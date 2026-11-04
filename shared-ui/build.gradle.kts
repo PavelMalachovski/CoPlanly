@@ -98,9 +98,23 @@ kotlin {
             api("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-savedstate:2.9.6")
             // `viewModelOf` in `uiModules`, which the app's Koin graph includes. 4.1.1, the version
             // of the app's Koin BOM; it asks for lifecycle-viewmodel 2.9.3, which the line above
-            // lifts. `koinViewModel()` in common code (koin-compose-viewmodel) waits for the screens
-            // (Task 11): the screens still in the app resolve the same definitions through theirs.
+            // lifts.
             implementation("io.insert-koin:koin-core-viewmodel:4.1.1")
+            // The screens (Task 11). Each of the three is already in the app's Android graph at the
+            // version it resolves to here, so none moves an Android version:
+            // - `koinViewModel()` in common code. 4.1.1, the Koin BOM's; the app's
+            //   koin-androidx-compose brings the same artifact, which asks for activity-compose
+            //   1.10.1 and lifecycle-viewmodel-compose 2.9.3 (2.9.4 through the line above).
+            implementation("io.insert-koin:koin-compose-viewmodel:4.1.1")
+            // - `collectAsStateWithLifecycle` and `LocalLifecycleOwner`. The release Compose
+            //   Multiplatform 1.9.3 pairs with, which on Android is androidx's 2.9.4, the line the
+            //   ViewModels already resolve.
+            implementation("org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose:2.9.6")
+            // - `BackHandler` and `PredictiveBackHandler` in common code (`androidx.compose.ui.
+            //   backhandler`, experimental). On Android its 1.9.3 calls androidx.activity's own
+            //   handlers and asks for activity-compose 1.8.0, below the app's; on the iPhone it is
+            //   Compose Multiplatform's back gesture dispatcher.
+            implementation("org.jetbrains.compose.ui:ui-backhandler:1.9.3")
         }
         androidMain.dependencies {
             // `WindowCompat`, for the system bars (`Theme.android.kt`). The app's version.

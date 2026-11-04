@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import com.coparently.app.presentation.platform.ProvideAndroidPlatform
 import com.coparently.app.presentation.theme.CoPlanlyTheme
 import com.coparently.app.utils.AppLocale
 import com.coparently.app.utils.inAppLanguage
@@ -34,17 +35,20 @@ class QRScannerActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         AppLocale.follow(this)
         setContent {
-            CoPlanlyTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    QrScannerScreen(
-                        onCodeScanned = { code ->
-                            setResult(RESULT_OK, Intent().putExtra(EXTRA_CODE, code))
-                            finish()
-                        }
-                    )
+            // The platform capabilities, as `MainActivity` provides them (MON-24 phase 2, Task 11).
+            ProvideAndroidPlatform {
+                CoPlanlyTheme {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        QrScannerScreen(
+                            onCodeScanned = { code ->
+                                setResult(RESULT_OK, Intent().putExtra(EXTRA_CODE, code))
+                                finish()
+                            }
+                        )
+                    }
                 }
             }
         }

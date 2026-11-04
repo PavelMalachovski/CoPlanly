@@ -16,6 +16,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.common.LocalFixedToday
+import com.coparently.app.presentation.platform.ProvideAndroidPlatform
 import com.coparently.app.presentation.theme.CoPlanlyTheme
 import com.coparently.app.presentation.theme.LocalParentPalette
 import com.github.takahirom.roborazzi.RoborazziOptions
@@ -138,15 +139,19 @@ private fun ScreenshotFrame(
         // The fixtures' date, not the clock: the month grid's weekday header marks today.
         LocalFixedToday provides ScreenshotFixtures.TODAY
     ) {
-        CoPlanlyTheme(darkTheme = variant.dark, contrastLevel = variant.contrast) {
-            Surface(color = MaterialTheme.colorScheme.background) {
-                val size = if (fullScreen) Modifier.fillMaxSize() else Modifier.fillMaxWidth()
-                Box(
-                    modifier = size
-                        .testTag(SCREENSHOT_TAG)
-                        .padding(if (fullScreen) 0.dp else FRAME_PADDING)
-                ) {
-                    content()
+        // The platform capabilities the app's shell provides (MON-24 phase 2, Task 11), so a
+        // component reads the values it reads in the app.
+        ProvideAndroidPlatform {
+            CoPlanlyTheme(darkTheme = variant.dark, contrastLevel = variant.contrast) {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    val size = if (fullScreen) Modifier.fillMaxSize() else Modifier.fillMaxWidth()
+                    Box(
+                        modifier = size
+                            .testTag(SCREENSHOT_TAG)
+                            .padding(if (fullScreen) 0.dp else FRAME_PADDING)
+                    ) {
+                        content()
+                    }
                 }
             }
         }

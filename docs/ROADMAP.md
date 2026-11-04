@@ -2980,6 +2980,15 @@ bytes are identical on Android):
   app's PDF writer answers, its range now kotlinx-datetime; the iPhone has no record file yet) and
   the school import (`schoolUiModule`). **Task 10 is done** but for the login screen's and Google
   Calendar's connection ViewModels, which move with their screens in Task 11.
+- **The screens to `:shared-ui`** — **started (phase 2, Task 11, November 2026; slices 11a–11g)**.
+  Slice 11a, the foundation: the screens' three libraries in common code (`koin-compose-viewmodel`
+  4.1.1, JetBrains' `lifecycle-runtime-compose` 2.9.6, Compose Multiplatform's `ui-backhandler`
+  1.9.3, none moving an Android version), and `presentation/platform/`: one interface per thing a
+  screen asks of the phone (share, pick, photograph, scan, dictate, ask a permission, hand a link or
+  a file to another app, copy a credential, read the build's values), each saying whether it is
+  available, provided by the shell through composition locals that throw when nobody provided them.
+  Android's are today's code (`ProvideAndroidPlatform`, in `MainActivity`, `QRScannerActivity` and the
+  screenshot frame); the iPhone's are stand-ins until phase 3 and 4.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

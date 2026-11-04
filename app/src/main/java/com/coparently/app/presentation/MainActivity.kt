@@ -51,6 +51,7 @@ import com.coparently.app.presentation.navigation.PendingDestinationOpen
 import com.coparently.app.presentation.navigation.PendingInviteCodes
 import com.coparently.app.presentation.navigation.Screen
 import com.coparently.app.presentation.navigation.startDestinationFor
+import com.coparently.app.presentation.platform.ProvideAndroidPlatform
 import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
 import com.coparently.app.presentation.theme.CoPlanlyTheme
@@ -367,30 +368,34 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            CoPlanlyTheme(darkTheme = useDarkTheme) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    val navController = rememberNavController()
-                    // Snackbars that outlive the screen that raised them (D-25), shown by the
-                    // navigation graph's root Scaffold.
-                    val appMessages = rememberAppMessages()
-
-                    CompositionLocalProvider(
-                        LocalGoogleSignInCallback provides googleSignInCallback,
-                        LocalParentPalette provides parentPalette,
-                        LocalFamilyView provides familyView,
-                        LocalAppMessages provides appMessages,
-                        LocalPhotoViewerUid provides photoViewerUid
+            // Every platform capability the shared screens read (`presentation/platform/`, MON-24
+            // phase 2, Task 11), from this activity.
+            ProvideAndroidPlatform {
+                CoPlanlyTheme(darkTheme = useDarkTheme) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
                     ) {
-                        NavGraph(
-                            navController = navController,
-                            syncViewModel = syncViewModel,
-                            pendingInviteCodes = pendingInviteCodes,
-                            pendingChatOpen = pendingChatOpen,
-                            pendingDestinationOpen = pendingDestinationOpen
-                        )
+                        val navController = rememberNavController()
+                        // Snackbars that outlive the screen that raised them (D-25), shown by the
+                        // navigation graph's root Scaffold.
+                        val appMessages = rememberAppMessages()
+
+                        CompositionLocalProvider(
+                            LocalGoogleSignInCallback provides googleSignInCallback,
+                            LocalParentPalette provides parentPalette,
+                            LocalFamilyView provides familyView,
+                            LocalAppMessages provides appMessages,
+                            LocalPhotoViewerUid provides photoViewerUid
+                        ) {
+                            NavGraph(
+                                navController = navController,
+                                syncViewModel = syncViewModel,
+                                pendingInviteCodes = pendingInviteCodes,
+                                pendingChatOpen = pendingChatOpen,
+                                pendingDestinationOpen = pendingDestinationOpen
+                            )
+                        }
                     }
                 }
             }

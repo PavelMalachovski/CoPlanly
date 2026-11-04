@@ -1035,6 +1035,25 @@ Then the export and the school import:
   instrumented tests are green, and `:shared-ui:compileKotlinIosSimulatorArm64` compiles.
 - [ ] **Step 4: Commit.** One per group: `refactor: move the <group> screens to shared-ui (MON-24)`
 
+**Slice 11a notes (November 2026).** The foundation, in four groups.
+- Group 1, the dependencies and the platform interfaces:
+  - `:shared-ui` `commonMain` gains `koin-compose-viewmodel` 4.1.1, JetBrains'
+    `lifecycle-runtime-compose` 2.9.6 and `org.jetbrains.compose.ui:ui-backhandler` 1.9.3 (POMs read
+    on Maven Central: on Android the first asks for activity-compose 1.10.1 and
+    lifecycle-viewmodel-compose 2.9.3, the second is androidx's 2.9.4, the third calls
+    androidx.activity's handlers and asks for activity-compose 1.8.0; all already in the app's graph
+    at those versions or above).
+  - `presentation/platform/`: `PlatformCapability` (`available`) and `PlatformLauncher`; `ShareSheet`,
+    `FilePicker`, `CameraCapture` (`CaptureTarget`, `CaptureResult`), `QrScanner`, `Dictation`,
+    `PermissionRequester` (`PlatformPermission`, `PermissionRequest`), `OpenUrl`, `SensitiveClipboard`
+    and `AppBuildValues`; `PlatformServices` (no defaults), `ProvidePlatform` and the locals, whose
+    default throws; `PlatformLocals.all`.
+  - Android: `ProvideAndroidPlatform`/`androidPlatformServices` in the app, from today's code;
+    `MainActivity`, `QRScannerActivity` and the screenshot frame provide it. iPhone:
+    `iosPlatformServices(buildValues)`, every capability unavailable.
+  - Tests: `PlatformServicesTest` (commonTest), `AndroidPlatformTest` (app, Robolectric).
+  - No screen reads the locals yet; each slice moves its screens onto them.
+
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 
 **Files:**

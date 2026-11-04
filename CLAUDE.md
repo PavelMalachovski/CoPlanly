@@ -572,7 +572,11 @@ When touching the UI, keep these invariants:
    past the BOM, the reason Koin waits below; `viewModelOf` in common code is `koin-core-viewmodel`
    4.1.1; `SavedStateHandle` in common code, since slice 10c, JetBrains'
    `lifecycle-viewmodel-savedstate` 2.9.6, androidx's 2.9.4 on every target, with
-   `org.jetbrains.androidx.savedstate` 1.3.6, which is androidx.savedstate 1.3.3),
+   `org.jetbrains.androidx.savedstate` 1.3.6, which is androidx.savedstate 1.3.3; and, for the
+   screens since Task 11, `koinViewModel()` in common code from `koin-compose-viewmodel` 4.1.1,
+   `collectAsStateWithLifecycle` from JetBrains' `lifecycle-runtime-compose` 2.9.6, androidx's 2.9.4,
+   and `BackHandler`/`PredictiveBackHandler` from Compose Multiplatform's `ui-backhandler` 1.9.3,
+   which on Android calls androidx.activity's own — each already in the app's graph at that version),
    **Koin 4.1.1** (BOM; `koin-android`, `koin-androidx-compose`, `koin-androidx-workmanager`, and
    `koin-test` for the JVM tests — MON-24 phase 2 replaced Hilt 2.58 with it; 4.2.x is newer but its
    Compose artifacts pull Compose 1.10, activity 1.12 and lifecycle 2.10 past the BOM, so it waits
@@ -1607,7 +1611,9 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              friends', the guest's, professionals', the parenting plan's, the export's and the
              school import's: every one but the two whose sign-ins run on an Android activity),
              with their Koin modules: uiModules and platformUiModule, which appModules includes.
-             Screens follow (Task 11). It makes the iPhone's one framework, Shared (static,
+             Then the screens (Task 11), from slice 11a's foundation: presentation/platform/ (the
+             capabilities a screen asks of the phone, provided by the shell), the date seam
+             (utils/ReaderDateText) and the image seam. It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
              ReminderScheduler, the export's record and the school import's plan — in shared/,
@@ -2255,6 +2261,29 @@ screen says the export failed) and the school directory over its own client, as 
 Bakaláři client. The three tests (MockK) run in `androidUnitTest`. **Task 10 is done but for
 `AuthViewModel` and `SyncViewModel`**, which stay in the app until Task 11 (above); the app's
 `viewModelModule` holds those two alone.
+
+**What a moved screen asks of the phone goes through `presentation/platform/`** (MON-24 phase 2,
+Task 11, slice 11a). One interface per capability in `:shared-ui`'s `commonMain` — `ShareSheet`,
+`FilePicker`, `CameraCapture`, `QrScanner`, `Dictation`, `PermissionRequester`, `OpenUrl` (links,
+a shared file in a viewer, the dialler, a mail draft, the app's settings), `SensitiveClipboard` and
+`AppBuildValues` (what screens read from `BuildConfig`) — each with `available`, so a screen draws
+no affordance the phone cannot keep (design item 8). They reach the screens through one
+`staticCompositionLocalOf` each, provided together by `ProvidePlatform(PlatformServices(…))`, whose
+constructor has no defaults, so a shell cannot leave one out. The app's `ProvideAndroidPlatform`
+(`app/…/presentation/platform/AndroidPlatform.kt`) builds them from the Activity with the Android code
+the screens called (`Intent.createChooser`, the activity-result contracts, `QRScannerActivity`,
+`OnDeviceSpeechDictation`'s rule, `copySensitive`, `openSharedFile`, `BuildConfig`); `MainActivity`,
+`QRScannerActivity` and the screenshot frame (`ScreenshotFrame`) wrap their content in it. The
+iPhone's `iosPlatformServices(buildValues)` (`iosMain`) answers with stand-ins that are not available
+until phase 3 and 4. Three things not to undo. **A local read outside the provider throws** — no
+"unavailable" default, which would hide a feature in production with no test noticing; a test that
+composes a screen provides the platform as the app does. **`AndroidPlatformTest`** (the app's,
+Robolectric) reads every local of `PlatformLocals.all` through `ProvideAndroidPlatform`, and
+`PlatformServicesTest` (commonTest) holds `PlatformServices.providedValues()` to that list, so a new
+capability goes in all three places. And **a capability's Android half is today's code**, moved, not
+rewritten: a screen that moves to it keeps its behaviour, so check its old call against the
+interface's Android half when it moves (the vault's camera button, which never asked whether the
+phone has a camera, now has `CameraCapture.available` to ask).
 
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller
