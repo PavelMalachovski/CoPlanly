@@ -1,7 +1,5 @@
 package com.coparently.app.presentation.family
 
-import android.content.Context
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -45,10 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import com.coparently.app.R
 import com.coparently.app.data.family.AssignOutcome
 import com.coparently.app.data.family.FamilyOption
 import com.coparently.app.data.family.UnassignedKind
@@ -57,14 +52,51 @@ import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.UiText
+import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.custody.labelRes
-import com.coparently.app.presentation.expenses.currencyFormat
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyLargeEmphasized
-import com.coparently.app.utils.localizedDate
-import kotlinx.datetime.toJavaLocalDate
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_back
+import com.coparently.app.resources.common_dialog_cancel
+import com.coparently.app.resources.record_place_only_me
+import com.coparently.app.resources.unassigned_records_choose_title
+import com.coparently.app.resources.unassigned_records_custody_note
+import com.coparently.app.resources.unassigned_records_custody_starts
+import com.coparently.app.resources.unassigned_records_earlier_hint
+import com.coparently.app.resources.unassigned_records_earlier_unnamed
+import com.coparently.app.resources.unassigned_records_earlier_with
+import com.coparently.app.resources.unassigned_records_empty_description
+import com.coparently.app.resources.unassigned_records_empty_title
+import com.coparently.app.resources.unassigned_records_family_unnamed
+import com.coparently.app.resources.unassigned_records_family_with
+import com.coparently.app.resources.unassigned_records_group_children_pets
+import com.coparently.app.resources.unassigned_records_group_custody
+import com.coparently.app.resources.unassigned_records_group_events
+import com.coparently.app.resources.unassigned_records_group_expenses
+import com.coparently.app.resources.unassigned_records_intro
+import com.coparently.app.resources.unassigned_records_keep_mine
+import com.coparently.app.resources.unassigned_records_keep_mine_hint
+import com.coparently.app.resources.unassigned_records_kind_child
+import com.coparently.app.resources.unassigned_records_kind_pet
+import com.coparently.app.resources.unassigned_records_notice_assigned
+import com.coparently.app.resources.unassigned_records_notice_assigned_unnamed
+import com.coparently.app.resources.unassigned_records_notice_gone
+import com.coparently.app.resources.unassigned_records_notice_kept
+import com.coparently.app.resources.unassigned_records_notice_not_sent
+import com.coparently.app.resources.unassigned_records_notice_proposal_waiting
+import com.coparently.app.resources.unassigned_records_notice_proposed
+import com.coparently.app.resources.unassigned_records_notice_proposed_unnamed
+import com.coparently.app.resources.unassigned_records_notice_put_away
+import com.coparently.app.resources.unassigned_records_save
+import com.coparently.app.resources.unassigned_records_title
+import com.coparently.app.utils.ReaderDateText
+import com.coparently.app.utils.ReaderMoneyText
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -98,13 +130,13 @@ fun UnassignedRecordsScreen(
     val state by viewModel.state.collectAsState()
     val busy by viewModel.busy.collectAsState()
     val notice by viewModel.notice.collectAsState()
-    val context = LocalContext.current
+    val resolver = rememberUiTextResolver()
     val snackbarHostState = remember { SnackbarHostState() }
     var choosingKey by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(notice) {
         notice?.let { said ->
-            snackbarHostState.showSnackbar(noticeText(context, said, state))
+            snackbarHostState.showSnackbar(noticeText(said, state).asString(resolver))
             viewModel.noticeShown()
         }
     }
@@ -121,10 +153,10 @@ fun UnassignedRecordsScreen(
             state.loading -> Unit
             state.records.isEmpty() -> EmptyState(
                 icon = Icons.Default.CheckCircle,
-                title = stringResource(R.string.unassigned_records_empty_title),
+                title = stringResource(Res.string.unassigned_records_empty_title),
                 description = stringResource(
-                    R.string.unassigned_records_empty_description,
-                    stringResource(R.string.record_place_only_me)
+                    Res.string.unassigned_records_empty_description,
+                    stringResource(Res.string.record_place_only_me)
                 ),
                 modifier = bodyModifier
             )
@@ -160,12 +192,12 @@ fun UnassignedRecordsScreen(
 @Composable
 private fun UnassignedTopBar(onNavigateUp: () -> Unit) {
     TopAppBar(
-        title = { Text(stringResource(R.string.unassigned_records_title)) },
+        title = { Text(stringResource(Res.string.unassigned_records_title)) },
         navigationIcon = {
             IconButton(onClick = onNavigateUp) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.common_back)
+                    contentDescription = stringResource(Res.string.common_back)
                 )
             }
         }
@@ -194,7 +226,7 @@ private fun RecordsBody(
         verticalArrangement = Arrangement.spacedBy(Spacing.L)
     ) {
         Text(
-            text = stringResource(R.string.unassigned_records_intro),
+            text = stringResource(Res.string.unassigned_records_intro),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -252,13 +284,13 @@ private fun ChooseFamilyDialog(
     var choice by rememberSaveable(record.key) { mutableStateOf<String?>(null) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.unassigned_records_choose_title)) },
+        title = { Text(stringResource(Res.string.unassigned_records_choose_title)) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Text(text = recordTitle(record), style = MaterialTheme.typography.bodyLargeEmphasized)
                 if (record.kind == UnassignedKind.CUSTODY) {
                     Text(
-                        text = stringResource(R.string.unassigned_records_custody_note),
+                        text = stringResource(Res.string.unassigned_records_custody_note),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = Spacing.S)
@@ -278,14 +310,14 @@ private fun ChooseFamilyDialog(
                         label = earlierChoiceLabel(family),
                         selected = choice == family.familyId,
                         onSelect = { choice = family.familyId },
-                        hint = stringResource(R.string.unassigned_records_earlier_hint)
+                        hint = stringResource(Res.string.unassigned_records_earlier_hint)
                     )
                 }
                 ChoiceRow(
-                    label = stringResource(R.string.unassigned_records_keep_mine),
+                    label = stringResource(Res.string.unassigned_records_keep_mine),
                     selected = choice == KEEP_ONLY_MINE,
                     onSelect = { choice = KEEP_ONLY_MINE },
-                    hint = stringResource(R.string.unassigned_records_keep_mine_hint)
+                    hint = stringResource(Res.string.unassigned_records_keep_mine_hint)
                 )
             }
         },
@@ -294,12 +326,12 @@ private fun ChooseFamilyDialog(
                 enabled = choice != null,
                 onClick = { choice?.let { if (it == KEEP_ONLY_MINE) onKeep() else onAssign(it) } }
             ) {
-                Text(stringResource(R.string.unassigned_records_save))
+                Text(stringResource(Res.string.unassigned_records_save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.common_dialog_cancel))
+                Text(stringResource(Res.string.common_dialog_cancel))
             }
         }
     )
@@ -338,15 +370,15 @@ private fun ChoiceRow(label: String, selected: Boolean, onSelect: () -> Unit, hi
 @Composable
 private fun familyChoiceLabel(family: FamilyOption): String =
     family.partnerName.takeIf { it.isNotBlank() }
-        ?.let { stringResource(R.string.unassigned_records_family_with, it) }
-        ?: stringResource(R.string.unassigned_records_family_unnamed)
+        ?.let { stringResource(Res.string.unassigned_records_family_with, it) }
+        ?: stringResource(Res.string.unassigned_records_family_unnamed)
 
 /** An ended family, named by its co-parent as this phone kept them, or unnamed. */
 @Composable
 private fun earlierChoiceLabel(family: FamilyOption): String =
     family.partnerName.takeIf { it.isNotBlank() }
-        ?.let { stringResource(R.string.unassigned_records_earlier_with, it) }
-        ?: stringResource(R.string.unassigned_records_earlier_unnamed)
+        ?.let { stringResource(Res.string.unassigned_records_earlier_with, it) }
+        ?: stringResource(Res.string.unassigned_records_earlier_unnamed)
 
 /** The record's name: a title or a name, or a schedule's pattern. */
 @Composable
@@ -356,54 +388,52 @@ private fun recordTitle(record: UnassignedRecord): String =
 /** The record's supporting line: what kind it is, its day, its amount. */
 @Composable
 private fun recordDetail(record: UnassignedRecord): String? {
-    val day = record.date?.toJavaLocalDate()?.format(localizedDate(DATE_SKELETON))
+    val day = record.date?.let { ReaderDateText.date(it, DATE_SKELETON) }
     return when (record.kind) {
-        UnassignedKind.CHILD -> stringResource(R.string.unassigned_records_kind_child)
-        UnassignedKind.PET -> stringResource(R.string.unassigned_records_kind_pet)
+        UnassignedKind.CHILD -> stringResource(Res.string.unassigned_records_kind_child)
+        UnassignedKind.PET -> stringResource(Res.string.unassigned_records_kind_pet)
         UnassignedKind.EVENT -> day
         UnassignedKind.EXPENSE -> listOfNotNull(amountText(record), day).joinToString(DETAIL_JOIN).ifEmpty { null }
-        UnassignedKind.CUSTODY -> day?.let { stringResource(R.string.unassigned_records_custody_starts, it) }
+        UnassignedKind.CUSTODY -> day?.let { stringResource(Res.string.unassigned_records_custody_starts, it) }
     }
 }
 
 /** An expense's amount in its own currency, formatted for the reader. */
 private fun amountText(record: UnassignedRecord): String? {
     val amount = record.amount ?: return null
-    return record.currency?.let { currencyFormat(it).format(amount) }
+    return record.currency?.let { ReaderMoneyText.amount(amount, it) }
 }
 
 /** What [notice] says, for the snackbar; [state] names the family it went to. */
-private fun noticeText(context: Context, notice: UnassignedNotice, state: UnassignedRecordsUiState): String =
+private fun noticeText(notice: UnassignedNotice, state: UnassignedRecordsUiState): UiText =
     when (notice) {
-        UnassignedNotice.Kept -> context.getString(R.string.unassigned_records_notice_kept)
+        UnassignedNotice.Kept -> UiText.Res(Res.string.unassigned_records_notice_kept)
         is UnassignedNotice.Assigned -> if (notice.outcome == AssignOutcome.ASSIGNED && notice.putAway) {
-            context.getString(R.string.unassigned_records_notice_put_away)
+            UiText.Res(Res.string.unassigned_records_notice_put_away)
         } else {
             val name = state.family(notice.familyId)?.partnerName.orEmpty()
             when (notice.outcome) {
                 AssignOutcome.ASSIGNED -> named(
-                    context,
                     name,
-                    R.string.unassigned_records_notice_assigned,
-                    R.string.unassigned_records_notice_assigned_unnamed
+                    Res.string.unassigned_records_notice_assigned,
+                    Res.string.unassigned_records_notice_assigned_unnamed
                 )
                 AssignOutcome.PROPOSED -> named(
-                    context,
                     name,
-                    R.string.unassigned_records_notice_proposed,
-                    R.string.unassigned_records_notice_proposed_unnamed
+                    Res.string.unassigned_records_notice_proposed,
+                    Res.string.unassigned_records_notice_proposed_unnamed
                 )
                 AssignOutcome.PROPOSAL_WAITING ->
-                    context.getString(R.string.unassigned_records_notice_proposal_waiting)
-                AssignOutcome.NOT_SENT -> context.getString(R.string.unassigned_records_notice_not_sent)
-                AssignOutcome.GONE -> context.getString(R.string.unassigned_records_notice_gone)
+                    UiText.Res(Res.string.unassigned_records_notice_proposal_waiting)
+                AssignOutcome.NOT_SENT -> UiText.Res(Res.string.unassigned_records_notice_not_sent)
+                AssignOutcome.GONE -> UiText.Res(Res.string.unassigned_records_notice_gone)
             }
         }
     }
 
 /** [withName] with [name], or [unnamed] when the co-parent's name is not known. */
-private fun named(context: Context, name: String, @StringRes withName: Int, @StringRes unnamed: Int): String =
-    if (name.isBlank()) context.getString(unnamed) else context.getString(withName, name)
+private fun named(name: String, withName: StringResource, unnamed: StringResource): UiText =
+    if (name.isBlank()) UiText.Res(unnamed) else UiText.Res(withName, listOf(name))
 
 private fun UnassignedKind.icon(): ImageVector = when (this) {
     UnassignedKind.CHILD -> Icons.Default.ChildCare
@@ -413,10 +443,9 @@ private fun UnassignedKind.icon(): ImageVector = when (this) {
     UnassignedKind.CUSTODY -> Icons.Default.DateRange
 }
 
-@StringRes
-private fun UnassignedGroup.labelResource(): Int = when (this) {
-    UnassignedGroup.CHILDREN_AND_PETS -> R.string.unassigned_records_group_children_pets
-    UnassignedGroup.EVENTS -> R.string.unassigned_records_group_events
-    UnassignedGroup.EXPENSES -> R.string.unassigned_records_group_expenses
-    UnassignedGroup.CUSTODY -> R.string.unassigned_records_group_custody
+private fun UnassignedGroup.labelResource(): StringResource = when (this) {
+    UnassignedGroup.CHILDREN_AND_PETS -> Res.string.unassigned_records_group_children_pets
+    UnassignedGroup.EVENTS -> Res.string.unassigned_records_group_events
+    UnassignedGroup.EXPENSES -> Res.string.unassigned_records_group_expenses
+    UnassignedGroup.CUSTODY -> Res.string.unassigned_records_group_custody
 }

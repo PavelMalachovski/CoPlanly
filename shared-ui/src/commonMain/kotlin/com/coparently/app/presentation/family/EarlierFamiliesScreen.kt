@@ -30,18 +30,39 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.presentation.common.BannerTone
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
-import com.coparently.app.presentation.expenses.currencyFormat
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.utils.format
-import com.coparently.app.utils.localizedDate
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_back
+import com.coparently.app.resources.earlier_families_empty_description
+import com.coparently.app.resources.earlier_families_empty_title
+import com.coparently.app.resources.earlier_families_last_day
+import com.coparently.app.resources.earlier_families_notice
+import com.coparently.app.resources.earlier_families_title
+import com.coparently.app.resources.earlier_families_unnamed
+import com.coparently.app.resources.earlier_families_with
+import com.coparently.app.resources.earlier_family_children
+import com.coparently.app.resources.earlier_family_documents
+import com.coparently.app.resources.earlier_family_documents_supporting
+import com.coparently.app.resources.earlier_family_events
+import com.coparently.app.resources.earlier_family_expenses
+import com.coparently.app.resources.earlier_family_export
+import com.coparently.app.resources.earlier_family_export_supporting
+import com.coparently.app.resources.earlier_family_journal
+import com.coparently.app.resources.earlier_family_more
+import com.coparently.app.resources.earlier_family_nothing
+import com.coparently.app.resources.earlier_family_notice
+import com.coparently.app.resources.earlier_family_pets
+import com.coparently.app.resources.earlier_family_total
+import com.coparently.app.utils.ReaderDateText
+import com.coparently.app.utils.ReaderMoneyText
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /** A record's day, in the reader's own order. */
@@ -69,7 +90,7 @@ fun EarlierFamiliesScreen(
     viewModel: EarlierFamiliesViewModel = koinViewModel()
 ) {
     val families by viewModel.families.collectAsState()
-    Scaffold(topBar = { BackTopBar(stringResource(R.string.earlier_families_title), onNavigateUp) }) { padding ->
+    Scaffold(topBar = { BackTopBar(stringResource(Res.string.earlier_families_title), onNavigateUp) }) { padding ->
         val bodyModifier = Modifier
             .fillMaxSize()
             .padding(padding)
@@ -77,8 +98,8 @@ fun EarlierFamiliesScreen(
         if (list.isEmpty()) {
             EmptyState(
                 icon = Icons.Default.History,
-                title = stringResource(R.string.earlier_families_empty_title),
-                description = stringResource(R.string.earlier_families_empty_description),
+                title = stringResource(Res.string.earlier_families_empty_title),
+                description = stringResource(Res.string.earlier_families_empty_description),
                 modifier = bodyModifier
             )
             return@Scaffold
@@ -89,7 +110,7 @@ fun EarlierFamiliesScreen(
             verticalArrangement = Arrangement.spacedBy(Spacing.M)
         ) {
             item(key = "notice") {
-                InlineBanner(text = stringResource(R.string.earlier_families_notice), tone = BannerTone.INFO)
+                InlineBanner(text = stringResource(Res.string.earlier_families_notice), tone = BannerTone.INFO)
             }
             item(key = "families") {
                 SectionGroup {
@@ -100,8 +121,8 @@ fun EarlierFamiliesScreen(
                             icon = Icons.Default.History,
                             supporting = family.lastDay?.let { day ->
                                 stringResource(
-                                    R.string.earlier_families_last_day,
-                                    day.format(localizedDate(DATE_SKELETON))
+                                    Res.string.earlier_families_last_day,
+                                    ReaderDateText.date(day, DATE_SKELETON)
                                 )
                             },
                             onClick = { onOpen(family.familyId) },
@@ -133,7 +154,7 @@ fun EarlierFamilyScreen(
 ) {
     val families by viewModel.families.collectAsState()
     val family = families?.firstOrNull { it.familyId == familyId }
-    val title = family?.let { familyTitle(it) } ?: stringResource(R.string.earlier_families_title)
+    val title = family?.let { familyTitle(it) } ?: stringResource(Res.string.earlier_families_title)
     Scaffold(topBar = { BackTopBar(title, onNavigateUp) }) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -143,28 +164,28 @@ fun EarlierFamilyScreen(
             verticalArrangement = Arrangement.spacedBy(Spacing.M)
         ) {
             item(key = "notice") {
-                InlineBanner(text = stringResource(R.string.earlier_family_notice), tone = BannerTone.INFO)
+                InlineBanner(text = stringResource(Res.string.earlier_family_notice), tone = BannerTone.INFO)
             }
             item(key = "papers") {
                 SectionGroup {
                     SectionRow(
-                        title = stringResource(R.string.earlier_family_documents),
+                        title = stringResource(Res.string.earlier_family_documents),
                         icon = Icons.Default.Description,
-                        supporting = stringResource(R.string.earlier_family_documents_supporting),
+                        supporting = stringResource(Res.string.earlier_family_documents_supporting),
                         onClick = onOpenDocuments
                     )
                     Divider()
                     SectionRow(
-                        title = stringResource(R.string.earlier_family_export),
+                        title = stringResource(Res.string.earlier_family_export),
                         icon = Icons.Default.FileDownload,
-                        supporting = stringResource(R.string.earlier_family_export_supporting),
+                        supporting = stringResource(Res.string.earlier_family_export_supporting),
                         onClick = onExport
                     )
                 }
             }
             if (family == null) return@LazyColumn
             if (family.holdsNoRecords) {
-                item(key = "nothing") { Text(stringResource(R.string.earlier_family_nothing)) }
+                item(key = "nothing") { Text(stringResource(Res.string.earlier_family_nothing)) }
             }
             records(family)
         }
@@ -172,42 +193,42 @@ fun EarlierFamilyScreen(
 }
 
 private fun LazyListScope.records(family: EarlierFamily) {
-    section("events", R.string.earlier_family_events, family.events) { event ->
+    section("events", Res.string.earlier_family_events, family.events) { event ->
         RecordRow(
             title = event.title,
-            supporting = event.startDateTime.date.format(localizedDate(DATE_SKELETON)),
+            supporting = ReaderDateText.date(event.startDateTime.date, DATE_SKELETON),
             iconRes = Icons.Default.Event
         )
     }
     if (family.expenses.isNotEmpty()) {
         item(key = "expenses-total") {
             val totals = family.expenses.groupBy { it.currency }
-                .map { (currency, expenses) -> currencyFormat(currency).format(expenses.sumOf { it.amount }) }
+                .map { (currency, expenses) -> ReaderMoneyText.amount(expenses.sumOf { it.amount }, currency) }
             Text(
-                text = stringResource(R.string.earlier_family_total, totals.joinToString(DETAIL_JOIN)),
+                text = stringResource(Res.string.earlier_family_total, totals.joinToString(DETAIL_JOIN)),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
-    section("expenses", R.string.earlier_family_expenses, family.expenses) { expense ->
+    section("expenses", Res.string.earlier_family_expenses, family.expenses) { expense ->
         RecordRow(
             title = expense.title,
-            supporting = currencyFormat(expense.currency).format(expense.amount) + DETAIL_JOIN +
-                expense.date.format(localizedDate(DATE_SKELETON)),
+            supporting = ReaderMoneyText.amount(expense.amount, expense.currency) + DETAIL_JOIN +
+                ReaderDateText.date(expense.date, DATE_SKELETON),
             iconRes = Icons.Default.Payments
         )
     }
-    section("children", R.string.earlier_family_children, family.children) { child ->
+    section("children", Res.string.earlier_family_children, family.children) { child ->
         RecordRow(title = child.childName, supporting = null, iconRes = Icons.Default.ChildCare)
     }
-    section("pets", R.string.earlier_family_pets, family.pets) { pet ->
+    section("pets", Res.string.earlier_family_pets, family.pets) { pet ->
         RecordRow(title = pet.name, supporting = null, iconRes = Icons.Default.Pets)
     }
-    section("journal", R.string.earlier_family_journal, family.journal) { entry ->
+    section("journal", Res.string.earlier_family_journal, family.journal) { entry ->
         RecordRow(
             title = entry.text.lineSequence().firstOrNull().orEmpty(),
-            supporting = entry.entryDate.format(localizedDate(DATE_SKELETON)),
+            supporting = ReaderDateText.date(entry.entryDate, DATE_SKELETON),
             iconRes = Icons.Default.Book
         )
     }
@@ -216,7 +237,7 @@ private fun LazyListScope.records(family: EarlierFamily) {
 /** A labelled group of up to [MAX_ROWS] rows, saying how many more there are. */
 private fun <T> LazyListScope.section(
     key: String,
-    labelRes: Int,
+    labelRes: StringResource,
     rows: List<T>,
     row: @Composable (T) -> Unit
 ) {
@@ -232,7 +253,7 @@ private fun <T> LazyListScope.section(
             }
             if (rows.size > MAX_ROWS) {
                 Text(
-                    text = stringResource(R.string.earlier_family_more, rows.size - MAX_ROWS),
+                    text = stringResource(Res.string.earlier_family_more, rows.size - MAX_ROWS),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -249,8 +270,8 @@ private fun RecordRow(title: String, supporting: String?, iconRes: ImageVector) 
 /** "With Zuzana", or "Earlier family" for one whose co-parent this phone never named. */
 @Composable
 private fun familyTitle(family: EarlierFamily): String =
-    family.coParentName?.let { stringResource(R.string.earlier_families_with, it) }
-        ?: stringResource(R.string.earlier_families_unnamed)
+    family.coParentName?.let { stringResource(Res.string.earlier_families_with, it) }
+        ?: stringResource(Res.string.earlier_families_unnamed)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -259,7 +280,7 @@ private fun BackTopBar(title: String, onNavigateUp: () -> Unit) {
         title = { Text(title) },
         navigationIcon = {
             IconButton(onClick = onNavigateUp) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_back))
             }
         }
     )

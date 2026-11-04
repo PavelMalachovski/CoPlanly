@@ -1,11 +1,15 @@
 package com.coparently.app.presentation.changerequests
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.expenses_percent_sign
+import com.coparently.app.resources.expenses_split_shares_named
+import com.coparently.app.resources.expenses_split_shares_you_first
+import com.coparently.app.resources.expenses_split_shares_you_second
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * "Zuzana pays 35 %, Pavel pays 65 %": a split with each share beside the name of the parent who
@@ -21,26 +25,26 @@ import com.coparently.app.presentation.common.ParentNames
  * @param parentNames Names each slot — never "Mom" or "Dad".
  */
 @Composable
-internal fun splitSharesText(ratio: SplitRatio, parentNames: ParentNames): String {
-    val percent = stringResource(R.string.expenses_percent_sign)
+fun splitSharesText(ratio: SplitRatio, parentNames: ParentNames): String {
+    val percent = stringResource(Res.string.expenses_percent_sign)
     return when {
         // The reader's own share is "you pay" (UX audit H4), in the slot order the split bar draws.
         parentNames.isReader(ContactWindow.SLOT_ONE) -> stringResource(
-            R.string.expenses_split_shares_you_first,
+            Res.string.expenses_split_shares_you_first,
             ratio.momPercent,
             parentNames.labelFor(ContactWindow.SLOT_TWO),
             ratio.dadPercent,
             percent
         )
         parentNames.isReader(ContactWindow.SLOT_TWO) -> stringResource(
-            R.string.expenses_split_shares_you_second,
+            Res.string.expenses_split_shares_you_second,
             parentNames.labelFor(ContactWindow.SLOT_ONE),
             ratio.momPercent,
             ratio.dadPercent,
             percent
         )
         else -> stringResource(
-            R.string.expenses_split_shares_named,
+            Res.string.expenses_split_shares_named,
             parentNames.labelFor(ContactWindow.SLOT_ONE),
             ratio.momPercent,
             parentNames.labelFor(ContactWindow.SLOT_TWO),

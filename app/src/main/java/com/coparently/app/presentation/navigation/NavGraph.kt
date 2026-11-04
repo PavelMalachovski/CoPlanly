@@ -451,11 +451,7 @@ fun NavGraph(
                         openSection = com.coparently.app.presentation.changerequests.InboxSection.fromRoute(
                             backStackEntry.arguments?.getString(Screen.ChangeRequests.ARG_SECTION)
                         ),
-                        onOpenAgreement = { screen -> navController.navigate(screen.route) },
-                        // Android's reading of the split's `%%` strings until 11e rewords them.
-                        splitSharesText = { ratio, names ->
-                            com.coparently.app.presentation.changerequests.splitSharesText(ratio, names)
-                        }
+                        onOpenAgreement = { screen -> navController.navigate(screen.route) }
                     )
                 }
 

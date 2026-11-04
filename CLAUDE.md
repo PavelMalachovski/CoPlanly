@@ -1210,7 +1210,9 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `ProfessionalRequestRow`, `PlanRequestRow`, `RequestHistoryGroup`, `CardClockBanner`, `CardClockChip`
   and `CardClockDetails`, which the screenshots and `RequestHistoryGroupTest` render, and
   `SwapDayAnswers`, `SwapOfferSides`, `SwapNoteQuote`, `sidesAsked`, `swapOfferHeading`,
-  `swapAcceptLabel` and `swapDatesText`, which Home calls). A test that moves with its code to `:shared-ui` keeps `internal`
+  `swapAcceptLabel` and `swapDatesText`, which Home calls; slice 11e: `FamilyMoneyCard`, which the
+  screenshots render, `splitSharesText`, `formatMoney` and `balanceCaption`, which Home calls, and
+  the stickers' `roleOrNull` and `senderLine`, which `MyStickersScreen` calls). A test that moves with its code to `:shared-ui` keeps `internal`
   reachable, as the calendar's ten pure tests do. The screenshot frame
   provides the platform capabilities as the app does (`ProvideAndroidPlatform`), so a moved screen
   that reads one renders as it does on a phone. Every fixture date is pinned (May 2026,
@@ -1642,7 +1644,9 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              they read; and, from slice 11d, custody's screens (presentation/custody/), with the
              custody-conflict screen and the parenting plan's reference card, and the requests'
              screens (presentation/changerequests/: the inbox, its cards and the change request
-             form; but SplitShares.kt, for slice 11e). It makes the iPhone's one framework, Shared (static,
+             form); and, from slice 11e, the family's screens (presentation/family/), with the
+             split's wording, the stickers' views, the family's two dialogs and Home's money text.
+             It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
              ReminderScheduler, the export's record and the school import's plan — in shared/,
@@ -1658,8 +1662,9 @@ data/      — Room (v46 + migrations), Firestore/Google clients, repository imp
 presentation/ — Compose screens per feature, and the two ViewModels whose sign-ins run on an
              Android activity (AuthViewModel, SyncViewModel; Task 11). Their strings, the theme,
              the design system's components, the shared state and every other ViewModel are in
-             shared-ui/ (Task 10), and so are chat's, the event form's, the calendar's, custody's
-             and the requests' screens (Task 11, slices 11b–11d); the app keeps their previews
+             shared-ui/ (Task 10), and so are chat's, the event form's, the calendar's, custody's,
+             the requests' and the family's screens (Task 11, slices 11b–11e); the app keeps
+             their previews
 di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
              listed in appModules); the database builder (DatabaseBuilder.kt) and the file name
              (DatabaseName.kt) are in shared-data/ since MON-24 phase 2
@@ -2111,11 +2116,27 @@ moved beside it: `support/SupportText.kt` (`supportAmount`, through the money se
 `DecimalText.plain`, and `supportMonth`, out of `SupportScreen.kt`) and
 `professionals/ProfessionalRoleLabel.kt` (`ProfessionalRole.labelRes()` a `StringResource`, out of
 `ProfessionalText.kt`; the Professionals screens read it with Compose Multiplatform's
-`stringResource`). **`SplitShares.kt` stays in the app**, for its `%%` strings ("Localization"):
-`ChangeRequestsScreen` takes a `splitSharesText` parameter, which `NavGraph` passes, until slice 11e.
+`stringResource`). ~~`SplitShares.kt` stays in the app~~: it followed in slice 11e, once its
+strings took the percent sign as an argument ("Localization"), and `ChangeRequestsScreen` lost the
+`splitSharesText` parameter 11d gave it.
 `CardClockTest` and `InboxItemsTest` run in `commonTest` (their names without commas),
 `RequestClockTextTest` in `androidUnitTest` (it compares with `answerByText`);
-`RequestHistoryGroupTest` stays in the app (Robolectric).
+`RequestHistoryGroupTest` stays in the app (Robolectric). **Then the family's screens** (slice
+11e): `presentation/family/`'s `FamilyScreen` (the tab's hub, design refresh item 4),
+`EarlierFamiliesScreen`, `UnassignedRecordsScreen` and `UnassignedRecordsEntries` (the row and Home's
+question), with what they read from screens still in the app: `changerequests/SplitShares.kt`
+(`splitSharesText`, public, which the inbox, Expenses and Home's pop-up word a split with),
+`stickers/StickerViews.kt` (`HomeStickers`, `StickersRow`, `ParentRolePrompt`, `ParentRoleDialog`,
+`StickerBadge`, and `roleOrNull` and `senderLine`, public for `MyStickersScreen`), the new
+`settings/FamilyDialogs.kt` (`caresForSummary`, `FamilyKindDialog` and `SplitRatioDialog`, out of
+`SettingsScreen.kt`, which no longer called them), and Home's money text, `home/MoneyText.kt`
+(`formatMoney` and `balanceCaption`, out of `HomeScreen.kt`, which calls them from the app) with
+`home/SettleUpPosition.kt` (its test in `commonTest`). Every amount goes through the money seam's
+new `ReaderMoneyText.amount(value: Double, currency)`, which on Android is
+`currencyFormat(currency).format(value)`, the call each of them made, and every date through
+`ReaderDateText.date`; the unassigned records' snackbar is a `UiText` resolved through
+`rememberUiTextResolver()` where it read the Activity's `Context`; `@StringRes Int` labels are
+`StringResource`s. `FamilyMoneyCard` is public for the screenshots.
 **A Robolectric test runs `RobolectricTestApplication`**
 (`app/src/test/.../testing/`, `@Config(application = …)`): Robolectric installs no content
 provider from the manifest, so it hands Compose Multiplatform's resource reader the context its

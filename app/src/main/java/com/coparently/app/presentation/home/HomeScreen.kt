@@ -119,10 +119,7 @@ import com.coparently.app.utils.shortTime
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.toKotlinLocalDate
 import org.koin.compose.viewmodel.koinViewModel
-import java.text.NumberFormat
 import java.time.LocalDate
-import java.util.Currency
-import java.util.Locale
 
 /** A date in the locale's order for [skeleton], then the locale's short time (D-18). */
 private fun LocalDateTime.dateAndTime(skeleton: String): String =
@@ -837,37 +834,6 @@ internal fun StatTiles(
     }
 }
 
-/**
- * The settle-up line under the spend figure: "You are owed 1 416,00 CZK, 58,00 €", "You owe
- * 29.85", or "All settled".
- *
- * Every currency with an open balance is named ([SettleUpPosition]); the app does no FX
- * conversion, so they are listed, never summed. A month that owes one way in one currency and
- * the other way in another gets both sentences, one per line — there is no honest single one.
- */
-@Composable
-internal fun balanceCaption(balances: List<CurrencyBalance>, coParentName: String? = null): String {
-    val position = SettleUpPosition.of(balances)
-    if (position.settled) return stringResource(R.string.home_stat_settled)
-    val amounts: (List<CurrencyAmount>) -> String = { list ->
-        list.joinToString(", ") { formatMoney(it.amount, it.currency) }
-    }
-    // With a name, the sentence says who owes whom, as the Expenses balance does; the Family tab's
-    // card passes one, Home's tile keeps its shorter line and arrow.
-    val owedToYou: @Composable (String) -> String = { sum ->
-        coParentName?.let { stringResource(R.string.expenses_balance_owed_to_you_named, it, sum) }
-            ?: stringResource(R.string.home_stat_owed_to_you, sum)
-    }
-    val youOwe: @Composable (String) -> String = { sum ->
-        coParentName?.let { stringResource(R.string.expenses_balance_you_owe_named, it, sum) }
-            ?: stringResource(R.string.home_stat_you_owe, sum)
-    }
-    return listOfNotNull(
-        position.owedToYou.takeIf { it.isNotEmpty() }?.let { owedToYou(amounts(it)) },
-        position.youOwe.takeIf { it.isNotEmpty() }?.let { youOwe(amounts(it)) }
-    ).joinToString("\n")
-}
-
 @Composable
 @Suppress("LongParameterList") // one tile anatomy, expressed as one parameter list
 private fun StatTile(
@@ -1217,22 +1183,6 @@ private fun answerLabel(answer: HistoryEntry): String {
         RequestSubject.CustodySchedule -> stringResource(R.string.request_history_custody)
         RequestSubject.SplitRatio -> stringResource(R.string.request_history_split)
     }
-}
-
-/**
- * Formats an amount in the reader's own conventions, in the currency the record was entered in.
- *
- * The locale and the currency are separate decisions and this needs both: the *currency* comes
- * from the expense (a Czech family may still record something in EUR), while the *formatting* —
- * decimal comma, thin space between thousands, symbol after the number — belongs to whoever is
- * reading. Pinned to `Locale.US`, this rendered `CZK 1,234.56` on the "this month" tile of a
- * Czech user's home screen, where `1 234,56 Kč` is what they expect on a figure two parents are
- * about to settle between them.
- */
-internal fun formatMoney(amount: Double, currencyCode: String): String {
-    val format = NumberFormat.getCurrencyInstance(Locale.getDefault())
-    runCatching { format.currency = Currency.getInstance(currencyCode) }
-    return format.format(amount)
 }
 
 private fun ActivityKind.icon(): ImageVector = when (this) {

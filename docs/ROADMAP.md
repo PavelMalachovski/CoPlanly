@@ -3037,6 +3037,11 @@ bytes are identical on Android):
   amount and month and a profession's name, which the inbox's rows read. The expense split's
   wording stays in the app until 11e rewords its `%%` strings; the inbox takes it as a parameter.
   **Slice 11d built, CI pending.**
+  Slice 11e, the family and the money: first the split's shares, which take the percent sign as an
+  argument and so read alike in both string readers (the last exception check 7 made); then the
+  Family tab, its earlier families and the records of no family, with the split's wording, the
+  stickers' views, the family's two dialogs and Home's money text moved beside them, every amount
+  through the money seam's `Double` overload, which is the `NumberFormat` call they made.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

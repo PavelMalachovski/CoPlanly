@@ -30,12 +30,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.window.DialogProperties
-import com.coparently.app.R
 import com.coparently.app.domain.stickers.ParentRole
 import com.coparently.app.domain.stickers.ParentRoleAnswer
 import com.coparently.app.domain.stickers.Sticker
@@ -48,11 +46,29 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.titleMediumEmphasized
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.parent_role_body
+import com.coparently.app.resources.parent_role_save
+import com.coparently.app.resources.parent_role_save_failed
+import com.coparently.app.resources.parent_role_title
+import com.coparently.app.resources.sticker_from
+import com.coparently.app.resources.sticker_from_app
+import com.coparently.app.resources.sticker_got_it
+import com.coparently.app.resources.sticker_new_heading
+import com.coparently.app.resources.stickers_close
+import com.coparently.app.resources.stickers_send
+import com.coparently.app.resources.stickers_send_failed
+import com.coparently.app.resources.stickers_send_note
+import com.coparently.app.resources.stickers_send_supporting
+import com.coparently.app.resources.stickers_send_title
+import com.coparently.app.resources.stickers_sent
+import com.coparently.app.resources.stickers_settings_description
+import com.coparently.app.resources.stickers_title
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /** The role this parent's stickers address them by, or null while none is known. */
-internal fun ParentRoleAnswer.roleOrNull(): ParentRole? = (this as? ParentRoleAnswer.Answered)?.role
+fun ParentRoleAnswer.roleOrNull(): ParentRole? = (this as? ParentRoleAnswer.Answered)?.role
 
 /**
  * A sticker's badge: its picture on the tonal disc every hero icon sits on, and its sentence as
@@ -78,11 +94,11 @@ fun StickerBadge(kind: StickerKind, role: ParentRole?, modifier: Modifier = Modi
 
 /** Who a received [sticker] is from: the app, or the co-parent named [coParentName]. */
 @Composable
-internal fun senderLine(sticker: Sticker, coParentName: String): String =
+fun senderLine(sticker: Sticker, coParentName: String): String =
     if (sticker.fromUid == null) {
-        stringResource(R.string.sticker_from_app)
+        stringResource(Res.string.sticker_from_app)
     } else {
-        stringResource(R.string.sticker_from, coParentName)
+        stringResource(Res.string.sticker_from, coParentName)
     }
 
 /**
@@ -106,7 +122,7 @@ fun HomeStickers(coParentName: String, viewModel: StickersViewModel = koinViewMo
                     modifier = Modifier.padding(Spacing.L),
                     verticalArrangement = Arrangement.spacedBy(Spacing.M)
                 ) {
-                    GroupLabel(stringResource(R.string.sticker_new_heading))
+                    GroupLabel(stringResource(Res.string.sticker_new_heading))
                     StickerBadge(sticker.kind, role.roleOrNull())
                     Text(
                         text = senderLine(sticker, coParentName),
@@ -114,7 +130,7 @@ fun HomeStickers(coParentName: String, viewModel: StickersViewModel = koinViewMo
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     TextButton(onClick = { viewModel.markSeen(sticker) }, modifier = Modifier.align(Alignment.End)) {
-                        Text(stringResource(R.string.sticker_got_it))
+                        Text(stringResource(Res.string.sticker_got_it))
                     }
                 }
             }
@@ -123,8 +139,8 @@ fun HomeStickers(coParentName: String, viewModel: StickersViewModel = koinViewMo
             SectionGroup {
                 SectionRow(
                     icon = Icons.Default.Favorite,
-                    title = stringResource(R.string.stickers_send),
-                    supporting = stringResource(R.string.stickers_send_supporting, coParentName),
+                    title = stringResource(Res.string.stickers_send),
+                    supporting = stringResource(Res.string.stickers_send_supporting, coParentName),
                     onClick = { sheetOpen = true },
                     trailing = { Chevron() }
                 )
@@ -166,23 +182,23 @@ private fun SendStickerSheet(
             verticalArrangement = Arrangement.spacedBy(Spacing.M)
         ) {
             Text(
-                text = stringResource(R.string.stickers_send_title, coParentName),
+                text = stringResource(Res.string.stickers_send_title, coParentName),
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.semantics { heading() }
             )
             Text(
-                text = stringResource(R.string.stickers_send_note, coParentName),
+                text = stringResource(Res.string.stickers_send_note, coParentName),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             when (sending) {
                 StickersViewModel.SendState.Sent -> {
                     Text(
-                        text = stringResource(R.string.stickers_sent, coParentName),
+                        text = stringResource(Res.string.stickers_sent, coParentName),
                         style = MaterialTheme.typography.bodyLarge
                     )
                     TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
-                        Text(stringResource(R.string.stickers_close))
+                        Text(stringResource(Res.string.stickers_close))
                     }
                 }
                 else -> {
@@ -191,7 +207,7 @@ private fun SendStickerSheet(
                     }
                     if (sending == StickersViewModel.SendState.Failed) {
                         Text(
-                            text = stringResource(R.string.stickers_send_failed),
+                            text = stringResource(Res.string.stickers_send_failed),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.error
                         )
@@ -246,10 +262,10 @@ fun ParentRoleDialog(
             dismissOnBackPress = onDismiss != null,
             dismissOnClickOutside = onDismiss != null
         ),
-        title = { Text(stringResource(R.string.parent_role_title)) },
+        title = { Text(stringResource(Res.string.parent_role_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
-                Text(stringResource(R.string.parent_role_body))
+                Text(stringResource(Res.string.parent_role_body))
                 Column(modifier = Modifier.selectableGroup()) {
                     ParentRole.entries.forEach { option ->
                         Row(
@@ -269,7 +285,7 @@ fun ParentRoleDialog(
                 }
                 if (failed) {
                     Text(
-                        text = stringResource(R.string.parent_role_save_failed),
+                        text = stringResource(Res.string.parent_role_save_failed),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -278,11 +294,11 @@ fun ParentRoleDialog(
         },
         confirmButton = {
             TextButton(onClick = { chosen?.let(onSave) }, enabled = chosen != null) {
-                Text(stringResource(R.string.parent_role_save))
+                Text(stringResource(Res.string.parent_role_save))
             }
         },
         dismissButton = if (onDismiss != null) {
-            { TextButton(onClick = onDismiss) { Text(stringResource(R.string.stickers_close)) } }
+            { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.stickers_close)) } }
         } else {
             null
         }
@@ -298,8 +314,8 @@ fun ParentRoleDialog(
 fun SectionGroupScope.StickersRow(onOpen: () -> Unit) {
     SectionRow(
         icon = Icons.Default.Favorite,
-        title = stringResource(R.string.stickers_title),
-        supporting = stringResource(R.string.stickers_settings_description),
+        title = stringResource(Res.string.stickers_title),
+        supporting = stringResource(Res.string.stickers_settings_description),
         onClick = onOpen,
         trailing = { Chevron() }
     )

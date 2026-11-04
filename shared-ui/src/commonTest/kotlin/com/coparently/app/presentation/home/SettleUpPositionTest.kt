@@ -2,7 +2,7 @@ package com.coparently.app.presentation.home
 
 import com.coparently.app.domain.expenses.CurrencyBalance
 import com.coparently.app.domain.expenses.ExpenseBalance
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -23,7 +23,7 @@ class SettleUpPositionTest {
     )
 
     @Test
-    fun `every currency owed to this parent is reported, largest first`() {
+    fun `every currency owed to this parent is reported - largest first`() {
         val position = SettleUpPosition.of(listOf(balance("EUR", 58.0), balance("CZK", 1_416.0)))
 
         assertEquals(
@@ -34,7 +34,7 @@ class SettleUpPositionTest {
     }
 
     @Test
-    fun `opposite directions land on opposite sides, as positive amounts`() {
+    fun `opposite directions land on opposite sides as positive amounts`() {
         val position = SettleUpPosition.of(listOf(balance("CZK", 200.0), balance("EUR", -30.0)))
 
         assertEquals(listOf(CurrencyAmount("CZK", 200.0)), position.owedToYou)

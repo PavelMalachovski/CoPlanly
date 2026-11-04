@@ -10,13 +10,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.SectionGroupScope
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.unassigned_records_count
+import com.coparently.app.resources.unassigned_records_prompt_body
+import com.coparently.app.resources.unassigned_records_prompt_choose
+import com.coparently.app.resources.unassigned_records_prompt_later
+import com.coparently.app.resources.unassigned_records_prompt_title
+import com.coparently.app.resources.unassigned_records_title
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -40,8 +46,8 @@ fun SectionGroupScope.UnassignedRecordsRow(
     if (summary.count == 0) return
     SectionRow(
         icon = Icons.Default.VisibilityOff,
-        title = stringResource(R.string.unassigned_records_title),
-        supporting = pluralStringResource(R.plurals.unassigned_records_count, summary.count, summary.count),
+        title = stringResource(Res.string.unassigned_records_title),
+        supporting = pluralStringResource(Res.plurals.unassigned_records_count, summary.count, summary.count),
         onClick = onOpen,
         trailing = {
             Icon(
@@ -74,10 +80,10 @@ fun UnassignedRecordsPrompt(
     val summary by viewModel.summary.collectAsState()
     if (!summary.askOnHome) return
     ConfirmationDialog(
-        title = stringResource(R.string.unassigned_records_prompt_title),
-        message = pluralStringResource(R.plurals.unassigned_records_prompt_body, summary.count, summary.count),
-        confirmText = stringResource(R.string.unassigned_records_prompt_choose),
-        dismissText = stringResource(R.string.unassigned_records_prompt_later),
+        title = stringResource(Res.string.unassigned_records_prompt_title),
+        message = pluralStringResource(Res.plurals.unassigned_records_prompt_body, summary.count, summary.count),
+        confirmText = stringResource(Res.string.unassigned_records_prompt_choose),
+        dismissText = stringResource(Res.string.unassigned_records_prompt_later),
         onConfirm = {
             viewModel.promptAnswered()
             onChoose()

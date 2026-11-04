@@ -38,7 +38,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.coparently.app.domain.changerequests.AnswerByPick
@@ -134,41 +133,20 @@ import org.koin.compose.viewmodel.koinViewModel
  *   snackbar says so once the inbox has loaded.
  * @param openSection A section to scroll to on arrival, or null — Home opens History this way.
  * @param onOpenAgreement Opens the screen a child support, professional or plan row is answered on.
- * @param splitSharesText Words a split with each share beside the name of the parent who pays it
- *   ("Zuzana pays 35 %, Pavel pays 65 %"), for the split proposal's card. The app's own, read through
- *   Android's resources, until its strings read alike in Compose Multiplatform's reader (their
- *   `%%` beside arguments, CLAUDE.md "Localization"; MON-24 phase 2, slice 11e).
  * @param viewModel Change-request state
  */
 @Composable
-// The parameters are its three ways out, its two arrival targets, the split's wording and its ViewModel.
-@Suppress("LongParameterList")
+// One screen: its sections, the scroll to a chat card's request on arrival, and the sheet that asks to
+// change an agreed swap. Splitting it for the metric would scatter state the screen owns; the parameters
+// are its three ways out, its two arrival targets and its ViewModel.
+@Suppress("LongMethod", "LongParameterList")
 fun ChangeRequestsScreen(
     onBack: () -> Unit,
     onOpenEvent: (String) -> Unit,
     linkedEventId: String? = null,
     openSection: InboxSection? = null,
     onOpenAgreement: (AgreementScreen) -> Unit = {},
-    splitSharesText: @Composable (SplitRatio, ParentNames) -> String,
     viewModel: ChangeRequestViewModel = koinViewModel()
-) {
-    CompositionLocalProvider(LocalSplitSharesText provides splitSharesText) {
-        InboxScreen(onBack, onOpenEvent, linkedEventId, openSection, onOpenAgreement, viewModel)
-    }
-}
-
-/** [ChangeRequestsScreen]'s body, under the split wording it was handed. */
-@Composable
-// One screen: its sections, the scroll to a chat card's request on arrival, and the sheet that asks to
-// change an agreed swap. Splitting it for the metric would scatter state the screen owns.
-@Suppress("LongMethod", "LongParameterList")
-private fun InboxScreen(
-    onBack: () -> Unit,
-    onOpenEvent: (String) -> Unit,
-    linkedEventId: String?,
-    openSection: InboxSection?,
-    onOpenAgreement: (AgreementScreen) -> Unit,
-    viewModel: ChangeRequestViewModel
 ) {
     val state by viewModel.requests.collectAsState()
     val miniMonths by viewModel.miniMonths.collectAsState()
@@ -263,11 +241,6 @@ private fun InboxScreen(
         }
     }
     SwapChangeSheet(changingSwap, parentNames, onOffer = viewModel::proposeSwapChange)
-}
-
-/** The split wording [ChangeRequestsScreen] was handed; nothing else provides it. */
-private val LocalSplitSharesText = staticCompositionLocalOf<@Composable (SplitRatio, ParentNames) -> String> {
-    error("ChangeRequestsScreen provides the split wording")
 }
 
 /**
@@ -731,14 +704,14 @@ private fun SplitProposalCard(
             // Money is never cut off (design item 15): both lines wrap rather than end in an ellipsis.
             agreed?.let { now ->
                 Text(
-                    text = stringResource(Res.string.split_request_now, LocalSplitSharesText.current(now, parentNames)),
+                    text = stringResource(Res.string.split_request_now, splitSharesText(now, parentNames)),
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
             Text(
                 text = stringResource(
                     Res.string.split_request_proposed,
-                    LocalSplitSharesText.current(proposal.ratio, parentNames)
+                    splitSharesText(proposal.ratio, parentNames)
                 ),
                 style = MaterialTheme.typography.bodyMediumEmphasized
             )

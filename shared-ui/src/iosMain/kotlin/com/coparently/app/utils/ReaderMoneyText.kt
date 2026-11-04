@@ -2,8 +2,10 @@ package com.coparently.app.utils
 
 import platform.Foundation.NSDecimalNumber
 import platform.Foundation.NSLocale
+import platform.Foundation.NSNumber
 import platform.Foundation.NSNumberFormatter
 import platform.Foundation.NSNumberFormatterCurrencyStyle
+import platform.Foundation.NSNumberFormatterPercentStyle
 import platform.Foundation.currentLocale
 
 /**
@@ -24,14 +26,28 @@ actual object ReaderMoneyText {
         return if (plain == null || currency == null) plain else currencyText(amount, currency) ?: plain
     }
 
-    private fun currencyText(amount: String, currency: String): String? {
-        val value = NSDecimalNumber(string = amount, locale = NSLocale(localeIdentifier = "en_US_POSIX"))
+    /** Foundation's currency style over the `Double`, as Android's `NumberFormat` formats one. */
+    actual fun amount(value: Double, currency: String): String =
+        currencyFormatter(currency).stringFromNumber(NSNumber(double = value)).orEmpty()
+
+    actual fun percent(fraction: Double): String {
         val formatter = NSNumberFormatter().apply {
             locale = NSLocale.currentLocale
-            numberStyle = NSNumberFormatterCurrencyStyle
-            currencyCode = currency
+            numberStyle = NSNumberFormatterPercentStyle
+            maximumFractionDigits = 0u
         }
-        return formatter.stringFromNumber(value)
+        return formatter.stringFromNumber(NSNumber(double = fraction)).orEmpty()
+    }
+
+    private fun currencyFormatter(currency: String) = NSNumberFormatter().apply {
+        locale = NSLocale.currentLocale
+        numberStyle = NSNumberFormatterCurrencyStyle
+        currencyCode = currency
+    }
+
+    private fun currencyText(amount: String, currency: String): String? {
+        val value = NSDecimalNumber(string = amount, locale = NSLocale(localeIdentifier = "en_US_POSIX"))
+        return currencyFormatter(currency).stringFromNumber(value)
     }
 
     /**

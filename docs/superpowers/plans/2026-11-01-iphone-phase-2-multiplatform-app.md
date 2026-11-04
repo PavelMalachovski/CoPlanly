@@ -1171,8 +1171,8 @@ Then the export and the school import:
   kotlinx-datetime and `StringResource`): `Today` (with `LocalFixedToday`; the app's `JavaToday.kt`
   gave the screens still there `rememberJavaToday()` until round 2 deleted it), `PickerDates` with `LocalDatePickerDialog`
   (the app's `JavaPickerDates.kt` keeps `java.time` overloads that call the shared conversion),
-  `components/TimePicker` (`ClockFormat.is24Hour` for the dial; `JavaTimePicker.kt` keeps a `java.time`
-  overload and the previews), `AnswerByField`, `HolidayNames` (`readerLanguage()`, an `expect`),
+  `components/TimePicker` (`ClockFormat.is24Hour` for the dial; `JavaTimePicker.kt` kept a `java.time`
+  overload and the previews, until the overload went in 11d and the file became `TimePickerPreviews.kt`), `AnswerByField`, `HolidayNames` (`readerLanguage()`, an `expect`),
   `EventTypeLabel`, `FamilyMemberChips`, and `MONTH_PAGING_MS`/`monthPagingTween`
   (`MonthPagingTween.kt`; the direction and transition stay with Expenses for 11e). `TodayTest` →
   `:shared-ui` `commonTest`; `PickerDatesTest` reads `fromPickerMillisJava`; `HolidayNamesTest` and
@@ -1275,7 +1275,8 @@ Then the export and the school import:
   Compose Multiplatform's `stringResource`. `EventMemberMark.of` lost its locale. `JavaToday.kt` is
   deleted (Home, custody's preview and the proposal preview read `rememberToday()` now);
   `JavaPickerDates.kt` and `JavaTimePicker.kt` stay, for expenses, the child records, the change
-  request, the export and two androidTest classes. The ten tests run in `commonTest`, their names
+  request, the export and two androidTest classes *(`JavaTimePicker.kt`'s overload went in 11d, the file
+  renamed `TimePickerPreviews.kt`; `JavaPickerDates.kt` is retired in 11e and 11g)*. The ten tests run in `commonTest`, their names
   without commas or parentheses; `CalendarScreenshots`, `HomeScreenshots` and `RequestScreenshots`
   convert their fixtures at the call. Public for the app: `MonthView`, `SwapDaysButton`,
   `DaySwapSelectionBar`, `DaySwapSheet`, `DaySwapSheetContent`, `SwapSheetOffer`, `SwapSheetActions`,
@@ -1362,6 +1363,26 @@ Then the export and the school import:
   `StringsParityTest` lost its special case and its pinned-difference test, which now holds the
   shares alike. The app's `SplitShares.kt` and the `InlineBanner` screenshot fixture pass the sign;
   no screenshot's text changes.
+- Group 2, the family's screens (`git mv`, packages unchanged, `R.string` → `Res.string`), with the 11d
+  review's two notes (the two `JavaTimePicker.kt` lines above marked as gone in 11d, and
+  `WeekdayNamesTest`, `androidUnitTest`: `readerName("EEE"/"EEEE"/"EEEEE")` against
+  `DayOfWeek.getDisplayName(SHORT/FULL/NARROW, Locale.getDefault())` for the seven days in en-150, en,
+  cs, de, ru and uk, the format forms the custody screens used): `family/FamilyScreen.kt`,
+  `EarlierFamiliesScreen.kt`, `UnassignedRecordsScreen.kt` and `UnassignedRecordsEntries.kt`; beside
+  them, what they read from screens still in the app: `changerequests/SplitShares.kt` (`splitSharesText`
+  public; `ChangeRequestsScreen`'s 11d parameter and local and `NavGraph`'s lambda gone, the screen's
+  body back in `ChangeRequestsScreen`), `stickers/StickerViews.kt` (`roleOrNull`, `senderLine` public for
+  `MyStickersScreen`), the new `settings/FamilyDialogs.kt` (`caresForSummary`, `FamilyKindDialog`,
+  `SplitRatioDialog`, cut from `SettingsScreen.kt`, which did not call them), the new `home/MoneyText.kt`
+  (`formatMoney`, `balanceCaption`, cut from `HomeScreen.kt`) and `home/SettleUpPosition.kt`
+  (`SettleUpPositionTest` → `commonTest`, two names without commas). The money seam gained
+  `ReaderMoneyText.amount(value: Double, currency: String)` (Android: `currencyFormat(currency).format(value)`,
+  what `formatMoney` and the family screens' `currencyFormat(…).format(…)` were; iPhone: Foundation's
+  currency style over an `NSNumber`) and `percent(fraction)` (Android: the default locale's
+  `NumberFormat.getPercentInstance` with no fraction digits, for the analytics in group 3). Replaced:
+  `utils.format(localizedDate(skeleton))` → `ReaderDateText.date`; the unassigned records' snackbar,
+  worded with the Activity's `Context`, → a `UiText` resolved by `rememberUiTextResolver()`; `@StringRes
+  Int` → `StringResource`. Public for the screenshots: `FamilyMoneyCard`.
 
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 

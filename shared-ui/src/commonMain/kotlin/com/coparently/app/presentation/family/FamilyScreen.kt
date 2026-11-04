@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.family
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -47,8 +46,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.data.repository.RatioSubmission
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.FamilyKind
@@ -71,6 +68,58 @@ import com.coparently.app.presentation.stickers.HomeStickers
 import com.coparently.app.presentation.stickers.StickersRow
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.documents_settings_description
+import com.coparently.app.resources.documents_settings_title
+import com.coparently.app.resources.earlier_families_row_supporting
+import com.coparently.app.resources.earlier_families_title
+import com.coparently.app.resources.export_settings_description
+import com.coparently.app.resources.export_settings_title
+import com.coparently.app.resources.family_children_add
+import com.coparently.app.resources.family_coparent_shared
+import com.coparently.app.resources.family_group_agreements
+import com.coparently.app.resources.family_group_home
+import com.coparently.app.resources.family_group_mine
+import com.coparently.app.resources.family_group_money
+import com.coparently.app.resources.family_group_people
+import com.coparently.app.resources.family_group_records
+import com.coparently.app.resources.family_money_this_month
+import com.coparently.app.resources.family_pairing_linked
+import com.coparently.app.resources.family_title
+import com.coparently.app.resources.friend_section_supporting
+import com.coparently.app.resources.friend_section_title
+import com.coparently.app.resources.home_contacts
+import com.coparently.app.resources.home_contacts_supporting
+import com.coparently.app.resources.journal_settings_description
+import com.coparently.app.resources.journal_title
+import com.coparently.app.resources.month_review_settings_description
+import com.coparently.app.resources.month_review_title
+import com.coparently.app.resources.nav_settings
+import com.coparently.app.resources.parenting_plan_settings_description
+import com.coparently.app.resources.parenting_plan_title
+import com.coparently.app.resources.professional_section_supporting
+import com.coparently.app.resources.professional_section_title
+import com.coparently.app.resources.settings_child_info_description
+import com.coparently.app.resources.settings_child_info_title
+import com.coparently.app.resources.settings_coparent_profile_description
+import com.coparently.app.resources.settings_custody_description
+import com.coparently.app.resources.settings_custody_title
+import com.coparently.app.resources.settings_family_kind_kept_by_co_parent
+import com.coparently.app.resources.settings_family_kind_not_saved
+import com.coparently.app.resources.settings_family_kind_records_kept
+import com.coparently.app.resources.settings_family_kind_title
+import com.coparently.app.resources.settings_pairing_description
+import com.coparently.app.resources.settings_pairing_title
+import com.coparently.app.resources.settings_pets_description
+import com.coparently.app.resources.settings_pets_title
+import com.coparently.app.resources.settings_split_ratio_applied
+import com.coparently.app.resources.settings_split_ratio_proposed
+import com.coparently.app.resources.settings_split_ratio_refused
+import com.coparently.app.resources.settings_split_ratio_title
+import com.coparently.app.resources.settings_split_ratio_value_named
+import com.coparently.app.resources.support_row_supporting
+import com.coparently.app.resources.support_title
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -193,11 +242,11 @@ fun FamilyScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.family_title)) },
+                title = { Text(stringResource(Res.string.family_title)) },
                 actions = {
                     FamilySwitcherChip()
                     IconButton(onClick = destinations.settings) {
-                        Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.nav_settings))
+                        Icon(Icons.Default.Settings, contentDescription = stringResource(Res.string.nav_settings))
                     }
                 }
             )
@@ -211,14 +260,14 @@ fun FamilyScreen(
                 .padding(horizontal = Spacing.L, vertical = Spacing.S),
             verticalArrangement = Arrangement.spacedBy(Spacing.L)
         ) {
-            Group(R.string.family_group_money) {
+            Group(Res.string.family_group_money) {
                 FamilyMoneyCard(money = money, coParentName = linkedCoParent, onOpen = destinations.expenses)
                 Divider()
                 NavRow(
                     Icons.Default.Balance,
-                    R.string.settings_split_ratio_title,
+                    Res.string.settings_split_ratio_title,
                     stringResource(
-                        R.string.settings_split_ratio_value_named,
+                        Res.string.settings_split_ratio_value_named,
                         parentNames.labelFor(SLOT_ONE),
                         familySplit.ratio.momPercent,
                         parentNames.labelFor(SLOT_TWO),
@@ -229,21 +278,25 @@ fun FamilyScreen(
                 Divider()
                 NavRow(
                     Icons.Default.Payments,
-                    R.string.support_title,
-                    R.string.support_row_supporting,
+                    Res.string.support_title,
+                    Res.string.support_row_supporting,
                     destinations.support
                 )
             }
 
             AgreementsGroup(schedule, destinations)
 
-            Group(R.string.family_group_home) {
+            Group(Res.string.family_group_home) {
                 if (FamilyKind.CHILDREN in caresFor) {
                     NavRow(
                         Icons.Default.ChildCare,
-                        R.string.settings_child_info_title,
+                        Res.string.settings_child_info_title,
                         stringResource(
-                            if (hasChildren) R.string.settings_child_info_description else R.string.family_children_add
+                            if (hasChildren) {
+                                Res.string.settings_child_info_description
+                            } else {
+                                Res.string.family_children_add
+                            }
                         ),
                         destinations.childInfo
                     )
@@ -252,45 +305,45 @@ fun FamilyScreen(
                 if (FamilyKind.PETS in caresFor) {
                     NavRow(
                         Icons.Default.Pets,
-                        R.string.settings_pets_title,
-                        R.string.settings_pets_description,
+                        Res.string.settings_pets_title,
+                        Res.string.settings_pets_description,
                         destinations.pets
                     )
                     Divider()
                 }
                 NavRow(
                     Icons.Default.Contacts,
-                    R.string.home_contacts,
-                    R.string.home_contacts_supporting,
+                    Res.string.home_contacts,
+                    Res.string.home_contacts_supporting,
                     destinations.contacts
                 )
                 Divider()
                 NavRow(
                     Icons.Default.FolderShared,
-                    R.string.documents_settings_title,
-                    R.string.documents_settings_description,
+                    Res.string.documents_settings_title,
+                    Res.string.documents_settings_description,
                     destinations.documents
                 )
                 Divider()
                 // What this family co-parents, and the way back into that answer: without it a
                 // family that gets a dog a year later could never reach the pet records.
-                NavRow(Icons.Default.FamilyRestroom, R.string.settings_family_kind_title, caresForSummary(caresFor)) {
+                NavRow(Icons.Default.FamilyRestroom, Res.string.settings_family_kind_title, caresForSummary(caresFor)) {
                     showFamilyKindPicker = true
                 }
             }
 
             RecordsGroup(destinations)
 
-            Group(R.string.family_group_people) {
+            Group(Res.string.family_group_people) {
                 // Records that name none of the families; draws itself and its divider only while
                 // some wait.
                 UnassignedRecordsRow(onOpen = destinations.unassignedRecords)
                 NavRow(
                     Icons.Default.Group,
-                    R.string.settings_pairing_title,
+                    Res.string.settings_pairing_title,
                     // Linked: who with. Not yet: what linking gives.
-                    linkedCoParent?.let { stringResource(R.string.family_pairing_linked, it) }
-                        ?: stringResource(R.string.settings_pairing_description),
+                    linkedCoParent?.let { stringResource(Res.string.family_pairing_linked, it) }
+                        ?: stringResource(Res.string.settings_pairing_description),
                     destinations.pairing
                 )
                 // Only once linked: before that the screen could say nothing but "not linked",
@@ -301,8 +354,8 @@ fun FamilyScreen(
                     Divider()
                     SectionRow(
                         icon = Icons.Default.PersonOutline,
-                        title = stringResource(R.string.family_coparent_shared, linkedCoParent),
-                        supporting = stringResource(R.string.settings_coparent_profile_description),
+                        title = stringResource(Res.string.family_coparent_shared, linkedCoParent),
+                        supporting = stringResource(Res.string.settings_coparent_profile_description),
                         onClick = destinations.coParentProfile,
                         trailing = { Chevron() }
                     )
@@ -310,20 +363,20 @@ fun FamilyScreen(
                 Divider()
                 NavRow(
                     Icons.Default.Diversity3,
-                    R.string.friend_section_title,
-                    R.string.friend_section_supporting,
+                    Res.string.friend_section_title,
+                    Res.string.friend_section_supporting,
                     destinations.friends
                 )
                 Divider()
                 NavRow(
                     Icons.Default.Gavel,
-                    R.string.professional_section_title,
-                    R.string.professional_section_supporting,
+                    Res.string.professional_section_title,
+                    Res.string.professional_section_supporting,
                     destinations.professionals
                 )
             }
 
-            Group(R.string.family_group_mine) {
+            Group(Res.string.family_group_mine) {
                 StickersRow(onOpen = destinations.stickers)
                 EarlierFamiliesRow(shown = !earlierFamilies.isNullOrEmpty(), onOpen = destinations.earlierFamilies)
             }
@@ -340,20 +393,20 @@ fun FamilyScreen(
  */
 @Composable
 private fun AgreementsGroup(schedule: CustodyModelType?, destinations: FamilyDestinations) {
-    Group(R.string.family_group_agreements) {
+    Group(Res.string.family_group_agreements) {
         NavRow(
             Icons.Default.DateRange,
-            R.string.settings_custody_title,
+            Res.string.settings_custody_title,
             // The schedule in force, by kind; the set-up prompt only while there is none.
             schedule?.let { stringResource(it.labelRes()) }
-                ?: stringResource(R.string.settings_custody_description),
+                ?: stringResource(Res.string.settings_custody_description),
             destinations.custody
         )
         Divider()
         NavRow(
             Icons.AutoMirrored.Filled.Assignment,
-            R.string.parenting_plan_title,
-            R.string.parenting_plan_settings_description,
+            Res.string.parenting_plan_title,
+            Res.string.parenting_plan_settings_description,
             destinations.parentingPlan
         )
     }
@@ -366,25 +419,25 @@ private fun AgreementsGroup(schedule: CustodyModelType?, destinations: FamilyDes
  */
 @Composable
 private fun RecordsGroup(destinations: FamilyDestinations) {
-    Group(R.string.family_group_records) {
+    Group(Res.string.family_group_records) {
         NavRow(
             Icons.Default.Insights,
-            R.string.month_review_title,
-            R.string.month_review_settings_description,
+            Res.string.month_review_title,
+            Res.string.month_review_settings_description,
             destinations.monthReview
         )
         Divider()
         NavRow(
             Icons.Default.Description,
-            R.string.export_settings_title,
-            R.string.export_settings_description,
+            Res.string.export_settings_title,
+            Res.string.export_settings_description,
             destinations.export
         )
         Divider()
         NavRow(
             Icons.Default.Lock,
-            R.string.journal_title,
-            R.string.journal_settings_description,
+            Res.string.journal_title,
+            Res.string.journal_settings_description,
             destinations.journal
         )
     }
@@ -396,9 +449,9 @@ private fun RecordsGroup(destinations: FamilyDestinations) {
  */
 @Composable
 private fun FamilyOutcomes(settingsViewModel: SettingsViewModel, snackbarHostState: SnackbarHostState) {
-    val splitApplied = stringResource(R.string.settings_split_ratio_applied)
-    val splitProposed = stringResource(R.string.settings_split_ratio_proposed)
-    val splitRefused = stringResource(R.string.settings_split_ratio_refused)
+    val splitApplied = stringResource(Res.string.settings_split_ratio_applied)
+    val splitProposed = stringResource(Res.string.settings_split_ratio_proposed)
+    val splitRefused = stringResource(Res.string.settings_split_ratio_refused)
     LaunchedEffect(Unit) {
         settingsViewModel.ratioSubmission.collect { outcome ->
             snackbarHostState.showSnackbar(
@@ -410,9 +463,9 @@ private fun FamilyOutcomes(settingsViewModel: SettingsViewModel, snackbarHostSta
             )
         }
     }
-    val keptByCoParent = stringResource(R.string.settings_family_kind_kept_by_co_parent)
-    val notSaved = stringResource(R.string.settings_family_kind_not_saved)
-    val recordsKept = stringResource(R.string.settings_family_kind_records_kept)
+    val keptByCoParent = stringResource(Res.string.settings_family_kind_kept_by_co_parent)
+    val notSaved = stringResource(Res.string.settings_family_kind_not_saved)
+    val recordsKept = stringResource(Res.string.settings_family_kind_records_kept)
     LaunchedEffect(Unit) {
         settingsViewModel.caresForOutcome.collect { outcome ->
             snackbarHostState.showSnackbar(
@@ -436,13 +489,13 @@ private fun FamilyOutcomes(settingsViewModel: SettingsViewModel, snackbarHostSta
  * @param onOpen Opens the Expenses screen
  */
 @Composable
-internal fun SectionGroupScope.FamilyMoneyCard(money: MonthMoney?, coParentName: String?, onOpen: () -> Unit) {
+fun SectionGroupScope.FamilyMoneyCard(money: MonthMoney?, coParentName: String?, onOpen: () -> Unit) {
     val amounts = money?.spend?.byCurrency.orEmpty().joinToString("\n") { formatMoney(it.amount, it.currency) }
     SectionRow(
         icon = Icons.Default.Payments,
-        title = amounts.ifBlank { stringResource(R.string.family_money_this_month) },
+        title = amounts.ifBlank { stringResource(Res.string.family_money_this_month) },
         supporting = money?.let {
-            stringResource(R.string.family_money_this_month) + "\n" + balanceCaption(it.balances, coParentName)
+            stringResource(Res.string.family_money_this_month) + "\n" + balanceCaption(it.balances, coParentName)
         },
         onClick = onOpen,
         trailing = { Chevron() }
@@ -451,7 +504,7 @@ internal fun SectionGroupScope.FamilyMoneyCard(money: MonthMoney?, coParentName:
 
 /** A labelled group of rows. */
 @Composable
-private fun Group(@StringRes label: Int, content: @Composable SectionGroupScope.() -> Unit) {
+private fun Group(label: StringResource, content: @Composable SectionGroupScope.() -> Unit) {
     Column {
         GroupLabel(stringResource(label))
         SectionGroup(content = content)
@@ -466,15 +519,15 @@ private fun Group(@StringRes label: Int, content: @Composable SectionGroupScope.
 private fun SectionGroupScope.EarlierFamiliesRow(shown: Boolean, onOpen: () -> Unit) {
     if (!shown) return
     Divider()
-    NavRow(Icons.Default.History, R.string.earlier_families_title, R.string.earlier_families_row_supporting, onOpen)
+    NavRow(Icons.Default.History, Res.string.earlier_families_title, Res.string.earlier_families_row_supporting, onOpen)
 }
 
 /** A row that opens a screen, with its title and description as resources. */
 @Composable
 private fun SectionGroupScope.NavRow(
     icon: ImageVector,
-    title: Int,
-    supporting: Int,
+    title: StringResource,
+    supporting: StringResource,
     onClick: () -> Unit
 ) = NavRow(icon, title, stringResource(supporting), onClick)
 
@@ -482,7 +535,7 @@ private fun SectionGroupScope.NavRow(
 @Composable
 private fun SectionGroupScope.NavRow(
     icon: ImageVector,
-    title: Int,
+    title: StringResource,
     supporting: String,
     onClick: () -> Unit
 ) {
