@@ -1379,7 +1379,8 @@ screenshots render). A test that moves with its code to `:shared-ui` keeps `inte
   `app/src/main/java/com/coparently/app/di/koin/` and are listed in `appModules` (`AppModules.kt`),
   which also includes `:shared-data`'s `dataModules` and `platformDataModule` and `:shared-ui`'s
   `uiModules` and `platformUiModule` (`shared-ui/.../di/koin/UiModules.kt`, MON-24 phase 2, Task 10:
-  the shared state and every ViewModel but the two whose sign-ins run on an Android activity, one
+  the shared state and every ViewModel — the last two, whose sign-ins run on an Android activity,
+  since Task 11's slice 11f, behind the shell's `GoogleCalendarSignIn` and `CredentialSignIn` — one
   module per feature; a new ViewModel goes there);
   a class the graph builds is a `singleOf`/`factoryOf`/`viewModelOf`/`workerOf` there (a `single`
   for what is one per process, as a Hilt `@Singleton` was), an interface is bound with
@@ -1637,7 +1638,8 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              Home's, the month review's, the stickers', the consents', the AI consent's, the
              child's and pet's records', the contacts', the documents', the journal's, family
              friends', the guest's, professionals', the parenting plan's, the export's and the
-             school import's: every one but the two whose sign-ins run on an Android activity),
+             school import's: every one but the two whose sign-ins run on an Android activity,
+             which followed in slice 11f),
              with their Koin modules: uiModules and platformUiModule, which appModules includes.
              Then the screens (Task 11), from slice 11a's foundation: presentation/platform/ (the
              capabilities a screen asks of the phone, provided by the shell), the date seam
@@ -1654,7 +1656,9 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              and the expenses' and child support's screens (presentation/expenses/,
              presentation/support/); and, from slice 11f, Settings' screens (presentation/settings/,
              with the country picker and the consent screens) and SyncViewModel, then pairing's and
-             onboarding's screens (presentation/pairing/, presentation/onboarding/).
+             onboarding's screens (presentation/pairing/, presentation/onboarding/), then the
+             sign-in's and the profile's (presentation/auth/, presentation/profile/) with
+             AuthViewModel.
              It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
@@ -1668,16 +1672,17 @@ data/      — Room (v46 + migrations), Firestore/Google clients, repository imp
              sync but its WorkManager classes, the request clocks but their notices and worker,
              data/family/, the school import but its wording and worker, the export but its file
              writer, and some of data/chat/, data/support/ and data/session/
-presentation/ — Compose screens per feature, and the ViewModel whose sign-ins run on an
-             Android activity (AuthViewModel; Task 11). Their strings, the theme, the design
-             system's components, the shared state and every other ViewModel are in shared-ui/
-             (Task 10; SyncViewModel since slice 11f), and so are chat's, the event form's, the
-             calendar's, custody's, the requests', the family's, the expenses', child support's,
-             Settings', pairing's and onboarding's screens (Task 11, slices 11b–11f); the app keeps
-             their previews and the Android halves of the platform interfaces
+presentation/ — Compose screens per feature not moved yet (slice 11g), MainActivity, the widget
+             and navigation. The strings, the theme, the design system's components, the shared
+             state and every ViewModel are in shared-ui/ (Task 10; SyncViewModel and AuthViewModel
+             since slice 11f), and so are chat's, the event form's, the calendar's, custody's, the
+             requests', the family's, the expenses', child support's, Settings', pairing's,
+             onboarding's, the sign-in's and the profile's screens (Task 11, slices 11b–11f); the
+             app keeps their previews and the Android halves of the platform interfaces
              (presentation/platform/, the language picker's AndroidAppLanguages, Google's
-             sign-in's AndroidGoogleCalendarSignIn, the QR scanner's QRScannerActivity and
-             QrScannerScreen, the invitation QR's AndroidInviteQrCodes)
+             sign-in's AndroidGoogleCalendarSignIn, the credential sheets' AndroidCredentialSignIn
+             with AndroidAuthErrors, the QR scanner's QRScannerActivity and QrScannerScreen, the
+             invitation QR's AndroidInviteQrCodes)
 di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
              listed in appModules); the database builder (DatabaseBuilder.kt) and the file name
              (DatabaseName.kt) are in shared-data/ since MON-24 phase 2
@@ -2040,10 +2045,10 @@ public for the app's `TwoPaneTest` and Chat); `ListSkeleton` with `components/Sk
 `RecordPlaceMark`; and the notification and microphone requesters (`PermissionRequesters.kt`, over
 `PermissionRequester`; `hasNotificationPermission(context)` and `hasMicrophonePermission(context)`
 stay in the app's `AndroidPermissionChecks.kt`). Still in the app, each for its reason:
-`AuthViewModel`, whose sign-ins run on an Android activity (Task 11, below; `SyncViewModel` left in
-slice 11f); the Android halves of the platform interfaces (`SharedFileViewer`, `SensitiveClipboard`,
-`PrivacyPolicyLink`, `TermsOfServiceLink`, which `AndroidPlatform.kt` calls or which read
-`BuildConfig` for screens still in the app); the `java.time` users whose signatures carry
+~~`AuthViewModel` and `SyncViewModel`, whose sign-ins run on an Android activity~~ (both moved in
+slice 11f, below); the Android halves of the platform interfaces (`SharedFileViewer`,
+`SensitiveClipboard`, which `AndroidPlatform.kt` calls; `PrivacyPolicyLink` and `TermsOfServiceLink`
+are gone since slice 11f, their screens reading `AppBuildValues` and `OpenUrl`); the `java.time` users whose signatures carry
 `java.time` to their callers (~~`MonthPaging`'s direction and transition, Expenses'~~, moved with
 Expenses in slice 11e onto kotlinx-datetime, and `VaccinationListEditor`), each moving with its screens onto kotlinx-datetime and the date seam; the
 `@StringRes` label helpers (`BloodTypeLabel`, `PetSpeciesLabel`; ~~`CountryPicker`~~, moved with Settings
@@ -2234,7 +2239,35 @@ QR (`InviteQrCodes.available`, new, true by default; the iPhone's `NoInviteQrCod
 or scanner (the iPhone for now) the card offers no Share, no copy (the code stays, the line under
 it says only how long it lasts) and the form no scan button; and the onboarding's notification step
 offers its button only where the phone asks for the permission. `QRScannerActivity`,
-`QrScannerScreen` and `AndroidInviteQrCodes` stay in the app.
+`QrScannerScreen` and `AndroidInviteQrCodes` stay in the app. **Then the sign-in's and the profile's screens, with
+`AuthViewModel`** (slice 11f): `presentation/auth/`'s `AuthScreen`, `AuthLegalNotice`, `AuthError` (the
+type alone, with an empty companion), `AuthErrorText` (`messageRes()` a `StringResource`) and
+`AuthViewModel` (`authUiModule`), and `profile/ProfileScreen.kt`. **The ordering rules are the
+ViewModel's own, unchanged**: the save prompt before `onSuccess`, the `finally` that clears
+`isLoading`, cancellations rethrown. What it asked of Android goes through three seams. The
+credential sheets are the shell's **`CredentialSignIn`** (`presentation/platform/`: Google's id token,
+a saved password as a `SavedCredential` whose `toString` hides it, the offer to save), which
+`MainActivity` alone provides through `LocalCredentialSignIn` (`AndroidCredentialSignIn` over
+`CredentialAuthenticator` on the activity, so the Activity stays on Android's side and the ViewModel
+is handed this on each call where it was handed the Activity); the account's calls are the data
+layer's new **`AccountSignIn`** (`data/remote/firebase/`, in `:shared-data`; `FirebaseAuthService`
+answers it, its four methods `override`s returning `Result<FirebaseUser>` for `Result<Any>`; the
+iPhone's `NoAccountSignIn` fails every call); and which `AuthError` an exception is goes through
+**`AuthErrors`** (`presentation/auth/`, bound by the app to `AndroidAuthErrors`, whose mappings are the
+companion's old ones as `AuthError.Companion` extensions, so `AuthErrorTest` reads them as before; the
+iPhone's `NoAuthErrors` calls every failure `Unknown`) — a Koin seam rather than a member of
+`CredentialSignIn`, because the password reset has no sheet to be handed. The events are
+`data/platform/AnalyticsEvents.kt`'s new `logLogin` and `logSignUp` (Firebase's `login` and `sign_up`
+with `method`, as `AnalyticsManager`'s functions of those names logged them; they left it), the reports
+`CrashReporter.recordWithContext`. The screen offers Google and a saved password only where
+`CredentialSignIn.available` (not on the iPhone); the legal notice draws the terms clause and the two
+links only while their address is set and the phone opens links (`AppBuildValues`, `OpenUrl`), so the
+app's `PrivacyPolicyLink` and `TermsOfServiceLink` are gone. The profile's dates are
+`readerMediumDate` and its picker the kotlinx `LocalDatePickerDialog` with the child records' labels
+(where it opened the child records' `java.time` `DatePickerDialog`). `AuthViewModelTest` and
+`AuthErrorTest` stay in the app (MockK, androidx.credentials, Firebase): the first hands the ViewModel
+`AndroidCredentialSignIn` over the mocked authenticator and `AndroidAuthErrors`, so every case still
+drives the Android halves. The app's `viewModelModule` is gone with its last ViewModel.
 **A Robolectric test runs `RobolectricTestApplication`**
 (`app/src/test/.../testing/`, `@Config(application = …)`): Robolectric installs no content
 provider from the manifest, so it hands Compose Multiplatform's resource reader the context its
@@ -2438,8 +2471,9 @@ Task 11 gives the screens their platform interfaces: `AuthViewModel` hands Crede
 Auth exception types into `AuthError`; `SyncViewModel` builds Google Sign-In's `Intent` and reads
 its `Task<GoogleSignInAccount>` result, an activity-result flow, through `CredentialManagerService`.
 Each moves once its sign-in is behind a platform interface the screen provides (plan, Task 11's
-carried notes; `SyncViewModel` did in slice 11f, behind `GoogleCalendarSignIn` and
-`GoogleCalendarAccount`, below).
+carried notes; both did in slice 11f: `SyncViewModel` behind `GoogleCalendarSignIn` and
+`GoogleCalendarAccount`, `AuthViewModel` behind `CredentialSignIn`, `AccountSignIn` and
+`AuthErrors`, below).
 Slice 10f moves **the rest**. Its first group is **Home, the month in review, stickers and the
 consents**. `HomeViewModel` (with `HomeIdentityDependencies`, a `factory`) and
 `PutOffAsksViewModel` are in `homeUiModule`, with what Home's ViewModel reads and nothing Android
@@ -2506,7 +2540,7 @@ did. The iPhone's `platformDataModule` binds `NoRecordFiles` (rendering fails, n
 screen says the export failed) and the school directory over its own client, as it binds the
 Bakaláři client. The three tests (MockK) run in `androidUnitTest`. **Task 10 is done but for
 `AuthViewModel` and `SyncViewModel`**, which stay in the app until Task 11 (above); the app's
-`viewModelModule` holds those two alone (`AuthViewModel` alone since slice 11f moved `SyncViewModel`).
+`viewModelModule` holds those two alone (both moved in slice 11f, and `viewModelModule` with them).
 
 **What a moved screen asks of the phone goes through `presentation/platform/`** (MON-24 phase 2,
 Task 11, slice 11a). One interface per capability in `:shared-ui`'s `commonMain` — `ShareSheet`,
@@ -4296,8 +4330,9 @@ below hold what it fixed in place.
      sweep.
 7. **What signing in agrees to is on the sign-in screen** (`AuthLegalNotice`).
    - The age line is always shown. The terms clause and its link appear only while
-     `BuildConfig.TERMS_URL` is set (`TermsOfServiceLink`, like `PrivacyPolicyLink`), and Settings
-     links both.
+     `BuildConfig.TERMS_URL` is set (`AppBuildValues.termsUrl`, like `privacyPolicyUrl`, read through
+     the platform since MON-24 phase 2, slice 11f) and the phone can open a link (`OpenUrl.available`),
+     and Settings links both.
    - Telemetry is never described as "anonymous". It carries a pseudonymous installation
      identifier (L-13).
 8. **A record's photo is stored under its family's path, read only by the family's two parents,

@@ -33,3 +33,12 @@ fun Analytics.logPetUpdated() = log("pet_updated")
 
 /** A pet's record deleted. */
 fun Analytics.logPetDeleted() = log("pet_deleted")
+
+/**
+ * A sign-in to the app's account, with how ([method]: "email", "google", "saved_password"): Firebase
+ * Analytics' own `login` event and `method` parameter, as `AnalyticsManager.logLogin` logged them.
+ */
+fun Analytics.logLogin(method: String) = log("login", mapOf("method" to method))
+
+/** An account created, with how: Firebase Analytics' own `sign_up` event and `method` parameter. */
+fun Analytics.logSignUp(method: String) = log("sign_up", mapOf("method" to method))

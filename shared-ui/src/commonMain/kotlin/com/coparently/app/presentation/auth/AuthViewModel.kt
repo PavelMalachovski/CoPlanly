@@ -1,12 +1,13 @@
 package com.coparently.app.presentation.auth
 
-import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.data.analytics.AnalyticsManager
-import com.coparently.app.data.crashlytics.CrashlyticsManager
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
-import com.coparently.app.data.remote.google.CredentialAuthenticator
+import com.coparently.app.data.platform.Analytics
+import com.coparently.app.data.platform.CrashReporter
+import com.coparently.app.data.platform.logLogin
+import com.coparently.app.data.platform.logSignUp
+import com.coparently.app.data.remote.firebase.AccountSignIn
+import com.coparently.app.presentation.platform.CredentialSignIn
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,14 +18,21 @@ import kotlinx.coroutines.launch
 /**
  * State for the login screen: the four ways in, and why the last attempt failed.
  *
- * Every credential operation takes the [Activity] as a parameter. Credential Manager hosts its UI
- * on one, and a ViewModel outlives an Activity — storing the reference would leak it.
+ * Every credential operation takes the shell's [CredentialSignIn] as a parameter. Credential Manager
+ * hosts its UI on an Activity, which the shell holds (`AndroidCredentialSignIn`), and a ViewModel
+ * outlives an Activity — storing the reference would leak it.
+ *
+ * In `:shared-ui` since MON-24 phase 2 (slice 11f): the account calls go through [AccountSignIn]
+ * (the app's `FirebaseAuthService`), the SDKs' exceptions are worded through [AuthErrors] (the app's
+ * `AndroidAuthErrors`), and the events and reports through [Analytics] and [CrashReporter]. The
+ * ordering rules are unchanged: the save prompt before `onSuccess`, the `finally` that clears
+ * [AuthUiState.isLoading], cancellations rethrown.
  */
 class AuthViewModel(
-    private val firebaseAuthService: FirebaseAuthService,
-    private val credentialAuthenticator: CredentialAuthenticator,
-    private val analyticsManager: AnalyticsManager,
-    private val crashlyticsManager: CrashlyticsManager
+    private val firebaseAuthService: AccountSignIn,
+    private val authErrors: AuthErrors,
+    private val analyticsManager: Analytics,
+    private val crashlyticsManager: CrashReporter
 ) : ViewModel() {
 
     /** Invoked after any successful authentication so the host can refresh its auth state. */
@@ -86,10 +94,10 @@ class AuthViewModel(
     /**
      * Signs in with the typed email and password, then offers to remember them.
      *
-     * @param activity Activity to host the save prompt on
+     * @param credentials The shell's credential sheets, to host the save prompt
      * @param onSuccess Runs after the save prompt has been dealt with — see [completeSignIn]
      */
-    fun signIn(activity: Activity, onSuccess: () -> Unit) {
+    fun signIn(credentials: CredentialSignIn, onSuccess: () -> Unit) {
         val state = _uiState.value
         if (state.email.isBlank() || state.password.isBlank()) {
             _uiState.update { it.copy(error = AuthError.EmptyFields) }
@@ -107,7 +115,7 @@ class AuthViewModel(
                 firebaseAuthService.signInWithEmail(state.email, state.password).fold(
                     onSuccess = {
                         analyticsManager.logLogin("email")
-                        completeSignIn(activity, state.email, state.password, onSuccess)
+                        completeSignIn(credentials, state.email, state.password, onSuccess)
                     },
                     onFailure = { error -> reportEmailFailure(error, "sign_in") }
                 )
@@ -120,10 +128,10 @@ class AuthViewModel(
     /**
      * Creates an account with the typed email and password, then offers to remember them.
      *
-     * @param activity Activity to host the save prompt on
+     * @param credentials The shell's credential sheets, to host the save prompt
      * @param onSuccess Runs after the save prompt has been dealt with
      */
-    fun signUp(activity: Activity, onSuccess: () -> Unit) {
+    fun signUp(credentials: CredentialSignIn, onSuccess: () -> Unit) {
         val state = _uiState.value
         if (state.email.isBlank() || state.password.isBlank()) {
             _uiState.update { it.copy(error = AuthError.EmptyFields) }
@@ -138,7 +146,7 @@ class AuthViewModel(
                 firebaseAuthService.createAccountWithEmail(state.email, state.password).fold(
                     onSuccess = {
                         analyticsManager.logSignUp("email")
-                        completeSignIn(activity, state.email, state.password, onSuccess)
+                        completeSignIn(credentials, state.email, state.password, onSuccess)
                     },
                     onFailure = { error -> reportEmailFailure(error, "sign_up") }
                 )
@@ -164,12 +172,12 @@ class AuthViewModel(
      * the normal and the cancelled path. `AuthViewModel` survives the recreation this can trigger,
      * so without it every control on the screen would stay disabled until the app is force-stopped.
      *
-     * @param activity Activity to host Google's UI on
+     * @param credentials The shell's credential sheets, to host Google's UI
      */
-    suspend fun signInWithGoogle(activity: Activity) {
+    suspend fun signInWithGoogle(credentials: CredentialSignIn) {
         _uiState.update { it.copy(isLoading = true, error = null) }
         try {
-            credentialAuthenticator.signInWithGoogle(activity).fold(
+            credentials.googleIdToken().fold(
                 onSuccess = { idToken ->
                     firebaseAuthService.signInWithGoogleIdToken(idToken).fold(
                         onSuccess = {
@@ -190,7 +198,7 @@ class AuthViewModel(
     /**
      * Offers the passwords the system has stored, and signs in with the chosen one.
      *
-     * Feeds the result into the same [FirebaseAuthService.signInWithEmail] path the typed form
+     * Feeds the result into the same [AccountSignIn.signInWithEmail] path the typed form
      * uses, so there is no second authentication route to keep in step. Deliberately does **not**
      * offer to save the password afterwards: it came from the store it would be saved back into.
      *
@@ -200,12 +208,12 @@ class AuthViewModel(
      * would otherwise skip every `isLoading = false` in this body. `finally` clears it on the
      * cancelled path too, so a config change mid-lookup cannot leave the screen locked.
      *
-     * @param activity Activity to host the picker on
+     * @param credentials The shell's credential sheets, to host the picker
      */
-    suspend fun signInWithSavedPassword(activity: Activity) {
+    suspend fun signInWithSavedPassword(credentials: CredentialSignIn) {
         _uiState.update { it.copy(isLoading = true, error = null) }
         try {
-            credentialAuthenticator.getSavedPassword(activity).fold(
+            credentials.savedPassword().fold(
                 onSuccess = { saved ->
                     firebaseAuthService.signInWithEmail(saved.email, saved.password).fold(
                         onSuccess = {
@@ -233,12 +241,12 @@ class AuthViewModel(
      * accepted them.
      */
     private suspend fun completeSignIn(
-        activity: Activity,
+        credentials: CredentialSignIn,
         email: String,
         password: String,
         onSuccess: () -> Unit
     ) {
-        credentialAuthenticator.savePassword(activity, email, password)
+        credentials.offerToSave(email, password)
         _uiState.update { it.copy(isLoading = false) }
         onAuthStateChanged?.invoke()
         onSuccess()
@@ -256,25 +264,25 @@ class AuthViewModel(
      */
     private fun reportEmailFailure(error: Throwable, action: String) {
         rethrowIfCancellation(error)
-        crashlyticsManager.recordExceptionWithContext(error, mapOf("action" to action))
+        crashlyticsManager.recordWithContext(error, mapOf("action" to action))
         // isLoading is cleared by the caller's `finally` (signIn/signUp), not here — a single
         // clearing point per path means nobody has to reason about which reset wins.
-        _uiState.update { it.copy(error = AuthError.fromEmailPassword(error)) }
+        _uiState.update { it.copy(error = authErrors.fromEmailPassword(error)) }
     }
 
     private fun reportCredentialFailure(error: Throwable, action: String) {
         rethrowIfCancellation(error)
-        val mapped = AuthError.fromGoogle(error)
+        val mapped = authErrors.fromGoogle(error)
         // A null mapping means the user dismissed the sheet. That is a decision, not a fault, and
         // recording it would bury real failures under a stream of cancellations.
         if (mapped != null) {
-            crashlyticsManager.recordExceptionWithContext(error, mapOf("action" to action))
+            crashlyticsManager.recordWithContext(error, mapOf("action" to action))
         }
         _uiState.update { it.copy(error = mapped) }
     }
 
     /**
-     * Reports a genuine [FirebaseAuthService.signInWithEmail] failure reached via the
+     * Reports a genuine [AccountSignIn.signInWithEmail] failure reached via the
      * saved-password button.
      *
      * `FirebaseAuthService` catches `Exception` broadly and turns even a cancellation into a
@@ -283,26 +291,26 @@ class AuthViewModel(
      */
     private fun reportSavedPasswordFirebaseFailure(error: Throwable) {
         rethrowIfCancellation(error)
-        crashlyticsManager.recordExceptionWithContext(
+        crashlyticsManager.recordWithContext(
             error,
             mapOf("action" to "saved_password_sign_in")
         )
-        _uiState.update { it.copy(error = AuthError.fromEmailPassword(error)) }
+        _uiState.update { it.copy(error = authErrors.fromEmailPassword(error)) }
     }
 
     /**
-     * Reports a genuine [CredentialAuthenticator.getSavedPassword] failure — no saved password,
+     * Reports a genuine [CredentialSignIn.savedPassword] failure — no saved password,
      * no Play services, or a misconfigured provider.
      *
      * Mirrors [reportCredentialFailure]'s shape: Crashlytics only sees it when
-     * [AuthError.fromSavedPassword] maps the cause to something non-null. A null mapping means
+     * [AuthErrors.fromSavedPassword] maps the cause to something non-null. A null mapping means
      * the user dismissed the picker, which is a decision, not a fault worth burying real
      * failures under.
      */
     private fun reportSavedPasswordCredentialFailure(error: Throwable) {
-        val mapped = AuthError.fromSavedPassword(error)
+        val mapped = authErrors.fromSavedPassword(error)
         if (mapped != null) {
-            crashlyticsManager.recordExceptionWithContext(
+            crashlyticsManager.recordWithContext(
                 error,
                 mapOf("action" to "saved_password_credential")
             )
@@ -314,7 +322,7 @@ class AuthViewModel(
      * Rethrows [error] when it is a coroutine [CancellationException] instead of treating it as
      * an authentication failure.
      *
-     * [FirebaseAuthService] catches `Exception` broadly and converts every failure, cancellation
+     * `FirebaseAuthService` catches `Exception` broadly and converts every failure, cancellation
      * included, into a `Result.failure` — correct in isolation, but every Firebase call in this
      * ViewModel now runs from a coroutine a configuration change can cancel mid-flight, so the
      * cancellation crosses that boundary disguised as an ordinary failure. Rethrowing here

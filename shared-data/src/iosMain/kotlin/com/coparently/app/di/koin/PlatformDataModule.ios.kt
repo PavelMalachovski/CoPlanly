@@ -35,6 +35,7 @@ import com.coparently.app.data.platform.IosCrashReporter
 import com.coparently.app.data.platform.IosDeviceRegion
 import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.platform.keychainSecurePreferences
+import com.coparently.app.data.remote.firebase.AccountSignIn
 import com.coparently.app.data.remote.firebase.AuthSession
 import com.coparently.app.data.remote.firebase.CallableFunctions
 import com.coparently.app.data.remote.firebase.FirestoreClient
@@ -121,6 +122,7 @@ actual val platformDataModule: Module = module {
     single<PushDevice> { NoPush }
     single<PushQueue> { get<PushDevice>() }
     single<PushRegistration> { NoPush }
+    single<AccountSignIn> { NoAccountSignIn }
     single<AccountConsistency> { NoAccountSwitch }
     single<AccountDeletion> { NoAccountDeletion }
     single<AccountTraces> { NoAccountTraces }

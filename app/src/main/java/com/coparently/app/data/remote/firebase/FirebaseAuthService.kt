@@ -23,7 +23,7 @@ import kotlinx.coroutines.tasks.await
  */
 class FirebaseAuthService(
     private val firebaseAuth: FirebaseAuth
-) : SignedInUser, AuthSession {
+) : SignedInUser, AuthSession, AccountSignIn {
     /**
      * Gets the current Firebase user.
      */
@@ -92,7 +92,7 @@ class FirebaseAuthService(
      * @param password User's password
      * @return Result containing FirebaseUser on success or error message on failure
      */
-    suspend fun signInWithEmail(email: String, password: String): Result<FirebaseUser> {
+    override suspend fun signInWithEmail(email: String, password: String): Result<FirebaseUser> {
         return try {
             val result = firebaseAuth.signInWithEmailAndPassword(email, password).await()
             Result.success(result.user!!)
@@ -108,7 +108,7 @@ class FirebaseAuthService(
      * @param password User's password
      * @return Result containing FirebaseUser on success or error message on failure
      */
-    suspend fun createAccountWithEmail(email: String, password: String): Result<FirebaseUser> {
+    override suspend fun createAccountWithEmail(email: String, password: String): Result<FirebaseUser> {
         return try {
             // Log Firebase configuration for debugging
             val projectId = firebaseAuth.app.options.projectId
@@ -134,7 +134,7 @@ class FirebaseAuthService(
      * @param idToken Google ID token from Google Sign-In
      * @return Result containing FirebaseUser on success or error message on failure
      */
-    suspend fun signInWithGoogleIdToken(idToken: String): Result<FirebaseUser> {
+    override suspend fun signInWithGoogleIdToken(idToken: String): Result<FirebaseUser> {
         return try {
             val credential = GoogleAuthProvider.getCredential(idToken, null)
             val result = firebaseAuth.signInWithCredential(credential).await()
@@ -151,7 +151,7 @@ class FirebaseAuthService(
      * @param email User's email address
      * @return Result indicating success or failure
      */
-    suspend fun sendPasswordResetEmail(email: String): Result<Unit> {
+    override suspend fun sendPasswordResetEmail(email: String): Result<Unit> {
         return try {
             firebaseAuth.sendPasswordResetEmail(email).await()
             Result.success(Unit)

@@ -5,6 +5,7 @@ import com.coparently.app.data.export.ExportedFile
 import com.coparently.app.data.export.RecordFileWriter
 import com.coparently.app.data.files.PickedFiles
 import com.coparently.app.data.files.StorageBucket
+import com.coparently.app.data.remote.firebase.AccountSignIn
 import com.coparently.app.data.remote.firebase.AuthSession
 import com.coparently.app.data.remote.firebase.PushDevice
 import com.coparently.app.data.remote.firebase.PushRegistration
@@ -163,6 +164,24 @@ internal object NoSupportReminderJob : SupportReminderScheduler {
 
     override fun schedule() = Unit
     override fun cancel() = Unit
+}
+
+/**
+ * Nobody signs in yet (phase 3 brings the iPhone's Firebase Auth): every call fails as an
+ * unreachable service would, so the sign-in screen says it could not sign in and signs nobody in.
+ */
+internal object NoAccountSignIn : AccountSignIn {
+    override suspend fun signInWithEmail(email: String, password: String): Result<Any> =
+        Result.failure(IllegalStateException(UNAVAILABLE))
+
+    override suspend fun createAccountWithEmail(email: String, password: String): Result<Any> =
+        Result.failure(IllegalStateException(UNAVAILABLE))
+
+    override suspend fun signInWithGoogleIdToken(idToken: String): Result<Any> =
+        Result.failure(IllegalStateException(UNAVAILABLE))
+
+    override suspend fun sendPasswordResetEmail(email: String): Result<Unit> =
+        Result.failure(IllegalStateException(UNAVAILABLE))
 }
 
 /** No background jobs yet: a sync asked for now is not run in the background. */

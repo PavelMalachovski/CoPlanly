@@ -6,6 +6,8 @@ import com.coparently.app.domain.ai.AiAssistResult
 import com.coparently.app.domain.dictation.DictationFailure
 import com.coparently.app.domain.dictation.DictationListener
 import com.coparently.app.domain.dictation.SpeechDictation
+import com.coparently.app.presentation.auth.AuthError
+import com.coparently.app.presentation.auth.AuthErrors
 import com.coparently.app.presentation.pairing.InviteQrCodes
 import kotlinx.datetime.YearMonth
 
@@ -60,4 +62,17 @@ internal val NoInviteQrCodes: InviteQrCodes = object : InviteQrCodes {
     override val available: Boolean = false
 
     override fun forInvite(code: String): ImageBitmap? = null
+}
+
+/**
+ * Nobody signs in yet (the data layer's `NoAccountSignIn` fails every call): any failure is
+ * [AuthError.Unknown], since there is no SDK yet whose exceptions could say more. Phase 3's Firebase
+ * Auth replaces it together with `NoAccountSignIn`.
+ */
+internal object NoAuthErrors : AuthErrors {
+    override fun fromEmailPassword(cause: Throwable): AuthError = AuthError.Unknown
+
+    override fun fromGoogle(cause: Throwable): AuthError? = AuthError.Unknown
+
+    override fun fromSavedPassword(cause: Throwable): AuthError? = AuthError.Unknown
 }

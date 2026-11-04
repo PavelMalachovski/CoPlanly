@@ -7,8 +7,9 @@ import org.koin.core.module.Module
  * verifies. Instrumented tests start the same list with their overrides after it.
  *
  * One module per former Hilt module, under the same name, holds what that module bound or
- * provided; [dataModule], [presentationModule], [viewModelModule] and
- * [workerModule] hold what Hilt built from `@Inject` constructors. The former `serializationModule`
+ * provided; [dataModule], [presentationModule] and [workerModule] hold what Hilt built from
+ * `@Inject` constructors (`viewModelModule`, which held the ViewModels still in the app, went with
+ * the last of them, `AuthViewModel`, in MON-24 phase 2's slice 11f). The former `serializationModule`
  * provided the one injectable Gson; it went with Gson (MON-24), since `StoredJson` is an object.
  * `:shared-data`'s [dataModules] and its Android [platformDataModule] follow (MON-24 phase 2): the
  * data layer both apps run, which binds its Firebase seams over this graph's SDK instances; then
@@ -36,6 +37,5 @@ val appModules: List<Module> = listOf(
     syncModule,
     dataModule,
     presentationModule,
-    viewModelModule,
     workerModule
 ) + dataModules + platformDataModule + uiModules + platformUiModule

@@ -27,17 +27,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
+import com.coparently.app.presentation.platform.LocalCredentialSignIn
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
@@ -46,8 +44,32 @@ import com.coparently.app.presentation.theme.headlineSmallEmphasized
 import com.coparently.app.presentation.theme.labelLargeEmphasized
 import com.coparently.app.presentation.theme.rememberReducedMotion
 import com.coparently.app.presentation.theme.titleMediumEmphasized
-import com.coparently.app.utils.findActivity
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.app_name
+import com.coparently.app.resources.auth_action_create_account
+import com.coparently.app.resources.auth_action_sign_in
+import com.coparently.app.resources.auth_action_sign_up
+import com.coparently.app.resources.auth_cd_logo
+import com.coparently.app.resources.auth_create_your_account
+import com.coparently.app.resources.auth_divider_or
+import com.coparently.app.resources.auth_email_label
+import com.coparently.app.resources.auth_email_placeholder
+import com.coparently.app.resources.auth_forgot_password_link
+import com.coparently.app.resources.auth_google_sign_in
+import com.coparently.app.resources.auth_have_account_question
+import com.coparently.app.resources.auth_hide_password
+import com.coparently.app.resources.auth_no_account_question
+import com.coparently.app.resources.auth_password_label
+import com.coparently.app.resources.auth_password_placeholder
+import com.coparently.app.resources.auth_reset_email_sent
+import com.coparently.app.resources.auth_saved_password_sign_in
+import com.coparently.app.resources.auth_show_password
+import com.coparently.app.resources.auth_sign_in_subtitle
+import com.coparently.app.resources.auth_sign_up_subtitle
+import com.coparently.app.resources.auth_tagline
+import com.coparently.app.resources.auth_welcome_back
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -66,9 +88,9 @@ fun AuthScreen(
     val uiState by viewModel.uiState.collectAsState()
     val dims = dimensions()
     val coroutineScope = rememberCoroutineScope()
-    // Credential Manager hosts its UI on an Activity and refuses an application context.
-    // Compose may hand this composable a ContextWrapper, so unwrap rather than cast.
-    val activity = LocalContext.current.findActivity()
+    // Credential Manager hosts its UI on an Activity and refuses an application context, so the
+    // shell holds the Activity and hands the screen its sheets (`CredentialSignIn`, MON-24 phase 2).
+    val credentials = LocalCredentialSignIn.current
 
     // Gradient background
     Box(
@@ -114,7 +136,7 @@ fun AuthScreen(
 
                 Icon(
                     imageVector = Icons.Default.ChildCare,
-                    contentDescription = stringResource(R.string.auth_cd_logo),
+                    contentDescription = stringResource(Res.string.auth_cd_logo),
                     modifier = Modifier
                         .size(AUTH_LOGO_SIZE)
                         .graphicsLayer {
@@ -127,13 +149,13 @@ fun AuthScreen(
                 Spacer(modifier = Modifier.height(Spacing.L))
 
                 Text(
-                    text = stringResource(R.string.app_name),
+                    text = stringResource(Res.string.app_name),
                     style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onBackground
                 )
 
                 Text(
-                    text = stringResource(R.string.auth_tagline),
+                    text = stringResource(Res.string.auth_tagline),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
@@ -155,18 +177,18 @@ fun AuthScreen(
                     // Title
                     Text(
                         text = if (uiState.isSignInMode) {
-                            stringResource(R.string.auth_welcome_back)
+                            stringResource(Res.string.auth_welcome_back)
                         } else {
-                            stringResource(R.string.auth_create_your_account)
+                            stringResource(Res.string.auth_create_your_account)
                         },
                         style = MaterialTheme.typography.headlineSmallEmphasized
                     )
 
                     Text(
                         text = if (uiState.isSignInMode) {
-                            stringResource(R.string.auth_sign_in_subtitle)
+                            stringResource(Res.string.auth_sign_in_subtitle)
                         } else {
-                            stringResource(R.string.auth_sign_up_subtitle)
+                            stringResource(Res.string.auth_sign_up_subtitle)
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -178,8 +200,8 @@ fun AuthScreen(
                     OutlinedTextField(
                         value = uiState.email,
                         onValueChange = viewModel::updateEmail,
-                        label = { Text(stringResource(R.string.auth_email_label)) },
-                        placeholder = { Text(stringResource(R.string.auth_email_placeholder)) },
+                        label = { Text(stringResource(Res.string.auth_email_label)) },
+                        placeholder = { Text(stringResource(Res.string.auth_email_placeholder)) },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.Email,
@@ -202,8 +224,8 @@ fun AuthScreen(
                     OutlinedTextField(
                         value = uiState.password,
                         onValueChange = viewModel::updatePassword,
-                        label = { Text(stringResource(R.string.auth_password_label)) },
-                        placeholder = { Text(stringResource(R.string.auth_password_placeholder)) },
+                        label = { Text(stringResource(Res.string.auth_password_label)) },
+                        placeholder = { Text(stringResource(Res.string.auth_password_placeholder)) },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.Lock,
@@ -219,9 +241,9 @@ fun AuthScreen(
                                         Icons.Default.Visibility
                                     },
                                     contentDescription = if (passwordVisible) {
-                                        stringResource(R.string.auth_hide_password)
+                                        stringResource(Res.string.auth_hide_password)
                                     } else {
-                                        stringResource(R.string.auth_show_password)
+                                        stringResource(Res.string.auth_show_password)
                                     }
                                 )
                             }
@@ -250,7 +272,7 @@ fun AuthScreen(
                             enabled = !uiState.isLoading
                         ) {
                             Text(
-                                text = stringResource(R.string.auth_forgot_password_link),
+                                text = stringResource(Res.string.auth_forgot_password_link),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
@@ -286,7 +308,7 @@ fun AuthScreen(
                                 )
                                 Text(
                                     text = resetSentTo
-                                        ?.let { stringResource(R.string.auth_reset_email_sent, it) }
+                                        ?.let { stringResource(Res.string.auth_reset_email_sent, it) }
                                         .orEmpty(),
                                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                                     style = MaterialTheme.typography.bodySmall
@@ -335,45 +357,44 @@ fun AuthScreen(
 
                     Spacer(modifier = Modifier.height(Spacing.S))
 
-                    // Google Sign-In Button
-                    OutlinedButton(
-                        onClick = {
-                            activity?.let { host ->
-                                coroutineScope.launch { viewModel.signInWithGoogle(host) }
-                            }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(dims.buttonHeight),
-                        enabled = !uiState.isLoading,
-                        shape = MaterialTheme.shapes.medium,
-                        border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
-                            width = 2.dp
-                        )
-                    ) {
-                        Text(
-                            text = stringResource(R.string.auth_google_sign_in),
-                            // A button's own role, not a lightened title.
-                            style = MaterialTheme.typography.labelLarge
-                        )
+                    // Google Sign-In Button — only where the phone has the credential sheets (the
+                    // iPhone has no sign-in yet), as a button that could do nothing is design item 8.
+                    if (credentials.available) {
+                        OutlinedButton(
+                            onClick = {
+                                coroutineScope.launch { viewModel.signInWithGoogle(credentials) }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(dims.buttonHeight),
+                            enabled = !uiState.isLoading,
+                            shape = MaterialTheme.shapes.medium,
+                            border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
+                                width = 2.dp
+                            )
+                        ) {
+                            Text(
+                                text = stringResource(Res.string.auth_google_sign_in),
+                                // A button's own role, not a lightened title.
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
                     }
 
                     // Sign-in only: offering a stored password while creating an account is
                     // nonsense. Deliberately a button rather than a sheet that opens with the
                     // screen - the system UI stays behind an explicit request, which matters
                     // most right after a deliberate sign-out.
-                    if (uiState.isSignInMode) {
+                    if (uiState.isSignInMode && credentials.available) {
                         TextButton(
                             onClick = {
-                                activity?.let { host ->
-                                    coroutineScope.launch { viewModel.signInWithSavedPassword(host) }
-                                }
+                                coroutineScope.launch { viewModel.signInWithSavedPassword(credentials) }
                             },
                             modifier = Modifier.fillMaxWidth(),
                             enabled = !uiState.isLoading
                         ) {
                             Text(
-                                text = stringResource(R.string.auth_saved_password_sign_in),
+                                text = stringResource(Res.string.auth_saved_password_sign_in),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
@@ -388,7 +409,7 @@ fun AuthScreen(
                     ) {
                         HorizontalDivider(modifier = Modifier.weight(1f))
                         Text(
-                            text = stringResource(R.string.auth_divider_or),
+                            text = stringResource(Res.string.auth_divider_or),
                             modifier = Modifier.padding(horizontal = Spacing.L),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -399,12 +420,10 @@ fun AuthScreen(
                     // Primary Action Button
                     Button(
                         onClick = {
-                            activity?.let { host ->
-                                if (uiState.isSignInMode) {
-                                    viewModel.signIn(host, onAuthSuccess)
-                                } else {
-                                    viewModel.signUp(host, onAuthSuccess)
-                                }
+                            if (uiState.isSignInMode) {
+                                viewModel.signIn(credentials, onAuthSuccess)
+                            } else {
+                                viewModel.signUp(credentials, onAuthSuccess)
                             }
                         },
                         modifier = Modifier
@@ -426,9 +445,9 @@ fun AuthScreen(
                         } else {
                             Text(
                                 text = if (uiState.isSignInMode) {
-                                    stringResource(R.string.auth_action_sign_in)
+                                    stringResource(Res.string.auth_action_sign_in)
                                 } else {
-                                    stringResource(R.string.auth_action_create_account)
+                                    stringResource(Res.string.auth_action_create_account)
                                 },
                                 style = MaterialTheme.typography.titleMediumEmphasized
                             )
@@ -448,9 +467,9 @@ fun AuthScreen(
             ) {
                 Text(
                     text = if (uiState.isSignInMode) {
-                        stringResource(R.string.auth_no_account_question)
+                        stringResource(Res.string.auth_no_account_question)
                     } else {
-                        stringResource(R.string.auth_have_account_question)
+                        stringResource(Res.string.auth_have_account_question)
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -459,9 +478,9 @@ fun AuthScreen(
                 TextButton(onClick = { viewModel.toggleSignInMode() }) {
                     Text(
                         text = if (uiState.isSignInMode) {
-                            stringResource(R.string.auth_action_sign_up)
+                            stringResource(Res.string.auth_action_sign_up)
                         } else {
-                            stringResource(R.string.auth_action_sign_in)
+                            stringResource(Res.string.auth_action_sign_in)
                         },
                         style = MaterialTheme.typography.labelLargeEmphasized,
                         color = MaterialTheme.colorScheme.primary

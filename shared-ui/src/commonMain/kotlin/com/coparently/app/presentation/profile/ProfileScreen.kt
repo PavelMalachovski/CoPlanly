@@ -35,26 +35,39 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.model.User
-import com.coparently.app.presentation.childinfo.components.DatePickerDialog
 import com.coparently.app.presentation.common.DatePickerField
 import com.coparently.app.presentation.common.ErrorState
+import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.utils.format
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.childinfo_cancel
+import com.coparently.app.resources.childinfo_ok
+import com.coparently.app.resources.common_back
+import com.coparently.app.resources.profile_coparent_empty
+import com.coparently.app.resources.profile_coparent_title
+import com.coparently.app.resources.profile_dob_label
+import com.coparently.app.resources.profile_load_failed
+import com.coparently.app.resources.profile_my_title
+import com.coparently.app.resources.profile_name_label
+import com.coparently.app.resources.profile_not_paired
+import com.coparently.app.resources.profile_phone_label
+import com.coparently.app.resources.profile_readonly_note
+import com.coparently.app.resources.profile_save
+import com.coparently.app.resources.profile_saved
+import com.coparently.app.utils.readerMediumDate
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
+import kotlin.time.Clock
 
 /**
  * A parent's profile, used in two modes.
@@ -87,7 +100,7 @@ fun ProfileScreen(
     val uiState by viewModel.uiState.collectAsState()
     val haptic = LocalHapticFeedback.current
     val snackbarHostState = remember { SnackbarHostState() }
-    val savedMessage = stringResource(R.string.profile_saved)
+    val savedMessage = stringResource(Res.string.profile_saved)
 
     // savedAt is an instant, not a draft field, so this fires once per save rather than once
     // per recomposition — the same reason it is epoch millis and not a LocalDateTime (see
@@ -132,13 +145,13 @@ fun ProfileScreen(
 private fun ProfileTopBar(editable: Boolean, onNavigateUp: () -> Unit) {
     TopAppBar(
         title = {
-            Text(stringResource(if (editable) R.string.profile_my_title else R.string.profile_coparent_title))
+            Text(stringResource(if (editable) Res.string.profile_my_title else Res.string.profile_coparent_title))
         },
         navigationIcon = {
             IconButton(onClick = onNavigateUp) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.common_back)
+                    contentDescription = stringResource(Res.string.common_back)
                 )
             }
         }
@@ -187,7 +200,7 @@ private fun ProfileContent(
 @Composable
 private fun ProfileSaveBar(isSaving: Boolean, onSave: () -> Unit, modifier: Modifier = Modifier) {
     StickyActionBar(
-        label = stringResource(R.string.profile_save),
+        label = stringResource(Res.string.profile_save),
         onClick = onSave,
         modifier = modifier,
         busy = isSaving
@@ -219,7 +232,7 @@ private fun ProfileLoadingIndicator(modifier: Modifier = Modifier) {
 @Composable
 private fun ProfileLoadFailed(onRetry: () -> Unit, modifier: Modifier = Modifier) {
     ErrorState(
-        message = stringResource(R.string.profile_load_failed),
+        message = stringResource(Res.string.profile_load_failed),
         onRetry = onRetry,
         modifier = modifier.fillMaxWidth()
     )
@@ -234,36 +247,39 @@ private fun MyProfileContent(
     onPhoneChange: (String) -> Unit
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
-    val dateFormatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM) }
 
     OutlinedTextField(
         value = person.name,
         onValueChange = onNameChange,
-        label = { Text(stringResource(R.string.profile_name_label)) },
+        label = { Text(stringResource(Res.string.profile_name_label)) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth()
     )
 
     DatePickerField(
-        label = stringResource(R.string.profile_dob_label),
-        value = person.dateOfBirth?.format(dateFormatter),
+        label = stringResource(Res.string.profile_dob_label),
+        value = person.dateOfBirth?.let(::readerMediumDate),
         onClick = { showDatePicker = true }
     )
     if (showDatePicker) {
-        DatePickerDialog(
-            onDateSelected = { dateTime ->
-                onDateOfBirthChange(dateTime.toLocalDate().toKotlinLocalDate())
+        // The kotlinx-datetime picker the child records' `DatePickerDialog` opens, with its labels
+        // (MON-24 phase 2, slice 11f): today where no date is set yet, as that one did.
+        LocalDatePickerDialog(
+            initialDate = person.dateOfBirth ?: Clock.System.todayIn(TimeZone.currentSystemDefault()),
+            confirmLabel = stringResource(Res.string.childinfo_ok),
+            dismissLabel = stringResource(Res.string.childinfo_cancel),
+            onConfirm = { date ->
+                onDateOfBirthChange(date)
                 showDatePicker = false
             },
-            onDismiss = { showDatePicker = false },
-            initialDate = person.dateOfBirth?.toJavaLocalDate()?.atStartOfDay()
+            onDismiss = { showDatePicker = false }
         )
     }
 
     OutlinedTextField(
         value = person.phone.orEmpty(),
         onValueChange = onPhoneChange,
-        label = { Text(stringResource(R.string.profile_phone_label)) },
+        label = { Text(stringResource(Res.string.profile_phone_label)) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
         modifier = Modifier.fillMaxWidth()
@@ -275,9 +291,9 @@ private fun MyProfileContent(
  *
  * Three states, gated on what is actually known:
  * - [coParent] null: nobody is paired (or the pairing/profile read has not resolved yet) —
- *   [R.string.profile_not_paired].
+ *   [Res.string.profile_not_paired].
  * - [coParent] known but carries none of the profile-specific fields yet (the co-parent has
- *   never opened their own profile screen) — [R.string.profile_coparent_empty]. The name is
+ *   never opened their own profile screen) — [Res.string.profile_coparent_empty]. The name is
  *   still shown: it comes from pairing itself, not from the profile questionnaire, so there is
  *   no reason to hide it behind the same empty state.
  * - [coParent] known and has filled in at least one field — those fields, with no editing
@@ -286,27 +302,27 @@ private fun MyProfileContent(
 @Composable
 private fun CoParentProfileContent(coParent: User?) {
     if (coParent == null) {
-        ProfileEmptyState(stringResource(R.string.profile_not_paired))
+        ProfileEmptyState(stringResource(Res.string.profile_not_paired))
         return
     }
 
-    val coParentName = coParent.name.ifBlank { stringResource(R.string.profile_coparent_title) }
+    val coParentName = coParent.name.ifBlank { stringResource(Res.string.profile_coparent_title) }
 
     SectionGroup {
         SectionRow(
-            title = stringResource(R.string.profile_name_label),
+            title = stringResource(Res.string.profile_name_label),
             trailing = { ProfileValueText(coParentName) }
         )
     }
 
     Text(
-        text = stringResource(R.string.profile_readonly_note, coParentName),
+        text = stringResource(Res.string.profile_readonly_note, coParentName),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 
     if (!coParent.hasProfileData()) {
-        ProfileEmptyState(stringResource(R.string.profile_coparent_empty))
+        ProfileEmptyState(stringResource(Res.string.profile_coparent_empty))
         return
     }
 
@@ -322,10 +338,9 @@ private fun CoParentProfileContent(coParent: User?) {
  */
 @Composable
 private fun CoParentDetailRows(coParent: User) {
-    val dateFormatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM) }
     val detailRows = buildList {
-        coParent.dateOfBirth?.format(dateFormatter)?.let { add(R.string.profile_dob_label to it) }
-        coParent.phone?.takeIf { it.isNotBlank() }?.let { add(R.string.profile_phone_label to it) }
+        coParent.dateOfBirth?.let(::readerMediumDate)?.let { add(Res.string.profile_dob_label to it) }
+        coParent.phone?.takeIf { it.isNotBlank() }?.let { add(Res.string.profile_phone_label to it) }
     }
     if (detailRows.isEmpty()) return
 

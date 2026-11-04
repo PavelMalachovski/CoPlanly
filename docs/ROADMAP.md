@@ -3061,6 +3061,11 @@ bytes are identical on Android):
   and the four-step wizard, the invitation's share, copy and scan through the platform interfaces; on
   a phone with no QR drawing, share sheet, clipboard or scanner (the iPhone for now) the card draws no
   QR frame and offers no Share or copy, and the form no scan.
+  Then the sign-in and the profile, with their ViewModel: the credential sheets are the shell's (on
+  Android Credential Manager on the activity, as before), the account's calls and the wording of
+  their failures the data layer's and the app's, every ordering rule unchanged; on a phone with no
+  credential sheets (the iPhone for now) the sign-in offers neither Google nor a saved password.
+  **Slice 11f built, CI pending.** Task 10's last two ViewModels moved with it.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

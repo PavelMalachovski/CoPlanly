@@ -1,5 +1,7 @@
 package com.coparently.app.di.koin
 
+import com.coparently.app.presentation.auth.AndroidAuthErrors
+import com.coparently.app.presentation.auth.AuthErrors
 import com.coparently.app.presentation.pairing.AndroidInviteQrCodes
 import com.coparently.app.presentation.pairing.InviteQrCodes
 import com.coparently.app.presentation.widget.TodayWidgetNames
@@ -24,4 +26,6 @@ val presentationModule = module {
     singleOf(::NetworkMonitor)
     // The invitation's QR code, which the pairing ViewModel in `:shared-ui` asks for.
     single<InviteQrCodes> { AndroidInviteQrCodes(get()) }
+    // Which sign-in failure an SDK's exception is, which AuthViewModel in `:shared-ui` asks for.
+    single<AuthErrors> { AndroidAuthErrors }
 }

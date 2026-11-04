@@ -1497,6 +1497,34 @@ Then the export and the school import:
   long it lasts) where unavailable; the scan button and the onboarding's notification button only
   where their capability is. Kept in the app: `QRScannerActivity`, `QrScannerScreen` (CameraX, ML
   Kit), `AndroidInviteQrCodes`.
+- Group 3, the sign-in and the profile, with `AuthViewModel` (carried note): `auth/AuthScreen.kt`,
+  `AuthLegalNotice.kt`, `AuthError.kt` (the type, with an empty companion), `AuthErrorText.kt`
+  (`messageRes()` a `StringResource`), `AuthViewModel.kt` (`authUiModule`) and `profile/ProfileScreen.kt`.
+  The seams: **`CredentialSignIn`** (`presentation/platform/`, `googleIdToken`, `savedPassword` →
+  `SavedCredential`, `offerToSave`; `LocalCredentialSignIn`, provided by `MainActivity` alone,
+  `AndroidCredentialSignIn(activity, CredentialAuthenticator)`; read elsewhere it throws), passed to
+  `signIn`/`signUp`/`signInWithGoogle`/`signInWithSavedPassword` where the Activity was;
+  **`AccountSignIn`** (`:shared-data` `data/remote/firebase/`, the four Firebase Auth calls;
+  `FirebaseAuthService` overrides them covariantly, `Result<FirebaseUser>` for `Result<Any>`, checked
+  with kotlinc; `NoAccountSignIn` on the iPhone); **`AuthErrors`** (`presentation/auth/`, the three
+  mappings; `AndroidAuthErrors` in the app, the companion's code as `AuthError.Companion` extensions,
+  bound in `presentationModule`; `NoAuthErrors` on the iPhone, `platformUiModule`) — a Koin seam, not
+  part of `CredentialSignIn`, because `sendPasswordReset` takes no sheet. `AnalyticsManager.logLogin`/
+  `logSignUp` → `data/platform/AnalyticsEvents.kt`'s `logLogin`/`logSignUp` ("login"/"sign_up" with
+  "method": Firebase's `Event.LOGIN`, `Event.SIGN_UP`, `Param.METHOD`); `recordExceptionWithContext` →
+  `CrashReporter.recordWithContext`. The order is the old code's line for line (the diff of the
+  ViewModel is the seam names). The screen: `LocalContext.findActivity()` → `LocalCredentialSignIn`
+  (the Google and saved-password buttons only where it is available); `AuthLegalNotice`'s
+  `PrivacyPolicyLink`/`TermsOfServiceLink` → `AppBuildValues` and `OpenUrl` (the terms clause too only
+  with its link), and the two objects deleted. The profile: `format(ofLocalizedDate(MEDIUM))` →
+  `readerMediumDate`, the child records' `java.time` `DatePickerDialog` → the kotlinx
+  `LocalDatePickerDialog` with `childinfo_ok`/`childinfo_cancel` (today where unset, as it was). The
+  app's `viewModelModule` is deleted. Tests: `AuthViewModelTest` (stays in the app) builds the
+  ViewModel with `AndroidAuthErrors` and calls it with `AndroidCredentialSignIn(activity,
+  credentialAuthenticator)`, verifying `recordWithContext`; `AuthErrorTest` unchanged. **Task 11 after
+  11f:** what is left is 11g's — the child and pet records, contacts, documents, the export, the journal,
+  friends, guests, professionals, the parenting plan, Home, the month review, the stickers' screen,
+  the school import and `common/`'s last helpers.
 
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 

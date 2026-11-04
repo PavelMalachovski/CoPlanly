@@ -1,6 +1,8 @@
 package com.coparently.app.di.koin
 
 import com.coparently.app.presentation.ai.AiConsentViewModel
+import com.coparently.app.presentation.auth.AuthErrors
+import com.coparently.app.presentation.auth.AuthViewModel
 import com.coparently.app.presentation.calendar.CalendarViewModel
 import com.coparently.app.presentation.changerequests.ChangeRequestViewModel
 import com.coparently.app.presentation.changerequests.RequestChangeViewModel
@@ -236,6 +238,16 @@ val onboardingUiModule: Module = module {
 }
 
 /**
+ * Signing in (MON-24 phase 2, slice 11f): the sign-in screen's form, its four ways in and why the
+ * last one failed. The account calls go through `AccountSignIn` and their failures' wording through
+ * [AuthErrors], which the app binds on Android and the iPhone's modules stand in for; the credential
+ * sheets are the shell's (`CredentialSignIn`), handed to each call.
+ */
+val authUiModule: Module = module {
+    viewModelOf(::AuthViewModel)
+}
+
+/**
  * The session (MON-24 phase 2, Task 10): whether anybody is signed in and still owes the wizard —
  * the start destination's one source — and sign-out's undoing of this phone's push token, school
  * tokens, scheduled steps and files, in that order, before the session ends. The session, the token
@@ -417,6 +429,7 @@ val uiModules: List<Module> = listOf(
     settingsUiModule,
     pairingUiModule,
     onboardingUiModule,
+    authUiModule,
     sessionUiModule,
     profileUiModule,
     homeUiModule,

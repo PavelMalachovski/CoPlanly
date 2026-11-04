@@ -22,6 +22,7 @@ import com.coparently.app.data.notification.EventReminderScheduler
 import com.coparently.app.data.notification.NotificationManager
 import com.coparently.app.data.notification.WorkRequestClockScheduler
 import com.coparently.app.data.pairing.PlayInstallReferrerSource
+import com.coparently.app.data.remote.firebase.AccountSignIn
 import com.coparently.app.data.remote.firebase.AuthSession
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
@@ -106,6 +107,8 @@ val dataModule = module {
     single<SignedInUser> { get<FirebaseAuthService>() }
     // The start's wait and sign-out's end, which the session's ViewModel in `:shared-ui` asks for.
     single<AuthSession> { get<FirebaseAuthService>() }
+    // The sign-in screen's account calls, which AuthViewModel in `:shared-ui` asks for.
+    single<AccountSignIn> { get<FirebaseAuthService>() }
     singleOf(::FirebaseImageStorage)
     singleOf(::CredentialAuthenticator)
     singleOf(::CredentialManagerService)

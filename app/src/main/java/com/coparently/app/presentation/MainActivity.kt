@@ -29,6 +29,7 @@ import com.coparently.app.data.notification.NotificationManager
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.PushDestination
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.data.remote.google.CredentialAuthenticator
 import com.coparently.app.data.remote.google.CredentialManagerService
 import com.coparently.app.domain.chat.ChatUri
 import com.coparently.app.domain.guests.GuestInviteUri
@@ -36,6 +37,7 @@ import com.coparently.app.domain.pairing.InstallReferrer
 import com.coparently.app.domain.pairing.InstallReferrerSource
 import com.coparently.app.domain.pairing.PairingUri
 import com.coparently.app.domain.repository.PreferencesRepository
+import com.coparently.app.presentation.auth.AndroidCredentialSignIn
 import com.coparently.app.presentation.common.FamilyViewViewModel
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.LocalFamilyView
@@ -51,6 +53,7 @@ import com.coparently.app.presentation.navigation.PendingDestinationOpen
 import com.coparently.app.presentation.navigation.PendingInviteCodes
 import com.coparently.app.presentation.navigation.Screen
 import com.coparently.app.presentation.navigation.startDestinationFor
+import com.coparently.app.presentation.platform.LocalCredentialSignIn
 import com.coparently.app.presentation.platform.LocalGoogleCalendarSignIn
 import com.coparently.app.presentation.platform.ProvideAndroidPlatform
 import com.coparently.app.presentation.sync.AndroidGoogleCalendarSignIn
@@ -107,6 +110,9 @@ class MainActivity : AppCompatActivity() {
 
     /** Google Calendar's sign-in client, and the redeeming of its answer. */
     private val credentialManagerService: CredentialManagerService by inject()
+
+    /** Credential Manager's sheets for the app's own sign-in, hosted on this activity. */
+    private val credentialAuthenticator: CredentialAuthenticator by inject()
 
     private val todayWidgetRefresher: TodayWidgetRefresher by inject()
 
@@ -365,6 +371,9 @@ class MainActivity : AppCompatActivity() {
             val googleCalendarSignIn = remember(googleSignInLauncher) {
                 AndroidGoogleCalendarSignIn(credentialManagerService) { intent -> googleSignInLauncher.launch(intent) }
             }
+            // The sign-in screen's credential sheets (`presentation/platform/CredentialSignIn`), on
+            // this activity, which Credential Manager hosts them on; the ViewModel keeps none of it.
+            val credentialSignIn = remember { AndroidCredentialSignIn(this@MainActivity, credentialAuthenticator) }
 
             // Every platform capability the shared screens read (`presentation/platform/`, MON-24
             // phase 2, Task 11), from this activity.
@@ -381,6 +390,7 @@ class MainActivity : AppCompatActivity() {
 
                         CompositionLocalProvider(
                             LocalGoogleCalendarSignIn provides googleCalendarSignIn,
+                            LocalCredentialSignIn provides credentialSignIn,
                             LocalParentPalette provides parentPalette,
                             LocalFamilyView provides familyView,
                             LocalAppMessages provides appMessages,
