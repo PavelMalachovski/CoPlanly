@@ -1,6 +1,5 @@
 package com.coparently.app.screenshots
 
-import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.unit.dp
@@ -34,6 +33,7 @@ import com.coparently.app.presentation.home.MonthMoney
 import com.coparently.app.presentation.pairing.InvitationView
 import com.coparently.app.presentation.settings.CUSTOM_COLOUR
 import com.coparently.app.presentation.settings.ParentColorPicker
+import com.coparently.app.testing.RobolectricTestApplication
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
@@ -58,7 +58,7 @@ import java.util.Locale
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [SCREENSHOT_SDK], application = Application::class)
+@Config(sdk = [SCREENSHOT_SDK], application = RobolectricTestApplication::class)
 class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
 
     @Test

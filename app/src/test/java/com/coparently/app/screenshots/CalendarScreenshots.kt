@@ -1,6 +1,5 @@
 package com.coparently.app.screenshots
 
-import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +20,7 @@ import com.coparently.app.presentation.calendar.components.SwapSheetActions
 import com.coparently.app.presentation.calendar.components.SwapSheetOffer
 import com.coparently.app.presentation.calendar.components.VacationBanner
 import com.coparently.app.presentation.calendar.swapMiniMonths
+import com.coparently.app.testing.RobolectricTestApplication
 import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -41,7 +41,7 @@ import org.robolectric.annotation.GraphicsMode
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [SCREENSHOT_SDK], application = Application::class)
+@Config(sdk = [SCREENSHOT_SDK], application = RobolectricTestApplication::class)
 class CalendarScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
 
     @Test

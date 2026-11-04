@@ -1,6 +1,5 @@
 package com.coparently.app.screenshots
 
-import android.app.Application
 import androidx.compose.foundation.layout.Column
 import com.coparently.app.domain.custody.HandoverInfo
 import com.coparently.app.domain.expenses.CurrencyBalance
@@ -13,6 +12,7 @@ import com.coparently.app.presentation.home.HandoverHero
 import com.coparently.app.presentation.home.MonthSpend
 import com.coparently.app.presentation.home.StatTiles
 import com.coparently.app.presentation.home.TimelineRow
+import com.coparently.app.testing.RobolectricTestApplication
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Test
@@ -30,7 +30,7 @@ import org.robolectric.annotation.GraphicsMode
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [SCREENSHOT_SDK], application = Application::class)
+@Config(sdk = [SCREENSHOT_SDK], application = RobolectricTestApplication::class)
 class HomeScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
 
     @Test

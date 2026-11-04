@@ -1,11 +1,11 @@
 package com.coparently.app.data.local.dao
 
-import android.app.Application
 import androidx.room.Room
 import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.data.local.entity.KnownFamilyEntity
 import com.coparently.app.data.local.entity.UserEntity
+import com.coparently.app.testing.RobolectricTestApplication
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.toKotlinLocalDateTime
@@ -34,7 +34,7 @@ import kotlin.test.assertNull
  * queries' (`EncryptedDatabaseTest` covers it on a device).
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = Application::class)
+@Config(sdk = [34], application = RobolectricTestApplication::class)
 class DaoEmptyResultTest {
 
     private lateinit var database: CoPlanlyDatabase

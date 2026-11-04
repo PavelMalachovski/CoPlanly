@@ -1,7 +1,7 @@
 package com.coparently.app.data.session
 
-import android.app.Application
 import android.content.Context
+import com.coparently.app.testing.RobolectricTestApplication
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -19,7 +19,7 @@ import kotlin.test.assertTrue
  * account switch or deletion removes both.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = Application::class)
+@Config(sdk = [34], application = RobolectricTestApplication::class)
 class DeviceTracesTest {
 
     private val context: Context get() = RuntimeEnvironment.getApplication()

@@ -1,6 +1,5 @@
 package com.coparently.app.di
 
-import android.app.Application
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -29,6 +28,7 @@ import com.coparently.app.presentation.common.ParentPaletteViewModel
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.friends.FriendCalendarViewModel
 import com.coparently.app.presentation.navigation.Screen
+import com.coparently.app.testing.RobolectricTestApplication
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -66,7 +66,7 @@ import org.robolectric.annotation.Config
  * screen, none of which a JVM test has; the owner the composables ask is an activity's either way.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = Application::class)
+@Config(sdk = [34], application = RobolectricTestApplication::class)
 class ViewModelScopeTest {
 
     @get:Rule

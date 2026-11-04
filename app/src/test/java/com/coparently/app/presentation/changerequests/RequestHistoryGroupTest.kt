@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.changerequests
 
-import android.app.Application
 import android.content.Context
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
@@ -20,6 +19,7 @@ import com.coparently.app.presentation.common.NamedParent
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.theme.CoPlanlyTheme
+import com.coparently.app.testing.RobolectricTestApplication
 import kotlinx.datetime.LocalDateTime
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -39,7 +39,7 @@ import org.robolectric.annotation.Config
  * chip, and nobody named as having answered.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = Application::class, qualifiers = "w393dp-h851dp")
+@Config(sdk = [34], application = RobolectricTestApplication::class, qualifiers = "w393dp-h851dp")
 class RequestHistoryGroupTest {
 
     @get:Rule

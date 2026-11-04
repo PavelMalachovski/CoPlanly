@@ -1,6 +1,5 @@
 package com.coparently.app.screenshots
 
-import android.app.Application
 import com.coparently.app.domain.friends.CalendarFriendGrant
 import com.coparently.app.domain.friends.FriendAccessDuration
 import com.coparently.app.domain.guests.GuestInvite
@@ -10,6 +9,7 @@ import com.coparently.app.presentation.friends.FriendEventDetails
 import com.coparently.app.presentation.friends.FriendInviteContent
 import com.coparently.app.presentation.friends.FriendInviteState
 import com.coparently.app.presentation.professionals.ProfessionalDay
+import com.coparently.app.testing.RobolectricTestApplication
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
@@ -27,7 +27,7 @@ import org.robolectric.annotation.GraphicsMode
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [SCREENSHOT_SDK], application = Application::class)
+@Config(sdk = [SCREENSHOT_SDK], application = RobolectricTestApplication::class)
 class FriendScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
 
     /** Co-parent beside family friend, row by row — stacked into lines at 1.5× and 2.0×. */

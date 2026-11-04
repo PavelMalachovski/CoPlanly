@@ -1,6 +1,5 @@
 package com.coparently.app.screenshots
 
-import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
@@ -26,6 +25,7 @@ import com.coparently.app.presentation.changerequests.RequestHistoryGroup
 import com.coparently.app.presentation.common.AnswerByField
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.testing.RobolectricTestApplication
 import kotlinx.datetime.toKotlinLocalDateTime
 import kotlinx.datetime.toKotlinTimeZone
 import org.junit.After
@@ -56,7 +56,7 @@ import java.util.concurrent.TimeUnit
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [SCREENSHOT_SDK], application = Application::class)
+@Config(sdk = [SCREENSHOT_SDK], application = RobolectricTestApplication::class)
 class RequestClockScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
 
     private var savedZone: TimeZone? = null

@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.widget
 
-import android.app.Application
 import android.content.Context
 import android.provider.Settings
 import com.coparently.app.domain.custody.ContactWindow
@@ -9,6 +8,7 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.NamedParent
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.theme.ParentColorChoice
+import com.coparently.app.testing.RobolectricTestApplication
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
@@ -32,7 +32,7 @@ import java.time.LocalDateTime
  * plural is chosen by the reader's language, and that nothing the rows leave out goes unsaid.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = Application::class)
+@Config(sdk = [34], application = RobolectricTestApplication::class)
 class TodayWidgetTextTest {
 
     private val context: Context get() = RuntimeEnvironment.getApplication()

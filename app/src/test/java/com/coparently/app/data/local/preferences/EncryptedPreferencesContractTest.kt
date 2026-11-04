@@ -1,10 +1,10 @@
 package com.coparently.app.data.local.preferences
 
-import android.app.Application
 import android.content.Context
 import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.school.SchoolConnectionStore
 import com.coparently.app.data.school.SchoolTestSupport
+import com.coparently.app.testing.RobolectricTestApplication
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -31,7 +31,7 @@ import kotlin.test.assertTrue
  * restart (CLAUDE.md item 35).
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = Application::class)
+@Config(sdk = [34], application = RobolectricTestApplication::class)
 class EncryptedPreferencesContractTest {
 
     private val context: Context get() = RuntimeEnvironment.getApplication()

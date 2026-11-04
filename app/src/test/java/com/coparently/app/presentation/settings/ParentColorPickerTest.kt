@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.settings
 
-import android.app.Application
 import android.content.Context
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
@@ -11,6 +10,7 @@ import androidx.compose.ui.test.performClick
 import com.coparently.app.R
 import com.coparently.app.presentation.theme.CoPlanlyTheme
 import com.coparently.app.presentation.theme.ParentColorChoice
+import com.coparently.app.testing.RobolectricTestApplication
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -25,7 +25,7 @@ import org.robolectric.annotation.Config
  * separate option that opens the wheel.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = Application::class, qualifiers = "w393dp-h851dp")
+@Config(sdk = [34], application = RobolectricTestApplication::class, qualifiers = "w393dp-h851dp")
 class ParentColorPickerTest {
 
     @get:Rule

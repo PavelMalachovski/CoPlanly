@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.pairing
 
-import android.app.Application
 import android.content.Context
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
@@ -10,6 +9,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.coparently.app.R
 import com.coparently.app.presentation.theme.CoPlanlyTheme
+import com.coparently.app.testing.RobolectricTestApplication
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -20,7 +20,7 @@ import org.robolectric.annotation.Config
 
 /** The invitation an unlinked parent answers before a code is redeemed (spec G2). */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = Application::class, qualifiers = "w393dp-h851dp")
+@Config(sdk = [34], application = RobolectricTestApplication::class, qualifiers = "w393dp-h851dp")
 class InvitationViewTest {
 
     @get:Rule

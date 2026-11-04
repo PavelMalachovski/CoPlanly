@@ -1,6 +1,5 @@
 package com.coparently.app.resources
 
-import android.app.Application
 import android.content.res.Resources
 import com.coparently.app.resources.ResourceParity.LANGUAGES
 import com.coparently.app.resources.ResourceParity.PLURALS
@@ -8,6 +7,7 @@ import com.coparently.app.resources.ResourceParity.androidId
 import com.coparently.app.resources.ResourceParity.androidResources
 import com.coparently.app.resources.ResourceParity.argumentsFor
 import com.coparently.app.resources.ResourceParity.inLanguage
+import com.coparently.app.testing.RobolectricTestApplication
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.PluralStringResource
 import org.jetbrains.compose.resources.getPluralString
@@ -28,7 +28,7 @@ import org.robolectric.annotation.Config
  * one consumer; see [StringsParityTest].
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = Application::class)
+@Config(sdk = [34], application = RobolectricTestApplication::class)
 class PluralsParityTest {
 
     @Before

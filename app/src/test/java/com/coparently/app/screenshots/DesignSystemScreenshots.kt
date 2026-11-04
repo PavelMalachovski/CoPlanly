@@ -1,6 +1,5 @@
 package com.coparently.app.screenshots
 
-import android.app.Application
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.height
@@ -36,6 +35,7 @@ import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.navigation.CoPlanlyNavigationRail
 import com.coparently.app.presentation.navigation.Screen
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.testing.RobolectricTestApplication
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
@@ -54,7 +54,7 @@ import org.robolectric.annotation.GraphicsMode
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [SCREENSHOT_SDK], application = Application::class)
+@Config(sdk = [SCREENSHOT_SDK], application = RobolectricTestApplication::class)
 class DesignSystemScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
 
     @Test
