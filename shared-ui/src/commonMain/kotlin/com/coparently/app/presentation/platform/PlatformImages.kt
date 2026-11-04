@@ -21,8 +21,9 @@ import androidx.compose.ui.layout.ContentScale
 interface PlatformImages : PlatformCapability {
 
     /**
-     * Draws [model] — a URL, a record photo reference, or a platform value the shell understands (on
-     * Android a `Uri` or a `File`).
+     * Draws [model] — a URL, a record photo reference, a local file's kotlinx-io `Path` (a chat
+     * attachment's checked thumbnail), or a platform value the shell understands (on Android a `Uri`
+     * or a `File`).
      *
      * @param contentDescription What TalkBack says, or null for a decorative image
      * @param fullResolution Load it at its own size rather than the size it is drawn at, for a viewer

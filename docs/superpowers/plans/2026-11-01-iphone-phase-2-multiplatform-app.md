@@ -1116,6 +1116,21 @@ Then the export and the school import:
     strips leave themselves out. The event and receipt photos (11c, 11e) and the attachments' thumbnail
     (11b) read the same flag as they move.
 
+**Slice 11b notes (November 2026).** Chat's screens, in two groups.
+- Group 1, the seams chat needs beyond 11a's:
+  - `presentation/platform/FileDetails` (a picked file's name and size, a size in the reader's
+    words: Android's `ContentResolver` and `Formatter.formatShortFileSize` in the Activity's language;
+    the iPhone's `NSByteCountFormatter`) and `QrCodes` (`encode` to a `QrMatrix`, `shareImage`:
+    Android's ZXing and the PNG through the file provider, `AndroidQrCodes`, the settle-up code's
+    code unchanged; none on the iPhone), both in `PlatformServices` and `PlatformLocals.all`.
+  - `utils/ReaderMoneyText` (an `expect`): an amount as plain decimal text in the reader's
+    conventions; Android `BigDecimal` and `currencyFormat`, which moved to `:shared-ui`'s `androidMain`
+    (`presentation/expenses/CurrencyFormat.kt`, public, package unchanged); iPhone
+    `NSNumberFormatter`.
+  - `readerMediumDate` beside `ReaderDateText` (a thread's day separator, `FormatStyle.MEDIUM` on
+    Android; a top-level `expect`, because the object is at detekt's function limit).
+  - `CoilImages` maps a kotlinx-io `Path` to the `File` the attachment thumbnail handed Coil.
+
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 
 **Files:**

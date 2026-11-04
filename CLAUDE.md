@@ -2277,8 +2277,11 @@ Bakaláři client. The three tests (MockK) run in `androidUnitTest`. **Task 10 i
 **What a moved screen asks of the phone goes through `presentation/platform/`** (MON-24 phase 2,
 Task 11, slice 11a). One interface per capability in `:shared-ui`'s `commonMain` — `ShareSheet`,
 `FilePicker`, `CameraCapture`, `QrScanner`, `Dictation`, `PermissionRequester`, `OpenUrl` (links,
-a shared file in a viewer, the dialler, a mail draft, the app's settings), `SensitiveClipboard` and
-`AppBuildValues` (what screens read from `BuildConfig`) — each with `available`, so a screen draws
+a shared file in a viewer, the dialler, a mail draft, the app's settings), `SensitiveClipboard`,
+`AppBuildValues` (what screens read from `BuildConfig`), `FileDetails` (a picked file's name and
+size, a size in the reader's words; slice 11b) and `QrCodes` (a QR matrix from text, and the code
+shared as a picture: ZXing and a PNG through the file provider on Android, the settle-up card's
+payment code; slice 11b) — each with `available`, so a screen draws
 no affordance the phone cannot keep (design item 8). They reach the screens through one
 `staticCompositionLocalOf` each, provided together by `ProvidePlatform(PlatformServices(…))`, whose
 constructor has no defaults, so a shell cannot leave one out. The app's `ProvideAndroidPlatform`
@@ -4581,7 +4584,13 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
   byte for byte the same by construction (a direct delegate; `ReaderDateTextTest` holds the
   delegation — under Gradle's plain JVM `getBestDateTimePattern` has no ICU, so its skeleton cases
   fall back to the medium style on both sides and say nothing of a device's patterns), and whose
-  iPhone `actual` is Foundation's.
+  iPhone `actual` is Foundation's; `readerMediumDate` beside it is a date in the language's medium
+  style (a chat thread's day separator, slice 11b). **Money is the same kind of seam** (slice 11b):
+  `utils/ReaderMoneyText.amount(text, currency)` writes an amount the app carries as plain decimal
+  text in the reader's conventions, whose Android `actual` is `BigDecimal` and `currencyFormat` (in
+  `:shared-ui`'s `androidMain` since then, `presentation/expenses/CurrencyFormat.kt`, package and
+  signature unchanged, so the app's callers compile as they were) and whose iPhone `actual` is
+  `NSNumberFormatter`'s currency style.
   `ClockFormat`, `monthInFormatForm`, `unbreakableDate` and the skeleton constants are common
   (`utils/ClockFormat.kt`); `ClockFormat.follow(context)` and `localeUses24Hour(locale)` are
   Android extensions beside the `java.time` code. It follows

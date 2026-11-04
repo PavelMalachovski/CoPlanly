@@ -8,7 +8,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.provider.OpenableColumns
 import android.provider.Settings
+import android.text.format.Formatter
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -68,6 +70,8 @@ fun androidPlatformServices(context: Context): PlatformServices = PlatformServic
     clipboard = AndroidSensitiveClipboard(context),
     buildValues = androidBuildValues(),
     images = CoilImages,
+    fileDetails = AndroidFileDetails(context),
+    qrCodes = AndroidQrCodes(context),
 )
 
 /** The build's values, from `BuildConfig`; a blank address is null, which hides its row. */
@@ -351,14 +355,17 @@ private object CoilImages : PlatformImages {
     ) {
         // The zoomable viewer's (`ZoomableImage`): the photo at its own size, so zooming in shows
         // detail rather than an upscaled thumbnail. Otherwise the model as it is, sized to its place.
+        // A local file's kotlinx-io `Path` (a chat attachment's thumbnail) is the `File` the screen
+        // handed Coil before it moved.
+        val data: Any? = if (model is kotlinx.io.files.Path) File(model.toString()) else model
         val request: Any? = if (fullResolution) {
             ImageRequest.Builder(LocalContext.current)
-                .data(model)
+                .data(data)
                 .size(Size.ORIGINAL)
                 .crossfade(true)
                 .build()
         } else {
-            model
+            data
         }
         if (placeholder != null) {
             // The account picture's shape (`AccountAvatar`): the initial while loading and on failure.
@@ -379,4 +386,27 @@ private object CoilImages : PlatformImages {
             )
         }
     }
+}
+
+/**
+ * The `ContentResolver`'s display name and size, and `Formatter.formatShortFileSize` in the
+ * Activity's language, as the chat's attachment confirmation and chip wrote them.
+ */
+private class AndroidFileDetails(private val context: Context) : FileDetails {
+
+    override val available: Boolean = true
+
+    override fun describe(contentUri: String): PickedFileDescription {
+        val parsed = Uri.parse(contentUri)
+        val columns = arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE)
+        return runCatching {
+            context.contentResolver.query(parsed, columns, null, null, null)?.use { cursor ->
+                if (!cursor.moveToFirst()) return@use null
+                val size = if (cursor.isNull(1)) "" else Formatter.formatShortFileSize(context, cursor.getLong(1))
+                PickedFileDescription(cursor.getString(0).orEmpty(), size)
+            }
+        }.getOrNull() ?: PickedFileDescription(parsed.lastPathSegment.orEmpty(), "")
+    }
+
+    override fun formatSize(bytes: Long): String = Formatter.formatShortFileSize(context, bytes)
 }

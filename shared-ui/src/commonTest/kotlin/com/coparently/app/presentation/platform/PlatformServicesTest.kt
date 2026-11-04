@@ -95,5 +95,15 @@ class PlatformServicesTest {
                 placeholder: (@Composable () -> Unit)?,
             ) = Unit
         },
+        fileDetails = object : FileDetails {
+            override val available = false
+            override fun describe(contentUri: String) = PickedFileDescription("", "")
+            override fun formatSize(bytes: Long) = ""
+        },
+        qrCodes = object : QrCodes {
+            override val available = false
+            override fun encode(content: String): QrMatrix? = null
+            override fun shareImage(matrix: QrMatrix, chooserTitle: String) = Unit
+        },
     )
 }

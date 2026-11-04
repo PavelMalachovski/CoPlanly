@@ -5,6 +5,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import platform.Foundation.NSByteCountFormatter
+import platform.Foundation.NSByteCountFormatterCountStyleFile
 
 /*
  * The iPhone's platform capabilities (MON-24 phase 2, Task 11): what the iPhone app's view
@@ -29,6 +31,8 @@ fun iosPlatformServices(buildValues: AppBuildValues): PlatformServices = Platfor
     clipboard = NoClipboard,
     buildValues = buildValues,
     images = NoImages,
+    fileDetails = IosFileDetails,
+    qrCodes = NoQrCodes,
 )
 
 /** A launcher with nothing behind it. */
@@ -137,4 +141,28 @@ private object NoImages : PlatformImages {
     ) {
         Box(modifier = modifier, contentAlignment = Alignment.Center) { placeholder?.invoke() }
     }
+}
+
+/**
+ * Sizes as Foundation writes a file's (`NSByteCountFormatter`, file style, the phone's locale).
+ * Nothing is picked on the iPhone yet ([NoFilePicker]), so [describe] only says what an address's
+ * last segment says, with no size: what Android falls back to when the resolver knows nothing.
+ */
+private object IosFileDetails : FileDetails {
+    override val available: Boolean = true
+
+    override fun describe(contentUri: String): PickedFileDescription =
+        PickedFileDescription(name = contentUri.substringAfterLast('/'), size = "")
+
+    override fun formatSize(bytes: Long): String =
+        NSByteCountFormatter.stringFromByteCount(bytes, NSByteCountFormatterCountStyleFile)
+}
+
+/** No QR codes until phase 3 (Core Image's generator), so no payment code is drawn or shared. */
+private object NoQrCodes : QrCodes {
+    override val available: Boolean = false
+
+    override fun encode(content: String): QrMatrix? = null
+
+    override fun shareImage(matrix: QrMatrix, chooserTitle: String) = Unit
 }

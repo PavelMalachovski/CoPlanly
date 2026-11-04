@@ -10,6 +10,7 @@ import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toJavaYearMonth
 import kotlinx.datetime.toJavaZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Locale
 
 /**
@@ -44,3 +45,7 @@ actual object ReaderDateText {
 
     actual fun isoDate(iso: String?, skeleton: String): String = isoDateText(iso, skeleton)
 }
+
+/** `FormatStyle.MEDIUM` in `Locale.getDefault()`, the chat's day separator as it was formatted. */
+actual fun readerMediumDate(date: LocalDate): String =
+    date.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))

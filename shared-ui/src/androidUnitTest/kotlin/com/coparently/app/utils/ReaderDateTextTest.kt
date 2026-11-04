@@ -14,6 +14,7 @@ import org.junit.Before
 import org.junit.Test
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Locale
 
 /**
@@ -66,6 +67,11 @@ class ReaderDateTextTest {
             ReaderDateText.isoDate("2026-10-03", DAY_IN_SENTENCE)
         )
         assertEquals("not a date", ReaderDateText.isoDate("not a date", DAY_IN_SENTENCE))
+        assertEquals(
+            tag,
+            day.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)),
+            readerMediumDate(day)
+        )
     }
 
     @Test

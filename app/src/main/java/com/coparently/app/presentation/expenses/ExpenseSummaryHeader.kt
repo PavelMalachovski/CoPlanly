@@ -52,8 +52,6 @@ import com.coparently.app.presentation.theme.titleSmallEmphasized
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
 import java.text.NumberFormat
-import java.util.Currency
-import java.util.Locale
 import kotlin.math.abs
 
 /** Height of the who-paid split bar. */
@@ -601,15 +599,6 @@ private fun BalanceStrip(
         }
     }
 }
-
-/**
- * Currency formatter that tolerates an unknown code rather than crashing on it, in [locale] — the
- * process's default unless a caller words its text in a context of its own (a notice).
- */
-internal fun currencyFormat(currency: String, locale: Locale = Locale.getDefault()): NumberFormat =
-    NumberFormat.getCurrencyInstance(locale).apply {
-        runCatching { this.currency = Currency.getInstance(currency) }
-    }
 
 /** Two named parents, so the previews render the same shape a paired device does. */
 private val previewParentNames = ParentNames(

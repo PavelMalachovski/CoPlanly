@@ -83,3 +83,10 @@ expect object ReaderDateText {
      */
     fun isoDate(iso: String?, skeleton: String): String
 }
+
+/**
+ * [date] in the language's own medium style ("12 Aug 2026", "12. 8. 2026"), the form a chat
+ * thread's day separators take: a style, not a skeleton, so the platform's medium date as it is.
+ * Beside [ReaderDateText] rather than in it, which holds the skeleton and pattern rules.
+ */
+expect fun readerMediumDate(date: LocalDate): String

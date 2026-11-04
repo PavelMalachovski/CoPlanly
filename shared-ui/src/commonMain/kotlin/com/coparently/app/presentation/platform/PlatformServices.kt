@@ -26,6 +26,8 @@ class PlatformServices(
     val clipboard: SensitiveClipboard,
     val buildValues: AppBuildValues,
     val images: PlatformImages,
+    val fileDetails: FileDetails,
+    val qrCodes: QrCodes,
 ) {
 
     /** One provided value per local in [PlatformLocals.all], in that order. */
@@ -40,6 +42,8 @@ class PlatformServices(
         LocalSensitiveClipboard provides clipboard,
         LocalAppBuildValues provides buildValues,
         LocalPlatformImages provides images,
+        LocalFileDetails provides fileDetails,
+        LocalQrCodes provides qrCodes,
     )
 }
 
@@ -92,6 +96,12 @@ val LocalAppBuildValues = staticCompositionLocalOf<AppBuildValues> { notProvided
 /** How images are loaded and drawn. */
 val LocalPlatformImages = staticCompositionLocalOf<PlatformImages> { notProvided("LocalPlatformImages") }
 
+/** A file's name and size as the reader reads them. */
+val LocalFileDetails = staticCompositionLocalOf<FileDetails> { notProvided("LocalFileDetails") }
+
+/** QR codes drawn from text, and shared as a picture. */
+val LocalQrCodes = staticCompositionLocalOf<QrCodes> { notProvided("LocalQrCodes") }
+
 /** The platform's locals, for the test that the shell's provider covers each of them. */
 object PlatformLocals {
 
@@ -107,5 +117,7 @@ object PlatformLocals {
         LocalSensitiveClipboard,
         LocalAppBuildValues,
         LocalPlatformImages,
+        LocalFileDetails,
+        LocalQrCodes,
     )
 }

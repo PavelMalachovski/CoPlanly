@@ -11,6 +11,8 @@ import platform.Foundation.NSCalendar
 import platform.Foundation.NSCalendarIdentifierGregorian
 import platform.Foundation.NSDate
 import platform.Foundation.NSDateFormatter
+import platform.Foundation.NSDateFormatterMediumStyle
+import platform.Foundation.NSDateFormatterNoStyle
 import platform.Foundation.NSLocale
 import platform.Foundation.currentLocale
 import kotlin.time.Instant
@@ -75,6 +77,18 @@ actual object ReaderDateText {
     private const val PATTERN_12_HOUR = "h:mm a"
     private const val PATTERN_12_HOUR_GUTTER = "h a"
     private const val ANSWER_BY_DAY = "EEEMMMd"
+}
+
+/** Foundation's medium date style in the phone's locale, on the Gregorian calendar. */
+actual fun readerMediumDate(date: LocalDate): String {
+    val instant = nsDate(LocalDateTime(date, LocalTime(0, 0))) ?: return date.toString()
+    val medium = NSDateFormatter().apply {
+        locale = NSLocale.currentLocale
+        calendar = gregorian
+        dateStyle = NSDateFormatterMediumStyle
+        timeStyle = NSDateFormatterNoStyle
+    }
+    return medium.stringFromDate(instant)
 }
 
 /** The calendar `java.time`'s ISO dates are on. */
