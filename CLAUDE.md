@@ -1570,7 +1570,8 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              R.string copy; the Onest fonts (composeResources/font/); presentation/theme/ (slice
              9b, its Android-only halves in androidMain behind expects); and the common
              components of presentation/common/ that need no ViewModel and no Android API (the
-             design system's primitives). ViewModels and screens follow. It makes the iPhone's
+             design system's primitives), with UiText (slice 9c). ViewModels and screens follow.
+             It makes the iPhone's
              one framework, Shared (static, exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
              ReminderScheduler, the export's record and the school import's plan — in shared/,
@@ -1933,8 +1934,7 @@ Koin and the lifecycle, Task 10); Coil's users (`AccountAvatar`, `PhotoStrip`, `
 `java.time` and `java.util.Locale` users (`AnswerByField`, `HolidayNames`, `MonthPaging`,
 `PickerDates`, `Today`, `VaccinationListEditor`); the `@StringRes` label helpers (`BloodTypeLabel`,
 `EventTypeLabel`, `PetSpeciesLabel`, `CountryPicker`) and the components that read them
-(`MedicalProfileEditor`, `FamilyMemberChips`); `UiText` with `ErrorText` and `UiState`, which
-move with `UiText`'s Compose Multiplatform form (its own slice, 9c); and, not moved yet though
+(`MedicalProfileEditor`, `FamilyMemberChips`); and, not moved yet though
 nothing Android holds them, the state the sources and ViewModels share (`Loadable`, `FormDraft`,
 `NamedParent`, `PhotoOwner`, `ParentLabels`, `ParentNames`: Task 10) and `RecordPlaceMark` (with
 the screens that draw it, Task 11). **A Robolectric test runs `RobolectricTestApplication`**
@@ -1942,6 +1942,17 @@ the screens that draw it, Task 11). **A Robolectric test runs `RobolectricTestAp
 provider from the manifest, so it hands Compose Multiplatform's resource reader the context its
 `AndroidContextProvider` hands it on a device; without it every `stringResource(Res.string.…)` a
 test composes throws "Android context is not initialized".
+**`UiText` followed in slice 9c** (`UiText.kt`, `ErrorText.kt` and `UiState.kt`, the last on
+`kotlinx.io.IOException`, which is `java.io.IOException` on Android): its cases hold Compose
+Multiplatform's `StringResource` and `PluralStringResource` (`UiText.Res(Res.string.x, args)`,
+`UiText.Plural(Res.plurals.x, count, args)`), `Date` a kotlinx-datetime `LocalDate` and `Weekday`
+its `DayOfWeek`, worded by `rememberReaderDates` (an `expect`: `java.time` in the configuration's
+first locale on Android, as before; Foundation on the iPhone). `asString()` reads through Compose
+Multiplatform, and a snackbar or a Toast resolves through `rememberUiTextResolver()` (see CQ-14 in
+Known issues). Every ViewModel, state class and screen that builds a `UiText` names `Res`, with the
+same keys and arguments; `SharedFileViewer.sharedFileError` takes a `StringResource` fallback.
+`UiTextParityTest` (`app/src/test/.../resources/`) holds both resolutions to what Android's resources
+made of the same samples, in the five languages.
 
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller
@@ -3997,11 +4008,18 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   reintroduce a model key in the client either. Server secrets belong in `functions/.env`,
   never in a tracked file.
 - **Text a ViewModel or a service produces is a `UiText`, resolved in composition** (CQ-14,
-  September 2026). `presentation/common/UiText.kt` holds *which* string — `Res` with arguments,
-  `Plural`, `Date` (formatted in the reader's locale at resolution), or `Raw` for what is already
-  the user's own words — and the screen calls `asString()`, or `asString(context)` with the
-  **Activity's** `Context` inside a snackbar/Toast lambda. Still don't inject `Context` into a
-  ViewModel: the application's configuration can lag AppCompat's per-app locale on older APIs,
+  September 2026). `presentation/common/UiText.kt` (in `:shared-ui`'s `commonMain` since MON-24
+  phase 2, slice 9c) holds *which* string — `Res` with a Compose Multiplatform `StringResource` and
+  arguments (`UiText.Res(Res.string.x, listOf(…))`), `Plural` with a `PluralStringResource`, `Date`
+  (a kotlinx-datetime date, formatted in the reader's locale at resolution), `Weekday`, or `Raw`
+  for what is already the user's own words — and the screen calls `asString()`, or, inside a
+  snackbar/Toast lambda, `asString(resolver)` with the `rememberUiTextResolver()` it took in
+  composition, which carries the composition's language and date locale (it replaced
+  `asString(context)` with the Activity's `Context`; never resolve with the application's). An
+  argument that is not a `UiText` is printed with `toString()`, all Compose Multiplatform's
+  `%<n>$s` and `%<n>$d` do, so pass a `%<n>$d` an `Int` or a `Long`, never a formatted number, and
+  don't put the three `%%` keys of "Localization" in a `UiText`. Still don't inject `Context` into
+  a ViewModel: the application's configuration can lag AppCompat's per-app locale on older APIs,
   while composition follows the Activity. Three rules. **A screen that branches on an outcome
   gets a typed code, not text** — `CalendarScreen` used to compare the literal
   `"Event rescheduled"` to decide whether to offer Undo (UX-12); it now reads
@@ -4069,7 +4087,8 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
   spelling fixes; those keys are read through `R.string` only, and need a wording both read alike
   before `SplitShares.kt` moves to `shared-ui` (Task 11).
 - **Which reader a composable uses follows where it lives.** Code in `:shared-ui` (the theme's
-  colour names, the common components' own labels, since slice 9b) reads
+  colour names, the common components' own labels, since slice 9b, and every `UiText`, since
+  slice 9c) reads
   `org.jetbrains.compose.resources.stringResource(Res.string.…)`; code still in the app reads
   `androidx.compose.ui.res.stringResource(R.string.…)`, and one file may import both (the overloads
   differ by type). They pick the language differently: `R.string` from the Activity's
@@ -4117,8 +4136,9 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
   the device of whoever reads that language. CI runs it as the `invariants` job.
 - In composables use `stringResource(...)`; for text consumed inside non-composable
   lambdas (snackbars, coroutines) capture the string in composable scope first. Text that comes
-  from a ViewModel or a service is a `UiText` (`presentation/common/UiText.kt`, CQ-14) — never a
-  `String` built there. Language
+  from a ViewModel or a service is a `UiText` (`presentation/common/UiText.kt`, in `:shared-ui`,
+  CQ-14) — never a `String` built there — built from `Res.string`/`Res.plurals` and resolved in a
+  lambda through `rememberUiTextResolver()`. Language
   endonyms in the picker ("Čeština", "Русский", …) are `translatable="false"`.
 - Dates/day/month names come from `java.time` formatters with the default locale —
   never from string arrays.

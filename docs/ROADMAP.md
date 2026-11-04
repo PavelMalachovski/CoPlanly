@@ -868,7 +868,7 @@ through.
 The model in use, which is the rule for new code:
 
 - **A ViewModel that knows which operation failed says so with its own resource** —
-  `UiText.Res(R.string.change_request_error_apply_failed)`, `custody_setup_save_failed`,
+  `UiText.Res(Res.string.change_request_error_apply_failed)`, `custody_setup_save_failed`,
   `pets_delete_failed` — and logs the exception. This is most of the app, and it is more useful to a
   parent than a sentence chosen by exception type, so it is **not** to be routed through
   `ErrorHandler`.
@@ -945,7 +945,9 @@ abstraction. **Do not** inject `Context` into a ViewModel ad hoc to fix one. Blo
 **Done (September 2026), and the abstraction is a type rather than a provider.**
 `presentation/common/UiText.kt` holds *which* string — a resource with arguments, a plural, a date,
 or text that is already the user's own (a name) — and composition resolves it (`asString()`), or the
-Activity's `Context` does inside a snackbar or Toast lambda. A provider injected into the ViewModel
+Activity's `Context` does inside a snackbar or Toast lambda (since MON-24 phase 2's slice 9c a
+`rememberUiTextResolver()` taken in composition, the type being in `:shared-ui` on Compose
+Multiplatform's resources). A provider injected into the ViewModel
 was the rejected alternative: it resolves against the application's configuration, which under
 AppCompat's per-app locales can still be the previous language on older APIs, while composition
 follows the Activity. Where a screen *branches* on an outcome, the answer is still a typed code
@@ -2856,9 +2858,9 @@ bytes are identical on Android):
   now runs `RobolectricTestApplication`, which hands Compose Multiplatform's reader the context its
   content provider would. `PerAppLocaleTest` checks that Compose's `Locale.current`, which those
   labels' language follows, follows the app's language too; on Android 12 and older that rests on
-  AppCompat setting the default locale, unproven until the API 26 and 30 legs run. **Left for slice
-  9c**: `UiText` in its Compose Multiplatform form (every ViewModel that builds one from `R.string`
-  changes), with `ErrorText` and `UiState`. **Decided, option (a)** (owner, 4 November 2026; built
+  AppCompat setting the default locale, unproven until the API 26 and 30 legs run. **Then slice
+  9c** (below): `UiText` in its Compose Multiplatform form, with `ErrorText` and `UiState`.
+  **Decided, option (a)** (owner, 4 November 2026; built
   as `ResolvedAppLocale` in slice 9c's first commit) — the question was: the two readers fall back differently when the phone's first language is one the
   app does not translate. Android takes the first translated locale of the list; Compose
   Multiplatform 1.9.3 takes the first locale's language or `values/`. A phone in Slovak then Czech
@@ -2867,6 +2869,24 @@ bytes are identical on Android):
   language from the device's first to that one); (b) read the moved labels through `R.string` on
   Android behind an `expect`/`actual` until Compose Multiplatform falls back the same way; (c) leave
   it as a known gap until Task 11.
+- **`UiText` in its Compose Multiplatform form** — **slice 9c built (phase 2, Task 9, November
+  2026), CI's first run pending**: `UiText`, `ErrorText` and `UiState` moved to `:shared-ui`'s
+  `commonMain`, package unchanged. `UiText.Res` and `UiText.Plural` hold Compose Multiplatform's
+  `StringResource` and `PluralStringResource`, so the 25 ViewModels, state helpers and screens that
+  build one name `Res.string`/`Res.plurals` with the same keys and arguments; `Date` and `Weekday`
+  carry kotlinx-datetime's `LocalDate` and `DayOfWeek` and are worded by an `expect`
+  (`rememberReaderDates`: on Android `java.time`'s medium date and full day name in the
+  configuration's first locale, exactly as before; on the iPhone Foundation's in the current
+  locale). `asString()` reads through Compose Multiplatform; the fourteen snackbar and message
+  lambdas (thirteen screens) that resolved with the Activity's `Context` now resolve through
+  `rememberUiTextResolver()`, Compose Multiplatform's suspending readers in the composition's own
+  resource environment, so a lambda speaks the language the screen does. Every argument that
+  reaches a `%<n>$d` is an `Int`, no key read through `Res` holds a `%` other than
+  `%<n>$s`/`%<n>$d`, and the three `%%` keys
+  (`expenses_split_shares_*`) are read by `SplitShares.kt` through `R.string`, never through a
+  `UiText`. `UiTextParityTest` (Robolectric, five languages) compares both resolutions with what
+  Android's resources and `java.time` made of the same samples; the screenshot baselines should not
+  move. Task 9's Steps 5 and 6 are what remains of it.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

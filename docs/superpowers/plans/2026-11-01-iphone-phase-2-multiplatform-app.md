@@ -602,6 +602,24 @@ both parity tests and Steps 1–3; Steps 4–6 are slice 9b.
 - Not done: `UiText` (slice 9c). Steps 5–6 wait for it; screenshots must verify unchanged on 9b's
   CI run already.
 
+**Slice 9c notes (November 2026).** `UiText` in its Compose Multiplatform form, after
+`ResolvedAppLocale` (the owner's option (a) for the two readers' fallback):
+- `UiText.kt`, `ErrorText.kt` and `UiState.kt` moved to `shared-ui/src/commonMain/` (`UiState` on
+  `kotlinx.io.IOException`). The interface had five cases, not the four this task's Interfaces
+  lists: `Weekday` stays beside `Date`. Both carry kotlinx-datetime types and are worded by
+  `rememberReaderDates`, an `expect` (Android: `java.time` in `LocalConfiguration`'s first locale,
+  the code that was there; iPhone: `NSDateFormatter` in the current locale, Gregorian).
+- `asString(context)` became `asString(resolver)`, with `rememberUiTextResolver()` taken in
+  composition: Compose Multiplatform's suspending `getString`/`getPluralString` in the composition's
+  `rememberResourceEnvironment()`, never the system environment, so a snackbar speaks the screen's
+  language. Fourteen call sites in thirteen screens.
+- Every `UiText.Res(R.string.x)` and `UiText.Plural(R.plurals.x)` in the app and its tests is
+  `Res.string.x`/`Res.plurals.x`; `sharedFileError` and `ConnectSchoolViewModel.messageFor` take or
+  return a `StringResource`. Arguments: every `%<n>$d` gets an `Int`, nothing else is formatted,
+  and the three `%%` keys stay `R.string` in `SplitShares.kt`.
+- `UiTextParityTest` (app, Robolectric, five languages) compares both resolutions with Android's
+  resources and `java.time` for samples of every case and argument kind.
+
 - [ ] **Step 1: Write `StringsParityTest`** (Robolectric). For every key in every locale, the
   value from Android resources equals CMP's `getString` for that locale, with the same arguments.
   Use `"A"`/`7` per position and a key with `%%`.
