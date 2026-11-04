@@ -30,6 +30,9 @@ import kotlinx.coroutines.withContext
  * and medical profile included, sitting on the device. So the wipe is performed here,
  * explicitly, and only after the server reports success: clearing first would destroy the
  * user's data even on a run that failed and has to be retried.
+ *
+ * It is the Android [AccountDeletion], which Settings' ViewModel in `:shared-ui` calls (MON-24
+ * phase 2, Task 10).
  */
 @Suppress("LongParameterList") // one collaborator per piece of the account this phone holds
 class AccountDeletionService(
@@ -40,14 +43,14 @@ class AccountDeletionService(
     private val reminderScheduler: ReminderScheduler,
     private val requestClockScheduler: RequestClockScheduler,
     private val deviceTraces: DeviceTraces
-) {
+) : AccountDeletion {
 
     /**
      * Deletes the account and wipes this device.
      *
      * @return success once the server has erased the account and the local database is clear.
      */
-    suspend fun deleteAccount(): Result<Unit> = try {
+    override suspend fun deleteAccount(): Result<Unit> = try {
         functions.getHttpsCallable(CALLABLE).call(emptyMap<String, Any>()).await()
         wipeLocalData()
         Result.success(Unit)

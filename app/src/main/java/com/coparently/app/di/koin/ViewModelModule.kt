@@ -26,8 +26,6 @@ import com.coparently.app.presentation.profile.ProfileViewModel
 import com.coparently.app.presentation.review.MonthReviewViewModel
 import com.coparently.app.presentation.school.ConnectSchoolViewModel
 import com.coparently.app.presentation.school.SchoolImportViewModel
-import com.coparently.app.presentation.settings.CalendarFeedViewModel
-import com.coparently.app.presentation.settings.SettingsViewModel
 import com.coparently.app.presentation.stickers.StickersViewModel
 import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
@@ -69,8 +67,6 @@ val viewModelModule = module {
     viewModelOf(::MonthReviewViewModel)
     viewModelOf(::ConnectSchoolViewModel)
     viewModelOf(::SchoolImportViewModel)
-    viewModelOf(::CalendarFeedViewModel)
-    viewModelOf(::SettingsViewModel)
     viewModelOf(::StickersViewModel)
     viewModelOf(::AuthStateViewModel)
     viewModelOf(::SyncViewModel)

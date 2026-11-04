@@ -15,16 +15,17 @@ import kotlinx.coroutines.tasks.await
  * It is also the Android [PushQueue], through which the repositories in `:shared-data` queue a
  * push (MON-24 phase 2, Task 8b), and the Android [PushDevice], through which the sync keeps this
  * device's token on the profile (Task 8g). The sync's event and child-info payloads are
- * [RecordPushes]' since then.
+ * [RecordPushes]' since then. And it is the Android [PushRegistration], the Settings switch and the
+ * sign-out's detach that the shared ViewModels ask for (Task 10).
  */
 class FcmService(
     private val firebaseMessaging: FirebaseMessaging,
     private val firestore: FirebaseFirestore,
     private val firebaseAuthService: FirebaseAuthService,
     private val encryptedPreferences: SecurePreferences
-) : PushDevice {
+) : PushDevice, PushRegistration {
     /** Whether this person has left push notifications on. On unless they switched it off. */
-    fun isPushEnabled(): Boolean =
+    override fun isPushEnabled(): Boolean =
         encryptedPreferences.getString(PreferenceKeys.PUSH_ENABLED, null) != false.toString()
 
     /**
@@ -36,7 +37,7 @@ class FcmService(
      * @return failure when turning it on could not register a token; turning it off is
      *   best-effort, like sign-out, and always succeeds locally.
      */
-    suspend fun setPushEnabled(enabled: Boolean): Result<Unit> {
+    override suspend fun setPushEnabled(enabled: Boolean): Result<Unit> {
         encryptedPreferences.putString(PreferenceKeys.PUSH_ENABLED, enabled.toString())
         if (!enabled) {
             unregisterToken()
@@ -174,7 +175,7 @@ class FcmService(
      * or not the network is there, and `CoPlanlyMessagingService` refuses a push addressed to
      * anybody but the signed-in uid regardless.
      */
-    suspend fun unregisterToken() {
+    override suspend fun unregisterToken() {
         val uid = firebaseAuthService.getCurrentUser()?.uid ?: return
         runCatching {
             firestore.collection("users").document(uid)

@@ -9,7 +9,9 @@ import com.google.firebase.analytics.logEvent
  * Provides centralized analytics tracking for app events.
  *
  * It is the Android [Analytics] (MON-24 phase 2). It never turns collection on or off:
- * `TelemetryConsentApplier` is the one switch (REL-5).
+ * `TelemetryConsentApplier` is the one switch (REL-5). The events the shared ViewModels log are
+ * `:shared-data`'s `AnalyticsEvents.kt`, through [log], with the names and parameters the functions
+ * they replaced here wrote (Task 10).
  *
  * @property analytics Firebase Analytics instance
  */
@@ -140,28 +142,6 @@ class AnalyticsManager(
     fun logCalendarSync(success: Boolean) {
         analytics.logEvent("calendar_sync") {
             param("success", success.toString())
-        }
-    }
-
-    /**
-     * Log push notifications enabled/disabled.
-     *
-     * @param enabled Whether notifications are enabled
-     */
-    fun logNotificationsToggled(enabled: Boolean) {
-        analytics.logEvent("notifications_toggled") {
-            param("enabled", enabled.toString())
-        }
-    }
-
-    /**
-     * Log theme changed event.
-     *
-     * @param isDark Whether dark theme is enabled
-     */
-    fun logThemeChanged(isDark: Boolean) {
-        analytics.logEvent("theme_changed") {
-            param("dark_mode", isDark.toString())
         }
     }
 

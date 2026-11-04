@@ -2949,8 +2949,12 @@ bytes are identical on Android):
   receipt's on-device text recognition (nothing read, nothing sent). Then payments and child support
   (`paymentsUiModule`, `supportUiModule`), on the signed-in account's seam; the support reminder's
   scheduler interface moved to `:shared-data` (the iPhone schedules nothing yet), and a typed amount
-  is read by the new `DecimalText.parsePositiveAmount`, held to `BigDecimal`'s answers. Settings to
-  sync and the rest follow.
+  is read by the new `DecimalText.parsePositiveAmount`, held to `BigDecimal`'s answers. **Slice 10e
+  built, CI pending**: settings (`settingsUiModule`) — Settings' ViewModel, on two new seams in
+  `:shared-data` (`PushRegistration` for the push switch, `AccountDeletion` for the account's erasure,
+  which the app's `FcmService` and `AccountDeletionService` answer; the iPhone offers neither yet)
+  and its product events through `Analytics`, and the calendar-feed screen's. Pairing, onboarding,
+  auth, sync and the rest follow.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

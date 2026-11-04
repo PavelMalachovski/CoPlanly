@@ -27,6 +27,7 @@ import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirebaseImageStorage
 import com.coparently.app.data.remote.firebase.PushDevice
 import com.coparently.app.data.remote.firebase.PushQueue
+import com.coparently.app.data.remote.firebase.PushRegistration
 import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.remote.google.CredentialAuthenticator
 import com.coparently.app.data.remote.google.CredentialManagerService
@@ -44,6 +45,7 @@ import com.coparently.app.data.school.bakalari.BakalariClient
 import com.coparently.app.data.school.bakalari.BakalariSchoolDirectory
 import com.coparently.app.data.security.EncryptionManager
 import com.coparently.app.data.session.AccountConsistency
+import com.coparently.app.data.session.AccountDeletion
 import com.coparently.app.data.session.AccountDeletionService
 import com.coparently.app.data.session.AccountSwitchGuard
 import com.coparently.app.data.session.DeviceTraces
@@ -93,6 +95,8 @@ val dataModule = module {
     single<PushQueue> { get<FcmService>() }
     // This device's push token, which the sync in `:shared-data` keeps on the profile.
     single<PushDevice> { get<FcmService>() }
+    // The Settings switch and sign-out's detach, which the ViewModels in `:shared-ui` ask for.
+    single<PushRegistration> { get<FcmService>() }
     singleOf(::FirebaseAuthService)
     // The one question the repositories in `:shared-data` ask of the signed-in account.
     single<SignedInUser> { get<FirebaseAuthService>() }
@@ -115,6 +119,8 @@ val dataModule = module {
     single { BakalariClient(get<HttpClient>(SCHOOL_HTTP_CLIENT)) }
     single { BakalariSchoolDirectory(get<HttpClient>(SCHOOL_HTTP_CLIENT)) }
     singleOf(::AccountDeletionService)
+    // The account's erasure, which Settings' ViewModel in `:shared-ui` asks for.
+    single<AccountDeletion> { get<AccountDeletionService>() }
     singleOf(::AccountSwitchGuard)
     // The check the sync in `:shared-data` runs before its first upload.
     single<AccountConsistency> { get<AccountSwitchGuard>() }

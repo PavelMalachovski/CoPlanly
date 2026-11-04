@@ -1,6 +1,6 @@
 package com.coparently.app.presentation.settings
 
-import com.coparently.app.data.remote.firebase.FcmService
+import com.coparently.app.data.remote.firebase.PushRegistration
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.repository.FamilySplit
 import com.coparently.app.data.repository.RatioSubmission
@@ -45,7 +45,7 @@ import org.junit.Test
 class SettingsViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
-    private val fcmService = mockk<FcmService>(relaxed = true)
+    private val fcmService = mockk<PushRegistration>(relaxed = true)
     private val pauseBeforeSending = MutableStateFlow(false)
     private val preferences = mockk<PreferencesRepository>(relaxed = true) {
         every { getDarkThemeFlow() } returns flowOf(null)

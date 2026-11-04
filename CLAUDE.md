@@ -1588,21 +1588,19 @@ shared-data/ — Kotlin Multiplatform module (MON-24 phase 2): the data layer bo
              on the iPhone platformDataModule binds every seam itself (Task 8j: stand-ins in
              di/koin/IosUnavailable.kt where the iPhone has nothing yet).
              Depends on shared/; no iOS framework of its own
-shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phase 2, from Task 9):
-             the UI both apps will run. So far the strings: composeResources/values*/ (every
-             string, plural and string array, five locales), from which Res
-             (com.coparently.app.resources) is generated, and from which the app generates its
-             R.string copy; the Onest fonts (composeResources/font/); presentation/theme/ (slice
-             9b, its Android-only halves in androidMain behind expects); and the common
-             components of presentation/common/ that need no ViewModel and no Android API (the
-             design system's primitives), with UiText (slice 9c); and, from Task 10, the shared
-             state of presentation/common/ (ParentsSource and its siblings) and the ViewModels,
-             group by group (so far common/'s, chat's, the calendar's, the events', custody's, the
-             requests', the family's,
-             expenses', payments' and child support's), with
-             their Koin modules: uiModules and platformUiModule, which appModules includes.
-             Screens follow (Task 11). It makes the iPhone's one framework, Shared (static,
-             exporting shared/ and shared-data/)
+shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phase 2, from Task 9): the
+             UI both apps will run. So far the strings: composeResources/values*/ (every string,
+             plural and string array, five locales), from which Res (com.coparently.app.resources)
+             is generated, and from which the app generates its R.string copy; the Onest fonts
+             (composeResources/font/); presentation/theme/ (slice 9b, its Android-only halves in
+             androidMain behind expects); and the common components of presentation/common/ that
+             need no ViewModel and no Android API (the design system's primitives), with UiText
+             (slice 9c); and, from Task 10, the shared state of presentation/common/ (ParentsSource
+             and its siblings) and the ViewModels, group by group (so far common/'s, chat's, the
+             calendar's, the events', custody's, the requests', the family's, expenses', payments',
+             child support's and settings'), with their Koin modules: uiModules and
+             platformUiModule, which appModules includes. Screens follow (Task 11). It makes the
+             iPhone's one framework, Shared (static, exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
              ReminderScheduler, the export's record and the school import's plan — in shared/,
              except the phase-1 stay list below (one file), which is still in app/
@@ -1845,21 +1843,22 @@ app binds the four seams to its classes. Still in the app from `data/repository/
 which on Android is `ZoneId.systemDefault()` itself and is read on every call; `RequestClocksTest`
 holds the zone to `ZoneId.systemDefault()` on every call, as the system zone changes, and a test in
 another module builds a fixed clock through `RequestTime.of` — today `RequestsSourceTest`, in
-`:shared-ui` since slice 10c — the primary constructor staying `internal` for `KoinGraphTest`), `RequestClocks`, `RequestClockActions`, `RequestClockKeeper` (its in-flight set a
-compare-and-set over an immutable set where it took a JVM lock; the sweep's bound, its
-`NonCancellable` tail and everything else unchanged), `RequestClockSteps` and `RequestRecords`, and
-from `data/family/`, `OtherFamiliesSignals` (its "today" and "now" from `kotlin.time`'s system
-clock in the system zone, what `LocalDate.now()` and `System.currentTimeMillis()` read). The steps
-post through the new **`RequestClockNotices`** (`data/requests/`: `remind`, `deadlinePassed` and
-`noAnswer`; the app's `RequestNotices` implements it) and keep their jobs through the domain's
-`RequestClockScheduler`, as before. Every constructor kept its parameter names, so the e2e parents
-build them unchanged. They are bound in `requestsDataModule` (with `RequestClockSweep`, which the
-app bound in Task 8g) and `familyDataModule`, and the app binds `RequestClockNotices`. Still in the
-app from `data/requests/` and `data/notification/`: `RequestNotices` (the notification manager, the
-strings and the `BigTextStyle` of item 15), `RequestClockWorker`, `RequestClockWork` and
-`WorkRequestClockScheduler` (WorkManager: the `KEEP` names and `needsNetwork`). Task 8i, the
-school import (item 35), the export's sources (item 26) and the records of no family (item 46),
-once their domain had left the stay list: in `commonMain`, from `data/school/`, `SchoolAccounts`,
+`:shared-ui` since slice 10c — the primary constructor staying `internal` for `KoinGraphTest`),
+`RequestClocks`, `RequestClockActions`, `RequestClockKeeper` (its in-flight set a compare-and-set
+over an immutable set where it took a JVM lock; the sweep's bound, its `NonCancellable` tail and
+everything else unchanged), `RequestClockSteps` and `RequestRecords`, and from `data/family/`,
+`OtherFamiliesSignals` (its "today" and "now" from `kotlin.time`'s system clock in the system zone,
+what `LocalDate.now()` and `System.currentTimeMillis()` read). The steps post through the new
+**`RequestClockNotices`** (`data/requests/`: `remind`, `deadlinePassed` and `noAnswer`; the app's
+`RequestNotices` implements it) and keep their jobs through the domain's `RequestClockScheduler`, as
+before. Every constructor kept its parameter names, so the e2e parents build them unchanged. They
+are bound in `requestsDataModule` (with `RequestClockSweep`, which the app bound in Task 8g) and
+`familyDataModule`, and the app binds `RequestClockNotices`. Still in the app from `data/requests/`
+and `data/notification/`: `RequestNotices` (the notification manager, the strings and the
+`BigTextStyle` of item 15), `RequestClockWorker`, `RequestClockWork` and `WorkRequestClockScheduler`
+(WorkManager: the `KEEP` names and `needsNetwork`). Task 8i, the school import (item 35), the
+export's sources (item 26) and the records of no family (item 46), once their domain had left the
+stay list: in `commonMain`, from `data/school/`, `SchoolAccounts`,
 `SchoolConnectionStore` (its `@Synchronized` methods under the data layer's reentrant `Monitor`,
 `synchronized` on Android; the ledger's day `IsoText.date`/`parseDate`), `SchoolEventWriter` and
 `SchoolImporter` (on `kotlin.time`'s `Clock` in the zone it was built in, what
@@ -1927,15 +1926,14 @@ task; the iPhone has no `koin-test`). Phase 3's app replaces each stand-in. Ever
 `data/…` path is still under
 `app/src/main/java/com/coparently/app/`. **The data layer reaches the platform only through those
 interfaces**: a new data-layer class takes `SecurePreferences`, `AppDirectories`, `CrashReporter`,
-`Analytics`, `DeviceRegion`, `SignedInUser`, `PushQueue`, `PushDevice`, `AccountConsistency`, `RequestClockNotices`,
-`RequestClockScheduler`, `GoogleCalendarConnectionSource`, `StorageBucket`, `PickedFiles` or
-`ExportVerifyAddress` rather
-than `EncryptedPreferences`, a `Context` directory, `CrashlyticsManager`, `AnalyticsManager`,
-`FirebaseAuthService`, `FcmService`, `AccountSwitchGuard`, `RequestNotices`,
+`Analytics`, `DeviceRegion`, `SignedInUser`, `PushQueue`, `PushDevice`, `PushRegistration`,
+`AccountConsistency`, `AccountDeletion`, `RequestClockNotices`, `RequestClockScheduler`,
+`GoogleCalendarConnectionSource`, `StorageBucket`, `PickedFiles` or `ExportVerifyAddress` rather than
+`EncryptedPreferences`, a `Context` directory, `CrashlyticsManager`, `AnalyticsManager`,
+`FirebaseAuthService`, `FcmService`, `AccountSwitchGuard`, `AccountDeletionService`, `RequestNotices`,
 `WorkRequestClockScheduler`, `CredentialManagerService`, `FirebaseStorage`, a `ContentResolver` or
-`BuildConfig`,
-and logs with
-`logger.e/w/i/d(TAG, …)`, never `android.util.Log`.
+`BuildConfig`, and logs with `logger.e/w/i/d(TAG, …)`, never `android.util.Log`. A ViewModel in
+`:shared-ui` takes the same seams (`PushRegistration` and `AccountDeletion` came with slice 10e).
 
 **Where a `presentation/theme/…` or `presentation/common/…` path in this file lives** (MON-24
 phase 2, Task 9, slice 9b, November 2026). The theme moved whole to
@@ -2111,8 +2109,9 @@ edge: `ExpenseScreen` hands `monthPagingTransition` and its month label `toJavaY
 the payments' calls and `PendingSettleUp` take the month as it is (they converted it with
 `toKotlinYearMonth()` before); `SettleUpDialog` formats `pending.month.toJavaYearMonth()`. The
 receipt's on-device text goes through the domain's `ReceiptTextRecognizer`, which the iPhone's
-`platformDataModule` stands in for with `NoReceiptText` (every scan an `IOException`, so the form says
-it found nothing and keeps the photo; nothing is sent anywhere, item 10). The four
+`platformDataModule` stands in for with `NoReceiptText` (every scan an `IOException`, so the form shows
+its failed-scan message, "Couldn't read the receipt" (`ReceiptScanState.Failed`), and keeps the photo;
+nothing is sent anywhere, item 10). The four
 `ExpenseViewModel` tests (MockK) run in `androidUnitTest`, unchanged but for their location.
 Then **payments and child support**: `PaymentsViewModel` and `SupportViewModel`, in `paymentsUiModule`
 and `supportUiModule`, on `SignedInUser` for the uid where they took `FirebaseAuthService`
@@ -2126,6 +2125,17 @@ with `signum() > 0 && scale() <= 2` and the app's `MinorUnits.fromDecimal` answe
 `DecimalTextParityTest` holds it to `BigDecimal` over a corpus and 10 000 random texts; the grammar
 `DecimalText`'s readers share is the file-private `DecimalGrammar`, so the object stays within
 detekt's function count. `SupportAmountTest` runs in `commonTest`.
+Slice 10e moved **settings**: `SettingsViewModel` and `CalendarFeedViewModel`, in `settingsUiModule`.
+Settings' push switch goes through `data/remote/firebase/PushRegistration` (new in `:shared-data`:
+`isPushEnabled`, `setPushEnabled` and the sign-out's `unregisterToken`, which the app's `FcmService`
+answers beside `PushDevice`), the account's erasure through `data/session/AccountDeletion` (new, a
+`fun interface` the app's `AccountDeletionService` answers, so the server-first, wipe-after order
+is the service's own, unchanged), and its two product events through `Analytics`, as
+`data/platform/AnalyticsEvents.kt`'s `logNotificationsToggled` and `logThemeChanged`, the event
+names and parameters `AnalyticsManager`'s functions of those names wrote (they left it). The
+iPhone's `platformDataModule` binds `NoPushRegistration` (the switch reads off, turning it on
+fails, nothing to detach) and `NoAccountDeletion` (it fails and wipes nothing). Both ViewModel tests
+(MockK) run in `androidUnitTest`, the push mock now a `PushRegistration`.
 
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller

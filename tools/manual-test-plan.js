@@ -236,7 +236,8 @@ const RULES = [
     sections: ['3.25'],
     why: 'settle up: the card, the IBAN, or the payment QR code a bank reads',
     paths: ['K/domain/payment/**', 'K/data/payment/**', 'K/presentation/chat/SettleUpPayment.kt',
-      'K/presentation/expenses/SettleUpDialog.kt', 'K/presentation/expenses/ExpenseSummaryHeader.kt'],
+      'K/presentation/expenses/SettleUpDialog.kt', 'K/presentation/expenses/SettleUpViewModel.kt',
+      'K/presentation/expenses/ExpenseSummaryHeader.kt'],
   },
   {
     sections: ['3.26'],
@@ -262,7 +263,7 @@ const RULES = [
     sections: ['3.29'],
     why: 'a new user\'s first week: the Family tab, Home leading with today, Expenses as a detail screen, the requests pop-up, the legend',
     paths: ['K/presentation/family/**', 'K/presentation/home/HomeScreen.kt', 'K/presentation/home/HomeAskQueue.kt',
-      'K/presentation/home/MonthMoney.kt', 'K/presentation/navigation/NavGraph.kt',
+      'K/presentation/home/MonthMoney.kt', 'K/presentation/home/MonthSpend.kt', 'K/presentation/navigation/NavGraph.kt',
       'K/presentation/navigation/BottomNavDestination.kt', 'K/presentation/calendar/components/CustodyLegend.kt',
       'K/presentation/chat/MessagesList.kt', 'K/presentation/settings/SettingsScreen.kt',
       'K/presentation/expenses/ExpenseScreen.kt'],

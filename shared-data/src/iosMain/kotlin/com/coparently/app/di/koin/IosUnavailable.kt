@@ -4,6 +4,7 @@ import com.coparently.app.data.export.ExportVerifyAddress
 import com.coparently.app.data.files.PickedFiles
 import com.coparently.app.data.files.StorageBucket
 import com.coparently.app.data.remote.firebase.PushDevice
+import com.coparently.app.data.remote.firebase.PushRegistration
 import com.coparently.app.data.remote.firebase.SignedInAccount
 import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.remote.google.CredentialProvider
@@ -17,6 +18,7 @@ import com.coparently.app.data.requests.RequestClockNotices
 import com.coparently.app.data.school.SchoolImportScheduler
 import com.coparently.app.data.school.SchoolImportWordings
 import com.coparently.app.data.session.AccountConsistency
+import com.coparently.app.data.session.AccountDeletion
 import com.coparently.app.data.support.SupportReminderScheduler
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.domain.changerequests.RequestDeadline
@@ -65,6 +67,25 @@ internal object NoPushDevice : PushDevice {
     override suspend fun updateUserToken(token: String): Result<Unit> =
         Result.failure(IllegalStateException(UNAVAILABLE))
 }
+
+/**
+ * No push registration (slice 10e: Settings' switch and sign-out ask for it): the switch reads off,
+ * turning it on fails as a phone with no messaging service would, and there is no token to detach.
+ */
+internal object NoPushRegistration : PushRegistration {
+    override fun isPushEnabled(): Boolean = false
+
+    override suspend fun setPushEnabled(enabled: Boolean): Result<Unit> =
+        if (enabled) Result.failure(IllegalStateException(UNAVAILABLE)) else Result.success(Unit)
+
+    override suspend fun unregisterToken() = Unit
+}
+
+/**
+ * No account to erase yet (slice 10e: Settings asks for it): with nobody signed in
+ * ([NoSignedInUser]) the erasure fails and nothing is wiped, rather than reporting an account gone.
+ */
+internal val NoAccountDeletion = AccountDeletion { Result.failure(IllegalStateException(UNAVAILABLE)) }
 
 /**
  * Nothing to compare: with nobody signed in ([NoSignedInUser]), no account can follow another.
@@ -197,9 +218,10 @@ internal object NoRecordPhotoStorage : RecordPhotoStorage {
 
 /**
  * No on-device text recognition yet (ML Kit's is Android's; the iPhone's comes with its camera,
- * phase 4): a receipt's text is not read, so the expense form says the scan found nothing and keeps
- * the photo, as it does when recognition fails on Android (`ExpenseViewModel.scanReceipt`, slice
- * 10d). Nothing is sent anywhere instead (item 10 of "Things that are easy to get wrong").
+ * phase 4): a receipt's text is not read, so the expense form shows its failed-scan message
+ * ("Couldn't read the receipt", `ReceiptScanState.Failed`) and keeps the photo, as it does when
+ * recognition fails on Android (`ExpenseViewModel.scanReceipt`, slice 10d). Nothing is sent anywhere
+ * instead (item 10 of "Things that are easy to get wrong").
  */
 internal object NoReceiptText : ReceiptTextRecognizer {
     override suspend fun recognize(imageUri: String): List<String> = throw IOException(UNAVAILABLE)

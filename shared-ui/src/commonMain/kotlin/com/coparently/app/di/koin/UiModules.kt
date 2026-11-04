@@ -32,6 +32,8 @@ import com.coparently.app.presentation.pairing.CustodyConflictViewModel
 import com.coparently.app.presentation.pairing.PendingCustodyConflict
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
 import com.coparently.app.presentation.payments.PaymentsViewModel
+import com.coparently.app.presentation.settings.CalendarFeedViewModel
+import com.coparently.app.presentation.settings.SettingsViewModel
 import com.coparently.app.presentation.support.SupportViewModel
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.factoryOf
@@ -168,6 +170,18 @@ val supportUiModule: Module = module {
 }
 
 /**
+ * Settings (MON-24 phase 2, Task 10): the app's and the account's settings — the push switch, the
+ * theme, the currency, the country and region, the family's answers and split, the account's
+ * erasure — and the read-only calendar links a parent gives an iPhone. The push switch and the
+ * erasure go through `PushRegistration` and `AccountDeletion`, which the app binds on Android and
+ * [platformDataModule] stands in for on the iPhone.
+ */
+val settingsUiModule: Module = module {
+    viewModelOf(::CalendarFeedViewModel)
+    viewModelOf(::SettingsViewModel)
+}
+
+/**
  * Every module of the UI both apps run, grouped by feature as [dataModules] is. The app's
  * `appModules` includes them, with [platformUiModule]; the iPhone app's will (phase 3). The
  * ViewModels move here group by group (Task 10's slices); a screen still in the app resolves a moved
@@ -183,7 +197,8 @@ val uiModules: List<Module> = listOf(
     familyUiModule,
     expensesUiModule,
     paymentsUiModule,
-    supportUiModule
+    supportUiModule,
+    settingsUiModule
 )
 
 /**

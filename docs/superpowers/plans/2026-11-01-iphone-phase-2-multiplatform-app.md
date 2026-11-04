@@ -816,7 +816,8 @@ Then expenses:
   the two `toKotlinYearMonth()` calls before the payments went), `SettleUpDialog`
   (`pending.month.toJavaYearMonth()` to format).
 - iPhone: `platformDataModule` binds `NoReceiptText` (`ReceiptTextRecognizer`, a data seam beside
-  `NoRecordPhotoStorage`): a scan throws `IOException`, which the form reads as "nothing found".
+  `NoRecordPhotoStorage`): a scan throws `IOException`, which the form shows as a failed scan
+  ("Couldn't read the receipt", `ReceiptScanState.Failed`).
   A JVM `verify()` of `dataModules + uiModules` with the iPhone's bindings resolves, and fails without
   it.
 - Tests: the four `ExpenseViewModel*Test`s (MockK) to androidUnitTest, location only.
@@ -836,6 +837,19 @@ Then payments and child support:
   object stays within detekt's `TooManyFunctions`.
 - Tests: `SupportAmountTest` to commonTest (one name lost its commas). No other screen converts
   anything: both ViewModels were kotlinx-datetime already.
+
+**Slice 10e notes (November 2026).** Settings first:
+- `SettingsViewModel` and `CalendarFeedViewModel` in `settingsUiModule`. `FcmService` →
+  `PushRegistration` (new, `:shared-data`'s `data/remote/firebase/`: `isPushEnabled`, `setPushEnabled`,
+  `unregisterToken`; `FcmService` implements it), `AccountDeletionService` → `AccountDeletion` (new,
+  `data/session/`, a `fun interface`; the service implements it), `AnalyticsManager` → `Analytics`,
+  with `logNotificationsToggled` and `logThemeChanged` as extensions in `data/platform/AnalyticsEvents.kt`
+  (same event names and parameters; the two members left `AnalyticsManager`), `java.io.IOException` →
+  `kotlinx.io.IOException`. Parameter names unchanged. `CalendarFeedViewModel` moved unchanged.
+- iPhone: `platformDataModule` binds `NoPushRegistration` (off; turning it on fails) and
+  `NoAccountDeletion` (fails, wipes nothing).
+- Tests: `SettingsViewModelTest` (the push mock a `PushRegistration`) and `CalendarFeedViewModelTest`
+  (MockK) to androidUnitTest.
 
 ### Task 11: The screens to `commonMain`
 
@@ -861,6 +875,12 @@ Then payments and child support:
   Each is provided through a `staticCompositionLocalOf` by the shell. The iOS implementations of
   `CameraCapture`, `QrScanner` and `Dictation` answer `available = false` until phase 4, and the
   screens hide the affordance (CLAUDE.md design item 8, item 28).
+
+**Carried from Task 10:**
+- While the iPhone's `platformDataModule` binds `NoReceiptText` and `NoSupportReminderJob`, the
+  shared screens must not offer a receipt scan or a child support reminder on the iPhone (design
+  refresh item 8): a scan there always fails and a reminder is never scheduled. Hide both until the
+  iPhone has the capability, as `CameraCapture` and `Dictation` are hidden.
 
 - [ ] **Step 1: For each group, run the screenshot tests and the group's instrumented tests**
   before the move. Record that they are green.

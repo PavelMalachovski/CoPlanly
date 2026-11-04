@@ -2,12 +2,14 @@ package com.coparently.app.presentation.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.data.analytics.AnalyticsManager
-import com.coparently.app.data.remote.firebase.FcmService
+import com.coparently.app.data.platform.Analytics
+import com.coparently.app.data.platform.logNotificationsToggled
+import com.coparently.app.data.platform.logThemeChanged
+import com.coparently.app.data.remote.firebase.PushRegistration
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.repository.FamilySplit
 import com.coparently.app.data.repository.RatioSubmission
-import com.coparently.app.data.session.AccountDeletionService
+import com.coparently.app.data.session.AccountDeletion
 import com.coparently.app.data.session.SignedInAccountSource
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.expenses.SplitRatio
@@ -38,18 +40,24 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.io.IOException
+import kotlinx.io.IOException
 
 /**
  * ViewModel for Settings screen.
  * Manages settings state and user preferences.
+ *
+ * In `:shared-ui` since MON-24 phase 2 (Task 10): the push switch, the account's erasure and the
+ * product events go through [PushRegistration], [AccountDeletion] and [Analytics], which the app's
+ * `FcmService`, `AccountDeletionService` and `AnalyticsManager` answer on Android. The parameter
+ * names are the ones the app's classes gave them.
  */
+@Suppress("LongParameterList") // one collaborator per section of the screen: push, account, family, money
 class SettingsViewModel(
-    private val fcmService: FcmService,
-    private val accountDeletionService: AccountDeletionService,
+    private val fcmService: PushRegistration,
+    private val accountDeletionService: AccountDeletion,
     private val userRepository: UserRepository,
     private val preferencesRepository: PreferencesRepository,
-    private val analyticsManager: AnalyticsManager,
+    private val analyticsManager: Analytics,
     signedInAccountSource: SignedInAccountSource,
     private val familyKindSource: FamilyKindSource,
     parentsSource: ParentsSource,

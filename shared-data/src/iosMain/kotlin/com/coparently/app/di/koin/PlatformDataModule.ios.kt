@@ -40,6 +40,7 @@ import com.coparently.app.data.remote.firebase.GitLiveFirestoreClient
 import com.coparently.app.data.remote.firebase.IosCallableFunctions
 import com.coparently.app.data.remote.firebase.PushDevice
 import com.coparently.app.data.remote.firebase.PushQueue
+import com.coparently.app.data.remote.firebase.PushRegistration
 import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.remote.google.CredentialProvider
 import com.coparently.app.data.remote.google.GoogleCalendarApi
@@ -50,6 +51,7 @@ import com.coparently.app.data.school.SchoolImportScheduler
 import com.coparently.app.data.school.SchoolImportWordings
 import com.coparently.app.data.school.bakalari.BakalariClient
 import com.coparently.app.data.session.AccountConsistency
+import com.coparently.app.data.session.AccountDeletion
 import com.coparently.app.data.support.SupportReminderScheduler
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.domain.notification.ReminderScheduler
@@ -108,7 +110,9 @@ actual val platformDataModule: Module = module {
     single<SignedInUser> { NoSignedInUser }
     single<PushDevice> { NoPushDevice }
     single<PushQueue> { get<PushDevice>() }
+    single<PushRegistration> { NoPushRegistration }
     single<AccountConsistency> { NoAccountSwitch }
+    single<AccountDeletion> { NoAccountDeletion }
     single<ReminderScheduler> { NoEventReminders }
     single<RequestClockScheduler> { NoRequestClockJobs }
     single<RequestClockNotices> { NoRequestClockNotices }
