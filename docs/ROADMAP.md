@@ -2911,8 +2911,8 @@ bytes are identical on Android):
   `UiText`. `UiTextParityTest` (Robolectric, five languages) compares both resolutions with what
   Android's resources and `java.time` made of the same samples; the screenshot baselines should not
   move. Task 9's Steps 5 and 6 are what remains of it.
-- **The ViewModels to `:shared-ui`** — **slice 10a built (phase 2, Task 10, November 2026), CI's
-  first run pending**: the infrastructure (JetBrains' multiplatform `lifecycle-viewmodel` 2.9.6,
+- **The ViewModels to `:shared-ui`** — **done but for the two sign-in ViewModels (phase 2, Task 10,
+  November 2026; slices 10a–10f, each reviewed and built in CI)**. Slice 10a: the infrastructure (JetBrains' multiplatform `lifecycle-viewmodel` 2.9.6,
   which is androidx's 2.9.4 on Android and lifts the app's lifecycle artifacts there;
   `koin-core-viewmodel` 4.1.1 for `viewModelOf` in common code; coroutines-test and Turbine in
   `commonTest`, MockK in `androidUnitTest`), `:shared-ui`'s `uiModules` and `platformUiModule`
@@ -2961,8 +2961,8 @@ bytes are identical on Android):
   source and sign-out, on new `AuthSession` and `AccountTraces` seams beside `PushRegistration`, in
   sign-out's unchanged order) and the profile (`profileUiModule`). The login screen's and Google
   Calendar's connection ViewModels stay in the app until Task 11, because their sign-ins run on an
-  Android activity (Credential Manager's sheet; Google Sign-In's intent and result). **Slice 10f,
-  in progress**: the rest, in groups. First Home (`homeUiModule`: the dashboard's ViewModel, now on
+  Android activity (Credential Manager's sheet; Google Sign-In's intent and result). **Slice 10f**:
+  the rest, in groups. First Home (`homeUiModule`: the dashboard's ViewModel, now on
   kotlinx-datetime, with its feed, the children's day and the Requests row's words, and "Later",
   kept in the sealed store), the month in review (`reviewUiModule`), stickers (`stickersUiModule`),
   the consents (`consentUiModule`; the child-health consent's manager moved to `:shared-data`) and

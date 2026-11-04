@@ -110,7 +110,8 @@ actual val platformDataModule: Module = module {
 
     single { GoogleCalendarApi(httpClient(HttpTimeouts.GOOGLE_CALENDAR)) }
     single { BakalariClient(httpClient(HttpTimeouts.SCHOOL)) }
-    // The school directory the connect screen's ViewModel searches (slice 10f), on the same client.
+    // The school directory the connect screen's ViewModel searches (slice 10f), on a client of its
+    // own with the same timeouts (Android shares one named client; nothing on the iPhone needs that).
     single { BakalariSchoolDirectory(httpClient(HttpTimeouts.SCHOOL)) }
 
     single<SignedInUser> { NoSignedInUser }

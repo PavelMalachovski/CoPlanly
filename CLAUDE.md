@@ -1974,9 +1974,9 @@ stay in the app, `DesignSystemPreviews.kt`), `AddItemButton`, `AnswerButtons`, `
 `ErrorState`, `ExpandableDetails`, `FabScrollVisibility`, `InlineBanner`, `InviteCodeText`,
 `LargeFontLayout`, `StickyActionBar` and `animations/`. Their own labels are `Res.string`, and
 `GroupLabel` uppercases with Compose's `toUpperCase(Locale.current)`, which on Android is the
-`Locale.getDefault()` it used. Still in the app, each for its reason: the `*ViewModel`s not moved
-yet (Task 10's later slices, below); Coil's users (`AccountAvatar`, `PhotoStrip`, `ZoomableImage`,
-`SignedInAsRow`, which draws an avatar); the Android requesters and handlers
+`Locale.getDefault()` it used. Still in the app, each for its reason: `AuthViewModel` and
+`SyncViewModel`, whose sign-ins run on an Android activity (Task 11, below); Coil's users
+(`AccountAvatar`, `PhotoStrip`, `ZoomableImage`, `SignedInAsRow`, which draws an avatar); the Android requesters and handlers
 (`NotificationPermission`, `MicrophonePermission`, `SharedFileViewer`, `SensitiveClipboard`,
 `PrivacyPolicyLink`, `TermsOfServiceLink`; Task 11's platform interfaces);
 `DiscardGuard` (`PredictiveBackHandler`); `FamilySwitcher` (`koinViewModel`); `TwoPane`
@@ -2106,7 +2106,7 @@ with the pure `EarlierFamilies.kt` (`EarlierFamily.lastDay` a kotlinx-datetime `
 `EarlierFamiliesScreen` formats through `utils/LocalizedDates.kt`'s kotlinx `format` overload, unchanged)
 and `UnassignedRecordsViewModel` (its log line through `logger`), with what the hub reads of Home:
 `home/MonthMoney.kt`, and `CurrencyAmount`, `MonthSpend` and `MonthSpendDependencies`, split out of
-`HomeViewModel.kt` into `home/MonthSpend.kt` (Home's ViewModel, still in the app, reads them from
+`HomeViewModel.kt` into `home/MonthSpend.kt` (Home's ViewModel reads them from
 there). They are in `familyUiModule`, `MonthSpendDependencies` a `factory` as it was in
 `presentationModule`. `EarlierFamiliesTest` and `MonthMoneyTest` run in `commonTest` (kotlinx-datetime
 literals; four names lost a comma), `FamilyViewModelTest` and `UnassignedRecordsViewModelTest` (MockK)
