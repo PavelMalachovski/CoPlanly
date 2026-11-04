@@ -212,7 +212,6 @@ fun FriendProfileScreen(
 }
 
 /** The localized name of a role. */
-@androidx.annotation.StringRes
 private fun FriendRole.labelRes(): StringResource = when (this) {
     FriendRole.GUARDIAN -> Res.string.friend_role_guardian
     FriendRole.FRIEND -> Res.string.friend_role_friend

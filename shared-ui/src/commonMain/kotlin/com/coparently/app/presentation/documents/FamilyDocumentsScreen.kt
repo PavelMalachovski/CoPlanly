@@ -178,7 +178,7 @@ private fun rememberDocumentPickers(onPicked: (String) -> Unit): DocumentPickers
     val files = LocalFilePicker.current
     val cameraCapture = LocalCameraCapture.current
     val cameraUnavailable = stringResource(Res.string.documents_camera_unavailable)
-    val filePicker = files.rememberDocumentPicker(SharedFilePolicy.CONTENT_TYPES) { uri -> onPicked(uri) }
+    val filePicker = files.rememberDocumentPicker(SharedFilePolicy.CONTENT_TYPES.toList()) { uri -> onPicked(uri) }
     val camera = cameraCapture.rememberCapture(CaptureTarget.SHARED_FILE) { result ->
         when (result) {
             is CaptureResult.Taken -> onPicked(result.contentUri)

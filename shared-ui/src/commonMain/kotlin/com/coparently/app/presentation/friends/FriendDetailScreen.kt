@@ -200,7 +200,6 @@ fun FriendDetailScreen(
 }
 
 /** The localized name of a role, as the parents read it. */
-@androidx.annotation.StringRes
 private fun FriendRole.detailLabelRes(): StringResource = when (this) {
     FriendRole.GUARDIAN -> Res.string.friend_role_guardian
     FriendRole.FRIEND -> Res.string.friend_role_friend
