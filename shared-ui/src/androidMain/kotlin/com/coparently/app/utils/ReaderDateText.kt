@@ -54,6 +54,13 @@ actual fun readerMediumDate(date: LocalDate): String =
 actual fun readerShortDate(date: LocalDate): String =
     date.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT))
 
+/**
+ * `FormatStyle.LONG` in `Locale.getDefault()`, as a guest's or a grant's end was formatted (slice
+ * 11g): the screens formatted the instant's date in the device's zone, which is this date.
+ */
+actual fun readerLongDate(date: LocalDate): String =
+    date.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG))
+
 /** `FormatStyle.FULL` in `Locale.getDefault()`, as the custody schedule's start date was formatted. */
 actual fun readerFullDate(date: LocalDate): String =
     date.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL))

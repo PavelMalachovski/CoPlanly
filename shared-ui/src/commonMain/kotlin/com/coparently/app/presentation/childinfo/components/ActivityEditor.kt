@@ -10,14 +10,31 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import com.coparently.app.R
 import com.coparently.app.domain.model.Activity
 import com.coparently.app.presentation.common.AddItemButton
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.childinfo_activity_contact_marker
+import com.coparently.app.resources.childinfo_activity_contact_phone_marker
+import com.coparently.app.resources.childinfo_activity_location_marker
+import com.coparently.app.resources.childinfo_activity_name_label
+import com.coparently.app.resources.childinfo_activity_name_placeholder
+import com.coparently.app.resources.childinfo_add_activity
+import com.coparently.app.resources.childinfo_cancel
+import com.coparently.app.resources.childinfo_contact_person_optional_label
+import com.coparently.app.resources.childinfo_contact_phone_optional_label
+import com.coparently.app.resources.childinfo_delete
+import com.coparently.app.resources.childinfo_edit
+import com.coparently.app.resources.childinfo_edit_activity
+import com.coparently.app.resources.childinfo_location_optional_label
+import com.coparently.app.resources.childinfo_new_activity
+import com.coparently.app.resources.childinfo_save
+import com.coparently.app.resources.childinfo_schedule_label
+import com.coparently.app.resources.childinfo_schedule_placeholder
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Editor for managing a list of child activities.
@@ -88,7 +105,7 @@ fun ActivityEditor(
         // Add button
         if (!isAddingNew && editingIndex == null) {
             AddItemButton(
-                label = stringResource(R.string.childinfo_add_activity),
+                label = stringResource(Res.string.childinfo_add_activity),
                 onClick = { isAddingNew = true },
                 modifier = Modifier.fillMaxWidth()
             )
@@ -128,7 +145,7 @@ private fun ActivityCard(
                 val location = activity.location
                 if (!location.isNullOrBlank()) {
                     Text(
-                        text = stringResource(R.string.childinfo_activity_location_marker, location),
+                        text = stringResource(Res.string.childinfo_activity_location_marker, location),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -139,12 +156,12 @@ private fun ActivityCard(
                     Text(
                         text = if (!contactPhone.isNullOrBlank()) {
                             stringResource(
-                                R.string.childinfo_activity_contact_phone_marker,
+                                Res.string.childinfo_activity_contact_phone_marker,
                                 contactPerson,
                                 contactPhone
                             )
                         } else {
-                            stringResource(R.string.childinfo_activity_contact_marker, contactPerson)
+                            stringResource(Res.string.childinfo_activity_contact_marker, contactPerson)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -154,12 +171,12 @@ private fun ActivityCard(
 
             Row {
                 IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.childinfo_edit))
+                    Icon(Icons.Default.Edit, contentDescription = stringResource(Res.string.childinfo_edit))
                 }
                 IconButton(onClick = onDelete) {
                     Icon(
                         Icons.Default.Delete,
-                        contentDescription = stringResource(R.string.childinfo_delete),
+                        contentDescription = stringResource(Res.string.childinfo_delete),
                         tint = MaterialTheme.colorScheme.error
                     )
                 }
@@ -197,9 +214,9 @@ private fun ActivityForm(
         ) {
             Text(
                 text = if (activity == null) {
-                    stringResource(R.string.childinfo_new_activity)
+                    stringResource(Res.string.childinfo_new_activity)
                 } else {
-                    stringResource(R.string.childinfo_edit_activity)
+                    stringResource(Res.string.childinfo_edit_activity)
                 },
                 style = MaterialTheme.typography.titleSmall
             )
@@ -207,8 +224,8 @@ private fun ActivityForm(
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text(stringResource(R.string.childinfo_activity_name_label)) },
-                placeholder = { Text(stringResource(R.string.childinfo_activity_name_placeholder)) },
+                label = { Text(stringResource(Res.string.childinfo_activity_name_label)) },
+                placeholder = { Text(stringResource(Res.string.childinfo_activity_name_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -216,8 +233,8 @@ private fun ActivityForm(
             OutlinedTextField(
                 value = schedule,
                 onValueChange = { schedule = it },
-                label = { Text(stringResource(R.string.childinfo_schedule_label)) },
-                placeholder = { Text(stringResource(R.string.childinfo_schedule_placeholder)) },
+                label = { Text(stringResource(Res.string.childinfo_schedule_label)) },
+                placeholder = { Text(stringResource(Res.string.childinfo_schedule_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -225,7 +242,7 @@ private fun ActivityForm(
             OutlinedTextField(
                 value = location,
                 onValueChange = { location = it },
-                label = { Text(stringResource(R.string.childinfo_location_optional_label)) },
+                label = { Text(stringResource(Res.string.childinfo_location_optional_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -233,7 +250,7 @@ private fun ActivityForm(
             OutlinedTextField(
                 value = contactPerson,
                 onValueChange = { contactPerson = it },
-                label = { Text(stringResource(R.string.childinfo_contact_person_optional_label)) },
+                label = { Text(stringResource(Res.string.childinfo_contact_person_optional_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -241,7 +258,7 @@ private fun ActivityForm(
             OutlinedTextField(
                 value = contactPhone,
                 onValueChange = { contactPhone = it },
-                label = { Text(stringResource(R.string.childinfo_contact_phone_optional_label)) },
+                label = { Text(stringResource(Res.string.childinfo_contact_phone_optional_label)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
@@ -253,7 +270,7 @@ private fun ActivityForm(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TextButton(onClick = onCancel) {
-                    Text(stringResource(R.string.childinfo_cancel))
+                    Text(stringResource(Res.string.childinfo_cancel))
                 }
                 Spacer(modifier = Modifier.width(Spacing.S))
                 Button(
@@ -272,7 +289,7 @@ private fun ActivityForm(
                     },
                     enabled = name.isNotBlank() && schedule.isNotBlank()
                 ) {
-                    Text(stringResource(R.string.childinfo_save))
+                    Text(stringResource(Res.string.childinfo_save))
                 }
             }
         }

@@ -1,16 +1,20 @@
 package com.coparently.app.presentation.childinfo.components
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.presentation.common.LocalDatePickerDialog
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.childinfo_cancel
+import com.coparently.app.resources.childinfo_ok
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
+import org.jetbrains.compose.resources.stringResource
+import kotlin.time.Clock
 
 /**
- * Material3 date picker dialog shared by the child and pet forms, the profile and onboarding —
- * dates of birth and vaccinations.
+ * Material3 date picker dialog shared by the child and pet forms — dates of birth and
+ * vaccinations.
  *
  * The millis conversion lives in [LocalDatePickerDialog]: this picker used to convert through the
  * system zone, which highlighted the previous day east of Greenwich (all of Central Europe) and
@@ -18,7 +22,7 @@ import java.time.LocalTime
  *
  * @param onDateSelected Callback when date is selected
  * @param onDismiss Callback when dialog is dismissed
- * @param initialDate Initial date to show in picker
+ * @param initialDate Initial date to show in picker; today in the device's zone when null
  */
 @Composable
 fun DatePickerDialog(
@@ -27,12 +31,12 @@ fun DatePickerDialog(
     initialDate: LocalDateTime? = null
 ) {
     LocalDatePickerDialog(
-        initialDate = initialDate?.toLocalDate() ?: LocalDate.now(),
-        confirmLabel = stringResource(R.string.childinfo_ok),
-        dismissLabel = stringResource(R.string.childinfo_cancel),
+        initialDate = initialDate?.date ?: Clock.System.todayIn(TimeZone.currentSystemDefault()),
+        confirmLabel = stringResource(Res.string.childinfo_ok),
+        dismissLabel = stringResource(Res.string.childinfo_cancel),
         onConfirm = { selectedDate ->
             // Keep the time of day the caller already had (usually midnight).
-            onDateSelected(LocalDateTime.of(selectedDate, initialDate?.toLocalTime() ?: LocalTime.MIDNIGHT))
+            onDateSelected(LocalDateTime(selectedDate, initialDate?.time ?: LocalTime(0, 0)))
         },
         onDismiss = onDismiss
     )

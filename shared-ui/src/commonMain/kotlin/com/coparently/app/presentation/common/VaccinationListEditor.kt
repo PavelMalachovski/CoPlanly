@@ -21,18 +21,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.model.Vaccination
 import com.coparently.app.presentation.childinfo.components.DatePickerDialog
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.utils.format
-import kotlinx.datetime.toKotlinLocalDate
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.medical_empty
+import com.coparently.app.resources.medical_item_add
+import com.coparently.app.resources.medical_vaccination_add
+import com.coparently.app.resources.medical_vaccination_date_label
+import com.coparently.app.resources.medical_vaccination_name_label
+import com.coparently.app.resources.medical_vaccination_no_date
+import com.coparently.app.resources.medical_vaccination_remove
+import com.coparently.app.utils.readerMediumDate
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.atTime
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Vaccination list editor: one row per [Vaccination] (name, formatted date or "no date",
@@ -61,13 +66,12 @@ fun VaccinationListEditor(
     enabled: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val dateFormatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM) }
-    val noDateLabel = stringResource(R.string.medical_vaccination_no_date)
+    val noDateLabel = stringResource(Res.string.medical_vaccination_no_date)
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         if (vaccinations.isEmpty() && !enabled) {
             Text(
-                text = stringResource(R.string.medical_empty),
+                text = stringResource(Res.string.medical_empty),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -82,7 +86,7 @@ fun VaccinationListEditor(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(text = vaccination.name, style = MaterialTheme.typography.bodyLarge)
                     Text(
-                        text = vaccination.date?.format(dateFormatter) ?: noDateLabel,
+                        text = vaccination.date?.let(::readerMediumDate) ?: noDateLabel,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -91,7 +95,7 @@ fun VaccinationListEditor(
                     IconButton(onClick = { onRemove(index) }) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(R.string.medical_vaccination_remove)
+                            contentDescription = stringResource(Res.string.medical_vaccination_remove)
                         )
                     }
                 }
@@ -99,7 +103,7 @@ fun VaccinationListEditor(
         }
 
         if (enabled) {
-            VaccinationAddRow(dateFormatter = dateFormatter, onAdd = onAdd)
+            VaccinationAddRow(onAdd = onAdd)
         }
     }
 }
@@ -111,7 +115,6 @@ fun VaccinationListEditor(
  */
 @Composable
 private fun VaccinationAddRow(
-    dateFormatter: DateTimeFormatter,
     onAdd: (Vaccination) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -123,11 +126,11 @@ private fun VaccinationAddRow(
     if (showDatePicker) {
         DatePickerDialog(
             onDateSelected = { dateTime ->
-                newDate = dateTime.toLocalDate()
+                newDate = dateTime.date
                 showDatePicker = false
             },
             onDismiss = { showDatePicker = false },
-            initialDate = newDate?.atStartOfDay()
+            initialDate = newDate?.atTime(0, 0)
         )
     }
 
@@ -137,20 +140,20 @@ private fun VaccinationAddRow(
                 OutlinedTextField(
                     value = newName,
                     onValueChange = { newName = it },
-                    label = { Text(stringResource(R.string.medical_vaccination_name_label)) },
+                    label = { Text(stringResource(Res.string.medical_vaccination_name_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
                 OutlinedButton(onClick = { showDatePicker = true }, modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = newDate?.format(dateFormatter)
-                            ?: stringResource(R.string.medical_vaccination_date_label)
+                        text = newDate?.let(::readerMediumDate)
+                            ?: stringResource(Res.string.medical_vaccination_date_label)
                     )
                 }
                 Button(
                     onClick = {
                         if (newName.isNotBlank()) {
-                            onAdd(Vaccination(name = newName, date = newDate?.toKotlinLocalDate()))
+                            onAdd(Vaccination(name = newName, date = newDate))
                             newName = ""
                             newDate = null
                             isAdding = false
@@ -159,14 +162,14 @@ private fun VaccinationAddRow(
                     enabled = newName.isNotBlank(),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(stringResource(R.string.medical_item_add))
+                    Text(stringResource(Res.string.medical_item_add))
                 }
             }
         }
 
         if (!isAdding) {
             AddItemButton(
-                label = stringResource(R.string.medical_vaccination_add),
+                label = stringResource(Res.string.medical_vaccination_add),
                 onClick = { isAdding = true },
                 modifier = Modifier.fillMaxWidth()
             )

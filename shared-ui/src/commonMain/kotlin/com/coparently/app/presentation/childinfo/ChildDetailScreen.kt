@@ -19,15 +19,27 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.presentation.childinfo.components.GuestInviteSheet
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ListSkeleton
+import com.coparently.app.presentation.common.UiText
+import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.rememberUiTextResolver
+import com.coparently.app.presentation.platform.LocalShareSheet
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.childinfo_back
+import com.coparently.app.resources.childinfo_record_gone_description
+import com.coparently.app.resources.childinfo_record_gone_title
+import com.coparently.app.resources.childinfo_screen_title
+import com.coparently.app.resources.guest_invite_share
+import com.coparently.app.resources.guest_invite_share_message
+import com.coparently.app.resources.guest_revoke_failed
+import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -59,7 +71,9 @@ fun ChildDetailScreen(
     viewModel: ChildInfoViewModel = koinViewModel()
 ) {
     val haptic = LocalHapticFeedback.current
-    val context = LocalContext.current
+    val shareSheet = LocalShareSheet.current
+    val textResolver = rememberUiTextResolver()
+    val scope = rememberCoroutineScope()
     val uiState by viewModel.uiState.collectAsState()
     val guestInvite by viewModel.guestInvite.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -67,7 +81,7 @@ fun ChildDetailScreen(
     // A failed revoke has to be said out loud. The row vanishes from the list either way once
     // Room is written, so silence here would leave the parent believing access is gone.
     val revokeFailed by viewModel.guestRevokeFailed.collectAsState()
-    val revokeFailedMessage = stringResource(R.string.guest_revoke_failed)
+    val revokeFailedMessage = stringResource(Res.string.guest_revoke_failed)
     LaunchedEffect(revokeFailed) {
         if (revokeFailed) {
             snackbarHostState.showSnackbar(revokeFailedMessage)
@@ -83,7 +97,20 @@ fun ChildDetailScreen(
         state = guestInvite,
         onChooseDuration = viewModel::chooseGuestDuration,
         onCreate = viewModel::createGuestInvite,
-        onShare = { link -> context.startActivity(guestShareIntent(context, link)) },
+        // The message is worded at the tap, through Compose Multiplatform's reader, which reads a
+        // string outside composition in a coroutine; no button where the phone has no share sheet.
+        onShare = if (shareSheet.available) {
+            { link ->
+                scope.launch {
+                    shareSheet.shareText(
+                        text = UiText.Res(Res.string.guest_invite_share_message, listOf(link)).asString(textResolver),
+                        chooserTitle = UiText.Res(Res.string.guest_invite_share).asString(textResolver)
+                    )
+                }
+            }
+        } else {
+            null
+        },
         onDismiss = viewModel::dismissGuestInvite
     )
 
@@ -92,7 +119,7 @@ fun ChildDetailScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(childInfo?.childName ?: stringResource(R.string.childinfo_screen_title))
+                    Text(childInfo?.childName ?: stringResource(Res.string.childinfo_screen_title))
                 },
                 navigationIcon = {
                     IconButton(onClick = {
@@ -101,7 +128,7 @@ fun ChildDetailScreen(
                     }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.childinfo_back)
+                            contentDescription = stringResource(Res.string.childinfo_back)
                         )
                     }
                 }
@@ -127,9 +154,9 @@ fun ChildDetailScreen(
                 // never been added.
                 else -> EmptyState(
                     icon = Icons.Default.ChildCare,
-                    title = stringResource(R.string.childinfo_record_gone_title),
-                    description = stringResource(R.string.childinfo_record_gone_description),
-                    actionLabel = stringResource(R.string.childinfo_back),
+                    title = stringResource(Res.string.childinfo_record_gone_title),
+                    description = stringResource(Res.string.childinfo_record_gone_description),
+                    actionLabel = stringResource(Res.string.childinfo_back),
                     onAction = onNavigateBack,
                     modifier = Modifier.fillMaxSize()
                 )

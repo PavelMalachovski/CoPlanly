@@ -9,15 +9,20 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import com.coparently.app.R
 import com.coparently.app.presentation.common.AddItemButton
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.childinfo_add
+import com.coparently.app.resources.childinfo_add_allergy
+import com.coparently.app.resources.childinfo_allergy_label
+import com.coparently.app.resources.childinfo_allergy_placeholder
+import com.coparently.app.resources.childinfo_remove
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Editor for managing a list of allergies.
@@ -53,7 +58,7 @@ fun AllergyEditor(
                     // The whole chip removes it: it used to be a chip whose own tap did nothing, holding a
                     // 20dp remove button — under half the 48dp minimum. The chip enforces the minimum, and
                     // TalkBack hears "Remove <item>" rather than the item alone.
-                    val removeLabel = stringResource(R.string.childinfo_remove)
+                    val removeLabel = stringResource(Res.string.childinfo_remove)
                     AssistChip(
                         onClick = { onRemove(index) },
                         label = { Text(allergy) },
@@ -84,8 +89,8 @@ fun AllergyEditor(
                 OutlinedTextField(
                     value = newAllergy,
                     onValueChange = { newAllergy = it },
-                    label = { Text(stringResource(R.string.childinfo_allergy_label)) },
-                    placeholder = { Text(stringResource(R.string.childinfo_allergy_placeholder)) },
+                    label = { Text(stringResource(Res.string.childinfo_allergy_label)) },
+                    placeholder = { Text(stringResource(Res.string.childinfo_allergy_placeholder)) },
                     modifier = Modifier.weight(1f),
                     singleLine = true
                 )
@@ -100,7 +105,7 @@ fun AllergyEditor(
                     },
                     enabled = newAllergy.isNotBlank()
                 ) {
-                    Text(stringResource(R.string.childinfo_add))
+                    Text(stringResource(Res.string.childinfo_add))
                 }
             }
         }
@@ -108,7 +113,7 @@ fun AllergyEditor(
         // Add button
         if (!isAddingNew) {
             AddItemButton(
-                label = stringResource(R.string.childinfo_add_allergy),
+                label = stringResource(Res.string.childinfo_add_allergy),
                 onClick = { isAddingNew = true },
                 modifier = Modifier.fillMaxWidth()
             )

@@ -1,6 +1,8 @@
 package com.coparently.app.presentation.common
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -42,10 +44,10 @@ class PickerDatesTest {
         for (zone in EAST + WEST) {
             TimeZone.setDefault(TimeZone.getTimeZone(zone))
             for (date in DATES) {
-                val millis = PickerDates.toPickerMillis(date)
+                val millis = PickerDates.toPickerMillis(date.toKotlinLocalDate())
                 // What DatePickerState itself reports for a tapped day: that day's UTC midnight.
                 assertEquals("$zone $date", date.toEpochDay() * DAY_MILLIS, millis)
-                assertEquals("$zone $date", date, PickerDates.fromPickerMillisJava(millis))
+                assertEquals("$zone $date", date, PickerDates.fromPickerMillis(millis).toJavaLocalDate())
             }
         }
     }
@@ -61,7 +63,7 @@ class PickerDatesTest {
         for (zone in WEST) {
             TimeZone.setDefault(TimeZone.getTimeZone(zone))
             for (date in DATES) {
-                val readInSystemZone = Instant.ofEpochMilli(PickerDates.toPickerMillis(date))
+                val readInSystemZone = Instant.ofEpochMilli(PickerDates.toPickerMillis(date.toKotlinLocalDate()))
                     .atZone(ZoneId.systemDefault())
                     .toLocalDate()
                 assertEquals("$zone $date", date.minusDays(1), readInSystemZone)
@@ -71,8 +73,12 @@ class PickerDatesTest {
             TimeZone.setDefault(TimeZone.getTimeZone(zone))
             for (date in DATES) {
                 val systemMidnight = date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                assertNotEquals("$zone $date", PickerDates.toPickerMillis(date), systemMidnight)
-                assertEquals("$zone $date", date.minusDays(1), PickerDates.fromPickerMillisJava(systemMidnight))
+                assertNotEquals("$zone $date", PickerDates.toPickerMillis(date.toKotlinLocalDate()), systemMidnight)
+                assertEquals(
+                    "$zone $date",
+                    date.minusDays(1),
+                    PickerDates.fromPickerMillis(systemMidnight).toJavaLocalDate()
+                )
             }
         }
     }

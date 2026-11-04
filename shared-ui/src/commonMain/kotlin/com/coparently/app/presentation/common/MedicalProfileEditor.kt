@@ -28,16 +28,26 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import com.coparently.app.R
 import com.coparently.app.domain.model.BloodType
 import com.coparently.app.domain.model.MedicalProfile
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.medical_blood_type_label
+import com.coparently.app.resources.medical_blood_type_not_set
+import com.coparently.app.resources.medical_empty
+import com.coparently.app.resources.medical_hereditary_hint
+import com.coparently.app.resources.medical_hereditary_label
+import com.coparently.app.resources.medical_intolerances_hint
+import com.coparently.app.resources.medical_intolerances_label
+import com.coparently.app.resources.medical_item_add
+import com.coparently.app.resources.medical_item_remove
+import com.coparently.app.resources.medical_vaccinations_label
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Edits a [MedicalProfile], or renders one read-only.
@@ -69,8 +79,8 @@ fun MedicalProfileEditor(
         )
 
         MedicalStringListSection(
-            label = stringResource(R.string.medical_intolerances_label),
-            hint = stringResource(R.string.medical_intolerances_hint),
+            label = stringResource(Res.string.medical_intolerances_label),
+            hint = stringResource(Res.string.medical_intolerances_hint),
             values = profile.intolerances,
             onAdd = { entry -> onChange(profile.copy(intolerances = profile.intolerances + entry)) },
             onRemove = { index ->
@@ -81,8 +91,8 @@ fun MedicalProfileEditor(
         )
 
         MedicalStringListSection(
-            label = stringResource(R.string.medical_hereditary_label),
-            hint = stringResource(R.string.medical_hereditary_hint),
+            label = stringResource(Res.string.medical_hereditary_label),
+            hint = stringResource(Res.string.medical_hereditary_hint),
             values = profile.hereditaryConditions,
             onAdd = { entry ->
                 onChange(profile.copy(hereditaryConditions = profile.hereditaryConditions + entry))
@@ -96,7 +106,7 @@ fun MedicalProfileEditor(
 
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
             Text(
-                text = stringResource(R.string.medical_vaccinations_label),
+                text = stringResource(Res.string.medical_vaccinations_label),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -125,9 +135,9 @@ private fun BloodTypeSection(
     enabled: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val notSetLabel = stringResource(R.string.medical_blood_type_not_set)
+    val notSetLabel = stringResource(Res.string.medical_blood_type_not_set)
     val currentLabel = bloodType?.let { stringResource(it.labelRes()) } ?: notSetLabel
-    val fieldLabel = stringResource(R.string.medical_blood_type_label)
+    val fieldLabel = stringResource(Res.string.medical_blood_type_label)
 
     if (!enabled) {
         Column(modifier = modifier) {
@@ -210,7 +220,7 @@ private fun MedicalStringListSection(
         if (!enabled) {
             if (values.isEmpty()) {
                 Text(
-                    text = stringResource(R.string.medical_empty),
+                    text = stringResource(Res.string.medical_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -250,7 +260,7 @@ private fun MedicalStringChips(values: List<String>, onRemove: (Int) -> Unit, mo
             // The whole chip removes it: it used to be a chip whose own tap did nothing, holding a
             // 20dp remove button — under half the 48dp minimum. The chip enforces the minimum, and
             // TalkBack hears "Remove <item>" rather than the item alone.
-            val removeLabel = stringResource(R.string.medical_item_remove)
+            val removeLabel = stringResource(Res.string.medical_item_remove)
             AssistChip(
                 onClick = { onRemove(index) },
                 label = { Text(value) },
@@ -301,14 +311,14 @@ private fun MedicalStringAddRow(hint: String, onAdd: (String) -> Unit, modifier:
                     },
                     enabled = newValue.isNotBlank()
                 ) {
-                    Text(stringResource(R.string.medical_item_add))
+                    Text(stringResource(Res.string.medical_item_add))
                 }
             }
         }
 
         if (!isAdding) {
             AddItemButton(
-                label = stringResource(R.string.medical_item_add),
+                label = stringResource(Res.string.medical_item_add),
                 onClick = { isAdding = true },
                 modifier = Modifier.fillMaxWidth()
             )

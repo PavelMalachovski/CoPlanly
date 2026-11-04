@@ -5,13 +5,28 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import com.coparently.app.R
 import com.coparently.app.domain.model.SchoolInfo
 import com.coparently.app.presentation.common.AddItemButton
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.childinfo_add_school_info
+import com.coparently.app.resources.childinfo_address_optional_label
+import com.coparently.app.resources.childinfo_cancel
+import com.coparently.app.resources.childinfo_clear
+import com.coparently.app.resources.childinfo_grade_optional_label
+import com.coparently.app.resources.childinfo_grade_placeholder
+import com.coparently.app.resources.childinfo_save
+import com.coparently.app.resources.childinfo_school_clear_message
+import com.coparently.app.resources.childinfo_school_clear_title
+import com.coparently.app.resources.childinfo_school_name_label
+import com.coparently.app.resources.childinfo_school_phone_optional_label
+import com.coparently.app.resources.childinfo_section_school
+import com.coparently.app.resources.childinfo_section_teacher
+import com.coparently.app.resources.childinfo_teacher_email_optional_label
+import com.coparently.app.resources.childinfo_teacher_name_optional_label
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Editor for managing school information.
@@ -51,10 +66,10 @@ fun SchoolInfoEditor(
     val hasContent = listOf(name, address, phone, teacherName, teacherEmail, grade).any { it.isNotBlank() }
     if (confirmClear) {
         ConfirmationDialog(
-            title = stringResource(R.string.childinfo_school_clear_title),
-            message = stringResource(R.string.childinfo_school_clear_message),
-            confirmText = stringResource(R.string.childinfo_clear),
-            dismissText = stringResource(R.string.childinfo_cancel),
+            title = stringResource(Res.string.childinfo_school_clear_title),
+            message = stringResource(Res.string.childinfo_school_clear_message),
+            confirmText = stringResource(Res.string.childinfo_clear),
+            dismissText = stringResource(Res.string.childinfo_cancel),
             isDestructive = true,
             onDismiss = { confirmClear = false },
             onConfirm = {
@@ -82,14 +97,14 @@ fun SchoolInfoEditor(
                     verticalArrangement = Arrangement.spacedBy(Spacing.S)
                 ) {
                     Text(
-                        text = stringResource(R.string.childinfo_section_school),
+                        text = stringResource(Res.string.childinfo_section_school),
                         style = MaterialTheme.typography.titleSmall
                     )
 
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
-                        label = { Text(stringResource(R.string.childinfo_school_name_label)) },
+                        label = { Text(stringResource(Res.string.childinfo_school_name_label)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -97,7 +112,7 @@ fun SchoolInfoEditor(
                     OutlinedTextField(
                         value = address,
                         onValueChange = { address = it },
-                        label = { Text(stringResource(R.string.childinfo_address_optional_label)) },
+                        label = { Text(stringResource(Res.string.childinfo_address_optional_label)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -105,7 +120,7 @@ fun SchoolInfoEditor(
                     OutlinedTextField(
                         value = phone,
                         onValueChange = { phone = it },
-                        label = { Text(stringResource(R.string.childinfo_school_phone_optional_label)) },
+                        label = { Text(stringResource(Res.string.childinfo_school_phone_optional_label)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
@@ -114,8 +129,8 @@ fun SchoolInfoEditor(
                     OutlinedTextField(
                         value = grade,
                         onValueChange = { grade = it },
-                        label = { Text(stringResource(R.string.childinfo_grade_optional_label)) },
-                        placeholder = { Text(stringResource(R.string.childinfo_grade_placeholder)) },
+                        label = { Text(stringResource(Res.string.childinfo_grade_optional_label)) },
+                        placeholder = { Text(stringResource(Res.string.childinfo_grade_placeholder)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -123,14 +138,14 @@ fun SchoolInfoEditor(
                     HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.S))
 
                     Text(
-                        text = stringResource(R.string.childinfo_section_teacher),
+                        text = stringResource(Res.string.childinfo_section_teacher),
                         style = MaterialTheme.typography.titleSmall
                     )
 
                     OutlinedTextField(
                         value = teacherName,
                         onValueChange = { teacherName = it },
-                        label = { Text(stringResource(R.string.childinfo_teacher_name_optional_label)) },
+                        label = { Text(stringResource(Res.string.childinfo_teacher_name_optional_label)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -138,7 +153,7 @@ fun SchoolInfoEditor(
                     OutlinedTextField(
                         value = teacherEmail,
                         onValueChange = { teacherEmail = it },
-                        label = { Text(stringResource(R.string.childinfo_teacher_email_optional_label)) },
+                        label = { Text(stringResource(Res.string.childinfo_teacher_email_optional_label)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
@@ -152,7 +167,7 @@ fun SchoolInfoEditor(
                             onClick = { if (hasContent) confirmClear = true else clear() },
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text(stringResource(R.string.childinfo_clear))
+                            Text(stringResource(Res.string.childinfo_clear))
                         }
 
                         Button(
@@ -173,14 +188,14 @@ fun SchoolInfoEditor(
                             modifier = Modifier.weight(1f),
                             enabled = name.isNotBlank()
                         ) {
-                            Text(stringResource(R.string.childinfo_save))
+                            Text(stringResource(Res.string.childinfo_save))
                         }
                     }
                 }
             }
         } else {
             AddItemButton(
-                label = stringResource(R.string.childinfo_add_school_info),
+                label = stringResource(Res.string.childinfo_add_school_info),
                 onClick = { isEditing = true },
                 modifier = Modifier.fillMaxWidth()
             )

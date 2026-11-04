@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.childinfo.components
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -23,20 +22,26 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.guests.GuestAccessDuration
 import com.coparently.app.domain.guests.GuestInviteUri
 import com.coparently.app.presentation.childinfo.GuestInviteState
 import com.coparently.app.presentation.common.InviteCodeText
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.guest_invite_create
+import com.coparently.app.resources.guest_invite_duration_month
+import com.coparently.app.resources.guest_invite_duration_quarter
+import com.coparently.app.resources.guest_invite_duration_week
+import com.coparently.app.resources.guest_invite_ends_on
+import com.coparently.app.resources.guest_invite_how_long
+import com.coparently.app.resources.guest_invite_scope
+import com.coparently.app.resources.guest_invite_share
+import com.coparently.app.resources.guest_invite_title
+import com.coparently.app.utils.readerLongDateAt
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 
 /**
  * Offering somebody read access to one child's record.
@@ -54,7 +59,8 @@ import java.time.format.FormatStyle
  * @param state What to show — see [GuestInviteState].
  * @param onChooseDuration Picks a different length; ignored once a code exists.
  * @param onCreate Mints the invitation.
- * @param onShare Hands the guest link to the system share sheet.
+ * @param onShare Hands the guest link to the system share sheet; null where the phone has none,
+ *   which leaves the code on screen to read out and no button that does nothing (design item 8).
  * @param onDismiss Closes the sheet.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -63,7 +69,7 @@ fun GuestInviteSheet(
     state: GuestInviteState,
     onChooseDuration: (GuestAccessDuration) -> Unit,
     onCreate: () -> Unit,
-    onShare: (String) -> Unit,
+    onShare: ((String) -> Unit)?,
     onDismiss: () -> Unit
 ) {
     if (!state.isOpen) return
@@ -79,11 +85,11 @@ fun GuestInviteSheet(
             verticalArrangement = Arrangement.spacedBy(Spacing.L)
         ) {
             Text(
-                text = stringResource(R.string.guest_invite_title),
+                text = stringResource(Res.string.guest_invite_title),
                 style = MaterialTheme.typography.titleLarge
             )
             Text(
-                text = stringResource(R.string.guest_invite_scope),
+                text = stringResource(Res.string.guest_invite_scope),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -106,7 +112,7 @@ fun GuestInviteSheet(
                     if (state.isBusy) {
                         CircularProgressIndicator(modifier = Modifier.size(SPINNER))
                     } else {
-                        Text(stringResource(R.string.guest_invite_create))
+                        Text(stringResource(Res.string.guest_invite_create))
                     }
                 }
             } else {
@@ -128,7 +134,7 @@ private fun DurationChoice(
     onChooseDuration: (GuestAccessDuration) -> Unit
 ) {
     Text(
-        text = stringResource(R.string.guest_invite_how_long),
+        text = stringResource(Res.string.guest_invite_how_long),
         style = MaterialTheme.typography.titleSmall
     )
     FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
@@ -150,35 +156,32 @@ private fun DurationChoice(
 
 /** The code, when it ends, and the one way to send it. */
 @Composable
-private fun MintedCode(code: String, grantEndsAtMillis: Long, onShare: (String) -> Unit) {
-    val ends = remember(grantEndsAtMillis) {
-        DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)
-            .format(Instant.ofEpochMilli(grantEndsAtMillis).atZone(ZoneId.systemDefault()))
-    }
+private fun MintedCode(code: String, grantEndsAtMillis: Long, onShare: ((String) -> Unit)?) {
+    val ends = remember(grantEndsAtMillis) { readerLongDateAt(grantEndsAtMillis) }
     InviteCodeText(code = code)
     Text(
-        text = stringResource(R.string.guest_invite_ends_on, ends),
+        text = stringResource(Res.string.guest_invite_ends_on, ends),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
+    if (onShare == null) return
     OutlinedButton(
         onClick = { onShare(GuestInviteUri.build(code)) },
         modifier = Modifier.fillMaxWidth()
     ) {
         Icon(Icons.Default.Share, contentDescription = null)
         Text(
-            text = stringResource(R.string.guest_invite_share),
+            text = stringResource(Res.string.guest_invite_share),
             modifier = Modifier.padding(start = Spacing.S)
         )
     }
 }
 
 /** The label for one length of access. */
-@StringRes
-private fun GuestAccessDuration.labelRes(): Int = when (this) {
-    GuestAccessDuration.WEEK -> R.string.guest_invite_duration_week
-    GuestAccessDuration.MONTH -> R.string.guest_invite_duration_month
-    GuestAccessDuration.QUARTER -> R.string.guest_invite_duration_quarter
+private fun GuestAccessDuration.labelRes(): StringResource = when (this) {
+    GuestAccessDuration.WEEK -> Res.string.guest_invite_duration_week
+    GuestAccessDuration.MONTH -> Res.string.guest_invite_duration_month
+    GuestAccessDuration.QUARTER -> Res.string.guest_invite_duration_quarter
 }
 
 /** Matches the height of the button label it replaces, so the button does not resize. */

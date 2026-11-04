@@ -12,6 +12,7 @@ import platform.Foundation.NSCalendarIdentifierGregorian
 import platform.Foundation.NSDate
 import platform.Foundation.NSDateFormatter
 import platform.Foundation.NSDateFormatterFullStyle
+import platform.Foundation.NSDateFormatterLongStyle
 import platform.Foundation.NSDateFormatterMediumStyle
 import platform.Foundation.NSDateFormatterNoStyle
 import platform.Foundation.NSDateFormatterShortStyle
@@ -87,6 +88,9 @@ actual fun readerMediumDate(date: LocalDate): String = styledDate(date, NSDateFo
 
 /** Foundation's short date style in the phone's locale, on the Gregorian calendar. */
 actual fun readerShortDate(date: LocalDate): String = styledDate(date, NSDateFormatterShortStyle)
+
+/** Foundation's long date style in the phone's locale, on the Gregorian calendar. */
+actual fun readerLongDate(date: LocalDate): String = styledDate(date, NSDateFormatterLongStyle)
 
 /** Foundation's full date style in the phone's locale, on the Gregorian calendar. */
 actual fun readerFullDate(date: LocalDate): String = styledDate(date, NSDateFormatterFullStyle)

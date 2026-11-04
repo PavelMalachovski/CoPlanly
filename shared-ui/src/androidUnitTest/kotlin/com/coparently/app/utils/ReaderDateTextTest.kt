@@ -72,6 +72,11 @@ class ReaderDateTextTest {
             day.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)),
             readerMediumDate(day)
         )
+        assertEquals(
+            tag,
+            day.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)),
+            readerLongDate(day)
+        )
     }
 
     @Test

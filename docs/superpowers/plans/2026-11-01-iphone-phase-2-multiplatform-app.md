@@ -1537,6 +1537,20 @@ Then the export and the school import:
   `LocalConfiguration.locales[0].toLanguageTag()` → Compose's `Locale.current.toLanguageTag()`,
   `uppercase(locale)` → `uppercase()`, `ActivityKind.labelRes()` and `OutcomeChip`'s label a
   `StringResource`. The two previews → the app's `home/HomePreviews.kt`.
+- Group 2, the family's records: `childinfo/ChildInfoScreen.kt`, `ChildDetailScreen.kt`,
+  `AddEditChildInfoScreen.kt`, `components/` (the editors, `GuestInviteSheet`, `DatePickerDialog`);
+  `pets/PetsScreen.kt`, `AddEditPetScreen.kt`; `contacts/ContactsScreen.kt`; `guests/GuestAcceptScreen.kt`;
+  `common/MedicalProfileEditor.kt`, `VaccinationListEditor.kt`, `BloodTypeLabel.kt`, `PetSpeciesLabel.kt`
+  (`labelRes()` a `StringResource`; `BloodTypeLabelTest` to `commonTest`). Replaced: the
+  `PickVisualMedia` launchers → `FilePicker.rememberImagePicker` (add only where available);
+  `UUID.randomUUID()` → `Uuid.random()`; `ofLocalizedDate(MEDIUM)` → `readerMediumDate`;
+  `ofLocalizedDate(LONG)` of an instant in the system zone → the new `readerLongDateAt` over the new
+  `readerLongDate` expect (Android `FormatStyle.LONG`, iPhone `NSDateFormatterLongStyle`;
+  `ReaderDateTextTest` holds it); `localizedDate("yMMMd")` → `ReaderDateText.date`; the dialler intent
+  → `OpenUrl.dial`; `guestShareIntent` → `ShareSheet.shareText` (text worded at the tap through
+  `rememberUiTextResolver`; `GuestInviteSheet.onShare` nullable, no button where unavailable). The
+  child/pet `DatePickerDialog` is kotlinx-datetime now (`LocalDatePickerDialogTest` and
+  `PickerDatesTest` convert their `java.time` fixtures at the call).
 
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 

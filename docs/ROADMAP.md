@@ -3068,6 +3068,9 @@ bytes are identical on Android):
   **Slice 11f built, CI pending.** Task 10's last two ViewModels moved with it.
   Slice 11g, everything else: first Home, the month in review and the stickers' shelf, their dates
   and amounts through the date and money seams (the same text on Android).
+  Then the family's records — the child and pet records, the contacts and the guest's screen: their
+  photo pickers, dialler and share sheet through the platform interfaces, with no add, dial or share
+  affordance where the phone has none.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

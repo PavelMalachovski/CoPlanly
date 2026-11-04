@@ -1,7 +1,7 @@
 package com.coparently.app.presentation.common
 
 import com.coparently.app.domain.model.BloodType
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
@@ -44,7 +44,7 @@ class BloodTypeLabelTest {
     }
 
     @Test
-    fun `an empty medical profile is the default, so an untouched parent stores nothing`() {
+    fun `an empty medical profile is the default - so an untouched parent stores nothing`() {
         val empty = com.coparently.app.domain.model.MedicalProfile()
 
         assertEquals(null, empty.bloodType)

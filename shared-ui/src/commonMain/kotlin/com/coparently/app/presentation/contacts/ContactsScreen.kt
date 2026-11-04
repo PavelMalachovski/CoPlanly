@@ -1,8 +1,5 @@
 package com.coparently.app.presentation.contacts
 
-import android.content.ActivityNotFoundException
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -30,9 +27,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.contacts.ContactDirectory
 import com.coparently.app.domain.contacts.ContactGroup
 import com.coparently.app.domain.contacts.DirectoryContact
@@ -44,8 +38,20 @@ import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.valueOrNull
+import com.coparently.app.presentation.platform.LocalOpenUrl
+import com.coparently.app.presentation.platform.OpenUrl
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.contacts_back
+import com.coparently.app.resources.contacts_call
+import com.coparently.app.resources.contacts_empty
+import com.coparently.app.resources.contacts_empty_action
+import com.coparently.app.resources.contacts_empty_hint
+import com.coparently.app.resources.contacts_no_dialer
+import com.coparently.app.resources.contacts_title
+import com.coparently.app.resources.contacts_vet
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /** How the numbers on one row are joined. Punctuation, not text — nothing to translate. */
@@ -59,7 +65,7 @@ private const val NUMBER_SEPARATOR = " · "
  * guess which one grandma went into. `relationship` is free text and already carries
  * "grandmother" or "paediatrician".
  *
- * **Dialling goes through [Intent.ACTION_DIAL], never `ACTION_CALL`.** `DIAL` opens the dialler
+ * **Dialling goes through `Intent.ACTION_DIAL` ([OpenUrl.dial]), never `ACTION_CALL`.** `DIAL` opens the dialler
  * pre-filled and needs no permission; `CALL` places the call immediately and requires
  * `CALL_PHONE`. Asking a separated parent for permission to place calls, to save one tap, is not
  * a trade this app should make.
@@ -79,12 +85,12 @@ fun ContactsScreen(
 ) {
     val groupsState by viewModel.groups.collectAsState()
     val groups = groupsState.valueOrNull.orEmpty()
-    val context = LocalContext.current
+    val openUrl = LocalOpenUrl.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     // Resolved in composable scope: the failure message is shown from a coroutine, which is not
     // one.
-    val noDialerMessage = stringResource(R.string.contacts_no_dialer)
+    val noDialerMessage = stringResource(Res.string.contacts_no_dialer)
 
     Scaffold(
         topBar = { ContactsTopBar(onNavigateUp = onNavigateUp) },
@@ -97,9 +103,9 @@ fun ContactsScreen(
         } else if (groups.isEmpty()) {
             EmptyState(
                 icon = Icons.Default.Contacts,
-                title = stringResource(R.string.contacts_empty),
-                description = stringResource(R.string.contacts_empty_hint),
-                actionLabel = stringResource(R.string.contacts_empty_action),
+                title = stringResource(Res.string.contacts_empty),
+                description = stringResource(Res.string.contacts_empty_hint),
+                actionLabel = stringResource(Res.string.contacts_empty_action),
                 onAction = onAddContact,
                 modifier = Modifier
                     .fillMaxSize()
@@ -119,7 +125,7 @@ fun ContactsScreen(
                 ChildContacts(
                     group = group,
                     onDial = { number ->
-                        if (!context.dial(number)) {
+                        if (!openUrl.dial(number)) {
                             scope.launch { snackbarHostState.showSnackbar(noDialerMessage) }
                         }
                     }
@@ -134,12 +140,12 @@ fun ContactsScreen(
 @Composable
 private fun ContactsTopBar(onNavigateUp: () -> Unit) {
     TopAppBar(
-        title = { Text(stringResource(R.string.contacts_title)) },
+        title = { Text(stringResource(Res.string.contacts_title)) },
         navigationIcon = {
             IconButton(onClick = onNavigateUp) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.contacts_back)
+                    contentDescription = stringResource(Res.string.contacts_back)
                 )
             }
         }
@@ -190,7 +196,7 @@ private fun ContactRow(
     val dialable = contact.dialable
     // A vet row carries a sentinel rather than a typed relationship, so the word is resolved
     // here, where there is a `Context` and five translations, instead of in the domain.
-    val vetLabel = stringResource(R.string.contacts_vet)
+    val vetLabel = stringResource(Res.string.contacts_vet)
     val relationship = if (contact.relationship == ContactDirectory.VET_RELATIONSHIP) {
         vetLabel
     } else {
@@ -200,7 +206,7 @@ private fun ContactRow(
     val supporting = (listOf(relationship) + contact.numbers)
         .filter { it.isNotBlank() }
         .joinToString(NUMBER_SEPARATOR)
-    val callLabel = stringResource(R.string.contacts_call)
+    val callLabel = stringResource(Res.string.contacts_call)
 
     SectionRow(
         title = title,
@@ -219,21 +225,4 @@ private fun ContactRow(
             }
         }
     )
-}
-
-/**
- * Opens the dialler pre-filled with [number].
- *
- * @return false when the device has no dialler to open, which is rare but real — a tablet with
- *   no telephony has none, and a silent no-op there looks exactly like a broken button.
- */
-private fun android.content.Context.dial(number: String): Boolean {
-    val intent = Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", number, null))
-    return try {
-        startActivity(intent)
-        true
-    } catch (e: ActivityNotFoundException) {
-        android.util.Log.w("ContactsScreen", "No dialler for tel: intent", e)
-        false
-    }
 }

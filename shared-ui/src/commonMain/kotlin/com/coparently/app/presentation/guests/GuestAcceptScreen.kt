@@ -26,19 +26,23 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.pairing.components.CodeEntryField
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.guest_accept_action
+import com.coparently.app.resources.guest_accept_back
+import com.coparently.app.resources.guest_accept_done_action
+import com.coparently.app.resources.guest_accept_done_scope
+import com.coparently.app.resources.guest_accept_done_title
+import com.coparently.app.resources.guest_accept_done_until
+import com.coparently.app.resources.guest_accept_explainer
+import com.coparently.app.resources.guest_accept_title
+import com.coparently.app.utils.readerLongDateAt
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 
 /**
  * Redeeming a guest invitation.
@@ -66,12 +70,12 @@ fun GuestAcceptScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.guest_accept_title)) },
+                title = { Text(stringResource(Res.string.guest_accept_title)) },
                 navigationIcon = {
                     IconButton(onClick = onDone) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.guest_accept_back)
+                            contentDescription = stringResource(Res.string.guest_accept_back)
                         )
                     }
                 }
@@ -100,7 +104,7 @@ fun GuestAcceptScreen(
 @Composable
 private fun GuestAcceptForm(state: GuestAcceptUiState, viewModel: GuestAcceptViewModel) {
     Text(
-        text = stringResource(R.string.guest_accept_explainer),
+        text = stringResource(Res.string.guest_accept_explainer),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
@@ -120,7 +124,7 @@ private fun GuestAcceptForm(state: GuestAcceptUiState, viewModel: GuestAcceptVie
         if (state.isBusy) {
             CircularProgressIndicator(modifier = Modifier.size(BUSY_SPINNER))
         } else {
-            Text(stringResource(R.string.guest_accept_action))
+            Text(stringResource(Res.string.guest_accept_action))
         }
     }
 }
@@ -128,24 +132,21 @@ private fun GuestAcceptForm(state: GuestAcceptUiState, viewModel: GuestAcceptVie
 /** What a guest sees once the grant exists: what they may read, and until when. */
 @Composable
 private fun GuestAccepted(untilMillis: Long, onDone: () -> Unit) {
-    val until = remember(untilMillis) {
-        DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)
-            .format(Instant.ofEpochMilli(untilMillis).atZone(ZoneId.systemDefault()))
-    }
+    val until = remember(untilMillis) { readerLongDateAt(untilMillis) }
     SectionGroup {
         SectionRow(
             icon = Icons.Default.CheckCircle,
-            title = stringResource(R.string.guest_accept_done_title),
-            supporting = stringResource(R.string.guest_accept_done_until, until)
+            title = stringResource(Res.string.guest_accept_done_title),
+            supporting = stringResource(Res.string.guest_accept_done_until, until)
         )
     }
     Text(
-        text = stringResource(R.string.guest_accept_done_scope),
+        text = stringResource(Res.string.guest_accept_done_scope),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
     Button(onClick = onDone, modifier = Modifier.fillMaxWidth()) {
-        Text(stringResource(R.string.guest_accept_done_action))
+        Text(stringResource(Res.string.guest_accept_done_action))
     }
 }
 

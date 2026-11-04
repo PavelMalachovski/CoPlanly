@@ -10,14 +10,29 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import com.coparently.app.R
 import com.coparently.app.domain.model.EmergencyContact
 import com.coparently.app.presentation.common.AddItemButton
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.childinfo_add_emergency_contact
+import com.coparently.app.resources.childinfo_alternate_phone_optional_label
+import com.coparently.app.resources.childinfo_cancel
+import com.coparently.app.resources.childinfo_contact_alt_phone_marker
+import com.coparently.app.resources.childinfo_contact_phone_marker
+import com.coparently.app.resources.childinfo_delete
+import com.coparently.app.resources.childinfo_edit
+import com.coparently.app.resources.childinfo_edit_emergency_contact
+import com.coparently.app.resources.childinfo_name_label
+import com.coparently.app.resources.childinfo_new_emergency_contact
+import com.coparently.app.resources.childinfo_phone_number_label
+import com.coparently.app.resources.childinfo_relationship_label
+import com.coparently.app.resources.childinfo_relationship_placeholder
+import com.coparently.app.resources.childinfo_save
+import com.coparently.app.resources.common_required
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Editor for managing emergency contacts.
@@ -88,7 +103,7 @@ fun EmergencyContactEditor(
         // Add button
         if (!isAddingNew && editingIndex == null) {
             AddItemButton(
-                label = stringResource(R.string.childinfo_add_emergency_contact),
+                label = stringResource(Res.string.childinfo_add_emergency_contact),
                 onClick = { isAddingNew = true },
                 modifier = Modifier.fillMaxWidth()
             )
@@ -126,14 +141,14 @@ private fun EmergencyContactCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = stringResource(R.string.childinfo_contact_phone_marker, contact.phone),
+                    text = stringResource(Res.string.childinfo_contact_phone_marker, contact.phone),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 val alternatePhone = contact.alternatePhone
                 if (!alternatePhone.isNullOrBlank()) {
                     Text(
-                        text = stringResource(R.string.childinfo_contact_alt_phone_marker, alternatePhone),
+                        text = stringResource(Res.string.childinfo_contact_alt_phone_marker, alternatePhone),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -142,12 +157,12 @@ private fun EmergencyContactCard(
 
             Row {
                 IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.childinfo_edit))
+                    Icon(Icons.Default.Edit, contentDescription = stringResource(Res.string.childinfo_edit))
                 }
                 IconButton(onClick = onDelete) {
                     Icon(
                         Icons.Default.Delete,
-                        contentDescription = stringResource(R.string.childinfo_delete),
+                        contentDescription = stringResource(Res.string.childinfo_delete),
                         tint = MaterialTheme.colorScheme.error
                     )
                 }
@@ -187,9 +202,9 @@ private fun EmergencyContactForm(
         ) {
             Text(
                 text = if (contact == null) {
-                    stringResource(R.string.childinfo_new_emergency_contact)
+                    stringResource(Res.string.childinfo_new_emergency_contact)
                 } else {
-                    stringResource(R.string.childinfo_edit_emergency_contact)
+                    stringResource(Res.string.childinfo_edit_emergency_contact)
                 },
                 style = MaterialTheme.typography.titleSmall
             )
@@ -197,8 +212,8 @@ private fun EmergencyContactForm(
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text(stringResource(R.string.childinfo_name_label)) },
-                supportingText = { Text(stringResource(R.string.common_required)) },
+                label = { Text(stringResource(Res.string.childinfo_name_label)) },
+                supportingText = { Text(stringResource(Res.string.common_required)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -206,9 +221,9 @@ private fun EmergencyContactForm(
             OutlinedTextField(
                 value = relationship,
                 onValueChange = { relationship = it },
-                label = { Text(stringResource(R.string.childinfo_relationship_label)) },
-                supportingText = { Text(stringResource(R.string.common_required)) },
-                placeholder = { Text(stringResource(R.string.childinfo_relationship_placeholder)) },
+                label = { Text(stringResource(Res.string.childinfo_relationship_label)) },
+                supportingText = { Text(stringResource(Res.string.common_required)) },
+                placeholder = { Text(stringResource(Res.string.childinfo_relationship_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -216,8 +231,8 @@ private fun EmergencyContactForm(
             OutlinedTextField(
                 value = phone,
                 onValueChange = { phone = it },
-                label = { Text(stringResource(R.string.childinfo_phone_number_label)) },
-                supportingText = { Text(stringResource(R.string.common_required)) },
+                label = { Text(stringResource(Res.string.childinfo_phone_number_label)) },
+                supportingText = { Text(stringResource(Res.string.common_required)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
@@ -226,7 +241,7 @@ private fun EmergencyContactForm(
             OutlinedTextField(
                 value = alternatePhone,
                 onValueChange = { alternatePhone = it },
-                label = { Text(stringResource(R.string.childinfo_alternate_phone_optional_label)) },
+                label = { Text(stringResource(Res.string.childinfo_alternate_phone_optional_label)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
@@ -238,7 +253,7 @@ private fun EmergencyContactForm(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TextButton(onClick = onCancel) {
-                    Text(stringResource(R.string.childinfo_cancel))
+                    Text(stringResource(Res.string.childinfo_cancel))
                 }
                 Spacer(modifier = Modifier.width(Spacing.S))
                 Button(
@@ -256,7 +271,7 @@ private fun EmergencyContactForm(
                     },
                     enabled = name.isNotBlank() && relationship.isNotBlank() && phone.isNotBlank()
                 ) {
-                    Text(stringResource(R.string.childinfo_save))
+                    Text(stringResource(Res.string.childinfo_save))
                 }
             }
         }

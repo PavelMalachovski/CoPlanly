@@ -1,8 +1,5 @@
 package com.coparently.app.presentation.pets
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -45,10 +42,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.model.PetSpecies
@@ -64,23 +59,52 @@ import com.coparently.app.presentation.common.VaccinationListEditor
 import com.coparently.app.presentation.common.field
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.rememberDiscardGuard
+import com.coparently.app.presentation.platform.LocalFilePicker
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
+import com.coparently.app.resources.pet_add_button
+import com.coparently.app.resources.pet_breed_label
+import com.coparently.app.resources.pet_delete_cancel
+import com.coparently.app.resources.pet_delete_confirm
+import com.coparently.app.resources.pet_delete_message
+import com.coparently.app.resources.pet_delete_title
+import com.coparently.app.resources.pet_feeding_label
+import com.coparently.app.resources.pet_feeding_placeholder
+import com.coparently.app.resources.pet_name_label
 import com.coparently.app.resources.pet_photos_add
 import com.coparently.app.resources.pet_photos_close
+import com.coparently.app.resources.pet_photos_delete_failed
 import com.coparently.app.resources.pet_photos_hint
 import com.coparently.app.resources.pet_photos_none
 import com.coparently.app.resources.pet_photos_open
 import com.coparently.app.resources.pet_photos_remove
 import com.coparently.app.resources.pet_photos_thumbnail_description
 import com.coparently.app.resources.pet_photos_title
-import com.coparently.app.utils.format
-import com.coparently.app.utils.localizedDate
+import com.coparently.app.resources.pet_photos_upload_failed
+import com.coparently.app.resources.pet_save_changes
+import com.coparently.app.resources.pet_save_failed
+import com.coparently.app.resources.pet_section_basic
+import com.coparently.app.resources.pet_section_feeding
+import com.coparently.app.resources.pet_section_medications
+import com.coparently.app.resources.pet_section_photos
+import com.coparently.app.resources.pet_section_special_needs
+import com.coparently.app.resources.pet_section_vaccinations
+import com.coparently.app.resources.pet_section_vet
+import com.coparently.app.resources.pet_special_needs_label
+import com.coparently.app.resources.pet_special_needs_placeholder
+import com.coparently.app.resources.pet_species_label
+import com.coparently.app.resources.pet_title_add
+import com.coparently.app.resources.pet_title_edit
+import com.coparently.app.resources.pet_vet_name_label
+import com.coparently.app.resources.pet_vet_phone_label
+import com.coparently.app.resources.pets_back
+import com.coparently.app.resources.profile_dob_label
+import com.coparently.app.utils.ReaderDateText
 import kotlinx.datetime.LocalDateTime
-import kotlinx.datetime.toJavaLocalDateTime
-import kotlinx.datetime.toKotlinLocalDateTime
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import java.util.UUID
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Screen for adding or editing a pet.
@@ -140,15 +164,12 @@ fun AddEditPetScreen(
     }
     val storedPhotos = currentPet?.photos.orEmpty()
 
-    val photoPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        uri?.let { pickedPhotos = pickedPhotos + it.toString() }
-    }
+    val filePicker = LocalFilePicker.current
+    val photoPicker = filePicker.rememberImagePicker { uri -> pickedPhotos = pickedPhotos + uri }
 
     val photoError by viewModel.photoError.collectAsState()
-    val uploadFailed = stringResource(R.string.pet_photos_upload_failed)
-    val deleteFailed = stringResource(R.string.pet_photos_delete_failed)
+    val uploadFailed = stringResource(Res.string.pet_photos_upload_failed)
+    val deleteFailed = stringResource(Res.string.pet_photos_delete_failed)
     LaunchedEffect(photoError) {
         val message = when (photoError) {
             PetPhotoError.UPLOAD_FAILED -> uploadFailed
@@ -165,7 +186,7 @@ fun AddEditPetScreen(
     // guard over two local flags, and nothing ever cleared `isSaving` — so it never fired, the
     // form stayed disabled behind a spinner forever, and the only way to see the (already
     // saved) change was to back out and re-enter. That is the reported "saving takes ages".
-    val saveFailed = stringResource(R.string.pet_save_failed)
+    val saveFailed = stringResource(Res.string.pet_save_failed)
     LaunchedEffect(Unit) {
         viewModel.saveOutcome.collect { outcome ->
             when (outcome) {
@@ -187,11 +208,11 @@ fun AddEditPetScreen(
     if (showDatePicker) {
         DatePickerDialog(
             onDateSelected = { date ->
-                dateOfBirth = date.toKotlinLocalDateTime()
+                dateOfBirth = date
                 showDatePicker = false
             },
             onDismiss = { showDatePicker = false },
-            initialDate = dateOfBirth?.toJavaLocalDateTime()
+            initialDate = dateOfBirth
         )
     }
 
@@ -202,10 +223,10 @@ fun AddEditPetScreen(
     if (showDeleteConfirm) {
         val pet = currentPet
         ConfirmationDialog(
-            title = stringResource(R.string.pet_delete_title, name),
-            message = stringResource(R.string.pet_delete_message),
-            confirmText = stringResource(R.string.pet_delete_confirm),
-            dismissText = stringResource(R.string.pet_delete_cancel),
+            title = stringResource(Res.string.pet_delete_title, name),
+            message = stringResource(Res.string.pet_delete_message),
+            confirmText = stringResource(Res.string.pet_delete_confirm),
+            dismissText = stringResource(Res.string.pet_delete_cancel),
             isDestructive = true,
             onDismiss = { showDeleteConfirm = false },
             onConfirm = {
@@ -227,9 +248,9 @@ fun AddEditPetScreen(
                 title = {
                     Text(
                         if (isNewPet) {
-                            stringResource(R.string.pet_title_add)
+                            stringResource(Res.string.pet_title_add)
                         } else {
-                            stringResource(R.string.pet_title_edit)
+                            stringResource(Res.string.pet_title_edit)
                         }
                     )
                 },
@@ -237,7 +258,7 @@ fun AddEditPetScreen(
                     IconButton(onClick = leave) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.pets_back)
+                            contentDescription = stringResource(Res.string.pets_back)
                         )
                     }
                 },
@@ -246,7 +267,7 @@ fun AddEditPetScreen(
                         IconButton(onClick = { showDeleteConfirm = true }) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
-                                contentDescription = stringResource(R.string.pet_delete_confirm),
+                                contentDescription = stringResource(Res.string.pet_delete_confirm),
                                 tint = MaterialTheme.colorScheme.error
                             )
                         }
@@ -276,7 +297,7 @@ fun AddEditPetScreen(
                 enabled = !isSaving
             )
 
-            SectionCard(title = stringResource(R.string.pet_section_medications)) {
+            SectionCard(title = stringResource(Res.string.pet_section_medications)) {
                 MedicationEditor(
                     medications = medications,
                     onAdd = { medications = medications + it },
@@ -289,7 +310,7 @@ fun AddEditPetScreen(
                 )
             }
 
-            SectionCard(title = stringResource(R.string.pet_section_vaccinations)) {
+            SectionCard(title = stringResource(Res.string.pet_section_vaccinations)) {
                 VaccinationListEditor(
                     vaccinations = vaccinations,
                     onAdd = { vaccinations = vaccinations + it },
@@ -300,12 +321,12 @@ fun AddEditPetScreen(
                 )
             }
 
-            SectionCard(title = stringResource(R.string.pet_section_special_needs)) {
+            SectionCard(title = stringResource(Res.string.pet_section_special_needs)) {
                 OutlinedTextField(
                     value = specialNeeds,
                     onValueChange = { specialNeeds = it },
-                    label = { Text(stringResource(R.string.pet_special_needs_label)) },
-                    placeholder = { Text(stringResource(R.string.pet_special_needs_placeholder)) },
+                    label = { Text(stringResource(Res.string.pet_special_needs_label)) },
+                    placeholder = { Text(stringResource(Res.string.pet_special_needs_placeholder)) },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !isSaving,
                     minLines = 2,
@@ -313,12 +334,12 @@ fun AddEditPetScreen(
                 )
             }
 
-            SectionCard(title = stringResource(R.string.pet_section_feeding)) {
+            SectionCard(title = stringResource(Res.string.pet_section_feeding)) {
                 OutlinedTextField(
                     value = feedingNotes,
                     onValueChange = { feedingNotes = it },
-                    label = { Text(stringResource(R.string.pet_feeding_label)) },
-                    placeholder = { Text(stringResource(R.string.pet_feeding_placeholder)) },
+                    label = { Text(stringResource(Res.string.pet_feeding_label)) },
+                    placeholder = { Text(stringResource(Res.string.pet_feeding_placeholder)) },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !isSaving,
                     minLines = 2,
@@ -326,11 +347,11 @@ fun AddEditPetScreen(
                 )
             }
 
-            SectionCard(title = stringResource(R.string.pet_section_vet)) {
+            SectionCard(title = stringResource(Res.string.pet_section_vet)) {
                 OutlinedTextField(
                     value = vetName,
                     onValueChange = { vetName = it },
-                    label = { Text(stringResource(R.string.pet_vet_name_label)) },
+                    label = { Text(stringResource(Res.string.pet_vet_name_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !isSaving,
                     singleLine = true
@@ -338,7 +359,7 @@ fun AddEditPetScreen(
                 OutlinedTextField(
                     value = vetPhone,
                     onValueChange = { vetPhone = it },
-                    label = { Text(stringResource(R.string.pet_vet_phone_label)) },
+                    label = { Text(stringResource(Res.string.pet_vet_phone_label)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !isSaving,
@@ -346,15 +367,16 @@ fun AddEditPetScreen(
                 )
             }
 
-            SectionCard(title = stringResource(R.string.pet_section_photos)) {
+            SectionCard(title = stringResource(Res.string.pet_section_photos)) {
                 PhotoStrip(
                     photos = storedPhotos.filterNot { it in removedPhotos } + pickedPhotos,
                     owner = PhotoOwner(RecordPhotoKind.PET, currentPet?.id.orEmpty(), currentPet?.familyId),
                     strings = petPhotoStripStrings(),
-                    onAdd = {
-                        photoPicker.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        )
+                    // No add button where the phone has no photo picker (design item 8).
+                    onAdd = if (filePicker.available) {
+                        { photoPicker.launch() }
+                    } else {
+                        null
                     },
                     onRemove = { photo ->
                         if (photo in pickedPhotos) {
@@ -375,7 +397,7 @@ fun AddEditPetScreen(
                         val base = currentPet.takeIf { !isNewPet }
                         val now = wallClockNow()
                         val resolvedId = base?.id ?: petId?.takeIf { it != "new" }
-                            ?: UUID.randomUUID().toString()
+                            ?: newPetId()
                         val pet = (
                             base ?: Pet(id = resolvedId, name = name, createdAt = now, updatedAt = now)
                             ).copy(
@@ -412,9 +434,9 @@ fun AddEditPetScreen(
                 }
                 Text(
                     if (isNewPet) {
-                        stringResource(R.string.pet_add_button)
+                        stringResource(Res.string.pet_add_button)
                     } else {
-                        stringResource(R.string.pet_save_changes)
+                        stringResource(Res.string.pet_save_changes)
                     }
                 )
             }
@@ -438,11 +460,11 @@ private fun BasicSection(
     onPickDate: () -> Unit,
     enabled: Boolean
 ) {
-    SectionCard(title = stringResource(R.string.pet_section_basic)) {
+    SectionCard(title = stringResource(Res.string.pet_section_basic)) {
         OutlinedTextField(
             value = name,
             onValueChange = onName,
-            label = { Text(stringResource(R.string.pet_name_label)) },
+            label = { Text(stringResource(Res.string.pet_name_label)) },
             modifier = Modifier.fillMaxWidth(),
             enabled = enabled,
             singleLine = true
@@ -453,15 +475,15 @@ private fun BasicSection(
         OutlinedTextField(
             value = breed,
             onValueChange = onBreed,
-            label = { Text(stringResource(R.string.pet_breed_label)) },
+            label = { Text(stringResource(Res.string.pet_breed_label)) },
             modifier = Modifier.fillMaxWidth(),
             enabled = enabled,
             singleLine = true
         )
 
         DatePickerField(
-            label = stringResource(R.string.profile_dob_label),
-            value = dateOfBirth?.format(localizedDate("yMMMd")),
+            label = stringResource(Res.string.profile_dob_label),
+            value = dateOfBirth?.let { ReaderDateText.date(it.date, "yMMMd") },
             onClick = onPickDate,
             enabled = enabled
         )
@@ -486,7 +508,7 @@ private fun SpeciesDropdown(
             onValueChange = {},
             readOnly = true,
             enabled = enabled,
-            label = { Text(stringResource(R.string.pet_species_label)) },
+            label = { Text(stringResource(Res.string.pet_species_label)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
                 .fillMaxWidth()
@@ -534,3 +556,7 @@ private fun petPhotoStripStrings() = PhotoStripStrings(
     remove = Res.string.pet_photos_remove,
     close = Res.string.pet_photos_close
 )
+
+/** A new pet's id, a random UUID in its usual text, what `UUID.randomUUID().toString()` wrote. */
+@OptIn(ExperimentalUuidApi::class)
+private fun newPetId(): String = Uuid.random().toString()

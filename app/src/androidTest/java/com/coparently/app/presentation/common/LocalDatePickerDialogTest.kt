@@ -10,8 +10,11 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.platform.app.InstrumentationRegistry
-import com.coparently.app.R
 import com.coparently.app.presentation.childinfo.components.DatePickerDialog
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -64,10 +67,10 @@ class LocalDatePickerDialogTest(private val zone: String) {
         var dismissed = false
         composeTestRule.setContent {
             LocalDatePickerDialog(
-                initialDate = INITIAL,
+                initialDate = INITIAL.toKotlinLocalDate(),
                 confirmLabel = OK,
                 dismissLabel = CANCEL,
-                onConfirm = { picked = it },
+                onConfirm = { picked = it.toJavaLocalDate() },
                 onDismiss = { dismissed = true }
             )
         }
@@ -87,10 +90,10 @@ class LocalDatePickerDialogTest(private val zone: String) {
         var picked: LocalDate? = null
         composeTestRule.setContent {
             LocalDatePickerDialog(
-                initialDate = INITIAL,
+                initialDate = INITIAL.toKotlinLocalDate(),
                 confirmLabel = OK,
                 dismissLabel = CANCEL,
-                onConfirm = { picked = it },
+                onConfirm = { picked = it.toJavaLocalDate() },
                 onDismiss = {}
             )
         }
@@ -108,10 +111,10 @@ class LocalDatePickerDialogTest(private val zone: String) {
         var dismissed = false
         composeTestRule.setContent {
             LocalDatePickerDialog(
-                initialDate = INITIAL,
+                initialDate = INITIAL.toKotlinLocalDate(),
                 confirmLabel = OK,
                 dismissLabel = CANCEL,
-                onConfirm = { picked = it },
+                onConfirm = { picked = it.toJavaLocalDate() },
                 onDismiss = { dismissed = true }
             )
         }
@@ -130,9 +133,9 @@ class LocalDatePickerDialogTest(private val zone: String) {
         var picked: LocalDateTime? = null
         composeTestRule.setContent {
             DatePickerDialog(
-                onDateSelected = { picked = it },
+                onDateSelected = { picked = it.toJavaLocalDateTime() },
                 onDismiss = {},
-                initialDate = INITIAL.atTime(BIRTH_HOUR, BIRTH_MINUTE)
+                initialDate = INITIAL.atTime(BIRTH_HOUR, BIRTH_MINUTE).toKotlinLocalDateTime()
             )
         }
 

@@ -1,8 +1,5 @@
 package com.coparently.app.presentation.childinfo
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -14,9 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.*
 import com.coparently.app.domain.time.wallClockNow
@@ -30,13 +25,39 @@ import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.consent.HealthConsentDialog
 import com.coparently.app.presentation.consent.HealthConsentViewModel
 import com.coparently.app.presentation.consent.LockedMedicalSection
+import com.coparently.app.presentation.platform.LocalFilePicker
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.utils.format
-import com.coparently.app.utils.localizedDate
-import kotlinx.datetime.toJavaLocalDateTime
-import kotlinx.datetime.toKotlinLocalDateTime
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.childinfo_add_child_button
+import com.coparently.app.resources.childinfo_back
+import com.coparently.app.resources.childinfo_child_name_label
+import com.coparently.app.resources.childinfo_delete_action
+import com.coparently.app.resources.childinfo_delete_cancel
+import com.coparently.app.resources.childinfo_delete_confirm
+import com.coparently.app.resources.childinfo_delete_message
+import com.coparently.app.resources.childinfo_delete_title
+import com.coparently.app.resources.childinfo_medical_notes_label
+import com.coparently.app.resources.childinfo_medical_notes_placeholder
+import com.coparently.app.resources.childinfo_save_changes
+import com.coparently.app.resources.childinfo_save_failed
+import com.coparently.app.resources.childinfo_section_activities
+import com.coparently.app.resources.childinfo_section_allergies
+import com.coparently.app.resources.childinfo_section_basic
+import com.coparently.app.resources.childinfo_section_emergency_contacts
+import com.coparently.app.resources.childinfo_section_medical_notes
+import com.coparently.app.resources.childinfo_section_medications
+import com.coparently.app.resources.childinfo_section_school
+import com.coparently.app.resources.childinfo_title_add
+import com.coparently.app.resources.childinfo_title_edit
+import com.coparently.app.resources.medical_photos_delete_failed
+import com.coparently.app.resources.medical_photos_upload_failed
+import com.coparently.app.resources.medical_section_title
+import com.coparently.app.resources.profile_dob_label
+import com.coparently.app.utils.ReaderDateText
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import java.util.UUID
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Screen for adding or editing child information.
@@ -100,7 +121,7 @@ fun AddEditChildInfoScreen(
     // The ViewModel says when the write landed. This used to be a `saveCompleted && !isSaving`
     // guard over two local flags, and nothing ever cleared `isSaving`, so it never fired: the
     // form stayed disabled behind a spinner while the record had already been written to Room.
-    val saveFailed = stringResource(R.string.childinfo_save_failed)
+    val saveFailed = stringResource(Res.string.childinfo_save_failed)
     LaunchedEffect(Unit) {
         viewModel.saveOutcome.collect { outcome ->
             when (outcome) {
@@ -144,10 +165,10 @@ fun AddEditChildInfoScreen(
     if (showDeleteConfirm) {
         val child = currentChildInfo
         ConfirmationDialog(
-            title = stringResource(R.string.childinfo_delete_title, child?.childName.orEmpty()),
-            message = stringResource(R.string.childinfo_delete_message),
-            confirmText = stringResource(R.string.childinfo_delete_confirm),
-            dismissText = stringResource(R.string.childinfo_delete_cancel),
+            title = stringResource(Res.string.childinfo_delete_title, child?.childName.orEmpty()),
+            message = stringResource(Res.string.childinfo_delete_message),
+            confirmText = stringResource(Res.string.childinfo_delete_confirm),
+            dismissText = stringResource(Res.string.childinfo_delete_cancel),
             isDestructive = true,
             onDismiss = { showDeleteConfirm = false },
             onConfirm = {
@@ -163,17 +184,14 @@ fun AddEditChildInfoScreen(
 
     // The same picker the receipt and event-photo flows use. Nothing is uploaded here: the URI
     // is held until save, so a parent who backs out leaves nothing behind in the bucket.
-    val photoPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        uri?.let { pickedPhotos = pickedPhotos + it.toString() }
-    }
+    val filePicker = LocalFilePicker.current
+    val photoPicker = filePicker.rememberImagePicker { uri -> pickedPhotos = pickedPhotos + uri }
 
     // A failed upload or delete has to be said out loud: both leave the record in a state the
     // user did not ask for, and one of them leaves the photograph still attached.
     val photoError by viewModel.photoError.collectAsState()
-    val uploadFailed = stringResource(R.string.medical_photos_upload_failed)
-    val deleteFailed = stringResource(R.string.medical_photos_delete_failed)
+    val uploadFailed = stringResource(Res.string.medical_photos_upload_failed)
+    val deleteFailed = stringResource(Res.string.medical_photos_delete_failed)
     LaunchedEffect(photoError) {
         val message = when (photoError) {
             MedicalPhotoError.UPLOAD_FAILED -> uploadFailed
@@ -190,11 +208,11 @@ fun AddEditChildInfoScreen(
     if (showDatePicker) {
         DatePickerDialog(
             onDateSelected = { date ->
-                dateOfBirth = date.toKotlinLocalDateTime()
+                dateOfBirth = date
                 showDatePicker = false
             },
             onDismiss = { showDatePicker = false },
-            initialDate = dateOfBirth?.toJavaLocalDateTime()
+            initialDate = dateOfBirth
         )
     }
 
@@ -206,9 +224,9 @@ fun AddEditChildInfoScreen(
                 title = {
                     Text(
                         if (childInfoId == "new") {
-                            stringResource(R.string.childinfo_title_add)
+                            stringResource(Res.string.childinfo_title_add)
                         } else {
-                            stringResource(R.string.childinfo_title_edit)
+                            stringResource(Res.string.childinfo_title_edit)
                         }
                     )
                 },
@@ -216,7 +234,7 @@ fun AddEditChildInfoScreen(
                     IconButton(onClick = leave) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.childinfo_back)
+                            contentDescription = stringResource(Res.string.childinfo_back)
                         )
                     }
                 },
@@ -229,7 +247,7 @@ fun AddEditChildInfoScreen(
                             Icon(
                                 imageVector = Icons.Default.Delete,
                                 contentDescription = stringResource(
-                                    R.string.childinfo_delete_action
+                                    Res.string.childinfo_delete_action
                                 ),
                                 tint = MaterialTheme.colorScheme.error
                             )
@@ -257,22 +275,22 @@ fun AddEditChildInfoScreen(
                     verticalArrangement = Arrangement.spacedBy(Spacing.M)
                 ) {
                     Text(
-                        text = stringResource(R.string.childinfo_section_basic),
+                        text = stringResource(Res.string.childinfo_section_basic),
                         style = MaterialTheme.typography.titleMedium
                     )
 
                     OutlinedTextField(
                         value = childName,
                         onValueChange = { childName = it },
-                        label = { Text(stringResource(R.string.childinfo_child_name_label)) },
+                        label = { Text(stringResource(Res.string.childinfo_child_name_label)) },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !isSaving,
                         singleLine = true
                     )
 
                     DatePickerField(
-                        label = stringResource(R.string.profile_dob_label),
-                        value = dateOfBirth?.format(localizedDate("yMMMd")),
+                        label = stringResource(Res.string.profile_dob_label),
+                        value = dateOfBirth?.let { ReaderDateText.date(it.date, "yMMMd") },
                         onClick = { showDatePicker = true },
                         enabled = !isSaving
                     )
@@ -289,7 +307,7 @@ fun AddEditChildInfoScreen(
                         verticalArrangement = Arrangement.spacedBy(Spacing.S)
                     ) {
                         Text(
-                            text = stringResource(R.string.childinfo_section_medications),
+                            text = stringResource(Res.string.childinfo_section_medications),
                             style = MaterialTheme.typography.titleMedium
                         )
 
@@ -322,7 +340,7 @@ fun AddEditChildInfoScreen(
                     verticalArrangement = Arrangement.spacedBy(Spacing.S)
                 ) {
                     Text(
-                        text = stringResource(R.string.childinfo_section_activities),
+                        text = stringResource(Res.string.childinfo_section_activities),
                         style = MaterialTheme.typography.titleMedium
                     )
 
@@ -354,7 +372,7 @@ fun AddEditChildInfoScreen(
                         verticalArrangement = Arrangement.spacedBy(Spacing.S)
                     ) {
                         Text(
-                            text = stringResource(R.string.medical_section_title),
+                            text = stringResource(Res.string.medical_section_title),
                             style = MaterialTheme.typography.titleMedium
                         )
                         LockedMedicalSection(
@@ -375,7 +393,7 @@ fun AddEditChildInfoScreen(
                         verticalArrangement = Arrangement.spacedBy(Spacing.S)
                     ) {
                         Text(
-                            text = stringResource(R.string.childinfo_section_allergies),
+                            text = stringResource(Res.string.childinfo_section_allergies),
                             style = MaterialTheme.typography.titleMedium
                         )
 
@@ -404,7 +422,7 @@ fun AddEditChildInfoScreen(
                         verticalArrangement = Arrangement.spacedBy(Spacing.S)
                     ) {
                         Text(
-                            text = stringResource(R.string.medical_section_title),
+                            text = stringResource(Res.string.medical_section_title),
                             style = MaterialTheme.typography.titleMedium
                         )
 
@@ -427,15 +445,15 @@ fun AddEditChildInfoScreen(
                         verticalArrangement = Arrangement.spacedBy(Spacing.S)
                     ) {
                         Text(
-                            text = stringResource(R.string.childinfo_section_medical_notes),
+                            text = stringResource(Res.string.childinfo_section_medical_notes),
                             style = MaterialTheme.typography.titleMedium
                         )
 
                         OutlinedTextField(
                             value = medicalNotes,
                             onValueChange = { medicalNotes = it },
-                            label = { Text(stringResource(R.string.childinfo_medical_notes_label)) },
-                            placeholder = { Text(stringResource(R.string.childinfo_medical_notes_placeholder)) },
+                            label = { Text(stringResource(Res.string.childinfo_medical_notes_label)) },
+                            placeholder = { Text(stringResource(Res.string.childinfo_medical_notes_placeholder)) },
                             modifier = Modifier.fillMaxWidth(),
                             enabled = !isSaving,
                             minLines = 3,
@@ -449,10 +467,11 @@ fun AddEditChildInfoScreen(
                                 recordId = currentChildInfo?.id.orEmpty(),
                                 familyId = currentChildInfo?.familyId
                             ),
-                            onAdd = {
-                                photoPicker.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                )
+                            // No add button where the phone has no photo picker (design item 8).
+                            onAdd = if (filePicker.available) {
+                                { photoPicker.launch() }
+                            } else {
+                                null
                             },
                             onRemove = { photo ->
                                 // A picked photograph is nowhere yet, so forgetting it is the whole
@@ -479,7 +498,7 @@ fun AddEditChildInfoScreen(
                     verticalArrangement = Arrangement.spacedBy(Spacing.S)
                 ) {
                     Text(
-                        text = stringResource(R.string.childinfo_section_emergency_contacts),
+                        text = stringResource(Res.string.childinfo_section_emergency_contacts),
                         style = MaterialTheme.typography.titleMedium
                     )
 
@@ -511,7 +530,7 @@ fun AddEditChildInfoScreen(
                     verticalArrangement = Arrangement.spacedBy(Spacing.S)
                 ) {
                     Text(
-                        text = stringResource(R.string.childinfo_section_school),
+                        text = stringResource(Res.string.childinfo_section_school),
                         style = MaterialTheme.typography.titleMedium
                     )
 
@@ -537,7 +556,7 @@ fun AddEditChildInfoScreen(
                         val base = currentChildInfo.takeIf { !isNewChild }
                         val now = wallClockNow()
                         val resolvedId = base?.id ?: childInfoId?.takeIf { it != "new" }
-                            ?: UUID.randomUUID().toString()
+                            ?: newChildId()
                         val childInfo = (
                             base ?: ChildInfo(
                                 id = resolvedId,
@@ -579,9 +598,9 @@ fun AddEditChildInfoScreen(
                 }
                 Text(
                     if (childInfoId == "new") {
-                        stringResource(R.string.childinfo_add_child_button)
+                        stringResource(Res.string.childinfo_add_child_button)
                     } else {
-                        stringResource(R.string.childinfo_save_changes)
+                        stringResource(Res.string.childinfo_save_changes)
                     }
                 )
             }
@@ -591,3 +610,7 @@ fun AddEditChildInfoScreen(
         }
     }
 }
+
+/** A new child's id, a random UUID in its usual text, what `UUID.randomUUID().toString()` wrote. */
+@OptIn(ExperimentalUuidApi::class)
+private fun newChildId(): String = Uuid.random().toString()

@@ -26,9 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.model.Pet
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ErrorState
@@ -38,6 +36,13 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.pets_add
+import com.coparently.app.resources.pets_back
+import com.coparently.app.resources.pets_empty_state
+import com.coparently.app.resources.pets_group_label
+import com.coparently.app.resources.pets_screen_title
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -65,7 +70,7 @@ fun PetsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.pets_screen_title)) },
+                title = { Text(stringResource(Res.string.pets_screen_title)) },
                 navigationIcon = {
                     IconButton(onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -73,7 +78,7 @@ fun PetsScreen(
                     }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.pets_back)
+                            contentDescription = stringResource(Res.string.pets_back)
                         )
                     }
                 }
@@ -88,7 +93,7 @@ fun PetsScreen(
                         onEditPet("new")
                     },
                     icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                    text = { Text(stringResource(R.string.pets_add)) }
+                    text = { Text(stringResource(Res.string.pets_add)) }
                 )
             }
         }
@@ -113,8 +118,8 @@ fun PetsScreen(
                     if (state.pets.isEmpty()) {
                         EmptyState(
                             icon = Icons.Default.Pets,
-                            title = stringResource(R.string.pets_empty_state),
-                            actionLabel = stringResource(R.string.pets_add),
+                            title = stringResource(Res.string.pets_empty_state),
+                            actionLabel = stringResource(Res.string.pets_add),
                             onAction = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 onEditPet("new")
@@ -143,7 +148,7 @@ private fun PetsList(pets: List<Pet>, onEditPet: (String) -> Unit) {
     ) {
         item {
             Column {
-                GroupLabel(stringResource(R.string.pets_group_label))
+                GroupLabel(stringResource(Res.string.pets_group_label))
                 SectionGroup {
                     pets.forEachIndexed { index, pet ->
                         val species = stringResource(pet.species.labelRes())

@@ -1661,7 +1661,8 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              onboarding's screens (presentation/pairing/, presentation/onboarding/), then the
              sign-in's and the profile's (presentation/auth/, presentation/profile/) with
              AuthViewModel; and, from slice 11g, Home's, the month review's and the stickers'
-             screens (presentation/home/, presentation/review/, presentation/stickers/).
+             screens (presentation/home/, presentation/review/, presentation/stickers/), then the
+             family's records (presentation/childinfo/, pets/, contacts/, guests/).
              It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
@@ -1680,8 +1681,9 @@ presentation/ — Compose screens per feature not moved yet (slice 11g), MainAct
              state and every ViewModel are in shared-ui/ (Task 10; SyncViewModel and AuthViewModel
              since slice 11f), and so are chat's, the event form's, the calendar's, custody's, the
              requests', the family's, the expenses', child support's, Settings', pairing's,
-             onboarding's, the sign-in's, the profile's, Home's, the month review's and the
-             stickers' screens (Task 11, slices 11b–11g); the
+             onboarding's, the sign-in's, the profile's, Home's, the month review's, the
+             stickers', the child and pet records', the contacts' and the guest's screens (Task 11,
+             slices 11b–11g); the
              app keeps their previews and the Android halves of the platform interfaces
              (presentation/platform/, the language picker's AndroidAppLanguages, Google's
              sign-in's AndroidGoogleCalendarSignIn, the credential sheets' AndroidCredentialSignIn
@@ -2054,10 +2056,12 @@ slice 11f, below); the Android halves of the platform interfaces (`SharedFileVie
 `SensitiveClipboard`, which `AndroidPlatform.kt` calls; `PrivacyPolicyLink` and `TermsOfServiceLink`
 are gone since slice 11f, their screens reading `AppBuildValues` and `OpenUrl`); the `java.time` users whose signatures carry
 `java.time` to their callers (~~`MonthPaging`'s direction and transition, Expenses'~~, moved with
-Expenses in slice 11e onto kotlinx-datetime, and `VaccinationListEditor`), each moving with its screens onto kotlinx-datetime and the date seam; the
-`@StringRes` label helpers (`BloodTypeLabel`, `PetSpeciesLabel`; ~~`CountryPicker`~~, moved with Settings
-in slice 11f onto `StringResource`) and the component
-that reads them (`MedicalProfileEditor`), which move with the screens that pass them ids. **Slice
+Expenses in slice 11e onto kotlinx-datetime, and ~~`VaccinationListEditor`~~, moved with the child
+records in slice 11g), each moving with its screens onto kotlinx-datetime and the date seam; the
+`@StringRes` label helpers (~~`BloodTypeLabel`, `PetSpeciesLabel`~~, moved with the child and pet
+records in slice 11g, and ~~`CountryPicker`~~, moved with Settings in slice 11f, onto
+`StringResource`) and the component that reads them (~~`MedicalProfileEditor`~~, slice 11g), which
+move with the screens that pass them ids. **Slice
 11c moved the calendar's and the event form's helpers** onto kotlinx-datetime and `StringResource`,
 packages unchanged: `Today` (`rememberToday()` and `LocalFixedToday` are kotlinx-datetime days; the
 app's `JavaToday.kt` gave the screens that still held a `java.time.LocalDate` the same state
@@ -2284,6 +2288,23 @@ locale before; the owner's rule makes them one), and the review's month title is
 `Char.uppercase()`, as the calendar header's is (the five languages' month names capitalise alike
 with and without a locale). An activity's feed label is a `StringResource`. The previews are the
 app's `home/HomePreviews.kt`.
+**Then the family's records** (slice 11g): `presentation/childinfo/` (`ChildInfoScreen`,
+`ChildDetailScreen`, `AddEditChildInfoScreen` and `components/`), `pets/` (`PetsScreen`,
+`AddEditPetScreen`), `contacts/ContactsScreen.kt` and `guests/GuestAcceptScreen.kt`, with
+`common/`'s `MedicalProfileEditor`, `VaccinationListEditor`, `BloodTypeLabel` and `PetSpeciesLabel`
+(`labelRes()` a `StringResource`; `BloodTypeLabelTest` in `commonTest`). The child and pet forms'
+`DatePickerDialog` (`childinfo/components/`) takes and gives a kotlinx-datetime `LocalDateTime`,
+today in the system zone where none is set, so the forms no longer convert; its `androidTest`
+(`LocalDatePickerDialogTest`) converts its `java.time` fixtures at the call, as `PickerDatesTest`
+does. The photo pickers go through `FilePicker.rememberImagePicker` (the same `PickVisualMedia`,
+images only), the strip's add button only where `FilePicker.available`; a new child's or pet's id is a
+`Uuid`; the medium dates `readerMediumDate`, the form's date of birth `ReaderDateText.date(…,
+"yMMMd")`, and a grant's end the new `readerLongDateAt(millis)` (`readerLongDate`, `FormatStyle.LONG`
+on Android, of the instant's day in the system zone). The contacts dial through `OpenUrl.dial`
+(`ACTION_DIAL`, as before, and the same snackbar when there is no dialler). A guest link is shared
+through `ShareSheet` (its message worded through `rememberUiTextResolver` at the tap), and the guest
+sheet offers no Share button where there is none (`GuestInviteSheet`'s `onShare` is null then); the
+app's `guestShareIntent` is gone.
 **A Robolectric test runs `RobolectricTestApplication`**
 (`app/src/test/.../testing/`, `@Config(application = …)`): Robolectric installs no content
 provider from the manifest, so it hands Compose Multiplatform's resource reader the context its

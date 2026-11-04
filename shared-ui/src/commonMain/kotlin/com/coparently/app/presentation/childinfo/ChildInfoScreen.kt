@@ -1,7 +1,5 @@
 package com.coparently.app.presentation.childinfo
 
-import android.content.Context
-import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -13,8 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.data.family.RecordPlace
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.guests.GuestGrant
@@ -41,12 +37,41 @@ import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.placeOf
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.utils.format
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.childinfo_add_child_button
+import com.coparently.app.resources.childinfo_back
+import com.coparently.app.resources.childinfo_children_group_label
+import com.coparently.app.resources.childinfo_contact_phone_marker
+import com.coparently.app.resources.childinfo_detail_grade
+import com.coparently.app.resources.childinfo_dob_value
+import com.coparently.app.resources.childinfo_empty_state
+import com.coparently.app.resources.childinfo_medication_summary
+import com.coparently.app.resources.childinfo_school_summary
+import com.coparently.app.resources.childinfo_screen_title
+import com.coparently.app.resources.childinfo_section_activities
+import com.coparently.app.resources.childinfo_section_allergies
+import com.coparently.app.resources.childinfo_section_basic
+import com.coparently.app.resources.childinfo_section_emergency_contacts
+import com.coparently.app.resources.childinfo_section_medical_notes
+import com.coparently.app.resources.childinfo_section_medications
+import com.coparently.app.resources.childinfo_section_school
+import com.coparently.app.resources.childinfo_title_add
+import com.coparently.app.resources.guest_access_until
+import com.coparently.app.resources.guest_invite_row_supporting
+import com.coparently.app.resources.guest_invite_row_title
+import com.coparently.app.resources.guest_revoke_cancel
+import com.coparently.app.resources.guest_revoke_confirm
+import com.coparently.app.resources.guest_revoke_message
+import com.coparently.app.resources.guest_revoke_title
+import com.coparently.app.resources.guest_section_label
+import com.coparently.app.resources.medical_blood_type_label
+import com.coparently.app.resources.medical_blood_type_not_set
+import com.coparently.app.resources.medical_section_title
+import com.coparently.app.resources.medical_vaccination_no_date
+import com.coparently.app.utils.readerLongDateAt
+import com.coparently.app.utils.readerMediumDate
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 import kotlin.time.Clock
 
 /**
@@ -82,7 +107,7 @@ fun ChildInfoScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.childinfo_screen_title)) },
+                title = { Text(stringResource(Res.string.childinfo_screen_title)) },
                 navigationIcon = {
                     IconButton(onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -90,7 +115,7 @@ fun ChildInfoScreen(
                     }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.childinfo_back)
+                            contentDescription = stringResource(Res.string.childinfo_back)
                         )
                     }
                 }
@@ -107,7 +132,7 @@ fun ChildInfoScreen(
                         onAddChild()
                     },
                     icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                    text = { Text(stringResource(R.string.childinfo_add_child_button)) }
+                    text = { Text(stringResource(Res.string.childinfo_add_child_button)) }
                 )
             }
         }
@@ -139,8 +164,8 @@ fun ChildInfoScreen(
                     if (state.childInfoList.isEmpty()) {
                         EmptyState(
                             icon = Icons.Default.ChildCare,
-                            title = stringResource(R.string.childinfo_empty_state),
-                            actionLabel = stringResource(R.string.childinfo_title_add),
+                            title = stringResource(Res.string.childinfo_empty_state),
+                            actionLabel = stringResource(Res.string.childinfo_title_add),
                             onAction = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 onAddChild()
@@ -166,16 +191,13 @@ fun ChildInfoScreen(
  */
 @Composable
 private fun ChildrenList(children: List<ChildInfo>, onOpenChild: (String) -> Unit) {
-    val dateFormatter = remember {
-        DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
-    }
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(Spacing.L),
         verticalArrangement = Arrangement.spacedBy(Spacing.L)
     ) {
         item {
-            GroupLabel(stringResource(R.string.childinfo_children_group_label))
+            GroupLabel(stringResource(Res.string.childinfo_children_group_label))
             SectionGroup {
                 children.forEach { child ->
                     // A child that is only mine or from an earlier family says so, in the one
@@ -186,8 +208,8 @@ private fun ChildrenList(children: List<ChildInfo>, onOpenChild: (String) -> Uni
                         title = child.childName,
                         supporting = child.dateOfBirth?.let { dob ->
                             stringResource(
-                                R.string.childinfo_dob_value,
-                                dob.date.format(dateFormatter)
+                                Res.string.childinfo_dob_value,
+                                readerMediumDate(dob.date)
                             )
                         },
                         onClick = { onOpenChild(child.id) },
@@ -301,7 +323,7 @@ private fun GuestAccessGroup(
     var pendingRevoke by remember { mutableStateOf<GuestGrant?>(null) }
 
     Column {
-        GroupLabel(stringResource(R.string.guest_section_label))
+        GroupLabel(stringResource(Res.string.guest_section_label))
         SectionGroup {
             active.forEach { grant ->
                 // Red, and it confirms: the sign-out anatomy, because the row's whole action
@@ -312,8 +334,8 @@ private fun GuestAccessGroup(
                     title = grant.name,
                     titleColor = MaterialTheme.colorScheme.error,
                     supporting = stringResource(
-                        R.string.guest_access_until,
-                        localDate(grant.expiresAtMillis)
+                        Res.string.guest_access_until,
+                        readerLongDateAt(grant.expiresAtMillis)
                     ),
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -324,8 +346,8 @@ private fun GuestAccessGroup(
             }
             SectionRow(
                 icon = Icons.Default.PersonAdd,
-                title = stringResource(R.string.guest_invite_row_title),
-                supporting = stringResource(R.string.guest_invite_row_supporting),
+                title = stringResource(Res.string.guest_invite_row_title),
+                supporting = stringResource(Res.string.guest_invite_row_supporting),
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     onInviteGuest()
@@ -336,10 +358,10 @@ private fun GuestAccessGroup(
 
     pendingRevoke?.let { grant ->
         ConfirmationDialog(
-            title = stringResource(R.string.guest_revoke_title, grant.name),
-            message = stringResource(R.string.guest_revoke_message),
-            confirmText = stringResource(R.string.guest_revoke_confirm),
-            dismissText = stringResource(R.string.guest_revoke_cancel),
+            title = stringResource(Res.string.guest_revoke_title, grant.name),
+            message = stringResource(Res.string.guest_revoke_message),
+            confirmText = stringResource(Res.string.guest_revoke_confirm),
+            dismissText = stringResource(Res.string.guest_revoke_cancel),
             isDestructive = true,
             onDismiss = { pendingRevoke = null },
             onConfirm = {
@@ -351,25 +373,12 @@ private fun GuestAccessGroup(
     }
 }
 
-/** An epoch-millis instant as a date in the reader's own zone. */
-private fun localDate(millis: Long): String =
-    DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)
-        .format(Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()))
-
-/** Builds the share-sheet intent for a guest link. */
-internal fun guestShareIntent(context: Context, link: String): Intent {
-    val sendIntent = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, context.getString(R.string.guest_invite_share_message, link))
-    }
-    return Intent.createChooser(sendIntent, context.getString(R.string.guest_invite_share))
-}
 
 /** The child's identity: name, and date of birth when recorded. */
 @Composable
 private fun BasicInfoGroup(childInfo: ChildInfo, onClick: () -> Unit) {
     Column {
-        GroupLabel(stringResource(R.string.childinfo_section_basic))
+        GroupLabel(stringResource(Res.string.childinfo_section_basic))
         SectionGroup {
             SectionRow(
                 icon = Icons.Default.ChildCare,
@@ -377,8 +386,8 @@ private fun BasicInfoGroup(childInfo: ChildInfo, onClick: () -> Unit) {
                 // The reader's date, as the list above prints it — not ISO (release audit R-6).
                 supporting = childInfo.dateOfBirth?.let { dob ->
                     stringResource(
-                        R.string.childinfo_dob_value,
-                        dob.date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
+                        Res.string.childinfo_dob_value,
+                        readerMediumDate(dob.date)
                     )
                 },
                 onClick = onClick
@@ -391,14 +400,14 @@ private fun BasicInfoGroup(childInfo: ChildInfo, onClick: () -> Unit) {
 @Composable
 private fun MedicationsGroup(medications: List<Medication>, onClick: () -> Unit) {
     Column {
-        GroupLabel(stringResource(R.string.childinfo_section_medications))
+        GroupLabel(stringResource(Res.string.childinfo_section_medications))
         SectionGroup {
             medications.forEachIndexed { index, medication ->
                 SectionRow(
                     icon = Icons.Default.Favorite,
                     title = medication.name,
                     supporting = stringResource(
-                        R.string.childinfo_medication_summary,
+                        Res.string.childinfo_medication_summary,
                         medication.dosage,
                         medication.frequency
                     ),
@@ -414,7 +423,7 @@ private fun MedicationsGroup(medications: List<Medication>, onClick: () -> Unit)
 @Composable
 private fun ActivitiesGroup(activities: List<Activity>, onClick: () -> Unit) {
     Column {
-        GroupLabel(stringResource(R.string.childinfo_section_activities))
+        GroupLabel(stringResource(Res.string.childinfo_section_activities))
         SectionGroup {
             activities.forEachIndexed { index, activity ->
                 SectionRow(
@@ -433,7 +442,7 @@ private fun ActivitiesGroup(activities: List<Activity>, onClick: () -> Unit) {
 @Composable
 private fun AllergiesGroup(allergies: List<String>, onClick: () -> Unit) {
     Column {
-        GroupLabel(stringResource(R.string.childinfo_section_allergies))
+        GroupLabel(stringResource(Res.string.childinfo_section_allergies))
         SectionGroup {
             allergies.forEachIndexed { index, allergy ->
                 SectionRow(icon = Icons.Default.Warning, title = allergy, onClick = onClick)
@@ -447,7 +456,7 @@ private fun AllergiesGroup(allergies: List<String>, onClick: () -> Unit) {
 @Composable
 private fun MedicalNotesGroup(notes: String, onClick: () -> Unit) {
     Column {
-        GroupLabel(stringResource(R.string.childinfo_section_medical_notes))
+        GroupLabel(stringResource(Res.string.childinfo_section_medical_notes))
         SectionGroup {
             SectionRow(icon = Icons.Default.Info, title = notes, onClick = onClick)
         }
@@ -458,13 +467,13 @@ private fun MedicalNotesGroup(notes: String, onClick: () -> Unit) {
 @Composable
 private fun EmergencyContactsGroup(contacts: List<EmergencyContact>, onClick: () -> Unit) {
     Column {
-        GroupLabel(stringResource(R.string.childinfo_section_emergency_contacts))
+        GroupLabel(stringResource(Res.string.childinfo_section_emergency_contacts))
         SectionGroup {
             contacts.forEachIndexed { index, contact ->
                 SectionRow(
                     icon = Icons.Default.Phone,
                     title = contact.name,
-                    supporting = stringResource(R.string.childinfo_contact_phone_marker, contact.phone),
+                    supporting = stringResource(Res.string.childinfo_contact_phone_marker, contact.phone),
                     onClick = onClick
                 )
                 if (index != contacts.lastIndex) Divider()
@@ -482,15 +491,15 @@ private fun EmergencyContactsGroup(contacts: List<EmergencyContact>, onClick: ()
 @Composable
 private fun SchoolGroup(schoolInfo: SchoolInfo, onClick: () -> Unit) {
     val grade = schoolInfo.grade?.takeIf { it.isNotBlank() }
-        ?.let { stringResource(R.string.childinfo_detail_grade, it) }
+        ?.let { stringResource(Res.string.childinfo_detail_grade, it) }
     val address = schoolInfo.address?.takeIf { it.isNotBlank() }
     val summary = if (grade != null && address != null) {
-        stringResource(R.string.childinfo_school_summary, grade, address)
+        stringResource(Res.string.childinfo_school_summary, grade, address)
     } else {
         grade ?: address
     }
     Column {
-        GroupLabel(stringResource(R.string.childinfo_section_school))
+        GroupLabel(stringResource(Res.string.childinfo_section_school))
         SectionGroup {
             SectionRow(
                 icon = Icons.Default.School,
@@ -510,16 +519,15 @@ private fun SchoolGroup(schoolInfo: SchoolInfo, onClick: () -> Unit) {
  */
 @Composable
 private fun MedicalDetailsGroup(profile: MedicalProfile, onClick: () -> Unit) {
-    val dateFormatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM) }
     val bloodTypeText = profile.bloodType?.let { stringResource(it.labelRes()) }
-        ?: stringResource(R.string.medical_blood_type_not_set)
+        ?: stringResource(Res.string.medical_blood_type_not_set)
 
     Column {
-        GroupLabel(stringResource(R.string.medical_section_title))
+        GroupLabel(stringResource(Res.string.medical_section_title))
         SectionGroup {
             SectionRow(
                 icon = Icons.Default.Bloodtype,
-                title = stringResource(R.string.medical_blood_type_label),
+                title = stringResource(Res.string.medical_blood_type_label),
                 onClick = onClick,
                 trailing = {
                     Text(
@@ -544,7 +552,7 @@ private fun MedicalDetailsGroup(profile: MedicalProfile, onClick: () -> Unit) {
             }
             if (profile.vaccinations.isNotEmpty()) {
                 Divider()
-                VaccinationRows(vaccinations = profile.vaccinations, dateFormatter = dateFormatter, onClick = onClick)
+                VaccinationRows(vaccinations = profile.vaccinations, onClick = onClick)
             }
         }
     }
@@ -566,15 +574,14 @@ private fun SectionGroupScope.StringListRows(items: List<String>, icon: ImageVec
 @Composable
 private fun SectionGroupScope.VaccinationRows(
     vaccinations: List<Vaccination>,
-    dateFormatter: DateTimeFormatter,
     onClick: () -> Unit
 ) {
     vaccinations.forEachIndexed { index, vaccination ->
         SectionRow(
             icon = Icons.Default.Vaccines,
             title = vaccination.name,
-            supporting = vaccination.date?.format(dateFormatter)
-                ?: stringResource(R.string.medical_vaccination_no_date),
+            supporting = vaccination.date?.let(::readerMediumDate)
+                ?: stringResource(Res.string.medical_vaccination_no_date),
             onClick = onClick
         )
         if (index != vaccinations.lastIndex) Divider()
