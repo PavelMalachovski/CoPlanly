@@ -44,7 +44,7 @@ data class FamilySwitcherState(
      * is not empty, and its content description names the kinds.
      */
     val otherFamilySignals: Set<FamilySignal>
-        get() = families.flatMapTo(sortedSetOf<FamilySignal>()) { signalsOf(it.familyId) }
+        get() = families.flatMapTo(mutableSetOf()) { signalsOf(it.familyId) }.inDeclarationOrder()
 
     /**
      * What [familyId]'s row in the switcher dialog says is waiting, in declaration order. Always
@@ -53,11 +53,18 @@ data class FamilySwitcherState(
      */
     fun signalsOf(familyId: String): Set<FamilySignal> =
         if (canSwitch && familyId != selectedFamilyId) {
-            signals[familyId].orEmpty().toSortedSet()
+            signals[familyId].orEmpty().inDeclarationOrder()
         } else {
             emptySet()
         }
 }
+
+/**
+ * This set in [FamilySignal]'s declaration order, the order the JVM's `sortedSetOf` gave the
+ * enum before this file moved to common code (Kotlin/Native has no sorted set).
+ */
+private fun Set<FamilySignal>.inDeclarationOrder(): Set<FamilySignal> =
+    FamilySignal.entries.filterTo(LinkedHashSet()) { it in this }
 
 /**
  * State and the one action behind the family switcher — the Settings row and the top-bar chip
