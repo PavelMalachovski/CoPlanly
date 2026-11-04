@@ -1598,8 +1598,8 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              design system's primitives), with UiText (slice 9c); and, from Task 10, the shared
              state of presentation/common/ (ParentsSource and its siblings) and the ViewModels,
              group by group (so far common/'s, chat's, the calendar's, the events', custody's, the
-             requests', the family's and
-             expenses'), with
+             requests', the family's,
+             expenses', payments' and child support's), with
              their Koin modules: uiModules and platformUiModule, which appModules includes.
              Screens follow (Task 11). It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
@@ -1779,8 +1779,10 @@ takes a `FirestoreClient` (`PaymentStore`, `SupportAgreementStore`; `ChildInfoRe
 `firebaseAuthService` is a `SignedInUser` now). They are bound in `moneyDataModule`,
 `repositoryDataModule`, `requestsDataModule` and `familyDataModule`. The `child_info` wire contract
 stayed in `app/src/test/…/wire/` and the app's list alone until Task 8g: `SyncService`, then still
-in the app, writes `child_info` too. The child support reminder's `SupportReminderWorker` and its scheduler stay in the
-app (WorkManager, the notification manager, `currencyFormat`). The rest of `data/family/`,
+in the app, writes `child_info` too. The child support reminder's `SupportReminderWorker` and
+`WorkManagerSupportReminderScheduler` stay in the app (WorkManager, the notification manager,
+`currencyFormat`); the `SupportReminderScheduler` interface they answer moved to `data/support/` in
+slice 10d, with the screen's ViewModel. The rest of `data/family/`,
 `data/chat/` and `data/requests/` stayed in the app then: `OtherFamiliesSignals` (`java.time` and the
 request clocks) and the request clocks' keeper, steps, records, `RequestClocks` and `RequestTime`
 (the Android notification manager, WorkManager and a `java.time.ZoneId`) until Task 8h (below);
@@ -2112,6 +2114,18 @@ receipt's on-device text goes through the domain's `ReceiptTextRecognizer`, whic
 `platformDataModule` stands in for with `NoReceiptText` (every scan an `IOException`, so the form says
 it found nothing and keeps the photo; nothing is sent anywhere, item 10). The four
 `ExpenseViewModel` tests (MockK) run in `androidUnitTest`, unchanged but for their location.
+Then **payments and child support**: `PaymentsViewModel` and `SupportViewModel`, in `paymentsUiModule`
+and `supportUiModule`, on `SignedInUser` for the uid where they took `FirebaseAuthService`
+(`getCurrentUid()`, what `getCurrentUser()?.uid` read). The support screen's reminder job goes through
+`data/support/SupportReminderScheduler`, which moved to `:shared-data` out of the app's
+`SupportReminderWorker.kt` (the app's WorkManager scheduler answers it; the iPhone's
+`platformDataModule` binds `NoSupportReminderJob`, which schedules nothing, while the choice is kept in
+the sealed store). `SupportViewModel.parseAmount` reads a typed amount through
+`DecimalText.parsePositiveAmount` (`domain/money/`, new), which answers what `toBigDecimalOrNull()`
+with `signum() > 0 && scale() <= 2` and the app's `MinorUnits.fromDecimal` answered —
+`DecimalTextParityTest` holds it to `BigDecimal` over a corpus and 10 000 random texts; the grammar
+`DecimalText`'s readers share is the file-private `DecimalGrammar`, so the object stays within
+detekt's function count. `SupportAmountTest` runs in `commonTest`.
 
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller

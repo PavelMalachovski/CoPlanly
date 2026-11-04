@@ -31,6 +31,8 @@ import com.coparently.app.presentation.home.MonthSpendDependencies
 import com.coparently.app.presentation.pairing.CustodyConflictViewModel
 import com.coparently.app.presentation.pairing.PendingCustodyConflict
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
+import com.coparently.app.presentation.payments.PaymentsViewModel
+import com.coparently.app.presentation.support.SupportViewModel
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
@@ -149,6 +151,23 @@ val expensesUiModule: Module = module {
 }
 
 /**
+ * Payments between the parents (MON-24 phase 2, Task 10): "I paid" and "Money arrived" for a
+ * month's settle-up and for child support, in the family on screen.
+ */
+val paymentsUiModule: Module = module {
+    viewModelOf(::PaymentsViewModel)
+}
+
+/**
+ * Child support (MON-24 phase 2, Task 10): the agreement, its proposal and answer, each month's
+ * payment, and the payer's reminder, whose job goes through `SupportReminderScheduler` — WorkManager
+ * on Android, and nothing yet on the iPhone, where [platformDataModule] stands in for it.
+ */
+val supportUiModule: Module = module {
+    viewModelOf(::SupportViewModel)
+}
+
+/**
  * Every module of the UI both apps run, grouped by feature as [dataModules] is. The app's
  * `appModules` includes them, with [platformUiModule]; the iPhone app's will (phase 3). The
  * ViewModels move here group by group (Task 10's slices); a screen still in the app resolves a moved
@@ -162,7 +181,9 @@ val uiModules: List<Module> = listOf(
     custodyUiModule,
     requestsUiModule,
     familyUiModule,
-    expensesUiModule
+    expensesUiModule,
+    paymentsUiModule,
+    supportUiModule
 )
 
 /**

@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.data.payment.PaymentStore
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.payments.Payment
 import com.coparently.app.domain.payments.PaymentKind
 import com.coparently.app.presentation.common.UiText
@@ -36,11 +36,11 @@ import kotlinx.datetime.YearMonth
 @OptIn(ExperimentalCoroutinesApi::class)
 class PaymentsViewModel(
     private val store: PaymentStore,
-    auth: FirebaseAuthService,
+    auth: SignedInUser,
     familyViewSource: FamilyViewSource
 ) : ViewModel() {
 
-    val myUid: String? = auth.getCurrentUser()?.uid
+    val myUid: String? = auth.getCurrentUid()
 
     /** The family on screen's payments; empty while none can be read. */
     val payments: StateFlow<List<Payment>> = familyViewSource.observe()

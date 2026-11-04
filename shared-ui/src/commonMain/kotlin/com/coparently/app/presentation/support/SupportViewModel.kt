@@ -3,13 +3,14 @@ package com.coparently.app.presentation.support
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.family.FamilyViewSource
-import com.coparently.app.data.money.MinorUnits
 import com.coparently.app.data.payment.PaymentStore
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.support.SupportAgreementStore
 import com.coparently.app.data.support.SupportRead
 import com.coparently.app.data.support.SupportReminderScheduler
 import com.coparently.app.data.support.SupportReminders
+import com.coparently.app.domain.money.DecimalText
+import com.coparently.app.domain.payment.PaymentQr
 import com.coparently.app.domain.payments.Payment
 import com.coparently.app.domain.payments.PaymentKind
 import com.coparently.app.domain.repository.PreferencesRepository
@@ -82,14 +83,14 @@ class SupportViewModel(
     private val payments: PaymentStore,
     private val reminders: SupportReminders,
     private val reminderScheduler: SupportReminderScheduler,
-    auth: FirebaseAuthService,
+    auth: SignedInUser,
     familyViewSource: FamilyViewSource,
     parentsSource: ParentsSource,
     preferencesRepository: PreferencesRepository
 ) : ViewModel() {
 
     /** The signed-in parent. */
-    val myUid: String? = auth.getCurrentUser()?.uid
+    val myUid: String? = auth.getCurrentUid()
 
     /** The two parents, to name who pays. */
     val parents: StateFlow<Parents> = parentsSource.observe()
@@ -184,11 +185,13 @@ class SupportViewModel(
 
         /**
          * [text] as an amount — digits with an optional decimal comma or dot, at most two places,
-         * above zero — in minor units (45000 is 450.00), or null when it is not one.
+         * above zero — in minor units (45000 is 450.00), or null when it is not one: what
+         * `toBigDecimalOrNull()` with `signum() > 0 && scale() <= 2` and `MinorUnits.fromDecimal`
+         * answered before MON-24 phase 2, through [DecimalText.parsePositiveAmount].
          */
-        fun parseAmount(text: String): Long? =
-            text.trim().replace(" ", "").replace(',', '.').toBigDecimalOrNull()
-                ?.takeIf { it.signum() > 0 && it.scale() <= 2 }
-                ?.let(MinorUnits::fromDecimal)
+        fun parseAmount(text: String): Long? {
+            val plain = text.trim().replace(" ", "").replace(',', '.')
+            return DecimalText.parsePositiveAmount(plain, PaymentQr.MONEY_SCALE)
+        }
     }
 }

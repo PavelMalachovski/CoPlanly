@@ -2946,8 +2946,11 @@ bytes are identical on Android):
   without a family"; then expenses (`expensesUiModule`) — the Expenses screen's and form's ViewModel
   (its months now kotlinx-datetime, which the screen converts at its edge) and the settle-up
   dialog's, split out of the dialog. On the iPhone, `platformDataModule` now also stands in for the
-  receipt's on-device text recognition (nothing read, nothing sent). Settings to sync and the rest
-  follow.
+  receipt's on-device text recognition (nothing read, nothing sent). Then payments and child support
+  (`paymentsUiModule`, `supportUiModule`), on the signed-in account's seam; the support reminder's
+  scheduler interface moved to `:shared-data` (the iPhone schedules nothing yet), and a typed amount
+  is read by the new `DecimalText.parsePositiveAmount`, held to `BigDecimal`'s answers. Settings to
+  sync and the rest follow.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

@@ -821,6 +821,22 @@ Then expenses:
   it.
 - Tests: the four `ExpenseViewModel*Test`s (MockK) to androidUnitTest, location only.
 
+Then payments and child support:
+- `PaymentsViewModel` (`paymentsUiModule`) and `SupportViewModel` (`supportUiModule`):
+  `FirebaseAuthService` → `SignedInUser` (`getCurrentUid()`).
+- `SupportReminderScheduler` moved out of the app's `SupportReminderWorker.kt` into
+  `:shared-data`'s `data/support/` (same package; the app's WorkManager scheduler implements it).
+  iPhone: `platformDataModule` binds `NoSupportReminderJob` (schedules nothing). The `verify()` of
+  `dataModules + uiModules` with the iPhone's bindings resolves (152 definitions), and fails without
+  it.
+- `parseAmount`: `toBigDecimalOrNull()` + `MinorUnits.fromDecimal` → the new
+  `DecimalText.parsePositiveAmount` in `:shared` (`signum() > 0 && scale() <= scale`, then exact minor
+  units, null past a Long), with `DecimalTextParityTest` cases (corpus and 10 000 random texts) and
+  `DecimalTextTest` vectors. `DecimalText`'s grammar moved to a file-private `DecimalGrammar`, so the
+  object stays within detekt's `TooManyFunctions`.
+- Tests: `SupportAmountTest` to commonTest (one name lost its commas). No other screen converts
+  anything: both ViewModels were kotlinx-datetime already.
+
 ### Task 11: The screens to `commonMain`
 
 **Files:**

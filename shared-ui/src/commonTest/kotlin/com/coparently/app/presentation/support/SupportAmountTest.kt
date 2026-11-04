@@ -1,6 +1,6 @@
 package com.coparently.app.presentation.support
 
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
@@ -22,7 +22,7 @@ class SupportAmountTest {
     }
 
     @Test
-    fun `more than two places, nothing, or no more than zero is refused`() {
+    fun `more than two places - nothing - or no more than zero is refused`() {
         assertNull(SupportViewModel.parseAmount("12.345"))
         assertNull(SupportViewModel.parseAmount("12.300"))
         assertNull(SupportViewModel.parseAmount("1E-3"))

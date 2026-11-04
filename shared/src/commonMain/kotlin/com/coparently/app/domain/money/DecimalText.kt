@@ -14,7 +14,6 @@ package com.coparently.app.domain.money
 object DecimalText {
 
     private const val MAX_LONG_DIGITS = 19
-    private const val MAX_EXPONENT_DIGITS = 10
     private const val ROUND_UP_FROM = '5'
 
     /**
@@ -31,7 +30,7 @@ object DecimalText {
     fun halfUp(value: Double, scale: Int): String {
         require(scale >= 0) { "scale must not be negative: $scale" }
         if (!value.isFinite()) throw NumberFormatException("not a finite number: $value")
-        val decimal = parseDecimal(value.toString())
+        val decimal = DecimalGrammar.parse(value.toString())
             ?: throw NumberFormatException("unexpected text for a double: $value")
         // The number is `digits` × 10^exponent; its units at `scale` are digits × 10^shift.
         val shift = decimal.exponent + scale
@@ -83,7 +82,7 @@ object DecimalText {
      */
     internal fun parse(plain: String, scale: Int): Long? {
         require(scale >= 0) { "scale must not be negative: $scale" }
-        val decimal = parseDecimal(plain) ?: return null
+        val decimal = DecimalGrammar.parse(plain) ?: return null
         val units = exactUnits(decimal.digits.trimStart('0'), decimal.exponent + scale) ?: return null
         return ((if (decimal.negative) "-" else "") + units).toLongOrNull()
     }
@@ -103,7 +102,7 @@ object DecimalText {
      */
     fun parseHalfUp(plain: String, scale: Int): Long? {
         require(scale >= 0) { "scale must not be negative: $scale" }
-        val decimal = parseDecimal(plain) ?: return null
+        val decimal = DecimalGrammar.parse(plain) ?: return null
         val digits = decimal.digits.trimStart('0')
         // The number is `digits` × 10^exponent; its units at `scale` are digits × 10^shift.
         val shift = decimal.exponent + scale
@@ -121,6 +120,27 @@ object DecimalText {
             }
         }
         return ((if (decimal.negative) "-" else "") + units).toLongOrNull()
+    }
+
+    /**
+     * The minor units at [scale] decimals of [plain] when it is above zero and written with at most
+     * [scale] decimals, or null: what `plain.toBigDecimalOrNull()?.takeIf { it.signum() > 0 &&
+     * it.scale() <= scale }` answers, moved into minor units with `setScale(scale)
+     * .movePointRight(scale).longValueExact()` (null when it does not fit a Long). It reads what
+     * [parse] reads, but decides by the text's own decimals, as `BigDecimal.scale()` does: "12.300"
+     * at scale 2 is refused although its value fits, and "1e3" is 100000. Zero and a negative are
+     * refused.
+     *
+     * How the child support screen reads a typed amount (`SupportViewModel.parseAmount`, MON-24 phase
+     * 2, Task 10), which did exactly this through `BigDecimal` and the app's `MinorUnits.fromDecimal`.
+     */
+    fun parsePositiveAmount(plain: String, scale: Int): Long? {
+        require(scale >= 0) { "scale must not be negative: $scale" }
+        val decimal = DecimalGrammar.parse(plain)
+        // `BigDecimal.scale()` is the text's own decimals, -exponent here.
+        val digits = decimal?.takeIf { !it.negative && -it.exponent <= scale }?.digits?.trimStart('0')
+        if (decimal == null || digits.isNullOrEmpty()) return null
+        return exactUnits(digits, decimal.exponent + scale)?.toLongOrNull()
     }
 
     /**
@@ -161,9 +181,19 @@ object DecimalText {
         }
         return "1" + chars.concatToString()
     }
+}
+
+/**
+ * The text `toBigDecimalOrNull()` reads, which every reader in [DecimalText] parses with. Apart from
+ * it only so that [DecimalText] keeps to detekt's function count (MON-24 phase 2, slice 10d); private
+ * to this file.
+ */
+private object DecimalGrammar {
+
+    private const val MAX_EXPONENT_DIGITS = 10
 
     /** A decimal number as `digits` × 10^`exponent`, with its sign. */
-    private class Decimal(val negative: Boolean, val digits: String, val exponent: Long)
+    class Decimal(val negative: Boolean, val digits: String, val exponent: Long)
 
     /**
      * [text] as `toBigDecimalOrNull()` reads it: `[+-]?(digits[.digits?]|.digits)([eE][+-]?digits)?`,
@@ -173,7 +203,7 @@ object DecimalText {
      * an Int — and so does the scale it leaves (fraction digits minus exponent, inside an Int), so a
      * text `BigDecimal` refuses is refused here, even a zero.
      */
-    private fun parseDecimal(text: String): Decimal? {
+    fun parse(text: String): Decimal? {
         val negative = text.startsWith('-')
         val body = if (negative || text.startsWith('+')) text.substring(1) else text
         val e = body.indexOfFirst { it == 'e' || it == 'E' }

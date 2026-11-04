@@ -170,15 +170,6 @@ class SupportReminderWorker(
     }
 }
 
-/** Starts and stops the child support reminder job. An interface so the screen can be tested. */
-interface SupportReminderScheduler {
-    /** Makes sure the job runs; a no-op when it already does. */
-    fun schedule()
-
-    /** Stops the job. */
-    fun cancel()
-}
-
 /**
  * [SupportReminderScheduler] over WorkManager: unique periodic work [WORK_NAME], every
  * [INTERVAL_HOURS] hours with a network, kept rather than replaced.

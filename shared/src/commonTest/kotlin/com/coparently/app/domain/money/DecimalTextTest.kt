@@ -176,4 +176,27 @@ class DecimalTextTest {
         assertEquals("100", DecimalText.plainStripped(10000, 2))
         assertEquals("0", DecimalText.plainStripped(0, 2))
     }
+
+    @Test
+    fun parsePositiveAmountDecidesByTheTextsOwnDecimals() {
+        // As `BigDecimal.scale()` decides: "12.300" has three decimals, though its value fits two.
+        assertEquals(500_000L, DecimalText.parsePositiveAmount("5000", 2))
+        assertEquals(500_050L, DecimalText.parsePositiveAmount("5000.50", 2))
+        assertEquals(100_000L, DecimalText.parsePositiveAmount("1e3", 2))
+        assertEquals(1L, DecimalText.parsePositiveAmount("0.01", 2))
+        assertNull(DecimalText.parsePositiveAmount("12.300", 2))
+        assertNull(DecimalText.parsePositiveAmount("1E-3", 2))
+    }
+
+    @Test
+    fun parsePositiveAmountRefusesZeroNegativesAndWhatDoesNotFitALong() {
+        assertNull(DecimalText.parsePositiveAmount("0", 2))
+        assertNull(DecimalText.parsePositiveAmount("-0.00", 2))
+        assertNull(DecimalText.parsePositiveAmount("-5", 2))
+        assertEquals(500L, DecimalText.parsePositiveAmount("+5", 2))
+        assertEquals(Long.MAX_VALUE, DecimalText.parsePositiveAmount("92233720368547758.07", 2))
+        assertNull(DecimalText.parsePositiveAmount("92233720368547758.08", 2))
+        assertNull(DecimalText.parsePositiveAmount("1E999999999", 2))
+        assertNull(DecimalText.parsePositiveAmount("12,5", 2))
+    }
 }

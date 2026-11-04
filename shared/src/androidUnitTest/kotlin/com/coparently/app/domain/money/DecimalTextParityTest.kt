@@ -111,6 +111,53 @@ class DecimalTextParityTest {
         }
     }
 
+    @Test
+    fun parsePositiveAmountMatchesBigDecimalOnTheCorpus() {
+        (PARSE_CORPUS + HALF_UP_TEXT_CORPUS + POSITIVE_CORPUS).forEach { text ->
+            SCALES.forEach { scale -> assertParsePositiveAmount(text, scale) }
+        }
+    }
+
+    @Test
+    fun parsePositiveAmountMatchesBigDecimalOnRandomText() {
+        val random = Random(SEED)
+        repeat(RANDOM_CASES) {
+            val units = random.nextLong(-MAX_UNITS, MAX_UNITS)
+            val scale = random.nextInt(0, MAX_SCALE + 1)
+            assertParsePositiveAmount(BigDecimal.valueOf(units, scale).toPlainString(), MONEY_SCALE)
+            assertParsePositiveAmount(random.decimalish(), random.nextInt(0, MAX_SCALE + 1))
+        }
+    }
+
+    /**
+     * What the child support screen read a typed amount as until MON-24 phase 2
+     * (`SupportViewModel.parseAmount`): `toBigDecimalOrNull()`, above zero and with at most [scale]
+     * decimals of its own, then `MinorUnits.fromDecimal` — `setScale(scale, HALF_UP)`, which rounds
+     * nothing here, moved into minor units, in a Long.
+     *
+     * The early answer is `longValueExact`'s own, reached without `setScale`, which for "1E999999999"
+     * builds a power of ten a billion digits long: more than 19 integer digits never fit a Long.
+     */
+    private fun assertParsePositiveAmount(text: String, scale: Int) {
+        val expected = text.toBigDecimalOrNull()
+            ?.takeIf { it.signum() > 0 && it.scale() <= scale }
+            ?.let { decimal ->
+                val stripped = decimal.stripTrailingZeros()
+                if (stripped.precision().toLong() - stripped.scale() > MAX_LONG_DIGITS) {
+                    null
+                } else {
+                    runCatching {
+                        decimal.setScale(scale, RoundingMode.HALF_UP).movePointRight(scale).longValueExact()
+                    }.getOrNull()
+                }
+            }
+        assertEquals(
+            expected,
+            DecimalText.parsePositiveAmount(text, scale),
+            "parsePositiveAmount(\"$text\", $scale)"
+        )
+    }
+
     /**
      * What the money documents read through `MinorUnits.fromText` until MON-24 phase 2:
      * `toBigDecimalOrNull()`, rounded half up to [scale], moved into minor units, in a Long.
@@ -195,6 +242,12 @@ class DecimalTextParityTest {
             "12.345", "12.3449", "0.005", "-0.005", "-0.004", "0.995", "9.995", "-9.995", "0.0049", "450.00",
             "5000.5", "92233720368547758.075", "92233720368547758.074", "-92233720368547758.084",
             "-92233720368547758.085", "1E-999999999", "1E999999999", "5E-3", "4.9E-3", "0.00500",
+        )
+
+        /** What a parent types for child support, as `SupportViewModel.parseAmount` cleans it. */
+        val POSITIVE_CORPUS = listOf(
+            "5000", "5000.50", "12.5", "1e3", "1E-3", "0.01", "0.001", "12.300", "12.30", "0", "0.00", "-5",
+            "+5", "1E-2", "1E-1", "1.5E-1", "92233720368547758.07", "92233720368547758.08", "1E17", "1E18",
         )
 
         val PARSE_CORPUS = listOf(

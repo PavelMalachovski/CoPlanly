@@ -18,7 +18,6 @@ import com.coparently.app.presentation.journal.JournalListViewModel
 import com.coparently.app.presentation.onboarding.OnboardingViewModel
 import com.coparently.app.presentation.pairing.PairingViewModel
 import com.coparently.app.presentation.parentingplan.ParentingPlanViewModel
-import com.coparently.app.presentation.payments.PaymentsViewModel
 import com.coparently.app.presentation.pets.PetsViewModel
 import com.coparently.app.presentation.professionals.ProfessionalCalendarViewModel
 import com.coparently.app.presentation.professionals.ProfessionalPlanViewModel
@@ -30,7 +29,6 @@ import com.coparently.app.presentation.school.SchoolImportViewModel
 import com.coparently.app.presentation.settings.CalendarFeedViewModel
 import com.coparently.app.presentation.settings.SettingsViewModel
 import com.coparently.app.presentation.stickers.StickersViewModel
-import com.coparently.app.presentation.support.SupportViewModel
 import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
 import org.koin.core.module.dsl.viewModelOf
@@ -63,7 +61,6 @@ val viewModelModule = module {
     viewModelOf(::OnboardingViewModel)
     viewModelOf(::PairingViewModel)
     viewModelOf(::ParentingPlanViewModel)
-    viewModelOf(::PaymentsViewModel)
     viewModelOf(::PetsViewModel)
     viewModelOf(::ProfessionalCalendarViewModel)
     viewModelOf(::ProfessionalPlanViewModel)
@@ -75,7 +72,6 @@ val viewModelModule = module {
     viewModelOf(::CalendarFeedViewModel)
     viewModelOf(::SettingsViewModel)
     viewModelOf(::StickersViewModel)
-    viewModelOf(::SupportViewModel)
     viewModelOf(::AuthStateViewModel)
     viewModelOf(::SyncViewModel)
 }

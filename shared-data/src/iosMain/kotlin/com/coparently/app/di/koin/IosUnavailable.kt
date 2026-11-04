@@ -17,6 +17,7 @@ import com.coparently.app.data.requests.RequestClockNotices
 import com.coparently.app.data.school.SchoolImportScheduler
 import com.coparently.app.data.school.SchoolImportWordings
 import com.coparently.app.data.session.AccountConsistency
+import com.coparently.app.data.support.SupportReminderScheduler
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.files.RecordPhotoKind
@@ -90,6 +91,16 @@ internal object NoRequestClockJobs : RequestClockScheduler {
 
 /** No background jobs yet: the school import's daily run is not scheduled. */
 internal object NoSchoolImportJob : SchoolImportScheduler {
+    override fun schedule() = Unit
+    override fun cancel() = Unit
+}
+
+/**
+ * No background jobs yet: the child support reminder's job is not scheduled, so the iPhone reminds
+ * nobody (slice 10d: the child support screen's ViewModel asks for it when the payer turns the
+ * reminder on). The choice is still kept, in the sealed store, for the job phase 3 brings.
+ */
+internal object NoSupportReminderJob : SupportReminderScheduler {
     override fun schedule() = Unit
     override fun cancel() = Unit
 }

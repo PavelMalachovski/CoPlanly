@@ -50,6 +50,7 @@ import com.coparently.app.data.school.SchoolImportScheduler
 import com.coparently.app.data.school.SchoolImportWordings
 import com.coparently.app.data.school.bakalari.BakalariClient
 import com.coparently.app.data.session.AccountConsistency
+import com.coparently.app.data.support.SupportReminderScheduler
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.notification.RequestClockScheduler
@@ -112,6 +113,7 @@ actual val platformDataModule: Module = module {
     single<RequestClockScheduler> { NoRequestClockJobs }
     single<RequestClockNotices> { NoRequestClockNotices }
     single<SchoolImportScheduler> { NoSchoolImportJob }
+    single<SupportReminderScheduler> { NoSupportReminderJob }
     single<SyncRequester> { NoSyncRequests }
     single<GoogleCalendarConnectionSource> { NoGoogleCalendar }
     single<CredentialProvider> { NoGoogleCalendar }
