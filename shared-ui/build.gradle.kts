@@ -100,8 +100,9 @@ kotlin {
         commonTest.dependencies {
             implementation(kotlin("test"))
             // The ViewModels' and the shared state's tests (Task 10), at the app's versions:
-            // `runTest` and `Dispatchers.setMain`, and Turbine for their flows. Both run on the JVM
-            // and the simulator.
+            // `runTest` and `Dispatchers.setMain`, and Turbine for their flows. They run on the JVM;
+            // CI compiles them for iOS, and nothing runs them on the simulator yet (the test
+            // executable would need shared-data's Firebase pods).
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
             implementation("app.cash.turbine:turbine:1.2.0")
         }

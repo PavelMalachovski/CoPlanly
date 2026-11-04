@@ -1078,9 +1078,11 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   refuses them (`Name contains illegal characters`), so write "a - b", not "a, b". `build-test` runs the
   same tests once more, because Kover merges `:shared`, `:shared-data` and `:shared-ui` into the
   app's coverage report. `shared` also runs `:shared-ui:testDebugUnitTest` — the theme's JVM tests,
-  which moved with it to `shared-ui/src/androidUnitTest/` (slice 9b) — and compiles
-  `:shared-ui:compileKotlinIosSimulatorArm64`, its iOS klib with `Res`, the theme and the common
-  components; the strings' parity tests run in the app, in `build-test`. **`shared-ios`** runs `:shared:iosSimulatorArm64Test`,
+  which moved with it to `shared-ui/src/androidUnitTest/` (slice 9b), and the moved ViewModels' and
+  shared state's (Task 10, commonTest and `androidUnitTest`) — and compiles
+  `:shared-ui:compileKotlinIosSimulatorArm64`, its iOS klib with `Res`, the theme, the common
+  components and the ViewModels, and `compileTestKotlinIosSimulatorArm64`, its commonTest (nothing
+  runs that on the simulator yet: the test executable would need `shared-data`'s Firebase pods); the strings' parity tests run in the app, in `build-test`. **`shared-ios`** runs `:shared:iosSimulatorArm64Test`,
   `:shared-data:iosSimulatorArm64Test` and `:shared-ui:linkDebugFrameworkIosSimulatorArm64` (the
   iPhone app's one framework, `Shared`, static, exporting `:shared` and `:shared-data`, which make
   none of their own since Task 9)
@@ -1659,7 +1661,9 @@ is `shared-data/src/commonMain/kotlin/com/coparently/app/data/<package>/<File>.k
 `shared-data/src/commonTest/`). **Task 8, the data layer, is complete with slice 8j**: what is still
 under `app/src/main/java/com/coparently/app/data/` stays on purpose (a `Worker`, a notification, a
 string resource, the Android SDK a seam's Android half calls, Coil, `PdfDocument`, ML Kit, dictation,
-or the `upgrade` seed's constructors), and `docs/ROADMAP.md` MON-24 lists it. Moved (Task 5, the HTTP clients on Ktor): `data/http/` (new:
+or the `upgrade` seed's constructors), and `docs/ROADMAP.md` MON-24 lists it. One more class
+followed in Task 10a, with the chat ViewModels that read it: `data/ai/AiConsentManager`, bound in
+`shared-data`'s `aiDataModule`. Moved (Task 5, the HTTP clients on Ktor): `data/http/` (new:
 `httpClient(HttpTimeouts)`, OkHttp on Android and Darwin on iOS, and the address and form encodings,
 the timeouts and the redirect rules (`FollowUps.kt`) the old clients had); in `data/school/bakalari/`, `BakalariClient`, `BakalariSchoolDirectory` (with
 `BakalariUrls`), `BakalariException` and `BakalariJson` — the parsers, `BakalariAccount` and

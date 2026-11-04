@@ -681,7 +681,8 @@ ViewModels are about 57 of those files.
   androidx 2.9.4 on Android, which lifts the app's lifecycle artifacts from 2.9.3) and
   `io.insert-koin:koin-core-viewmodel` 4.1.1; its tests get coroutines-test 1.11.0 and Turbine
   1.2.0 (commonTest) and MockK 1.13.13 (androidUnitTest).
-- `di/koin/UiModules.kt`: `uiModules` (so far `commonUiModule`, the three sources' `single`s) and
+- `di/koin/UiModules.kt`: `uiModules` (so far `commonUiModule`, the three sources' `single`s and the four common
+  ViewModels, and `chatUiModule`) and
   `expect val platformUiModule` (empty on Android; stand-ins on the iPhone). `appModules` adds both
   after `dataModules` and `platformDataModule`.
 - Moved from `presentation/common/`: `ParentsSource` (its log line through `logger`),

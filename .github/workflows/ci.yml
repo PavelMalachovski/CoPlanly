@@ -1906,10 +1906,13 @@ jobs:
   # components). Two jobs, gated on `changes`' `shared` output (`shared/**`, `shared-data/**`,
   # `shared-ui/**`, the build files, the workflow). `build-test` runs these tests too, because Kover
   # merges `:shared`, `:shared-data` and `:shared-ui` into the app's coverage; this job is where they
-  # get a check run of their own, beside the iOS compile. `:shared-ui`'s own tests are the theme's,
-  # on the JVM (`androidUnitTest`, moved with it in slice 9b); its strings are checked by the app's
-  # parity tests (`StringsParityTest`, `PluralsParityTest`, in `build-test`), and its iOS klib —
-  # `Res`, the theme and the common components — is compiled here.
+  # get a check run of their own, beside the iOS compile. `:shared-ui`'s own tests are the theme's
+  # (`androidUnitTest`, slice 9b) and the moved ViewModels' and shared state's (Task 10: commonTest
+  # and `androidUnitTest`), run on the JVM; its strings are checked by the app's parity tests
+  # (`StringsParityTest`, `PluralsParityTest`, in `build-test`), and its iOS klib — `Res`, the
+  # theme, the common components and the ViewModels — and its commonTest are compiled here for iOS.
+  # Nothing runs `:shared-ui`'s commonTest on the simulator yet: its test executable would link
+  # `shared-data`'s Firebase pods, which only `shared-data` (CocoaPods, `linkOnly`) provides.
   #
   # `compileKotlinIosSimulatorArm64` builds the iOS klib on Linux. Kotlin has done that without a
   # flag since 2.2.20 ("stable cross-platform compilation"), so a common-code change that does not
@@ -1992,6 +1995,7 @@ jobs:
           :shared-data:testDebugUnitTest :shared-data:compileKotlinIosSimulatorArm64
           :shared-data:compileTestKotlinIosSimulatorArm64
           :shared-ui:testDebugUnitTest :shared-ui:compileKotlinIosSimulatorArm64
+          :shared-ui:compileTestKotlinIosSimulatorArm64
 
       - name: Upload reports
         if: always()
