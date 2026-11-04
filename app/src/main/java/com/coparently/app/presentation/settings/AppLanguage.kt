@@ -1,9 +1,12 @@
 package com.coparently.app.presentation.settings
 
+import android.content.Context
+import android.os.Build
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import com.coparently.app.R
+import com.coparently.app.utils.AppLocale
 
 /**
  * Languages offered by the in-app language picker in Settings.
@@ -39,15 +42,24 @@ enum class AppLanguage(val tag: String, @StringRes val labelRes: Int) {
          * Applies [language] as the per-app locale. AppCompat recreates started activities
          * and (thanks to the `autoStoreLocales` manifest service) persists the choice across
          * process restarts; on Android 13+ it is also mirrored to the system per-app
-         * language setting.
+         * language setting. Below Android 13 the choice is mirrored for the pushes and workers
+         * at once (`AppLocale.rememberChoice`, so the mirror never lags it), and "System
+         * default" over a choice starts the app again in a fresh process
+         * ([SystemDefaultRelaunch]), so the owner's rule speaks there rather than Android's own
+         * resolution. [context] is the screen's.
          */
-        fun apply(language: AppLanguage) {
+        fun apply(language: AppLanguage, context: Context) {
+            val hadChoice = !AppCompatDelegate.getApplicationLocales().isEmpty
+            val plan = SystemDefaultRelaunch.plan(Build.VERSION.SDK_INT, language, hadChoice)
+            if (plan == SystemDefaultRelaunch.Plan.NOTHING) return
             val locales = if (language == SYSTEM) {
                 LocaleListCompat.getEmptyLocaleList()
             } else {
                 LocaleListCompat.forLanguageTags(language.tag)
             }
             AppCompatDelegate.setApplicationLocales(locales)
+            AppLocale.rememberChoice(context)
+            if (plan == SystemDefaultRelaunch.Plan.SET_AND_RELAUNCH) SystemDefaultRelaunch.relaunch(context)
         }
     }
 }

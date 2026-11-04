@@ -305,7 +305,8 @@ const RULES = [
     sections: ['3.6', '4.2'],
     why: 'strings, locales, the language picker or the rule that picks the app\'s language',
     paths: ['S/values*/**', 'app/src/main/res/xml/locales_config.xml',
-      'K/presentation/settings/AppLanguage.kt', 'K/utils/AppLocale.kt', 'K/domain/language/**'],
+      'K/presentation/settings/AppLanguage.kt', 'K/presentation/settings/SystemDefaultRelaunch.kt',
+      'K/utils/AppLocale.kt', 'K/domain/language/**'],
   },
   {
     sections: ['3.7'],

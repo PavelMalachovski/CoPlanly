@@ -4133,15 +4133,28 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
   - **The per-app choice** is `LocaleManager.getApplicationLocales()` on Android 13 and later;
     below that AppCompat's, which only an activity loads, so `AppLocale.rememberChoice` (in
     `MainActivity.onCreate`) mirrors it in the plain preference file `app_language` for a push or a
-    worker in a process no activity has started. A push below 13 therefore follows the choice too,
-    which it never did before.
+    worker in a process no activity has started, and `AppLanguage.apply` mirrors a new choice the
+    moment it is made, so the mirror never lags it. A push below 13 therefore follows the choice
+    too, which it never did before. **Below 13, "System default" over a choice restarts the app**
+    (`presentation/settings/SystemDefaultRelaunch`): AppCompat would otherwise hold an empty request
+    for the rest of the process and give every activity Android's own resolution, under
+    `follow`'s locale — two languages and two directions on one screen. No AppCompat API takes the
+    request back to none, so the app deletes AppCompat's stored choice itself, opens `MainActivity`
+    on a fresh task and ends the process; the next one holds no request and speaks the rule. It
+    never restarts on 13 and later, nor when nothing changed ("System default" again changes
+    nothing below 13, since AppCompat would take the empty list as a request too), and a restarted
+    process has nothing to restart for. Don't replace it with an override on top of AppCompat's:
+    `updateAppConfiguration` would then see a locale difference on every `onCreate` and recreate
+    in a loop.
   - **The phone's first language** is `LocaleManager.getSystemLocales()` on 13 and later (the
     order the person set) and `Resources.getSystem()`'s below (the framework's display order: a first
     language the system itself cannot show reads as the one it shows). Never `LocaleList.getDefault()`,
     which `follow` sets.
   - **Tests**: `AppLocaleTest` (Robolectric: the contexts read English on a phone in Irish, Czech in
     Czech, German under a per-app German, the mirror below 13), `ShippedLanguagesTest` (the rule's
-    list is the picker's, `locales_config.xml`'s and the string folders'), and `PerAppLocaleTest`
+    list is the picker's, `locales_config.xml`'s and the string folders'),
+    `SystemDefaultRelaunchTest` (when "System default" restarts, and that the restart leaves
+    AppCompat's storage with no choice, read through the library's own helper), and `PerAppLocaleTest`
     on the emulators. `docs/DEVICE-CHECKLIST.md` §3.6 asks for Slovak then Czech (English), Czech
     first (Czech) and a per-app choice on a phone. Consequences the rule brings, not defects: on a
     Slovak phone the holidays' local names and the dates are English too; what the system draws

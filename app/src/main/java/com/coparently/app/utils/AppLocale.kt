@@ -1,5 +1,6 @@
 package com.coparently.app.utils
 
+import android.annotation.SuppressLint
 import android.app.LocaleManager
 import android.content.Context
 import android.content.res.Configuration
@@ -99,11 +100,12 @@ object AppLocale {
 
     /**
      * Mirrors AppCompat's per-app choice below Android 13, where nothing outside an activity can
-     * read it. `MainActivity` calls it after AppCompat has applied the choice; a change of choice
-     * recreates the activity, which calls it again.
+     * read it. `AppLanguage.apply` calls it right after handing AppCompat a new choice, and
+     * `MainActivity` after AppCompat has applied one (a cold start restores it from AppCompat's
+     * own storage).
      */
-    fun rememberChoice(activity: Context) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) storeChoice(activity)
+    fun rememberChoice(context: Context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) storeChoice(context)
     }
 
     /** The per-app choice's first locale, or null when the app follows the phone. */
@@ -126,12 +128,17 @@ object AppLocale {
         return remembered.takeIf { it.isNotBlank() }?.let { LocaleList.forLanguageTags(it)[0] }
     }
 
-    /** Writes AppCompat's choice into the mirror ([rememberChoice] below Android 13; the tests). */
+    /**
+     * Writes AppCompat's choice into the mirror ([rememberChoice] below Android 13; the tests).
+     * With `commit`, only when it changed: "System default" below 13 ends the process right after
+     * (`SystemDefaultRelaunch`), and an `apply` still in flight would be lost with it.
+     */
+    @SuppressLint("ApplySharedPref")
     internal fun storeChoice(context: Context) {
         val tags = AppCompatDelegate.getApplicationLocales().toLanguageTags()
         val preferences = choicePreferences(context)
         if (preferences.getString(CHOICE_KEY, "") != tags) {
-            preferences.edit().putString(CHOICE_KEY, tags).apply()
+            preferences.edit().putString(CHOICE_KEY, tags).commit()
         }
     }
 

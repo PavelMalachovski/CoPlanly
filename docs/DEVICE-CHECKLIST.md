@@ -644,6 +644,12 @@ system setting or a Play install.
 - [ ] A per-app choice wins: Settings → Language → **Deutsch** on a phone in Slovak then Czech, or
       in Czech: the app, a push and the widget are **German**. On Android 12 or older, force-stop
       the app, then have a push arrive before opening it: still German.
+- [ ] **Android 12 or older**, phone in Slovak then Czech, app in **Deutsch**: Settings → Language →
+      **System default**. The app closes and opens again on Home by itself, and then reads in the
+      rule's language — **English** here (Czech on a phone in Czech first) — everywhere, dates and
+      the dialogs' buttons included; nothing German or Slovak is left. Force-stop and relaunch:
+      still English. Choosing **System default** again restarts nothing. On Android 13 or later the
+      same steps switch the language without a restart.
 - [ ] Known and not a failure (AUDIT §4.2): Home's dates may keep the old language until the
       process restarts.
 - **(screenshots)** Whether each translation *fits* — clipping, ellipsis, wrapping at 1.5× text

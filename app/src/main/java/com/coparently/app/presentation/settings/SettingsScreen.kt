@@ -925,8 +925,9 @@ fun SettingsScreen(
                 if (language != currentLanguage) {
                     currentLanguage = language
                     // Recreates the activity with the new locale and persists the choice
-                    // (autoStoreLocales).
-                    AppLanguage.apply(language)
+                    // (autoStoreLocales); below Android 13, "System default" over a choice
+                    // starts the app again (SystemDefaultRelaunch).
+                    AppLanguage.apply(language, context)
                 }
             },
             onDismiss = { showLanguagePicker = false }
