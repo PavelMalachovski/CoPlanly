@@ -36,7 +36,9 @@ actual fun adaptiveDimensions(): Dimensions {
     // Get base dimensions from window size
     val baseDimensions = windowSizeClass?.getDimensions() ?: compactDimensions
 
-    return remember(windowSizeClass, isTouchExplorationEnabled, fontScale) {
+    // The type is spelled out for lint: AGP 8.10's lint reads Kotlin 2.1 metadata, cannot resolve
+    // commonMain's `adaptedDimensions` here, and took the call for one returning Unit.
+    return remember<Dimensions>(windowSizeClass, isTouchExplorationEnabled, fontScale) {
         adaptedDimensions(baseDimensions, fontScale, isTouchExplorationEnabled)
     }
 }
