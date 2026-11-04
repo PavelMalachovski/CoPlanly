@@ -48,7 +48,8 @@ private const val UNZOOMED_EPSILON = 1.01f
  *
  * Two things here are load-bearing rather than stylistic.
  *
- * **It requests [Size.ORIGINAL] from Coil.** Coil sizes a decode from the measured constraint,
+ * **It asks the image seam for `fullResolution`**, whose Android half requests `Size.ORIGINAL`
+ * from Coil. Coil sizes a decode from the measured constraint,
  * so an image loaded at container size and then scaled up by `graphicsLayer` is a blurred
  * upscale of a phone-width bitmap — the pinch would work and reveal nothing, which is the same
  * complaint it is meant to answer. The uploads this shows are already capped at

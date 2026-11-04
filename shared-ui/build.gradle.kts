@@ -48,6 +48,13 @@ kotlin {
         }
     }
 
+    // `expect object` (`ReaderDateText`, slice 11a) is a Beta feature that warns on every build
+    // without this flag; an object is the shape the date seam needs, so the warning is acknowledged
+    // here once, as `:shared` and `:shared-data` do.
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
     sourceSets {
         commonMain.dependencies {
             // `api`, because the framework exports both (an exported module must be an `api`

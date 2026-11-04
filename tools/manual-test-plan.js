@@ -126,7 +126,8 @@ const RULES = [
   {
     sections: ['3.17'],
     why: 'the tabs\' wide layouts or the QR scanner',
-    paths: ['K/presentation/common/TwoPane.kt', 'K/presentation/home/HomeScreen.kt',
+    // `TwoPane*`: its window width is an `expect` since MON-24 (`TwoPane.android.kt`, `.ios.kt`).
+    paths: ['K/presentation/common/TwoPane*', 'K/presentation/home/HomeScreen.kt',
       'K/presentation/chat/ConversationsScreen.kt', 'K/presentation/pairing/**'],
   },
   {
@@ -140,7 +141,9 @@ const RULES = [
     why: 'the Add button, "Later", the default currency or the reader\'s clock',
     paths: ['K/presentation/common/FabScrollVisibility.kt', 'K/presentation/expenses/ExpenseScreen.kt',
       'K/presentation/home/AwaitingDialogs.kt', 'K/presentation/home/PutOffAsksViewModel.kt',
-      'K/data/money/**', 'K/data/repository/PreferencesRepositoryImpl.kt', 'K/utils/LocalizedDates.kt'],
+      'K/data/money/**', 'K/data/repository/PreferencesRepositoryImpl.kt', 'K/utils/LocalizedDates.kt',
+      // The common half of the reader's clock since MON-24 (`ClockFormat.is24Hour`, the date seam).
+      'K/utils/ClockFormat.kt', 'K/utils/ReaderDateText*'],
   },
   {
     sections: ['3.15'],
@@ -229,7 +232,8 @@ const RULES = [
   {
     sections: ['3.24'],
     why: 'the hour gutter\'s clock, holiday names, an event\'s colour on Home, or a chip\'s member initial',
-    paths: ['K/utils/LocalizedDates.kt', 'K/presentation/theme/WindowSize.kt',
+    paths: ['K/utils/LocalizedDates.kt', 'K/utils/ClockFormat.kt', 'K/utils/ReaderDateText*',
+      'K/presentation/theme/WindowSize.kt',
       'K/presentation/common/HolidayNames.kt', 'K/domain/holidays/CzechSchoolBreak.kt',
       'K/presentation/calendar/EventMemberMark.kt', 'K/presentation/calendar/DayWeekView.kt',
       'K/presentation/home/HomeScreen.kt'],
@@ -340,6 +344,10 @@ const RULES = [
     why: 'record photos (L-4), photo upload or Storage rules',
     paths: ['storage.rules', 'K/presentation/pets/**', 'K/presentation/childinfo/**',
       '**/*Upload*', 'K/**/*Photo*', 'K/domain/files/**', 'K/data/files/**',
+      // The image seam since MON-24: every record photo is drawn through `AppImage`, whose Android
+      // half (`CoilImages`) is the one Coil call that fetches it, and the viewer and avatar above it.
+      'K/presentation/platform/PlatformImages.kt', 'K/presentation/platform/AndroidPlatform.kt',
+      'K/presentation/common/AccountAvatar.kt', 'K/presentation/common/ZoomableImage.kt',
       'functions/record-photos.js'],
   },
   {

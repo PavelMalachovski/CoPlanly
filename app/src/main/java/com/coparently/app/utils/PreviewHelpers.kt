@@ -13,6 +13,7 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.NamedParent
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.Parents
+import com.coparently.app.presentation.platform.ProvideAndroidPlatform
 import com.coparently.app.presentation.theme.CoPlanlyTheme
 import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDateTime
@@ -209,12 +210,16 @@ fun PreviewWrapper(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    CoPlanlyTheme(darkTheme = darkTheme) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
-        ) {
-            content()
+    // The platform too, as the screenshot frame provides it: a moved screen that draws an image or
+    // asks for a permission reads a platform local, and a preview without them would throw.
+    ProvideAndroidPlatform {
+        CoPlanlyTheme(darkTheme = darkTheme) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                content()
+            }
         }
     }
 }

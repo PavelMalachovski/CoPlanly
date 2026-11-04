@@ -2300,8 +2300,11 @@ phone has a camera, now has `CameraCapture.available` to ask).
 never Coil itself: on Android `CoilImages` in `AndroidPlatform.kt` is the Coil 2 call each screen made
 (`AsyncImage`; `SubcomposeAsyncImage` when a placeholder is given, the account picture's initial;
 `Size.ORIGINAL` with a crossfade for `fullResolution`, the zoomable viewer's), with the app's
-`ImageLoaderFactory` and `RecordPhotoFetcher` unchanged. Coil 3 is not part of MON-24 phase 2; the
-iPhone's stand-in keeps the image's place and draws its placeholder.
+`ImageLoaderFactory` and `RecordPhotoFetcher` unchanged; a placeholder and `fullResolution` may be
+asked for together. Coil 3 is not part of MON-24 phase 2. `PlatformImages` says whether it is
+`available`: the iPhone's stand-in says no, so a screen whose point is the image (the photo strips,
+an attachment's thumbnail) leaves it out, and an image drawn anyway keeps its place and draws its
+placeholder. `PreviewWrapper` provides the platform too, so a moved screen's preview does not throw.
 
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller
@@ -4575,7 +4578,10 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
   unchanged, and a shared screen reaches the same rules through `utils/ReaderDateText` (an `expect`
   over kotlinx-datetime values: `date`, `month`, `pattern`, `time`, `dateWithTime`, `hour`,
   `answerBy`, `isoDate`), whose Android `actual` calls those `java.time` functions, so the text is
-  byte for byte the same (`ReaderDateTextTest`), and whose iPhone `actual` is Foundation's.
+  byte for byte the same by construction (a direct delegate; `ReaderDateTextTest` holds the
+  delegation — under Gradle's plain JVM `getBestDateTimePattern` has no ICU, so its skeleton cases
+  fall back to the medium style on both sides and say nothing of a device's patterns), and whose
+  iPhone `actual` is Foundation's.
   `ClockFormat`, `monthInFormatForm`, `unbreakableDate` and the skeleton constants are common
   (`utils/ClockFormat.kt`); `ClockFormat.follow(context)` and `localeUses24Hour(locale)` are
   Android extensions beside the `java.time` code. It follows

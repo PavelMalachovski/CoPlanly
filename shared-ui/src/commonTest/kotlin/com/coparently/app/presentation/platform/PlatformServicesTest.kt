@@ -83,6 +83,8 @@ class PlatformServicesTest {
             pairingWebLink = false
         ),
         images = object : PlatformImages {
+            override val available = false
+
             @Composable
             override fun Image(
                 model: Any?,

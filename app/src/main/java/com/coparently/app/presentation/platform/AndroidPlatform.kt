@@ -172,7 +172,8 @@ private class AndroidCameraCapture(private val context: Context) : CameraCapture
         val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             if (granted) takePhoto() else currentOnResult(CaptureResult.PermissionDenied)
         }
-        return remember(camera, permission) {
+        // Keyed on the target too, so a caller that switches it photographs into the new place.
+        return remember(camera, permission, target) {
             PlatformLauncher {
                 val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
                     PackageManager.PERMISSION_GRANTED
@@ -337,6 +338,8 @@ private class AndroidSensitiveClipboard(private val context: Context) : Sensitiv
  */
 private object CoilImages : PlatformImages {
 
+    override val available: Boolean = true
+
     @Composable
     override fun Image(
         model: Any?,
@@ -346,30 +349,30 @@ private object CoilImages : PlatformImages {
         fullResolution: Boolean,
         placeholder: (@Composable () -> Unit)?,
     ) {
-        when {
+        // The zoomable viewer's (`ZoomableImage`): the photo at its own size, so zooming in shows
+        // detail rather than an upscaled thumbnail. Otherwise the model as it is, sized to its place.
+        val request: Any? = if (fullResolution) {
+            ImageRequest.Builder(LocalContext.current)
+                .data(model)
+                .size(Size.ORIGINAL)
+                .crossfade(true)
+                .build()
+        } else {
+            model
+        }
+        if (placeholder != null) {
             // The account picture's shape (`AccountAvatar`): the initial while loading and on failure.
-            placeholder != null -> SubcomposeAsyncImage(
-                model = model,
+            SubcomposeAsyncImage(
+                model = request,
                 contentDescription = contentDescription,
                 contentScale = contentScale,
                 loading = { placeholder() },
                 error = { placeholder() },
                 modifier = modifier
             )
-            // The zoomable viewer's (`ZoomableImage`): the photo at its own size, so zooming in shows
-            // detail rather than an upscaled thumbnail.
-            fullResolution -> AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(model)
-                    .size(Size.ORIGINAL)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = contentDescription,
-                contentScale = contentScale,
-                modifier = modifier
-            )
-            else -> AsyncImage(
-                model = model,
+        } else {
+            AsyncImage(
+                model = request,
                 contentDescription = contentDescription,
                 contentScale = contentScale,
                 modifier = modifier

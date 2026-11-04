@@ -119,10 +119,13 @@ private object NoClipboard : SensitiveClipboard {
 }
 
 /**
- * No image loading until phase 3: the image's place keeps its size and shows its placeholder (an
+ * No image loading until phase 3, so [available] is false and a photo strip or an attachment's
+ * thumbnail is left out. An image drawn anyway keeps its size and shows its placeholder (an
  * account's initial, for example), so the screen around it lays out as it will.
  */
 private object NoImages : PlatformImages {
+    override val available: Boolean = false
+
     @Composable
     override fun Image(
         model: Any?,

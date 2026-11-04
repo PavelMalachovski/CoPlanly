@@ -1016,6 +1016,11 @@ Then the export and the school import:
 - While `platformUiModule` binds `NoInviteQrCodes`, the shared pairing screen must not draw the QR
   frame on the iPhone (it would wait for a code that never comes); the code and the link are how an
   invitation leaves the phone there.
+- **For 11f: the iPhone cannot send an invitation yet.** `iosPlatformServices`' share sheet and
+  clipboard are stand-ins (`available = false`), so on the iPhone the code and the link can only be
+  read off the screen. The shared pairing screen hides Share and Copy there rather than offer them,
+  and says nothing that assumes them; phase 3's `UIActivityViewController` and `UIPasteboard` give
+  them back.
 - `AuthViewModel` and `SyncViewModel` move with the auth and settings screens, once their sign-ins
   are platform interfaces the shell provides: a `CredentialSignIn` (Google's id token, a saved
   password, the save prompt — the Activity stays on Android's side of it) with `AuthError` mapped
@@ -1063,8 +1068,10 @@ Then the export and the school import:
     skeleton)` (the first day formatted, as the mini month and the month review do), `pattern(date
     or month, fixed pattern)` (the money screens' "LLLL yyyy", "EEE", "d MMMM"), `time(LocalTime or
     LocalDateTime)`, `dateWithTime`, `hour`, `answerBy`, `isoDate`. Android: those `java.time`
-    functions in `Locale.getDefault()`; `ReaderDateTextTest` (androidUnitTest) holds each to them in
-    six languages and both clocks. iPhone: `NSDateFormatter` templates and fixed patterns in the
+    functions in `Locale.getDefault()`, byte for byte by construction; `ReaderDateTextTest`
+    (androidUnitTest) holds the delegation in six languages and both clocks (in Gradle's plain JVM
+    `getBestDateTimePattern` has no ICU, so the skeleton cases fall back to the medium style on both
+    sides; a device's patterns are not what it checks). iPhone: `NSDateFormatter` templates and fixed patterns in the
     current locale, Gregorian; `languageUses24Hour` from the `j` template.
 - Group 3, the image seam:
   - `presentation/platform/PlatformImages` (`Image(model, contentDescription, modifier, contentScale,
@@ -1097,12 +1104,24 @@ Then the export and the school import:
     readers (`BloodTypeLabel`, `EventTypeLabel`, `PetSpeciesLabel`, `CountryPicker`,
     `MedicalProfileEditor`, `FamilyMemberChips`), the Android halves (`SharedFileViewer`,
     `SensitiveClipboard`, `PrivacyPolicyLink`, `TermsOfServiceLink`), `DesignSystemPreviews.kt`.
+- For phase 3, from the 11a review:
+  - **A wall-clock time in a daylight-saving gap prints an hour off on the iPhone.** The iOS
+    `ReaderDateText` turns a kotlinx-datetime wall-clock value into an `NSDate` through the phone's
+    zone (`dateFromComponents` with the system time zone) and formats it back in that zone, so a time
+    that does not exist there — 02:30 on a spring-forward day — prints as "03:30", where `java.time`
+    prints a `LocalDateTime` as it is. The fix: set the Gregorian calendar's and both formatters'
+    `timeZone` to GMT, so a wall-clock value round-trips exactly, with a commonTest vector on a gap
+    day. Nothing calls it on a device before phase 3.
+  - `PlatformImages` says whether it is `available`; the iPhone's `NoImages` says no, so the photo
+    strips leave themselves out. The event and receipt photos (11c, 11e) and the attachments' thumbnail
+    (11b) read the same flag as they move.
 
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 
 **Files:**
 - Move to `shared-ui/src/commonMain/.../presentation/navigation/`: `NavGraph`, `Screen`,
-  `BottomNavDestination`, `ReadablePane`, `TwoPane`, `CalendarTabTaps` and `navigateToTab`.
+  `BottomNavDestination`, `ReadablePane`, `CalendarTabTaps` and `navigateToTab` (`TwoPane` moved to
+  `presentation/common/` in slice 11a).
 - `app/` keeps:
   - `CoPlanlyApplication` and `MainActivity` (the AppCompat requirement, the splash, the launch
     intent and push routing);

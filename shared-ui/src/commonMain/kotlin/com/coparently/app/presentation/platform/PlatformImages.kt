@@ -12,8 +12,13 @@ import androidx.compose.ui.layout.ContentScale
  * `RecordPhotoFetcher`, which downloads a record photo as the signed-in parent and keeps a copy only
  * when its digest matches; a screen never fetches an image itself. Coil 3, which runs on the iPhone
  * too, is not part of MON-24 phase 2.
+ *
+ * [available] is false where nothing loads an image yet (the iPhone until phase 3), so a screen
+ * whose whole point is the image — a photo strip, an attachment's thumbnail — leaves it out rather
+ * than draw blank, tappable frames (design item 8). An image beside other content (an avatar's
+ * picture over its initial) is still drawn: its placeholder stands in.
  */
-interface PlatformImages {
+interface PlatformImages : PlatformCapability {
 
     /**
      * Draws [model] — a URL, a record photo reference, or a platform value the shell understands (on
@@ -23,7 +28,7 @@ interface PlatformImages {
      * @param fullResolution Load it at its own size rather than the size it is drawn at, for a viewer
      *   that zooms (with a short crossfade)
      * @param placeholder Drawn while the image loads and when it cannot be loaded; null draws nothing
-     *   there
+     *   there. It and [fullResolution] are independent: a caller may ask for both.
      */
     @Suppress("LongParameterList") // the image call's own parameters, named at every call site
     @Composable

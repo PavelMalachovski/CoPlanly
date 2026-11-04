@@ -293,7 +293,7 @@ class MainActivity : AppCompatActivity() {
 
         // Notification permission is requested contextually (Settings push toggle,
         // event reminder selection) instead of on every cold start — see
-        // NotificationPermission.kt.
+        // :shared-ui's PermissionRequesters.kt.
 
         // Initialize notifications
         try {

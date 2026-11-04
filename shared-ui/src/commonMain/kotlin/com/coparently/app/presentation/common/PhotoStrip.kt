@@ -36,6 +36,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.coparently.app.domain.files.RecordPhotoAccess
 import com.coparently.app.presentation.platform.AppImage
+import com.coparently.app.presentation.platform.LocalPlatformImages
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
 import org.jetbrains.compose.resources.StringResource
@@ -81,7 +82,8 @@ private data class ShownPhoto(val entry: String, val model: Any)
  *
  * **Only the two parents see a stored photograph** (L-4). An entry this viewer may not read — a
  * guest, a calendar friend — and a legacy download URL from before L-4 are left out, not drawn as
- * broken images; a read-only strip with nothing left renders nothing at all.
+ * broken images; a read-only strip with nothing left renders nothing at all. Nor is a strip drawn
+ * where the platform loads no image (`PlatformImages.available`, the iPhone until phase 3).
  *
  * @param photos What to show: `RecordPhotoCodec` references already on the record, and content
  *   URIs picked on this device and not yet uploaded.
@@ -106,6 +108,9 @@ fun PhotoStrip(
 ) {
     val shown = rememberShownPhotos(photos, owner)
     if (onAdd == null && shown.isEmpty()) return
+    // Where nothing loads an image (the iPhone until phase 3), a strip would be blank frames that
+    // open a black viewer: leave it out, the editor's Add with it (design item 8).
+    if (!LocalPlatformImages.current.available) return
     var opened by remember { mutableStateOf<ShownPhoto?>(null) }
 
     Column(

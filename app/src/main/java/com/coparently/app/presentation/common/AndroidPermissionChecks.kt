@@ -9,8 +9,7 @@ import androidx.core.content.ContextCompat
 /*
  * The Android checks behind `PermissionRequester`'s Android half (`presentation/platform/
  * AndroidPlatform.kt`), which the app's own screens read too. The requesters themselves are common
- * since MON-24 phase 2, Task 11 (`:shared-ui`'s `NotificationPermission.kt` and
- * `MicrophonePermission.kt`).
+ * since MON-24 phase 2, Task 11 (`:shared-ui`'s `presentation/common/PermissionRequesters.kt`).
  */
 
 /**

@@ -333,8 +333,9 @@ Preconditions: `adb uninstall app.coplanly`, set the system to **dark** theme
     Push notifications, or (b) pick a reminder chip in the event form.
   - To re-test, run `adb shell pm revoke app.coplanly android.permission.POST_NOTIFICATIONS`,
     then `adb shell pm clear-permission-flags app.coplanly android.permission.POST_NOTIFICATIONS user-set user-fixed`.
-  - **If it fails:** `presentation/common/NotificationPermission.kt`, `SettingsScreen.kt`,
-    `AddEditEventScreen.kt`.
+  - **If it fails:** `presentation/common/PermissionRequesters.kt` (`:shared-ui`),
+    `presentation/common/AndroidPermissionChecks.kt` and `presentation/platform/AndroidPlatform.kt`
+    (the app), `SettingsScreen.kt`, `AddEditEventScreen.kt`.
 - [ ] **After the Firebase BoM 34 move (audit L-2)**: every Firebase SDK moved a major version
       at once (`-ktx` artifacts gone, BoM 33.7 → 34.4). CI compiles and runs the emulator suites
       against them, but not a real project, Google sign-in or FCM.
@@ -1229,7 +1230,8 @@ online recognizer (`OnDeviceSpeechDictation`'s KDoc says why).
 - [ ] **Leaving.** While listening, press Home, or switch tab: listening stops (the system's
       microphone indicator goes off).
 - **If it fails:** `data/dictation/OnDeviceSpeechDictation.kt`, `presentation/chat/DictationViewModel.kt`,
-  `presentation/chat/ChatDictation.kt`, `presentation/common/MicrophonePermission.kt`.
+  `presentation/chat/ChatDictation.kt`, `presentation/common/PermissionRequesters.kt` (`:shared-ui`),
+  `presentation/common/AndroidPermissionChecks.kt` and `presentation/platform/AndroidPlatform.kt`.
 
 ### 3.22 AI reply suggestions and the month in review · 1P, paired account, debug build
 
