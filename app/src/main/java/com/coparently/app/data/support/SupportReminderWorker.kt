@@ -117,7 +117,7 @@ class SupportReminderWorker(
             .getString(R.string.push_actor_fallback)
     }
 
-    /** Posts the reminder, worded and dated in the language the app speaks now ([inAppLanguage]). */
+    /** Posts the reminder, worded, dated and priced in the language the app speaks now ([inAppLanguage]). */
     private fun post(familyId: String, terms: SupportTerms, month: YearMonth, payeeName: String) {
         val context = applicationContext
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -128,10 +128,12 @@ class SupportReminderWorker(
         }
         val words = context.inAppLanguage()
         PushNotifier(words).createChannels()
+        // The date and the amount in the notice's own locale, the one its words are in.
+        val locale = words.resources.configuration.locales[0]
         val due = terms.dueDate(month).toJavaLocalDate().format(
-            DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(words.resources.configuration.locales[0])
+            DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale)
         )
-        val amount = currencyFormat(terms.currency).format(MinorUnits.toDecimal(terms.amountMinor))
+        val amount = currencyFormat(terms.currency, locale).format(MinorUnits.toDecimal(terms.amountMinor))
         val title = words.getString(R.string.support_reminder_title, due)
         val body = words.getString(R.string.support_reminder_body, amount, payeeName)
         val key = listOf("support", familyId).hashCode()

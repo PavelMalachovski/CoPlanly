@@ -602,9 +602,12 @@ private fun BalanceStrip(
     }
 }
 
-/** Currency formatter that tolerates an unknown code rather than crashing on it. */
-internal fun currencyFormat(currency: String): NumberFormat =
-    NumberFormat.getCurrencyInstance(Locale.getDefault()).apply {
+/**
+ * Currency formatter that tolerates an unknown code rather than crashing on it, in [locale] — the
+ * process's default unless a caller words its text in a context of its own (a notice).
+ */
+internal fun currencyFormat(currency: String, locale: Locale = Locale.getDefault()): NumberFormat =
+    NumberFormat.getCurrencyInstance(locale).apply {
         runCatching { this.currency = Currency.getInstance(currency) }
     }
 
