@@ -10,6 +10,7 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.text.intl.Locale
 import androidx.core.os.LocaleListCompat
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -23,6 +24,7 @@ import com.coparently.app.testing.exists
 import com.coparently.app.testing.pumpUntil
 import com.coparently.app.testing.settle
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Before
 import org.junit.Rule
@@ -83,6 +85,11 @@ class PerAppLocaleTest {
                 composeTestRule.pumpUntil("Settings titled \"$title\"") {
                     exists(hasText(title)) && exists(hasText(firstGroup, ignoreCase = true))
                 }
+                // Compose Multiplatform's resources (the theme's colour names, the common
+                // components' labels; MON-24 phase 2) pick their language from Compose's
+                // Locale.current, the process's default locale, not from the Activity's
+                // configuration that R.string reads. So the choice must reach that too.
+                assertEquals("$tag is Compose's locale too", tag, Locale.current.language)
             }
         }
     }

@@ -62,9 +62,10 @@ kotlin {
             api(compose.components.resources)
             // The theme and the common components (slice 9b). `api`, because their public
             // signatures carry Material 3's `ColorScheme`, `Typography` and `WindowSizeClass` and
-            // Compose's `Modifier`, `Color` and `ImageVector`. On Android each of these is the
-            // androidx artifact the app's BOM 2025.10.00 already names: material3 and its
-            // window-size-class 1.4.0, foundation and ui at the 1.9.4 above.
+            // Compose's `Modifier`, `Color`, `ImageVector` and transitions. On Android each of
+            // these is the androidx artifact the app's BOM 2025.10.00 already names: material3 and
+            // its window-size-class 1.4.0, animation, foundation and ui at the 1.9.4 above.
+            api(compose.animation)
             api(compose.foundation)
             api(compose.ui)
             api(compose.material3)
@@ -72,6 +73,11 @@ kotlin {
             // plugin's `compose.*` accessors, so named here, at the material3 version Compose
             // Multiplatform 1.9.3 itself uses (`composeMaterial3Version`).
             api("org.jetbrains.compose.material3:material3-window-size-class:1.9.0")
+            // The common components' glyphs (`Icons.Default.…`). 1.7.3 is the last Compose
+            // Multiplatform release of the extended set; on Android it is androidx's
+            // material-icons-extended, which the app's BOM puts at 1.7.8, so the classes the app
+            // already draws.
+            implementation("org.jetbrains.compose.material:material-icons-extended:1.7.3")
         }
         androidMain.dependencies {
             // `WindowCompat`, for the system bars (`Theme.android.kt`). The app's version.
@@ -109,6 +115,12 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    // As in the app, where the theme's tests ran until slice 9b: an Android framework method is a
+    // stub in JVM unit tests, and answers its default rather than throwing "not mocked".
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 }
 

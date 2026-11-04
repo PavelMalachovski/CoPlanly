@@ -4,8 +4,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_action_retry
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * A screen that could not load, said the way an empty one is (docs/AUDIT-2026-10-design.md
@@ -29,7 +30,7 @@ fun ErrorState(message: String, onRetry: (() -> Unit)?, modifier: Modifier = Mod
         icon = Icons.Default.ErrorOutline,
         title = message,
         modifier = modifier,
-        actionLabel = if (onRetry != null) stringResource(R.string.common_action_retry) else null,
+        actionLabel = if (onRetry != null) stringResource(Res.string.common_action_retry) else null,
         onAction = onRetry
     )
 }

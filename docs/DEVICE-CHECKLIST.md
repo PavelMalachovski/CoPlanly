@@ -614,8 +614,11 @@ who does **not** have today.
 
 **[CI]** `PerAppLocaleTest` sets each of cs, de, ru and uk through
 `AppCompatDelegate.setApplicationLocales` and sees Settings render in it on API 30 — so
-`MainActivity` is still an `AppCompatActivity` and composition follows the choice. It does not tap
-the Settings row, and it cannot see Android 13's system setting or a Play install.
+`MainActivity` is still an `AppCompatActivity` and composition follows the choice — and that
+Compose's own `Locale.current`, which the text read through Compose Multiplatform's resources
+follows (MON-24 phase 2: the colour names, the confirm and cancel of a dialog, Retry, the offline
+line), names the same language. It does not tap the Settings row, and it cannot see Android 13's
+system setting or a Play install.
 
 - [ ] Settings → App → **Language** → **Deutsch**, while the phone is in another language. The
       UI switches at once.
@@ -623,6 +626,9 @@ the Settings row, and it cannot see Android 13's system setting or a Play instal
 - [ ] On Android 13+, system Settings → Apps → CoPlanly → Language shows Deutsch. Change it there
       and the app follows.
 - [ ] Go through Čeština, Русский, Українська and English, then back to **System default**.
+- [ ] On Android 12 or older, with the app in Deutsch and the phone in another language: Settings →
+      App → **My colour** names its colours in German, and a dialog's **Abbrechen** is German too
+      (both are read through Compose Multiplatform since MON-24 phase 2).
 - [ ] Known and not a failure (AUDIT §4.2): Home's dates may keep the old language until the
       process restarts.
 - **(screenshots)** Whether each translation *fits* — clipping, ellipsis, wrapping at 1.5× text

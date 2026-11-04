@@ -23,14 +23,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import com.coparently.app.R
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.connectivity_offline
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * The one line the app shows while the phone is offline, above every screen
@@ -77,7 +78,7 @@ fun ConnectivityBanner(offline: Boolean, modifier: Modifier = Modifier) {
                     modifier = Modifier.size(IconSizes.Small)
                 )
                 Text(
-                    text = stringResource(R.string.connectivity_offline),
+                    text = stringResource(Res.string.connectivity_offline),
                     style = MaterialTheme.typography.labelMedium
                 )
             }

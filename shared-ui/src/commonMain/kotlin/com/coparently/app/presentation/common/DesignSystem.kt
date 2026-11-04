@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -20,9 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Balance
-import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -40,16 +36,15 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.toUpperCase
 import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.labelMediumEmphasized
-import com.coparently.app.utils.LightDarkPreviews
-import com.coparently.app.utils.PreviewWrapper
-import java.util.Locale
 
 /**
  * Shared building blocks introduced by the August 2026 design refresh.
@@ -71,7 +66,9 @@ import java.util.Locale
  * shared with a screen that needs it in sentence case (`childinfo_section_*` is also a form
  * header in `AddEditChildInfoScreen`), so baking the casing into the value would leak into that
  * other caller. Centralizing it here means every caller can pass its string as authored and get
- * the same label styling regardless of how that string is cased or reused elsewhere.
+ * the same label styling regardless of how that string is cased or reused elsewhere. The case is
+ * the reader's locale's (Compose's `Locale.current`, which on Android is the JVM's default locale
+ * this used to read), so a Czech or German label uppercases as Czech or German does.
  *
  * @param text Label text, in whatever case it is authored; uppercased for display
  * @param modifier Modifier applied to the label
@@ -82,7 +79,7 @@ fun GroupLabel(
     modifier: Modifier = Modifier
 ) {
     Text(
-        text = text.uppercase(Locale.getDefault()),
+        text = text.toUpperCase(Locale.current),
         style = MaterialTheme.typography.labelMediumEmphasized,
         color = MaterialTheme.colorScheme.primary,
         modifier = modifier
@@ -459,45 +456,3 @@ fun HeroIcon(icon: ImageVector) {
 
 /** Diameter of the tonal disc behind a [HeroIcon]. */
 private val HERO_DISC = 72.dp
-
-@LightDarkPreviews
-@Composable
-private fun EmptyStatePreview() {
-    PreviewWrapper {
-        EmptyState(
-            icon = Icons.Default.Contacts,
-            title = "No contacts yet",
-            description = "Save the school, the doctor or a relative to reach them in one tap.",
-            actionLabel = "Add a contact",
-            onAction = {},
-            modifier = Modifier.fillMaxSize()
-        )
-    }
-}
-
-@LightDarkPreviews
-@Composable
-private fun SectionGroupPreview() {
-    PreviewWrapper {
-        Column(modifier = Modifier.padding(Spacing.L)) {
-            GroupLabel("Family")
-            SectionGroup {
-                SectionRow(
-                    icon = Icons.Default.Contacts,
-                    title = "Contacts",
-                    supporting = "3 saved",
-                    onClick = {}
-                )
-                Divider()
-                SectionRow(
-                    icon = Icons.Default.Balance,
-                    title = "Expense split",
-                    supporting = "50 / 50",
-                    trailing = {
-                        PillChip(label = "Agreed", leadingDot = MaterialTheme.colorScheme.primary)
-                    }
-                )
-            }
-        }
-    }
-}

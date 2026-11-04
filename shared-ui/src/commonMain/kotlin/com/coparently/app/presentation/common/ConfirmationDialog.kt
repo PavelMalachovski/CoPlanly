@@ -7,8 +7,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_confirm
+import com.coparently.app.resources.common_dialog_cancel
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Reusable confirmation dialog component.
@@ -29,8 +31,8 @@ import com.coparently.app.R
 fun ConfirmationDialog(
     title: String,
     message: String,
-    confirmText: String = stringResource(R.string.common_confirm),
-    dismissText: String = stringResource(R.string.common_dialog_cancel),
+    confirmText: String = stringResource(Res.string.common_confirm),
+    dismissText: String = stringResource(Res.string.common_dialog_cancel),
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,

@@ -24,13 +24,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import com.coparently.app.R
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_collapsed
+import com.coparently.app.resources.common_expanded
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * An explanation a screen keeps folded under its action (UX audit M10): a text button naming what
@@ -51,7 +53,7 @@ fun ExpandableDetails(
     content: @Composable ColumnScope.() -> Unit
 ) {
     var open by rememberSaveable { mutableStateOf(false) }
-    val state = stringResource(if (open) R.string.common_expanded else R.string.common_collapsed)
+    val state = stringResource(if (open) Res.string.common_expanded else Res.string.common_collapsed)
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.XS)) {
         TextButton(onClick = { open = !open }, modifier = Modifier.semantics { stateDescription = state }) {
             Text(label)
