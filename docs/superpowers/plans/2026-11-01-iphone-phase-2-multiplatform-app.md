@@ -690,6 +690,10 @@ ViewModels are about 57 of those files.
   `NamedParent`, `ParentNames` (`Res.string`), `ParentLabels` and `PhotoOwner`. Tests:
   `ParentsTest`, `ParentLabelsTest`, `ParentNamesTest` and `FormDraftTest` to commonTest on
   `kotlin.test`; `ParentsSourceTest` and `FamilyKindSourceTest` (MockK) to androidUnitTest.
+- `common/`'s ViewModels: `ConnectivityViewModel` (on `Connectivity.online`, which on Android is
+  `NetworkMonitor.networkStatus` as a state; its test, with a fake `Connectivity`, in commonTest),
+  `FamilySwitcherViewModel`, `FamilyViewViewModel` and `ParentPaletteViewModel` (tests in
+  androidUnitTest, with a copy of `testParentsSource`).
 
 ### Task 11: The screens to `commonMain`
 

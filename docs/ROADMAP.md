@@ -2919,7 +2919,9 @@ bytes are identical on Android):
   (included in the app's `appModules`), and the shared state every ViewModel reads:
   `ParentsSource`, `FamilyKindSource`, `FamilyMembersSource`, `CoParentOnScreen`, `Loadable`,
   `FormDraft`, `NamedParent`, `ParentNames`, `ParentLabels` and `PhotoOwner`, packages unchanged,
-  with their tests (on `kotlin.test` in `commonTest` where nothing is mocked). Calendar and event,
+  with their tests (on `kotlin.test` in `commonTest` where nothing is mocked); then `common/`'s four
+  tree-wide ViewModels (the offline banner's on the data layer's `Connectivity`, the family
+  switcher's, the family view's and the palette's). Calendar and event,
   custody and requests, family and expenses, settings to sync and the rest follow as slices 10b–10f.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google

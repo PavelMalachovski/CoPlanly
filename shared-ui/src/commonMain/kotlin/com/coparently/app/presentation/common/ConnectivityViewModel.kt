@@ -2,7 +2,7 @@ package com.coparently.app.presentation.common
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.utils.NetworkMonitor
+import com.coparently.app.data.platform.Connectivity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
@@ -20,14 +20,18 @@ import kotlinx.coroutines.flow.stateIn
  *
  * Going offline shows only after [OFFLINE_GRACE_MS], so a Wi-Fi-to-mobile handover or a lift
  * ride does not flash a banner; coming back hides it at once.
+ *
+ * It reads the data layer's [Connectivity] (MON-24 phase 2, Task 10), which on Android is the
+ * `NetworkMonitor` whose `networkStatus` it read before: [Connectivity.online] is that stream held as
+ * a state while it has a collector, so the banner follows the same validated networks.
  */
 class ConnectivityViewModel(
-    networkMonitor: NetworkMonitor
+    connectivity: Connectivity
 ) : ViewModel() {
 
     /** True while the phone has had no validated internet for longer than the grace period. */
     @OptIn(ExperimentalCoroutinesApi::class)
-    val isOffline: StateFlow<Boolean> = networkMonitor.networkStatus
+    val isOffline: StateFlow<Boolean> = connectivity.online
         .mapLatest { online ->
             if (!online) delay(OFFLINE_GRACE_MS)
             !online

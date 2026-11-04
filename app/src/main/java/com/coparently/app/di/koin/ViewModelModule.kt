@@ -13,10 +13,6 @@ import com.coparently.app.presentation.chat.DictationViewModel
 import com.coparently.app.presentation.chat.ReplySuggestionViewModel
 import com.coparently.app.presentation.chat.SettleUpPaymentViewModel
 import com.coparently.app.presentation.childinfo.ChildInfoViewModel
-import com.coparently.app.presentation.common.ConnectivityViewModel
-import com.coparently.app.presentation.common.FamilySwitcherViewModel
-import com.coparently.app.presentation.common.FamilyViewViewModel
-import com.coparently.app.presentation.common.ParentPaletteViewModel
 import com.coparently.app.presentation.consent.HealthConsentViewModel
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
 import com.coparently.app.presentation.contacts.ContactsViewModel
@@ -80,10 +76,6 @@ val viewModelModule = module {
     viewModelOf(::ReplySuggestionViewModel)
     viewModelOf(::SettleUpPaymentViewModel)
     viewModelOf(::ChildInfoViewModel)
-    viewModelOf(::ConnectivityViewModel)
-    viewModelOf(::FamilySwitcherViewModel)
-    viewModelOf(::FamilyViewViewModel)
-    viewModelOf(::ParentPaletteViewModel)
     viewModelOf(::HealthConsentViewModel)
     viewModelOf(::TelemetryConsentViewModel)
     viewModelOf(::ContactsViewModel)

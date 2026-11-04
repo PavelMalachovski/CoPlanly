@@ -1988,7 +1988,12 @@ reads it: `ParentsSource` (its one log line through the data layer's `logger`), 
 `FamilyMembersSource`, `CoParentOnScreen`, `Loadable`, `FormDraft`, `NamedParent`, `ParentNames`
 (`rememberParentNames` reads its three fallbacks through Compose Multiplatform's `stringResource`),
 `ParentLabels` and `PhotoOwner` (with `LocalPhotoViewerUid`), whose three sources are `single`s in
-`uiModules`' `commonUiModule` now. `coParentOnScreen`, `observeSignedInUser` and
+`uiModules`' `commonUiModule` now. Then **`common/`'s ViewModels**, the four the whole tree shares
+from the activity's level: `ConnectivityViewModel` (on the data layer's `Connectivity`, whose
+`online` is `NetworkMonitor`'s `networkStatus` held as a state, in place of `NetworkMonitor`
+itself), `FamilySwitcherViewModel`, `FamilyViewViewModel` and `ParentPaletteViewModel`, in
+`commonUiModule` too. A moved test that builds a `ParentsSource` uses `androidUnitTest`'s copy of
+`testParentsSource`; the app keeps its own for the tests still there. `coParentOnScreen`, `observeSignedInUser` and
 `projectedCoParentUid` are public behind `@InternalSharedApi` until the five ViewModels still in the
 app that call them move (see the `@InternalSharedApi` paragraph below).
 

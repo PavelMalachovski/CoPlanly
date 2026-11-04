@@ -1,8 +1,6 @@
 package com.coparently.app.presentation.common
 
-import com.coparently.app.utils.NetworkMonitor
-import io.mockk.every
-import io.mockk.mockk
+import com.coparently.app.data.platform.Connectivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,9 +11,9 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -28,16 +26,16 @@ class ConnectivityViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
     private val networkUp = MutableStateFlow(true)
-    private val monitor = mockk<NetworkMonitor> {
-        every { networkStatus } returns networkUp
+    private val monitor = object : Connectivity {
+        override val online = networkUp
     }
 
-    @Before
+    @BeforeTest
     fun setUp() {
         Dispatchers.setMain(dispatcher)
     }
 
-    @After
+    @AfterTest
     fun tearDown() {
         Dispatchers.resetMain()
     }
