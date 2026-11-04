@@ -2022,7 +2022,17 @@ language through an `expect`, `Locale.getDefault().language` on Android; `CzechS
 a `StringResource`), `EventTypeLabel` (`eventTypeLabelRes` a `StringResource`), `FamilyMemberChips`
 (the label a `StringResource`), and `MONTH_PAGING_MS` with `monthPagingTween` (`MonthPagingTween.kt`,
 a file name of its own, because two modules' files of one name in one package make one JVM class).
-`TodayTest` runs in `:shared-ui`'s `commonTest`.
+`TodayTest` runs in `:shared-ui`'s `commonTest`. **Then the event form** (`event/AddEditEventScreen.kt`
+and `EventFormRows.kt`), on kotlinx-datetime throughout: its saved fields hold kotlinx days and times
+(JVM-`Serializable`, so `rememberSaveable` keeps them in the Bundle as it kept `java.time`'s), its
+lines and descriptions through `ReaderDateText`, a new event's id from `kotlin.uuid.Uuid`, its "now"
+`wallClockNow()`, `plusHour()` the clock-face hour `plusHours(1)` was, the photo through
+`FilePicker.rememberImagePicker` (its content URI kept as text, which Coil maps to the same `Uri`)
+and left out where the platform can neither pick nor draw one, its log line through `logger`, and
+the strings its lambdas used read in composition. `utils/ValidationUtils` moved with it, its one
+caller, without its email and URL checks (Android's `Patterns`; nothing called them). `NavGraph`
+parses the route's date with kotlinx-datetime. `EventFormEndTest` and `AddEditEventScreenTest` run
+in `commonTest`.
 **A Robolectric test runs `RobolectricTestApplication`**
 (`app/src/test/.../testing/`, `@Config(application = …)`): Robolectric installs no content
 provider from the manifest, so it hands Compose Multiplatform's resource reader the context its

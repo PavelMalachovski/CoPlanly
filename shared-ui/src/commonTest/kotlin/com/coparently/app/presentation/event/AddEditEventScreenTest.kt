@@ -3,7 +3,7 @@ package com.coparently.app.presentation.event
 import com.coparently.app.domain.events.EventAcceptanceTransition
 import com.coparently.app.domain.model.Event
 import kotlinx.datetime.LocalDateTime
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -34,7 +34,7 @@ class AddEditEventScreenTest {
     }
 
     @Test
-    fun `hidden before the upstream has emitted once, regardless of the rest`() {
+    fun `hidden before the upstream has emitted once - regardless of the rest`() {
         assertFalse(
             showParentOwnerSelector(
                 parentsLoaded = false,
@@ -52,7 +52,7 @@ class AddEditEventScreenTest {
     }
 
     @Test
-    fun `a family of one whose own slot already resolved is hidden immediately, not after a frame`() {
+    fun `a family of one whose own slot already resolved is hidden immediately - not after a frame`() {
         // The case the first fix round left open: parentOwner has not caught up to
         // currentUserSlot yet (the LaunchedEffect that copies it hasn't run this composition),
         // but there is nobody to choose between either way.
@@ -89,7 +89,7 @@ class AddEditEventScreenTest {
     }
 
     @Test
-    fun `once an owner is assigned - a loaded event, say - an unpaired account no longer sees it`() {
+    fun `once an owner is assigned - a loaded event - say - an unpaired account no longer sees it`() {
         assertFalse(
             showParentOwnerSelector(
                 parentsLoaded = true,

@@ -3013,7 +3013,8 @@ bytes are identical on Android):
   form: first the helpers they read, onto kotlinx-datetime and Compose Multiplatform's resources —
   today's date, the date and time pickers, the "Answer by" block, holiday and event-type names, the
   member chips and the month-paging tween — each with a `java.time` twin in the app for the screens
-  not yet moved.
+  not yet moved; then the event form, onto kotlinx-datetime, its photo through the platform's picker
+  (none on the iPhone yet, so no attach button there).
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

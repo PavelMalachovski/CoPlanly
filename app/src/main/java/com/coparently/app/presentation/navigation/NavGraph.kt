@@ -364,7 +364,7 @@ fun NavGraph(
                     val dateString = backStackEntry.arguments?.getString(Screen.AddEvent.ARG_DATE)
                     val hourValue = backStackEntry.arguments?.getInt(Screen.AddEvent.ARG_HOUR) ?: -1
                     val hour = if (hourValue >= 0) hourValue else null
-                    val initialDate = dateString?.takeIf { it != "null" }?.let { java.time.LocalDate.parse(it) }
+                    val initialDate = dateString?.takeIf { it != "null" }?.let { kotlinx.datetime.LocalDate.parse(it) }
 
                     AddEditEventScreen(
                         eventId = null,

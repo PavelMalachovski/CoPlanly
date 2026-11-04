@@ -1,7 +1,5 @@
 package com.coparently.app.utils
 
-import android.util.Patterns
-
 /**
  * Результат валидации.
  *
@@ -21,13 +19,16 @@ sealed class ValidationResult {
     data class Error(val message: String) : ValidationResult()
 }
 
+// MON-24 phase 2, slice 11c: moved to :shared-ui with the event form, its one caller. Its email and
+// URL checks (and `isValidEmail`), which read Android's `Patterns` and which nothing called, were
+// left out.
 /**
  * Утилиты для валидации форм.
  * Содержит методы для проверки различных типов данных.
  *
  * Использование:
  * ```kotlin
- * val result = ValidationUtils.validateEmail(email)
+ * val result = ValidationUtils.validateEventTitle(title)
  * when (result) {
  *     is ValidationResult.Success -> { /* продолжить */ }
  *     is ValidationResult.Error -> { /* показать ошибку */ }
@@ -56,27 +57,6 @@ object ValidationUtils {
      * Максимальная длина описания. Public for the same reason as [MAX_TITLE_LENGTH].
      */
     const val MAX_DESCRIPTION_LENGTH = 500
-
-    /**
-     * Валидирует email адрес.
-     *
-     * Проверяет:
-     * - Не пустой
-     * - Соответствует паттерну email
-     *
-     * @param email Email для проверки
-     * @return ValidationResult.Success если валидация прошла успешно, иначе ValidationResult.Error
-     */
-    fun validateEmail(email: String): ValidationResult {
-        return when {
-            email.isBlank() -> ValidationResult.Error("Email cannot be empty")
-            !Patterns.EMAIL_ADDRESS.matcher(email).matches() ->
-                ValidationResult.Error("Invalid email format")
-            email.length > 254 -> // RFC 5321
-                ValidationResult.Error("Email is too long")
-            else -> ValidationResult.Success
-        }
-    }
 
     /**
      * Валидирует пароль.
@@ -188,24 +168,6 @@ object ValidationUtils {
     }
 
     /**
-     * Валидирует URL.
-     *
-     * @param url URL для проверки
-     * @return ValidationResult
-     */
-    fun validateUrl(url: String): ValidationResult {
-        if (url.isBlank()) {
-            return ValidationResult.Error("URL cannot be empty")
-        }
-
-        return when {
-            !Patterns.WEB_URL.matcher(url).matches() ->
-                ValidationResult.Error("Invalid URL format")
-            else -> ValidationResult.Success
-        }
-    }
-
-    /**
      * Валидирует возраст.
      *
      * @param age Возраст для проверки
@@ -265,7 +227,7 @@ object ValidationUtils {
      * Использование:
      * ```kotlin
      * val result = ValidationUtils.validateMultiple(
-     *     validateEmail(email),
+     *     validatePhone(phone),
      *     validatePassword(password),
      *     validateName(name)
      * )
@@ -276,13 +238,6 @@ object ValidationUtils {
      */
     fun validateMultiple(vararg validations: ValidationResult): ValidationResult {
         return validations.firstOrNull { it is ValidationResult.Error } ?: ValidationResult.Success
-    }
-
-    /**
-     * Расширение для String для быстрой валидации email.
-     */
-    fun String.isValidEmail(): Boolean {
-        return validateEmail(this) is ValidationResult.Success
     }
 
     /**

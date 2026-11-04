@@ -1,9 +1,5 @@
 package com.coparently.app.presentation.event
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -79,10 +75,8 @@ import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -91,7 +85,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.RequestCap
 import com.coparently.app.domain.events.AllDayEvent
@@ -99,6 +93,7 @@ import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.files.RecordPhotoCodec
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.calendar.CalendarViewModel
 import com.coparently.app.presentation.common.AnswerByField
 import com.coparently.app.presentation.common.AnswerByPickSaver
@@ -118,6 +113,8 @@ import com.coparently.app.presentation.common.rememberRecordPhoto
 import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.components.TimePickerDialog
 import com.coparently.app.presentation.platform.AppImage
+import com.coparently.app.presentation.platform.LocalFilePicker
+import com.coparently.app.presentation.platform.LocalPlatformImages
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.ParentColors
@@ -125,38 +122,121 @@ import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.labelLargeEmphasized
 import com.coparently.app.resources.Res
+import com.coparently.app.resources.event_all_day
+import com.coparently.app.resources.event_delete
+import com.coparently.app.resources.event_form_add_description
+import com.coparently.app.resources.event_form_assigned_to
+import com.coparently.app.resources.event_form_attach_photo
+import com.coparently.app.resources.event_form_cancel
+import com.coparently.app.resources.event_form_cd_assign_to
+import com.coparently.app.resources.event_form_cd_delete_event
+import com.coparently.app.resources.event_form_cd_description_icon
+import com.coparently.app.resources.event_form_cd_error
+import com.coparently.app.resources.event_form_cd_event_type
+import com.coparently.app.resources.event_form_cd_label_icon
+import com.coparently.app.resources.event_form_cd_not_selected
+import com.coparently.app.resources.event_form_cd_remove_photo
+import com.coparently.app.resources.event_form_cd_request_change
+import com.coparently.app.resources.event_form_cd_select_date
+import com.coparently.app.resources.event_form_cd_select_end_date
+import com.coparently.app.resources.event_form_cd_select_end_time
+import com.coparently.app.resources.event_form_cd_select_start_time
+import com.coparently.app.resources.event_form_cd_selected
+import com.coparently.app.resources.event_form_cd_selected_icon
+import com.coparently.app.resources.event_form_cd_title_icon
+import com.coparently.app.resources.event_form_change_photo
+import com.coparently.app.resources.event_form_clear
+import com.coparently.app.resources.event_form_delete_dialog_message
+import com.coparently.app.resources.event_form_delete_dialog_title
+import com.coparently.app.resources.event_form_delete_failed
+import com.coparently.app.resources.event_form_description_coparent_hint
+import com.coparently.app.resources.event_form_description_too_long
+import com.coparently.app.resources.event_form_draft_restored
+import com.coparently.app.resources.event_form_end_before_start
+import com.coparently.app.resources.event_form_ends
+import com.coparently.app.resources.event_form_event_deleted
+import com.coparently.app.resources.event_form_event_type
+import com.coparently.app.resources.event_form_field_description_label
+import com.coparently.app.resources.event_form_field_description_placeholder
+import com.coparently.app.resources.event_form_field_title_label
+import com.coparently.app.resources.event_form_field_title_placeholder
 import com.coparently.app.resources.event_form_for_members
+import com.coparently.app.resources.event_form_important_description
+import com.coparently.app.resources.event_form_important_description_named
+import com.coparently.app.resources.event_form_important_helper
+import com.coparently.app.resources.event_form_important_title
+import com.coparently.app.resources.event_form_not_found
+import com.coparently.app.resources.event_form_ok
+import com.coparently.app.resources.event_form_owner_unknown
+import com.coparently.app.resources.event_form_photo
+import com.coparently.app.resources.event_form_photo_upload_failed
+import com.coparently.app.resources.event_form_pickup
+import com.coparently.app.resources.event_form_pickup_confirm
+import com.coparently.app.resources.event_form_pickup_confirmed_by
+import com.coparently.app.resources.event_form_pickup_not_confirmed
+import com.coparently.app.resources.event_form_pickup_undo
+import com.coparently.app.resources.event_form_private_description
+import com.coparently.app.resources.event_form_private_title
+import com.coparently.app.resources.event_form_reminder
+import com.coparently.app.resources.event_form_repeat
+import com.coparently.app.resources.event_form_repeat_forever
+import com.coparently.app.resources.event_form_repeat_until
+import com.coparently.app.resources.event_form_save
+import com.coparently.app.resources.event_form_save_failed
+import com.coparently.app.resources.event_form_starts
+import com.coparently.app.resources.event_form_title_edit
+import com.coparently.app.resources.event_form_title_empty
+import com.coparently.app.resources.event_form_title_new
+import com.coparently.app.resources.event_form_title_too_long
+import com.coparently.app.resources.event_reminder_10_min
+import com.coparently.app.resources.event_reminder_1_day
+import com.coparently.app.resources.event_reminder_1_hour
+import com.coparently.app.resources.event_reminder_2_hours
+import com.coparently.app.resources.event_reminder_30_min
+import com.coparently.app.resources.event_reminder_none
+import com.coparently.app.resources.event_repeat_biweekly
+import com.coparently.app.resources.event_repeat_daily
+import com.coparently.app.resources.event_repeat_monthly
+import com.coparently.app.resources.event_repeat_none
+import com.coparently.app.resources.event_repeat_weekly
+import com.coparently.app.resources.friend_event_participates
+import com.coparently.app.resources.image_viewer_open
+import com.coparently.app.resources.parent_label_slot_first
+import com.coparently.app.resources.parent_label_slot_second
+import com.coparently.app.utils.ReaderDateText
 import com.coparently.app.utils.ValidationResult
 import com.coparently.app.utils.ValidationUtils
-import com.coparently.app.utils.localizedDate
-import com.coparently.app.utils.shortTime
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toJavaLocalTime
-import kotlinx.datetime.toKotlinLocalDate
-import kotlinx.datetime.toKotlinLocalDateTime
+import kotlinx.datetime.daysUntil
+import kotlinx.datetime.plus
+import kotlinx.datetime.todayIn
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
-import java.time.temporal.ChronoUnit
-import java.util.UUID
+import kotlin.time.Clock
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Reminder lead-time options offered in the event form, in minutes before the
- * event start (null = no reminder), paired with the label resource id.
+ * event start (null = no reminder), paired with the label resource.
  * Stored as [Event.reminderMinutes].
  */
-private val REMINDER_OPTIONS: List<Pair<Int?, Int>> = listOf(
-    null to R.string.event_reminder_none,
-    10 to R.string.event_reminder_10_min,
-    30 to R.string.event_reminder_30_min,
-    60 to R.string.event_reminder_1_hour,
-    120 to R.string.event_reminder_2_hours,
-    1440 to R.string.event_reminder_1_day
+private val REMINDER_OPTIONS: List<Pair<Int?, StringResource>> = listOf(
+    null to Res.string.event_reminder_none,
+    10 to Res.string.event_reminder_10_min,
+    30 to Res.string.event_reminder_30_min,
+    60 to Res.string.event_reminder_1_hour,
+    120 to Res.string.event_reminder_2_hours,
+    1440 to Res.string.event_reminder_1_day
 )
 
 /**
@@ -295,13 +375,13 @@ fun AddEditEventScreen(
     // Event photo: URL of an already-attached image, and a freshly picked local image
     // (not yet uploaded). Picking a new one supersedes the existing image on save.
     var existingImageUrl by rememberSaveable { mutableStateOf<String?>(null) }
-    var pickedImageUri by rememberSaveable { mutableStateOf<Uri?>(null) }
+    var pickedImageUri by rememberSaveable { mutableStateOf<String?>(null) }
     // Custom event types are read from encrypted prefs; load them off the main thread
     // so opening the screen isn't blocked by the (synchronous) decrypt on first composition.
     var customEventTypes by remember { mutableStateOf<List<String>>(emptyList()) }
-    var startDate by rememberSaveable { mutableStateOf(initialDate ?: LocalDate.now()) }
+    var startDate by rememberSaveable { mutableStateOf(initialDate ?: systemToday()) }
     var startTime by rememberSaveable(initialHour, initialDate) {
-        mutableStateOf(initialHour?.let { LocalTime.of(it, 0) } ?: defaultStartTime(LocalTime.now()))
+        mutableStateOf(initialHour?.let { LocalTime(it, 0) } ?: defaultStartTime(wallClockNow().time))
     }
     var endTime by rememberSaveable(initialHour) { mutableStateOf(defaultEndTime(startTime)) }
 
@@ -329,10 +409,10 @@ fun AddEditEventScreen(
     val scrollState = rememberScrollState()
     val focusManager = LocalFocusManager.current
     val dims = dimensions()
-    val context = LocalContext.current
-    val photoPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia()
-    ) { uri -> if (uri != null) pickedImageUri = uri }
+    // The system's photo picker (`PickVisualMedia`, images only, on Android); where there is none
+    // (the iPhone until phase 3) the photo section offers no attach button.
+    val filePicker = LocalFilePicker.current
+    val photoPicker = filePicker.rememberImagePicker { uri -> pickedImageUri = uri }
     val snackbarHostState = remember { SnackbarHostState() }
     val appMessages = LocalAppMessages.current
     var isSaving by remember { mutableStateOf(false) }
@@ -344,19 +424,24 @@ fun AddEditEventScreen(
 
     // Strings used inside non-composable lambdas/effects must be resolved here,
     // in composable scope (stringResource cannot be called in those lambdas).
-    val endBeforeStartMessage = stringResource(R.string.event_form_end_before_start)
-    val draftRestoredMessage = stringResource(R.string.event_form_draft_restored)
-    val draftClearLabel = stringResource(R.string.event_form_clear)
+    val endBeforeStartMessage = stringResource(Res.string.event_form_end_before_start)
+    val draftRestoredMessage = stringResource(Res.string.event_form_draft_restored)
+    val draftClearLabel = stringResource(Res.string.event_form_clear)
     // The validator's own messages are English; it decides, these say it (CQ-14).
-    val titleEmptyMessage = stringResource(R.string.event_form_title_empty)
+    val titleEmptyMessage = stringResource(Res.string.event_form_title_empty)
     val titleTooLongMessage = stringResource(
-        R.string.event_form_title_too_long,
+        Res.string.event_form_title_too_long,
         ValidationUtils.MAX_TITLE_LENGTH
     )
     val descriptionTooLongMessage = stringResource(
-        R.string.event_form_description_too_long,
+        Res.string.event_form_description_too_long,
         ValidationUtils.MAX_DESCRIPTION_LENGTH
     )
+    val photoUploadFailedMessage = stringResource(Res.string.event_form_photo_upload_failed)
+    val saveFailedMessage = stringResource(Res.string.event_form_save_failed)
+    val eventDeletedMessage = stringResource(Res.string.event_form_event_deleted)
+    val notFoundMessage = stringResource(Res.string.event_form_not_found)
+    val deleteFailedMessage = stringResource(Res.string.event_form_delete_failed)
 
     // Validation states
     var titleError by remember { mutableStateOf<String?>(null) }
@@ -387,7 +472,7 @@ fun AddEditEventScreen(
         val startDateTime = formStartDateTime(startDate, startTime, allDay)
         val endDateTime = formEndDateTime(startDate, endTime, endDaySpan, keepNoEnd, allDay)
 
-        if (endDateTime != null && !endDateTime.isAfter(startDateTime)) {
+        if (endDateTime != null && endDateTime <= startDateTime) {
             showTimeValidationError = true
             timeValidationMessage = endBeforeStartMessage
         } else {
@@ -430,7 +515,7 @@ fun AddEditEventScreen(
     // owner it was saved with; moving it would re-colour, and re-ask about, an agreed event.
     LaunchedEffect(startDate, currentUser?.slot) {
         if (eventId == null) {
-            autoEventOwner(ownerViewModel.custodyParentOn(startDate.toKotlinLocalDate()), currentUser?.slot)?.let {
+            autoEventOwner(ownerViewModel.custodyParentOn(startDate), currentUser?.slot)?.let {
                 parentOwner = it
             }
         }
@@ -453,16 +538,14 @@ fun AddEditEventScreen(
                     description = it.description ?: ""
                     parentOwner = it.parentOwner
                     eventType = it.eventType
-                    // The form's fields are java.time, which its saved state holds; the event's are
-                    // kotlinx-datetime (MON-24) and are converted here and on save.
-                    startDate = it.startDateTime.date.toJavaLocalDate()
-                    startTime = it.startDateTime.time.toJavaLocalTime()
-                    endTime = it.endDateTime?.time?.toJavaLocalTime() ?: startTime.plusHours(1)
+                    startDate = it.startDateTime.date
+                    startTime = it.startDateTime.time
+                    endTime = it.endDateTime?.time ?: startTime.plusHour()
                     endDaySpan = endDaySpanOf(it)
                     keepNoEnd = it.endDateTime == null
                     allDay = AllDayEvent.isAllDay(it)
                     recurrencePattern = if (it.isRecurring) it.recurrencePattern else null
-                    recurrenceEndDate = it.recurrenceEndDate?.toJavaLocalDate()
+                    recurrenceEndDate = it.recurrenceEndDate
                     reminderMinutes = it.reminderMinutes
                     isPrivate = it.isPrivate
                     isImportant = it.isImportant
@@ -483,6 +566,8 @@ fun AddEditEventScreen(
                     description = it.description
                     parentOwner = it.parentOwner
                     eventType = it.eventType
+                    // The ISO text `java.time` wrote and read ("2026-05-13", "09:00"), which
+                    // kotlinx-datetime's ISO formats write and read alike.
                     startDate = LocalDate.parse(it.startDate)
                     startTime = LocalTime.parse(it.startTime)
                     endTime = LocalTime.parse(it.endTime)
@@ -511,8 +596,8 @@ fun AddEditEventScreen(
                 description = ""
                 parentOwner = currentUser?.slot
                 eventType = "general"
-                startDate = initialDate ?: LocalDate.now()
-                startTime = defaultStartTime(LocalTime.now())
+                startDate = initialDate ?: systemToday()
+                startTime = defaultStartTime(wallClockNow().time)
                 endTime = defaultEndTime(startTime)
                 endDaySpan = 0
                 keepNoEnd = false
@@ -575,7 +660,7 @@ fun AddEditEventScreen(
         friendParticipates = friendParticipates,
         forMembers = forMembers,
         imageUrl = existingImageUrl,
-        newImage = pickedImageUri?.toString()
+        newImage = pickedImageUri
     )
     val editsUnsaved = existingEvent?.let { EventFields.of(it) != formFields } ?: false
     // A new event on the co-parent's days waits for their answer (phase 3a): the parent is asked when
@@ -607,7 +692,7 @@ fun AddEditEventScreen(
                 val base = existingEvent
                 // Resolve the id up front so a newly picked image can be uploaded under
                 // the same event id before the event is persisted.
-                val resolvedId = base?.id ?: eventId ?: UUID.randomUUID().toString()
+                val resolvedId = base?.id ?: eventId ?: newEventId()
 
                 // Resolve the final image reference: a freshly picked image is uploaded (best
                 // effort — a failure keeps the previous image and still saves the event);
@@ -617,13 +702,14 @@ fun AddEditEventScreen(
                 val originalImageUrl = base?.imageUrl
                 val keptImage = existingImageUrl?.takeIf { RecordPhotoCodec.isReference(it) }
                 var imageUploadFailed = false
-                val finalImageUrl = if (pickedImageUri != null) {
+                val picked = pickedImageUri
+                val finalImageUrl = if (picked != null) {
                     try {
-                        viewModel.uploadEventImage(resolvedId, base?.familyId, pickedImageUri.toString())
+                        viewModel.uploadEventImage(resolvedId, base?.familyId, picked)
                     } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
                         // Log the cause: this failure used to be swallowed silently, which left
                         // "Photo upload failed" as the only evidence anywhere in the system.
-                        android.util.Log.e("CoPlanlyUpload", "Event image upload failed", e)
+                        logger.e("CoPlanlyUpload", "Event image upload failed", e)
                         imageUploadFailed = true
                         keptImage
                     }
@@ -638,30 +724,29 @@ fun AddEditEventScreen(
                     base ?: Event(
                         id = resolvedId,
                         title = "",
-                        startDateTime = LocalDateTime.now().toKotlinLocalDateTime(),
+                        startDateTime = wallClockNow(),
                         eventType = "general",
                         parentOwner = ownerSlot,
-                        createdAt = LocalDateTime.now().toKotlinLocalDateTime(),
-                        updatedAt = LocalDateTime.now().toKotlinLocalDateTime()
+                        createdAt = wallClockNow(),
+                        updatedAt = wallClockNow()
                     )
                     ).copy(
                     title = title,
                     description = description.ifEmpty { null },
-                    startDateTime = formStartDateTime(startDate, startTime, allDay).toKotlinLocalDateTime(),
-                    endDateTime = formEndDateTime(startDate, endTime, endDaySpan, keepNoEnd, allDay)
-                        ?.toKotlinLocalDateTime(),
+                    startDateTime = formStartDateTime(startDate, startTime, allDay),
+                    endDateTime = formEndDateTime(startDate, endTime, endDaySpan, keepNoEnd, allDay),
                     eventType = eventType,
                     parentOwner = ownerSlot,
                     isRecurring = recurrencePattern != null,
                     recurrencePattern = recurrencePattern,
-                    recurrenceEndDate = recurrenceEndDate?.toKotlinLocalDate(),
+                    recurrenceEndDate = recurrenceEndDate,
                     reminderMinutes = reminderMinutes,
                     isPrivate = isPrivate,
                     isImportant = isImportant,
                     friendParticipates = friendParticipates,
                     forMembers = forMembers,
                     imageUrl = finalImageUrl,
-                    updatedAt = LocalDateTime.now().toKotlinLocalDateTime()
+                    updatedAt = wallClockNow()
                 )
 
                 if (eventId == null) {
@@ -685,7 +770,7 @@ fun AddEditEventScreen(
                 // app's message host, which survives navigation (D-25; it was a Toast). This
                 // matches AddExpenseScreen's receipt-upload warning.
                 if (imageUploadFailed) {
-                    appMessages?.show(context.getString(R.string.event_form_photo_upload_failed))
+                    appMessages?.show(photoUploadFailedMessage)
                 }
                 onSave()
             } catch (e: Exception) {
@@ -694,7 +779,7 @@ fun AddEditEventScreen(
                 isSaving = false
                 snackbarHostState.showSnackbar(
                     // Not `e.message`: that is the exception's English text (CQ-14).
-                    message = context.getString(R.string.event_form_save_failed),
+                    message = saveFailedMessage,
                     duration = SnackbarDuration.Long
                 )
             }
@@ -709,9 +794,9 @@ fun AddEditEventScreen(
                 title = {
                     Text(
                         if (eventId == null) {
-                            stringResource(R.string.event_form_title_new)
+                            stringResource(Res.string.event_form_title_new)
                         } else {
-                            stringResource(R.string.event_form_title_edit)
+                            stringResource(Res.string.event_form_title_edit)
                         },
                         style = MaterialTheme.typography.headlineSmall
                     )
@@ -723,7 +808,7 @@ fun AddEditEventScreen(
                     }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.event_form_cancel)
+                            contentDescription = stringResource(Res.string.event_form_cancel)
                         )
                     }
                 },
@@ -739,7 +824,7 @@ fun AddEditEventScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.SwapHoriz,
-                                contentDescription = stringResource(R.string.event_form_cd_request_change)
+                                contentDescription = stringResource(Res.string.event_form_cd_request_change)
                             )
                         }
                     }
@@ -762,7 +847,7 @@ fun AddEditEventScreen(
                             } else {
                                 Icon(
                                     imageVector = Icons.Default.Delete,
-                                    contentDescription = stringResource(R.string.event_form_cd_delete_event),
+                                    contentDescription = stringResource(Res.string.event_form_cd_delete_event),
                                     tint = MaterialTheme.colorScheme.error
                                 )
                             }
@@ -781,7 +866,7 @@ fun AddEditEventScreen(
             // Sticky Save: the primary action stays reachable without scrolling
             // back to the top-bar check icon on this long form
             StickyActionBar(
-                label = stringResource(R.string.event_form_save),
+                label = stringResource(Res.string.event_form_save),
                 onClick = performSave,
                 enabled = isFormValid && !isDeleting,
                 busy = isSaving,
@@ -793,7 +878,7 @@ fun AddEditEventScreen(
                 notice = if (parentOwner == null) {
                     {
                         Text(
-                            text = stringResource(R.string.event_form_owner_unknown),
+                            text = stringResource(Res.string.event_form_owner_unknown),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error
                         )
@@ -823,12 +908,12 @@ fun AddEditEventScreen(
                         titleError = null
                     }
                 },
-                label = { Text(stringResource(R.string.event_form_field_title_label)) },
-                placeholder = { Text(stringResource(R.string.event_form_field_title_placeholder)) },
+                label = { Text(stringResource(Res.string.event_form_field_title_label)) },
+                placeholder = { Text(stringResource(Res.string.event_form_field_title_placeholder)) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Title,
-                        contentDescription = stringResource(R.string.event_form_cd_title_icon)
+                        contentDescription = stringResource(Res.string.event_form_cd_title_icon)
                     )
                 },
                 isError = titleError != null,
@@ -861,12 +946,12 @@ fun AddEditEventScreen(
                         description = it
                         validateDescription()
                     },
-                    label = { Text(stringResource(R.string.event_form_field_description_label)) },
-                    placeholder = { Text(stringResource(R.string.event_form_field_description_placeholder)) },
+                    label = { Text(stringResource(Res.string.event_form_field_description_label)) },
+                    placeholder = { Text(stringResource(Res.string.event_form_field_description_placeholder)) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Description,
-                            contentDescription = stringResource(R.string.event_form_cd_description_icon)
+                            contentDescription = stringResource(Res.string.event_form_cd_description_icon)
                         )
                     },
                     isError = descriptionError != null,
@@ -892,7 +977,7 @@ fun AddEditEventScreen(
                             {
                                 Text(
                                     stringResource(
-                                        R.string.event_form_description_coparent_hint,
+                                        Res.string.event_form_description_coparent_hint,
                                         parentNames.labelFor(parentOwner)
                                     )
                                 )
@@ -922,7 +1007,7 @@ fun AddEditEventScreen(
                         modifier = Modifier.size(IconSizes.Small)
                     )
                     Spacer(modifier = Modifier.width(Spacing.S))
-                    Text(stringResource(R.string.event_form_add_description))
+                    Text(stringResource(Res.string.event_form_add_description))
                 }
             }
 
@@ -931,7 +1016,7 @@ fun AddEditEventScreen(
             // start date (autoEventOwner). See showParentOwnerSelector's KDoc.
             if (showParentOwnerSelector(parentsLoaded, parentOwner, currentUser?.slot)) {
                 Text(
-                    text = stringResource(R.string.event_form_assigned_to),
+                    text = stringResource(Res.string.event_form_assigned_to),
                     style = MaterialTheme.typography.titleMedium
                 )
 
@@ -944,8 +1029,10 @@ fun AddEditEventScreen(
                     // account's slot may be either one) tells the two cards apart. parentLabel
                     // itself is untouched: it still answers "who is this" and "we do not know"
                     // is the right answer to that question.
-                    val slotFirst = stringResource(R.string.parent_label_slot_first)
-                    val slotSecond = stringResource(R.string.parent_label_slot_second)
+                    val slotFirst = stringResource(Res.string.parent_label_slot_first)
+                    val slotSecond = stringResource(Res.string.parent_label_slot_second)
+                    val selectedWord = stringResource(Res.string.event_form_cd_selected)
+                    val notSelectedWord = stringResource(Res.string.event_form_cd_not_selected)
                     listOf(
                         "mom" to slotFirst,
                         "dad" to slotSecond
@@ -956,6 +1043,11 @@ fun AddEditEventScreen(
                             ordinalLabel
                         }
                         val isSelected = parentOwner == value
+                        val cardDescription = stringResource(
+                            Res.string.event_form_cd_assign_to,
+                            label,
+                            if (isSelected) selectedWord else notSelectedWord
+                        )
                         // A short tween, like every other selection in the app: this was the
                         // one bouncy spring, an overshoot no other control makes (D-25).
                         val scale by animateFloatAsState(
@@ -971,17 +1063,7 @@ fun AddEditEventScreen(
                                 .semantics {
                                     role = Role.RadioButton
                                     selected = isSelected
-                                    contentDescription = context.getString(
-                                        R.string.event_form_cd_assign_to,
-                                        label,
-                                        context.getString(
-                                            if (isSelected) {
-                                                R.string.event_form_cd_selected
-                                            } else {
-                                                R.string.event_form_cd_not_selected
-                                            }
-                                        )
-                                    )
+                                    contentDescription = cardDescription
                                 }
                                 .graphicsLayer {
                                     scaleX = scale
@@ -1036,7 +1118,7 @@ fun AddEditEventScreen(
                                 // carry the identity.
                                 Icon(
                                     imageVector = Icons.Default.Person,
-                                    contentDescription = stringResource(R.string.event_form_cd_label_icon, label),
+                                    contentDescription = stringResource(Res.string.event_form_cd_label_icon, label),
                                     tint = when (value) {
                                         "mom" -> ParentColors.fill("mom")
                                         "dad" -> ParentColors.fill("dad")
@@ -1061,7 +1143,7 @@ fun AddEditEventScreen(
 
             // Event Type Selection
             Text(
-                text = stringResource(R.string.event_form_event_type),
+                text = stringResource(Res.string.event_form_event_type),
                 style = MaterialTheme.typography.titleMedium
             )
 
@@ -1072,8 +1154,15 @@ fun AddEditEventScreen(
             ) {
                 val allTypes = (CalendarViewModel.DEFAULT_EVENT_TYPES + customEventTypes)
                     .map { it to eventTypeLabel(it) }
+                val selectedWord = stringResource(Res.string.event_form_cd_selected)
+                val notSelectedWord = stringResource(Res.string.event_form_cd_not_selected)
 
                 allTypes.forEach { (value, label) ->
+                    val chipDescription = stringResource(
+                        Res.string.event_form_cd_event_type,
+                        label,
+                        if (eventType == value) selectedWord else notSelectedWord
+                    )
                     FilterChip(
                         selected = eventType == value,
                         onClick = {
@@ -1085,23 +1174,13 @@ fun AddEditEventScreen(
                             if (eventType == value) {
                                 Icon(
                                     imageVector = Icons.Default.Check,
-                                    contentDescription = stringResource(R.string.event_form_cd_selected_icon),
+                                    contentDescription = stringResource(Res.string.event_form_cd_selected_icon),
                                     modifier = Modifier.size(IconSizes.Small)
                                 )
                             }
                         },
                         modifier = Modifier.semantics {
-                            contentDescription = context.getString(
-                                R.string.event_form_cd_event_type,
-                                label,
-                                context.getString(
-                                    if (eventType == value) {
-                                        R.string.event_form_cd_selected
-                                    } else {
-                                        R.string.event_form_cd_not_selected
-                                    }
-                                )
-                            )
+                            contentDescription = chipDescription
                         }
                     )
                 }
@@ -1110,10 +1189,8 @@ fun AddEditEventScreen(
             // Date & Time Section: one group — all day, when it starts, when it ends — where four
             // cards used to take a screen of their own (UX audit H5). Each date and time is its
             // own tap target; the end date follows the start date (`endDaySpan`).
-            val allDayLabel = stringResource(R.string.event_all_day)
-            val endDate = startDate.plusDays(endDaySpan.toLong())
-            val dateLine = localizedDate("MMMEd")
-            val fullDate = localizedDate("yMMMMEEEEd")
+            val allDayLabel = stringResource(Res.string.event_all_day)
+            val endDate = startDate.plus(endDaySpan, DateTimeUnit.DAY)
             SectionGroup {
                 SectionRow(
                     title = allDayLabel,
@@ -1132,13 +1209,16 @@ fun AddEditEventScreen(
                 )
                 Divider()
                 EventDateTimeRow(
-                    label = stringResource(R.string.event_form_starts),
-                    date = startDate.format(dateLine),
-                    time = startTime.format(shortTime()).takeUnless { allDay },
-                    dateDescription = stringResource(R.string.event_form_cd_select_date, startDate.format(fullDate)),
+                    label = stringResource(Res.string.event_form_starts),
+                    date = ReaderDateText.date(startDate, DATE_LINE),
+                    time = ReaderDateText.time(startTime).takeUnless { allDay },
+                    dateDescription = stringResource(
+                        Res.string.event_form_cd_select_date,
+                        ReaderDateText.date(startDate, FULL_DATE)
+                    ),
                     timeDescription = stringResource(
-                        R.string.event_form_cd_select_start_time,
-                        startTime.format(shortTime())
+                        Res.string.event_form_cd_select_start_time,
+                        ReaderDateText.time(startTime)
                     ),
                     onDate = { showDatePicker = true },
                     onTime = {
@@ -1148,13 +1228,16 @@ fun AddEditEventScreen(
                 )
                 Divider()
                 EventDateTimeRow(
-                    label = stringResource(R.string.event_form_ends),
-                    date = endDate.format(dateLine),
-                    time = endTime.format(shortTime()).takeUnless { allDay },
-                    dateDescription = stringResource(R.string.event_form_cd_select_end_date, endDate.format(fullDate)),
+                    label = stringResource(Res.string.event_form_ends),
+                    date = ReaderDateText.date(endDate, DATE_LINE),
+                    time = ReaderDateText.time(endTime).takeUnless { allDay },
+                    dateDescription = stringResource(
+                        Res.string.event_form_cd_select_end_date,
+                        ReaderDateText.date(endDate, FULL_DATE)
+                    ),
                     timeDescription = stringResource(
-                        R.string.event_form_cd_select_end_time,
-                        endTime.format(shortTime())
+                        Res.string.event_form_cd_select_end_time,
+                        ReaderDateText.time(endTime)
                     ),
                     onDate = { showEndDatePicker = true },
                     onTime = {
@@ -1181,7 +1264,7 @@ fun AddEditEventScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Schedule,
-                            contentDescription = stringResource(R.string.event_form_cd_error),
+                            contentDescription = stringResource(Res.string.event_form_cd_error),
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(IconSizes.Standard)
                         )
@@ -1197,11 +1280,11 @@ fun AddEditEventScreen(
             // Repeat and reminder: rows that say their value and open a short list (UX audit H5),
             // where eleven chips used to sit in the form.
             val repeatOptions = listOf(
-                null to stringResource(R.string.event_repeat_none),
-                "daily" to stringResource(R.string.event_repeat_daily),
-                "weekly" to stringResource(R.string.event_repeat_weekly),
-                "biweekly" to stringResource(R.string.event_repeat_biweekly),
-                "monthly" to stringResource(R.string.event_repeat_monthly)
+                null to stringResource(Res.string.event_repeat_none),
+                "daily" to stringResource(Res.string.event_repeat_daily),
+                "weekly" to stringResource(Res.string.event_repeat_weekly),
+                "biweekly" to stringResource(Res.string.event_repeat_biweekly),
+                "monthly" to stringResource(Res.string.event_repeat_monthly)
             )
             val reminderOptions = REMINDER_OPTIONS.map { (value, labelRes) -> value to stringResource(labelRes) }
             // Picking a reminder is the moment notifications become relevant —
@@ -1210,7 +1293,7 @@ fun AddEditEventScreen(
                 com.coparently.app.presentation.common.rememberNotificationPermissionRequester()
             SectionGroup {
                 SectionRow(
-                    title = stringResource(R.string.event_form_repeat),
+                    title = stringResource(Res.string.event_form_repeat),
                     icon = Icons.Default.Repeat,
                     onClick = { showRepeatDialog = true },
                     trailing = { OptionValue(repeatOptions.firstOrNull { it.first == recurrencePattern }?.second) }
@@ -1219,15 +1302,15 @@ fun AddEditEventScreen(
                 if (recurrencePattern != null) {
                     Divider()
                     SectionRow(
-                        title = stringResource(R.string.event_form_repeat_until),
-                        supporting = recurrenceEndDate?.format(fullDate)
-                            ?: stringResource(R.string.event_form_repeat_forever),
+                        title = stringResource(Res.string.event_form_repeat_until),
+                        supporting = recurrenceEndDate?.let { ReaderDateText.date(it, FULL_DATE) }
+                            ?: stringResource(Res.string.event_form_repeat_forever),
                         icon = Icons.Default.Event,
                         onClick = { showRecurrenceEndPicker = true },
                         trailing = recurrenceEndDate?.let {
                             {
                                 TextButton(onClick = { recurrenceEndDate = null }) {
-                                    Text(stringResource(R.string.event_form_clear))
+                                    Text(stringResource(Res.string.event_form_clear))
                                 }
                             }
                         }
@@ -1235,7 +1318,7 @@ fun AddEditEventScreen(
                 }
                 Divider()
                 SectionRow(
-                    title = stringResource(R.string.event_form_reminder),
+                    title = stringResource(Res.string.event_form_reminder),
                     icon = Icons.Default.Notifications,
                     onClick = { showReminderDialog = true },
                     trailing = { OptionValue(reminderOptions.firstOrNull { it.first == reminderMinutes }?.second) }
@@ -1243,7 +1326,7 @@ fun AddEditEventScreen(
             }
             if (showRepeatDialog) {
                 EventOptionDialog(
-                    title = stringResource(R.string.event_form_repeat),
+                    title = stringResource(Res.string.event_form_repeat),
                     options = repeatOptions,
                     selected = recurrencePattern,
                     onSelect = { value ->
@@ -1256,7 +1339,7 @@ fun AddEditEventScreen(
             }
             if (showReminderDialog) {
                 EventOptionDialog(
-                    title = stringResource(R.string.event_form_reminder),
+                    title = stringResource(Res.string.event_form_reminder),
                     options = reminderOptions,
                     selected = reminderMinutes,
                     onSelect = { value ->
@@ -1304,7 +1387,7 @@ fun AddEditEventScreen(
                             )
                             Column {
                                 Text(
-                                    text = stringResource(R.string.event_form_important_title),
+                                    text = stringResource(Res.string.event_form_important_title),
                                     style = MaterialTheme.typography.titleSmall
                                 )
                                 // Names the co-parent of the family on screen, whose presence the
@@ -1313,18 +1396,18 @@ fun AddEditEventScreen(
                                 Text(
                                     text = if (expected != null) {
                                         stringResource(
-                                            R.string.event_form_important_description_named,
+                                            Res.string.event_form_important_description_named,
                                             parentNames.labelForUid(expected.uid)
                                         )
                                     } else {
-                                        stringResource(R.string.event_form_important_description)
+                                        stringResource(Res.string.event_form_important_description)
                                     },
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
-                        val importantLabel = stringResource(R.string.event_form_important_title)
+                        val importantLabel = stringResource(Res.string.event_form_important_title)
                         Switch(
                             checked = isImportant,
                             // Named for TalkBack: a bare switch beside its label reads as
@@ -1340,7 +1423,7 @@ fun AddEditEventScreen(
                     // printing it while the flag is off would explain a state the event is not in.
                     if (isImportant) {
                         Text(
-                            text = stringResource(R.string.event_form_important_helper),
+                            text = stringResource(Res.string.event_form_important_helper),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1374,14 +1457,14 @@ fun AddEditEventScreen(
                     ) {
                         Text(
                             text = stringResource(
-                                R.string.friend_event_participates,
+                                Res.string.friend_event_participates,
                                 friend.name
                             ),
                             style = MaterialTheme.typography.titleSmall,
                             modifier = Modifier.weight(1f)
                         )
                         val participatesLabel = stringResource(
-                            R.string.friend_event_participates,
+                            Res.string.friend_event_participates,
                             friend.name
                         )
                         Switch(
@@ -1422,17 +1505,17 @@ fun AddEditEventScreen(
                         )
                         Column {
                             Text(
-                                text = stringResource(R.string.event_form_private_title),
+                                text = stringResource(Res.string.event_form_private_title),
                                 style = MaterialTheme.typography.titleSmall
                             )
                             Text(
-                                text = stringResource(R.string.event_form_private_description),
+                                text = stringResource(Res.string.event_form_private_description),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
-                    val privateLabel = stringResource(R.string.event_form_private_title)
+                    val privateLabel = stringResource(Res.string.event_form_private_title)
                     Switch(
                         checked = isPrivate,
                         modifier = Modifier.semantics { contentDescription = privateLabel },
@@ -1453,19 +1536,19 @@ fun AddEditEventScreen(
                 recordId = existingEvent?.id ?: eventId.orEmpty(),
                 recordFamilyId = existingEvent?.familyId
             )
-            EventPhotoSection(
-                displayImage = pickedImageUri ?: storedPhoto,
-                enabled = !isSaving && !isDeleting,
-                onPickPhoto = {
-                    photoPicker.launch(
-                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                    )
-                },
-                onRemovePhoto = {
-                    pickedImageUri = null
-                    existingImageUrl = null
-                }
-            )
+            // Left out where the platform can neither pick nor draw a photo (the iPhone until
+            // phase 3), rather than offer an attach button that does nothing (design item 8).
+            if (filePicker.available && LocalPlatformImages.current.available) {
+                EventPhotoSection(
+                    displayImage = pickedImageUri ?: storedPhoto,
+                    enabled = !isSaving && !isDeleting,
+                    onPickPhoto = { photoPicker.launch() },
+                    onRemovePhoto = {
+                        pickedImageUri = null
+                        existingImageUrl = null
+                    }
+                )
+            }
 
             // Pickup Confirmation Section (existing events only)
             if (eventId != null) {
@@ -1503,15 +1586,15 @@ fun AddEditEventScreen(
                             )
                             Column {
                                 Text(
-                                    text = stringResource(R.string.event_form_pickup),
+                                    text = stringResource(Res.string.event_form_pickup),
                                     style = MaterialTheme.typography.titleSmall
                                 )
                                 Text(
                                     text = if (confirmedBy != null) {
                                         val confirmerName = parentNames.labelFor(confirmedBy)
-                                        stringResource(R.string.event_form_pickup_confirmed_by, confirmerName)
+                                        stringResource(Res.string.event_form_pickup_confirmed_by, confirmerName)
                                     } else {
-                                        stringResource(R.string.event_form_pickup_not_confirmed)
+                                        stringResource(Res.string.event_form_pickup_not_confirmed)
                                     },
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1531,7 +1614,7 @@ fun AddEditEventScreen(
                                     viewModel.confirmPickup(eventId)
                                     existingEvent = existingEvent?.copy(
                                         pickupConfirmedBy = parentOwner,
-                                        pickupConfirmedAt = LocalDateTime.now().toKotlinLocalDateTime()
+                                        pickupConfirmedAt = wallClockNow()
                                     )
                                 }
                             }
@@ -1539,9 +1622,9 @@ fun AddEditEventScreen(
                             Text(
                                 stringResource(
                                     if (confirmedBy != null) {
-                                        R.string.event_form_pickup_undo
+                                        Res.string.event_form_pickup_undo
                                     } else {
-                                        R.string.event_form_pickup_confirm
+                                        Res.string.event_form_pickup_confirm
                                     }
                                 )
                             )
@@ -1564,9 +1647,9 @@ fun AddEditEventScreen(
     // Recurrence end date picker
     if (showRecurrenceEndPicker) {
         LocalDatePickerDialog(
-            initialDate = recurrenceEndDate ?: startDate.plusMonths(3),
-            confirmLabel = stringResource(R.string.event_form_ok),
-            dismissLabel = stringResource(R.string.event_form_cancel),
+            initialDate = recurrenceEndDate ?: startDate.plus(3, DateTimeUnit.MONTH),
+            confirmLabel = stringResource(Res.string.event_form_ok),
+            dismissLabel = stringResource(Res.string.event_form_cancel),
             onConfirm = { recurrenceEndDate = it },
             onDismiss = { showRecurrenceEndPicker = false }
         )
@@ -1576,8 +1659,8 @@ fun AddEditEventScreen(
     if (showDatePicker) {
         LocalDatePickerDialog(
             initialDate = startDate,
-            confirmLabel = stringResource(R.string.event_form_ok),
-            dismissLabel = stringResource(R.string.event_form_cancel),
+            confirmLabel = stringResource(Res.string.event_form_ok),
+            dismissLabel = stringResource(Res.string.event_form_cancel),
             onConfirm = { startDate = it },
             onDismiss = { showDatePicker = false }
         )
@@ -1586,9 +1669,9 @@ fun AddEditEventScreen(
     // End date picker: the span is what is kept, so a later start date carries the end along
     if (showEndDatePicker) {
         LocalDatePickerDialog(
-            initialDate = startDate.plusDays(endDaySpan.toLong()),
-            confirmLabel = stringResource(R.string.event_form_ok),
-            dismissLabel = stringResource(R.string.event_form_cancel),
+            initialDate = startDate.plus(endDaySpan, DateTimeUnit.DAY),
+            confirmLabel = stringResource(Res.string.event_form_ok),
+            dismissLabel = stringResource(Res.string.event_form_cancel),
             onConfirm = {
                 endDaySpan = endDaySpanFor(startDate, it)
                 keepNoEnd = false
@@ -1605,8 +1688,8 @@ fun AddEditEventScreen(
                 startTime = selectedTime
                 // Auto-adjust end time if it's before start time (on a same-day event: an
                 // overnight one ends earlier in the day than it starts)
-                if (endDaySpan == 0 && endTime.isBefore(startTime)) {
-                    endTime = startTime.plusHours(1)
+                if (endDaySpan == 0 && endTime < startTime) {
+                    endTime = startTime.plusHour()
                 }
             },
             onDismiss = { showStartTimePicker = false }
@@ -1634,10 +1717,10 @@ fun AddEditEventScreen(
                 }
             },
             title = {
-                Text(stringResource(R.string.event_form_delete_dialog_title))
+                Text(stringResource(Res.string.event_form_delete_dialog_title))
             },
             text = {
-                Text(stringResource(R.string.event_form_delete_dialog_message))
+                Text(stringResource(Res.string.event_form_delete_dialog_message))
             },
             confirmButton = {
                 TextButton(
@@ -1649,14 +1732,14 @@ fun AddEditEventScreen(
                                 event?.let {
                                     viewModel.deleteEvent(it)
                                     snackbarHostState.showSnackbar(
-                                        message = context.getString(R.string.event_form_event_deleted),
+                                        message = eventDeletedMessage,
                                         duration = SnackbarDuration.Short
                                     )
                                     kotlinx.coroutines.delay(500)
                                     onSave() // Navigate back
                                 } ?: run {
                                     snackbarHostState.showSnackbar(
-                                        message = context.getString(R.string.event_form_not_found),
+                                        message = notFoundMessage,
                                         duration = SnackbarDuration.Short
                                     )
                                     isDeleting = false
@@ -1664,7 +1747,7 @@ fun AddEditEventScreen(
                                 }
                             } catch (e: Exception) {
                                 snackbarHostState.showSnackbar(
-                                    message = context.getString(R.string.event_form_delete_failed),
+                                    message = deleteFailedMessage,
                                     duration = SnackbarDuration.Long
                                 )
                                 isDeleting = false
@@ -1674,7 +1757,7 @@ fun AddEditEventScreen(
                     },
                     enabled = !isDeleting
                 ) {
-                    Text(stringResource(R.string.event_delete), color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(Res.string.event_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
@@ -1684,7 +1767,7 @@ fun AddEditEventScreen(
                     },
                     enabled = !isDeleting
                 ) {
-                    Text(stringResource(R.string.event_form_cancel))
+                    Text(stringResource(Res.string.event_form_cancel))
                 }
             }
         )
@@ -1703,7 +1786,7 @@ private fun EventDeadline(
     onSelect: (AnswerByPick) -> Unit
 ) {
     val cap = remember(start) {
-        RequestCap.forEvent(start.toKotlinLocalDateTime(), System.currentTimeMillis(), TimeZone.currentSystemDefault())
+        RequestCap.forEvent(start, Clock.System.now().toEpochMilliseconds(), TimeZone.currentSystemDefault())
     }
     AnswerByField(
         offer = rememberAnswerByOffer(cap),
@@ -1719,21 +1802,38 @@ private fun EventDeadline(
  * last hour of the day stays in it rather than wrapping to a midnight already behind.
  */
 internal fun defaultStartTime(now: LocalTime): LocalTime =
-    if (now.hour == LAST_HOUR) LocalTime.of(LAST_HOUR, 0) else now.truncatedTo(ChronoUnit.HOURS).plusHours(1)
+    if (now.hour == LAST_HOUR) LocalTime(LAST_HOUR, 0) else LocalTime(now.hour + 1, 0)
 
 /** An hour after [start], or the day's last minute when that hour would wrap past midnight. */
 internal fun defaultEndTime(start: LocalTime): LocalTime =
-    if (start.hour == LAST_HOUR) AllDayEvent.LAST_MINUTE.toJavaLocalTime() else start.plusHours(1)
+    if (start.hour == LAST_HOUR) AllDayEvent.LAST_MINUTE else start.plusHour()
 
 /** The day's last hour, 11 PM. */
 private const val LAST_HOUR = 23
+
+/** Hours in a day, the clock face [plusHour] wraps on. */
+private const val HOURS_PER_DAY = 24
+
+/** The form's date line ("Wed, 13 May") and the date a screen reader hears in full. */
+private const val DATE_LINE = "MMMEd"
+private const val FULL_DATE = "yMMMMEEEEd"
+
+/** An hour later on the clock face, past midnight to the next day's hour, as `java.time`'s `plusHours(1)`. */
+internal fun LocalTime.plusHour(): LocalTime = LocalTime((hour + 1) % HOURS_PER_DAY, minute, second, nanosecond)
+
+/** Today in the phone's zone, what `LocalDate.now()` read. */
+private fun systemToday(): LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefault())
+
+/** A new event's id, a random UUID in its usual text, what `UUID.randomUUID().toString()` wrote. */
+@OptIn(ExperimentalUuidApi::class)
+private fun newEventId(): String = Uuid.random().toString()
 
 /**
  * The start the event form saves and validates: [startTime] on [startDate], or the start of
  * [startDate] for an all-day event — the shape [AllDayEvent] reads as all day.
  */
 internal fun formStartDateTime(startDate: LocalDate, startTime: LocalTime, allDay: Boolean): LocalDateTime =
-    if (allDay) startDate.atStartOfDay() else LocalDateTime.of(startDate, startTime)
+    if (allDay) LocalDateTime(startDate, LocalTime(0, 0)) else LocalDateTime(startDate, startTime)
 
 /**
  * The end the event form saves and validates: [endTime] on the end date, [endDaySpan] days after
@@ -1749,11 +1849,11 @@ internal fun formEndDateTime(
     keepNoEnd: Boolean,
     allDay: Boolean = false
 ): LocalDateTime? {
-    val endDate = startDate.plusDays(endDaySpan.toLong())
+    val endDate = startDate.plus(endDaySpan, DateTimeUnit.DAY)
     return when {
         keepNoEnd -> null
-        allDay -> endDate.atTime(AllDayEvent.LAST_MINUTE.toJavaLocalTime())
-        else -> LocalDateTime.of(endDate, endTime)
+        allDay -> LocalDateTime(endDate, AllDayEvent.LAST_MINUTE)
+        else -> LocalDateTime(endDate, endTime)
     }
 }
 
@@ -1764,11 +1864,11 @@ internal fun formEndDateTime(
  */
 internal fun endDaySpanOf(event: Event): Int {
     val lastDay = if (AllDayEvent.isAllDay(event)) {
-        AllDayEvent.lastDay(event).toJavaLocalDate()
+        AllDayEvent.lastDay(event)
     } else {
-        event.endDateTime?.date?.toJavaLocalDate() ?: return 0
+        event.endDateTime?.date ?: return 0
     }
-    return endDaySpanFor(event.startDateTime.date.toJavaLocalDate(), lastDay).coerceAtLeast(0)
+    return endDaySpanFor(event.startDateTime.date, lastDay).coerceAtLeast(0)
 }
 
 /**
@@ -1776,8 +1876,7 @@ internal fun endDaySpanOf(event: Event): Int {
  * between them. A day before the start gives a negative span on purpose: the end then lies before
  * the start, and the form says so and keeps Save off rather than quietly moving either date.
  */
-internal fun endDaySpanFor(startDate: LocalDate, endDate: LocalDate): Int =
-    ChronoUnit.DAYS.between(startDate, endDate).coerceIn(Int.MIN_VALUE.toLong(), Int.MAX_VALUE.toLong()).toInt()
+internal fun endDaySpanFor(startDate: LocalDate, endDate: LocalDate): Int = startDate.daysUntil(endDate)
 
 /**
  * The values the event form edits, compared to tell whether leaving would drop an edit (D-11).
@@ -1806,19 +1905,19 @@ private data class EventFields(
     /** The form's values for [event], as the edit mode prefills them. */
     companion object {
         fun of(event: Event): EventFields {
-            val start = event.startDateTime.time.toJavaLocalTime()
+            val start = event.startDateTime.time
             return EventFields(
                 title = event.title,
                 description = event.description ?: "",
                 parentOwner = event.parentOwner,
                 eventType = event.eventType,
-                startDate = event.startDateTime.date.toJavaLocalDate(),
+                startDate = event.startDateTime.date,
                 startTime = start,
-                endTime = event.endDateTime?.time?.toJavaLocalTime() ?: start.plusHours(1),
+                endTime = event.endDateTime?.time ?: start.plusHour(),
                 endDaySpan = endDaySpanOf(event),
                 allDay = AllDayEvent.isAllDay(event),
                 recurrencePattern = if (event.isRecurring) event.recurrencePattern else null,
-                recurrenceEndDate = event.recurrenceEndDate?.toJavaLocalDate(),
+                recurrenceEndDate = event.recurrenceEndDate,
                 reminderMinutes = event.reminderMinutes,
                 isPrivate = event.isPrivate,
                 isImportant = event.isImportant,
@@ -1832,7 +1931,7 @@ private data class EventFields(
 }
 
 /**
- * Event photo picker/preview. [displayImage] may be a [Uri] (freshly picked) or a
+ * Event photo picker/preview. [displayImage] may be a content URI's text (freshly picked) or a
  * `ViewablePhoto` (already attached, fetched as the signed-in parent) — Coil renders both.
  * Shows an attach button when empty, or a preview with change/remove controls when a photo is
  * present.
@@ -1858,7 +1957,7 @@ private fun EventPhotoSection(
             verticalArrangement = Arrangement.spacedBy(dims.paddingSmall)
         ) {
             Text(
-                text = stringResource(R.string.event_form_photo),
+                text = stringResource(Res.string.event_form_photo),
                 style = MaterialTheme.typography.titleSmall
             )
             if (displayImage == null) {
@@ -1869,21 +1968,21 @@ private fun EventPhotoSection(
                 ) {
                     Icon(Icons.Default.AddAPhoto, contentDescription = null)
                     Spacer(modifier = Modifier.size(dims.paddingSmall))
-                    Text(stringResource(R.string.event_form_attach_photo))
+                    Text(stringResource(Res.string.event_form_attach_photo))
                 }
             } else {
                 var viewingPhoto by rememberSaveable { mutableStateOf(false) }
                 if (viewingPhoto) {
                     FullScreenImageDialog(
                         model = displayImage,
-                        contentDescription = stringResource(R.string.event_form_photo),
+                        contentDescription = stringResource(Res.string.event_form_photo),
                         onDismiss = { viewingPhoto = false }
                     )
                 }
                 Box(modifier = Modifier.fillMaxWidth()) {
                     AppImage(
                         model = displayImage,
-                        contentDescription = stringResource(R.string.image_viewer_open),
+                        contentDescription = stringResource(Res.string.image_viewer_open),
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1900,7 +1999,7 @@ private fun EventPhotoSection(
                     ) {
                         Icon(
                             Icons.Default.Close,
-                            contentDescription = stringResource(R.string.event_form_cd_remove_photo)
+                            contentDescription = stringResource(Res.string.event_form_cd_remove_photo)
                         )
                     }
                 }
@@ -1908,7 +2007,7 @@ private fun EventPhotoSection(
                     onClick = onPickPhoto,
                     enabled = enabled
                 ) {
-                    Text(stringResource(R.string.event_form_change_photo))
+                    Text(stringResource(Res.string.event_form_change_photo))
                 }
             }
         }

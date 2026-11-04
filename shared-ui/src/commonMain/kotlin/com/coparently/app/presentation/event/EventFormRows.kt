@@ -17,13 +17,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import com.coparently.app.R
 import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.event_form_cancel
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * One line of the event form's date and time group: "Starts", then the date and, for an event
@@ -124,7 +125,7 @@ internal fun <T> EventOptionDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.event_form_cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.event_form_cancel)) }
         }
     )
 }

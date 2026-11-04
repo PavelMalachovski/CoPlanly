@@ -1177,6 +1177,14 @@ Then the export and the school import:
   (`MonthPagingTween.kt`; the direction and transition stay with Expenses for 11e). `TodayTest` →
   `:shared-ui` `commonTest`; `PickerDatesTest` reads `fromPickerMillisJava`; `HolidayNamesTest` and
   `EventTypeLabelTest` read the `StringResource`s' keys.
+- Group 2, the event form: `event/AddEditEventScreen.kt` and `EventFormRows.kt` (`git mv`), its fields,
+  helpers and saved state on kotlinx-datetime (`formStartDateTime`, `formEndDateTime`, `endDaySpanOf`,
+  `endDaySpanFor`, `defaultStartTime`, `defaultEndTime`, and `plusHour()` for `plusHours(1)`), its text
+  through `ReaderDateText`, the photo through `FilePicker` (hidden, with its preview, unless both
+  `FilePicker` and `PlatformImages` are available), `Uuid`, `wallClockNow()`, `logger`; the strings its
+  lambdas used are read in composition. `utils/ValidationUtils` moved with it (its unused email and URL
+  checks, on Android's `Patterns`, left out). `NavGraph` parses the date with kotlinx-datetime. Its two
+  JVM tests run in `commonTest`, their names without commas.
 
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 
