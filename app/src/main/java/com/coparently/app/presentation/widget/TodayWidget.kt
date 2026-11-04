@@ -31,6 +31,7 @@ import com.coparently.app.presentation.MainActivity
 import com.coparently.app.presentation.common.STACK_CONTROLS_FONT_SCALE
 import com.coparently.app.presentation.theme.DarkColorScheme
 import com.coparently.app.presentation.theme.LightColorScheme
+import com.coparently.app.utils.inAppLanguage
 import kotlinx.coroutines.flow.first
 import kotlinx.datetime.toKotlinLocalDateTime
 import org.koin.core.component.KoinComponent
@@ -59,7 +60,9 @@ class TodayWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val loadedFor = getAppWidgetState<Preferences>(context, id)[REFRESH_STAMP]
-        val initial = contentState(context)
+        // Worded in the language the app speaks now (the owner's rule, `AppLocale`), each time the
+        // lines load; drawn in the launcher's context, so the widget follows the system's theme.
+        val initial = contentState(context.inAppLanguage())
         TodayWidgetMidnight.ensureScheduled(context)
         provideContent {
             // A redraw asked for while this session is still open recomposes rather than calling
@@ -67,7 +70,7 @@ class TodayWidget : GlanceAppWidget() {
             val stamp = currentState(REFRESH_STAMP)
             var state by remember { mutableStateOf(initial) }
             LaunchedEffect(stamp) {
-                if (stamp != loadedFor) state = contentState(context)
+                if (stamp != loadedFor) state = contentState(context.inAppLanguage())
             }
             TodayWidgetRoot(state, onClick = actionStartActivity<MainActivity>())
         }

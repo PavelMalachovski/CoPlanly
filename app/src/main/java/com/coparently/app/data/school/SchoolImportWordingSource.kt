@@ -5,6 +5,7 @@ import com.coparently.app.R
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.school.SchoolDayType
 import com.coparently.app.domain.school.SchoolImportWording
+import com.coparently.app.utils.inAppLanguage
 
 /**
  * The titles an import writes, in the importing parent's language (MON-8).
@@ -13,9 +14,9 @@ import com.coparently.app.domain.school.SchoolImportWording
  * names the child — "Anna at school" — because a family with two children at school would
  * otherwise read two identical rows, and a member is a name, never a colour (FAM-2).
  *
- * Resolved from the application's resources, because the import runs in a worker with no
- * activity: on Android 12L and below that follows the device's language rather than the app's
- * own choice, as a push does (CLAUDE.md item 15).
+ * Resolved in the language the app speaks when the import runs ([inAppLanguage]: the per-app
+ * choice, else the phone's first language when the app ships it, else English), because the import
+ * runs in a worker with no activity, as a push does (CLAUDE.md item 15).
  */
 class SchoolImportWordingSource(
     private val context: Context,
@@ -25,7 +26,7 @@ class SchoolImportWordingSource(
     override suspend fun forChild(childId: String, fallbackName: String): SchoolImportWording {
         val name = childInfoRepository.getChildInfoById(childId)?.childName?.takeIf { it.isNotBlank() }
             ?: fallbackName
-        return ResourceWording(context, name)
+        return ResourceWording(context.inAppLanguage(), name)
     }
 
     private class ResourceWording(private val context: Context, private val child: String) : SchoolImportWording {

@@ -96,9 +96,9 @@ fun TodayWidgetLines.compactAtLargeText(): TodayWidgetLines {
  * named through [ParentNames], never by slot (CLAUDE.md, "The app never shows the words Mom or
  * Dad"), and coloured by the family's chosen palette.
  *
- * The language is the [context]'s configuration: on API 33 and above that is the per-app language
- * the parent chose; on API 32 and below AppCompat applies that choice to activities only, so the
- * widget follows the device language there — the same limit pushes have.
+ * The language is the [context]'s configuration. The widget hands it a context in the language the
+ * app speaks (`inAppLanguage()`: the per-app choice, else the phone's first language when the app
+ * ships it, else English), as pushes are worded; a test hands it the language it checks.
  */
 object TodayWidgetText {
 

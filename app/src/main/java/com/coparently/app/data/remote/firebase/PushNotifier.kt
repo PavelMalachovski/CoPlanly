@@ -37,7 +37,8 @@ import java.util.Locale
  * default `FirebaseApp`, which a test build does not have.
  *
  * Every string is resolved through [context], so the notification is worded in *its*
- * configuration's language. The service passes itself, whose configuration is the process's.
+ * configuration's language. The service and the workers pass a context in the language the app
+ * speaks (`inAppLanguage()`, the owner's rule); a test passes one in the language it checks.
  *
  * @param context The context whose resources word the notification and which posts it.
  */

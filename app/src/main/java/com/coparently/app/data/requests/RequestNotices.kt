@@ -17,6 +17,7 @@ import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.utils.answerByText
+import com.coparently.app.utils.inAppLanguage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
@@ -36,7 +37,8 @@ import kotlinx.coroutines.withTimeoutOrNull
  * item 15). Nothing is posted while notifications are not allowed.
  *
  * Android's [RequestClockNotices]: the steps that decide a notice is due are in `:shared-data` since
- * MON-24 phase 2 (Task 8h); the wording and the posting stay here.
+ * MON-24 phase 2 (Task 8h); the wording and the posting stay here. Each notice is worded through a
+ * context in the language the app speaks at that moment ([inAppLanguage]), made for that notice.
  */
 class RequestNotices(
     private val context: Context,
@@ -45,47 +47,54 @@ class RequestNotices(
 
     /** Reminds the answering parent that the proposer waits for an answer until the deadline. */
     override suspend fun remind(clock: RequestDeadline) {
-        val name = nameOf(clock.proposerUid)
+        val words = context.inAppLanguage()
+        val name = nameOf(clock.proposerUid, words)
         val until = answerByText(
             clock.answerByMillis,
-            locale = context.resources.configuration.locales[0],
+            locale = words.resources.configuration.locales[0],
             is24Hour = DateFormat.is24HourFormat(context)
         )
         post(
             clock,
             STEP_REMINDER,
-            context.getString(R.string.request_notice_reminder_title),
-            context.getString(R.string.request_notice_reminder_body, name, until)
+            words,
+            words.getString(R.string.request_notice_reminder_title),
+            words.getString(R.string.request_notice_reminder_body, name, until)
         )
     }
 
     /** Tells the proposer that the answering parent did not answer by the deadline. */
     override suspend fun deadlinePassed(clock: RequestDeadline) {
-        val name = nameOf(clock.responderUid)
+        val words = context.inAppLanguage()
+        val name = nameOf(clock.responderUid, words)
         post(
             clock,
             STEP_DEADLINE,
-            context.getString(R.string.request_notice_deadline_title, name),
-            context.getString(R.string.request_notice_deadline_body)
+            words,
+            words.getString(R.string.request_notice_deadline_title, name),
+            words.getString(R.string.request_notice_deadline_body)
         )
     }
 
     /** Tells the proposer that the request is closed with no answer. */
     override suspend fun noAnswer(clock: RequestDeadline) {
-        val name = nameOf(clock.responderUid)
+        val words = context.inAppLanguage()
+        val name = nameOf(clock.responderUid, words)
         post(
             clock,
             STEP_NO_ANSWER,
-            context.getString(R.string.request_notice_no_answer_title, name),
-            context.getString(R.string.request_notice_no_answer_body)
+            words,
+            words.getString(R.string.request_notice_no_answer_title, name),
+            words.getString(R.string.request_notice_no_answer_body)
         )
     }
 
     /**
      * The co-parent's first name as their own profile states it, waited for at most
-     * [NAME_WAIT_MILLIS]; "Your co-parent" when it is blank, unreadable or late.
+     * [NAME_WAIT_MILLIS]; "Your co-parent", in [words]' language, when it is blank, unreadable or
+     * late.
      */
-    private suspend fun nameOf(uid: String): String {
+    private suspend fun nameOf(uid: String, words: Context): String {
         val name = try {
             withTimeoutOrNull(NAME_WAIT_MILLIS) { pairingRepository.observeCoParentProfile(uid).first().name }
         } catch (e: CancellationException) {
@@ -94,21 +103,22 @@ class RequestNotices(
             // Any failure to read the profile words the notice with the fallback.
             null
         }
-        return name?.takeIf { it.isNotBlank() } ?: context.getString(R.string.push_actor_fallback)
+        return name?.takeIf { it.isNotBlank() } ?: words.getString(R.string.push_actor_fallback)
     }
 
     /**
      * Posts one notice. Its id and its tap's request code are derived from the clock and the step,
-     * so the same notice posted twice replaces itself and two clocks never replace each other.
+     * so the same notice posted twice replaces itself and two clocks never replace each other. The
+     * channels are named in [words]' language, the notice's own.
      */
-    private fun post(clock: RequestDeadline, step: String, title: String, body: String) {
+    private fun post(clock: RequestDeadline, step: String, words: Context, title: String, body: String) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED
         ) {
             return
         }
-        PushNotifier(context).createChannels()
+        PushNotifier(words).createChannels()
         val key = listOf(clock.id, step).hashCode()
         val tap = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
             putExtra(PushDestination.EXTRA, PushDestination.CHANGE_REQUESTS.key)

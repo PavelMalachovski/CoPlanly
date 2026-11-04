@@ -3,6 +3,7 @@ package com.coparently.app.data.remote.firebase
 import com.coparently.app.data.platform.CrashReporter
 import com.coparently.app.data.platform.logger
 import com.coparently.app.data.sync.SyncWorker
+import com.coparently.app.utils.inAppLanguage
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -31,7 +32,9 @@ import org.koin.android.ext.android.inject
  * that case where a data-only one will not.
  *
  * What a push *says* and where its tap leads is [PushNotifier]'s: this class supplies the
- * signed-in account and the sync, and hands everything else over.
+ * signed-in account and the sync, and hands everything else over. It hands the notifier itself in
+ * the language the app speaks now ([inAppLanguage]: the per-app choice, else the phone's first
+ * language when the app ships it, else English), made afresh for each message.
  */
 class CoPlanlyMessagingService : FirebaseMessagingService() {
 
@@ -41,7 +44,7 @@ class CoPlanlyMessagingService : FirebaseMessagingService() {
 
     override fun onCreate() {
         super.onCreate()
-        PushNotifier(this).createChannels()
+        PushNotifier(inAppLanguage()).createChannels()
     }
 
     /**
@@ -70,7 +73,7 @@ class CoPlanlyMessagingService : FirebaseMessagingService() {
      */
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
-        PushNotifier(this).receive(
+        PushNotifier(inAppLanguage()).receive(
             data = remoteMessage.data,
             signedInUid = FirebaseAuth.getInstance().currentUser?.uid,
             onAccepted = { SyncWorker.syncNow(applicationContext) }

@@ -22,6 +22,7 @@ import com.coparently.app.domain.notification.ReminderPlanner
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.time.IsoText
 import com.coparently.app.presentation.MainActivity
+import com.coparently.app.utils.inAppLanguage
 
 /**
  * Worker that fires a local reminder notification before an event starts.
@@ -37,6 +38,9 @@ import com.coparently.app.presentation.MainActivity
  * no longer exists — the worker asks the scheduler for the event's next one, which is how a
  * recurring event keeps reminding every week. The request replaces this very work under its
  * unique name, so it is the last thing done.
+ *
+ * The notification and its channel are worded in the language the app speaks when it fires
+ * ([inAppLanguage]).
  */
 class ReminderWorker(
     context: Context,
@@ -80,7 +84,8 @@ class ReminderWorker(
             return
         }
 
-        ensureChannel()
+        val words = applicationContext.inAppLanguage()
+        ensureChannel(words)
 
         val intent = Intent(applicationContext, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -97,7 +102,7 @@ class ReminderWorker(
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(
-                applicationContext.getString(R.string.reminder_notification_text, startTime)
+                words.getString(R.string.reminder_notification_text, startTime)
             )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
@@ -110,14 +115,15 @@ class ReminderWorker(
         notificationManager.notify(eventId.hashCode(), notification)
     }
 
-    private fun ensureChannel() {
+    /** Creates the reminder channel, or renames it into [words]' language when it exists. */
+    private fun ensureChannel(words: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                applicationContext.getString(R.string.reminder_channel_name),
+                words.getString(R.string.reminder_channel_name),
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = applicationContext.getString(R.string.reminder_channel_description)
+                description = words.getString(R.string.reminder_channel_description)
             }
             val notificationManager =
                 applicationContext.getSystemService(NotificationManager::class.java)

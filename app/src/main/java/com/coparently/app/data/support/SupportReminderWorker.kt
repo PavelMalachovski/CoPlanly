@@ -31,6 +31,7 @@ import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.support.SupportReminderRule
 import com.coparently.app.domain.support.SupportTerms
 import com.coparently.app.presentation.expenses.currencyFormat
+import com.coparently.app.utils.inAppLanguage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
@@ -112,9 +113,11 @@ class SupportReminderWorker(
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             null
         }
-        return name?.takeIf { it.isNotBlank() } ?: applicationContext.getString(R.string.push_actor_fallback)
+        return name?.takeIf { it.isNotBlank() } ?: applicationContext.inAppLanguage()
+            .getString(R.string.push_actor_fallback)
     }
 
+    /** Posts the reminder, worded and dated in the language the app speaks now ([inAppLanguage]). */
     private fun post(familyId: String, terms: SupportTerms, month: YearMonth, payeeName: String) {
         val context = applicationContext
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -123,11 +126,14 @@ class SupportReminderWorker(
         ) {
             return
         }
-        PushNotifier(context).createChannels()
-        val due = terms.dueDate(month).toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
+        val words = context.inAppLanguage()
+        PushNotifier(words).createChannels()
+        val due = terms.dueDate(month).toJavaLocalDate().format(
+            DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(words.resources.configuration.locales[0])
+        )
         val amount = currencyFormat(terms.currency).format(MinorUnits.toDecimal(terms.amountMinor))
-        val title = context.getString(R.string.support_reminder_title, due)
-        val body = context.getString(R.string.support_reminder_body, amount, payeeName)
+        val title = words.getString(R.string.support_reminder_title, due)
+        val body = words.getString(R.string.support_reminder_body, amount, payeeName)
         val key = listOf("support", familyId).hashCode()
         val tap = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
             putExtra(PushDestination.EXTRA, PushDestination.SUPPORT.key)

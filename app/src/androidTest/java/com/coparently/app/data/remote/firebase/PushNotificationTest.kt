@@ -47,11 +47,10 @@ import java.util.Locale
  * other end: what the receiving phone does with the data FCM delivers. What it still cannot see
  * is FCM delivering it, and the shade as a vendor skin draws it (`docs/DEVICE-CHECKLIST.md` §3.7).
  *
- * **Which language.** The service words a push through its own `Context`, whose configuration is
- * the process's. So this builds the same thing — a configuration context in the language under
- * test — rather than switching AppCompat's per-app locale, which on API 32 and below reaches
- * activities only and never a service. On API 33+ the system applies a per-app choice to the
- * whole process, so the process configuration *is* that choice there.
+ * **Which language.** The service words a push through a configuration context in the language
+ * the app speaks (`inAppLanguage()`, the owner's rule). So this builds the same thing — a
+ * configuration context in the language under test — rather than switching the per-app locale or
+ * the device's; which language that context is given is `AppLocaleTest`'s question.
  *
  * Deliberately starts no Koin graph and carries no `@UsesFakeFirebase`: nothing here is injected,
  * so it also runs on the 16 KB-page API 35 leg, where the fake Firebase override's MockK agent
