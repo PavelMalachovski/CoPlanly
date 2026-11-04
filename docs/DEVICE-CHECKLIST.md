@@ -1628,6 +1628,19 @@ phones and the deployed index.
   `presentation/changerequests/InboxItems.kt`, `data/family/OtherFamiliesSignals.kt`,
   `data/repository/ProfessionalRepositoryImpl.kt` (`observeFamilyGrants(familyId)`), `firestore.indexes.json`.
 
+### 3.34 Camera buttons on a phone with a camera · 1P
+
+Since MON-24 phase 2 (slices 11e and 11g) a camera button is drawn only where
+`CameraCapture.available` says the phone has a camera. Every CI and UI-tour emulator boots with
+`-camera-back none`, so no automated run shows these buttons.
+
+- [ ] **Receipt** (1P). On a phone with a camera, Expenses → **+** offers to photograph a receipt; the
+      photo is taken, attached and scanned as before.
+- [ ] **Vault** (1P). Family → Documents → add offers the camera beside the file picker; a photo is
+      filed as a document.
+- **If it fails:** `presentation/platform/CameraCapture.kt` (`:shared-ui`) and its Android half in
+  `app/…/presentation/platform/AndroidPlatform.kt`.
+
 ---
 
 ## 4. Release-build checks

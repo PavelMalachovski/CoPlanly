@@ -86,6 +86,9 @@ fun ContactsScreen(
     val groupsState by viewModel.groups.collectAsState()
     val groups = groupsState.valueOrNull.orEmpty()
     val openUrl = LocalOpenUrl.current
+    // A phone that opens no links has no dialler: no call button and no tappable row there
+    // (design item 8). On Android the platform always opens them, so nothing changes.
+    val canDial = remember(openUrl) { openUrl.available }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     // Resolved in composable scope: the failure message is shown from a coroutine, which is not
@@ -124,10 +127,14 @@ fun ContactsScreen(
             items(items = groups, key = { it.childId }) { group ->
                 ChildContacts(
                     group = group,
-                    onDial = { number ->
-                        if (!openUrl.dial(number)) {
-                            scope.launch { snackbarHostState.showSnackbar(noDialerMessage) }
+                    onDial = if (canDial) {
+                        { number ->
+                            if (!openUrl.dial(number)) {
+                                scope.launch { snackbarHostState.showSnackbar(noDialerMessage) }
+                            }
                         }
+                    } else {
+                        null
                     }
                 )
             }
@@ -156,12 +163,12 @@ private fun ContactsTopBar(onNavigateUp: () -> Unit) {
  * One child's contacts, as a labelled group of rows.
  *
  * @param group The child and their contacts
- * @param onDial Opens the dialler on a number
+ * @param onDial Opens the dialler on a number, or null where the phone has none
  */
 @Composable
 private fun ChildContacts(
     group: ContactGroup,
-    onDial: (String) -> Unit
+    onDial: ((String) -> Unit)?
 ) {
     Column {
         GroupLabel(group.childName)
@@ -186,14 +193,16 @@ private fun ChildContacts(
  * at least readable. It stays one action, per [SectionRow]'s one-trailing-control rule.
  *
  * @param contact The person
- * @param onDial Opens the dialler on a number
+ * @param onDial Opens the dialler on a number, or null where the phone has none: the row is
+ *   then inert, as for a contact with no number
  */
 @Composable
 private fun ContactRow(
     contact: DirectoryContact,
-    onDial: (String) -> Unit
+    onDial: ((String) -> Unit)?
 ) {
-    val dialable = contact.dialable
+    val dial = onDial
+    val dialable = if (dial != null) contact.dialable else null
     // A vet row carries a sentinel rather than a typed relationship, so the word is resolved
     // here, where there is a `Context` and five translations, instead of in the domain.
     val vetLabel = stringResource(Res.string.contacts_vet)
@@ -212,7 +221,7 @@ private fun ContactRow(
         title = title,
         icon = Icons.Default.Person,
         supporting = supporting.ifBlank { null },
-        onClick = dialable?.let { number -> { onDial(number) } },
+        onClick = dialable?.let { number -> { dial?.invoke(number) } },
         trailing = dialable?.let { number ->
             {
                 PillChip(
@@ -220,7 +229,7 @@ private fun ContactRow(
                     icon = Icons.Default.Call,
                     container = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    onClick = { onDial(number) }
+                    onClick = { dial?.invoke(number) }
                 )
             }
         }

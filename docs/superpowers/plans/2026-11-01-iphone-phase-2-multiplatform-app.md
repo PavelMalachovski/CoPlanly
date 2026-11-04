@@ -1579,8 +1579,8 @@ Then the export and the school import:
 - Then the 11f review's notes, in their own commit: I1, the iPhone's stand-ins for the two locals
   `MainActivity` provides beside `PlatformServices` (`NoCredentialSignIn`, `NoGoogleCalendarSignIn`
   in `IosPlatform.kt`), provided with `iosPlatformServices` by the new `ProvideIosShell(buildValues,
-  content)` the phase-3 view controller wraps its content in, held unavailable by
-  `IosSignInStandInsTest` (`iosTest`); kept as separate locals, so Android and `PlatformLocals.all`
+  content)` the phase-3 view controller wraps its content in, stated unavailable by
+  `IosSignInStandInsTest` (`iosTest`; compiled by the `shared` job, not yet run by any); kept as separate locals, so Android and `PlatformLocals.all`
   do not change. M1 `AnalyticsManager.logLogin`/`logSignUp` deleted; M2 `GridSwatch` `internal`; M3
   `readerLanguage()`'s source named (`Locale.getDefault()`); M4 `docs/DEVICE-CHECKLIST.md`'s
   references to the deleted link objects; M5 the child records' picker KDoc (done with group 2); M6

@@ -2275,7 +2275,8 @@ iPhone's `NoAuthErrors` calls every failure `Unknown`) — a Koin seam rather th
 with `method`, as `AnalyticsManager`'s functions of those names logged them; they left it), the reports
 `CrashReporter.recordWithContext`. The screen offers Google and a saved password only where
 `CredentialSignIn.available` (on the iPhone the shell's `ProvideIosShell` provides the unavailable
-`NoCredentialSignIn`; `IosSignInStandInsTest`, in `iosTest`, holds both stand-ins unavailable); the legal notice draws the terms clause and the two
+`NoCredentialSignIn`; `IosSignInStandInsTest`, in `iosTest`, states both stand-ins unavailable and is
+compiled by the `shared` job, but no job runs `:shared-ui:iosSimulatorArm64Test` yet); the legal notice draws the terms clause and the two
 links only while their address is set and the phone opens links (`AppBuildValues`, `OpenUrl`), so the
 app's `PrivacyPolicyLink` and `TermsOfServiceLink` are gone. The profile's dates are
 `readerMediumDate` and its picker the kotlinx `LocalDatePickerDialog` with the child records' labels
@@ -2327,7 +2328,11 @@ built (`fileShareIntent` in `AndroidPlatform.kt`; the app keeps `recordShareInte
 `presentation/export/RecordShareIntent.kt` for `ExportFileWriterTest`). **The export offers its
 formats only where the phone draws and shares the file** (`RecordFileWriter.available`, new, true
 by default; the iPhone's `NoRecordFiles` says false; `ExportViewModel.exportAvailable`, and
-`ShareSheet.available`), the carried note's hiding.
+`ShareSheet.available`), the carried note's hiding. The contacts screen's call button and tappable
+rows likewise appear only where `OpenUrl.available` (slice 11g review, I1). **Since 11e/11g a camera
+button (the receipt's, the vault's) is drawn only where `CameraCapture.available`**, which on Android
+asks whether the phone has a camera: every CI and UI-tour emulator boots with `-camera-back none`,
+so the tour's images show neither, and `docs/DEVICE-CHECKLIST.md` §3.34 asks for them on a phone.
 **Then the people outside the pair, and the plan** (slice 11g): `presentation/friends/` (the
 Friends screen, a friend's card and profile, the friend's calendar, the comparison table, the event
 details, the invite sheet and `GuestDurationText`, whose `GuestDurationTextTest` is in `commonTest`),
@@ -2617,8 +2622,9 @@ text, which the share sheet and `ExportFileWriterTest` read back through the app
 zone `TimeZone.currentSystemDefault()`, today `Clock.System.todayIn`, the default start three months
 back with `minus(3, DateTimeUnit.MONTH)` (java.time's `minusMonths`, the day clamped the same way).
 `ConnectSchoolViewModel`'s town filter folds case with `lowercase()`, what `lowercase(Locale.ROOT)`
-did. The iPhone's `platformDataModule` binds `NoRecordFiles` (rendering fails, nothing saved; the
-screen says the export failed) and the school directory over its own client, as it binds the
+did. The iPhone's `platformDataModule` binds `NoRecordFiles` (it says `available` false, so the
+screen offers no format since slice 11g; rendering would fail and save nothing; the Family tab's,
+Earlier families' and the chat's ways into the export are still drawn there, a Task 12 note) and the school directory over its own client, as it binds the
 Bakaláři client. The three tests (MockK) run in `androidUnitTest`. **Task 10 is done but for
 `AuthViewModel` and `SyncViewModel`**, which stay in the app until Task 11 (above); the app's
 `viewModelModule` holds those two alone (both moved in slice 11f, and `viewModelModule` with them).
