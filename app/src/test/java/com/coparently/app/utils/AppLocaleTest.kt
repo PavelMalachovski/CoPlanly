@@ -10,6 +10,7 @@ import com.coparently.app.testing.RobolectricTestApplication
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -106,17 +107,22 @@ class AppLocaleTest {
         assertEquals(LocaleList(Locale.forLanguageTag("en-SK")), LocaleList.getDefault())
     }
 
+    /**
+     * Below Android 13's path, on SDK 34 (the SDK every Robolectric test here runs, so CI fetches no
+     * other): AppCompat answers nothing outside an activity, and the mirror answers instead.
+     */
     @Test
-    @Config(sdk = [30], qualifiers = "cs-rCZ")
     fun `below Android 13 a mirrored choice reaches a process no activity has started`() {
         val mirror = context.getSharedPreferences("app_language", Context.MODE_PRIVATE)
         mirror.edit().putString("per_app_choice", "de").commit()
-        assertEquals(Locale.GERMAN, AppLocale.effective(context))
-        assertEquals(text("de", R.string.settings_title), context.inAppLanguage().getString(R.string.settings_title))
+        val chosen = AppLocale.appCompatOrRememberedChoice(context)
+        assertEquals(Locale.GERMAN, chosen)
+        val words = AppLocale.contextIn(context, AppLocale.effective(chosen, Locale.forLanguageTag("cs-CZ")))
+        assertEquals(text("de", R.string.settings_title), words.getString(R.string.settings_title))
 
         // An activity that finds no choice in AppCompat clears the mirror: the phone's language again.
-        AppLocale.rememberChoice(context)
-        assertEquals(Locale.forLanguageTag("cs-CZ"), AppLocale.effective(context))
+        AppLocale.storeChoice(context)
+        assertNull(AppLocale.appCompatOrRememberedChoice(context))
     }
 
     @Test

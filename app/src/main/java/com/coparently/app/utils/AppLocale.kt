@@ -103,12 +103,7 @@ object AppLocale {
      * recreates the activity, which calls it again.
      */
     fun rememberChoice(activity: Context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) return
-        val tags = AppCompatDelegate.getApplicationLocales().toLanguageTags()
-        val preferences = activity.applicationContext.getSharedPreferences(CHOICE_FILE, Context.MODE_PRIVATE)
-        if (preferences.getString(CHOICE_KEY, "") != tags) {
-            preferences.edit().putString(CHOICE_KEY, tags).apply()
-        }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) storeChoice(activity)
     }
 
     /** The per-app choice's first locale, or null when the app follows the phone. */
@@ -117,14 +112,31 @@ object AppLocale {
             val chosen = context.getSystemService(LocaleManager::class.java)?.applicationLocales
             return chosen?.takeUnless { it.isEmpty }?.get(0)
         }
+        return appCompatOrRememberedChoice(context)
+    }
+
+    /**
+     * Below Android 13: AppCompat's choice once an activity has loaded it, else the one
+     * [rememberChoice] last mirrored. (Internal and not gated on the API level, for the JVM tests.)
+     */
+    internal fun appCompatOrRememberedChoice(context: Context): Locale? {
         val requested = AppCompatDelegate.getApplicationLocales()
         if (!requested.isEmpty) return requested[0]
-        val remembered = context.applicationContext
-            .getSharedPreferences(CHOICE_FILE, Context.MODE_PRIVATE)
-            .getString(CHOICE_KEY, "")
-            .orEmpty()
+        val remembered = choicePreferences(context).getString(CHOICE_KEY, "").orEmpty()
         return remembered.takeIf { it.isNotBlank() }?.let { LocaleList.forLanguageTags(it)[0] }
     }
+
+    /** Writes AppCompat's choice into the mirror ([rememberChoice] below Android 13; the tests). */
+    internal fun storeChoice(context: Context) {
+        val tags = AppCompatDelegate.getApplicationLocales().toLanguageTags()
+        val preferences = choicePreferences(context)
+        if (preferences.getString(CHOICE_KEY, "") != tags) {
+            preferences.edit().putString(CHOICE_KEY, tags).apply()
+        }
+    }
+
+    private fun choicePreferences(context: Context) =
+        context.applicationContext.getSharedPreferences(CHOICE_FILE, Context.MODE_PRIVATE)
 }
 
 /**
