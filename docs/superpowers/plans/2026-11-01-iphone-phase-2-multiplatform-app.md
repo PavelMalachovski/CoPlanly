@@ -735,8 +735,9 @@ Then the events:
   `custodyParentOn` takes a kotlinx-datetime day; `AddEditEventScreen` converts its start date.
 - `EventDraft` is `@Serializable`: `:shared-ui` applies `org.jetbrains.kotlin.plugin.serialization`,
   and `tools/check-invariants.js` scans `shared-ui/` in checks 4 and 5 (without it the model fell
-  out of check 5's discovery, checked by hand).
-- iPhone: `platformUiModule` binds `NoRecordPhotoStorage` (the domain's `RecordPhotoStorage`, which
+  out of check 5's discovery; `tools/test/check-r8-probe.test.js` holds it).
+- iPhone: `platformDataModule` (`:shared-data`'s, beside `NoStorageBucket`, since it is a data seam)
+  binds `NoRecordPhotoStorage` (the domain's `RecordPhotoStorage`, which
   the app binds to `FirebaseImageStorage`): upload and delete throw `IOException`. A JVM `verify()` of
   `dataModules + uiModules` with the iPhone's bindings resolves, and fails without it.
 - Tests: `EventViewModelTest` (Gson 2.11.0 added to `:shared-ui`'s androidUnitTest as the draft's

@@ -92,7 +92,7 @@ test('the real discovery requires the models the probe names', () => {
   const models = [...storedJsonModels().keys()];
   assert.ok(models.includes(MED));
   assert.ok(models.includes('com.coparently.app.domain.custody.DayOverrideStatus'), 'an enum is discovered');
-  assert.ok(models.includes('com.coparently.app.presentation.event.EventDraft'), "the app's own models are");
+  assert.ok(models.includes('com.coparently.app.presentation.event.EventDraft'), "shared-ui's models are (EventDraft, slice 10b)");
 });
 
 test('production code imports no Gson', () => {

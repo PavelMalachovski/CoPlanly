@@ -1609,8 +1609,9 @@ data/      — Room (v46 + migrations), Firestore/Google clients, repository imp
              sync but its WorkManager classes, the request clocks but their notices and worker,
              data/family/, the school import but its wording and worker, the export but its file
              writer, and some of data/chat/, data/support/ and data/session/
-presentation/ — Compose screens per feature + ViewModels (their strings, the theme and the
-             design system's components in shared-ui/)
+presentation/ — Compose screens per feature, and the ViewModels not moved yet (their strings,
+             the theme, the design system's components, the shared state and the ViewModels
+             moved so far — Task 10's slices — in shared-ui/)
 di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
              listed in appModules); the database builder (DatabaseBuilder.kt) and the file name
              (DatabaseName.kt) are in shared-data/ since MON-24 phase 2
@@ -2013,8 +2014,7 @@ code stays with the screen), in `chatUiModule`; `sharedFileError` left `SharedFi
 `SharedFileErrors.kt`, and `data/ai/AiConsentManager` moved to `:shared-data` (`aiDataModule`).
 On the iPhone `platformUiModule` binds the chat's two platform seams the data layer does not: no
 dictation (`NoSpeechDictation`, unavailable) and no AI assist (`AiAssistAvailability(false)`,
-`NoAiAssist` answering `Disabled`), in `di/koin/IosUiUnavailable.kt` (with the events'
-`NoRecordPhotoStorage` since 10b, below). `coParentOnScreen`, `observeSignedInUser` and
+`NoAiAssist` answering `Disabled`), in `di/koin/IosUiUnavailable.kt`. `coParentOnScreen`, `observeSignedInUser` and
 `projectedCoParentUid` are public behind `@InternalSharedApi` until the five ViewModels still in the
 app that call them move (see the `@InternalSharedApi` paragraph below). Slice 10b moved **the
 calendar**: `CalendarViewModel` (its filters and the dismissed custody change in `SecurePreferences`,
@@ -2038,8 +2038,8 @@ every date and time was kotlinx-datetime already) with `EventDraft`, `EventUiSta
 day, which `AddEditEventScreen` converts with `toKotlinLocalDate()`), in `eventUiModule`. `EventDraft`
 is a stored model, so `:shared-ui` applies the serialization plugin and `check-invariants.js`' checks
 4 and 5 read `shared-ui/` too; the R8 probe names it as before. Its photo goes through the domain's
-`RecordPhotoStorage`, which the iPhone's `platformUiModule` stands in for with
-`NoRecordPhotoStorage` (every upload and delete an `IOException`: nothing stored, nothing dropped).
+`RecordPhotoStorage`, which the iPhone's `platformDataModule` stands in for with
+`NoRecordPhotoStorage` (a data seam, beside `NoStorageBucket`) (every upload and delete an `IOException`: nothing stored, nothing dropped).
 `EventViewModelTest` keeps Gson as the oracle for a draft an older build wrote (Gson 2.11.0 in
 `:shared-ui`'s `androidUnitTest`), and `EventOwnerViewModelTest`'s check of the form's
 `autoEventOwner` moved to the app's `AddEditEventScreenTest`, where that function is.

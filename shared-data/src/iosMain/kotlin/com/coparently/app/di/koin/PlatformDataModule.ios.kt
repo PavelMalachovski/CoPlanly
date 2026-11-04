@@ -116,6 +116,7 @@ actual val platformDataModule: Module = module {
     single<PairingWording> { NoWording }
     single<SchoolImportWordings> { NoWording }
     single<StorageBucket> { NoStorageBucket }
+    single<RecordPhotoStorage> { NoRecordPhotoStorage }
     single<PickedFiles> { NoPickedFiles }
     single<ExportVerifyAddress> { NoExportVerifyAddress }
 }

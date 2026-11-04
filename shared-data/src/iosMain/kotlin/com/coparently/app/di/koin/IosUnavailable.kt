@@ -19,9 +19,11 @@ import com.coparently.app.data.school.SchoolImportWordings
 import com.coparently.app.data.session.AccountConsistency
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.domain.changerequests.RequestDeadline
+import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.notification.RequestClockScheduler
+import com.coparently.app.domain.repository.RecordPhotoStorage
 import com.coparently.app.domain.school.SchoolImportWording
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -161,5 +163,24 @@ internal object NoPickedFiles : PickedFiles {
 
 /** No verification page is configured for the iPhone yet, so an export prints no address. */
 internal val NoExportVerifyAddress = ExportVerifyAddress { "" }
+
+/**
+ * No Cloud Storage for a record's photos yet (phase 3), as [NoStorageBucket] has none for a shared
+ * file: an upload fails, so nothing is stored that names a photo, and a delete
+ * fails too, so a caller that keeps a list keeps the reference rather than dropping one to an object
+ * it could not reach (`RecordPhotoStorage.delete`'s contract). The event form's photo is the first
+ * caller (`EventViewModel`, slice 10b).
+ */
+internal object NoRecordPhotoStorage : RecordPhotoStorage {
+    override suspend fun upload(
+        kind: RecordPhotoKind,
+        recordId: String,
+        recordFamilyId: String?,
+        localUri: String
+    ): String = throw IOException(UNAVAILABLE)
+
+    override suspend fun delete(reference: String, recordFamilyId: String?): Unit =
+        throw IOException(UNAVAILABLE)
+}
 
 private const val UNAVAILABLE = "Not available in this iPhone build yet"
