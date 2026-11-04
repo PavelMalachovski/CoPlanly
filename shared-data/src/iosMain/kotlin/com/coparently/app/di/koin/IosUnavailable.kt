@@ -3,6 +3,7 @@ package com.coparently.app.di.koin
 import com.coparently.app.data.export.ExportVerifyAddress
 import com.coparently.app.data.files.PickedFiles
 import com.coparently.app.data.files.StorageBucket
+import com.coparently.app.data.remote.firebase.AuthSession
 import com.coparently.app.data.remote.firebase.PushDevice
 import com.coparently.app.data.remote.firebase.PushRegistration
 import com.coparently.app.data.remote.firebase.SignedInAccount
@@ -19,6 +20,7 @@ import com.coparently.app.data.school.SchoolImportScheduler
 import com.coparently.app.data.school.SchoolImportWordings
 import com.coparently.app.data.session.AccountConsistency
 import com.coparently.app.data.session.AccountDeletion
+import com.coparently.app.data.session.AccountTraces
 import com.coparently.app.data.support.SupportReminderScheduler
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.domain.changerequests.RequestDeadline
@@ -54,6 +56,22 @@ internal object NoSignedInUser : SignedInUser {
     override fun observeCurrentUid(): Flow<String?> = flowOf(null)
     override fun getCurrentAccount(): SignedInAccount? = null
 }
+
+/**
+ * No session (slice 10e: the start and sign-out ask for it): nobody is signed in, as [NoSignedInUser]
+ * says, and ending a session there is nothing to do. Replace the two together.
+ */
+internal object NoAuthSession : AuthSession {
+    override suspend fun awaitSignedInUid(): String? = null
+
+    override suspend fun signOutCompletely(): Result<Unit> = Result.success(Unit)
+}
+
+/**
+ * Nothing kept outside the database to remove at sign-out (slice 10e): with no Cloud Storage
+ * ([NoStorageBucket]) no file is downloaded, and no notification is posted.
+ */
+internal val NoAccountTraces = AccountTraces { }
 
 /** No push token and no push: the iPhone registers with no messaging service yet. */
 internal object NoPushDevice : PushDevice {

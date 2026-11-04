@@ -22,6 +22,7 @@ import com.coparently.app.data.notification.EventReminderScheduler
 import com.coparently.app.data.notification.NotificationManager
 import com.coparently.app.data.notification.WorkRequestClockScheduler
 import com.coparently.app.data.pairing.PlayInstallReferrerSource
+import com.coparently.app.data.remote.firebase.AuthSession
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirebaseImageStorage
@@ -48,6 +49,7 @@ import com.coparently.app.data.session.AccountConsistency
 import com.coparently.app.data.session.AccountDeletion
 import com.coparently.app.data.session.AccountDeletionService
 import com.coparently.app.data.session.AccountSwitchGuard
+import com.coparently.app.data.session.AccountTraces
 import com.coparently.app.data.session.DeviceTraces
 import com.coparently.app.data.support.WorkManagerSupportReminderScheduler
 import com.coparently.app.data.sync.WorkManagerSyncRequester
@@ -100,6 +102,8 @@ val dataModule = module {
     singleOf(::FirebaseAuthService)
     // The one question the repositories in `:shared-data` ask of the signed-in account.
     single<SignedInUser> { get<FirebaseAuthService>() }
+    // The start's wait and sign-out's end, which the session's ViewModel in `:shared-ui` asks for.
+    single<AuthSession> { get<FirebaseAuthService>() }
     singleOf(::FirebaseImageStorage)
     singleOf(::CredentialAuthenticator)
     singleOf(::CredentialManagerService)
@@ -125,6 +129,8 @@ val dataModule = module {
     // The check the sync in `:shared-data` runs before its first upload.
     single<AccountConsistency> { get<AccountSwitchGuard>() }
     singleOf(::DeviceTraces)
+    // The files and notifications sign-out removes, for the session's ViewModel in `:shared-ui`.
+    single<AccountTraces> { get<DeviceTraces>() }
     singleOf(::WorkManagerSupportReminderScheduler)
     singleOf(::WorkManagerSyncRequester)
     singleOf(::TelemetryConsentApplier)

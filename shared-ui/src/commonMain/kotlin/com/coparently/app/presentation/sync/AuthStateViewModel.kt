@@ -2,10 +2,11 @@ package com.coparently.app.presentation.sync
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.data.remote.firebase.FcmService
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.platform.logger
+import com.coparently.app.data.remote.firebase.AuthSession
+import com.coparently.app.data.remote.firebase.PushRegistration
 import com.coparently.app.data.school.SchoolConnectionStore
-import com.coparently.app.data.session.DeviceTraces
+import com.coparently.app.data.session.AccountTraces
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.notification.RequestClockScheduler
 import com.coparently.app.domain.onboarding.OnboardingState
@@ -27,21 +28,27 @@ import kotlinx.coroutines.withTimeoutOrNull
  * It also answers the second half of that routing question — whether this account still has to
  * be walked through the first-run questionnaire. Both answers live here rather than in a second
  * view model so the start destination has one source that cannot disagree with itself.
+ *
+ * In `:shared-ui` since MON-24 phase 2 (Task 10): the session, the push token and the files left on
+ * the phone go through [AuthSession], [PushRegistration] and [AccountTraces], which the app's
+ * `FirebaseAuthService`, `FcmService` and `DeviceTraces` answer on Android; each seam is one call of
+ * the ones [signOut] makes, so their order is this function's, as before. The parameter names are
+ * the ones the app's classes gave them.
  */
 // Eight collaborators, all injected: a Koin graph edge list, and the last four are what sign-out
 // has to undo on this device (push token, school tokens, pending reminders, pending request-clock
 // steps) — the same reasoning `PairingViewModel` uses.
 @Suppress("LongParameterList")
 class AuthStateViewModel(
-    private val firebaseAuthService: FirebaseAuthService,
+    private val firebaseAuthService: AuthSession,
     private val userRepository: UserRepository,
     private val childInfoRepository: ChildInfoRepository,
     private val petRepository: PetRepository,
-    private val fcmService: FcmService,
+    private val fcmService: PushRegistration,
     private val schoolConnections: SchoolConnectionStore,
     private val reminderScheduler: ReminderScheduler,
     private val requestClockScheduler: RequestClockScheduler,
-    private val deviceTraces: DeviceTraces
+    private val deviceTraces: AccountTraces
 ) : ViewModel() {
 
     private val _isAuthenticated = MutableStateFlow<Boolean?>(null)
@@ -74,9 +81,9 @@ class AuthStateViewModel(
             _needsOnboarding.value = null
 
             // Wait for authentication to be ready, then check state
-            val user = firebaseAuthService.waitForAuthReady()
-            _isAuthenticated.value = user != null
-            _needsOnboarding.value = user?.uid?.let { resolveOnboarding(it) } ?: false
+            val uid = firebaseAuthService.awaitSignedInUid()
+            _isAuthenticated.value = uid != null
+            _needsOnboarding.value = uid?.let { resolveOnboarding(it) } ?: false
             _isLoading.value = false
         }
     }
@@ -117,7 +124,7 @@ class AuthStateViewModel(
     } catch (
         @Suppress("TooGenericExceptionCaught") e: Exception
     ) {
-        android.util.Log.e(TAG, "Failed to decide whether onboarding is needed", e)
+        logger.e(TAG, "Failed to decide whether onboarding is needed", e)
         false
     }
 

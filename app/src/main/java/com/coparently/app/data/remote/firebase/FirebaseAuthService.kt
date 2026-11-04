@@ -16,13 +16,14 @@ import kotlinx.coroutines.tasks.await
  * Handles user authentication using email/password and provides Firebase UID.
  *
  * It is also the Android [SignedInUser], the questions the repositories in `:shared-data` ask of
- * the signed-in account.
+ * the signed-in account, and the Android [AuthSession], the start's wait and sign-out's end that
+ * `AuthStateViewModel` in `:shared-ui` asks for (Task 10).
  *
  * @property firebaseAuth Firebase Authentication instance
  */
 class FirebaseAuthService(
     private val firebaseAuth: FirebaseAuth
-) : SignedInUser {
+) : SignedInUser, AuthSession {
     /**
      * Gets the current Firebase user.
      */
@@ -170,7 +171,7 @@ class FirebaseAuthService(
      * Signs out the current user from Firebase authentication.
      * This should be called when the user wants to sign out of the app completely.
      */
-    suspend fun signOutCompletely(): Result<Unit> {
+    override suspend fun signOutCompletely(): Result<Unit> {
         return try {
             firebaseAuth.signOut()
             Result.success(Unit)
@@ -206,6 +207,9 @@ class FirebaseAuthService(
         firebaseAuth.addAuthStateListener(listener)
         awaitClose { firebaseAuth.removeAuthStateListener(listener) }
     }
+
+    /** [waitForAuthReady]'s user's uid, with its default wait. */
+    override suspend fun awaitSignedInUid(): String? = waitForAuthReady()?.uid
 
     /**
      * Waits for authentication to be ready and returns the current user.

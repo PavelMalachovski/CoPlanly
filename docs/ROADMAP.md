@@ -2957,7 +2957,12 @@ bytes are identical on Android):
   (`pairingUiModule`), its error messages now Compose Multiplatform resources (the friend and
   professional screens read the same ones) and its QR code through a new `InviteQrCodes` seam the
   app answers with ZXing over the share sheet's link (the iPhone draws none yet), and onboarding
-  (`onboardingUiModule`) with its steps. Auth, sync and the rest follow.
+  (`onboardingUiModule`) with its steps. Then the session (`sessionUiModule`: the start destination's
+  source and sign-out, on new `AuthSession` and `AccountTraces` seams beside `PushRegistration`, in
+  sign-out's unchanged order) and the profile (`profileUiModule`). The login screen's and Google
+  Calendar's connection ViewModels stay in the app until Task 11, because their sign-ins run on an
+  Android activity (Credential Manager's sheet; Google Sign-In's intent and result). The rest (10f)
+  follows.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

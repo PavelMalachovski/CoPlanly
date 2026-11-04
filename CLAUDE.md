@@ -1598,9 +1598,10 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              (slice 9c); and, from Task 10, the shared state of presentation/common/ (ParentsSource
              and its siblings) and the ViewModels, group by group (so far common/'s, chat's, the
              calendar's, the events', custody's, the requests', the family's, expenses', payments',
-             child support's, settings', pairing's and onboarding's), with their Koin modules:
-             uiModules and platformUiModule, which appModules includes. Screens follow (Task 11). It
-             makes the iPhone's one framework, Shared (static, exporting shared/ and shared-data/)
+             child support's, settings', pairing's, onboarding's, the session's and the profile's),
+             with their Koin modules: uiModules and platformUiModule, which appModules includes.
+             Screens follow (Task 11). It makes the iPhone's one framework, Shared (static,
+             exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
              ReminderScheduler, the export's record and the school import's plan — in shared/,
              except the phase-1 stay list below (one file), which is still in app/
@@ -1926,14 +1927,15 @@ task; the iPhone has no `koin-test`). Phase 3's app replaces each stand-in. Ever
 `data/…` path is still under
 `app/src/main/java/com/coparently/app/`. **The data layer reaches the platform only through those
 interfaces**: a new data-layer class takes `SecurePreferences`, `AppDirectories`, `CrashReporter`,
-`Analytics`, `DeviceRegion`, `SignedInUser`, `PushQueue`, `PushDevice`, `PushRegistration`,
-`AccountConsistency`, `AccountDeletion`, `RequestClockNotices`, `RequestClockScheduler`,
-`GoogleCalendarConnectionSource`, `StorageBucket`, `PickedFiles` or `ExportVerifyAddress` rather than
-`EncryptedPreferences`, a `Context` directory, `CrashlyticsManager`, `AnalyticsManager`,
-`FirebaseAuthService`, `FcmService`, `AccountSwitchGuard`, `AccountDeletionService`, `RequestNotices`,
-`WorkRequestClockScheduler`, `CredentialManagerService`, `FirebaseStorage`, a `ContentResolver` or
-`BuildConfig`, and logs with `logger.e/w/i/d(TAG, …)`, never `android.util.Log`. A ViewModel in
-`:shared-ui` takes the same seams (`PushRegistration` and `AccountDeletion` came with slice 10e).
+`Analytics`, `DeviceRegion`, `SignedInUser`, `AuthSession`, `PushQueue`, `PushDevice`,
+`PushRegistration`, `AccountConsistency`, `AccountDeletion`, `AccountTraces`, `RequestClockNotices`,
+`RequestClockScheduler`, `GoogleCalendarConnectionSource`, `StorageBucket`, `PickedFiles` or
+`ExportVerifyAddress` rather than `EncryptedPreferences`, a `Context` directory,
+`CrashlyticsManager`, `AnalyticsManager`, `FirebaseAuthService`, `FcmService`, `AccountSwitchGuard`,
+`AccountDeletionService`, `DeviceTraces`, `RequestNotices`, `WorkRequestClockScheduler`,
+`CredentialManagerService`, `FirebaseStorage`, a `ContentResolver` or `BuildConfig`, and logs with
+`logger.e/w/i/d(TAG, …)`, never `android.util.Log`. A ViewModel in `:shared-ui` takes the same seams
+(`AuthSession`, `PushRegistration`, `AccountDeletion` and `AccountTraces` came with slice 10e).
 
 **Where a `presentation/theme/…` or `presentation/common/…` path in this file lives** (MON-24
 phase 2, Task 9, slice 9b, November 2026). The theme moved whole to
@@ -2019,10 +2021,10 @@ code stays with the screen), in `chatUiModule`; `sharedFileError` left `SharedFi
 On the iPhone `platformUiModule` binds the chat's two platform seams the data layer does not: no
 dictation (`NoSpeechDictation`, unavailable) and no AI assist (`AiAssistAvailability(false)`,
 `NoAiAssist` answering `Disabled`), in `di/koin/IosUiUnavailable.kt`. `coParentOnScreen`, `observeSignedInUser` and
-`projectedCoParentUid` are public behind `@InternalSharedApi` until the ViewModels still in the
-app that call them move (three since `PairingViewModel` moved in 10e; see the `@InternalSharedApi`
-paragraph below). Slice 10b moved **the
-calendar**: `CalendarViewModel` (its filters and the dismissed custody change in `SecurePreferences`,
+`projectedCoParentUid` are public behind `@InternalSharedApi` until the ViewModels still in the app
+that call them move (two since `PairingViewModel` and `ProfileViewModel` moved in 10e; see the
+`@InternalSharedApi` paragraph below). Slice 10b moved **the calendar**: `CalendarViewModel` (its
+filters and the dismissed custody change in `SecurePreferences`,
 under the same keys; its displayed month, query anchor, selection and custody lookup kotlinx-datetime
 `YearMonth`s and `LocalDate`s, today from `Clock.System.todayIn` in the system zone, a swap's group id
 from `Uuid` and its time `IsoText.dateTimeShortest(wallClockNow())`, the text
@@ -2109,10 +2111,10 @@ edge: `ExpenseScreen` hands `monthPagingTransition` and its month label `toJavaY
 the payments' calls and `PendingSettleUp` take the month as it is (they converted it with
 `toKotlinYearMonth()` before); `SettleUpDialog` formats `pending.month.toJavaYearMonth()`. The
 receipt's on-device text goes through the domain's `ReceiptTextRecognizer`, which the iPhone's
-`platformDataModule` stands in for with `NoReceiptText` (every scan an `IOException`, so the form shows
-its failed-scan message, "Couldn't read the receipt" (`ReceiptScanState.Failed`), and keeps the photo;
-nothing is sent anywhere, item 10). The four
-`ExpenseViewModel` tests (MockK) run in `androidUnitTest`, unchanged but for their location.
+`platformDataModule` stands in for with `NoReceiptText` (every scan an `IOException`, so the form
+shows its failed-scan message, "Couldn't read the receipt" (`ReceiptScanState.Failed`), and keeps
+the photo; nothing is sent anywhere, item 10). The four `ExpenseViewModel` tests (MockK) run in
+`androidUnitTest`, unchanged but for their location.
 Then **payments and child support**: `PaymentsViewModel` and `SupportViewModel`, in `paymentsUiModule`
 and `supportUiModule`, on `SignedInUser` for the uid where they took `FirebaseAuthService`
 (`getCurrentUid()`, what `getCurrentUser()?.uid` read). The support screen's reminder job goes through
@@ -2125,35 +2127,54 @@ with `signum() > 0 && scale() <= 2` and the app's `MinorUnits.fromDecimal` answe
 `DecimalTextParityTest` holds it to `BigDecimal` over a corpus and 10 000 random texts; the grammar
 `DecimalText`'s readers share is the file-private `DecimalGrammar`, so the object stays within
 detekt's function count. `SupportAmountTest` runs in `commonTest`.
-Slice 10e moved **settings**: `SettingsViewModel` and `CalendarFeedViewModel`, in `settingsUiModule`.
-Settings' push switch goes through `data/remote/firebase/PushRegistration` (new in `:shared-data`:
-`isPushEnabled`, `setPushEnabled` and the sign-out's `unregisterToken`, which the app's `FcmService`
-answers beside `PushDevice`), the account's erasure through `data/session/AccountDeletion` (new, a
-`fun interface` the app's `AccountDeletionService` answers, so the server-first, wipe-after order
-is the service's own, unchanged), and its two product events through `Analytics`, as
-`data/platform/AnalyticsEvents.kt`'s `logNotificationsToggled` and `logThemeChanged`, the event
-names and parameters `AnalyticsManager`'s functions of those names wrote (they left it). The
-iPhone's `platformDataModule` binds `NoPushRegistration` (the switch reads off, turning it on
-fails, nothing to detach) and `NoAccountDeletion` (it fails and wipes nothing). Both ViewModel tests
-(MockK) run in `androidUnitTest`, the push mock now a `PushRegistration`.
-Then **pairing and onboarding**: `PairingViewModel` (in `pairingUiModule`; its log lines through
+Slice 10e moved **settings**: `SettingsViewModel` and `CalendarFeedViewModel`, in
+`settingsUiModule`. Settings' push switch goes through `data/remote/firebase/PushRegistration` (new
+in `:shared-data`: `isPushEnabled`, `setPushEnabled` and the sign-out's `unregisterToken`, which the
+app's `FcmService` answers beside `PushDevice`), the account's erasure through
+`data/session/AccountDeletion` (new, a `fun interface` the app's `AccountDeletionService` answers,
+so the server-first, wipe-after order is the service's own, unchanged), and its two product events
+through `Analytics`, as `data/platform/AnalyticsEvents.kt`'s `logNotificationsToggled` and
+`logThemeChanged`, the event names and parameters `AnalyticsManager`'s functions of those names
+wrote (they left it). The iPhone's `platformDataModule` binds `NoPushRegistration` (the switch reads
+off, turning it on fails, nothing to detach) and `NoAccountDeletion` (it fails and wipes nothing).
+Both ViewModel tests (MockK) run in `androidUnitTest`, the push mock now a `PushRegistration`. Then
+**pairing and onboarding**: `PairingViewModel` (in `pairingUiModule`; its log lines through
 `logger`, the accepted invitation's event through `Analytics` as `logInvitationAccepted`, which left
 `AnalyticsManager` too) with `PairingErrorText.kt`, whose `pairingMessageRes` now answers a Compose
-Multiplatform `StringResource`, so `PairingFormState`'s three messages are `StringResource`s and so are
-the friend and professional ViewModels' `errorRes` and `FriendViewModel.saveError`, which read it from
-the app (their screens read them through Compose Multiplatform's `stringResource`; `PairingScreen`'s
-snackbar through `rememberUiTextResolver`). The invitation's QR code comes from
+Multiplatform `StringResource`, so `PairingFormState`'s three messages are `StringResource`s and so
+are the friend and professional ViewModels' `errorRes` and `FriendViewModel.saveError`, which read
+it from the app (their screens read them through Compose Multiplatform's `stringResource`;
+`PairingScreen`'s snackbar through `rememberUiTextResolver`). The invitation's QR code comes from
 `presentation/pairing/InviteQrCodes` (new in `:shared-ui`, a `fun interface` taking the code and
-answering a Compose `ImageBitmap`), which the app's `AndroidInviteQrCodes` answers with `QRCodeService`
-over `pairingLinkFor` — the share sheet's link, with `BuildConfig.PAIRING_WEB_LINK` staying in the app
-(item 37) — so `PairingFormState.qrBitmap` is an `ImageBitmap` and `InviteCodeCard` draws it as it is;
-`AndroidInviteQrCodesTest` holds the link. `OnboardingViewModel` (in `onboardingUiModule`) with
-`OnboardingStep`: its log lines through `logger`, and the finish mark
+answering a Compose `ImageBitmap`), which the app's `AndroidInviteQrCodes` answers with
+`QRCodeService` over `pairingLinkFor` — the share sheet's link, with `BuildConfig.PAIRING_WEB_LINK`
+staying in the app (item 37) — so `PairingFormState.qrBitmap` is an `ImageBitmap` and
+`InviteCodeCard` draws it as it is; `AndroidInviteQrCodesTest` holds the link. `OnboardingViewModel`
+(in `onboardingUiModule`) with `OnboardingStep`: its log lines through `logger`, and the finish mark
 `IsoText.dateTimeShortest(wallClockNow())`, the text `LocalDateTime.now().toString()` wrote. On the
 iPhone `platformUiModule` binds `NoInviteQrCodes` (no QR drawn). `OnboardingStepTest` runs in
-`commonTest` (one name lost its commas); `PairingViewModelTest` and `OnboardingViewModelTest` (MockK) in
-`androidUnitTest`, the first verifying `InviteQrCodes.forInvite` and `Analytics.log` where it verified
-`QRCodeService` and `AnalyticsManager`, and without its dead `ValidationUtils` mock.
+`commonTest` (one name lost its commas); `PairingViewModelTest` and `OnboardingViewModelTest`
+(MockK) in `androidUnitTest`, the first verifying `InviteQrCodes.forInvite` and `Analytics.log`
+where it verified `QRCodeService` and `AnalyticsManager`, and without its dead `ValidationUtils`
+mock. Then **the session and the profile**: `AuthStateViewModel` (in `sessionUiModule`; the start
+destination's one source and sign-out) on three seams — `data/remote/firebase/AuthSession` (new:
+`awaitSignedInUid`, `waitForAuthReady()?.uid` with its five-second wait, and `signOutCompletely`;
+the app's `FirebaseAuthService` answers it beside `SignedInUser`), `PushRegistration`'s
+`unregisterToken` and `data/session/AccountTraces` (new, a `fun interface`, `clearAfterSignOut`; the
+app's `DeviceTraces` answers it) — each one call of the sign-out, so its order (the token, the
+school tokens, the event reminders, the request clocks' steps, the files, then the session's end) is
+still the ViewModel's own, unchanged; and `ProfileViewModel` (in `profileUiModule`; its log line
+through `logger`, a save's time `Clock.System.now().toEpochMilliseconds()`, what
+`System.currentTimeMillis()` read). The iPhone's `platformDataModule` binds `NoAuthSession` (nobody
+signed in; ending a session is nothing to do) and `NoAccountTraces` (nothing kept outside the
+database yet). Both tests (MockK) run in `androidUnitTest`, the session's mock answering a uid where
+it answered a `FirebaseUser`. **Two of the slice's ViewModels stay in the app, on purpose**, until
+Task 11 gives the screens their platform interfaces: `AuthViewModel` hands Credential Manager the
+`Activity` that hosts its sheets on every sign-in call, and maps `androidx.credentials` and Firebase
+Auth exception types into `AuthError`; `SyncViewModel` builds Google Sign-In's `Intent` and reads
+its `Task<GoogleSignInAccount>` result, an activity-result flow, through `CredentialManagerService`.
+Each moves once its sign-in is behind a platform interface the screen provides (plan, Task 11's
+carried notes).
 
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller
@@ -2183,9 +2204,9 @@ app), the four expense mappers in
 e2e tests, which start the mirror themselves), and the engine overload of `httpClient` and
 `GitLiveFirestoreClient`'s `plainToGitLive` (the R8 probe); and in `shared-ui/` (Task 10)
 `CoParentOnScreen.kt`'s `coParentOnScreen`, `UserRepository.observeSignedInUser` and
-`User.projectedCoParentUid` (`HomeViewModel`, `ProfileViewModel` and `ParentingPlanViewModel`, in
-the app until their slices move them; `ParentsSource`, `FamilyKindSource`, since slice 10c
-`RequestsSource` and, since slice 10e, `PairingViewModel` opt in beside them in `:shared-ui`). This list
+`User.projectedCoParentUid` (`HomeViewModel` and `ParentingPlanViewModel`, in the app until slice
+10f moves them; `ParentsSource`, `FamilyKindSource`, since slice 10c `RequestsSource` and, since
+slice 10e, `PairingViewModel` and `ProfileViewModel` opt in beside them in `:shared-ui`). This list
 is the one place they are recorded; `InternalSharedApi`'s KDoc points here.
 
 Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth) → Firestore sync.

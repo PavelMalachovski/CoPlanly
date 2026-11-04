@@ -34,6 +34,7 @@ import com.coparently.app.data.platform.IosCrashReporter
 import com.coparently.app.data.platform.IosDeviceRegion
 import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.platform.keychainSecurePreferences
+import com.coparently.app.data.remote.firebase.AuthSession
 import com.coparently.app.data.remote.firebase.CallableFunctions
 import com.coparently.app.data.remote.firebase.FirestoreClient
 import com.coparently.app.data.remote.firebase.GitLiveFirestoreClient
@@ -52,6 +53,7 @@ import com.coparently.app.data.school.SchoolImportWordings
 import com.coparently.app.data.school.bakalari.BakalariClient
 import com.coparently.app.data.session.AccountConsistency
 import com.coparently.app.data.session.AccountDeletion
+import com.coparently.app.data.session.AccountTraces
 import com.coparently.app.data.support.SupportReminderScheduler
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.domain.notification.ReminderScheduler
@@ -108,11 +110,13 @@ actual val platformDataModule: Module = module {
     single { BakalariClient(httpClient(HttpTimeouts.SCHOOL)) }
 
     single<SignedInUser> { NoSignedInUser }
+    single<AuthSession> { NoAuthSession }
     single<PushDevice> { NoPushDevice }
     single<PushQueue> { get<PushDevice>() }
     single<PushRegistration> { NoPushRegistration }
     single<AccountConsistency> { NoAccountSwitch }
     single<AccountDeletion> { NoAccountDeletion }
+    single<AccountTraces> { NoAccountTraces }
     single<ReminderScheduler> { NoEventReminders }
     single<RequestClockScheduler> { NoRequestClockJobs }
     single<RequestClockNotices> { NoRequestClockNotices }

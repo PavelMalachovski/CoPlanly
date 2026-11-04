@@ -872,6 +872,24 @@ Then pairing and onboarding:
   `pairingLinkFor` check moved to the app's new `AndroidInviteQrCodesTest`; `FriendViewModelTest`
   and `ProfessionalsViewModelTest` compare `Res.string` where they compared `R.string`.
 
+Then the session and the profile:
+- `AuthStateViewModel` (`sessionUiModule`): `FirebaseAuthService` → `AuthSession` (new,
+  `data/remote/firebase/`: `awaitSignedInUid` = `waitForAuthReady()?.uid`, `signOutCompletely`; the
+  service implements it), `FcmService` → `PushRegistration`, `DeviceTraces` → `AccountTraces` (new,
+  `data/session/`, `fun interface` `clearAfterSignOut`; `DeviceTraces` implements it), `Log` → `logger`.
+  Each seam is one of sign-out's calls, so the order stays the ViewModel's. iPhone: `NoAuthSession`,
+  `NoAccountTraces` in `platformDataModule`.
+- `ProfileViewModel` (`profileUiModule`): `Log` → `logger`, `System.currentTimeMillis()` →
+  `Clock.System.now().toEpochMilliseconds()`.
+- Tests: `AuthStateViewModelTest` (its session mock answers `"u1"` where it answered a `FirebaseUser`)
+  and `ProfileViewModelTest` (MockK) to androidUnitTest.
+- **Left in the app, for Task 11**: `AuthViewModel` (every Credential Manager call takes the hosting
+  `Activity`; `AuthError` maps `androidx.credentials` and `FirebaseAuthException` types) and
+  `SyncViewModel` (Google Sign-In's `Intent` and `Task<GoogleSignInAccount>` result, through
+  `CredentialManagerService`). See Task 11's carried notes.
+- `@InternalSharedApi`: `coParentOnScreen`, `observeSignedInUser` and `projectedCoParentUid` stay
+  public behind the marker for `HomeViewModel` and `ParentingPlanViewModel` (10f).
+
 ### Task 11: The screens to `commonMain`
 
 **Files:**
@@ -905,6 +923,15 @@ Then pairing and onboarding:
 - While `platformUiModule` binds `NoInviteQrCodes`, the shared pairing screen must not draw the QR
   frame on the iPhone (it would wait for a code that never comes); the code and the link are how an
   invitation leaves the phone there.
+- `AuthViewModel` and `SyncViewModel` move with the auth and settings screens, once their sign-ins
+  are platform interfaces the shell provides: a `CredentialSignIn` (Google's id token, a saved
+  password, the save prompt — the Activity stays on Android's side of it) with `AuthError` mapped
+  there from Android's and Firebase's exception types into the common type, and a
+  `GoogleCalendarSignIn` launcher whose result is the connection outcome `SyncViewModel` words today.
+  `AuthViewModel`'s ordering rules move unchanged: the save prompt before `onSuccess`, the `finally`
+  that clears `isLoading`, cancellations rethrown. So does `SyncViewModel.signOut`'s use of
+  `CredentialManagerService.signOut`, which clears the Google credential before the network revoke
+  (CLAUDE.md item 23).
 
 - [ ] **Step 1: For each group, run the screenshot tests and the group's instrumented tests**
   before the move. Record that they are green.

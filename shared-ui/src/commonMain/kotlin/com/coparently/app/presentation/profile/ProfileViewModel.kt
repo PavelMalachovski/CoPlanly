@@ -1,13 +1,14 @@
-// `coParentOnScreen` and its helpers are public in `:shared-ui` only for the ViewModels still here (MON-24).
+// `coParentOnScreen` and its helpers are public behind the marker for the app's ViewModels, and the
+// marker applies in its own module too (MON-24).
 @file:OptIn(InternalSharedApi::class)
 
 package com.coparently.app.presentation.profile
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.chat.ChatPartner
 import com.coparently.app.data.chat.ChatPartnerSource
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.PairingRepository
@@ -27,6 +28,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.LocalDate
+import kotlin.time.Clock
 
 /**
  * State of a profile screen — the signed-in parent's own, and the co-parent's.
@@ -230,14 +232,14 @@ class ProfileViewModel(
                 )
                 userRepository.updateUser(toSave)
                 _uiState.update {
-                    it.copy(me = toSave, isSaving = false, savedAt = System.currentTimeMillis())
+                    it.copy(me = toSave, isSaving = false, savedAt = Clock.System.now().toEpochMilliseconds())
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
-                Log.e(TAG, "Failed to save the profile", e)
+                logger.e(TAG, "Failed to save the profile", e)
                 _uiState.update { it.copy(isSaving = false) }
             }
         }

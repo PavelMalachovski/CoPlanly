@@ -1,9 +1,9 @@
 package com.coparently.app.presentation.sync
 
-import com.coparently.app.data.remote.firebase.FcmService
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.AuthSession
+import com.coparently.app.data.remote.firebase.PushRegistration
 import com.coparently.app.data.school.SchoolConnectionStore
-import com.coparently.app.data.session.DeviceTraces
+import com.coparently.app.data.session.AccountTraces
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.model.User
@@ -12,7 +12,6 @@ import com.coparently.app.domain.notification.RequestClockScheduler
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.domain.repository.UserRepository
-import com.google.firebase.auth.FirebaseUser
 import io.mockk.coEvery
 import io.mockk.coVerifyOrder
 import io.mockk.every
@@ -44,16 +43,15 @@ class AuthStateViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val now = LocalDateTime(2026, 9, 1, 9, 0)
 
-    private val firebaseUser = mockk<FirebaseUser> { every { uid } returns "u1" }
-    private val firebaseAuthService = mockk<FirebaseAuthService>(relaxed = true)
+    private val firebaseAuthService = mockk<AuthSession>(relaxed = true)
     private val userRepository = mockk<UserRepository>()
     private val childInfoRepository = mockk<ChildInfoRepository>()
     private val petRepository = mockk<PetRepository>()
-    private val fcmService = mockk<FcmService>(relaxed = true)
+    private val fcmService = mockk<PushRegistration>(relaxed = true)
     private val schoolConnections = mockk<SchoolConnectionStore>(relaxed = true)
     private val reminderScheduler = mockk<ReminderScheduler>(relaxed = true)
     private val requestClockScheduler = mockk<RequestClockScheduler>(relaxed = true)
-    private val deviceTraces = mockk<DeviceTraces>(relaxed = true)
+    private val deviceTraces = mockk<AccountTraces>(relaxed = true)
 
     private val namedAccount = User(id = "u1", email = "olya@example.com", name = "Olya", role = "mom", colorCode = "")
 
@@ -99,7 +97,7 @@ class AuthStateViewModelTest {
 
     @Test
     fun `nobody signed in resolves to signed out, with nothing to onboard`() = runTest(dispatcher) {
-        coEvery { firebaseAuthService.waitForAuthReady(any()) } returns null
+        coEvery { firebaseAuthService.awaitSignedInUid() } returns null
 
         val vm = viewModel()
         advanceUntilIdle()
@@ -111,7 +109,7 @@ class AuthStateViewModelTest {
 
     @Test
     fun `waits for the account row rather than reading it once`() = runTest(dispatcher) {
-        coEvery { firebaseAuthService.waitForAuthReady(any()) } returns firebaseUser
+        coEvery { firebaseAuthService.awaitSignedInUid() } returns "u1"
         // Right after a sign-up the row is still being written: a single read would see null and
         // send a brand-new parent straight past the wizard.
         every { userRepository.observeUserById("u1") } returns flow {
@@ -130,7 +128,7 @@ class AuthStateViewModelTest {
 
     @Test
     fun `the co-parent's children are not evidence that this account was onboarded`() = runTest(dispatcher) {
-        coEvery { firebaseAuthService.waitForAuthReady(any()) } returns firebaseUser
+        coEvery { firebaseAuthService.awaitSignedInUid() } returns "u1"
         every { userRepository.observeUserById("u1") } returns flowOf(namedAccount)
         stubRecords(children = listOf(child(createdBy = "partner")))
 
@@ -142,7 +140,7 @@ class AuthStateViewModelTest {
 
     @Test
     fun `own children in the family not on screen are evidence all the same`() = runTest(dispatcher) {
-        coEvery { firebaseAuthService.waitForAuthReady(any()) } returns firebaseUser
+        coEvery { firebaseAuthService.awaitSignedInUid() } returns "u1"
         every { userRepository.observeUserById("u1") } returns flowOf(namedAccount)
         stubRecords(children = listOf(child(createdBy = "u1").copy(familyId = "u1__u3")))
         // With the family with u2 on screen, the family with u3's child is not in the scoped list.
@@ -157,7 +155,7 @@ class AuthStateViewModelTest {
 
     @Test
     fun `a named account with its own pet is not sent back through the wizard`() = runTest(dispatcher) {
-        coEvery { firebaseAuthService.waitForAuthReady(any()) } returns firebaseUser
+        coEvery { firebaseAuthService.awaitSignedInUid() } returns "u1"
         every { userRepository.observeUserById("u1") } returns flowOf(namedAccount)
         val ownPet = Pet(id = "p1", name = "Rex", createdAt = now, updatedAt = now, createdByFirebaseUid = "u1")
         stubRecords(pets = listOf(ownPet))
@@ -170,7 +168,7 @@ class AuthStateViewModelTest {
 
     @Test
     fun `sign-out drops the push token before the session ends`() = runTest(dispatcher) {
-        coEvery { firebaseAuthService.waitForAuthReady(any()) } returnsMany listOf(firebaseUser, null)
+        coEvery { firebaseAuthService.awaitSignedInUid() } returnsMany listOf("u1", null)
         every { userRepository.observeUserById("u1") } returns flowOf(namedAccount)
         stubRecords(children = listOf(child(createdBy = "u1")))
         coEvery { firebaseAuthService.signOutCompletely() } returns Result.success(Unit)

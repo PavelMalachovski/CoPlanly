@@ -33,13 +33,16 @@ import java.io.File
  *
  * Best effort: a file that cannot be deleted is logged by directory, never by name, and never
  * stops a sign-out or a deletion.
+ *
+ * It is the Android [AccountTraces], which sign-out's ViewModel in `:shared-ui` asks for (MON-24
+ * phase 2, Task 10).
  */
 class DeviceTraces(
     private val context: Context
-) {
+) : AccountTraces {
 
     /** What sign-out removes; see the class comment. */
-    suspend fun clearAfterSignOut() {
+    override suspend fun clearAfterSignOut() {
         withContext(Dispatchers.IO) { CACHE_DIRECTORIES.forEach { delete(File(context.cacheDir, it)) } }
         cancelNotifications()
     }

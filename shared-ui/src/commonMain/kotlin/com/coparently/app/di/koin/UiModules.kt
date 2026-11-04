@@ -34,9 +34,11 @@ import com.coparently.app.presentation.pairing.PairingViewModel
 import com.coparently.app.presentation.pairing.PendingCustodyConflict
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
 import com.coparently.app.presentation.payments.PaymentsViewModel
+import com.coparently.app.presentation.profile.ProfileViewModel
 import com.coparently.app.presentation.settings.CalendarFeedViewModel
 import com.coparently.app.presentation.settings.SettingsViewModel
 import com.coparently.app.presentation.support.SupportViewModel
+import com.coparently.app.presentation.sync.AuthStateViewModel
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
@@ -204,6 +206,26 @@ val onboardingUiModule: Module = module {
 }
 
 /**
+ * The session (MON-24 phase 2, Task 10): whether anybody is signed in and still owes the wizard —
+ * the start destination's one source — and sign-out's undoing of this phone's push token, school
+ * tokens, scheduled steps and files, in that order, before the session ends. The session, the token
+ * and the files go through `AuthSession`, `PushRegistration` and `AccountTraces`, which the app binds
+ * on Android and [platformDataModule] stands in for on the iPhone. (Google Calendar's connection,
+ * whose sign-in is an Android activity result, keeps its ViewModel in the app until Task 11.)
+ */
+val sessionUiModule: Module = module {
+    viewModelOf(::AuthStateViewModel)
+}
+
+/**
+ * Profiles (MON-24 phase 2, Task 10): the signed-in parent's own record, edited, and the co-parent
+ * of the family on screen's, read-only.
+ */
+val profileUiModule: Module = module {
+    viewModelOf(::ProfileViewModel)
+}
+
+/**
  * Every module of the UI both apps run, grouped by feature as [dataModules] is. The app's
  * `appModules` includes them, with [platformUiModule]; the iPhone app's will (phase 3). The
  * ViewModels move here group by group (Task 10's slices); a screen still in the app resolves a moved
@@ -222,7 +244,9 @@ val uiModules: List<Module> = listOf(
     supportUiModule,
     settingsUiModule,
     pairingUiModule,
-    onboardingUiModule
+    onboardingUiModule,
+    sessionUiModule,
+    profileUiModule
 )
 
 /**
