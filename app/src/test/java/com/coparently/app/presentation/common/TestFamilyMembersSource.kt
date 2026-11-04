@@ -12,6 +12,9 @@ import kotlinx.datetime.LocalDateTime
 /**
  * A real [FamilyMembersSource] over stubbed repositories.
  *
+ * `:shared-ui`'s `androidUnitTest` holds a copy for the ViewModel tests that have moved there
+ * (MON-24 phase 2, Task 10). Keep the two alike; this one goes when its last user has moved.
+ *
  * The real class rather than a mock of it, for the reason [testParentsSource] gives: the thing
  * under test is the combining, and a mock would let the two halves describe different families.
  *

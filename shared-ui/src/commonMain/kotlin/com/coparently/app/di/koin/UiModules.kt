@@ -15,6 +15,8 @@ import com.coparently.app.presentation.common.FamilySwitcherViewModel
 import com.coparently.app.presentation.common.FamilyViewViewModel
 import com.coparently.app.presentation.common.ParentPaletteViewModel
 import com.coparently.app.presentation.common.ParentsSource
+import com.coparently.app.presentation.event.EventOwnerViewModel
+import com.coparently.app.presentation.event.EventViewModel
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModelOf
@@ -68,6 +70,17 @@ val calendarUiModule: Module = module {
 }
 
 /**
+ * The events (MON-24 phase 2, Task 10): the events every calendar surface shows with their
+ * operations, an event's photo and the new-event draft, and whose day an event's start date is for
+ * the form. An event's photo goes through the domain's `RecordPhotoStorage`, which the app binds on
+ * Android and [platformUiModule] stands in for on the iPhone.
+ */
+val eventUiModule: Module = module {
+    viewModelOf(::EventOwnerViewModel)
+    viewModelOf(::EventViewModel)
+}
+
+/**
  * Every module of the UI both apps run, grouped by feature as [dataModules] is. The app's
  * `appModules` includes them, with [platformUiModule]; the iPhone app's will (phase 3). The
  * ViewModels move here group by group (Task 10's slices); a screen still in the app resolves a moved
@@ -76,7 +89,8 @@ val calendarUiModule: Module = module {
 val uiModules: List<Module> = listOf(
     commonUiModule,
     chatUiModule,
-    calendarUiModule
+    calendarUiModule,
+    eventUiModule
 )
 
 /**

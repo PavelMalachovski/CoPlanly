@@ -21,6 +21,9 @@ plugins {
     id("com.android.library")
     id("org.jetbrains.compose")
     id("org.jetbrains.kotlin.plugin.compose")
+    // kotlinx.serialization's compiler plugin, at the Kotlin version (the root build file): the
+    // event form's draft (`EventDraft`, Task 10) is a `@Serializable` model `StoredJson` writes.
+    id("org.jetbrains.kotlin.plugin.serialization")
     id("io.gitlab.arturbosch.detekt")
     id("org.jetbrains.kotlinx.kover")
 }
@@ -113,6 +116,10 @@ kotlin {
             // The moved ViewModel tests that mock their collaborators (Task 10). The app's version;
             // MockK runs on the JVM only, so a test that mocks lives here rather than in commonTest.
             implementation("io.mockk:mockk:1.13.13")
+            // The oracle a moved test compares `StoredJson` with, as `:shared`'s parity tests do: the
+            // Gson the app used until MON-24, at the version it used (`EventViewModelTest` opens a
+            // draft Gson wrote). Tests only.
+            implementation("com.google.code.gson:gson:2.11.0")
         }
     }
 }

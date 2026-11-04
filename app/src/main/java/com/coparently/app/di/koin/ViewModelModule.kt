@@ -11,8 +11,6 @@ import com.coparently.app.presentation.contacts.ContactsViewModel
 import com.coparently.app.presentation.custody.CustodySetupViewModel
 import com.coparently.app.presentation.custody.SeasonalScheduleViewModel
 import com.coparently.app.presentation.documents.FamilyDocumentsViewModel
-import com.coparently.app.presentation.event.EventOwnerViewModel
-import com.coparently.app.presentation.event.EventViewModel
 import com.coparently.app.presentation.expenses.ExpenseViewModel
 import com.coparently.app.presentation.expenses.SettleUpViewModel
 import com.coparently.app.presentation.export.ExportViewModel
@@ -68,8 +66,6 @@ val viewModelModule = module {
     viewModelOf(::CustodySetupViewModel)
     viewModelOf(::SeasonalScheduleViewModel)
     viewModelOf(::FamilyDocumentsViewModel)
-    viewModelOf(::EventOwnerViewModel)
-    viewModelOf(::EventViewModel)
     viewModelOf(::ExpenseViewModel)
     viewModelOf(::SettleUpViewModel)
     viewModelOf(::ExportViewModel)

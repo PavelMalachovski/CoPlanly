@@ -2929,9 +2929,11 @@ bytes are identical on Android):
   assist (neither offered). **Slice 10b built, CI pending**: the calendar's ViewModel (its filters
   and the dismissed custody change in `SecurePreferences`; its months, selection and custody lookup
   on kotlinx-datetime, which the calendar screen converts at its edge) with `CalendarViewMode`,
-  `ParentFilter`, `CalendarSelection` and `CustodyHelper`. Event,
-  custody and requests, family and expenses, settings to sync and the rest follow as the rest of
-  10b and slices 10c–10f.
+  `ParentFilter`, `CalendarSelection` and `CustodyHelper`; and the events' (the new-event draft and
+  the custom types in `SecurePreferences`, the draft a stored model, so `:shared-ui` applies the
+  serialization plugin) with the form's owner lookup. On the iPhone, `platformUiModule` now also
+  stands in for a record's photo storage (nothing stored). Custody and requests, family and
+  expenses, settings to sync and the rest follow as slices 10c–10f.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

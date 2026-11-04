@@ -2,7 +2,8 @@ package com.coparently.app.presentation.event
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.data.local.preferences.EncryptedPreferences
+import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.error.AppError
 import com.coparently.app.domain.files.RecordPhotoKind
@@ -23,7 +24,9 @@ import com.coparently.app.resources.event_error_title_invalid
 import com.coparently.app.resources.event_form_end_before_start
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,10 +55,6 @@ import kotlin.time.Clock
 /** Keeps the parents flow warm across brief unsubscriptions (config changes). */
 private const val PARENTS_STOP_TIMEOUT_MS = 5_000L
 
-/**
- * ViewModel for managing events.
- * Handles UI state and business logic for event operations using Use Cases.
- */
 /**
  * Data class for event draft.
  * Issue 1.3: Draft saving functionality.
@@ -93,10 +92,18 @@ internal sealed interface EventQuery {
     data class Range(val start: LocalDateTime, val end: LocalDateTime) : EventQuery
 }
 
+/**
+ * ViewModel for managing events.
+ * Handles UI state and business logic for event operations using Use Cases.
+ *
+ * In `:shared-ui` since MON-24 phase 2 (Task 10): the draft and the custom event types are read
+ * from the sealed preference store ([SecurePreferences], the app's `EncryptedPreferences` on
+ * Android), under the same keys; every date and time was kotlinx-datetime already.
+ */
 class EventViewModel(
     private val eventUseCases: com.coparently.app.domain.usecase.EventUseCases,
     private val errorHandler: com.coparently.app.domain.error.ErrorHandler,
-    private val encryptedPreferences: EncryptedPreferences,
+    private val encryptedPreferences: SecurePreferences,
     private val photoStorage: RecordPhotoStorage,
     private val parentsSource: ParentsSource,
     familyMembersSource: FamilyMembersSource
@@ -520,10 +527,10 @@ class EventViewModel(
      * Issue 1.3: Draft saving functionality.
      */
     fun saveEventDraft(draft: EventDraft) {
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val draftJson = StoredJson.encode(EventDraft.serializer(), draft)
-                // EncryptedPreferences seals and writes on the calling thread; keep it off Main.
+                // The preference store seals and writes on the calling thread; keep it off Main.
                 encryptedPreferences.putEventDraft(draftFamily.await(), draftJson)
             } catch (e: Exception) {
                 // Silently fail - draft saving is not critical
@@ -559,8 +566,8 @@ class EventViewModel(
      */
     fun customEventTypes(): List<String> {
         return encryptedPreferences
-            .getString(com.coparently.app.data.local.preferences.PreferenceKeys.CUSTOM_EVENT_TYPES)
-            ?.split(com.coparently.app.data.local.preferences.PreferenceKeys.LIST_SEPARATOR)
+            .getString(PreferenceKeys.CUSTOM_EVENT_TYPES)
+            ?.split(PreferenceKeys.LIST_SEPARATOR)
             ?.filter { it.isNotBlank() }
             ?: emptyList()
     }

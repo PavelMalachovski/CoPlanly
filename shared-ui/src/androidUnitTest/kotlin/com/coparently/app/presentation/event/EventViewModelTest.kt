@@ -1,7 +1,7 @@
 package com.coparently.app.presentation.event
 
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.data.local.preferences.EncryptedPreferences
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.AnswerByPreset
 import com.coparently.app.domain.error.AppError
@@ -70,7 +70,7 @@ class EventViewModelTest {
     private lateinit var deleteEvent: DeleteEventUseCase
     private lateinit var getEvents: GetEventsUseCase
     private lateinit var errorHandler: ErrorHandler
-    private lateinit var encryptedPreferences: EncryptedPreferences
+    private lateinit var encryptedPreferences: SecurePreferences
     private lateinit var viewModel: EventViewModel
 
     /** The signed-in parent, in slot 2. `confirmPickup` stamps their slot on the event. */

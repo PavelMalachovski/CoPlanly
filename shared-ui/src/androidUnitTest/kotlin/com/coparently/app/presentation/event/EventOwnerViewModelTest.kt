@@ -8,14 +8,18 @@ import com.coparently.app.domain.model.CustodyModelType
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.LocalDate
 import org.junit.Test
-import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 /**
  * A new event's owner is the day's parent (21 October 2026): what the family's schedule says,
  * with an accepted swap first, and the parent's own slot when nothing answers.
+ *
+ * The last half — the form's `autoEventOwner` falling back to the parent's own slot — is pinned in
+ * the app's `AddEditEventScreenTest` since this test moved to `:shared-ui` (MON-24 phase 2), where
+ * the form's function is out of reach.
  */
 class EventOwnerViewModelTest {
 
@@ -25,7 +29,7 @@ class EventOwnerViewModelTest {
         modelType = CustodyModelType.WEEK_ON_WEEK_OFF,
         patternDays = 14,
         momDayIndices = (0..6).toSet(),
-        startDate = kotlinx.datetime.LocalDate(2026, 10, 19)
+        startDate = LocalDate(2026, 10, 19)
     )
     private val repository = mockk<CustodyModelRepository>()
 
@@ -34,8 +38,8 @@ class EventOwnerViewModelTest {
         coEvery { repository.storedCustody() } returns (model to emptyMap())
         val viewModel = EventOwnerViewModel(repository)
 
-        assertEquals("mom", viewModel.custodyParentOn(LocalDate.of(2026, 10, 21)))
-        assertEquals("dad", viewModel.custodyParentOn(LocalDate.of(2026, 10, 27)))
+        assertEquals("mom", viewModel.custodyParentOn(LocalDate(2026, 10, 21)))
+        assertEquals("dad", viewModel.custodyParentOn(LocalDate(2026, 10, 27)))
     }
 
     @Test
@@ -50,17 +54,15 @@ class EventOwnerViewModelTest {
         )
         coEvery { repository.storedCustody() } returns (model to mapOf("2026-10-21" to swapped))
 
-        assertEquals("dad", EventOwnerViewModel(repository).custodyParentOn(LocalDate.of(2026, 10, 21)))
+        assertEquals("dad", EventOwnerViewModel(repository).custodyParentOn(LocalDate(2026, 10, 21)))
     }
 
     @Test
-    fun `without a schedule nothing answers, and the form keeps the parent's own slot`() = runTest {
+    fun `without a schedule nothing answers`() = runTest {
         coEvery { repository.storedCustody() } returns (null to emptyMap())
 
-        val custody = EventOwnerViewModel(repository).custodyParentOn(LocalDate.of(2026, 10, 21))
+        val custody = EventOwnerViewModel(repository).custodyParentOn(LocalDate(2026, 10, 21))
 
         assertNull(custody)
-        assertEquals("dad", autoEventOwner(custody, mySlot = "dad"))
-        assertEquals("mom", autoEventOwner("mom", mySlot = "dad"))
     }
 }

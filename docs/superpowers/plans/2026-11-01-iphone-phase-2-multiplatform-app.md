@@ -728,6 +728,24 @@ ViewModels are about 57 of those files.
   `CalendarViewModelCustodyChangeTest` and `TestFriendRepository.kt` to androidUnitTest, mocking
   `SecurePreferences`, the first keeping `java.time` as its oracle at the ViewModel's edge.
 
+Then the events:
+- `EventViewModel` (with `EventDraft`, `EventQuery`, `EventUiState`, `EventOperation`) and
+  `EventOwnerViewModel` in `eventUiModule`. `SecurePreferences` for the draft and the custom types
+  (parameter still `encryptedPreferences`); the draft's write on the common `Dispatchers.IO`.
+  `custodyParentOn` takes a kotlinx-datetime day; `AddEditEventScreen` converts its start date.
+- `EventDraft` is `@Serializable`: `:shared-ui` applies `org.jetbrains.kotlin.plugin.serialization`,
+  and `tools/check-invariants.js` scans `shared-ui/` in checks 4 and 5 (without it the model fell
+  out of check 5's discovery, checked by hand).
+- iPhone: `platformUiModule` binds `NoRecordPhotoStorage` (the domain's `RecordPhotoStorage`, which
+  the app binds to `FirebaseImageStorage`): upload and delete throw `IOException`. A JVM `verify()` of
+  `dataModules + uiModules` with the iPhone's bindings resolves, and fails without it.
+- Tests: `EventViewModelTest` (Gson 2.11.0 added to `:shared-ui`'s androidUnitTest as the draft's
+  oracle) and `EventOwnerViewModelTest` to androidUnitTest, with a copy of `testFamilyMembersSource`;
+  the `autoEventOwner` assertions of the latter's no-schedule case moved to the app's
+  `AddEditEventScreenTest`, since that function is the form's and stays in the app.
+- Left for 10c–10f: custody and requests; family and expenses; settings, pairing, onboarding, auth
+  and sync; the rest (among them `FriendCalendarViewModel` and `ProfessionalCalendarViewModel`).
+
 ### Task 11: The screens to `commonMain`
 
 **Files:**

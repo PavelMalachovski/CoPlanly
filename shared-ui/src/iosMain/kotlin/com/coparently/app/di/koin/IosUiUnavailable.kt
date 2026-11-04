@@ -5,7 +5,10 @@ import com.coparently.app.domain.ai.AiAssistResult
 import com.coparently.app.domain.dictation.DictationFailure
 import com.coparently.app.domain.dictation.DictationListener
 import com.coparently.app.domain.dictation.SpeechDictation
+import com.coparently.app.domain.files.RecordPhotoKind
+import com.coparently.app.domain.repository.RecordPhotoStorage
 import kotlinx.datetime.YearMonth
+import kotlinx.io.IOException
 
 /*
  * What the ViewModels in `uiModules` ask of the platform that the iPhone does not have yet (MON-24
@@ -48,3 +51,24 @@ internal object NoAiAssist : AiAssistRepository {
         stats: Map<String, Any>
     ): AiAssistResult = AiAssistResult.Disabled
 }
+
+/**
+ * No Cloud Storage for a record's photos yet (phase 3), as `:shared-data`'s `NoStorageBucket` has
+ * none for a shared file: an upload fails, so nothing is stored that names a photo, and a delete
+ * fails too, so a caller that keeps a list keeps the reference rather than dropping one to an object
+ * it could not reach (`RecordPhotoStorage.delete`'s contract). The event form's photo is the first
+ * caller (`EventViewModel`, slice 10b).
+ */
+internal object NoRecordPhotoStorage : RecordPhotoStorage {
+    override suspend fun upload(
+        kind: RecordPhotoKind,
+        recordId: String,
+        recordFamilyId: String?,
+        localUri: String
+    ): String = throw IOException(NO_PHOTO_STORAGE)
+
+    override suspend fun delete(reference: String, recordFamilyId: String?): Unit =
+        throw IOException(NO_PHOTO_STORAGE)
+}
+
+private const val NO_PHOTO_STORAGE = "Not available in this iPhone build yet"

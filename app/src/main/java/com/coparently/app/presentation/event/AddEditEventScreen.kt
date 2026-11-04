@@ -428,7 +428,9 @@ fun AddEditEventScreen(
     // owner it was saved with; moving it would re-colour, and re-ask about, an agreed event.
     LaunchedEffect(startDate, currentUser?.slot) {
         if (eventId == null) {
-            autoEventOwner(ownerViewModel.custodyParentOn(startDate), currentUser?.slot)?.let { parentOwner = it }
+            autoEventOwner(ownerViewModel.custodyParentOn(startDate.toKotlinLocalDate()), currentUser?.slot)?.let {
+                parentOwner = it
+            }
         }
     }
 

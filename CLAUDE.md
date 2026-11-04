@@ -576,7 +576,9 @@ When touching the UI, keep these invariants:
    Compose artifacts pull Compose 1.10, activity 1.12 and lifecycle 2.10 past the BOM, so it waits
    for a Compose BOM that has them), kotlinx-coroutines 1.11.0, **kotlinx-serialization-json 1.11.0**
    with the `org.jetbrains.kotlin.plugin.serialization` plugin at the Kotlin version (MON-24, which
-   replaced Gson; 1.11.0 is built with Kotlin 2.3.20, 1.12.0 with 2.4, so it moves with Kotlin),
+   replaced Gson; 1.11.0 is built with Kotlin 2.3.20, 1.12.0 with 2.4, so it moves with Kotlin; applied
+   in the app, `:shared`, `:shared-data` and, since Task 10's slice 10b and the event form's
+   `EventDraft`, `:shared-ui`),
    predictive back on. **Kotlin, KSP
    and Roborazzi move together, and AGP holds them back**: KSP has been versioned apart from Kotlin
    since 2.3.0 and is KSP2 only; 2.3.12 and later need AGP 8.12. Dagger used to be the second
@@ -1593,10 +1595,10 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              components of presentation/common/ that need no ViewModel and no Android API (the
              design system's primitives), with UiText (slice 9c); and, from Task 10, the shared
              state of presentation/common/ (ParentsSource and its siblings) and the ViewModels,
-             group by group (so far common/'s, chat's and the calendar's), with their Koin
-             modules: uiModules and platformUiModule, which
-             appModules includes. Screens follow (Task 11). It makes the iPhone's
-             one framework, Shared (static, exporting shared/ and shared-data/)
+             group by group (so far common/'s, chat's, the calendar's and the events'), with
+             their Koin modules: uiModules and platformUiModule, which appModules includes.
+             Screens follow (Task 11). It makes the iPhone's one framework, Shared (static,
+             exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
              ReminderScheduler, the export's record and the school import's plan — in shared/,
              except the phase-1 stay list below (one file), which is still in app/
@@ -2011,7 +2013,8 @@ code stays with the screen), in `chatUiModule`; `sharedFileError` left `SharedFi
 `SharedFileErrors.kt`, and `data/ai/AiConsentManager` moved to `:shared-data` (`aiDataModule`).
 On the iPhone `platformUiModule` binds the chat's two platform seams the data layer does not: no
 dictation (`NoSpeechDictation`, unavailable) and no AI assist (`AiAssistAvailability(false)`,
-`NoAiAssist` answering `Disabled`), in `di/koin/IosUiUnavailable.kt`. `coParentOnScreen`, `observeSignedInUser` and
+`NoAiAssist` answering `Disabled`), in `di/koin/IosUiUnavailable.kt` (with the events'
+`NoRecordPhotoStorage` since 10b, below). `coParentOnScreen`, `observeSignedInUser` and
 `projectedCoParentUid` are public behind `@InternalSharedApi` until the five ViewModels still in the
 app that call them move (see the `@InternalSharedApi` paragraph below). Slice 10b moved **the
 calendar**: `CalendarViewModel` (its filters and the dismissed custody change in `SecurePreferences`,
@@ -2027,7 +2030,19 @@ back with `toKotlinYearMonth()`/`toKotlinLocalDate()`, and `MonthView`, `DayWeek
 hand `CustodyHelper` their `java.time` day as `toKotlinLocalDate()`. The grid's other helpers
 (`queryRangeFor`, `DayCellFills`, `MiniMonthModel`, `OpeningHour`, `SwapSelection`, …) stay with the
 screens, because no ViewModel reads them. `CalendarSelectionTest` runs in `commonTest`; the two
-ViewModel tests (MockK) in `androidUnitTest`, where they keep `java.time` as their oracle.
+ViewModel tests (MockK) in `androidUnitTest`, where they keep `java.time` as their oracle. Then **the
+events**: `EventViewModel` (the new-event draft and the custom event types in `SecurePreferences`,
+under the same keys; the draft written on `Dispatchers.IO`, the common `kotlinx.coroutines.IO`;
+every date and time was kotlinx-datetime already) with `EventDraft`, `EventUiState` and
+`EventOperation` in its file, and `EventOwnerViewModel` (`custodyParentOn` takes a kotlinx-datetime
+day, which `AddEditEventScreen` converts with `toKotlinLocalDate()`), in `eventUiModule`. `EventDraft`
+is a stored model, so `:shared-ui` applies the serialization plugin and `check-invariants.js`' checks
+4 and 5 read `shared-ui/` too; the R8 probe names it as before. Its photo goes through the domain's
+`RecordPhotoStorage`, which the iPhone's `platformUiModule` stands in for with
+`NoRecordPhotoStorage` (every upload and delete an `IOException`: nothing stored, nothing dropped).
+`EventViewModelTest` keeps Gson as the oracle for a draft an older build wrote (Gson 2.11.0 in
+`:shared-ui`'s `androidUnitTest`), and `EventOwnerViewModelTest`'s check of the form's
+`autoEventOwner` moved to the app's `AddEditEventScreenTest`, where that function is.
 
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller

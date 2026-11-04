@@ -21,6 +21,18 @@ import kotlin.test.assertTrue
  */
 class AddEditEventScreenTest {
 
+    /**
+     * When the family's schedule answers nothing for the start date, a new event keeps the
+     * parent's own slot (21 October 2026). Was the second half of `EventOwnerViewModelTest`'s
+     * no-schedule case until that test moved to `:shared-ui` (MON-24 phase 2), out of reach of
+     * this file's internal function.
+     */
+    @Test
+    fun `without a schedule the form keeps the parent's own slot`() {
+        assertEquals("dad", autoEventOwner(custodyParent = null, mySlot = "dad"))
+        assertEquals("mom", autoEventOwner(custodyParent = "mom", mySlot = "dad"))
+    }
+
     @Test
     fun `hidden before the upstream has emitted once, regardless of the rest`() {
         assertFalse(
