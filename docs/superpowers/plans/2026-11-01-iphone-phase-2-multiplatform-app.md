@@ -1430,8 +1430,8 @@ Then the export and the school import:
   scan effect's KDoc, `caresForSummary`, `FamilyKindDialog`, `SplitRatioDialog` and `MoneyFormat`
   `internal`, and the two CLAUDE.md lines and this plan's 11d line marked.
 - Group 1, Settings and `SyncViewModel` (`git mv`, packages unchanged, `R.string` → `Res.string`):
-  `settings/SettingsScreen.kt`, `ParentColorDialog.kt` (`ParentColorPicker`, `CUSTOM_COLOUR` and
-  `GridSwatch` public: the screenshots, `ParentColorPickerTest`, onboarding), `CalendarFeedScreen.kt`,
+  `settings/SettingsScreen.kt`, `ParentColorDialog.kt` (`ParentColorPicker` and `CUSTOM_COLOUR`
+  public: the screenshots, `ParentColorPickerTest`; `GridSwatch` `internal` again after the review), `CalendarFeedScreen.kt`,
   `DataSourcesScreen.kt`, `RegionDialog.kt` and `AppLanguage.kt` (the enum alone, its labels
   `StringResource`s), with `common/CountryPicker.kt` (its labels `StringResource`s) and
   `consent/HealthConsentUi.kt` and `TelemetryConsentScreen.kt`; and `sync/SyncViewModel.kt`, in
@@ -1576,6 +1576,15 @@ Then the export and the school import:
   import's `Instant…format(dateWithTime(…))` → `ReaderDateText.dateWithTime`). **Task 11 done**: the
   app's `presentation/` holds `MainActivity`, `widget/`, `navigation/`, the previews and the Android
   halves of the platform interfaces (`RecordShareIntent.kt` new, for `ExportFileWriterTest`).
+- Then the 11f review's notes, in their own commit: I1, the iPhone's stand-ins for the two locals
+  `MainActivity` provides beside `PlatformServices` (`NoCredentialSignIn`, `NoGoogleCalendarSignIn`
+  in `IosPlatform.kt`), provided with `iosPlatformServices` by the new `ProvideIosShell(buildValues,
+  content)` the phase-3 view controller wraps its content in, held unavailable by
+  `IosSignInStandInsTest` (`iosTest`); kept as separate locals, so Android and `PlatformLocals.all`
+  do not change. M1 `AnalyticsManager.logLogin`/`logSignUp` deleted; M2 `GridSwatch` `internal`; M3
+  `readerLanguage()`'s source named (`Locale.getDefault()`); M4 `docs/DEVICE-CHECKLIST.md`'s
+  references to the deleted link objects; M5 the child records' picker KDoc (done with group 2); M6
+  `Context.findActivity()` and its test deleted (no caller).
 
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 

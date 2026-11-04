@@ -1216,8 +1216,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   the stickers' `roleOrNull` and `senderLine`, which `MyStickersScreen` calls, then the expenses'
   `CollapsedMonthSummary`, which the screenshots render, and `ReceiptScanEffect` with its
   `ReceiptScanFormState` and `ReceiptScanCallbacks`, which an androidTest drives; slice 11f:
-`ParentColorPicker` and `CUSTOM_COLOUR`, which the screenshots and `ParentColorPickerTest` render, and
-`GridSwatch`, which onboarding draws, then `InvitationView`, which `InvitationViewTest` and the
+`ParentColorPicker` and `CUSTOM_COLOUR`, which the screenshots and `ParentColorPickerTest` render
+(`GridSwatch` is `internal` again, onboarding being in the module too), then `InvitationView`, which `InvitationViewTest` and the
 screenshots render; slice 11g: Home's `HandoverHero`, `StatTiles` and `TimelineRow`, then
 `FriendAgendaDay`, `FriendComparisonTable`, `FriendEventDetails` and `FriendInviteContent`, which the
 screenshots render). A test that moves with its code to `:shared-ui` keeps `internal`
@@ -2200,8 +2200,8 @@ the dialog's amount `DecimalText.plain` (what `MinorUnits.toDecimal(…).toPlain
 (`SupportReminderScheduler.available`, new, true by default; the iPhone's `NoSupportReminderJob` says
 false; `SupportViewModel.remindersAvailable`), the carried note's hiding. **Then Settings' screens**
 (slice 11f): `presentation/settings/`'s `SettingsScreen` (its five groups, design refresh item 4),
-`ParentColorDialog` (the picker, `ParentColorPicker`, `CUSTOM_COLOUR` and `GridSwatch` public for the
-screenshots, `ParentColorPickerTest` and onboarding), `CalendarFeedScreen`, `DataSourcesScreen` (its
+`ParentColorDialog` (the picker, `ParentColorPicker` and `CUSTOM_COLOUR` public for the screenshots and
+`ParentColorPickerTest`; `GridSwatch`, which onboarding also draws, `internal`), `CalendarFeedScreen`, `DataSourcesScreen` (its
 `DataSourcesTest` in `commonTest`, comparing the `StringResource`s' keys) and `RegionDialog`, with
 `common/CountryPicker.kt` (its labels `StringResource`s) and `consent/`'s `HealthConsentUi.kt` and
 `TelemetryConsentScreen.kt`, and **`SyncViewModel`** (`settingsUiModule`). The phone's half, each
@@ -2209,7 +2209,8 @@ from the shell: links through `OpenUrl` and `AppBuildValues` (the privacy policy
 sources, the version; a row drawn only while its address is set and the phone opens links), the
 notification permission through `PermissionRequester`, the calendar link's share and copy through
 `ShareSheet` and `SensitiveClipboard` (each offered only where available), its language the reader's
-(`readerLanguage()`, the activity's first locale on Android) and its days `readerMediumDate`, the
+(`readerLanguage()`: on Android `Locale.getDefault()`'s language, which `AppLocale.follow` keeps on
+the app's language; the configuration's first locale before 11f) and its days `readerMediumDate`, the
 consent's day `ReaderDateText.date(…, "yMMMd")`, the last sync's time `ReaderDateText.time`, and the
 language card through the new `AppLanguages` (above; the `AppLanguage` enum moved, its labels
 `StringResource`s). **The push switch is offered only where the phone registers for pushes**
@@ -2227,7 +2228,9 @@ token and the two sign-outs through the new `GoogleCalendarAccount` (`data/remot
 `:shared-data`; `CredentialManagerService` answers it, so `signOut` keeps its order, the local store
 cleared before the network revoke, item 23; the iPhone's `NoGoogleCalendar` connects nothing), and the
 store through `SecurePreferences`. Settings draws the Google Calendar row only where
-`GoogleCalendarSignIn.available` (not on the iPhone). `SyncViewModelTest` and `SyncStateTextTest`
+`GoogleCalendarSignIn.available`; on the iPhone the shell provides an unavailable stand-in,
+`NoGoogleCalendarSignIn`, through `ProvideIosShell` (`iosMain`, beside `iosPlatformServices`; the 11f
+review's I1, since `LocalGoogleCalendarSignIn` throws outside a provider). `SyncViewModelTest` and `SyncStateTextTest`
 stay in the app (the first runs over the device's real credential store), so `toSyncState` and
 `toUiText` are public. `AppLanguage`'s Android half (`current`, `apply`) is the app's
 `AndroidAppLanguages`; `SystemDefaultRelaunch` stays with it. **Then pairing's and onboarding's
@@ -2271,7 +2274,8 @@ iPhone's `NoAuthErrors` calls every failure `Unknown`) — a Koin seam rather th
 `data/platform/AnalyticsEvents.kt`'s new `logLogin` and `logSignUp` (Firebase's `login` and `sign_up`
 with `method`, as `AnalyticsManager`'s functions of those names logged them; they left it), the reports
 `CrashReporter.recordWithContext`. The screen offers Google and a saved password only where
-`CredentialSignIn.available` (not on the iPhone); the legal notice draws the terms clause and the two
+`CredentialSignIn.available` (on the iPhone the shell's `ProvideIosShell` provides the unavailable
+`NoCredentialSignIn`; `IosSignInStandInsTest`, in `iosTest`, holds both stand-ins unavailable); the legal notice draws the terms clause and the two
 links only while their address is set and the phone opens links (`AppBuildValues`, `OpenUrl`), so the
 app's `PrivacyPolicyLink` and `TermsOfServiceLink` are gone. The profile's dates are
 `readerMediumDate` and its picker the kotlinx `LocalDatePickerDialog` with the child records' labels
@@ -2637,7 +2641,10 @@ the screens called (`Intent.createChooser`, the activity-result contracts, `QRSc
 `OnDeviceSpeechDictation`'s rule, `copySensitive`, `openSharedFile`, `BuildConfig`); `MainActivity`,
 `QRScannerActivity` and the screenshot frame (`ScreenshotFrame`) wrap their content in it. The
 iPhone's `iosPlatformServices(buildValues)` (`iosMain`) answers with stand-ins that are not available
-until phase 3 and 4. Three things not to undo. **A local read outside the provider throws** — no
+until phase 3 and 4, and its `ProvideIosShell(buildValues, content)` provides those with the two locals
+`MainActivity` provides on its own (`LocalCredentialSignIn`, `LocalGoogleCalendarSignIn`), as the
+unavailable `NoCredentialSignIn` and `NoGoogleCalendarSignIn`: the one call the phase-3 view
+controller makes. Three things not to undo. **A local read outside the provider throws** — no
 "unavailable" default, which would hide a feature in production with no test noticing; a test that
 composes a screen provides the platform as the app does. **`AndroidPlatformTest`** (the app's,
 Robolectric) reads every local of `PlatformLocals.all` through `ProvideAndroidPlatform`, and

@@ -88,15 +88,15 @@ const RULES = [
       'K/presentation/onboarding/**', 'K/domain/onboarding/**', 'K/presentation/MainActivity.kt',
       'K/presentation/common/PermissionRequesters.kt', 'K/presentation/common/AndroidPermissionChecks.kt',
       'K/presentation/platform/**',
-      'K/presentation/common/PrivacyPolicyLink.kt', 'K/data/telemetry/**', 'K/data/platform/AnalyticsEvents.kt',
+      'K/data/telemetry/**', 'K/data/platform/AnalyticsEvents.kt',
       'app/src/main/AndroidManifest.xml', 'app/src/main/res/values/themes.xml',
       'app/src/main/res/values-night/**'],
   },
   {
     sections: ['2.3'],
     why: 'what signing in agrees to: the age line, the terms and the policy links (L-12)',
-    paths: ['K/presentation/auth/AuthLegalNotice.kt', 'K/presentation/common/TermsOfServiceLink.kt',
-      'K/presentation/common/PrivacyPolicyLink.kt', 'S/values*/legal_strings.xml'],
+    paths: ['K/presentation/auth/AuthLegalNotice.kt', 'K/presentation/consent/TelemetryConsentScreen.kt',
+      'K/presentation/settings/SettingsScreen.kt', 'S/values*/legal_strings.xml'],
   },
   {
     sections: ['3.1'],

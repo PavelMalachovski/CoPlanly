@@ -49,7 +49,7 @@ adb logcat -v time EncryptedDatabase:V DatabaseKey:V SyncService:V SyncWorker:V 
   MessageRepo:V ChatViewModel:V CoPlanlyMessaging:V PetsViewModel:V ChildInfoViewModel:V \
   CoPlanlyUpload:V CoPlanlyReceiptScan:V AccountDeletionService:V SelectedFamily:V \
   CustodyModelRepo:V HomeViewModel:V UserRepository:V HealthConsentManager:V \
-  HealthConsentViewModel:V DepartedThreadSource:V TermsOfServiceLink:V AndroidRuntime:E *:S
+  HealthConsentViewModel:V DepartedThreadSource:V AndroidOpenUrl:V AndroidRuntime:E *:S
 ```
 
 `AndroidRuntime:E` is where a crash shows up, including a failed Room migration
@@ -326,7 +326,10 @@ Preconditions: `adb uninstall app.coplanly`, set the system to **dark** theme
     Settings → Account. `PRIVACY_POLICY_URL` is blank until REL-4 hosts the policy.
   - *(optional)* Build once with `-PCOPLANLY_PRIVACY_POLICY_URL=https://example.com`: both
     links appear and open the browser.
-  - **If it fails:** `presentation/common/PrivacyPolicyLink.kt`, log tag `PrivacyPolicyLink`.
+  - **If it fails:** `shared-ui/.../consent/TelemetryConsentScreen.kt` and
+    `settings/SettingsScreen.kt`, which draw the link from `AppBuildValues.privacyPolicyUrl`
+    (`androidBuildValues()` in `presentation/platform/AndroidPlatform.kt`); a link no app opens logs
+    under the tag `AndroidOpenUrl`.
 - [ ] **Notification permission is never requested on cold start.**
   - **Expected:** sign in and finish onboarding, and no system notification dialog appears.
   - **Expected:** the dialog appears the first time you (a) turn on Settings → App →
@@ -377,9 +380,11 @@ Preconditions: signed out (or the fresh install of §2.2, before signing in). Bu
       policy** row and a **Terms of service** row, each opening its address. In build B neither
       row exists.
 - [ ] Check the line in German and Russian at 1.5× text: it wraps, nothing is cut off.
-- **If it fails:** `presentation/auth/AuthLegalNotice.kt`, `presentation/common/TermsOfServiceLink.kt`
-  and `PrivacyPolicyLink.kt` (tags `TermsOfServiceLink`, `PrivacyPolicyLink`), the
-  `publishedTermsUrl`/`publishedPrivacyPolicyUrl` values in `app/build.gradle.kts`.
+- **If it fails:** `shared-ui/.../auth/AuthLegalNotice.kt`, `consent/TelemetryConsentScreen.kt` and
+  `settings/SettingsScreen.kt`, which read `AppBuildValues` (`androidBuildValues()` in
+  `presentation/platform/AndroidPlatform.kt`; a link no app opens logs under the tag
+  `AndroidOpenUrl`), the `publishedTermsUrl`/`publishedPrivacyPolicyUrl` values in
+  `app/build.gradle.kts`.
 
 ---
 

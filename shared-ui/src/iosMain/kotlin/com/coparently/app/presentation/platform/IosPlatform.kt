@@ -2,6 +2,8 @@ package com.coparently.app.presentation.platform
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -36,6 +38,47 @@ fun iosPlatformServices(buildValues: AppBuildValues): PlatformServices = Platfor
     qrCodes = NoQrCodes,
     appLanguages = NoAppLanguages,
 )
+
+/**
+ * Everything the shell provides, for the iPhone app's view controller to wrap its content in (phase
+ * 3): [iosPlatformServices] and the two capabilities `MainActivity` provides on its own on Android,
+ * because they need its activity — the credential sheets ([LocalCredentialSignIn]) and Google's
+ * sign-in ([LocalGoogleCalendarSignIn]). Their locals throw outside a provider, so Settings and the
+ * sign-in screen would fail before their `available` checks; here both are stand-ins that say they
+ * are not available, so the sign-in offers neither Google nor a saved password and Settings draws no
+ * Google Calendar row (the 11f review's I1).
+ */
+@Composable
+fun ProvideIosShell(buildValues: AppBuildValues, content: @Composable () -> Unit) {
+    val services = remember(buildValues) { iosPlatformServices(buildValues) }
+    ProvidePlatform(services) {
+        CompositionLocalProvider(
+            LocalCredentialSignIn provides NoCredentialSignIn,
+            LocalGoogleCalendarSignIn provides NoGoogleCalendarSignIn,
+            content = content
+        )
+    }
+}
+
+/** No credential sheets until the iPhone has its own sign-in (phase 3). */
+internal object NoCredentialSignIn : CredentialSignIn {
+    override val available: Boolean = false
+
+    override suspend fun googleIdToken(): Result<String> = Result.failure(IllegalStateException(NO_SIGN_IN))
+
+    override suspend fun savedPassword(): Result<SavedCredential> = Result.failure(IllegalStateException(NO_SIGN_IN))
+
+    override suspend fun offerToSave(email: String, password: String) = Unit
+}
+
+/** No Google sign-in until phase 3: nothing to open. */
+internal object NoGoogleCalendarSignIn : GoogleCalendarSignIn {
+    override val available: Boolean = false
+
+    override fun open(): GoogleSignInStart = GoogleSignInStart.UNAVAILABLE
+}
+
+private const val NO_SIGN_IN = "No sign-in sheet in this iPhone build yet"
 
 /** A launcher with nothing behind it. */
 private val NothingToLaunch = PlatformLauncher { }

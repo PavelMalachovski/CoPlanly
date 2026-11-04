@@ -3056,7 +3056,8 @@ bytes are identical on Android):
   the language card, the links, the notification permission, the share and the clipboard go through
   the platform interfaces. On a phone with no push registration, no Google sign-in or no language
   picker of its own (the iPhone for now) Settings offers no push switch, no Google Calendar row and
-  no language row.
+  no language row — the Google sign-in through an unavailable stand-in the iPhone's shell provides
+  (`ProvideIosShell`, added after the 11f review).
   Then pairing and onboarding: the pairing screen, the invitation, the code card and the code field,
   and the four-step wizard, the invitation's share, copy and scan through the platform interfaces; on
   a phone with no QR drawing, share sheet, clipboard or scanner (the iPhone for now) the card draws no
@@ -3064,7 +3065,8 @@ bytes are identical on Android):
   Then the sign-in and the profile, with their ViewModel: the credential sheets are the shell's (on
   Android Credential Manager on the activity, as before), the account's calls and the wording of
   their failures the data layer's and the app's, every ordering rule unchanged; on a phone with no
-  credential sheets (the iPhone for now) the sign-in offers neither Google nor a saved password.
+  credential sheets (the iPhone for now) the sign-in offers neither Google nor a saved password, the
+  shell (`ProvideIosShell`) providing an unavailable stand-in for them.
   **Slice 11f built, CI pending.** Task 10's last two ViewModels moved with it.
   Slice 11g, everything else: first Home, the month in review and the stickers' shelf, their dates
   and amounts through the date and money seams (the same text on Android).

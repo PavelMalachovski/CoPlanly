@@ -99,7 +99,8 @@ fun CalendarFeedScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val textResolver = rememberUiTextResolver()
-    // The feed's language: the one the app speaks, which on Android is the activity's first locale.
+    // The feed's language: the one the app speaks. On Android `Locale.getDefault()`'s language, which
+    // `AppLocale.follow` keeps on the app's language (the configuration's first locale before 11f).
     val language = readerLanguage()
     val snackbarHostState = remember { SnackbarHostState() }
     var revoking by rememberSaveable { mutableStateOf<String?>(null) }

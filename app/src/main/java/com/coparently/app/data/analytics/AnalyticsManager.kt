@@ -53,28 +53,6 @@ class AnalyticsManager(
     }
 
     /**
-     * Log user login event.
-     *
-     * @param method Authentication method used (e.g., "google", "email")
-     */
-    fun logLogin(method: String) {
-        analytics.logEvent(FirebaseAnalytics.Event.LOGIN) {
-            param(FirebaseAnalytics.Param.METHOD, method)
-        }
-    }
-
-    /**
-     * Log user signup event.
-     *
-     * @param method Registration method used (e.g., "google", "email")
-     */
-    fun logSignUp(method: String) {
-        analytics.logEvent(FirebaseAnalytics.Event.SIGN_UP) {
-            param(FirebaseAnalytics.Param.METHOD, method)
-        }
-    }
-
-    /**
      * Log pairing invitation sent event.
      *
      * @param method Method used to send invitation (e.g., "email")
