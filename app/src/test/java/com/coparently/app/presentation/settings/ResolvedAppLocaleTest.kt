@@ -6,54 +6,46 @@ import org.junit.Test
 import java.util.Locale
 
 /**
- * [ResolvedAppLocale.target]: the default locale Compose Multiplatform must see so its strings
- * speak the language Android's resources resolved (MON-24, option (a)).
+ * [ResolvedAppLocale.adjusted]: the default locale list Compose must see so its strings speak the
+ * locale Android's resources resolved (MON-24, option (a)).
  */
 class ResolvedAppLocaleTest {
 
     private fun tag(value: String): Locale = Locale.forLanguageTag(value)
 
     @Test
-    fun `a phone in Slovak then Czech reads Czech, in Slovakia`() {
-        val target = ResolvedAppLocale.target(listOf(tag("sk-SK"), tag("cs-CZ")), tag("sk-SK"))
+    fun `a first language the APK does not translate gives way to the resolved one`() {
+        // Device [ga-IE, cs-CZ], say nothing in the APK speaks Irish: Android resolves Czech.
+        val adjusted = ResolvedAppLocale.adjusted(listOf(tag("ga-IE"), tag("cs-CZ")), tag("cs-CZ"))
 
-        assertEquals("cs", target?.language)
-        assertEquals("SK", target?.country)
+        assertEquals(listOf(tag("cs-CZ"), tag("ga-IE")), adjusted)
     }
 
     @Test
-    fun `a shipped first language changes nothing`() {
-        assertNull(ResolvedAppLocale.target(listOf(tag("de-AT"), tag("cs-CZ")), tag("de-AT")))
-        assertNull(ResolvedAppLocale.target(listOf(tag("en-US")), tag("en-US")))
+    fun `a resolved first language changes nothing`() {
+        // Device [sk-SK, cs-CZ]: a library ships Slovak, so Android resolves Slovak and both
+        // readers fall back to English.
+        assertNull(ResolvedAppLocale.adjusted(listOf(tag("sk-SK"), tag("cs-CZ")), tag("sk-SK")))
+        assertNull(ResolvedAppLocale.adjusted(listOf(tag("de-AT")), tag("de-AT")))
     }
 
     @Test
-    fun `no shipped language anywhere changes nothing, both readers show English`() {
-        assertNull(ResolvedAppLocale.target(listOf(tag("sk-SK"), tag("pl-PL")), tag("sk-SK")))
+    fun `a per-app choice already first changes nothing`() {
+        assertNull(ResolvedAppLocale.adjusted(listOf(tag("uk")), tag("uk")))
     }
 
     @Test
-    fun `a per-app choice already in the default changes nothing`() {
-        assertNull(ResolvedAppLocale.target(listOf(tag("uk")), tag("uk")))
+    fun `an empty default list takes the resolved locale alone`() {
+        assertEquals(listOf(tag("en-US")), ResolvedAppLocale.adjusted(emptyList(), tag("en-US")))
     }
 
     @Test
-    fun `a default left behind by an earlier choice is replaced`() {
-        val target = ResolvedAppLocale.target(listOf(tag("ru-RU")), tag("cs-SK"))
+    fun `the rest of the list keeps its order`() {
+        val adjusted = ResolvedAppLocale.adjusted(
+            listOf(tag("ga-IE"), tag("fr-FR"), tag("de-DE")),
+            tag("de-DE")
+        )
 
-        assertEquals("ru", target?.language)
-        assertEquals("SK", target?.country)
-    }
-
-    @Test
-    fun `a default with no region keeps none`() {
-        val target = ResolvedAppLocale.target(listOf(tag("be"), tag("ru")), tag("be"))
-
-        assertEquals(tag("ru"), target)
-    }
-
-    @Test
-    fun `the shipped languages are the picker's`() {
-        assertEquals(setOf("en", "cs", "de", "ru", "uk"), ResolvedAppLocale.SHIPPED)
+        assertEquals(listOf(tag("de-DE"), tag("ga-IE"), tag("fr-FR")), adjusted)
     }
 }

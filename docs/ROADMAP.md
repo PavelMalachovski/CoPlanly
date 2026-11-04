@@ -2861,7 +2861,11 @@ bytes are identical on Android):
   AppCompat setting the default locale, unproven until the API 26 and 30 legs run. **Then slice
   9c** (below): `UiText` in its Compose Multiplatform form, with `ErrorText` and `UiState`.
   **Decided, option (a)** (owner, 4 November 2026; built
-  as `ResolvedAppLocale` in slice 9c's first commit) — the question was: the two readers fall back differently when the phone's first language is one the
+  as `ResolvedAppLocale`, then corrected after 9c's review: Android resolves from the whole APK's
+  locales, libraries included, and Compose reads the device's raw first locale, so `follow` puts
+  the resources' resolved locale first in `LocaleList`'s default and nothing else; a phone in
+  Slovak then Czech resolves Slovak through AppCompat's `values-sk` and reads English in both, and
+  would read Czech only with `localeFilters` limited to the five languages — open, owner) — the question was: the two readers fall back differently when the phone's first language is one the
   app does not translate. Android takes the first translated locale of the list; Compose
   Multiplatform 1.9.3 takes the first locale's language or `values/`. A phone in Slovak then Czech
   shows the app in Czech but the moved labels in English. Ways out: (a) set the process's default

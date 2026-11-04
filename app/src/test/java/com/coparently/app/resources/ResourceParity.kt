@@ -14,9 +14,10 @@ import java.util.Locale
  *
  * One set of files is read twice since MON-24 phase 2 (Task 9): by aapt2 into `R.string` (the
  * app's generated copy of `:shared-ui`'s `composeResources`) and by Compose Multiplatform's
- * resource plugin into `Res`. Compose Multiplatform picks the language from [Locale.getDefault]
- * (its Android `getSystemEnvironment`), so a case sets that; Android's side reads a configuration
- * context in the same language.
+ * resource plugin into `Res`. Compose Multiplatform picks the language from Compose's
+ * `Locale.current`, the first entry of `android.os.LocaleList.getDefault()`, which follows
+ * [Locale.setDefault] while no list was set explicitly, so a case sets that; Android's side reads a
+ * configuration context in the same language. On a device the two can differ (`ResolvedAppLocale`).
  */
 internal object ResourceParity {
 

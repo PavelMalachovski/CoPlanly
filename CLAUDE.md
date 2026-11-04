@@ -4096,18 +4096,24 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
   `Locale.current`, the process's default locale. `PerAppLocaleTest` holds the two to the same
   language on the API 26 and 30 legs (the 16 KB leg skips it with every `@UsesFakeFirebase` test),
   and `DEVICE-CHECKLIST.md` §3.6 asks for it on Android 12 or older; don't make a moved composable
-  take a `Context` to read `R.string` instead. **The two readers fall back differently, and the
-  app makes them agree** (9b review; owner decision of 4 November 2026, option (a)). Android takes
-  the first locale of the device's list that the app translates; Compose Multiplatform 1.9.3 takes
-  the first locale's language alone and otherwise reads `values/`, so on a phone set to Slovak
-  then Czech `R.string` was Czech and the moved labels English. `MainActivity.onCreate` calls
-  `presentation/settings/ResolvedAppLocale.follow` after AppCompat and before anything is
-  composed: it puts the first translated locale of the configuration first in the process's
-  default list, with the device's region kept (the currency hint reads the country), so both
-  readers — and `java.time`'s formatting — speak one language. It changes nothing when the first
-  locale is translated (a per-app choice always is) or when none is (both show English).
-  `ResolvedAppLocaleTest` holds the rule; don't drop the call, and don't move it before
-  `super.onCreate`, where AppCompat would set the default again.
+  take a `Context` to read `R.string` instead. **The two readers pick the language differently,
+  and the app makes them agree** (9b review; owner decision of 4 November 2026, option (a);
+  corrected in 9c's review against AOSP). Android resolves the locale from what the **whole APK**
+  translates, libraries included (`ResourcesImpl`: the best match of the device's list against the
+  APK's locales), moves it to the front of the resources' configuration and makes it
+  `java.util.Locale.getDefault()`, but leaves `android.os.LocaleList.getDefault()` as the device's
+  raw list — and its first entry is Compose's `Locale.current`, which Compose Multiplatform reads.
+  So when the device's first language is one nothing in the APK translates, `R.string` speaks the
+  resolved language and Compose Multiplatform its `values/` English. `MainActivity.onCreate` calls
+  `presentation/settings/ResolvedAppLocale.follow` after AppCompat and before anything is composed:
+  it puts the resources' resolved locale first in the default list, and touches nothing else
+  (`java.util.Locale.getDefault()`, `java.time`'s formatting and the region the currency hint reads
+  are already the resolved locale's). A per-app choice is always first already. **Mind the
+  libraries**: AppCompat ships `values-sk`, `-pl`, `-be`, `-sr` and more, so a phone in Slovak then
+  Czech resolves Slovak and shows the app in English through both readers — consistent, and not
+  Czech; only `localeFilters` limited to the five shipped languages would make it Czech (an open
+  question to the owner). `ResolvedAppLocaleTest` holds the rule; don't drop the call, and don't
+  move it before `super.onCreate`, where AppCompat would set the default again.
 
 - **Language selection**: device locale by default, plus a manual per-app override — the
   "Language" card in Settings (`presentation/settings/AppLanguage.kt`,

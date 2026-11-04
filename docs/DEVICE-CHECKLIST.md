@@ -630,8 +630,10 @@ system setting or a Play install.
       App → **My colour** names its colours in German, and a dialog's **Abbrechen** is German too
       (both are read through Compose Multiplatform since MON-24 phase 2).
 - [ ] Phone languages **Slovak then Czech**, app on System default (MON-24 phase 2,
-      `ResolvedAppLocale`): the whole app is Czech — a dialog's confirm and cancel, Retry, the
-      offline line and the colour names included — and dates are Czech too.
+      `ResolvedAppLocale`): the app reads in one language throughout — a dialog's confirm and
+      cancel, Retry, the offline line, the colour names and the snackbars included. Today that is
+      English (a library ships Slovak, so Android resolves Slovak, which the app does not
+      translate); note it if any line is Czech or Slovak.
 - [ ] Known and not a failure (AUDIT §4.2): Home's dates may keep the old language until the
       process restarts.
 - **(screenshots)** Whether each translation *fits* — clipping, ellipsis, wrapping at 1.5× text

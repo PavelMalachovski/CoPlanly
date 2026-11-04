@@ -48,7 +48,7 @@ private class FoundationDates(private val readerLocale: NSLocale) : ReaderDates 
         formatter.locale = readerLocale
         formatter.calendar = gregorian
         // Foundation counts from Sunday (index 0), ISO from Monday (1) to Sunday (7).
-        val name = formatter.weekdaySymbols?.getOrNull(day.isoDayNumber % DAYS_IN_WEEK) as? String
+        val name = formatter.weekdaySymbols.getOrNull(day.isoDayNumber % DAYS_IN_WEEK) as? String
             ?: day.name.lowercase()
         return name.replaceFirstChar { it.titlecase() }
     }
