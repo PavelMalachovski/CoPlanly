@@ -217,8 +217,9 @@ private fun StepColumn(state: ConnectSchoolUiState, modifier: Modifier, content:
 /** The town search: a field, the manual route, and the matching towns. */
 @Composable
 private fun TownStep(state: ConnectSchoolUiState, viewModel: ConnectSchoolViewModel, modifier: Modifier) {
-    if (state.towns.isEmpty() && state.error != null && !state.isLoading) {
-        ErrorState(message = state.error.asString(), onRetry = viewModel::loadTowns, modifier = modifier)
+    val error = state.error
+    if (state.towns.isEmpty() && error != null && !state.isLoading) {
+        ErrorState(message = error.asString(), onRetry = viewModel::loadTowns, modifier = modifier)
         return
     }
     StepColumn(state.copy(error = null), modifier) {
@@ -278,8 +279,9 @@ private fun TownList(state: ConnectSchoolUiState, viewModel: ConnectSchoolViewMo
 @Composable
 private fun SchoolStep(state: ConnectSchoolUiState, viewModel: ConnectSchoolViewModel, modifier: Modifier) {
     val town = state.town.orEmpty()
-    if (state.error != null && state.schools.isEmpty() && !state.isLoading) {
-        ErrorState(message = state.error.asString(), onRetry = { viewModel.chooseTown(town) }, modifier = modifier)
+    val error = state.error
+    if (error != null && state.schools.isEmpty() && !state.isLoading) {
+        ErrorState(message = error.asString(), onRetry = { viewModel.chooseTown(town) }, modifier = modifier)
         return
     }
     StepColumn(state, modifier) {
