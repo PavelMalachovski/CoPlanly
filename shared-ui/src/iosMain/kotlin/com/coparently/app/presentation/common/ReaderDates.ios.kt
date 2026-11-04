@@ -22,7 +22,7 @@ import platform.Foundation.currentLocale
 @Composable
 internal actual fun rememberReaderDates(): ReaderDates {
     val composeLocale = Locale.current
-    return remember(composeLocale) { FoundationDates(NSLocale.currentLocale) }
+    return remember<ReaderDates>(composeLocale) { FoundationDates(NSLocale.currentLocale) }
 }
 
 /**

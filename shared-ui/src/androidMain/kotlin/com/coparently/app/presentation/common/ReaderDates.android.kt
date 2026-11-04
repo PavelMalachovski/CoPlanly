@@ -19,7 +19,9 @@ import java.util.Locale
 @Composable
 internal actual fun rememberReaderDates(): ReaderDates {
     val locale = LocalConfiguration.current.locales[0]
-    return remember(locale) { JavaTimeDates(locale) }
+    // The type is spelled out for lint, which cannot always resolve commonMain from here (see
+    // `adaptiveDimensions`).
+    return remember<ReaderDates>(locale) { JavaTimeDates(locale) }
 }
 
 /** `java.time`'s wording in [locale]: the medium localized date, the full day name. */

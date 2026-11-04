@@ -116,7 +116,7 @@ class UiTextResolver internal constructor(
 fun rememberUiTextResolver(): UiTextResolver {
     val environment = rememberResourceEnvironment()
     val dates = rememberReaderDates()
-    return remember(environment, dates) { UiTextResolver(environment, dates) }
+    return remember<UiTextResolver>(environment, dates) { UiTextResolver(environment, dates) }
 }
 
 /**
