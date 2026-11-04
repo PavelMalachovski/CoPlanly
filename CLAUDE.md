@@ -4120,9 +4120,21 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
   then Czech read Czech and one in Slovak then Czech read English only by accident, and it leaves
   Compose's `Locale.current` on the raw first locale. The rule is `domain/language/AppLanguageRule`
   (pure, in `shared/`, so the iPhone can apply it; `AppLanguageRuleTest` runs on the JVM and iOS),
-  and its English fallback **keeps the phone's region** (`sk-SK` reads `en-SK`), so the currency
-  hint, the onboarding's country guess and number formats still see the country. Android's half is
-  `utils/AppLocale.kt`. Six things not to undo.
+  and its English fallback is **European English, `en-150`** (`AppLanguageRule.FALLBACK_LOCALE`,
+  owner decision of the same day): English words on a 24-hour clock with the day before the month
+  ("4 Nov 2026", "18:00", "04/11/2026"), Monday first, and an amount with the symbol after it —
+  "1.234,50 €" on Android 8–10 and "1,234.50 €" from Android 11, whose CLDR 36 dropped en_150's own
+  decimal comma (checked against the CLDR and ICU data of every Android ICU from 58 to 76). Don't go
+  back to English with the phone's region: CLDR had no `en_SK`, `en_PL`, `en_ES` or `en_HU` before
+  release 47, so on every Android the app runs on those fell to US English, a 12-hour clock and the
+  month first. **The phone's region is read from the phone** (`DeviceRegion`: `AndroidDeviceRegion`,
+  the first system locale's, on Android; `IosDeviceRegion` on the iPhone) for the currency hint and
+  the onboarding's country guess — never from `Locale.getDefault()`, whose country is "150" on a
+  fallback. **And every 12/24-hour decision is made in the context the text is worded in**
+  (`DateFormat.is24HourFormat` of the activity, of `inAppLanguage()` in pushes, request notices,
+  event reminders and the widget; `ClockFormat` follows the activity), so a Slovak phone whose clock
+  is on "use locale default" reads 24 hours on every surface, and a parent who chose a 12-hour clock
+  in system settings keeps it. Android's half is `utils/AppLocale.kt`. Six things not to undo.
   - **An activity gets its base context in that locale** (`attachBaseContext` →
     `newBase.inAppLanguage()`, before `super`, in `MainActivity` and `QRScannerActivity`). AppCompat
     1.7's `attachBaseContext2` finds the locale as a difference from the canonical configuration and
@@ -4165,7 +4177,10 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
     language the system itself cannot show reads as the one it shows). Never `LocaleList.getDefault()`,
     which `follow` sets.
   - **Tests**: `AppLocaleTest` (Robolectric: the contexts read English on a phone in Irish, Czech in
-    Czech, German under a per-app German, the mirror below 13), `ShippedLanguagesTest` (the rule's
+    Czech, German under a per-app German, the mirror below 13; a Slovak phone reads `en-150` on a
+    24-hour clock unless its own setting says 12, and its region is still SK),
+    `PreferencesRepositoryCurrencyTest` and `OnboardingViewModelTest` (the guesses read the phone's
+    region with the default locale set to `en-150`), `ShippedLanguagesTest` (the rule's
     list is the picker's, `locales_config.xml`'s and the string folders'),
     `SystemDefaultRelaunchTest` (when "System default" restarts, and that the restart leaves
     AppCompat's storage with no choice, read through the library's own helper), and `PerAppLocaleTest`

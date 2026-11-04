@@ -2863,8 +2863,19 @@ bytes are identical on Android):
   **Decided, the owner's language rule** (owner, 4 November 2026, slice 9d; it replaces option
   (a), which was built as `ResolvedAppLocale`, corrected after 9c's review and then removed): the
   app speaks **the phone's first language when it ships it, otherwise English, and a per-app
-  choice wins**; the phone's later languages are never used, and the English fallback keeps the
-  phone's region (`sk-SK` reads `en-SK`). `AppLanguageRule` (`shared/`, pure, tested on the JVM and
+  choice wins**; the phone's later languages are never used. **The English fallback is European
+  English, `en-150`** (owner decision of the same day, after slice 9d's review, finding I1): the
+  fallback first kept the phone's region (`sk-SK` read `en-SK`), but CLDR had no `en_SK` (nor
+  `en_PL`, `en_ES`, `en_HU`, …) before release 47, so every Android the app runs on fell back to US
+  English there — a 12-hour clock, the month before the day. `en-150` has data on all of them:
+  English words, `HH:mm`, `d MMM y` ("4 Nov 2026"), `dd/MM/y`, Monday first, and an amount with the
+  symbol after it ("1.234,50 €" on Android 8–10, "1,234.50 €" from Android 11, whose CLDR 36
+  dropped en_150's own decimal comma). The phone's region, which the currency hint and the
+  onboarding's country guess need, is read from the phone (`DeviceRegion`: the first system
+  locale's on Android, `NSLocale`'s on the iPhone), never from the locale the app speaks. Request
+  notices and event reminders decide 12 or 24 hours in the context they are worded in, as pushes,
+  the widget and the activity do, so a Slovak phone on "use locale default" reads 24 hours
+  everywhere. `AppLanguageRule` (`shared/`, pure, tested on the JVM and
   iOS) decides it; on Android `AppLocale` puts each activity's base context in that locale before
   AppCompat, hands every reader outside an activity (pushes, request notices, the reminders, the
   widget, the school import's titles, the pairing thread's name) a configuration context made for

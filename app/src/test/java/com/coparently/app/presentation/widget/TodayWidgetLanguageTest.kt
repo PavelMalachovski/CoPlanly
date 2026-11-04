@@ -12,7 +12,7 @@ class TodayWidgetLanguageTest {
 
     @Test
     fun `no widget placed redraws nothing`() {
-        assertFalse(needsLanguageRedraw(emptyList(), "en-SK"))
+        assertFalse(needsLanguageRedraw(emptyList(), "en-150"))
     }
 
     @Test

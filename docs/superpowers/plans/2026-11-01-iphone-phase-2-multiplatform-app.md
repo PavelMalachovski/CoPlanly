@@ -621,8 +621,9 @@ both parity tests and Steps 1–3; Steps 4–6 are slice 9b.
   resources and `java.time` for samples of every case and argument kind.
 
 **Slice 9d notes (November 2026).** The owner's language rule (4 November 2026) in place of
-`ResolvedAppLocale`: the phone's first language when the app ships it, otherwise English with the
-phone's region, a per-app choice winning.
+`ResolvedAppLocale`: the phone's first language when the app ships it, otherwise English, a
+per-app choice winning. The English fallback is European English, `en-150` (the owner's decision
+on review finding I1); the phone's region is read from the phone (`DeviceRegion`).
 - `shared/`'s `domain/language/AppLanguageRule` is the pure rule over BCP 47 tags, for the iPhone
   too (`AppLanguageRuleTest`, commonTest).
 - The app's `utils/AppLocale.kt`: activities' base contexts in that locale before AppCompat

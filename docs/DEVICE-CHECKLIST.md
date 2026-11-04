@@ -640,7 +640,18 @@ system setting or a Play install.
   - [ ] With the phone in Slovak then Czech, a push (ask the co-parent to send a message or a
         swap), a request reminder and the Today widget are **English** too; with the phone in
         Czech first, they are Czech.
-  - [ ] With the phone in Slovak, a new expense still offers euros (the region is kept).
+  - [ ] With the phone in Slovak, a new expense still offers euros (the phone's region is read
+        from the phone, not from the app's English).
+  - [ ] With the phone in Slovak then Czech and the system clock on its default ("Use locale
+        default" on; 24-hour format not forced either way), the European English formats: every
+        time is **24-hour** — Day and Week view's hour gutter ("09", "13"), an event's time, the
+        event form's time picker, a push's "Answer by", a request reminder, an event reminder and
+        the Today widget; dates put the day first ("Wed, 4 Nov", "4 Nov 2026") with English
+        month names; an amount reads **"1,234.50 €"** (Android 11 and later) or **"1.234,50 €"**
+        (Android 8–10), the symbol after the number. Note anything 12-hour ("6:00 PM") or
+        month-first ("Nov 4").
+  - [ ] The same phone with **24-hour format turned off** in system settings: every one of those
+        times is 12-hour instead — the parent's own setting wins.
 - [ ] A per-app choice wins: Settings → Language → **Deutsch** on a phone in Slovak then Czech, or
       in Czech: the app, a push and the widget are **German**. On Android 12 or older, force-stop
       the app, then have a push arrive before opening it: still German.

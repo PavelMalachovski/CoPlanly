@@ -13,9 +13,16 @@ package com.coparently.app.domain.language
  * Slovak. Under this rule both read English, and a phone whose first language is Czech reads Czech
  * whatever follows it.
  *
- * The English fallback **keeps the phone's region** (`sk-SK` gives `en-SK`), so what reads the
- * region from the locale — the currency hint, the onboarding's country guess, number formats —
- * still sees the country the parent is in.
+ * The English fallback is **European English**, [FALLBACK_LOCALE] (`en-150`, CLDR's "English
+ * (Europe)"; owner decision, 4 November 2026): English words with a 24-hour clock, the day before
+ * the month and English month names ("4 Nov 2026", "18:00"). It used to keep the phone's region
+ * (`sk-SK` gave `en-SK`), but CLDR had no data for most such locales before release 47 — none for
+ * Slovakia, Poland, Spain or Hungary — so on every Android the app runs on they fell back to US
+ * English: a 12-hour clock and the month before the day. The phone's region is not lost: what
+ * needs it (the currency hint, the onboarding's guess at the country) reads it from the phone
+ * itself (`DeviceRegion`), never from the locale the app speaks, whose region is now "150".
+ * A per-app choice of English stays the choice made ("en"), and a phone whose first language is
+ * English keeps its own ("en-US", "en-GB").
  *
  * Pure, over BCP 47 language tags, so the iPhone can apply the same rule; Android's half is the
  * app's `utils/AppLocale.kt`.
@@ -33,9 +40,18 @@ object AppLanguageRule {
     const val FALLBACK: String = "en"
 
     /**
+     * The locale the English fallback speaks: [FALLBACK] in Europe (`150`, the UN M.49 code), whose
+     * CLDR data every Android ICU the app runs on carries (API 26–36) — `HH:mm`, `d MMM y`,
+     * `dd/MM/y`, Monday first. Its number symbols changed with CLDR 36: a decimal comma and a
+     * grouping dot before it (ICU 58–63, Android 8–10: "1.234,50 €"), a decimal point and a
+     * grouping comma since (Android 11 and later: "1,234.50 €"), the symbol after the amount in
+     * both.
+     */
+    const val FALLBACK_LOCALE: String = "en-150"
+
+    /**
      * The tag the app speaks: [perAppChoice] when there is one; else [deviceFirst] when its
-     * language is in [shipped]; else [FALLBACK] with [deviceFirst]'s region, or bare when it has
-     * none.
+     * language is in [shipped]; else [FALLBACK_LOCALE], whatever [deviceFirst]'s region.
      *
      * @param perAppChoice The first locale of the per-app choice, or null (or blank) for none.
      * @param deviceFirst The phone's first language, as the system lists it, not as any app
@@ -46,36 +62,12 @@ object AppLanguageRule {
         return when {
             choice != null -> choice
             languageOf(deviceFirst) in shipped -> deviceFirst
-            else -> regionOf(deviceFirst)?.let { "$FALLBACK-$it" } ?: FALLBACK
+            else -> FALLBACK_LOCALE
         }
     }
 
     /** The language subtag of [tag], lower case (`cs` of `cs-CZ`); empty for an empty tag. */
     fun languageOf(tag: String): String = tag.trim().split('-', '_').first().lowercase()
 
-    /**
-     * The region subtag of [tag] (`SK` of `sk-SK`, `RS` of `sr-Latn-RS`, `419` of `es-419`), or
-     * null when it names none. Only the subtags before the first extension or private-use
-     * singleton are read, so `cs-u-fw-mon` has no region.
-     */
-    fun regionOf(tag: String): String? {
-        // An extended language subtag (three letters) or a script (four) comes before the region; a
-        // variant comes after it, so the first subtag past those is the region or there is none.
-        val candidate = tag.trim().split('-', '_').drop(1)
-            .takeWhile { it.length > 1 }
-            .dropWhile { it.all(Char::isLetter) && (it.length == EXTLANG_LETTERS || it.length == SCRIPT_LETTERS) }
-            .firstOrNull()
-        return when {
-            candidate == null -> null
-            candidate.length == REGION_LETTERS && candidate.all(Char::isLetter) -> candidate.uppercase()
-            candidate.length == REGION_DIGITS && candidate.all(Char::isDigit) -> candidate
-            else -> null
-        }
-    }
-
     private const val UNDETERMINED = "und"
-    private const val REGION_LETTERS = 2
-    private const val REGION_DIGITS = 3
-    private const val EXTLANG_LETTERS = 3
-    private const val SCRIPT_LETTERS = 4
 }
