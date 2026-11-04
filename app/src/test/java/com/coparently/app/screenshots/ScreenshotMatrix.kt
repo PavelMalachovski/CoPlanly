@@ -62,7 +62,7 @@ private val FRAME_PADDING = 16.dp
  * `@Config(sdk = [SCREENSHOT_SDK], application = RobolectricTestApplication::class)`.
  * The plain test application matters: the manifest names `CoPlanlyApplication`, whose Koin graph
  * reaches Firebase, and nothing rendered here needs it; it only hands Compose Multiplatform's
- * resource reader its context, which the theme's font names and the common components' strings
+ * resource reader its context, which the theme's colour names and the common components' strings
  * are read through.
  *
  * @param variant Language, theme, font scale and palette for this run

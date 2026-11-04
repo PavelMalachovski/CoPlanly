@@ -4075,8 +4075,15 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
   differ by type). They pick the language differently: `R.string` from the Activity's
   configuration, which AppCompat's per-app choice sets; Compose Multiplatform from Compose's
   `Locale.current`, the process's default locale. `PerAppLocaleTest` holds the two to the same
-  language on every emulator leg, and `DEVICE-CHECKLIST.md` §3.6 asks for it on Android 12 or
-  older; don't make a moved composable take a `Context` to read `R.string` instead.
+  language on the API 26 and 30 legs (the 16 KB leg skips it with every `@UsesFakeFirebase` test),
+  and `DEVICE-CHECKLIST.md` §3.6 asks for it on Android 12 or older; don't make a moved composable
+  take a `Context` to read `R.string` instead. **Known gap, to close before more strings move**
+  (9b review, November 2026): the two readers fall back differently. Android takes the first
+  locale of the device's list that the app translates; Compose Multiplatform 1.9.3 takes the first
+  locale's language alone and otherwise reads `values/`. So on a phone set to Slovak then Czech,
+  with no per-app choice, `R.string` is Czech and the moved labels (a dialog's confirm and cancel,
+  Retry, the offline line, the colour names) are English. The owner chooses the fix (ROADMAP
+  MON-24); until then, nothing more than slice 9b's labels reads through Compose Multiplatform.
 
 - **Language selection**: device locale by default, plus a manual per-app override — the
   "Language" card in Settings (`presentation/settings/AppLanguage.kt`,

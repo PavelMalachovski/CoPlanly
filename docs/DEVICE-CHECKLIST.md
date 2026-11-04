@@ -629,6 +629,10 @@ system setting or a Play install.
 - [ ] On Android 12 or older, with the app in Deutsch and the phone in another language: Settings →
       App → **My colour** names its colours in German, and a dialog's **Abbrechen** is German too
       (both are read through Compose Multiplatform since MON-24 phase 2).
+- [ ] **Known gap (MON-24 phase 2), recorded, not yet fixed:** phone languages Slovak then Czech,
+      app on System default. Most of the app is Czech; a dialog's confirm and cancel, Retry, the
+      offline line and the colour names are English. Note what you see; the fix is the owner's
+      choice (ROADMAP MON-24).
 - [ ] Known and not a failure (AUDIT §4.2): Home's dates may keep the old language until the
       process restarts.
 - **(screenshots)** Whether each translation *fits* — clipping, ellipsis, wrapping at 1.5× text

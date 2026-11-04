@@ -2858,7 +2858,15 @@ bytes are identical on Android):
   labels' language follows, follows the app's language too; on Android 12 and older that rests on
   AppCompat setting the default locale, unproven until the API 26 and 30 legs run. **Left for slice
   9c**: `UiText` in its Compose Multiplatform form (every ViewModel that builds one from `R.string`
-  changes), with `ErrorText` and `UiState`.
+  changes), with `ErrorText` and `UiState`. **Open, owner's decision before more strings move**
+  (9b review): the two readers fall back differently when the phone's first language is one the
+  app does not translate. Android takes the first translated locale of the list; Compose
+  Multiplatform 1.9.3 takes the first locale's language or `values/`. A phone in Slovak then Czech
+  shows the app in Czech but the moved labels in English. Ways out: (a) set the process's default
+  locale on Android to the locale Android's resources resolved (also moves `java.time`'s formatting
+  language from the device's first to that one); (b) read the moved labels through `R.string` on
+  Android behind an `expect`/`actual` until Compose Multiplatform falls back the same way; (c) leave
+  it as a known gap until Task 11.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call
