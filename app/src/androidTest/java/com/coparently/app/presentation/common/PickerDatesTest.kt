@@ -45,7 +45,7 @@ class PickerDatesTest {
                 val millis = PickerDates.toPickerMillis(date)
                 // What DatePickerState itself reports for a tapped day: that day's UTC midnight.
                 assertEquals("$zone $date", date.toEpochDay() * DAY_MILLIS, millis)
-                assertEquals("$zone $date", date, PickerDates.fromPickerMillis(millis))
+                assertEquals("$zone $date", date, PickerDates.fromPickerMillisJava(millis))
             }
         }
     }
@@ -72,7 +72,7 @@ class PickerDatesTest {
             for (date in DATES) {
                 val systemMidnight = date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
                 assertNotEquals("$zone $date", PickerDates.toPickerMillis(date), systemMidnight)
-                assertEquals("$zone $date", date.minusDays(1), PickerDates.fromPickerMillis(systemMidnight))
+                assertEquals("$zone $date", date.minusDays(1), PickerDates.fromPickerMillisJava(systemMidnight))
             }
         }
     }

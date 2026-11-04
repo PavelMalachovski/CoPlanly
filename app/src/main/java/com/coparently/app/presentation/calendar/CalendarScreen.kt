@@ -80,8 +80,8 @@ import com.coparently.app.presentation.calendar.components.SwapSheetOffer
 import com.coparently.app.presentation.changerequests.RequestsState
 import com.coparently.app.presentation.common.FamilyMemberFilterStrip
 import com.coparently.app.presentation.common.LocalDatePickerDialog
+import com.coparently.app.presentation.common.rememberJavaToday
 import com.coparently.app.presentation.common.rememberParentNames
-import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.custody.labelRes
 import com.coparently.app.presentation.event.EventOperation
@@ -92,6 +92,8 @@ import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.parentingplan.planCitationShortLine
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.calendar_filter_members
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.datetime.toJavaLocalDate
@@ -217,7 +219,7 @@ fun CalendarScreen(
     val queryAnchorMonth by calendarViewModel.queryAnchorMonth.collectAsJavaMonth()
     // Not `remember { LocalDate.now() }`: that captures the date at first composition and
     // never revisits it, so an app left open overnight goes on highlighting yesterday.
-    val today by rememberToday()
+    val today by rememberJavaToday()
 
     // What the screen says it is showing: the header title, and the day DAY/WEEK render.
     val anchorDate = CalendarSelection.anchorDate(
@@ -903,7 +905,7 @@ fun CalendarScreen(
                         members = familyMembers,
                         selected = activeMemberFilter,
                         onToggle = { memberFilter = activeMemberFilter.toggling(it) },
-                        label = R.string.calendar_filter_members,
+                        label = Res.string.calendar_filter_members,
                         modifier = Modifier.padding(
                             horizontal = dims.paddingMedium,
                             vertical = dims.paddingSmall / 2

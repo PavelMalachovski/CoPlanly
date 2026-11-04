@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.common
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,10 +12,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.family.names
 import com.coparently.app.presentation.theme.Spacing
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * "Who is this about" — one chip per child and per pet, multi-select.
@@ -48,7 +48,7 @@ fun FamilyMemberChips(
     members: List<FamilyMember>,
     selected: List<FamilyMemberRef>,
     onToggle: (FamilyMemberRef) -> Unit,
-    @StringRes label: Int,
+    label: StringResource,
     modifier: Modifier = Modifier
 ) {
     if (members.size < 2) return
@@ -83,7 +83,7 @@ fun FamilyMemberFilterStrip(
     members: List<FamilyMember>,
     selected: List<FamilyMemberRef>,
     onToggle: (FamilyMemberRef) -> Unit,
-    @StringRes label: Int,
+    label: StringResource,
     modifier: Modifier = Modifier
 ) {
     if (members.size < 2) return

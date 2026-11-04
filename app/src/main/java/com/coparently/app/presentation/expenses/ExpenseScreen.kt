@@ -85,6 +85,8 @@ import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.payments.PaymentsViewModel
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.expenses_filter_members
 import kotlinx.coroutines.launch
 import kotlinx.datetime.toJavaYearMonth
 import org.koin.compose.viewmodel.koinViewModel
@@ -493,7 +495,7 @@ fun ExpenseScreen(
                                         members = familyMembers,
                                         selected = memberFilter,
                                         onToggle = viewModel::toggleMemberFilter,
-                                        label = R.string.expenses_filter_members,
+                                        label = Res.string.expenses_filter_members,
                                         modifier = Modifier.padding(
                                             horizontal = Spacing.L,
                                             vertical = Spacing.XS

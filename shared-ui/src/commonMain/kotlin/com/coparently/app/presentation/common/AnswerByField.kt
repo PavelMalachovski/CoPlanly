@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.common
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -16,11 +15,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import com.coparently.app.R
 import com.coparently.app.data.requests.minuteTicks
 import com.coparently.app.domain.changerequests.AnswerBy
 import com.coparently.app.domain.changerequests.AnswerByBand
@@ -31,13 +27,29 @@ import com.coparently.app.domain.changerequests.AnswerByPreset
 import com.coparently.app.domain.changerequests.ReminderPlan
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.titleMediumEmphasized
-import com.coparently.app.utils.answerByText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.answer_by_compressed
+import com.coparently.app.resources.answer_by_fixed
+import com.coparently.app.resources.answer_by_outcome
+import com.coparently.app.resources.answer_by_outcome_short
+import com.coparently.app.resources.answer_by_pick_date
+import com.coparently.app.resources.answer_by_picker_cancel
+import com.coparently.app.resources.answer_by_picker_ok
+import com.coparently.app.resources.answer_by_reminders
+import com.coparently.app.resources.answer_by_three_days
+import com.coparently.app.resources.answer_by_title
+import com.coparently.app.resources.answer_by_tomorrow
+import com.coparently.app.resources.answer_by_too_soon
+import com.coparently.app.resources.answer_by_week
+import com.coparently.app.utils.ReaderDateText
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toKotlinLocalDate
-import kotlinx.datetime.toKotlinTimeZone
-import java.time.LocalDate
-import java.time.ZoneId
+import kotlinx.datetime.plus
+import kotlinx.datetime.todayIn
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
+import kotlin.time.Clock
 
 /**
  * Saves an [AnswerByPick] through a rotation or a process death, as the text
@@ -62,11 +74,11 @@ val AnswerByPickSaver: Saver<AnswerByPick, String> = Saver(
 @Composable
 fun rememberAnswerByOffer(capMillis: Long?): AnswerByOffer {
     val first = remember(capMillis) {
-        AnswerBy.offer(System.currentTimeMillis(), capMillis, TimeZone.currentSystemDefault())
+        AnswerBy.offer(nowMillis(), capMillis, TimeZone.currentSystemDefault())
     }
     val offer by produceState(first, capMillis) {
         minuteTicks().collect {
-            value = AnswerBy.offer(System.currentTimeMillis(), capMillis, TimeZone.currentSystemDefault())
+            value = AnswerBy.offer(nowMillis(), capMillis, TimeZone.currentSystemDefault())
         }
     }
     return offer
@@ -100,26 +112,26 @@ fun AnswerByField(
     coParentName: String,
     modifier: Modifier = Modifier
 ) {
-    val zone = ZoneId.systemDefault()
-    val selectedMillis = AnswerBy.resolve(selected, offer, zone.toKotlinTimeZone())
+    val zone = TimeZone.currentSystemDefault()
+    val selectedMillis = AnswerBy.resolve(selected, offer, zone)
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         if (selectedMillis == null) {
             // Too soon for a deadline: the offer gives none, whatever the pick.
-            HelperLine(stringResource(R.string.answer_by_too_soon))
+            HelperLine(stringResource(Res.string.answer_by_too_soon))
         } else if (offer.band == AnswerByBand.FIXED) {
             Text(
-                text = stringResource(R.string.answer_by_fixed, answerByText(selectedMillis, zone)),
+                text = stringResource(Res.string.answer_by_fixed, ReaderDateText.answerBy(selectedMillis, zone)),
                 style = MaterialTheme.typography.titleMediumEmphasized
             )
-            Consequences(offer, selectedMillis, coParentName, outcome = R.string.answer_by_outcome_short)
+            Consequences(offer, selectedMillis, coParentName, outcome = Res.string.answer_by_outcome_short)
         } else {
             Text(
-                text = stringResource(R.string.answer_by_title),
+                text = stringResource(Res.string.answer_by_title),
                 style = MaterialTheme.typography.titleMediumEmphasized,
                 modifier = Modifier.semantics { heading() }
             )
             AnswerByChoices(offer, selected, selectedMillis, onSelect)
-            Consequences(offer, selectedMillis, coParentName, outcome = R.string.answer_by_outcome)
+            Consequences(offer, selectedMillis, coParentName, outcome = Res.string.answer_by_outcome)
         }
     }
 }
@@ -134,7 +146,7 @@ private fun AnswerByChoices(
     onSelect: (AnswerByPick) -> Unit
 ) {
     var picking by remember { mutableStateOf(false) }
-    val zone = ZoneId.systemDefault()
+    val zone = TimeZone.currentSystemDefault()
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(Spacing.S),
         verticalArrangement = Arrangement.spacedBy(Spacing.S)
@@ -152,22 +164,24 @@ private fun AnswerByChoices(
             FilterChip(
                 selected = true,
                 onClick = { picking = true },
-                label = { Text(stringResource(R.string.answer_by_compressed, answerByText(selectedMillis, zone))) }
+                label = {
+                    Text(stringResource(Res.string.answer_by_compressed, ReaderDateText.answerBy(selectedMillis, zone)))
+                }
             )
         }
         FilterChip(
             selected = false,
             onClick = { picking = true },
-            label = { Text(stringResource(R.string.answer_by_pick_date)) }
+            label = { Text(stringResource(Res.string.answer_by_pick_date)) }
         )
     }
     if (picking) {
         LocalDatePickerDialog(
-            initialDate = (selected as? AnswerByPick.OnDate)?.date?.toJavaLocalDate()
-                ?: LocalDate.now(zone).plusDays(PICKER_START_DAYS),
-            confirmLabel = stringResource(R.string.answer_by_picker_ok),
-            dismissLabel = stringResource(R.string.answer_by_picker_cancel),
-            onConfirm = { onSelect(AnswerByPick.OnDate(it.toKotlinLocalDate())) },
+            initialDate = (selected as? AnswerByPick.OnDate)?.date
+                ?: Clock.System.todayIn(zone).plus(PICKER_START_DAYS, DateTimeUnit.DAY),
+            confirmLabel = stringResource(Res.string.answer_by_picker_ok),
+            dismissLabel = stringResource(Res.string.answer_by_picker_cancel),
+            onConfirm = { onSelect(AnswerByPick.OnDate(it)) },
             onDismiss = { picking = false }
         )
     }
@@ -175,16 +189,16 @@ private fun AnswerByChoices(
 
 /** A preset's name, or "By <time>" when the cap shortened it. */
 @Composable
-private fun chipLabel(chip: AnswerByChip, zone: ZoneId): String {
+private fun chipLabel(chip: AnswerByChip, zone: TimeZone): String {
     val preset = (chip.pick as? AnswerByPick.Preset)?.preset
     return if (chip.compressed || preset == null) {
-        stringResource(R.string.answer_by_compressed, answerByText(chip.answerByMillis, zone))
+        stringResource(Res.string.answer_by_compressed, ReaderDateText.answerBy(chip.answerByMillis, zone))
     } else {
         stringResource(
             when (preset) {
-                AnswerByPreset.TOMORROW -> R.string.answer_by_tomorrow
-                AnswerByPreset.THREE_DAYS -> R.string.answer_by_three_days
-                AnswerByPreset.WEEK -> R.string.answer_by_week
+                AnswerByPreset.TOMORROW -> Res.string.answer_by_tomorrow
+                AnswerByPreset.THREE_DAYS -> Res.string.answer_by_three_days
+                AnswerByPreset.WEEK -> Res.string.answer_by_week
             }
         )
     }
@@ -192,13 +206,13 @@ private fun chipLabel(chip: AnswerByChip, zone: ZoneId): String {
 
 /** The two lines under the choice: the reminders the co-parent gets, and what no answer leads to. */
 @Composable
-private fun Consequences(offer: AnswerByOffer, selectedMillis: Long, coParentName: String, @StringRes outcome: Int) {
+private fun Consequences(offer: AnswerByOffer, selectedMillis: Long, coParentName: String, outcome: StringResource) {
     val reminders = ReminderPlan.countFor(selectedMillis - offer.nowMillis)
     HelperLine(
-        LocalContext.current.resources.getQuantityString(
-            R.plurals.answer_by_reminders,
+        pluralStringResource(
+            Res.plurals.answer_by_reminders,
             reminders,
-            answerByText(selectedMillis, ZoneId.systemDefault()),
+            ReaderDateText.answerBy(selectedMillis, TimeZone.currentSystemDefault()),
             coParentName,
             reminders
         )
@@ -216,4 +230,7 @@ private fun HelperLine(text: String) {
 }
 
 /** Days ahead of today the date picker opens on when no date was picked yet. */
-private const val PICKER_START_DAYS = 3L
+private const val PICKER_START_DAYS = 3
+
+/** The wall clock's epoch millis, what `System.currentTimeMillis()` read. */
+private fun nowMillis(): Long = Clock.System.now().toEpochMilliseconds()

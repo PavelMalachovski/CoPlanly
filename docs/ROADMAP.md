@@ -3009,7 +3009,11 @@ bytes are identical on Android):
   1's stay list). Each Android call went behind a platform interface, the date seam or the money
   seam; the iPhone hides the attachment picker, the report, the IBAN's copy, the payment code and
   the thumbnails, as it has none of them yet. The previews and the dictation language's Android
-  half stay in the app. **Slice 11b built, CI pending.**
+  half stay in the app. **Slice 11b built, CI pending.** Slice 11c, the calendar and the event
+  form: first the helpers they read, onto kotlinx-datetime and Compose Multiplatform's resources —
+  today's date, the date and time pickers, the "Answer by" block, holiday and event-type names, the
+  member chips and the month-paging tween — each with a `java.time` twin in the app for the screens
+  not yet moved.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

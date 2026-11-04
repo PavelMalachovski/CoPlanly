@@ -124,6 +124,8 @@ import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.labelLargeEmphasized
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.event_form_for_members
 import com.coparently.app.utils.ValidationResult
 import com.coparently.app.utils.ValidationUtils
 import com.coparently.app.utils.localizedDate
@@ -1350,7 +1352,7 @@ fun AddEditEventScreen(
                 members = familyMembers,
                 selected = forMembers,
                 onToggle = { forMembers = forMembers.toggling(it) },
-                label = R.string.event_form_for_members,
+                label = Res.string.event_form_for_members,
                 modifier = Modifier.fillMaxWidth()
             )
 

@@ -33,7 +33,6 @@ import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.dateWithTime
 import com.coparently.app.utils.format
-import kotlinx.datetime.toKotlinLocalDate
 
 /**
  * The inbox's History (phase 2, spec §6.2): every request of the family on screen that was
@@ -66,7 +65,7 @@ internal fun RequestHistoryGroup(
     onProposeChange: ((HistoryEntry) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    val today = rememberToday().value.toKotlinLocalDate()
+    val today = rememberToday().value
     SectionGroup(modifier = modifier) {
         entries.forEachIndexed { index, entry ->
             if (index > 0) Divider()

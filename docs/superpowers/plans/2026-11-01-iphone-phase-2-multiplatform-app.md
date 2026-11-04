@@ -1167,6 +1167,16 @@ Then the export and the school import:
   and reads it in the POSIX locale, held on both platforms by `ReaderMoneyPlainTextTest`
   (commonTest); CLAUDE.md's screenshots paragraph no longer gives `ChatThreadHeader` as an
   `internal` example.
+- Group 1, the helpers the calendar and the event form read (`git mv`, packages unchanged, onto
+  kotlinx-datetime and `StringResource`): `Today` (with `LocalFixedToday`; the app's `JavaToday.kt`
+  gives the screens still there `rememberJavaToday()`), `PickerDates` with `LocalDatePickerDialog`
+  (the app's `JavaPickerDates.kt` keeps `java.time` overloads that call the shared conversion),
+  `components/TimePicker` (`ClockFormat.is24Hour` for the dial; `JavaTimePicker.kt` keeps a `java.time`
+  overload and the previews), `AnswerByField`, `HolidayNames` (`readerLanguage()`, an `expect`),
+  `EventTypeLabel`, `FamilyMemberChips`, and `MONTH_PAGING_MS`/`monthPagingTween`
+  (`MonthPagingTween.kt`; the direction and transition stay with Expenses for 11e). `TodayTest` →
+  `:shared-ui` `commonTest`; `PickerDatesTest` reads `fromPickerMillisJava`; `HolidayNamesTest` and
+  `EventTypeLabelTest` read the `StringResource`s' keys.
 
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 

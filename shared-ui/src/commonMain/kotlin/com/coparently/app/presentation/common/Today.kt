@@ -7,9 +7,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import kotlinx.coroutines.delay
-import java.time.Duration
-import java.time.LocalDate
-import java.time.LocalDateTime
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.plus
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.todayIn
+import kotlin.time.Clock
 
 /**
  * Today's date, as a value that actually changes when today does.
@@ -25,8 +32,7 @@ import java.time.LocalDateTime
  *
  * The wait is recomputed each round from the real clock rather than assuming 24 hours, so a
  * daylight-saving change, a manual clock adjustment or a delay that fires late all land on the
- * right date: whatever wakes the loop, the new value comes from `LocalDate.now()`, not from
- * counting.
+ * right date: whatever wakes the loop, the new value comes from the clock, not from counting.
  *
  * Known limitation: while the process is in Doze the timer is throttled, so the change can arrive
  * late — but it arrives with the correct date, and any screen the user actually returns to
@@ -35,12 +41,12 @@ import java.time.LocalDateTime
 @Composable
 fun rememberToday(): State<LocalDate> {
     LocalFixedToday.current?.let { fixed -> return remember(fixed) { mutableStateOf(fixed) } }
-    val today = remember { mutableStateOf(LocalDate.now()) }
+    val today = remember { mutableStateOf(systemToday()) }
 
     LaunchedEffect(Unit) {
         while (true) {
-            delay(millisUntilNextMidnight(LocalDateTime.now()))
-            today.value = LocalDate.now()
+            delay(millisUntilNextMidnight(Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())))
+            today.value = systemToday()
         }
     }
 
@@ -61,7 +67,12 @@ val LocalFixedToday = staticCompositionLocalOf<LocalDate?> { null }
  * time at all, and the loop would spin against the clock instead of waiting for it — the one way
  * a date that updates itself can cost more than a date that never does.
  */
-internal fun millisUntilNextMidnight(now: LocalDateTime): Long =
-    Duration.between(now, now.toLocalDate().plusDays(1).atStartOfDay())
-        .toMillis()
-        .coerceAtLeast(1L)
+internal fun millisUntilNextMidnight(now: LocalDateTime): Long {
+    // A wall-clock difference, as `java.time.Duration.between` of two `LocalDateTime`s was: both
+    // ends are read in UTC, so no zone's daylight-saving change stretches or shortens it.
+    val nextMidnight = now.date.plus(1, DateTimeUnit.DAY).atStartOfDayIn(TimeZone.UTC)
+    return (nextMidnight - now.toInstant(TimeZone.UTC)).inWholeMilliseconds.coerceAtLeast(1L)
+}
+
+/** Today in the phone's zone, what `LocalDate.now()` read. */
+private fun systemToday(): LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefault())

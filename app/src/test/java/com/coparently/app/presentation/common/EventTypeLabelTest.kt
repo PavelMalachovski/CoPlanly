@@ -15,7 +15,7 @@ class EventTypeLabelTest {
 
     @Test
     fun `every default type has a distinct label`() {
-        val resources = CalendarViewModel.DEFAULT_EVENT_TYPES.map { eventTypeLabelRes(it) }
+        val resources = CalendarViewModel.DEFAULT_EVENT_TYPES.map { eventTypeLabelRes(it)?.key }
 
         resources.forEach { assertNotNull(it) }
         assertEquals(resources.size, resources.distinct().size, "two types share a label resource")

@@ -101,6 +101,8 @@ import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.platform.AppImage
 import com.coparently.app.presentation.theme.CoPlanlyShapes
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.expense_for_members
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDate
 import org.koin.compose.viewmodel.koinViewModel
@@ -401,7 +403,7 @@ fun AddExpenseScreen(
                 members = familyMembers,
                 selected = forMembers,
                 onToggle = { forMembers = forMembers.toggling(it) },
-                label = R.string.expense_for_members
+                label = Res.string.expense_for_members
             )
 
             OutlinedTextField(

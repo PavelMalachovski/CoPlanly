@@ -2,10 +2,12 @@ package com.coparently.app.presentation.common
 
 import android.content.Context
 import android.content.res.Configuration
+import com.coparently.app.R
 import com.coparently.app.domain.holidays.CzechHolidays
 import com.coparently.app.domain.holidays.CzechSchoolBreak
 import com.coparently.app.domain.holidays.GermanHolidays
 import com.coparently.app.testing.RobolectricTestApplication
+import org.jetbrains.compose.resources.StringResource
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
@@ -30,6 +32,10 @@ class HolidayNamesTest {
 
     private val context: Context get() = RuntimeEnvironment.getApplication()
 
+    /** A shared-ui string through its generated `R.string` twin, read in this context's language. */
+    private fun Context.getString(resource: StringResource): String =
+        getString(R.string::class.java.getField(resource.key).getInt(null))
+
     private fun inLanguage(language: String): Context {
         val configuration = Configuration(context.resources.configuration)
         configuration.setLocale(Locale.forLanguageTag(language))
@@ -38,7 +44,7 @@ class HolidayNamesTest {
 
     @Test
     fun `every Czech break maps to its own resource`() {
-        val resources = CzechSchoolBreak.entries.map { it.nameRes() }
+        val resources = CzechSchoolBreak.entries.map { it.nameRes().key }
         assertEquals(CzechSchoolBreak.entries.size, resources.toSet().size)
     }
 

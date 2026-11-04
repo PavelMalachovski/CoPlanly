@@ -36,7 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.coparently.app.R
 import com.coparently.app.presentation.calendar.CalendarViewMode
-import com.coparently.app.presentation.common.rememberToday
+import com.coparently.app.presentation.common.rememberJavaToday
 import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.LayoutConstants
@@ -130,7 +130,7 @@ private fun MonthTitle(
     // The year only when it is not this one, as calendar apps do: beside the Today and Filters
     // pills "Сентябрь 2026" had no room and ended in an ellipsis (docs/AUDIT-2026-10-design.md
     // D-3), while "Сентябрь" fits, and a month in another year still names its year.
-    val today by rememberToday()
+    val today by rememberJavaToday()
     val monthLabel = if (yearMonth.year == today.year) monthName else "$monthName ${yearMonth.year}"
 
     Box {

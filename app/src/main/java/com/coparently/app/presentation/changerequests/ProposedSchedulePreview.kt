@@ -13,7 +13,7 @@ import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.presentation.calendar.MiniMonthModel
 import com.coparently.app.presentation.calendar.components.MiniMonth
 import com.coparently.app.presentation.common.ParentNames
-import com.coparently.app.presentation.common.rememberToday
+import com.coparently.app.presentation.common.rememberJavaToday
 import com.coparently.app.presentation.custody.labelRes
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.format
@@ -41,7 +41,7 @@ fun ProposedSchedulePreview(
     parentNames: ParentNames,
     modifier: Modifier = Modifier
 ) {
-    val today = rememberToday().value
+    val today = rememberJavaToday().value
     val model = proposal.model
     val from = maxOf(today, model.startDate.toJavaLocalDate())
     val month = remember(model, from) {

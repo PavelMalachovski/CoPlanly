@@ -1,12 +1,15 @@
 package com.coparently.app.presentation.common
 
-import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.holidays.CzechSchoolBreak
 import com.coparently.app.domain.holidays.Holiday
-import java.util.Locale
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.holiday_break_cz_autumn
+import com.coparently.app.resources.holiday_break_cz_christmas
+import com.coparently.app.resources.holiday_break_cz_easter
+import com.coparently.app.resources.holiday_break_cz_summer
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * The one rule for naming a public holiday or school vacation on screen (L-8, September 2026).
@@ -23,7 +26,7 @@ import java.util.Locale
  */
 @Composable
 fun holidayDisplayName(nameEn: String, nameLocal: String, localLanguage: String): String {
-    if (Locale.getDefault().language == localLanguage) return nameLocal
+    if (readerLanguage() == localLanguage) return nameLocal
     val schoolBreak = CzechSchoolBreak.of(localLanguage, nameLocal) ?: return nameEn
     return stringResource(schoolBreak.nameRes())
 }
@@ -33,10 +36,16 @@ fun holidayDisplayName(nameEn: String, nameLocal: String, localLanguage: String)
 fun Holiday.displayName(): String = holidayDisplayName(nameEn, nameLocal, localLanguage)
 
 /** The string resource naming a Czech school break in the reader's language. */
-@StringRes
-fun CzechSchoolBreak.nameRes(): Int = when (this) {
-    CzechSchoolBreak.SUMMER -> R.string.holiday_break_cz_summer
-    CzechSchoolBreak.CHRISTMAS -> R.string.holiday_break_cz_christmas
-    CzechSchoolBreak.AUTUMN -> R.string.holiday_break_cz_autumn
-    CzechSchoolBreak.EASTER -> R.string.holiday_break_cz_easter
+fun CzechSchoolBreak.nameRes(): StringResource = when (this) {
+    CzechSchoolBreak.SUMMER -> Res.string.holiday_break_cz_summer
+    CzechSchoolBreak.CHRISTMAS -> Res.string.holiday_break_cz_christmas
+    CzechSchoolBreak.AUTUMN -> Res.string.holiday_break_cz_autumn
+    CzechSchoolBreak.EASTER -> Res.string.holiday_break_cz_easter
 }
+
+/**
+ * The language the app speaks, as an ISO 639 code: on Android `Locale.getDefault().language`, the
+ * locale `AppLocale.follow` sets (what this rule read before it moved); on the iPhone the current
+ * locale's language.
+ */
+internal expect fun readerLanguage(): String

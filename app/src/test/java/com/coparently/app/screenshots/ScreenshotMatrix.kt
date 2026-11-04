@@ -21,6 +21,7 @@ import com.coparently.app.presentation.theme.CoPlanlyTheme
 import com.coparently.app.presentation.theme.LocalParentPalette
 import com.github.takahirom.roborazzi.RoborazziOptions
 import com.github.takahirom.roborazzi.captureRoboImage
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Rule
 import org.junit.rules.ExternalResource
 import org.junit.rules.RuleChain
@@ -137,7 +138,7 @@ private fun ScreenshotFrame(
         LocalDensity provides Density(density.density, variant.fontScale),
         LocalParentPalette provides variant.palette.palette,
         // The fixtures' date, not the clock: the month grid's weekday header marks today.
-        LocalFixedToday provides ScreenshotFixtures.TODAY
+        LocalFixedToday provides ScreenshotFixtures.TODAY.toKotlinLocalDate()
     ) {
         // The platform capabilities the app's shell provides (MON-24 phase 2, Task 11), so a
         // component reads the values it reads in the app.

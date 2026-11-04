@@ -53,8 +53,6 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.plus
 import kotlinx.datetime.toJavaDayOfWeek
-import kotlinx.datetime.toJavaLocalTime
-import kotlinx.datetime.toKotlinLocalTime
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -253,13 +251,13 @@ private fun ContactWindowDialog(
 
     when (picking) {
         TimeField.START -> TimePickerDialog(
-            initialTime = start.toJavaLocalTime(),
-            onTimeSelected = { start = it.toKotlinLocalTime() },
+            initialTime = start,
+            onTimeSelected = { start = it },
             onDismiss = { picking = null }
         )
         TimeField.END -> TimePickerDialog(
-            initialTime = end.toJavaLocalTime(),
-            onTimeSelected = { end = it.toKotlinLocalTime() },
+            initialTime = end,
+            onTimeSelected = { end = it },
             onDismiss = { picking = null }
         )
         null -> Unit

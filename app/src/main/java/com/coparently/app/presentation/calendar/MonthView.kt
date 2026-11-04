@@ -68,7 +68,7 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.displayName
 import com.coparently.app.presentation.common.monthPagingTween
 import com.coparently.app.presentation.common.placeOf
-import com.coparently.app.presentation.common.rememberToday
+import com.coparently.app.presentation.common.rememberJavaToday
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
@@ -321,7 +321,7 @@ private val CONTACT_WINDOW_MARKER_SIZE = 14.dp
 @Composable
 private fun WeekdayHeader(firstDayOfWeek: DayOfWeek) {
     val dims = dimensions()
-    val today by rememberToday()
+    val today by rememberJavaToday()
     // Resolved here: the semantics lambda is not a composable context.
     val headerDescription = stringResource(R.string.calendar_weekday_header_description)
 

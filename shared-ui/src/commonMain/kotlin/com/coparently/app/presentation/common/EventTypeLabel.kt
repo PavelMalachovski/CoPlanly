@@ -1,9 +1,14 @@
 package com.coparently.app.presentation.common
 
-import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.event_type_birthday
+import com.coparently.app.resources.event_type_general
+import com.coparently.app.resources.event_type_medical
+import com.coparently.app.resources.event_type_school
+import com.coparently.app.resources.event_type_sports
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * The string resource naming a built-in event type in the reader's language, or null for a
@@ -15,15 +20,14 @@ import com.coparently.app.R
  * the filter sheet used to print the raw English ids in every language.
  *
  * @param type the stored event type identifier
- * @return the id of the localized name, or null when [type] is not a built-in type
+ * @return the localized name's resource, or null when [type] is not a built-in type
  */
-@StringRes
-fun eventTypeLabelRes(type: String): Int? = when (type) {
-    "general" -> R.string.event_type_general
-    "medical" -> R.string.event_type_medical
-    "school" -> R.string.event_type_school
-    "sports" -> R.string.event_type_sports
-    "birthday" -> R.string.event_type_birthday
+fun eventTypeLabelRes(type: String): StringResource? = when (type) {
+    "general" -> Res.string.event_type_general
+    "medical" -> Res.string.event_type_medical
+    "school" -> Res.string.event_type_school
+    "sports" -> Res.string.event_type_sports
+    "birthday" -> Res.string.event_type_birthday
     else -> null
 }
 

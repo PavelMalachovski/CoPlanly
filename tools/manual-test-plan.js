@@ -101,14 +101,15 @@ const RULES = [
   {
     sections: ['3.1'],
     why: 'a date picker or the dates it saves',
-    paths: ['**/*DatePicker*', 'K/presentation/event/**', 'K/presentation/changerequests/**',
+    paths: ['**/*DatePicker*', 'K/presentation/common/*PickerDates.kt', 'K/presentation/components/*TimePicker.kt',
+      'K/presentation/event/**', 'K/presentation/changerequests/**',
       'K/presentation/childinfo/**', 'K/presentation/pets/**', 'K/presentation/profile/**'],
   },
   {
     sections: ['3.2'],
     why: 'motion or navigation',
     paths: ['K/presentation/theme/Motion*.kt', 'K/presentation/navigation/**',
-      'K/presentation/calendar/MonthView.kt'],
+      'K/presentation/calendar/MonthView.kt', 'K/presentation/common/MonthPaging*.kt'],
   },
   {
     sections: ['3.2'],

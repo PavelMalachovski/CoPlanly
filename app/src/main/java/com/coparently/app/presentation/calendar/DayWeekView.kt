@@ -102,7 +102,7 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.displayName
 import com.coparently.app.presentation.common.placeDescription
 import com.coparently.app.presentation.common.placeOf
-import com.coparently.app.presentation.common.rememberToday
+import com.coparently.app.presentation.common.rememberJavaToday
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.IconSizes
@@ -221,7 +221,7 @@ fun DayWeekView(
     }
     var savedHourOffset by remember { mutableIntStateOf(0) }
     var positioned by remember(anchorDate, daysCount) { mutableStateOf(false) }
-    val today by rememberToday()
+    val today by rememberJavaToday()
 
     HorizontalPager(
         state = pagerState,
@@ -316,7 +316,7 @@ private fun DayWeekPage(
     // the gutter wider — a 24-hour layout is exactly what it was.
     val is24Hour = ClockFormat.is24Hour
     val gutterWidth = dims.hourGutterWidthFor(is24Hour)
-    val today by rememberToday()
+    val today by rememberJavaToday()
     val hours = (0..23).toList()
     val density = LocalDensity.current
     // Match the actually-rendered theme, not the system one (the app can force light while

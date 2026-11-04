@@ -2003,12 +2003,26 @@ stay in the app's `AndroidPermissionChecks.kt`). Still in the app, each for its 
 `AuthViewModel` and `SyncViewModel`, whose sign-ins run on an Android activity (Task 11, below);
 the Android halves of the platform interfaces (`SharedFileViewer`, `SensitiveClipboard`,
 `PrivacyPolicyLink`, `TermsOfServiceLink`, which `AndroidPlatform.kt` calls or which read
-`BuildConfig` for screens still in the app); the `java.time` and `java.util.Locale` users whose
-signatures carry `java.time` to their callers (`AnswerByField`, `HolidayNames`, `MonthPaging`,
-`PickerDates`, `Today`, `VaccinationListEditor`, and `components/TimePicker`), each moving with its
-screens onto kotlinx-datetime and the date seam; the `@StringRes` label helpers (`BloodTypeLabel`,
-`EventTypeLabel`, `PetSpeciesLabel`, `CountryPicker`) and the components that read them
-(`MedicalProfileEditor`, `FamilyMemberChips`), which move with the screens that pass them ids.
+`BuildConfig` for screens still in the app); the `java.time` users whose signatures carry
+`java.time` to their callers (`MonthPaging`'s direction and transition, Expenses', and
+`VaccinationListEditor`), each moving with its screens onto kotlinx-datetime and the date seam; the
+`@StringRes` label helpers (`BloodTypeLabel`, `PetSpeciesLabel`, `CountryPicker`) and the component
+that reads them (`MedicalProfileEditor`), which move with the screens that pass them ids. **Slice
+11c moved the calendar's and the event form's helpers** onto kotlinx-datetime and `StringResource`,
+packages unchanged: `Today` (`rememberToday()` and `LocalFixedToday` are kotlinx-datetime days; the
+app's screens that still hold a `java.time.LocalDate` call `JavaToday.kt`'s `rememberJavaToday()`,
+the same state converted), `PickerDates` (the UTC rule in kotlinx-datetime; `JavaPickerDates.kt` in
+the app keeps a `java.time` overload of `LocalDatePickerDialog` and of `PickerDates.toPickerMillis`,
+and `fromPickerMillisJava`, each calling the shared one), `components/TimePicker`
+(`TimePickerDialog` on a kotlinx `LocalTime`, its dial's 12/24 hours `ClockFormat.is24Hour`, which
+`MainActivity` follows from `DateFormat.is24HourFormat` of the activity; `JavaTimePicker.kt` keeps a
+`java.time` overload and the previews), `AnswerByField` (its clock `kotlin.time`, its times
+`ReaderDateText.answerBy`, its reminders line `pluralStringResource`), `HolidayNames` (the reader's
+language through an `expect`, `Locale.getDefault().language` on Android; `CzechSchoolBreak.nameRes()`
+a `StringResource`), `EventTypeLabel` (`eventTypeLabelRes` a `StringResource`), `FamilyMemberChips`
+(the label a `StringResource`), and `MONTH_PAGING_MS` with `monthPagingTween` (`MonthPagingTween.kt`,
+a file name of its own, because two modules' files of one name in one package make one JVM class).
+`TodayTest` runs in `:shared-ui`'s `commonTest`.
 **A Robolectric test runs `RobolectricTestApplication`**
 (`app/src/test/.../testing/`, `@Config(application = …)`): Robolectric installs no content
 provider from the manifest, so it hands Compose Multiplatform's resource reader the context its

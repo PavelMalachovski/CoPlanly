@@ -80,7 +80,6 @@ import com.coparently.app.presentation.theme.bodyMediumEmphasized
 import com.coparently.app.utils.dateWithTime
 import com.coparently.app.utils.format
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.toKotlinLocalDate
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -224,7 +223,7 @@ private fun SwapChangeSheet(
 ) {
     val entry = changing.value ?: return
     val onDismiss = { changing.value = null }
-    val today = rememberToday().value.toKotlinLocalDate()
+    val today = rememberToday().value
     val ahead = remember(entry, today) { entry.swapDays.keys.filter { it >= today }.sorted() }
     if (ahead.isEmpty()) {
         // The last day passed while the sheet was open: nothing is left to change.

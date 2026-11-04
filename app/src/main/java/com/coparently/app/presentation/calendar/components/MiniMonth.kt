@@ -41,7 +41,7 @@ import com.coparently.app.presentation.calendar.dayCellBaseColor
 import com.coparently.app.presentation.calendar.dayCellOverlayColor
 import com.coparently.app.presentation.calendar.eventDotColor
 import com.coparently.app.presentation.common.ParentNames
-import com.coparently.app.presentation.common.rememberToday
+import com.coparently.app.presentation.common.rememberJavaToday
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.localizedDate
 import kotlinx.datetime.toJavaLocalDate
@@ -75,7 +75,7 @@ fun MiniMonth(
     model: MiniMonthModel,
     parentNames: ParentNames,
     modifier: Modifier = Modifier,
-    today: LocalDate = rememberToday().value
+    today: LocalDate = rememberJavaToday().value
 ) {
     // The model's dates are kotlinx-datetime's (`:shared-ui`, MON-24); today is the screen's own.
     val weeks = remember(model.month) { MiniMonthGrid.weeks(model.month) }

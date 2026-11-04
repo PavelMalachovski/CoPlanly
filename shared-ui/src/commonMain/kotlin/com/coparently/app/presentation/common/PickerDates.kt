@@ -7,9 +7,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneOffset
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Instant
 
 /**
  * The one conversion between a [LocalDate] and the millis Material3's `DatePickerState` speaks.
@@ -21,15 +23,18 @@ import java.time.ZoneOffset
  * west of it the form saved the previous day. Every picker goes through here so that bug has one
  * place to come back in, and one place the instrumented test pins in four time zones.
  *
- * `atZone(...).toLocalDate()` rather than `LocalDate.ofInstant`, which is API 34 (minSdk is 26).
+ * kotlinx-datetime's days (MON-24 phase 2, slice 11c), read in UTC as the `java.time` code read
+ * them (`atStartOfDay(ZoneOffset.UTC)`, `atZone(ZoneOffset.UTC)`); the app's screens that still
+ * hold a `java.time.LocalDate` call the overloads in the app's `JavaPickerDates.kt`.
  */
 object PickerDates {
 
     /** The millis a `DatePickerState` must be given to open on [date]. */
-    fun toPickerMillis(date: LocalDate): Long = date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+    fun toPickerMillis(date: LocalDate): Long = date.atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds()
 
     /** The day a `DatePickerState` means by [millis]. */
-    fun fromPickerMillis(millis: Long): LocalDate = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
+    fun fromPickerMillis(millis: Long): LocalDate =
+        Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.UTC).date
 }
 
 /**
