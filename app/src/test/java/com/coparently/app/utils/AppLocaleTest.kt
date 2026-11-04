@@ -104,7 +104,26 @@ class AppLocaleTest {
         AppLocale.follow(context)
 
         assertEquals(Locale.forLanguageTag("en-SK"), Locale.getDefault())
-        assertEquals(LocaleList(Locale.forLanguageTag("en-SK")), LocaleList.getDefault())
+        assertEquals(LocaleList.forLanguageTags("en-SK,sk-SK"), LocaleList.getDefault())
+    }
+
+    @Test
+    fun `the default list keeps the phone's other languages after the one the app speaks`() {
+        // English for a phone in Japanese then Chinese: the co-parent's Han text keeps its glyphs.
+        assertEquals(
+            LocaleList.forLanguageTags("en-JP,ja-JP,zh-TW"),
+            defaultLocalesFor(Locale.forLanguageTag("en-JP"), LocaleList.forLanguageTags("ja-JP,zh-TW"))
+        )
+        // The phone's own first language is not repeated.
+        assertEquals(
+            LocaleList.forLanguageTags("cs-CZ,de-DE"),
+            defaultLocalesFor(Locale.forLanguageTag("cs-CZ"), LocaleList.forLanguageTags("cs-CZ,de-DE"))
+        )
+        // A per-app choice goes first, whatever the phone lists.
+        assertEquals(
+            LocaleList.forLanguageTags("de,sk-SK,cs-CZ"),
+            defaultLocalesFor(Locale.GERMAN, LocaleList.forLanguageTags("sk-SK,cs-CZ"))
+        )
     }
 
     /**

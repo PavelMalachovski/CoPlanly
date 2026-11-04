@@ -4124,8 +4124,10 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
     wrap the application context once and keep it — it would miss a change of language — and never
     read `R.string` from a bare application or service context: that is Android's resolution, not
     the rule's. (The credential classes read only the untranslated `default_web_client_id`.)
-  - **The process's defaults follow it** (`AppLocale.follow`: `LocaleList.setDefault` of the one
-    locale, which sets `java.util.Locale`'s too) in `CoPlanlyApplication.onCreate` and
+  - **The process's defaults follow it** (`AppLocale.follow`: `LocaleList.setDefault` with that
+    locale first, which sets `java.util.Locale`'s too, and the phone's other languages after it —
+    only the first decides the language, and the rest is what text drawing reads for a Han glyph
+    or a hyphenation, so don't cut the list to one) in `CoPlanlyApplication.onCreate` and
     `onConfigurationChanged`, and in each activity's `onCreate` after `super` and `MainActivity.
     onResume`: the framework resets them to its own resolution on every configuration change, before
     the application hears of it, and a change it counts as none reaches no callback. So Compose

@@ -65,14 +65,7 @@ object AppLocale {
     }
 
     /** The phone's first language, as the system lists it (see the class's KDoc). */
-    fun deviceFirst(context: Context): Locale {
-        val system = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.getSystemService(LocaleManager::class.java)?.systemLocales
-        } else {
-            null
-        }
-        return (system ?: Resources.getSystem().configuration.locales)[0] ?: Locale.getDefault()
-    }
+    fun deviceFirst(context: Context): Locale = deviceLocales(context)[0] ?: Locale.getDefault()
 
     /**
      * A context like [base] in [locale] and nothing else: the override configuration names only the
@@ -87,15 +80,15 @@ object AppLocale {
     }
 
     /**
-     * Sets the process's default locale list to the effective locale alone, so `java.time`, number
-     * formats and Compose's `Locale.current` speak what `R.string` does. Nothing happens when they
-     * already do.
+     * Sets the process's default locale list to the effective locale first ([defaultLocalesFor]), so
+     * `java.time`, number formats and Compose's `Locale.current` speak what `R.string` does. Nothing
+     * happens when they already do.
      */
     fun follow(context: Context) {
         val locale = effective(context)
-        val defaults = LocaleList.getDefault()
-        if (defaults.size() == 1 && defaults[0] == locale && Locale.getDefault() == locale) return
-        LocaleList.setDefault(LocaleList(locale))
+        val defaults = defaultLocalesFor(locale, deviceLocales(context))
+        if (LocaleList.getDefault() == defaults && Locale.getDefault() == locale) return
+        LocaleList.setDefault(defaults)
     }
 
     /**
@@ -152,3 +145,25 @@ object AppLocale {
  * the next time, and nothing else about the context changes.
  */
 fun Context.inAppLanguage(): Context = AppLocale.contextIn(this, AppLocale.effective(this))
+
+/**
+ * The default locale list [AppLocale.follow] sets: [locale], then the phone's other languages in
+ * their order. Only the first entry decides the language (`Locale.getDefault()`, Compose's
+ * `Locale.current` and so Compose Multiplatform's strings read nothing else); the rest is what text
+ * drawing reads beyond it — which glyphs a Han character takes, how a word hyphenates — so a phone
+ * in Japanese still draws the co-parent's Japanese as Japanese under the English the app speaks.
+ */
+internal fun defaultLocalesFor(locale: Locale, phone: LocaleList): LocaleList {
+    val others = (0 until phone.size()).mapNotNull { phone[it] }.filter { it != locale }.distinct()
+    return LocaleList(locale, *others.toTypedArray())
+}
+
+/** The phone's languages, as the system lists them (see [AppLocale]'s KDoc). */
+private fun deviceLocales(context: Context): LocaleList {
+    val system = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        context.getSystemService(LocaleManager::class.java)?.systemLocales
+    } else {
+        null
+    }
+    return system ?: Resources.getSystem().configuration.locales
+}
