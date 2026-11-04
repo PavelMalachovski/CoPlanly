@@ -2040,7 +2040,10 @@ jobs:
     needs: changes
     if: needs.changes.outputs.shared == 'true'
     runs-on: macos-latest
-    timeout-minutes: 45
+    # 75, not 45: since Task 9 the link compiles Compose Multiplatform and skiko for Kotlin/Native
+    # too: a run whose pods missed the cache spent 34 minutes before the tests, and slice 9b's
+    # full run (4 November 2026) stopped at 45 inside the framework link after its tests passed.
+    timeout-minutes: 75
     permissions:
       contents: read
       checks: write
