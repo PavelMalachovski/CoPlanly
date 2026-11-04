@@ -102,6 +102,9 @@ import com.coparently.app.presentation.common.FamilyMemberRefListSaver
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.LocalDatePickerDialog
+import com.coparently.app.presentation.common.LocalDateSaver
+import com.coparently.app.presentation.common.LocalTimeSaver
+import com.coparently.app.presentation.common.NullableLocalDateSaver
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.StickyActionBar
@@ -357,7 +360,7 @@ fun AddEditEventScreen(
     var existingEvent by remember { mutableStateOf<Event?>(null) }
     // MVP1 fields: recurrence, reminder, privacy
     var recurrencePattern by rememberSaveable { mutableStateOf<String?>(null) }
-    var recurrenceEndDate by rememberSaveable { mutableStateOf<LocalDate?>(null) }
+    var recurrenceEndDate by rememberSaveable(stateSaver = NullableLocalDateSaver) { mutableStateOf<LocalDate?>(null) }
     var showRecurrenceEndPicker by remember { mutableStateOf(false) }
     var reminderMinutes by rememberSaveable { mutableStateOf<Int?>(null) }
     var isPrivate by rememberSaveable { mutableStateOf(false) }
@@ -379,11 +382,14 @@ fun AddEditEventScreen(
     // Custom event types are read from encrypted prefs; load them off the main thread
     // so opening the screen isn't blocked by the (synchronous) decrypt on first composition.
     var customEventTypes by remember { mutableStateOf<List<String>>(emptyList()) }
-    var startDate by rememberSaveable { mutableStateOf(initialDate ?: systemToday()) }
-    var startTime by rememberSaveable(initialHour, initialDate) {
+    // As ISO text (`DateTimeSavers.kt`), never by Java serialization, which R8 can break.
+    var startDate by rememberSaveable(stateSaver = LocalDateSaver) { mutableStateOf(initialDate ?: systemToday()) }
+    var startTime by rememberSaveable(initialHour, initialDate, stateSaver = LocalTimeSaver) {
         mutableStateOf(initialHour?.let { LocalTime(it, 0) } ?: defaultStartTime(wallClockNow().time))
     }
-    var endTime by rememberSaveable(initialHour) { mutableStateOf(defaultEndTime(startTime)) }
+    var endTime by rememberSaveable(initialHour, stateSaver = LocalTimeSaver) {
+        mutableStateOf(defaultEndTime(startTime))
+    }
 
     // The end date is kept as the days it lies after the start date (a weekend away, an overnight
     // stay), so moving the start date moves the end with it. An edited event keeps its span and,

@@ -38,8 +38,6 @@ import com.coparently.app.presentation.parentingplan.PlanReferenceCard
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.format
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toKotlinLocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -124,11 +122,10 @@ fun SeasonalLayerDialog(
 
     picking?.let { end ->
         LocalDatePickerDialog(
-            initialDate = (if (end == RangeEnd.FROM) draft.from else draft.to).toJavaLocalDate(),
+            initialDate = if (end == RangeEnd.FROM) draft.from else draft.to,
             confirmLabel = stringResource(R.string.seasonal_ok),
             dismissLabel = stringResource(R.string.seasonal_cancel),
-            onConfirm = { picked ->
-                val date = picked.toKotlinLocalDate()
+            onConfirm = { date ->
                 draft = if (end == RangeEnd.FROM) draft.copy(from = date) else draft.copy(to = date)
             },
             onDismiss = { picking = null }

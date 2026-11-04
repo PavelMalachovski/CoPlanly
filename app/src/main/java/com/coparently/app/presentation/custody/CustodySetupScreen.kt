@@ -93,8 +93,6 @@ import com.coparently.app.utils.format
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toJavaDayOfWeek
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toKotlinLocalDate
 import org.koin.compose.viewmodel.koinViewModel
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -652,10 +650,10 @@ internal fun CustodyPatternForm(
 
     if (showDatePicker) {
         LocalDatePickerDialog(
-            initialDate = uiState.startDate.toJavaLocalDate(),
+            initialDate = uiState.startDate,
             confirmLabel = stringResource(R.string.custody_ok),
             dismissLabel = stringResource(R.string.custody_cancel),
-            onConfirm = { actions.setStartDate(it.toKotlinLocalDate()) },
+            onConfirm = { actions.setStartDate(it) },
             onDismiss = { showDatePicker = false }
         )
     }

@@ -35,4 +35,10 @@ class ReaderMoneyPlainTextTest {
     fun `text that is not a number reads as nothing`() {
         listOf("", "abc", "1,50", "1.2.3", "e5").forEach { assertNull(ReaderMoneyText.amount(it, null), it) }
     }
+
+    @Test
+    fun `a scale that does not fit an Int reads as nothing as BigDecimal refuses it`() {
+        // The scale is the digits after the point less the exponent: 0 + 2^31 and 1 + (2^31 - 1).
+        listOf("1e-2147483648", "1.5e-2147483647").forEach { assertNull(ReaderMoneyText.amount(it, null), it) }
+    }
 }

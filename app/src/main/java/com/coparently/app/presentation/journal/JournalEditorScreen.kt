@@ -44,8 +44,6 @@ import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.theme.Spacing
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toKotlinLocalDate
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -77,11 +75,11 @@ fun JournalEditorScreen(
     }
     if (picking) {
         LocalDatePickerDialog(
-            initialDate = state.entryDate.toJavaLocalDate(),
+            initialDate = state.entryDate,
             confirmLabel = stringResource(R.string.journal_pick_ok),
             dismissLabel = stringResource(R.string.journal_pick_cancel),
             onConfirm = { date ->
-                viewModel.setDate(date.toKotlinLocalDate())
+                viewModel.setDate(date)
                 picking = false
             },
             onDismiss = { picking = false }

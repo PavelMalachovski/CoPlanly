@@ -2024,7 +2024,11 @@ a `StringResource`), `EventTypeLabel` (`eventTypeLabelRes` a `StringResource`), 
 a file name of its own, because two modules' files of one name in one package make one JVM class).
 `TodayTest` runs in `:shared-ui`'s `commonTest`. **Then the event form** (`event/AddEditEventScreen.kt`
 and `EventFormRows.kt`), on kotlinx-datetime throughout: its saved fields hold kotlinx days and times
-(JVM-`Serializable`, so `rememberSaveable` keeps them in the Bundle as it kept `java.time`'s), its
+saved as their ISO text (`common/DateTimeSavers.kt`: `LocalDateSaver`, `NullableLocalDateSaver`,
+`LocalTimeSaver`) — **never let `rememberSaveable` put a kotlinx-datetime value in the Bundle by Java
+serialization**: that goes through the library's private `writeReplace`/`readObject` proxy
+(`kotlinx.datetime.Ser`), which no R8 rule keeps, so a release build could fail to save or restore
+the form, where `java.time`'s platform classes were never R8's to touch (11c round 1 review, I1) — its
 lines and descriptions through `ReaderDateText`, a new event's id from `kotlin.uuid.Uuid`, its "now"
 `wallClockNow()`, `plusHour()` the clock-face hour `plusHours(1)` was, the photo through
 `FilePicker.rememberImagePicker` (its content URI kept as text, which Coil maps to the same `Uri`)

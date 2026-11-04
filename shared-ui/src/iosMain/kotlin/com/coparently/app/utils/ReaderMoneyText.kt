@@ -37,16 +37,19 @@ actual object ReaderMoneyText {
     /**
      * What `BigDecimal(text).toPlainString()` writes: the unscaled digits without leading zeros,
      * the scale the text gave (the digits after the point less the exponent), zeros appended for a
-     * negative scale, and a minus sign only before a value that is not zero.
+     * negative scale, and a minus sign only before a value that is not zero. Null for a scale that
+     * does not fit an `Int`, which `BigDecimal` refuses ("Scale out of range"): "1e-2147483648".
      */
-    private fun plainText(match: MatchResult, exponent: Int): String {
+    private fun plainText(match: MatchResult, exponent: Int): String? {
         val sign = match.groupValues[1]
         val mantissa = match.groupValues[2]
         val point = mantissa.indexOf('.')
         val integer = if (point < 0) mantissa else mantissa.substring(0, point)
         val fraction = if (point < 0) "" else mantissa.substring(point + 1)
         val digits = (integer + fraction).trimStart('0').ifEmpty { "0" }
-        val scale = fraction.length - exponent
+        val wideScale = fraction.length.toLong() - exponent
+        if (wideScale !in Int.MIN_VALUE..Int.MAX_VALUE) return null
+        val scale = wideScale.toInt()
         val body = when {
             scale <= 0 -> if (digits == "0") "0" else digits + "0".repeat(-scale)
             digits.length > scale -> digits.substring(0, digits.length - scale) + "." +

@@ -2725,7 +2725,8 @@ bytes are identical on Android):
   converters: the calendar's day model (`EventsByDay`, `OpeningHour`, `MiniMonthModel`,
   `DayWeekView`, `queryRangeFor`) and the holiday lookups it converts at; the event, expense and
   change-request forms, whose `rememberSaveable` state is Java-serialised (give each saved date a
-  `Saver` over epoch days or seconds, never a raw kotlinx value); `AnswerByField`'s picker,
+  `Saver` over its text, never a raw kotlinx value — the event form's are `common/DateTimeSavers.kt`'s
+  since phase 2, slice 11c); `AnswerByField`'s picker,
   `VaccinationListEditor` and the child-info `DatePickerDialog`; ~~`RequestTime.zone()` (`ZoneId`)~~
   (a kotlinx-datetime `TimeZone` since phase 2, Task 8h), `RequestsRowText` and `answerByText`; `ExpenseViewModel.selectedMonth` (java `YearMonth`, shared
   with the calendar's paging); ~~`UnassignedRecord.date`~~ (kotlinx-datetime since phase 2, Task 8i).
@@ -3014,7 +3015,9 @@ bytes are identical on Android):
   today's date, the date and time pickers, the "Answer by" block, holiday and event-type names, the
   member chips and the month-paging tween — each with a `java.time` twin in the app for the screens
   not yet moved; then the event form, onto kotlinx-datetime, its photo through the platform's picker
-  (none on the iPhone yet, so no attach button there). The calendar's screens are next, in one
+  (none on the iPhone yet, so no attach button there), its saved dates and times as ISO text (a
+  kotlinx-datetime value Java-serialised into the Bundle goes through a proxy no R8 rule keeps). The
+  calendar's screens are next, in one
   round: kizitonwose's multiplatform `HorizontalCalendar` 2.9.1 fits (kotlinx-datetime's months and
   days, Compose Multiplatform 1.9) and replaces the Android artifact in the same commit.
   **Slice 11c in progress: the helpers and the event form built, CI pending.**

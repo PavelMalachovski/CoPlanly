@@ -1179,12 +1179,22 @@ Then the export and the school import:
   `EventTypeLabelTest` read the `StringResource`s' keys.
 - Group 2, the event form: `event/AddEditEventScreen.kt` and `EventFormRows.kt` (`git mv`), its fields,
   helpers and saved state on kotlinx-datetime (`formStartDateTime`, `formEndDateTime`, `endDaySpanOf`,
-  `endDaySpanFor`, `defaultStartTime`, `defaultEndTime`, and `plusHour()` for `plusHours(1)`), its text
+  `endDaySpanFor`, `defaultStartTime`, `defaultEndTime`, and `plusHour()` for `plusHours(1)`; the saved
+  dates and times as ISO text through `common/DateTimeSavers.kt`, never Java serialization, whose
+  kotlinx-datetime proxy no R8 rule keeps — the round 1 review's I1), its text
   through `ReaderDateText`, the photo through `FilePicker` (hidden, with its preview, unless both
   `FilePicker` and `PlatformImages` are available), `Uuid`, `wallClockNow()`, `logger`; the strings its
   lambdas used are read in composition. `utils/ValidationUtils` moved with it (its unused email and URL
-  checks, on Android's `Patterns`, left out). `NavGraph` parses the date with kotlinx-datetime. Its two
-  JVM tests run in `commonTest`, their names without commas.
+  checks, on Android's `Patterns`, left out; two detekt baseline entries,
+  `MagicNumber:ValidationUtils.kt$ValidationUtils$254` and `TooManyFunctions:ValidationUtils.kt$ValidationUtils`,
+  are stale since, and harmless: the next Regenerate run drops them). `NavGraph` parses the date with
+  kotlinx-datetime. Its two JVM tests run in `commonTest`, their names without commas.
+- Round 1's review notes, done before the calendar: the form's saved state as text (above); the
+  iPhone's `ReaderMoneyText` reads an amount whose scale does not fit an `Int` ("1e-2147483648") as
+  nothing, as `BigDecimal` refuses it, where it threw (`ReaderMoneyPlainTextTest`); and the custody
+  start date, the seasonal layer's range and the journal's day call the kotlinx `LocalDatePickerDialog`
+  directly instead of converting through the app's `java.time` twin, which keeps its other callers
+  (the export, expenses, the child records, the change request and two androidTest classes).
 - **Left for 11c's next round: the calendar** (`presentation/calendar/` but the ViewModels and models
   Task 10 moved, and `calendar/components/`). Moving it piece by piece costs more than moving it at
   once: the helpers (`SwapSelection`, `SwapTap`, `SwapMark`, `OpeningHour`, `ChildCustodyBand`,
@@ -1202,7 +1212,10 @@ Then the export and the school import:
     Between 2.6.1 and 2.9.1 `HorizontalCalendar`, `CalendarMonths` and the month data are the same
     layout (2.9.1 wraps each month in a `Box(Modifier.onPlaced(…))` and keys and saves months by
     their ISO text); `calendarScrollPaged`, `animateScrollToMonth`, `firstVisibleMonth` and
-    `layoutInfo`, which `MonthView`'s own settle (design item 5) reads, keep their API.
+    `layoutInfo`, which `MonthView`'s own settle (design item 5) reads, keep their API. **The binary
+    check was `javap` on the desktop (JVM) jar only**: it proves the Android link. Kotlin/Native links
+    the iPhone's klib by signature, so a kotlinx-datetime 0.7 → 0.8 change it relies on would show only
+    at `:shared-ui:linkDebugFrameworkIosSimulatorArm64`; the `shared-ios` job settles it.
   - **What the calendar reads from other features, each to move or put behind a seam:**
     `utils/SwapDateList.kt` (`swapDateList`, `java.util.Locale` → `ReaderDateText`);
     `parentingplan/PlanReferenceCard.kt`'s `planCitationShortLine` and `ParentNames.coParentLabel`;
