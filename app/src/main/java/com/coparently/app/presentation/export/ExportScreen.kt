@@ -70,6 +70,7 @@ import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDate
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import java.time.LocalDate
 

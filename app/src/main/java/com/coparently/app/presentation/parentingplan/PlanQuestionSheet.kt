@@ -31,6 +31,7 @@ import com.coparently.app.R
 import com.coparently.app.domain.parentingplan.ParentingPlanPair
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.theme.Spacing
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * One question, both answers, and the tick that turns them into an agreement (MON-5).

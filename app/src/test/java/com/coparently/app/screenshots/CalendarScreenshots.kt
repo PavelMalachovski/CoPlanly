@@ -21,7 +21,9 @@ import com.coparently.app.presentation.calendar.components.SwapSheetOffer
 import com.coparently.app.presentation.calendar.components.VacationBanner
 import com.coparently.app.presentation.calendar.swapMiniMonths
 import com.coparently.app.testing.RobolectricTestApplication
+import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinYearMonth
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
@@ -138,20 +140,24 @@ private const val CHOSEN_SWAP_DAY = 20
 @Composable
 internal fun MonthGridFixture() {
     Box(modifier = Modifier.height(MONTH_GRID_HEIGHT)) {
+        // The fixtures' days are `java.time`; the grid's are kotlinx-datetime since it moved to
+        // `:shared-ui` (MON-24 phase 2, slice 11c), so they are converted here, at the call.
         MonthView(
-            selectedMonth = ScreenshotFixtures.MONTH,
-            eventsByDay = ScreenshotFixtures.monthEvents,
-            getCustody = ScreenshotFixtures::custodyFor,
-            getContactWindows = ScreenshotFixtures::contactWindowsFor,
+            selectedMonth = ScreenshotFixtures.MONTH.toKotlinYearMonth(),
+            eventsByDay = ScreenshotFixtures.monthEvents.mapKeys { (day, _) -> day.toKotlinLocalDate() },
+            getCustody = ScreenshotFixtures::custodyOn,
+            getContactWindows = { day -> ScreenshotFixtures.contactWindowsFor(day.toJavaLocalDate()) },
             parentNames = ScreenshotFixtures.parentNames,
             onDayClick = {},
             onMonthChange = {},
-            holidays = ScreenshotFixtures.holidays,
-            schoolVacationDays = ScreenshotFixtures.schoolVacationDays,
+            holidays = ScreenshotFixtures.holidays.mapKeys { (day, _) -> day.toKotlinLocalDate() },
+            schoolVacationDays = ScreenshotFixtures.schoolVacationDays.mapTo(mutableSetOf()) { it.toKotlinLocalDate() },
             // Both forms of a swap mark: a day waiting for an answer, and one being chosen.
             swapMarks = mapOf(
-                ScreenshotFixtures.MONTH.atDay(PENDING_SWAP_DAY) to SwapMark(toSlot = "dad", pending = true),
-                ScreenshotFixtures.MONTH.atDay(CHOSEN_SWAP_DAY) to SwapMark(toSlot = "mom", pending = false)
+                ScreenshotFixtures.MONTH.atDay(PENDING_SWAP_DAY).toKotlinLocalDate() to
+                    SwapMark(toSlot = "dad", pending = true),
+                ScreenshotFixtures.MONTH.atDay(CHOSEN_SWAP_DAY).toKotlinLocalDate() to
+                    SwapMark(toSlot = "mom", pending = false)
             )
         )
     }

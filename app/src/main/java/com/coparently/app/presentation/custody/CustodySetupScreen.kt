@@ -93,6 +93,7 @@ import com.coparently.app.utils.format
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toJavaDayOfWeek
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle

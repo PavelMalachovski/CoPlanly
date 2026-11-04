@@ -555,9 +555,13 @@ When touching the UI, keep these invariants:
    common components there since slice 9b add CMP animation, foundation, ui and material3, CMP's
    `material3-window-size-class` 1.9.0 and `org.jetbrains.compose.material:material-icons-extended`
    1.7.3, the last CMP release of the extended icons — on Android each is the androidx artifact the
-   BOM already names, material3 and window-size-class 1.4.0, icons 1.7.8; no multiplatform
-   Lifecycle, Navigation, Coil 3 or kizitonwose yet — each arrives with the task that first needs
-   it in common code), Room 2.7.2 (2.6.x breaks on
+   BOM already names, material3 and window-size-class 1.4.0, icons 1.7.8; **kizitonwose's calendar
+   is `com.kizitonwose.calendar:compose-multiplatform` 2.9.1** there since slice 11c, the month grid's
+   `HorizontalCalendar` on kotlinx-datetime (it asks for CMP 1.9.0, kotlinx-datetime 0.7.1 and
+   serialization 1.9.0, all below what the graph resolves; 2.10 asks for CMP 1.10, past the BOM), in
+   place of the app's Android `compose:2.6.1`, whose packages it shares, so never both; no
+   multiplatform Navigation or Coil 3 yet — each arrives with the task that first needs it in common
+   code), Room 2.7.2 (2.6.x breaks on
    Kotlin 2.x metadata), Room on **KSP2** (KSP `2.3.11`; kapt is gone) — **Room for Kotlin
    Multiplatform in `:shared-data` since MON-24 phase 2**, its processor run there for Android and
    both iPhone targets and the app running none, with androidx.sqlite 2.5.2's bundled driver
@@ -1197,7 +1201,11 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   tests and its own code alike — because `internal` stops at the module (slice 11a: `TwoPane`'s
   `TWO_PANE_MAX_WIDTH`, `WIDE_COLUMN_MAX_WIDTH` and `WideColumn`; slice 11b: `ChatThreadHeader` and
   `EventPreviewContent`, which the screenshots render, and `eventTimeLine`, which the app's main
-  code calls from `FriendEventDetails`). The screenshot frame
+  code calls from `FriendEventDetails`; slice 11c: `SwapDaysButton`, `DaySwapSelectionBar`,
+  `DaySwapSheetContent` and its `SwapSheetOffer`/`SwapSheetActions`, `CustodyLegend`, which the
+  screenshots render, and `DaySwapSheet`, `SwapSideGroup`, `isConsecutive` and `SwapMonths`, which
+  the requests' screens call). A test that moves with its code to `:shared-ui` keeps `internal`
+  reachable, as the calendar's ten pure tests do. The screenshot frame
   provides the platform capabilities as the app does (`ProvideAndroidPlatform`), so a moved screen
   that reads one renders as it does on a phone. Every fixture date is pinned (May 2026,
   `ScreenshotFixtures`) so an image does not change with the calendar — keep it that way, or the
@@ -1622,7 +1630,10 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              capabilities a screen asks of the phone, provided by the shell), the date seam
              (utils/ReaderDateText) and the image seam; and, from slice 11b, chat's screens
              (presentation/chat/), with the event preview, the AI consent's rows, the stickers'
-             wording, the message templates and the money seam (utils/ReaderMoneyText). It makes the iPhone's one framework, Shared (static,
+             wording, the message templates and the money seam (utils/ReaderMoneyText); and, from
+             slice 11c, the event form (presentation/event/) and the calendar's screens
+             (presentation/calendar/, on kizitonwose's multiplatform calendar), with the helpers
+             they read. It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
              ReminderScheduler, the export's record and the school import's plan — in shared/,
@@ -2010,8 +2021,8 @@ the Android halves of the platform interfaces (`SharedFileViewer`, `SensitiveCli
 that reads them (`MedicalProfileEditor`), which move with the screens that pass them ids. **Slice
 11c moved the calendar's and the event form's helpers** onto kotlinx-datetime and `StringResource`,
 packages unchanged: `Today` (`rememberToday()` and `LocalFixedToday` are kotlinx-datetime days; the
-app's screens that still hold a `java.time.LocalDate` call `JavaToday.kt`'s `rememberJavaToday()`,
-the same state converted), `PickerDates` (the UTC rule in kotlinx-datetime; `JavaPickerDates.kt` in
+app's `JavaToday.kt` gave the screens that still held a `java.time.LocalDate` the same state
+converted, until the calendar's move left it no caller), `PickerDates` (the UTC rule in kotlinx-datetime; `JavaPickerDates.kt` in
 the app keeps a `java.time` overload of `LocalDatePickerDialog` and of `PickerDates.toPickerMillis`,
 and `fromPickerMillisJava`, each calling the shared one), `components/TimePicker`
 (`TimePickerDialog` on a kotlinx `LocalTime`, its dial's 12/24 hours `ClockFormat.is24Hour`, which
@@ -2036,9 +2047,31 @@ and left out where the platform can neither pick nor draw one, its log line thro
 the strings its lambdas used read in composition. `utils/ValidationUtils` moved with it, its one
 caller, without its email and URL checks (Android's `Patterns`; nothing called them). `NavGraph`
 parses the route's date with kotlinx-datetime. `EventFormEndTest` and `AddEditEventScreenTest` run
-in `commonTest`. **The calendar's screens are still in the app** (`presentation/calendar/` but its
-ViewModels and models, and `calendar/components/`): the plan's slice 11c notes list what their move
-takes, kizitonwose's multiplatform 2.9.1 in place of the Android 2.6.1 among it.
+in `commonTest`. **Then the calendar's screens** (slice 11c's second round): all of
+`presentation/calendar/` and `calendar/components/`, packages unchanged, on kotlinx-datetime throughout
+(the grid's days, the month pager, the day and week pages, the event blocks' times through
+`domain/time/WallClock.kt`'s wall-clock arithmetic, `durationUntil` for `Duration.between`), the
+month grid on kizitonwose's multiplatform `HorizontalCalendar` 2.9.1 (`MonthView`'s own settle and
+`calendarScrollPaged = false` unchanged, design item 5), every text through `ReaderDateText` (a
+weekday's or a month's name, `getDisplayName(TextStyle…)` before, is the pattern letters "EEE",
+"EEEEE" or "LLLL" over a date of that day or month, the same text provider), Week view's number
+`DateRangeHelper.isoWeekNumber` (`WeekFields.ISO`'s, held day by day over seventy years by
+`IsoWeekNumberTest`), Compose Multiplatform's `BackHandler`, the pull to refresh's sync through the
+data layer's `SyncRequester` (`koinInject`, `SyncWorker.syncNow` on Android, nothing on the iPhone)
+and the partial swap's snackbar through `rememberUiTextResolver`. What they read from other features
+moved with them: `navigation/CalendarTabTaps` (pure, ahead of Task 12; the app's bar counts the taps),
+`changerequests/SwapMonths` (out of `SwapDayAnswers.kt`), `parentingplan/PlanStrings` (its wording a
+`StringResource` now) and `PlanCitationText.kt` (`planCitationLine`, `planCitationShortLine`,
+`coParentLabel`, out of the app's `PlanReferenceCard.kt`, which stays), `custody/CustodyModelTypeLabel`
+(`labelRes()` a `StringResource`), and `utils/SwapDays.kt` (`SWAP_DAY_SKELETON` and the screens'
+`swapDateList(dates)`; the app's `SwapDateList.kt` keeps the overloads that take a locale, for the
+push). The app's callers of those read them with Compose Multiplatform's `stringResource`. The
+previews are the app's `calendar/CalendarPreviews.kt`. The ten pure calendar tests run in
+`:shared-ui`'s `commonTest`; `CalendarScreenshots`, `HomeScreenshots` and `RequestScreenshots`
+convert their `java.time` fixtures at the call. Public for the app: `MonthView`, `SwapDaysButton`,
+`DaySwapSelectionBar`, `DaySwapSheet`, `DaySwapSheetContent`, `SwapSheetOffer`, `SwapSheetActions`,
+`SwapSideGroup`, `isConsecutive`, `CustodyLegend` and `SwapMonths` (the calendar's other helpers stay
+`internal`, their tests in the same module).
 **A Robolectric test runs `RobolectricTestApplication`**
 (`app/src/test/.../testing/`, `@Config(application = …)`): Robolectric installs no content
 provider from the manifest, so it hands Compose Multiplatform's resource reader the context its

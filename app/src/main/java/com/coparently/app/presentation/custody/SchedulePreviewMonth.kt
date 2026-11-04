@@ -11,11 +11,9 @@ import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.presentation.calendar.MiniMonthModel
 import com.coparently.app.presentation.calendar.components.MiniMonth
 import com.coparently.app.presentation.common.ParentNames
-import com.coparently.app.presentation.common.rememberJavaToday
+import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.Spacing
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toKotlinYearMonth
-import java.time.YearMonth
+import kotlinx.datetime.yearMonth
 
 /**
  * A schedule shown as the month it starts in — the custody wash and who has which day — under a
@@ -37,11 +35,11 @@ internal fun SchedulePreviewMonth(
     description: String?,
     modifier: Modifier = Modifier
 ) {
-    val today = rememberJavaToday().value
-    val from = maxOf(today, model.startDate.toJavaLocalDate())
+    val today = rememberToday().value
+    val from = maxOf(today, model.startDate)
     val month = remember(model, from) {
         MiniMonthModel.build(
-            month = YearMonth.from(from).toKotlinYearMonth(),
+            month = from.yearMonth,
             custodyFor = { date -> model.getCustodyFor(date) },
             events = emptyList(),
             marks = emptyMap()

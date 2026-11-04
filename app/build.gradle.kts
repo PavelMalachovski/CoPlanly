@@ -447,8 +447,9 @@ dependencies {
     implementation("androidx.glance:glance-appwidget:1.1.1")
     implementation("androidx.glance:glance-material3:1.1.1")
 
-    // Calendar - Check for updates at https://github.com/kizitonwose/Calendar
-    implementation("com.kizitonwose.calendar:compose:2.6.1")
+    // The month grid's calendar library (kizitonwose) is `:shared-ui`'s since MON-24 phase 2 (slice
+    // 11c): `com.kizitonwose.calendar:compose-multiplatform`, whose packages are the ones the Android
+    // 2.6.1 artifact here had, so this one must not come back beside it.
 
     // Google Sign-In - Migrating to Credential Manager API
     // Old deprecated API (will be removed)

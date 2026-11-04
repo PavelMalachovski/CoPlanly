@@ -96,8 +96,8 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.TwoPanes
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.placeOf
-import com.coparently.app.presentation.common.rememberJavaToday
 import com.coparently.app.presentation.common.rememberParentNames
+import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.common.rememberTwoPane
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.components.SkeletonBox
@@ -180,7 +180,7 @@ fun HomeScreen(
     putOffAsks: PutOffAsksViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val today by rememberJavaToday()
+    val today by rememberToday()
     val parentNames = rememberParentNames(viewModel.parents.collectAsState().value)
     val pendingProposal by changeRequestViewModel.pendingProposal.collectAsState()
     val pendingProposalDiff by changeRequestViewModel.pendingProposalDiff.collectAsState()
@@ -623,9 +623,9 @@ private fun HomeColumn(modifier: Modifier, content: LazyListScope.() -> Unit) {
  */
 @Composable
 private fun RequestsRow(state: RequestsRowState, coParentName: String, onClick: () -> Unit) {
-    val today by rememberJavaToday()
+    val today by rememberToday()
     // `asString` is composable, so each part is resolved here rather than inside joinToString.
-    val line = RequestsRowText.parts(state, coParentName, today.toKotlinLocalDate())
+    val line = RequestsRowText.parts(state, coParentName, today)
         .map { it.asString() }
         .joinToString(" · ")
     SectionRow(

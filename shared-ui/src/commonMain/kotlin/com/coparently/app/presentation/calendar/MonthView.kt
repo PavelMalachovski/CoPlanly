@@ -1,0 +1,916 @@
+package com.coparently.app.presentation.calendar
+
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
+import androidx.compose.foundation.gestures.drag
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.Velocity
+import androidx.compose.ui.unit.dp
+import com.coparently.app.data.family.RecordPlace
+import com.coparently.app.data.family.placementFamilyId
+import com.coparently.app.domain.custody.ContactWindow
+import com.coparently.app.domain.holidays.Holiday
+import com.coparently.app.domain.model.Event
+import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.displayName
+import com.coparently.app.presentation.common.monthPagingTween
+import com.coparently.app.presentation.common.placeOf
+import com.coparently.app.presentation.common.rememberToday
+import com.coparently.app.presentation.theme.CoPlanlyColors
+import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.bodyMediumEmphasized
+import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.presentation.theme.labelSmallEmphasized
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.calendar_contact_window_desc
+import com.coparently.app.resources.calendar_day_click_label
+import com.coparently.app.resources.calendar_day_desc_events
+import com.coparently.app.resources.calendar_day_desc_handover
+import com.coparently.app.resources.calendar_day_desc_outside_month
+import com.coparently.app.resources.calendar_day_desc_proposal_pending
+import com.coparently.app.resources.calendar_day_desc_school_vacation
+import com.coparently.app.resources.calendar_day_desc_today
+import com.coparently.app.resources.calendar_day_desc_with_parent
+import com.coparently.app.resources.calendar_day_long_click_label
+import com.coparently.app.resources.calendar_weekday_header_description
+import com.coparently.app.resources.day_swap_cell_goes_to
+import com.coparently.app.resources.day_swap_cell_goes_to_you
+import com.coparently.app.resources.day_swap_cell_waiting_to
+import com.coparently.app.resources.day_swap_cell_waiting_to_you
+import com.coparently.app.utils.ReaderDateText
+import com.kizitonwose.calendar.compose.CalendarState
+import com.kizitonwose.calendar.compose.HorizontalCalendar
+import com.kizitonwose.calendar.compose.rememberCalendarState
+import com.kizitonwose.calendar.core.CalendarDay
+import com.kizitonwose.calendar.core.DayPosition
+import com.kizitonwose.calendar.core.OutDateStyle
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.YearMonth
+import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.minus
+import kotlinx.datetime.monthsUntil
+import kotlinx.datetime.plus
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
+
+/** Months scrollable to each side of the visible month in the pager. */
+private const val MONTH_PAGER_RANGE = 24
+
+/** Days per week for the weekday header. */
+private const val DAYS_PER_WEEK = 7
+
+/** Full-hue edge marking the first day of a custody run. */
+
+/**
+ * Classic month grid: always starts at the 1st of the month, pages horizontally
+ * between months with follow-the-finger physics (kizitonwose HorizontalCalendar).
+ *
+ * Day cells show custody colouring (slot 1 pink / slot 2 blue), public holidays,
+ * parent-coloured event dots and — along the bottom edge — a neutral school-vacation line.
+ *
+ * @param parentNames Resolves a slot to that parent's name, for the cells' accessibility
+ *   descriptions — the grid says the colour out loud for anyone not reading it.
+ * @param eventsByDay Events pre-bucketed per day by `eventsByDay` in `CalendarScreen`. Taking the
+ *   index rather than the flat list is deliberate: `dayContent` runs for all 42 cells on every
+ *   recomposition, so filtering the whole list per cell cost O(42·N) each time.
+ * @param getProposedCustody What a **pending** custody proposal would make of a day, or null when
+ *   nothing is pending. Separate from [getCustody] for the same reason [swapMarks] is: a
+ *   proposal has changed nothing yet. The days it *would* move are washed in the proposed
+ *   parent's hue at a lower alpha, over the agreed day, which keeps its full strength underneath.
+ * @param schoolVacationDays Days inside a school vacation, public holidays inside one included
+ *   (`HolidayProvider.schoolVacationDaysInRange`). Drawn as a thin neutral line along the cell's
+ *   bottom edge that takes no height, so a month with a vacation is exactly as tall as one without
+ *   — the constraint the removed month banner broke (see `CalendarScreen`).
+ * @param swapMarks Days being chosen for a swap on this phone, and days a swap waits on, each with
+ *   whom it would go to ([SwapMark], day swap design, 28 October 2026). Deliberately separate from
+ *   [getCustody]: a swap not yet agreed has changed nothing about whose day it is, so the wash
+ *   stays and the mark is drawn over it. In-month cells only.
+ * @param swappedDates Dates an **accepted** swap decides. [getCustody] already answers whose day
+ *   each one is; this set only tells the cell the answer came from a swap, so it (and the day
+ *   after it) draws one solid fill instead of the handover diagonal — see `DayCellFills`.
+ * @param onDayLongClick Offers that day to the co-parent. Null when there is nobody to offer it
+ *   to — an unpaired account gets no long-press at all, because a swap that applies itself is
+ *   just an edit and the custody editor already does that.
+ * @param onSwapDragTo Extends an open selection to the day under a finger that long-pressed and
+ *   kept moving. Additive to [onDayLongClick]'s tap-to-extend rather than a replacement: the
+ *   drag is the gesture people reach for, the tap is the one that survives a pager stealing the
+ *   drag, and it is the only one a screen reader can perform at all.
+ */
+// Callbacks are this screen-level composable's API surface; the body carries the pager's
+// anchor/settle wiring beside the grid itself.
+@Suppress("LongParameterList", "LongMethod")
+@Composable
+fun MonthView(
+    selectedMonth: YearMonth,
+    selectedDate: LocalDate? = null,
+    eventsByDay: Map<LocalDate, List<Event>>,
+    getCustody: (LocalDate) -> String?,
+    getProposedCustody: (LocalDate) -> String? = { null },
+    getContactWindows: (LocalDate) -> List<ContactWindow> = { emptyList() },
+    parentNames: ParentNames,
+    onDayClick: (LocalDate) -> Unit,
+    onMonthChange: (YearMonth) -> Unit,
+    holidays: Map<LocalDate, Holiday> = emptyMap(),
+    schoolVacationDays: Set<LocalDate> = emptySet(),
+    swapMarks: Map<LocalDate, SwapMark> = emptyMap(),
+    swappedDates: Set<LocalDate> = emptySet(),
+    onDayLongClick: ((LocalDate) -> Unit)? = null,
+    onSwapDragTo: ((LocalDate) -> Unit)? = null,
+    selectingSwap: Boolean = false,
+    onSwapTap: ((LocalDate) -> Unit)? = null
+) {
+    val firstDayOfWeek = remember { DayOfWeek.MONDAY }
+
+    // Where each in-month cell sits, in root coordinates. A drag is delivered to the cell the
+    // finger went down on and keeps being delivered there, so the cell under the finger *now*
+    // can only be found by hit-testing. Deliberately a plain map rather than a snapshot map:
+    // it is written from layout for all 42 cells and read only inside a gesture, so making it
+    // observable would recompose the whole grid on every measure for nobody's benefit.
+    val dayBounds = remember { mutableMapOf<LocalDate, Rect>() }
+
+    // The pager's loaded month range is anchored to a stable month and only
+    // re-anchors on a far jump (Today button / date picker). Keeping it fixed while
+    // paging is what makes swipes symmetric: previously the range was keyed on
+    // selectedMonth, so every settle shifted it and one direction visibly jumped.
+    var anchorMonth by remember { mutableStateOf(selectedMonth) }
+    LaunchedEffect(selectedMonth) {
+        val distance = anchorMonth.monthsUntil(selectedMonth)
+        if (distance <= -MONTH_PAGER_RANGE || distance >= MONTH_PAGER_RANGE) {
+            anchorMonth = selectedMonth
+        }
+    }
+
+    val calendarState = rememberCalendarState(
+        startMonth = remember(anchorMonth) { anchorMonth.minus(MONTH_PAGER_RANGE, DateTimeUnit.MONTH) },
+        endMonth = remember(anchorMonth) { anchorMonth.plus(MONTH_PAGER_RANGE, DateTimeUnit.MONTH) },
+        firstVisibleMonth = selectedMonth,
+        firstDayOfWeek = firstDayOfWeek,
+        // Pad every month to a full 6-row grid. The library default (EndOfRow) gives months
+        // 5 or 6 rows, so their heights differ and paging between a short and a tall month
+        // looks uneven in one direction — a fixed 6-row grid makes left/right symmetric.
+        outDateStyle = OutDateStyle.EndOfGrid
+    )
+
+    // Propagate to the ViewModel only once the pager has fully settled *on a month
+    // boundary*. Reacting to mid-fling month flips fed selectedMonth back into the effect
+    // below and kicked off a programmatic scroll on top of the in-flight fling — which is
+    // what made swiping one way animate differently from the other. The boundary check
+    // matters with the custom settle below: between the finger lifting and the settle
+    // animation starting there is one idle frame, and reporting the half-scrolled first
+    // month in that gap would move the header title mid-animation.
+    LaunchedEffect(calendarState) {
+        snapshotFlow { calendarState.isScrollInProgress }
+            .collect { scrolling ->
+                if (!scrolling && calendarState.isSettledOnBoundary()) {
+                    val visibleMonth = calendarState.firstVisibleMonth.yearMonth
+                    if (visibleMonth != selectedMonth) {
+                        onMonthChange(visibleMonth)
+                    }
+                }
+            }
+    }
+
+    // External month change (Today button, date picker) -> animate the pager to it.
+    // Never do this while the user is mid-swipe: a programmatic scroll fighting the
+    // fling is exactly what made left/right swipes look different.
+    LaunchedEffect(selectedMonth) {
+        if (!calendarState.isScrollInProgress &&
+            calendarState.firstVisibleMonth.yearMonth != selectedMonth
+        ) {
+            calendarState.animateScrollToMonth(selectedMonth)
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = Spacing.S)
+    ) {
+        WeekdayHeader(firstDayOfWeek)
+
+        BoxWithConstraints(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+        ) {
+            val cellHeight = remember(maxHeight) {
+                val calculated = maxHeight / 6
+                if (calculated < 48.dp) 48.dp else calculated
+            }
+
+            // The settle animation is ours, not the library's. `calendarScrollPaged = true`
+            // snaps with an internal spring whose feel cannot be configured and, in practice,
+            // did not read the same in both directions. So paging is taken over: the drag
+            // still follows the finger (a CLAUDE.md invariant), but the release velocity is
+            // consumed in onPreFling and the page settles with one explicit tween — the same
+            // duration and easing whichever way the user swiped.
+            val settleScope = rememberCoroutineScope()
+            val settleConnection = remember(calendarState) {
+                object : NestedScrollConnection {
+                    private var settleJob: Job? = null
+
+                    override suspend fun onPreFling(available: Velocity): Velocity {
+                        settleJob?.cancel()
+                        settleJob = settleScope.launch {
+                            // The gesture's own (now zero-velocity) fling still holds the
+                            // scroll mutex for a frame; starting our animation under it would
+                            // get the animation cancelled at UserInput priority. Wait it out.
+                            snapshotFlow { calendarState.isScrollInProgress }.first { !it }
+                            calendarState.settleToNearestMonth(available.x)
+                        }
+                        return available
+                    }
+                }
+            }
+
+            HorizontalCalendar(
+                state = calendarState,
+                // Not the library's paged snapping — the nestedScroll connection above
+                // settles instead, with a direction-independent animation.
+                calendarScrollPaged = false,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .nestedScroll(settleConnection),
+                dayContent = { day ->
+                    DayCell(
+                        day = day,
+                        cellHeight = cellHeight,
+                        isSelected = selectedDate == day.date,
+                        events = eventsByDay[day.date].orEmpty(),
+                        getCustody = getCustody,
+                        getProposedCustody = getProposedCustody,
+                        getContactWindows = getContactWindows,
+                        parentNames = parentNames,
+                        onDayClick = onDayClick,
+                        holiday = holidays[day.date],
+                        isSchoolVacation = day.date in schoolVacationDays,
+                        // A borrowed cell refuses what you would act on (design item 10): a swap is
+                        // chosen and answered in its own month.
+                        swapMark = swapMarks[day.date]?.takeIf { day.position == DayPosition.MonthDate },
+                        isSwapped = day.date in swappedDates,
+                        previousSwapped = day.date.minus(1, DateTimeUnit.DAY) in swappedDates,
+                        onDayLongClick = onDayLongClick,
+                        onSwapDragTo = onSwapDragTo,
+                        dayBounds = dayBounds,
+                        // In selection mode a tap only chooses — a borrowed day too, which the
+                        // screen pages to (`SwapTap`). Outside it, tap keeps doing what the August
+                        // design decided it does.
+                        selectingSwap = selectingSwap,
+                        onSwapTap = onSwapTap
+                    )
+                }
+            )
+        }
+    }
+}
+
+/** Thickness of the school-vacation line along a month cell's bottom edge (MON-13). */
+private val VACATION_LINE_HEIGHT = 2.dp
+
+/** Side of the corner triangle that marks a day with a contact window (MON-6b). */
+// 14 dp, up from 10: at 10 it was easy to miss in a ~48 dp cell (UX audit M9).
+private val CONTACT_WINDOW_MARKER_SIZE = 14.dp
+
+/** A contact window's times in a day cell's description. */
+
+/**
+ * Weekday header row (Mon, Tue, Wed, etc.)
+ */
+@Composable
+private fun WeekdayHeader(firstDayOfWeek: DayOfWeek) {
+    val dims = dimensions()
+    val today by rememberToday()
+    // Resolved here: the semantics lambda is not a composable context.
+    val headerDescription = stringResource(Res.string.calendar_weekday_header_description)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(dims.buttonHeight * 0.8f)
+            .background(MaterialTheme.colorScheme.surface)
+            .semantics {
+                contentDescription = headerDescription
+            },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Each weekday's name is read off a date that falls on it, `today`'s week: a name is
+        // `java.time`'s `getDisplayName(TextStyle.SHORT)`, which is the pattern letters "EEE".
+        val weekdays = remember(firstDayOfWeek, today) {
+            (0 until DAYS_PER_WEEK).map { offset ->
+                today.plus(
+                    (firstDayOfWeek.isoDayNumber - today.dayOfWeek.isoDayNumber + offset),
+                    DateTimeUnit.DAY
+                )
+            }
+        }
+
+        weekdays.forEach { weekday ->
+            val dayOfWeek = weekday.dayOfWeek
+            val isToday = dayOfWeek == today.dayOfWeek
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .padding(dims.paddingSmall / 8)
+                    .background(
+                        color = if (isToday) {
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+                        } else {
+                            Color.Transparent
+                        },
+                        shape = MaterialTheme.shapes.extraSmall
+                    )
+                    .padding(dims.paddingSmall / 2),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = ReaderDateText.pattern(weekday, "EEE"),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Normal,
+                    color = if (isToday) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Individual day cell: day number, custody/holiday backgrounds and event dots.
+ */
+// A day cell renders many orthogonal visual states (today/selected/custody/
+// holiday/vacation/events) — the branching is inherent to the design.
+@Suppress("LongParameterList", "LongMethod", "CyclomaticComplexMethod")
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun DayCell(
+    day: CalendarDay,
+    cellHeight: Dp,
+    isSelected: Boolean,
+    events: List<Event>,
+    getCustody: (LocalDate) -> String?,
+    getProposedCustody: (LocalDate) -> String?,
+    getContactWindows: (LocalDate) -> List<ContactWindow>,
+    parentNames: ParentNames,
+    onDayClick: (LocalDate) -> Unit,
+    holiday: Holiday? = null,
+    isSchoolVacation: Boolean = false,
+    swapMark: SwapMark? = null,
+    isSwapped: Boolean = false,
+    previousSwapped: Boolean = false,
+    onDayLongClick: ((LocalDate) -> Unit)? = null,
+    onSwapDragTo: ((LocalDate) -> Unit)? = null,
+    dayBounds: MutableMap<LocalDate, Rect> = mutableMapOf(),
+    selectingSwap: Boolean = false,
+    onSwapTap: ((LocalDate) -> Unit)? = null
+) {
+    val dims = dimensions()
+    val date = day.date
+    val isCurrentMonth = day.position == DayPosition.MonthDate
+    val isToday = CustodyHelper.isToday(date)
+    val custody = getCustody(date)
+    val isWeekend = CustodyHelper.isWeekend(date)
+    // Use the actually-rendered theme (the app can force light while the system is
+    // dark); isSystemInDarkTheme() would pick the dark weekend fill on a light grid.
+    val isDarkTheme =
+        MaterialTheme.colorScheme.surface.luminance() < CoPlanlyColors.DARK_LUMINANCE_THRESHOLD
+
+    val isPublicHoliday = holiday != null && !holiday.isSchoolVacation
+
+    // Two layers, not one pick: see DayCellFills for why a single `when` made the weekend
+    // unreachable on every account with a custody model. Custody is still the product's core
+    // signal and still wins over the holiday tint. School vacation is intentionally NOT a
+    // full-cell fill at all (it used to drown custody colors); it is a thin neutral line along
+    // the bottom edge instead — see `DayCellFill.schoolVacation`.
+    val previousCustody = getCustody(date.minus(1, DateTimeUnit.DAY))
+    val proposedCustody = getProposedCustody(date)
+    val fill = DayCellFills.monthCell(
+        isWeekend = isWeekend,
+        isCurrentMonth = isCurrentMonth,
+        custody = custody,
+        previousCustody = previousCustody,
+        isPublicHoliday = isPublicHoliday,
+        proposedCustody = proposedCustody,
+        isSwapped = isSwapped,
+        previousSwapped = previousSwapped,
+        isSchoolVacation = isSchoolVacation
+    )
+    val baseColor = dayCellBaseColor(fill.base)
+    // One alpha for the whole custody channel of this cell, so the band and the handover
+    // triangle cannot come out at different strengths. A day borrowed from a neighbouring month
+    // keeps the band and gets it recessively — see `ADJACENT_MONTH_TINT_SCALE`.
+    val custodyAlpha = ParentColors.custodyTintAlpha * adjacentScale(fill.isAdjacentMonth)
+    val overlayColor = dayCellOverlayColor(fill)
+
+    // The parent the child is coming *from* on a handover day, at the same custody alpha as the
+    // overlay: the two triangles must read as one system, not as a tint and a competing block.
+    val handoverColor = when (fill.handoverFrom) {
+        DayCellOverlay.CUSTODY_MOM -> ParentColors.container("mom", alpha = custodyAlpha)
+        DayCellOverlay.CUSTODY_DAD -> ParentColors.container("dad", alpha = custodyAlpha)
+        else -> null
+    }
+
+    // A pending proposal's preview: the proposed parent's hue at a lower alpha than an agreed
+    // day, laid over the agreed fill rather than replacing it. Same colour, less of it — the
+    // meaning is "this is what it would become", and a different colour would read as a
+    // different parent. The two translucent hues blend into something that is neither, which is
+    // the honest rendering of a day nobody has agreed on; the cell's description says so in
+    // words.
+    val proposalColor = when (fill.pendingProposalFor) {
+        DayCellOverlay.CUSTODY_MOM -> ParentColors.container("mom", alpha = ParentColors.proposalTintAlpha)
+        DayCellOverlay.CUSTODY_DAD -> ParentColors.container("dad", alpha = ParentColors.proposalTintAlpha)
+        else -> null
+    }
+
+    // The school-vacation line: the theme's `outline` role, a neutral that is no parent's, the
+    // friend's or the holiday's, and scaled on a borrowed day like the band. Resolved here because
+    // the draw lambda below is not composable.
+    val vacationLineColor = if (fill.schoolVacation) {
+        MaterialTheme.colorScheme.outline.copy(alpha = adjacentScale(fill.isAdjacentMonth))
+    } else {
+        null
+    }
+
+    // A contact window (MON-6b) is marked, not filled: a small corner in the window parent's
+    // full hue — the saturation rule's "marker" strength — laid over everything else, so the
+    // weekend base, the custody band and the handover diagonal all read exactly as before. The
+    // whole-day tint cannot carry it (it already says whose day it is), and a sixth fill would
+    // fight the five this cell stacks. The hours are in the description and in Day view, one tap
+    // away. On a borrowed day the marker is scaled like the band: a window is part of the pattern,
+    // and the pattern crosses the month boundary.
+    val contactWindows = getContactWindows(date)
+    val windowMarkerColor = contactWindows.firstOrNull()?.let {
+        ParentColors.fill(it.parent).copy(alpha = adjacentScale(fill.isAdjacentMonth))
+    }
+    val windowLabels = contactWindows.map { window ->
+        stringResource(
+            Res.string.calendar_contact_window_desc,
+            parentNames.labelFor(window.parent),
+            ReaderDateText.time(window.start),
+            ReaderDateText.time(window.end)
+        )
+    }
+
+    // All localized pieces are resolved in composable scope; buildString itself is not one.
+    val todayLabel = stringResource(Res.string.calendar_day_desc_today)
+    val outsideMonthLabel = stringResource(Res.string.calendar_day_desc_outside_month)
+    val custodyLabel = custody?.let {
+        stringResource(Res.string.calendar_day_desc_with_parent, parentNames.labelFor(it))
+    }
+    val proposalLabel = fill.pendingProposalFor?.let {
+        stringResource(
+            Res.string.calendar_day_desc_proposal_pending,
+            parentNames.labelFor(proposedCustody.orEmpty())
+        )
+    }
+    // Spoken only when the holiday's own name does not already say it: on a vacation day the name
+    // *is* the vacation ("Summer vacation"), on Christmas Eve inside the break it is not.
+    val holidayLabel = holiday?.displayName()
+    val vacationLabel = if (fill.schoolVacation && holiday?.isSchoolVacation != true) {
+        stringResource(Res.string.calendar_day_desc_school_vacation)
+    } else {
+        null
+    }
+    val swapToReader = parentNames.isReader(swapMark?.toSlot)
+    val swapLabel = when {
+        swapMark == null -> null
+        swapMark.pending && swapToReader -> stringResource(Res.string.day_swap_cell_waiting_to_you)
+        swapMark.pending -> stringResource(Res.string.day_swap_cell_waiting_to, parentNames.labelFor(swapMark.toSlot))
+        swapToReader -> stringResource(Res.string.day_swap_cell_goes_to_you)
+        else -> stringResource(Res.string.day_swap_cell_goes_to, parentNames.labelFor(swapMark.toSlot))
+    }
+    val swapHatch = swapMark?.let {
+        ParentColors.container(
+            it.toSlot,
+            alpha = if (it.pending) ParentColors.proposalTintAlpha else ParentColors.custodyTintAlpha
+        )
+    }
+    val swapEdge = swapMark?.let { ParentColors.chipFill(it.toSlot) }
+    val handoverLabel = fill.handoverFrom?.let {
+        stringResource(
+            Res.string.calendar_day_desc_handover,
+            parentNames.labelFor(previousCustody.orEmpty()),
+            parentNames.labelFor(custody.orEmpty())
+        )
+    }
+    val eventsLabel = if (events.isNotEmpty()) {
+        pluralStringResource(Res.plurals.calendar_day_desc_events, events.size, events.size)
+    } else {
+        null
+    }
+    val semanticDescription = buildString {
+        append(ReaderDateText.date(date, "MMMMEEEEd"))
+        if (isToday) {
+            append(", ")
+            append(todayLabel)
+        }
+        if (!isCurrentMonth) {
+            append(", ")
+            append(outsideMonthLabel)
+        }
+        holidayLabel?.let {
+            append(", ")
+            append(it)
+        }
+        vacationLabel?.let {
+            append(", ")
+            append(it)
+        }
+        custodyLabel?.let {
+            append(", ")
+            append(it)
+        }
+        handoverLabel?.let {
+            append(", ")
+            append(it)
+        }
+        proposalLabel?.let {
+            append(", ")
+            append(it)
+        }
+        swapLabel?.let {
+            append(", ")
+            append(it)
+        }
+        windowLabels.forEach {
+            append(", ")
+            append(it)
+        }
+        eventsLabel?.let {
+            append(", ")
+            append(it)
+            events.firstOrNull()?.let { event ->
+                append(": ")
+                append(event.title)
+            }
+        }
+    }
+
+    val swapClickLabel = stringResource(Res.string.calendar_day_long_click_label)
+    val clickLabel = stringResource(
+        Res.string.calendar_day_click_label,
+        ReaderDateText.date(date, "MMMMd")
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(cellHeight)
+            .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+            // Only in-month cells register. That is what stops a drag extending a run into a day
+            // shown for context, which the long-press already refuses for the same reason.
+            .onGloballyPositioned { coordinates ->
+                if (isCurrentMonth) {
+                    dayBounds[date] = coordinates.boundsInRoot()
+                }
+            }
+            // The whole long-press-and-drag gesture, deliberately owned here rather than split
+            // between this modifier and `combinedClickable` below.
+            //
+            // A second detector alongside `onLongClick` does NOT work, and it is worth saying why:
+            // `combinedClickable` with a long-press handler runs `detectTapGestures`, whose
+            // long-press branch consumes every event until the finger lifts. A drag detector
+            // beside it therefore receives nothing at all — the gesture looks dead while both
+            // modifiers are behaving exactly as documented. So the long press lives here, and
+            // `onLongClick` is gone from the clickable below.
+            //
+            // Consuming after the press is load-bearing too: without it the release still reads
+            // as a tap, and a tap while a selection is open extends it — over the one day just
+            // picked, which `SwapSelection.toggled` turns straight back off. The selection would open
+            // and vanish in the same gesture.
+            .pointerInput(date, isCurrentMonth, onDayLongClick, onSwapDragTo) {
+                val offer = onDayLongClick
+                if (offer != null && isCurrentMonth) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        val press = awaitLongPressOrCancellation(down.id)
+                            ?: return@awaitEachGesture
+                        offer(date)
+                        press.consume()
+                        drag(press.id) { change ->
+                            change.consume()
+                            // The drag keeps arriving at the cell the finger went down on, so
+                            // the position is local to *that* cell: lift it into root space
+                            // before asking which cell the finger is over now.
+                            val origin = dayBounds[date]?.topLeft
+                            if (origin != null && onSwapDragTo != null) {
+                                val point = origin + change.position
+                                dayBounds.entries
+                                    .firstOrNull { (_, bounds) -> bounds.contains(point) }
+                                    ?.key
+                                    ?.let(onSwapDragTo)
+                            }
+                        }
+                    }
+                }
+            }
+            .semantics {
+                contentDescription = semanticDescription
+                role = Role.Button
+                // The long press moved into a raw pointer gesture above, which a screen reader
+                // cannot perform. This keeps offering the day reachable by an explicit action.
+                if (onDayLongClick != null && isCurrentMonth) {
+                    customActions = listOf(
+                        CustomAccessibilityAction(swapClickLabel) {
+                            onDayLongClick(date)
+                            true
+                        }
+                    )
+                }
+            }
+            .padding(dims.paddingSmall / 8)
+            .background(
+                color = baseColor,
+                shape = MaterialTheme.shapes.extraSmall
+            )
+            .background(
+                color = overlayColor,
+                shape = MaterialTheme.shapes.extraSmall
+            )
+            // A handover day is split on a diagonal: the parent who had the child yesterday in
+            // the top-left triangle, today's parent in the bottom-right, reading the way time
+            // does. This replaces the full-hue left edge that used to mark the first day of a
+            // custody run — both answered "the child changes hands here", and two answers to one
+            // question is what the design refresh removed elsewhere. The diagonal answers more:
+            // it names *both* parents, which the edge could not.
+            //
+            // Two `drawPath` calls rather than one diagonal gradient: a gradient would smear the
+            // boundary across the cell, and the point is that the day belongs to one parent until
+            // the handover and the other after it. The first repaints the triangle with the
+            // opaque base so the overlay's tint underneath is replaced rather than blended with —
+            // two translucent parent hues stacked would read as a muddy third colour — and the
+            // second lays yesterday's parent over it at the same custody alpha. The weekend base
+            // still shows through both halves, so this file's invariant survives.
+            .clip(MaterialTheme.shapes.extraSmall)
+            .drawBehind {
+                handoverColor?.let { color ->
+                    val triangle = Path().apply {
+                        moveTo(0f, 0f)
+                        lineTo(size.width, 0f)
+                        lineTo(0f, size.height)
+                        close()
+                    }
+                    drawPath(triangle, baseColor)
+                    drawPath(triangle, color)
+                }
+                // After the diagonal, deliberately: the preview is about the whole day, so a
+                // handover boundary drawn inside it must be previewed too rather than punching
+                // a hole in it.
+                proposalColor?.let { drawRect(it) }
+                // The school-vacation line along the bottom edge, full width so consecutive days
+                // read as one run. Under the contact-window corner, which is the rarer mark.
+                vacationLineColor?.let { color ->
+                    val thickness = VACATION_LINE_HEIGHT.toPx()
+                    drawRect(
+                        color = color,
+                        topLeft = Offset(0f, size.height - thickness),
+                        size = Size(size.width, thickness)
+                    )
+                }
+                // The contact-window corner, last so no fill covers it (see `windowMarkerColor`).
+                windowMarkerColor?.let { color ->
+                    val side = CONTACT_WINDOW_MARKER_SIZE.toPx()
+                    val corner = Path().apply {
+                        moveTo(size.width, size.height - side)
+                        lineTo(size.width, size.height)
+                        lineTo(size.width - side, size.height)
+                        close()
+                    }
+                    drawPath(corner, color)
+                }
+                // A swap mark last of all (`SwapMark`): stripes in the wash of whom the day would
+                // go to, over the wash of whom it is with now — the one thing the wash must keep
+                // saying — and an edge in their deep tone, dashed while the swap waits.
+                if (swapHatch != null && swapEdge != null) {
+                    drawSwapMark(swapHatch, swapEdge, dashed = swapMark?.pending == true)
+                }
+            }
+            // Long-press offers the day to the co-parent. A day from a neighbouring month is
+            // excluded: it is shown for context, not to be acted on, and its dimmed number and
+            // recessive tint already say so. That exclusion is why it takes no proposal preview
+            // and no holiday tint either — it does carry the custody band, which is a pattern
+            // rather than something you would answer.
+            .combinedClickable(
+                // While days are being chosen, a tap only chooses — a borrowed day included, which
+                // the screen pages to and chooses there (the owner's report: it opened Day view).
+                // Outside selection mode the tap is untouched: it selects the day and opens Day
+                // view, which is the only route to creating an event on a chosen day.
+                onClick = {
+                    if (selectingSwap && onSwapTap != null) {
+                        onSwapTap(date)
+                    } else {
+                        onDayClick(date)
+                    }
+                },
+                onClickLabel = if (selectingSwap) swapClickLabel else clickLabel
+            )
+            .padding(dims.paddingSmall / 2),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        // Whom a chosen or waiting day would go to, in words (`SwapMark`): the colour alone must not
+        // carry the direction. No content description of its own — the cell's names it.
+        if (swapMark != null && swapEdge != null) {
+            SwapMarkPill(
+                name = parentNames.labelFor(swapMark.toSlot),
+                toReader = parentNames.isReader(swapMark.toSlot),
+                edge = swapEdge,
+                pending = swapMark.pending,
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
+        }
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(Spacing.XXS)
+        ) {
+            // Day number: filled circle for today, outlined ring for the selected day
+            Box(
+                modifier = Modifier
+                    .defaultMinSize(minWidth = 28.dp, minHeight = 28.dp)
+                    .background(
+                        color = when {
+                            isToday -> MaterialTheme.colorScheme.primary
+                            isSelected -> MaterialTheme.colorScheme.primaryContainer
+                            else -> Color.Transparent
+                        },
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = date.day.toString(),
+                    style = if (isToday || isPublicHoliday) {
+                        MaterialTheme.typography.bodyMediumEmphasized
+                    } else {
+                        MaterialTheme.typography.bodyMedium
+                    },
+                    color = when {
+                        isToday -> MaterialTheme.colorScheme.onPrimary
+                        isSelected -> MaterialTheme.colorScheme.onPrimaryContainer
+                        !isCurrentMonth -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                        // Red 700 is only 3.44:1 on DarkSurface; Red 400 clears AA there.
+                        isPublicHoliday -> if (isDarkTheme) {
+                            CoPlanlyColors.HolidayRedDark
+                        } else {
+                            CoPlanlyColors.HolidayRed
+                        }
+                        else -> MaterialTheme.colorScheme.onSurface
+                    }
+                )
+            }
+
+            // Parent-coloured dots, one per event up to MAX_EVENT_DOTS, then a "+" marker.
+            //
+            // These replace a single full-width event chip plus a "+N" counter. The chip's
+            // label rendered at roughly 9sp inside a 48dp cell — below the legibility floor —
+            // and it showed only the *first* event, so a day with three things on it looked
+            // much like a day with one. Dots make the count the signal and hand the titles to
+            // the agenda card under the grid, where there is room to read them.
+            if (events.isNotEmpty()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    events.take(MAX_EVENT_DOTS).forEach { event ->
+                        Box(
+                            modifier = Modifier
+                                // A ring of the cell's own base around the dot. Since the custody
+                                // wash got brighter (October 2026) a dot in the day parent's hue
+                                // sinks into it — 2.5:1 at worst — while against the base it keeps
+                                // the 3:1 `ParentColorsTest` holds every fill to.
+                                .size(EVENT_DOT_SIZE + EVENT_DOT_HALO * 2)
+                                .background(color = baseColor, shape = CircleShape)
+                                .padding(EVENT_DOT_HALO)
+                                .background(
+                                    color = eventDotColor(
+                                        // An earlier family's event is drawn neutral: its slot
+                                        // colour would now name the wrong person.
+                                        parentOwner = if (
+                                            placeOf(event.placementFamilyId, event.createdByFirebaseUid) ==
+                                            RecordPlace.EARLIER_FAMILY
+                                        ) {
+                                            ""
+                                        } else {
+                                            event.parentOwner
+                                        },
+                                        isCurrentMonth = isCurrentMonth,
+                                        friendParticipates =
+                                        !event.friendParticipates.isNullOrBlank()
+                                    ),
+                                    shape = CircleShape
+                                )
+                        )
+                    }
+                    if (events.size > MAX_EVENT_DOTS) {
+                        Text(
+                            text = "+",
+                            style = MaterialTheme.typography.labelSmallEmphasized,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Settles the pager onto a month boundary with one deliberate, direction-independent tween.
+ *
+ * The fling velocity decides *which* month wins — a real fling turns the page the way it was
+ * thrown, a slow release goes to whichever month holds more of the screen — but never *how*
+ * the page gets there: the animation is the same [monthPagingTween] either way, which is
+ * the whole point of taking snapping away from the library.
+ *
+ * Offsets are LTR-only, which every shipped locale (en/cs/de/ru/uk) is.
+ */
+private suspend fun CalendarState.settleToNearestMonth(velocityX: Float) {
+    val visible = layoutInfo.visibleMonthsInfo
+    if (visible.isEmpty()) return
+    val first = visible.first()
+    val target = when {
+        // Finger flung left -> the next month (negative velocity scrolls content forward).
+        velocityX < -MONTH_SETTLE_FLING_THRESHOLD -> visible.getOrNull(1) ?: first
+        // Finger flung right -> back to the month peeking in at the start edge.
+        velocityX > MONTH_SETTLE_FLING_THRESHOLD -> first
+        // No real fling: the month holding more than half the viewport wins.
+        else -> if (first.offset < -first.size / 2) visible.getOrNull(1) ?: first else first
+    }
+    // target.offset is the signed distance from the viewport's start edge, so scrolling by
+    // exactly it aligns the month flush — forward for a positive offset, back for a negative.
+    animateScrollBy(value = target.offset.toFloat(), animationSpec = monthPagingTween())
+}
+
+/** Whether the first visible month sits flush with the viewport's start edge. */
+private fun CalendarState.isSettledOnBoundary(): Boolean {
+    val first = layoutInfo.visibleMonthsInfo.firstOrNull() ?: return false
+    return kotlin.math.abs(first.offset) <= 1
+}
+
+/** Release velocity (px/s) below which a swipe settles to the nearest month, not the thrown one. */
+private const val MONTH_SETTLE_FLING_THRESHOLD = 300f
+
+/**
+ * The pending-swap arrows. Small enough not to compete with the day number or the event dots —
+ * a swap under discussion is a footnote on the cell, not its headline.
+ */

@@ -122,6 +122,15 @@ kotlin {
             //   handlers and asks for activity-compose 1.8.0, below the app's; on the iPhone it is
             //   Compose Multiplatform's back gesture dispatcher.
             implementation("org.jetbrains.compose.ui:ui-backhandler:1.9.3")
+            // - The month grid's `HorizontalCalendar` (`MonthView`, slice 11c): kizitonwose's
+            //   multiplatform artifact, whose months and days are kotlinx-datetime's. 2.9.1 asks for
+            //   Compose Multiplatform 1.9.0 (androidx Compose 1.9.0 on Android, below the BOM's),
+            //   kotlinx-datetime 0.7.1, kotlinx-serialization 1.9.0 and stdlib 2.2.20, all below what
+            //   the graph resolves, so it moves no Android version; 2.10 asks for Compose
+            //   Multiplatform 1.10, past the BOM. It replaced the app's Android-only
+            //   `com.kizitonwose.calendar:compose:2.6.1`, whose packages are the same: the two cannot
+            //   both be on the classpath.
+            implementation("com.kizitonwose.calendar:compose-multiplatform:2.9.1")
         }
         androidMain.dependencies {
             // `WindowCompat`, for the system bars (`Theme.android.kt`). The app's version.

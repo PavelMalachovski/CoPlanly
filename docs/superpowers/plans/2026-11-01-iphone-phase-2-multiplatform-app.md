@@ -1245,6 +1245,37 @@ Then the export and the school import:
   - **The app's calendar screens call `rememberJavaToday()`** (group 1) until they move; the moved
     calendar reads `rememberToday()`, and `JavaToday.kt` stays for Home, custody and the requests
     until 11d.
+- **Round 2, the calendar (done):** every file of `presentation/calendar/` and `calendar/components/`
+  (`git mv`, packages unchanged; round 1's stashed helper conversion was the start of it, the stash
+  dropped once committed), in one commit with the dependency switch: `:shared-ui` takes
+  `com.kizitonwose.calendar:compose-multiplatform:2.9.1` and the app drops `compose:2.6.1`. On
+  kotlinx-datetime throughout, `queryRangeFor` and the pager's month arithmetic included; the event
+  blocks' minute arithmetic through `domain/time/WallClock.kt` (`plus`/`minus` in a unit,
+  `durationUntil`), never kotlinx's own (it has none for a `LocalDateTime`); Week view's number
+  `DateRangeHelper.isoWeekNumber`, held to `WeekFields.ISO` day by day from 1990 to 2060
+  (`IsoWeekNumberTest`, `androidUnitTest`); the weekday and month names `ReaderDateText.pattern` with
+  "EEE", "EEEEE" and "LLLL" over a date of that day or month. `BackHandler` is Compose
+  Multiplatform's; the pull to refresh asks the data layer's `SyncRequester` (`koinInject`), which on
+  Android is `SyncWorker.syncNow`, as the screen called before, and on the iPhone `NoSyncRequests`;
+  the partial-swap snackbar resolves through `rememberUiTextResolver`. Moved with it: `CalendarTabTaps`
+  (to `:shared-ui`'s `navigation/`, ahead of Task 12, the app's bar unchanged), `SwapMonths` (its own
+  file), `PlanStrings` (a `StringResource` map) with `planCitationLine`, `planCitationShortLine` and
+  `coParentLabel` (`PlanCitationText.kt`; `PlanReferenceCard` stays in the app), `CustodyModelType.
+  labelRes()` (a `StringResource`), and `utils/SwapDays.kt` (`SWAP_DAY_SKELETON`, `swapDateList(dates)`;
+  the app's `SwapDateList.kt` keeps the locale overloads for the push). The app's callers of those
+  (custody, family, onboarding, the plan, professionals, the export, the requests) read them through
+  Compose Multiplatform's `stringResource`. `EventMemberMark.of` lost its locale. `JavaToday.kt` is
+  deleted (Home, custody's preview and the proposal preview read `rememberToday()` now);
+  `JavaPickerDates.kt` and `JavaTimePicker.kt` stay, for expenses, the child records, the change
+  request, the export and two androidTest classes. The ten tests run in `commonTest`, their names
+  without commas or parentheses; `CalendarScreenshots`, `HomeScreenshots` and `RequestScreenshots`
+  convert their fixtures at the call. Public for the app: `MonthView`, `SwapDaysButton`,
+  `DaySwapSelectionBar`, `DaySwapSheet`, `DaySwapSheetContent`, `SwapSheetOffer`, `SwapSheetActions`,
+  `SwapSideGroup`, `isConsecutive`, `CustodyLegend`, `SwapMonths`; the rest stays `internal` (the
+  plan's list above assumed the tests would stay in the app). The previews are the app's
+  `calendar/CalendarPreviews.kt`. **Not yet proven:** the screenshots (the month grid is the most
+  covered component; kizitonwose 2.9.1 wraps each month in an `onPlaced` box) and the iPhone's link of
+  kizitonwose's klib against kotlinx-datetime 0.8 (`shared-ios`).
 
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 

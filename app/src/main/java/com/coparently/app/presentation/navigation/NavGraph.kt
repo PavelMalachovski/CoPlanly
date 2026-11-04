@@ -1644,7 +1644,7 @@ sealed class Screen(val route: String) {
         const val ARG_DATE = "date"
         const val ARG_HOUR = "hour"
 
-        fun createRoute(date: java.time.LocalDate? = null, hour: Int? = null): String {
+        fun createRoute(date: kotlinx.datetime.LocalDate? = null, hour: Int? = null): String {
             val dateParam = date?.toString() ?: "null"
             val hourParam = hour?.toString() ?: "-1"
             return "add_event?date=$dateParam&hour=$hourParam"

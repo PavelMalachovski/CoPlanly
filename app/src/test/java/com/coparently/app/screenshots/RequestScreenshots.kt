@@ -56,7 +56,7 @@ class RequestScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
                 )
             ),
             parentNames = ScreenshotFixtures.parentNames,
-            today = ScreenshotFixtures.TODAY
+            today = ScreenshotFixtures.TODAY.toKotlinLocalDate()
         )
     }
 

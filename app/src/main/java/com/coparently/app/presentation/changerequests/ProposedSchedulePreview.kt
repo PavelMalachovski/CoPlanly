@@ -13,14 +13,13 @@ import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.presentation.calendar.MiniMonthModel
 import com.coparently.app.presentation.calendar.components.MiniMonth
 import com.coparently.app.presentation.common.ParentNames
-import com.coparently.app.presentation.common.rememberJavaToday
+import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.custody.labelRes
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.format
 import com.coparently.app.utils.localizedDate
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toKotlinYearMonth
-import java.time.YearMonth
+import kotlinx.datetime.yearMonth
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * What a proposed custody schedule looks like, before the parent answers it: its pattern's name,
@@ -41,12 +40,12 @@ fun ProposedSchedulePreview(
     parentNames: ParentNames,
     modifier: Modifier = Modifier
 ) {
-    val today = rememberJavaToday().value
+    val today = rememberToday().value
     val model = proposal.model
-    val from = maxOf(today, model.startDate.toJavaLocalDate())
+    val from = maxOf(today, model.startDate)
     val month = remember(model, from) {
         MiniMonthModel.build(
-            month = YearMonth.from(from).toKotlinYearMonth(),
+            month = from.yearMonth,
             custodyFor = { date -> model.getCustodyFor(date) },
             events = emptyList(),
             marks = emptyMap()

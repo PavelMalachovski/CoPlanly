@@ -24,6 +24,7 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.format
 import com.coparently.app.utils.localizedDate
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * What the custody screen opens on: one row per [CustodySection], each saying what it holds now.

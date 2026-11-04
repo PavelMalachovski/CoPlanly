@@ -71,6 +71,7 @@ import com.coparently.app.presentation.stickers.HomeStickers
 import com.coparently.app.presentation.stickers.StickersRow
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /** Slot 1 and slot 2, as the split row names them. */

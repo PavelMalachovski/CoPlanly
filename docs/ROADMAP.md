@@ -3020,7 +3020,11 @@ bytes are identical on Android):
   calendar's screens are next, in one
   round: kizitonwose's multiplatform `HorizontalCalendar` 2.9.1 fits (kotlinx-datetime's months and
   days, Compose Multiplatform 1.9) and replaces the Android artifact in the same commit.
-  **Slice 11c in progress: the helpers and the event form built, CI pending.**
+  The calendar's screens followed in a second round: the month grid on kizitonwose's multiplatform
+  `HorizontalCalendar`, Day and Week view, the banners, the legend and the swap selection and sheet,
+  on kotlinx-datetime and Compose Multiplatform's resources, with what they read from custody, the
+  requests and the parenting plan, and the pull to refresh through the data layer's sync request.
+  **Slice 11c built (both rounds), CI pending.**
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

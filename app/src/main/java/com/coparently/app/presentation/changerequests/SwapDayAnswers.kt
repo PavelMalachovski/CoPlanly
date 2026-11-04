@@ -25,8 +25,6 @@ import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.custody.DaySwapInbox
 import com.coparently.app.domain.time.IsoText
-import com.coparently.app.presentation.calendar.MiniMonthModel
-import com.coparently.app.presentation.calendar.components.MiniMonth
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.format
@@ -94,12 +92,6 @@ internal fun SwapDayAnswers(
             }
         }
     }
-}
-
-/** The months an offer's days fall in, as [com.coparently.app.presentation.calendar.swapMiniMonths] built them. */
-@Composable
-internal fun SwapMonths(months: List<MiniMonthModel>, parentNames: ParentNames) {
-    months.forEach { MiniMonth(model = it, parentNames = parentNames) }
 }
 
 /** Each day's two chips: the answer and its label. */

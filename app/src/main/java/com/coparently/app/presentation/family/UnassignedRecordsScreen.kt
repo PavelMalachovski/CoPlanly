@@ -65,6 +65,7 @@ import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyLargeEmphasized
 import com.coparently.app.utils.localizedDate
 import kotlinx.datetime.toJavaLocalDate
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /** A record's day, in the reader's own order: "Aug 3, 2026", "3. 8. 2026". */
