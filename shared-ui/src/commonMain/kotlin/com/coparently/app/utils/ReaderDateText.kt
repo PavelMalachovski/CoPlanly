@@ -5,8 +5,6 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.YearMonth
-import kotlinx.datetime.toLocalDateTime
-import kotlin.time.Instant
 
 /**
  * Dates and times as the reader writes them, for the shared screens (MON-24 phase 2, Task 11):
@@ -98,14 +96,6 @@ expect fun readerShortDate(date: LocalDate): String
 
 /** [date] in the language's own long style ("August 12, 2026", "12. srpna 2026"), as [readerMediumDate] is the medium. */
 expect fun readerLongDate(date: LocalDate): String
-
-/**
- * The day the instant [millis] (epoch milliseconds) falls on in the device's zone, in the language's
- * long style: when a guest's or a grant's access ends, as the screens wrote it with
- * `ofLocalizedDate(FormatStyle.LONG)` over the instant in `ZoneId.systemDefault()` (slice 11g).
- */
-fun readerLongDateAt(millis: Long): String =
-    readerLongDate(Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.currentSystemDefault()).date)
 
 /** [date] in the language's own full style ("Wednesday, August 12, 2026"), as [readerMediumDate] is the medium. */
 expect fun readerFullDate(date: LocalDate): String
