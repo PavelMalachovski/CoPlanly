@@ -9,8 +9,9 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 // the same files through `:app`'s `stringsToAndroidRes` task, which copies them unchanged into
 // the app's generated resources. Then the theme (`presentation/theme/`, slice 9b), with the Onest
 // font files in `composeResources/font/`, and the common components (`presentation/common/`) that
-// need neither a ViewModel nor an Android API. The ViewModels and the screens follow task by
-// task, packages unchanged.
+// need neither a ViewModel nor an Android API. Then (Task 10) the shared state the ViewModels read
+// and the ViewModels themselves, group by group, with their Koin modules (`uiModules`); the screens
+// follow (Task 11), packages unchanged.
 //
 // Built like `:shared-data`: an `androidTarget()` on the `com.android.library` plugin and the two
 // iPhone targets. It depends on both other shared modules, and its framework is the one the iPhone
@@ -78,6 +79,19 @@ kotlin {
             // material-icons-extended, which the app's BOM puts at 1.7.8, so the classes the app
             // already draws.
             implementation("org.jetbrains.compose.material:material-icons-extended:1.7.3")
+            // The ViewModels (Task 10): the multiplatform `ViewModel` and `viewModelScope`. `api`,
+            // because the app's screens hold them and call their API. 2.9.6 is the release Compose
+            // Multiplatform 1.9.3 pairs with; on Android (and, through its redirect, on the iPhone)
+            // it is androidx.lifecycle:lifecycle-viewmodel 2.9.4, so the app's lifecycle artifacts
+            // (2.8.7 declared, 2.9.3 through Koin) resolve to 2.9.4, as they move in lockstep. Not
+            // 2.10 or 2.11, which lift Compose, activity and lifecycle past the app's BOM 2025.10.00,
+            // the reason Koin waits at 4.1.1 (see the app's build file).
+            api("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel:2.9.6")
+            // `viewModelOf` in `uiModules`, which the app's Koin graph includes. 4.1.1, the version
+            // of the app's Koin BOM; it asks for lifecycle-viewmodel 2.9.3, which the line above
+            // lifts. `koinViewModel()` in common code (koin-compose-viewmodel) waits for the screens
+            // (Task 11): the screens still in the app resolve the same definitions through theirs.
+            implementation("io.insert-koin:koin-core-viewmodel:4.1.1")
         }
         androidMain.dependencies {
             // `WindowCompat`, for the system bars (`Theme.android.kt`). The app's version.
@@ -85,11 +99,19 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
+            // The ViewModels' and the shared state's tests (Task 10), at the app's versions:
+            // `runTest` and `Dispatchers.setMain`, and Turbine for their flows. Both run on the JVM
+            // and the simulator.
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
+            implementation("app.cash.turbine:turbine:1.2.0")
         }
         androidUnitTest.dependencies {
             // The theme's tests (moved with it from the app, slice 9b) run here as the Android unit
             // tests, on JUnit 4 like the app's.
             implementation("junit:junit:4.13.2")
+            // The moved ViewModel tests that mock their collaborators (Task 10). The app's version;
+            // MockK runs on the JVM only, so a test that mocks lives here rather than in commonTest.
+            implementation("io.mockk:mockk:1.13.13")
         }
     }
 }

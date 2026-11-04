@@ -2,7 +2,7 @@ package com.coparently.app.presentation.common
 
 import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.model.User
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
@@ -176,7 +176,7 @@ class ParentLabelsTest {
     }
 
     @Test
-    fun `a co-parent write on an unmigrated pair still names the co-parent, not me`() {
+    fun `a co-parent write on an unmigrated pair still names the co-parent - not me`() {
         // Every pair created before slot assignment shipped has both parents reading "mom".
         // Resolving lastModifiedBy through the slot (parentLabel) would collapse both uids onto
         // "mom" and report the co-parent's write as mine; resolving the uid directly does not.

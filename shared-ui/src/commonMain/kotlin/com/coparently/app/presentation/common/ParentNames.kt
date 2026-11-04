@@ -3,8 +3,11 @@ package com.coparently.app.presentation.common
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.parent_label_coparent
+import com.coparently.app.resources.parent_label_unknown
+import com.coparently.app.resources.parent_label_you
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Everything a composable needs to turn a slot into a name: the two parents, and the three
@@ -131,9 +134,9 @@ data class ParentNames(
  */
 @Composable
 fun rememberParentNames(parents: Parents): ParentNames {
-    val you = stringResource(R.string.parent_label_you)
-    val coParent = stringResource(R.string.parent_label_coparent)
-    val unknown = stringResource(R.string.parent_label_unknown)
+    val you = stringResource(Res.string.parent_label_you)
+    val coParent = stringResource(Res.string.parent_label_coparent)
+    val unknown = stringResource(Res.string.parent_label_unknown)
     return remember(parents, you, coParent, unknown) {
         ParentNames(parents, you, coParent, unknown)
     }

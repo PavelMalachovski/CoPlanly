@@ -1,3 +1,6 @@
+// `coParentOnScreen` and its helpers are public in `:shared-ui` only for the ViewModels still here (MON-24).
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.presentation.pairing
 
 import android.graphics.Bitmap
@@ -14,6 +17,7 @@ import com.coparently.app.data.remote.firebase.QRCodeService
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.ParentSlotMigrator
 import com.coparently.app.data.session.SignedInAccountSource
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.custody.SharedCustodyRead
 import com.coparently.app.domain.model.AccountSummary
 import com.coparently.app.domain.model.InvitePreview

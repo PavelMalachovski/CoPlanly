@@ -2911,6 +2911,16 @@ bytes are identical on Android):
   `UiText`. `UiTextParityTest` (Robolectric, five languages) compares both resolutions with what
   Android's resources and `java.time` made of the same samples; the screenshot baselines should not
   move. Task 9's Steps 5 and 6 are what remains of it.
+- **The ViewModels to `:shared-ui`** — **slice 10a built (phase 2, Task 10, November 2026), CI's
+  first run pending**: the infrastructure (JetBrains' multiplatform `lifecycle-viewmodel` 2.9.6,
+  which is androidx's 2.9.4 on Android and lifts the app's lifecycle artifacts there;
+  `koin-core-viewmodel` 4.1.1 for `viewModelOf` in common code; coroutines-test and Turbine in
+  `commonTest`, MockK in `androidUnitTest`), `:shared-ui`'s `uiModules` and `platformUiModule`
+  (included in the app's `appModules`), and the shared state every ViewModel reads:
+  `ParentsSource`, `FamilyKindSource`, `FamilyMembersSource`, `CoParentOnScreen`, `Loadable`,
+  `FormDraft`, `NamedParent`, `ParentNames`, `ParentLabels` and `PhotoOwner`, packages unchanged,
+  with their tests (on `kotlin.test` in `commonTest` where nothing is mocked). Calendar and event,
+  custody and requests, family and expenses, settings to sync and the rest follow as slices 10b–10f.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

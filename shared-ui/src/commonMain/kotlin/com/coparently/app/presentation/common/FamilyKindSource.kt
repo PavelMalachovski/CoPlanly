@@ -1,5 +1,8 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.presentation.common
 
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.model.FamilyKind
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository

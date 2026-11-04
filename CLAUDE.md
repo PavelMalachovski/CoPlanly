@@ -565,6 +565,12 @@ When touching the UI, keep these invariants:
    through the `room.schemaLocation` KSP argument, which the app already used, rather than the Room
    Gradle plugin, which was not tried in this task (Google's Maven repository, where the plugin is
    published, is unreachable from the cloud sessions this was built in) — Navigation 2.9.3,
+   **lifecycle 2.9.4** (MON-24 phase 2, Task 10: `:shared-ui`'s ViewModels extend JetBrains'
+   multiplatform `org.jetbrains.androidx.lifecycle:lifecycle-viewmodel` 2.9.6, the release Compose
+   Multiplatform 1.9.3 pairs with, which on Android is androidx's 2.9.4, so the app's lifecycle
+   artifacts — 2.8.7 declared, 2.9.3 through Koin — resolve to 2.9.4; not 2.10, which lifts Compose
+   past the BOM, the reason Koin waits below; `viewModelOf` in common code is `koin-core-viewmodel`
+   4.1.1),
    **Koin 4.1.1** (BOM; `koin-android`, `koin-androidx-compose`, `koin-androidx-workmanager`, and
    `koin-test` for the JVM tests — MON-24 phase 2 replaced Hilt 2.58 with it; 4.2.x is newer but its
    Compose artifacts pull Compose 1.10, activity 1.12 and lifecycle 2.10 past the BOM, so it waits
@@ -1332,7 +1338,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
 - **Stateless composables** — state lives in ViewModels (`StateFlow`), UI receives values
   and callbacks. Follow the existing `UiState` sealed-class pattern.
 - **Koin** for all DI (Hilt until MON-24 phase 2). Modules live in
-  `app/src/main/java/com/coparently/app/di/koin/` and are listed in `appModules` (`AppModules.kt`);
+  `app/src/main/java/com/coparently/app/di/koin/` and are listed in `appModules` (`AppModules.kt`),
+  which also includes `:shared-data`'s `dataModules` and `platformDataModule` and `:shared-ui`'s
+  `uiModules` and `platformUiModule` (`shared-ui/.../di/koin/UiModules.kt`, MON-24 phase 2, Task 10:
+  the shared state and every ViewModel that has moved there, one module per feature);
   a class the graph builds is a `singleOf`/`factoryOf`/`viewModelOf`/`workerOf` there (a `single`
   for what is one per process, as a Hilt `@Singleton` was), an interface is bound with
   `single<I> { get<Impl>() }` in the module named after its feature, and a qualifier is
@@ -1579,8 +1588,10 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              R.string copy; the Onest fonts (composeResources/font/); presentation/theme/ (slice
              9b, its Android-only halves in androidMain behind expects); and the common
              components of presentation/common/ that need no ViewModel and no Android API (the
-             design system's primitives), with UiText (slice 9c). ViewModels and screens follow.
-             It makes the iPhone's
+             design system's primitives), with UiText (slice 9c); and, from Task 10, the shared
+             state of presentation/common/ (ParentsSource and its siblings) and the ViewModels,
+             group by group, with their Koin modules: uiModules and platformUiModule, which
+             appModules includes. Screens follow (Task 11). It makes the iPhone's
              one framework, Shared (static, exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
              ReminderScheduler, the export's record and the school import's plan — in shared/,
@@ -1936,9 +1947,8 @@ stay in the app, `DesignSystemPreviews.kt`), `AddItemButton`, `AnswerButtons`, `
 `ErrorState`, `ExpandableDetails`, `FabScrollVisibility`, `InlineBanner`, `InviteCodeText`,
 `LargeFontLayout`, `StickyActionBar` and `animations/`. Their own labels are `Res.string`, and
 `GroupLabel` uppercases with Compose's `toUpperCase(Locale.current)`, which on Android is the
-`Locale.getDefault()` it used. Still in the app, each for its reason: the sources and ViewModels
-(`ParentsSource`, `FamilyKindSource`, `FamilyMembersSource`, `CoParentOnScreen`, the `*ViewModel`s:
-Koin and the lifecycle, Task 10); Coil's users (`AccountAvatar`, `PhotoStrip`, `ZoomableImage`,
+`Locale.getDefault()` it used. Still in the app, each for its reason: the `*ViewModel`s not moved
+yet (Task 10's later slices, below); Coil's users (`AccountAvatar`, `PhotoStrip`, `ZoomableImage`,
 `SignedInAsRow`, which draws an avatar); the Android requesters and handlers
 (`NotificationPermission`, `MicrophonePermission`, `SharedFileViewer`, `SensitiveClipboard`,
 `OpenedFile`, `PrivacyPolicyLink`, `TermsOfServiceLink`; Task 11's platform interfaces);
@@ -1948,9 +1958,7 @@ Koin and the lifecycle, Task 10); Coil's users (`AccountAvatar`, `PhotoStrip`, `
 `PickerDates`, `Today`, `VaccinationListEditor`); the `@StringRes` label helpers (`BloodTypeLabel`,
 `EventTypeLabel`, `PetSpeciesLabel`, `CountryPicker`) and the components that read them
 (`MedicalProfileEditor`, `FamilyMemberChips`); and, not moved yet though
-nothing Android holds them, the state the sources and ViewModels share (`Loadable`, `FormDraft`,
-`NamedParent`, `PhotoOwner`, `ParentLabels`, `ParentNames`: Task 10) and `RecordPlaceMark` (with
-the screens that draw it, Task 11). **A Robolectric test runs `RobolectricTestApplication`**
+nothing Android holds it, `RecordPlaceMark` (with the screens that draw it, Task 11). **A Robolectric test runs `RobolectricTestApplication`**
 (`app/src/test/.../testing/`, `@Config(application = …)`): Robolectric installs no content
 provider from the manifest, so it hands Compose Multiplatform's resource reader the context its
 `AndroidContextProvider` hands it on a device; without it every `stringResource(Res.string.…)` a
@@ -1966,6 +1974,23 @@ Known issues). Every ViewModel, state class and screen that builds a `UiText` na
 same keys and arguments; `SharedFileViewer.sharedFileError` takes a `StringResource` fallback.
 `UiTextParityTest` (`app/src/test/.../resources/`) holds both resolutions to what Android's resources
 made of the same samples, in the five languages.
+**The shared state and the ViewModels follow in Task 10**, slice by slice (10a: the shared state,
+`common/`'s ViewModels and chat; then calendar and event, custody and requests, family and expenses,
+settings to sync, the rest), each moved with `git mv` to `shared-ui/src/commonMain/`, package
+unchanged, so a screen still in the app imports nothing new. Its test moves with it: to
+`shared-ui/src/commonTest/` (on `kotlin.test`) when it uses no JVM-only library, else to
+`shared-ui/src/androidUnitTest/` (MockK, a `java.time` fixture). Its `viewModelOf` leaves the app's
+`viewModelModule` for `:shared-ui`'s `uiModules` (`di/koin/UiModules.kt`, one module per feature,
+like `dataModules`), with `platformUiModule` beside it (an `expect`: nothing on Android, where the
+app's modules bind what the ViewModels take from the platform; on the iPhone, stand-ins that answer
+"not on this phone yet"). Slice 10a moved **the shared state** first, because nearly every ViewModel
+reads it: `ParentsSource` (its one log line through the data layer's `logger`), `FamilyKindSource`,
+`FamilyMembersSource`, `CoParentOnScreen`, `Loadable`, `FormDraft`, `NamedParent`, `ParentNames`
+(`rememberParentNames` reads its three fallbacks through Compose Multiplatform's `stringResource`),
+`ParentLabels` and `PhotoOwner` (with `LocalPhotoViewerUid`), whose three sources are `single`s in
+`uiModules`' `commonUiModule` now. `coParentOnScreen`, `observeSignedInUser` and
+`projectedCoParentUid` are public behind `@InternalSharedApi` until the five ViewModels still in the
+app that call them move (see the `@InternalSharedApi` paragraph below).
 
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller
@@ -1992,8 +2017,11 @@ app), the four expense mappers in
 `ExpenseMappers.kt` (the expenses wire contract, in `wire/` like the pets'),
 `ChatMirror.mirror` (the on-screen
 e2e tests, which start the mirror themselves), and the engine overload of `httpClient` and
-`GitLiveFirestoreClient`'s `plainToGitLive` (the R8 probe). This list is the one place they are
-recorded; `InternalSharedApi`'s KDoc points here.
+`GitLiveFirestoreClient`'s `plainToGitLive` (the R8 probe); and in `shared-ui/` (Task 10)
+`CoParentOnScreen.kt`'s `coParentOnScreen`, `UserRepository.observeSignedInUser` and
+`User.projectedCoParentUid` (`HomeViewModel`, `PairingViewModel`, `ProfileViewModel`,
+`ParentingPlanViewModel` and `RequestsSource`, in the app until their slices move them). This list
+is the one place they are recorded; `InternalSharedApi`'s KDoc points here.
 
 Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth) → Firestore sync.
 

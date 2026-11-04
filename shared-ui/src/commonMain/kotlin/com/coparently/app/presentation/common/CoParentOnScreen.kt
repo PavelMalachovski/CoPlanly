@@ -2,6 +2,7 @@ package com.coparently.app.presentation.common
 
 import com.coparently.app.data.chat.ChatPartner
 import com.coparently.app.data.chat.ChatPartnerSource
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.model.User
@@ -63,9 +64,13 @@ sealed interface CoParentOnScreen {
  * @param projectedPartnerUid The co-parent the signed-in Room row's `partnerId` names, or null —
  *   see [projectedCoParentUid].
  * @param profileOf A co-parent's live profile: `PairingRepository.observeCoParentProfile`.
+ *
+ * Public, behind [InternalSharedApi], only for the ViewModels still in the app that follow the same
+ * rule (MON-24 phase 2, Task 10); `internal` again once the last of them has moved.
  */
+@InternalSharedApi
 @OptIn(ExperimentalCoroutinesApi::class)
-internal fun coParentOnScreen(
+fun coParentOnScreen(
     pairing: Flow<PairingState>,
     projectedPartnerUid: Flow<String?>,
     profileOf: (String) -> Flow<PartnerSummary>
@@ -85,8 +90,11 @@ internal fun coParentOnScreen(
 /**
  * The signed-in parent's Room row, matched by uid — never "the only row", for the reason
  * [Parents] gives: sign-out does not clear Room, so a device two accounts have used holds two.
+ *
+ * Public, behind [InternalSharedApi], for [coParentOnScreen]'s reason.
  */
-internal fun UserRepository.observeSignedInUser(): Flow<User?> =
+@InternalSharedApi
+fun UserRepository.observeSignedInUser(): Flow<User?> =
     combine(observeCurrentUserId(), getAllUsers()) { uid, users ->
         uid?.let { id -> users.firstOrNull { it.id == id } }
     }
@@ -94,8 +102,11 @@ internal fun UserRepository.observeSignedInUser(): Flow<User?> =
 /**
  * The co-parent of the family this row is projected onto (`SelectedFamilySource`), or null when
  * it names nobody — or, as only a corrupt row would, the parent themselves.
+ *
+ * Public, behind [InternalSharedApi], for [coParentOnScreen]'s reason.
  */
-internal fun User.projectedCoParentUid(): String? =
+@InternalSharedApi
+fun User.projectedCoParentUid(): String? =
     partnerId?.takeIf { it.isNotBlank() && it != id }
 
 /** Where [coParentOnScreen] takes the profile from: an answer already in hand, or a listener of its own. */

@@ -676,6 +676,21 @@ ViewModels are about 57 of those files.
   `ViewModelScopeTest` and CI are green.
 - [ ] **Step 4: Commit.** One per group: `refactor: move the <group> ViewModels to shared-ui (MON-24)`
 
+**Slice 10a notes (November 2026).** The infrastructure and the shared state first:
+- `shared-ui` depends on `org.jetbrains.androidx.lifecycle:lifecycle-viewmodel` 2.9.6 (`api`;
+  androidx 2.9.4 on Android, which lifts the app's lifecycle artifacts from 2.9.3) and
+  `io.insert-koin:koin-core-viewmodel` 4.1.1; its tests get coroutines-test 1.11.0 and Turbine
+  1.2.0 (commonTest) and MockK 1.13.13 (androidUnitTest).
+- `di/koin/UiModules.kt`: `uiModules` (so far `commonUiModule`, the three sources' `single`s) and
+  `expect val platformUiModule` (empty on Android; stand-ins on the iPhone). `appModules` adds both
+  after `dataModules` and `platformDataModule`.
+- Moved from `presentation/common/`: `ParentsSource` (its log line through `logger`),
+  `FamilyKindSource`, `FamilyMembersSource`, `CoParentOnScreen` (its three helpers public behind
+  `@InternalSharedApi` for five ViewModels still in the app), `Loadable`, `FormDraft`,
+  `NamedParent`, `ParentNames` (`Res.string`), `ParentLabels` and `PhotoOwner`. Tests:
+  `ParentsTest`, `ParentLabelsTest`, `ParentNamesTest` and `FormDraftTest` to commonTest on
+  `kotlin.test`; `ParentsSourceTest` and `FamilyKindSourceTest` (MockK) to androidUnitTest.
+
 ### Task 11: The screens to `commonMain`
 
 **Files:**

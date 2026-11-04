@@ -1,9 +1,6 @@
 package com.coparently.app.di.koin
 
 import com.coparently.app.presentation.changerequests.RequestsSource
-import com.coparently.app.presentation.common.FamilyKindSource
-import com.coparently.app.presentation.common.FamilyMembersSource
-import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.home.HomeIdentityDependencies
 import com.coparently.app.presentation.home.MonthSpendDependencies
 import com.coparently.app.presentation.pairing.PendingCustodyConflict
@@ -20,13 +17,12 @@ import org.koin.dsl.module
 /**
  * The presentation layer's sources and helpers that are not ViewModels: shared flows several
  * screens read (a `single` each, as their Hilt `@Singleton` was) and per-screen dependency
- * bundles (a `factory` each, as they were unscoped).
+ * bundles (a `factory` each, as they were unscoped). `ParentsSource`, `FamilyKindSource` and
+ * `FamilyMembersSource` moved to `:shared-ui`'s `commonUiModule` with their classes (MON-24 phase 2,
+ * Task 10).
  */
 val presentationModule = module {
     factoryOf(::RequestsSource)
-    singleOf(::FamilyKindSource)
-    singleOf(::FamilyMembersSource)
-    single { ParentsSource(get(), get(), get()) }
     factoryOf(::HomeIdentityDependencies)
     factoryOf(::MonthSpendDependencies)
     singleOf(::PendingCustodyConflict)

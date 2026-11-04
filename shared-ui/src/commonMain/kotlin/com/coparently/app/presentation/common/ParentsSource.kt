@@ -1,6 +1,9 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.presentation.common
 
-import android.util.Log
+import com.coparently.app.data.platform.logger
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.family.FamilySlots
 import com.coparently.app.domain.family.FamilySlotsSource
@@ -260,7 +263,7 @@ class ParentsSource(
             // paired account gets in the window between the accept callable returning and
             // `PairingRepositoryImpl` writing the pairing into Room. That window prices an
             // expense as unshared, and without this line the only evidence is a wrong balance.
-            Log.i(TAG, "No co-parent on the local row for $uid; treating this account as unpaired")
+            logger.i(TAG, "No co-parent on the local row for $uid; treating this account as unpaired")
             return null
         }
         return partnerId.takeIf { it != uid }
