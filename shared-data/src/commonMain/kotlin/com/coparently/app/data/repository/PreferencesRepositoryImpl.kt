@@ -2,8 +2,8 @@ package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.money.CurrencyHints
+import com.coparently.app.data.platform.DeviceRegion
 import com.coparently.app.data.platform.SecurePreferences
-import com.coparently.app.data.platform.deviceRegionCode
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.money.defaultCurrencyForRegion
 import com.coparently.app.domain.money.resolveDefaultCurrency
@@ -22,11 +22,13 @@ import kotlinx.coroutines.flow.flatMapLatest
  * Manages user preferences using EncryptedPreferences.
  *
  * In `:shared-data` since MON-24 phase 2 (Task 8g), with [CurrencyHints]; the device region it
- * falls back to is [deviceRegionCode], which is `Locale.getDefault().country` on Android.
+ * falls back to is [DeviceRegion], the phone's own region — never the region of the locale the app
+ * speaks, which on an English fallback is "150" (Europe).
  */
 class PreferencesRepositoryImpl(
     private val encryptedPreferences: SecurePreferences,
-    private val currencyHints: CurrencyHints
+    private val currencyHints: CurrencyHints,
+    private val deviceRegion: DeviceRegion
 ) : PreferencesRepository {
 
     private val _darkThemeFlow = MutableStateFlow<Boolean?>(null)
@@ -64,7 +66,7 @@ class PreferencesRepositoryImpl(
      */
     private fun resolveInitialCurrency(): SupportedCurrency {
         SupportedCurrency.fromCode(encryptedPreferences.getDefaultCurrency())?.let { return it }
-        val resolved = defaultCurrencyForRegion(deviceRegionCode())
+        val resolved = defaultCurrencyForRegion(deviceRegion.code())
         encryptedPreferences.putDefaultCurrency(resolved.code)
         return resolved
     }

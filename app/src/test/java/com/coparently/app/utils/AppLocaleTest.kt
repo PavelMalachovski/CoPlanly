@@ -6,6 +6,7 @@ import android.content.res.Configuration
 import android.os.LocaleList
 import androidx.annotation.StringRes
 import com.coparently.app.R
+import com.coparently.app.data.platform.AndroidDeviceRegion
 import com.coparently.app.testing.RobolectricTestApplication
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -105,6 +106,15 @@ class AppLocaleTest {
 
         assertEquals(Locale.forLanguageTag("en-SK"), Locale.getDefault())
         assertEquals(LocaleList.forLanguageTags("en-SK,sk-SK"), LocaleList.getDefault())
+    }
+
+    @Test
+    @Config(qualifiers = "sk-rSK")
+    fun `the phone's region is read from the phone, never from the language the app speaks`() {
+        AppLocale.follow(context)
+
+        // The currency hint and the onboarding's country guess: still Slovakia.
+        assertEquals("SK", AndroidDeviceRegion(context).code())
     }
 
     @Test

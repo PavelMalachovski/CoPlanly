@@ -4,10 +4,10 @@ import android.annotation.SuppressLint
 import android.app.LocaleManager
 import android.content.Context
 import android.content.res.Configuration
-import android.content.res.Resources
 import android.os.Build
 import android.os.LocaleList
 import androidx.appcompat.app.AppCompatDelegate
+import com.coparently.app.data.platform.PhoneLocales
 import com.coparently.app.domain.language.AppLanguageRule
 import java.util.Locale
 
@@ -36,7 +36,9 @@ import java.util.Locale
  *   this class has set — `LocaleManager.getSystemLocales()` on Android 13 and later, the global
  *   configuration in the order the person set it; below that `Resources.getSystem()`'s, which the
  *   framework orders by what it can display itself, so a first language the phone cannot show (it
- *   then shows the next one) reads as the one it shows.
+ *   then shows the next one) reads as the one it shows. It is `shared-data`'s [PhoneLocales], whose
+ *   first entry's region is also the phone's region the currency hint and the onboarding read
+ *   (`AndroidDeviceRegion`), never the region of the locale the app speaks.
  */
 object AppLocale {
 
@@ -65,7 +67,7 @@ object AppLocale {
     }
 
     /** The phone's first language, as the system lists it (see the class's KDoc). */
-    fun deviceFirst(context: Context): Locale = deviceLocales(context)[0] ?: Locale.getDefault()
+    fun deviceFirst(context: Context): Locale = PhoneLocales.of(context)[0] ?: Locale.getDefault()
 
     /**
      * A context like [base] in [locale] and nothing else: the override configuration names only the
@@ -86,7 +88,7 @@ object AppLocale {
      */
     fun follow(context: Context) {
         val locale = effective(context)
-        val defaults = defaultLocalesFor(locale, deviceLocales(context))
+        val defaults = defaultLocalesFor(locale, PhoneLocales.of(context))
         if (LocaleList.getDefault() == defaults && Locale.getDefault() == locale) return
         LocaleList.setDefault(defaults)
     }
@@ -156,14 +158,4 @@ fun Context.inAppLanguage(): Context = AppLocale.contextIn(this, AppLocale.effec
 internal fun defaultLocalesFor(locale: Locale, phone: LocaleList): LocaleList {
     val others = (0 until phone.size()).mapNotNull { phone[it] }.filter { it != locale }.distinct()
     return LocaleList(locale, *others.toTypedArray())
-}
-
-/** The phone's languages, as the system lists them (see [AppLocale]'s KDoc). */
-private fun deviceLocales(context: Context): LocaleList {
-    val system = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        context.getSystemService(LocaleManager::class.java)?.systemLocales
-    } else {
-        null
-    }
-    return system ?: Resources.getSystem().configuration.locales
 }

@@ -2,6 +2,7 @@ package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.money.CurrencyHints
+import com.coparently.app.data.platform.DeviceRegion
 import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.domain.money.SupportedCurrency
 import io.mockk.every
@@ -29,21 +30,32 @@ class PreferencesRepositoryCurrencyTest {
 
     private val noHints = hints(country = null, lastExpense = null)
 
-    private fun withLocale(language: String, country: String, block: () -> Unit) {
+    /** The phone's own region, as `AndroidDeviceRegion` reads it. */
+    private var phoneRegion = ""
+    private val phone = DeviceRegion { phoneRegion }
+
+    /**
+     * Runs [block] on a phone in [country]. The process's default locale is the English fallback,
+     * European English: the guess must come from the phone's region and never from the locale the
+     * app speaks, whose region is Europe's ("150") on an English fallback.
+     */
+    private fun onPhoneIn(country: String, block: () -> Unit) {
         val original = Locale.getDefault()
-        Locale.setDefault(Locale.Builder().setLanguage(language).setRegion(country).build())
+        Locale.setDefault(Locale.forLanguageTag("en-150"))
+        phoneRegion = country
         try {
             block()
         } finally {
+            phoneRegion = ""
             Locale.setDefault(original)
         }
     }
 
     @Test
     fun `seeds the currency from the device region when nothing is stored`() {
-        withLocale("cs", "CZ") {
+        onPhoneIn("CZ") {
             val preferences = prefs(storedCurrency = null)
-            val repository = PreferencesRepositoryImpl(preferences, noHints)
+            val repository = PreferencesRepositoryImpl(preferences, noHints, phone)
 
             runBlocking {
                 assertEquals(SupportedCurrency.CZK, repository.getDefaultCurrencyFlow().first())
@@ -53,9 +65,23 @@ class PreferencesRepositoryCurrencyTest {
     }
 
     @Test
+    fun `a Slovak phone is offered euros though the app speaks European English`() {
+        // The owner's rule reads English on a Slovak phone, in en-150, whose region is "150".
+        onPhoneIn("SK") {
+            val preferences = prefs(storedCurrency = null)
+            val repository = PreferencesRepositoryImpl(preferences, noHints, phone)
+
+            runBlocking {
+                assertEquals(SupportedCurrency.EUR, repository.getDefaultCurrencyFlow().first())
+            }
+            verify { preferences.putDefaultCurrency("EUR") }
+        }
+    }
+
+    @Test
     fun `prefers the stored currency over the device region`() {
-        withLocale("cs", "CZ") {
-            val repository = PreferencesRepositoryImpl(prefs(storedCurrency = "EUR"), noHints)
+        onPhoneIn("CZ") {
+            val repository = PreferencesRepositoryImpl(prefs(storedCurrency = "EUR"), noHints, phone)
 
             runBlocking {
                 assertEquals(SupportedCurrency.EUR, repository.getDefaultCurrencyFlow().first())
@@ -65,8 +91,8 @@ class PreferencesRepositoryCurrencyTest {
 
     @Test
     fun `ignores an unrecognised stored code and reseeds from the region`() {
-        withLocale("pl", "PL") {
-            val repository = PreferencesRepositoryImpl(prefs(storedCurrency = "XYZ"), noHints)
+        onPhoneIn("PL") {
+            val repository = PreferencesRepositoryImpl(prefs(storedCurrency = "XYZ"), noHints, phone)
 
             runBlocking {
                 assertEquals(SupportedCurrency.PLN, repository.getDefaultCurrencyFlow().first())
@@ -76,9 +102,9 @@ class PreferencesRepositoryCurrencyTest {
 
     @Test
     fun `setting the currency persists it and updates the flow`() {
-        withLocale("cs", "CZ") {
+        onPhoneIn("CZ") {
             val preferences = prefs(storedCurrency = null)
-            val repository = PreferencesRepositoryImpl(preferences, noHints)
+            val repository = PreferencesRepositoryImpl(preferences, noHints, phone)
 
             runBlocking {
                 repository.setDefaultCurrency(SupportedCurrency.EUR)
@@ -92,9 +118,9 @@ class PreferencesRepositoryCurrencyTest {
     @Test
     fun `a suggestion replaces the device region's guess`() {
         // A Czech parent whose phone runs in English (United States): the first default is dollars.
-        withLocale("en", "US") {
+        onPhoneIn("US") {
             val preferences = prefs(storedCurrency = null)
-            val repository = PreferencesRepositoryImpl(preferences, noHints)
+            val repository = PreferencesRepositoryImpl(preferences, noHints, phone)
 
             runBlocking {
                 repository.suggestDefaultCurrency(SupportedCurrency.CZK)
@@ -106,11 +132,11 @@ class PreferencesRepositoryCurrencyTest {
 
     @Test
     fun `a suggestion never replaces a currency the parent chose`() {
-        withLocale("cs", "CZ") {
+        onPhoneIn("CZ") {
             val preferences = prefs(storedCurrency = "EUR").also {
                 every { it.getBoolean(PreferenceKeys.DEFAULT_CURRENCY_CHOSEN, false) } returns true
             }
-            val repository = PreferencesRepositoryImpl(preferences, noHints)
+            val repository = PreferencesRepositoryImpl(preferences, noHints, phone)
 
             runBlocking {
                 repository.suggestDefaultCurrency(SupportedCurrency.CZK)
@@ -123,8 +149,8 @@ class PreferencesRepositoryCurrencyTest {
     @Test
     fun `the parent's country comes before the device region`() {
         // R-5: a Czech account on an English (United States) phone, never asked to confirm.
-        withLocale("en", "US") {
-            val repository = PreferencesRepositoryImpl(prefs(storedCurrency = null), hints("CZ", "EUR"))
+        onPhoneIn("US") {
+            val repository = PreferencesRepositoryImpl(prefs(storedCurrency = null), hints("CZ", "EUR"), phone)
 
             runBlocking {
                 assertEquals(SupportedCurrency.CZK, repository.getDefaultCurrencyFlow().first())
@@ -134,8 +160,8 @@ class PreferencesRepositoryCurrencyTest {
 
     @Test
     fun `a country without an offered currency falls to the last expense`() {
-        withLocale("en", "US") {
-            val repository = PreferencesRepositoryImpl(prefs(storedCurrency = null), hints("UA", "EUR"))
+        onPhoneIn("US") {
+            val repository = PreferencesRepositoryImpl(prefs(storedCurrency = null), hints("UA", "EUR"), phone)
 
             runBlocking {
                 assertEquals(SupportedCurrency.EUR, repository.getDefaultCurrencyFlow().first())
@@ -145,11 +171,11 @@ class PreferencesRepositoryCurrencyTest {
 
     @Test
     fun `a chosen currency outranks the country`() {
-        withLocale("en", "US") {
+        onPhoneIn("US") {
             val preferences = prefs(storedCurrency = "GBP").also {
                 every { it.getBoolean(PreferenceKeys.DEFAULT_CURRENCY_CHOSEN, false) } returns true
             }
-            val repository = PreferencesRepositoryImpl(preferences, hints("CZ", "EUR"))
+            val repository = PreferencesRepositoryImpl(preferences, hints("CZ", "EUR"), phone)
 
             runBlocking {
                 assertEquals(SupportedCurrency.GBP, repository.getDefaultCurrencyFlow().first())
@@ -159,8 +185,8 @@ class PreferencesRepositoryCurrencyTest {
 
     @Test
     fun `choosing a currency takes over from the country at once`() {
-        withLocale("en", "US") {
-            val repository = PreferencesRepositoryImpl(prefs(storedCurrency = null), hints("CZ", null))
+        onPhoneIn("US") {
+            val repository = PreferencesRepositoryImpl(prefs(storedCurrency = null), hints("CZ", null), phone)
 
             runBlocking {
                 repository.setDefaultCurrency(SupportedCurrency.CHF)

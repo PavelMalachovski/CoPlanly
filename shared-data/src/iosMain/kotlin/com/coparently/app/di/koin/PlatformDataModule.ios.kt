@@ -26,10 +26,12 @@ import com.coparently.app.data.platform.Analytics
 import com.coparently.app.data.platform.AppDirectories
 import com.coparently.app.data.platform.Connectivity
 import com.coparently.app.data.platform.CrashReporter
+import com.coparently.app.data.platform.DeviceRegion
 import com.coparently.app.data.platform.IosAnalytics
 import com.coparently.app.data.platform.IosAppDirectories
 import com.coparently.app.data.platform.IosConnectivity
 import com.coparently.app.data.platform.IosCrashReporter
+import com.coparently.app.data.platform.IosDeviceRegion
 import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.platform.keychainSecurePreferences
 import com.coparently.app.data.remote.firebase.CallableFunctions
@@ -78,6 +80,7 @@ actual val platformDataModule: Module = module {
     single<CrashReporter> { IosCrashReporter }
     single<Analytics> { IosAnalytics }
     single<Connectivity> { IosConnectivity() }
+    single<DeviceRegion> { IosDeviceRegion }
 
     single<CoPlanlyDatabase> { buildCoPlanlyDatabase(get()) }
     factory<EventDao> { get<CoPlanlyDatabase>().eventDao() }

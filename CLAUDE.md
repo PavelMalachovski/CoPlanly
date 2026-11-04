@@ -1798,9 +1798,13 @@ with the sync. `data/repository/ParentSlotMigrator.kt` runs its two re-stamps in
 Android's `RoomDatabase.withTransaction`, so it no longer takes the database
 (`EventDaoReslotTest`, androidTest, proves a refused second statement takes the first back with
 it); the e2e parent changed there alone. `data/repository/PreferencesRepositoryImpl.kt` with
-`data/money/CurrencyHints.kt` reads the device region through `deviceRegionCode`
-(`data/platform/DeviceRegion.kt`, an internal `expect`/`actual`: `Locale.getDefault().country` on
-Android, the current `NSLocale`'s country code on the iPhone). `data/sync/CalendarSyncRepository.kt`
+`data/money/CurrencyHints.kt` reads the device region through `DeviceRegion`
+(`data/platform/DeviceRegion.kt`, a seam since slice 9d's I1 fix, where it was an internal
+`expect`/`actual` over `Locale.getDefault().country`: on Android `AndroidDeviceRegion`, the region
+of the phone's first language as `PhoneLocales` lists it — the list `AppLocale.deviceFirst` reads,
+never the default locale, which the owner's rule makes `en-150` on an English fallback — and on the
+iPhone `IosDeviceRegion`, the current `NSLocale`'s country code). The onboarding's guess at the
+parent's country reads the same seam. `data/sync/CalendarSyncRepository.kt`
 runs on kotlinx-datetime with the same wall clocks and rows (`SyncResult.Success`'s window is
 kotlinx-datetime's `LocalDate`; `SyncViewModel` words it as before), and tells Android's
 `NetworkOnMainThreadException` apart through an internal `expect`/`actual`
@@ -1897,7 +1901,7 @@ task; the iPhone has no `koin-test`). Phase 3's app replaces each stand-in. Ever
 `data/…` path is still under
 `app/src/main/java/com/coparently/app/`. **The data layer reaches the platform only through those
 interfaces**: a new data-layer class takes `SecurePreferences`, `AppDirectories`, `CrashReporter`,
-`Analytics`, `SignedInUser`, `PushQueue`, `PushDevice`, `AccountConsistency`, `RequestClockNotices`,
+`Analytics`, `DeviceRegion`, `SignedInUser`, `PushQueue`, `PushDevice`, `AccountConsistency`, `RequestClockNotices`,
 `RequestClockScheduler`, `GoogleCalendarConnectionSource`, `StorageBucket`, `PickedFiles` or
 `ExportVerifyAddress` rather
 than `EncryptedPreferences`, a `Context` directory, `CrashlyticsManager`, `AnalyticsManager`,

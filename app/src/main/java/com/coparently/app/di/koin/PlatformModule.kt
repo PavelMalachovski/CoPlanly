@@ -5,9 +5,11 @@ import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.platform.Analytics
 import com.coparently.app.data.platform.AndroidAppDirectories
+import com.coparently.app.data.platform.AndroidDeviceRegion
 import com.coparently.app.data.platform.AppDirectories
 import com.coparently.app.data.platform.Connectivity
 import com.coparently.app.data.platform.CrashReporter
+import com.coparently.app.data.platform.DeviceRegion
 import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.utils.NetworkMonitor
 import org.koin.android.ext.koin.androidContext
@@ -27,4 +29,5 @@ val platformModule = module {
     single<CrashReporter> { get<CrashlyticsManager>() }
     single<Analytics> { get<AnalyticsManager>() }
     single<Connectivity> { get<NetworkMonitor>() }
+    single<DeviceRegion> { AndroidDeviceRegion(androidContext()) }
 }

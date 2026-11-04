@@ -1,5 +1,6 @@
 package com.coparently.app.presentation.onboarding
 
+import com.coparently.app.data.platform.DeviceRegion
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.sync.SyncRequester
@@ -64,6 +65,9 @@ class OnboardingViewModelTest {
     private lateinit var custodyModelRepository: CustodyModelRepository
     private lateinit var syncRequester: SyncRequester
     private lateinit var preferencesRepository: PreferencesRepository
+
+    /** The phone's own region, as `AndroidDeviceRegion` reads it; "" names none. */
+    private var phoneRegion = ""
     private lateinit var pairing: MutableStateFlow<PairingState>
     private lateinit var viewModel: OnboardingViewModel
 
@@ -123,7 +127,8 @@ class OnboardingViewModelTest {
         pairingRepository,
         custodyModelRepository,
         syncRequester,
-        preferencesRepository
+        preferencesRepository,
+        DeviceRegion { phoneRegion }
     )
 
     /** Walks to [step], answering the one required field on the way. */
@@ -465,13 +470,19 @@ class OnboardingViewModelTest {
             assertTrue(stored.onboardingCompletedAt?.isNotBlank() == true)
         }
 
-    /** Runs [block] with the phone's region set to [region], then puts it back. */
+    /**
+     * Runs [block] on a phone in [region] whose app speaks the English fallback, European English:
+     * the process's default locale names Europe ("150"), never the phone's country, so a guess
+     * read from it instead of from the phone would find no country at all.
+     */
     private fun withRegion(region: String, block: () -> Unit) {
         val original = Locale.getDefault()
-        Locale.setDefault(Locale.Builder().setLanguage("en").setRegion(region).build())
+        Locale.setDefault(Locale.forLanguageTag("en-150"))
+        phoneRegion = region
         try {
             block()
         } finally {
+            phoneRegion = ""
             Locale.setDefault(original)
         }
     }

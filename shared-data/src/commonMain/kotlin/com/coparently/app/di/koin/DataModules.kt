@@ -467,7 +467,7 @@ val dataModules: List<Module> = listOf(
  * platform builds it. On Android the two seams wrap the Firebase SDK instances the app's
  * `firebaseModule` builds, so an instrumented test's replacement of those reaches the data sources,
  * and the rest — the Room DAOs, `AppDirectories`, `SecurePreferences`, `CrashReporter`, `Analytics`,
- * `Connectivity`, `SignedInUser`, `PushQueue`, `PushDevice`, `AccountConsistency`,
+ * `Connectivity`, `DeviceRegion`, `SignedInUser`, `PushQueue`, `PushDevice`, `AccountConsistency`,
  * `ReminderScheduler`, `RequestClockScheduler`, `RequestClockNotices`, `SyncRequester`,
  * `PairingWording`, `GoogleCalendarApi`, `CredentialProvider`, `GoogleCalendarConnectionSource`,
  * `BakalariClient`, `SchoolImportWordings`, `SchoolImportScheduler` and, since Task 8j,

@@ -3,6 +3,7 @@ package com.coparently.app.presentation.onboarding
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.platform.DeviceRegion
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.sync.SyncRequester
@@ -28,7 +29,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDateTime
-import java.util.Locale
 
 /**
  * What the wizard knows about the co-parent link.
@@ -187,8 +187,10 @@ data class OnboardingUiState(
  * @param syncRequester Asks for the sync that brings a new co-parent's records across
  * @param preferencesRepository Takes the confirmed country's currency as the default for new
  *   expenses, unless the parent already chose one
+ * @param deviceRegion The phone's own region, the first guess at the parent's country — never the
+ *   region of the locale the app speaks, which on an English fallback is Europe's
  */
-// Eight collaborators, all injected: a Koin graph edge list, not a call signature anybody writes
+// Nine collaborators, all injected: a Koin graph edge list, not a call signature anybody writes
 // by hand, and a wrapper type would only hide which dependencies this screen actually has.
 @Suppress("LongParameterList")
 class OnboardingViewModel(
@@ -199,7 +201,8 @@ class OnboardingViewModel(
     private val pairingRepository: PairingRepository,
     private val custodyModelRepository: CustodyModelRepository,
     private val syncRequester: SyncRequester,
-    private val preferencesRepository: PreferencesRepository
+    private val preferencesRepository: PreferencesRepository,
+    private val deviceRegion: DeviceRegion
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OnboardingUiState())
@@ -231,7 +234,7 @@ class OnboardingViewModel(
             try {
                 val user = userRepository.getCurrentUser()
                 val stored = HolidayCountry.fromCode(user?.countryCode)
-                val guess = HolidayCountry.ofCodeOrNull(Locale.getDefault().country)
+                val guess = HolidayCountry.ofCodeOrNull(deviceRegion.code())
                     .takeIf { user?.onboardingCompletedAt == null && stored == HolidayCountry.Default }
                 _uiState.update { state ->
                     val country = state.country.takeIf { it != HolidayCountry.Default } ?: guess ?: stored

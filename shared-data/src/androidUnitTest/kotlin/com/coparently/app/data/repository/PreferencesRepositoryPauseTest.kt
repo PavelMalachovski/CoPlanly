@@ -2,6 +2,7 @@ package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.money.CurrencyHints
+import com.coparently.app.data.platform.DeviceRegion
 import com.coparently.app.data.platform.SecurePreferences
 import io.mockk.every
 import io.mockk.mockk
@@ -33,14 +34,14 @@ class PreferencesRepositoryPauseTest {
 
     @Test
     fun `pause before sending is on for a parent who never set it`() {
-        val repository = PreferencesRepositoryImpl(prefs(stored = null), hints)
+        val repository = PreferencesRepositoryImpl(prefs(stored = null), hints, DeviceRegion { "" })
 
         runBlocking { assertTrue(repository.getPauseBeforeSendingFlow().first()) }
     }
 
     @Test
     fun `a stored off stays off`() {
-        val repository = PreferencesRepositoryImpl(prefs(stored = false), hints)
+        val repository = PreferencesRepositoryImpl(prefs(stored = false), hints, DeviceRegion { "" })
 
         runBlocking { assertFalse(repository.getPauseBeforeSendingFlow().first()) }
     }
