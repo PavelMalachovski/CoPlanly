@@ -172,7 +172,7 @@ internal fun DictationFailure.messageRes(): Int = when (this) {
  * words are the parent's own, so a Slovak phone dictates Slovak while the app reads English.
  */
 @Composable
-fun rememberDictationLanguageTag(): String? {
+fun rememberDictationLanguageTag(): String {
     val configuration = LocalConfiguration.current
     val context = LocalContext.current
     return remember(configuration) {
