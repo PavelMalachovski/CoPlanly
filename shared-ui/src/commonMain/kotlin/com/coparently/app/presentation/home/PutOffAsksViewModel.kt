@@ -3,8 +3,8 @@ package com.coparently.app.presentation.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.family.FamilyViewSource
-import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.SecurePreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -29,7 +29,7 @@ import kotlinx.coroutines.flow.stateIn
  * [putOff] is the family on screen's, following the switcher.
  */
 class PutOffAsksViewModel(
-    private val preferences: EncryptedPreferences,
+    private val preferences: SecurePreferences,
     familyViewSource: FamilyViewSource
 ) : ViewModel() {
 

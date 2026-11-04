@@ -3,9 +3,9 @@
 
 package com.coparently.app.presentation.home
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.chat.ChatReadState
@@ -30,6 +30,7 @@ import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.domain.time.plus
 import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.changerequests.RequestsSource
 import com.coparently.app.presentation.changerequests.RequestsState
@@ -55,10 +56,11 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.datetime.toKotlinLocalDate
-import kotlinx.datetime.toKotlinLocalDateTime
-import java.time.LocalDate
-import java.time.LocalDateTime
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atTime
+import kotlinx.datetime.todayIn
+import kotlin.time.Clock
 
 /**
  * The two repositories that describe this account's identity and its co-parent link,
@@ -351,7 +353,10 @@ class HomeViewModel(
      */
     private val nextHandover: StateFlow<HandoverInfo?> = custody
         .map { (model, overrides) ->
-            model?.let { HandoverCalculator.nextHandoverFrom(it, LocalDate.now().toKotlinLocalDate(), overrides) }
+            model?.let {
+                val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+                HandoverCalculator.nextHandoverFrom(it, today, overrides)
+            }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
 
@@ -363,7 +368,7 @@ class HomeViewModel(
         custody,
         homeIdentityDependencies.familyMembersSource.observe()
     ) { (model, overrides), members ->
-        ChildrenToday.of(LocalDate.now().toKotlinLocalDate(), model, overrides, members)
+        ChildrenToday.of(Clock.System.todayIn(TimeZone.currentSystemDefault()), model, overrides, members)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
     /**
@@ -387,8 +392,8 @@ class HomeViewModel(
             // Start of today, not now: the today card covers the whole day (a 9:00
             // appointment does not stop having happened at 9:05), while HomeWeek.of still
             // opens the week's own window at `now` when it filters below.
-            LocalDate.now().atStartOfDay().toKotlinLocalDateTime(),
-            LocalDateTime.now().plusDays(HomeWeek.DAYS).toKotlinLocalDateTime()
+            Clock.System.todayIn(TimeZone.currentSystemDefault()).atTime(0, 0),
+            wallClockNow().plus(HomeWeek.DAYS, DateTimeUnit.DAY)
         ),
         custody,
         _userId
@@ -403,7 +408,7 @@ class HomeViewModel(
         AgendaSections(
             today = HomeWeek.todayOf(
                 events = events,
-                today = LocalDate.now().toKotlinLocalDate(),
+                today = Clock.System.todayIn(TimeZone.currentSystemDefault()),
                 userId = userId,
                 custodyFor = resolve,
                 // The same windows the calendar grid draws (MON-6b), through the same lookup.
@@ -411,7 +416,7 @@ class HomeViewModel(
             ),
             week = HomeWeek.of(
                 events = events,
-                now = LocalDateTime.now().toKotlinLocalDateTime(),
+                now = wallClockNow(),
                 userId = userId,
                 custodyFor = resolve
             )
@@ -522,7 +527,7 @@ class HomeViewModel(
             }
         }
         .catch { e ->
-            Log.w(TAG, "Home unread count failed; showing zero", e)
+            logger.w(TAG, "Home unread count failed; showing zero", e)
             emit(0)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), 0)
@@ -669,7 +674,7 @@ class HomeViewModel(
     private companion object {
         /** Today's agenda before any repository has answered: today, empty, no custody. */
         val EMPTY_TODAY = TodayAgenda(
-            date = LocalDate.now().toKotlinLocalDate(),
+            date = Clock.System.todayIn(TimeZone.currentSystemDefault()),
             events = emptyList(),
             dayParent = null
         )

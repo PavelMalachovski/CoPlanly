@@ -1583,7 +1583,8 @@ shared-data/ — Kotlin Multiplatform module (MON-24 phase 2): the data layer bo
              outbox and the vault's repository (data/documents/), data/session/'s
              SessionProfileSynchronizer and SignedInAccountSource, and the export's
              ExportReceipts (on CallableFunctions, behind ExportVerifyAddress), and (Task 10)
-             the AI-assist consent (data/ai/AiConsentManager), with the ViewModels that ask it.
+             the AI-assist and child-health consents (data/ai/AiConsentManager,
+             data/consent/HealthConsentManager), with the ViewModels that ask them.
              Its Koin modules are dataModules and platformDataModule, which appModules includes;
              on the iPhone platformDataModule binds every seam itself (Task 8j: stand-ins in
              di/koin/IosUnavailable.kt where the iPhone has nothing yet).
@@ -1598,7 +1599,8 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              (slice 9c); and, from Task 10, the shared state of presentation/common/ (ParentsSource
              and its siblings) and the ViewModels, group by group (so far common/'s, chat's, the
              calendar's, the events', custody's, the requests', the family's, expenses', payments',
-             child support's, settings', pairing's, onboarding's, the session's and the profile's),
+             child support's, settings', pairing's, onboarding's, the session's, the profile's,
+             Home's, the month review's, the stickers', the consents' and the AI consent's),
              with their Koin modules: uiModules and platformUiModule, which appModules includes.
              Screens follow (Task 11). It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
@@ -1670,7 +1672,9 @@ under `app/src/main/java/com/coparently/app/data/` stays on purpose (a `Worker`,
 string resource, the Android SDK a seam's Android half calls, Coil, `PdfDocument`, ML Kit, dictation,
 or the `upgrade` seed's constructors), and `docs/ROADMAP.md` MON-24 lists it. One more class
 followed in Task 10a, with the chat ViewModels that read it: `data/ai/AiConsentManager`, bound in
-`shared-data`'s `aiDataModule`. Moved (Task 5, the HTTP clients on Ktor): `data/http/` (new:
+`shared-data`'s `aiDataModule`; and one in slice 10f, with the consent's ViewModel:
+`data/consent/HealthConsentManager` (with `HealthConsentWithdrawal`), bound in `consentDataModule`.
+Moved (Task 5, the HTTP clients on Ktor): `data/http/` (new:
 `httpClient(HttpTimeouts)`, OkHttp on Android and Darwin on iOS, and the address and form encodings,
 the timeouts and the redirect rules (`FollowUps.kt`) the old clients had); in `data/school/bakalari/`, `BakalariClient`, `BakalariSchoolDirectory` (with
 `BakalariUrls`), `BakalariException` and `BakalariJson` — the parsers, `BakalariAccount` and
@@ -2022,8 +2026,8 @@ On the iPhone `platformUiModule` binds the chat's two platform seams the data la
 dictation (`NoSpeechDictation`, unavailable) and no AI assist (`AiAssistAvailability(false)`,
 `NoAiAssist` answering `Disabled`), in `di/koin/IosUiUnavailable.kt`. `coParentOnScreen`, `observeSignedInUser` and
 `projectedCoParentUid` are public behind `@InternalSharedApi` until the ViewModels still in the app
-that call them move (two since `PairingViewModel` and `ProfileViewModel` moved in 10e; see the
-`@InternalSharedApi` paragraph below). Slice 10b moved **the calendar**: `CalendarViewModel` (its
+that call them move (one since `HomeViewModel` moved in 10f; see the `@InternalSharedApi`
+paragraph below). Slice 10b moved **the calendar**: `CalendarViewModel` (its
 filters and the dismissed custody change in `SecurePreferences`,
 under the same keys; its displayed month, query anchor, selection and custody lookup kotlinx-datetime
 `YearMonth`s and `LocalDate`s, today from `Clock.System.todayIn` in the system zone, a swap's group id
@@ -2135,8 +2139,10 @@ app's `FcmService` answers beside `PushDevice`), the account's erasure through
 so the server-first, wipe-after order is the service's own, unchanged), and its two product events
 through `Analytics`, as `data/platform/AnalyticsEvents.kt`'s `logNotificationsToggled` and
 `logThemeChanged`, the event names and parameters `AnalyticsManager`'s functions of those names
-wrote (they left it). The iPhone's `platformDataModule` binds `NoPushRegistration` (the switch reads
-off, turning it on fails, nothing to detach) and `NoAccountDeletion` (it fails and wipes nothing).
+wrote (they left it). The iPhone's `platformDataModule` binds `NoPush` (one object for `PushDevice`
+and `PushRegistration`, as `FcmService` is on Android, so phase 3 replaces them together: the switch
+reads off, turning it on fails, nothing to detach) and `NoAccountDeletion` (it fails and wipes
+nothing).
 Both ViewModel tests (MockK) run in `androidUnitTest`, the push mock now a `PushRegistration`. Then
 **pairing and onboarding**: `PairingViewModel` (in `pairingUiModule`; its log lines through
 `logger`, the accepted invitation's event through `Analytics` as `logInvitationAccepted`, which left
@@ -2175,6 +2181,24 @@ Auth exception types into `AuthError`; `SyncViewModel` builds Google Sign-In's `
 its `Task<GoogleSignInAccount>` result, an activity-result flow, through `CredentialManagerService`.
 Each moves once its sign-in is behind a platform interface the screen provides (plan, Task 11's
 carried notes).
+Slice 10f moves **the rest**. Its first group is **Home, the month in review, stickers and the
+consents**. `HomeViewModel` (with `HomeIdentityDependencies`, a `factory`) and
+`PutOffAsksViewModel` are in `homeUiModule`, with what Home's ViewModel reads and nothing Android
+holds: `HomeFeed.kt`, `ChildrenToday.kt` and `RequestsRow.kt` (`RequestsRowText.parts` and
+`relativeDay` take a kotlinx-datetime day, which `HomeScreen` converts from `rememberToday()` with
+`toKotlinLocalDate()`; the days between are `daysUntil`, what `ChronoUnit.DAYS.between` counted).
+Home's today is `Clock.System.todayIn` in the system zone and its now `wallClockNow()`, the week's
+end `plus(HomeWeek.DAYS, DateTimeUnit.DAY)` (`domain/time/WallClock.kt`, java.time's `plusDays`);
+its log line goes through `logger`, and "Later" is kept in `SecurePreferences` under the same key.
+`HomeAskQueue`, `SettleUpPosition` and the composables stay with the screen. `MonthReviewViewModel`
+(with `MonthReviewSources` and `MonthReviewAssist`, `factory`s) is in `reviewUiModule`;
+`StickersViewModel` in `stickersUiModule`; `HealthConsentViewModel` (its log lines through
+`logger`) and `TelemetryConsentViewModel` in `consentUiModule`; `AiConsentViewModel` in
+`aiUiModule`. `data/consent/HealthConsentManager` moved to `:shared-data` with the consent's
+ViewModel (`consentDataModule`; a consent's time `Clock.System.now().toEpochMilliseconds()`), its
+test to `shared-data`'s `androidUnitTest`. No new seam. `HomeFeedTest` and `ChildrenTodayTest` run
+in `commonTest` (six names lost a comma); the ViewModels' tests and `RequestsRowTextTest` (its
+`java.time` fixture converted at the call) in `androidUnitTest`.
 
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller
@@ -2204,9 +2228,10 @@ app), the four expense mappers in
 e2e tests, which start the mirror themselves), and the engine overload of `httpClient` and
 `GitLiveFirestoreClient`'s `plainToGitLive` (the R8 probe); and in `shared-ui/` (Task 10)
 `CoParentOnScreen.kt`'s `coParentOnScreen`, `UserRepository.observeSignedInUser` and
-`User.projectedCoParentUid` (`HomeViewModel` and `ParentingPlanViewModel`, in the app until slice
-10f moves them; `ParentsSource`, `FamilyKindSource`, since slice 10c `RequestsSource` and, since
-slice 10e, `PairingViewModel` and `ProfileViewModel` opt in beside them in `:shared-ui`). This list
+`User.projectedCoParentUid` (`ParentingPlanViewModel`, in the app until slice 10f's third group
+moves it; `ParentsSource`, `FamilyKindSource`, since slice 10c `RequestsSource`, since slice 10e
+`PairingViewModel` and `ProfileViewModel` and since slice 10f `HomeViewModel` opt in beside them in
+`:shared-ui`). This list
 is the one place they are recorded; `InternalSharedApi`'s KDoc points here.
 
 Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth) → Firestore sync.

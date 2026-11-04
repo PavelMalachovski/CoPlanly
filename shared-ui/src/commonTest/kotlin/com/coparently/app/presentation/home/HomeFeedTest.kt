@@ -11,7 +11,7 @@ import com.coparently.app.domain.time.plus
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -88,7 +88,7 @@ class HomeFeedTest {
     }
 
     @Test
-    fun `an accepted event is one Accepted row, not also an Updated one`() {
+    fun `an accepted event is one Accepted row - not also an Updated one`() {
         // Accepting an event stamps updatedAt with acceptedAt, by the parent who accepted.
         val acceptedAt = t0.plus(5, DateTimeUnit.HOUR)
         val accepted = event("e1", updatedAt = acceptedAt)
@@ -106,7 +106,7 @@ class HomeFeedTest {
     }
 
     @Test
-    fun `an accepted new time is one answer row, not also the event update it caused`() {
+    fun `an accepted new time is one answer row - not also the event update it caused`() {
         // Accepting a change request moves the event a moment before the request is marked.
         val respondedAt = t0.plus(5, DateTimeUnit.HOUR)
         val moved = event("e1", updatedAt = respondedAt.minus(1, DateTimeUnit.SECOND))
@@ -131,7 +131,7 @@ class HomeFeedTest {
     }
 
     @Test
-    fun `answers share the cap with the rest, newest first`() {
+    fun `answers share the cap with the rest - newest first`() {
         val events = (1..3).map { event("e$it", updatedAt = t0.plus(it.toLong(), DateTimeUnit.HOUR)) }
         val requests = listOf(request("r1", from = partner, to = me, createdAt = t0.plus(4, DateTimeUnit.HOUR)))
         val answers = listOf(

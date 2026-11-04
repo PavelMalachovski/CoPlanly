@@ -111,9 +111,10 @@ actual val platformDataModule: Module = module {
 
     single<SignedInUser> { NoSignedInUser }
     single<AuthSession> { NoAuthSession }
-    single<PushDevice> { NoPushDevice }
+    // One stand-in under all three types, as `FcmService` is on Android: replaced together.
+    single<PushDevice> { NoPush }
     single<PushQueue> { get<PushDevice>() }
-    single<PushRegistration> { NoPushRegistration }
+    single<PushRegistration> { NoPush }
     single<AccountConsistency> { NoAccountSwitch }
     single<AccountDeletion> { NoAccountDeletion }
     single<AccountTraces> { NoAccountTraces }

@@ -9,7 +9,7 @@ import com.coparently.app.presentation.common.FamilyMember
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.plus
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -31,7 +31,7 @@ class ChildrenTodayTest {
     )
 
     @Test
-    fun `a day the children are with different parents names each of them, pets never`() {
+    fun `a day the children are with different parents names each of them - pets never`() {
         val lines = ChildrenToday.of(slotTwoWeek, family, emptyMap(), members)
 
         assertEquals(listOf(ChildWithParent("Ema", "mom"), ChildWithParent("Tomáš", "dad")), lines)
@@ -43,7 +43,7 @@ class ChildrenTodayTest {
     }
 
     @Test
-    fun `an accepted swap moves the children who follow the family, and only them`() {
+    fun `an accepted swap moves the children who follow the family - and only them`() {
         val swaps = mapOf(
             start.toString() to DayOverride(
                 toParent = "dad",
@@ -59,7 +59,7 @@ class ChildrenTodayTest {
     }
 
     @Test
-    fun `one child, or no override, or no schedule, never grows the hero`() {
+    fun `one child - or no override - or no schedule - never grows the hero`() {
         assertTrue(ChildrenToday.of(slotTwoWeek, family, emptyMap(), members.take(1)).isEmpty())
         val noOverrides = family.copy(childOverrides = emptyList())
         assertTrue(ChildrenToday.of(slotTwoWeek, noOverrides, emptyMap(), members).isEmpty())

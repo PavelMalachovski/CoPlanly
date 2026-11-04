@@ -2961,8 +2961,13 @@ bytes are identical on Android):
   source and sign-out, on new `AuthSession` and `AccountTraces` seams beside `PushRegistration`, in
   sign-out's unchanged order) and the profile (`profileUiModule`). The login screen's and Google
   Calendar's connection ViewModels stay in the app until Task 11, because their sign-ins run on an
-  Android activity (Credential Manager's sheet; Google Sign-In's intent and result). The rest (10f)
-  follows.
+  Android activity (Credential Manager's sheet; Google Sign-In's intent and result). **Slice 10f,
+  in progress**: the rest, in groups. First Home (`homeUiModule`: the dashboard's ViewModel, now on
+  kotlinx-datetime, with its feed, the children's day and the Requests row's words, and "Later",
+  kept in the sealed store), the month in review (`reviewUiModule`), stickers (`stickersUiModule`),
+  the consents (`consentUiModule`; the child-health consent's manager moved to `:shared-data`) and
+  the AI consent (`aiUiModule`). The 10e review's four notes came with it: on the iPhone one push
+  stand-in for `PushDevice` and `PushRegistration`, as `FcmService` is one class on Android.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

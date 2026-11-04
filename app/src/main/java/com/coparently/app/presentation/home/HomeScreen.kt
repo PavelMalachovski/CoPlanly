@@ -625,7 +625,9 @@ private fun HomeColumn(modifier: Modifier, content: LazyListScope.() -> Unit) {
 private fun RequestsRow(state: RequestsRowState, coParentName: String, onClick: () -> Unit) {
     val today by rememberToday()
     // `asString` is composable, so each part is resolved here rather than inside joinToString.
-    val line = RequestsRowText.parts(state, coParentName, today).map { it.asString() }.joinToString(" · ")
+    val line = RequestsRowText.parts(state, coParentName, today.toKotlinLocalDate())
+        .map { it.asString() }
+        .joinToString(" · ")
     SectionRow(
         title = stringResource(R.string.home_requests_title),
         icon = Icons.Default.SwapHoriz,

@@ -4,7 +4,6 @@ import android.content.Context
 import com.coparently.app.BuildConfig
 import com.coparently.app.data.ai.FunctionsAiAssistRepository
 import com.coparently.app.data.analytics.AnalyticsManager
-import com.coparently.app.data.consent.HealthConsentManager
 import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.dictation.OnDeviceSpeechDictation
 import com.coparently.app.data.export.ExportFileWriter
@@ -71,7 +70,6 @@ import org.koin.dsl.module
 val dataModule = module {
     singleOf(::FunctionsAiAssistRepository)
     singleOf(::AnalyticsManager)
-    singleOf(::HealthConsentManager)
     singleOf(::CrashlyticsManager)
     singleOf(::OnDeviceSpeechDictation)
     singleOf(::ExportFileWriter)

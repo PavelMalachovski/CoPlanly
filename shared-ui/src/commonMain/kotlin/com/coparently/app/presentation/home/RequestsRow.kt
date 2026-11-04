@@ -14,12 +14,9 @@ import com.coparently.app.resources.home_requests_day_yesterday
 import com.coparently.app.resources.home_requests_none
 import com.coparently.app.resources.home_requests_waiting_on_them
 import com.coparently.app.resources.home_requests_waiting_on_you
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toKotlinDayOfWeek
-import kotlinx.datetime.toKotlinLocalDate
-import java.time.LocalDate
-import java.time.temporal.ChronoUnit
+import kotlinx.datetime.daysUntil
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 
@@ -50,7 +47,7 @@ object RequestsRowText {
     private val ANSWER_WINDOW: Duration = 7.days
 
     /** The last day named by a weekday rather than a date. */
-    private const val WEEKDAY_DAYS = 6L
+    private const val WEEKDAY_DAYS = 6
 
     /**
      * The co-parent's newest ACCEPTED/DECLINED answer to one of this parent's requests, decided
@@ -98,7 +95,7 @@ object RequestsRowText {
                 } else {
                     Res.string.home_requests_answer_declined
                 }
-                val day = relativeDay(answer.decidedAt.date.toJavaLocalDate(), today)
+                val day = relativeDay(answer.decidedAt.date, today)
                 add(UiText.Res(words, listOf(day, coParentName)))
             }
         }
@@ -107,12 +104,12 @@ object RequestsRowText {
 
     /** Today, Yesterday, a weekday for two to six days ago, else the date. */
     fun relativeDay(date: LocalDate, today: LocalDate): UiText {
-        val daysAgo = ChronoUnit.DAYS.between(date, today)
+        val daysAgo = date.daysUntil(today)
         return when (daysAgo) {
-            0L -> UiText.Res(Res.string.home_requests_day_today)
-            1L -> UiText.Res(Res.string.home_requests_day_yesterday)
-            in 2L..WEEKDAY_DAYS -> UiText.Weekday(date.dayOfWeek.toKotlinDayOfWeek())
-            else -> UiText.Date(date.toKotlinLocalDate())
+            0 -> UiText.Res(Res.string.home_requests_day_today)
+            1 -> UiText.Res(Res.string.home_requests_day_yesterday)
+            in 2..WEEKDAY_DAYS -> UiText.Weekday(date.dayOfWeek)
+            else -> UiText.Date(date)
         }
     }
 }

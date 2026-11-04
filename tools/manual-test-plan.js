@@ -87,7 +87,7 @@ const RULES = [
     paths: ['K/presentation/splash/**', 'K/presentation/auth/**', 'K/presentation/consent/**',
       'K/presentation/onboarding/**', 'K/domain/onboarding/**', 'K/presentation/MainActivity.kt',
       'K/presentation/common/NotificationPermission.kt',
-      'K/presentation/common/PrivacyPolicyLink.kt', 'K/data/telemetry/**',
+      'K/presentation/common/PrivacyPolicyLink.kt', 'K/data/telemetry/**', 'K/data/platform/AnalyticsEvents.kt',
       'app/src/main/AndroidManifest.xml', 'app/src/main/res/values/themes.xml',
       'app/src/main/res/values-night/**'],
   },
@@ -312,7 +312,8 @@ const RULES = [
   {
     sections: ['3.7'],
     why: 'push notifications',
-    paths: ['K/data/remote/firebase/FcmService.kt', 'K/data/remote/firebase/PushPayload.kt',
+    paths: ['K/data/remote/firebase/FcmService.kt', 'K/data/remote/firebase/PushRegistration.kt',
+      'K/data/remote/firebase/PushPayload.kt',
       'K/data/remote/firebase/PushNotifier.kt', 'K/data/notification/**', 'K/domain/notification/**', '**/*MessagingService*',
       'S/values*/push_strings.xml'],
   },

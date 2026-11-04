@@ -1,14 +1,10 @@
 package com.coparently.app.di.koin
 
-import com.coparently.app.presentation.home.HomeIdentityDependencies
 import com.coparently.app.presentation.pairing.AndroidInviteQrCodes
 import com.coparently.app.presentation.pairing.InviteQrCodes
-import com.coparently.app.presentation.review.MonthReviewAssist
-import com.coparently.app.presentation.review.MonthReviewSources
 import com.coparently.app.presentation.widget.TodayWidgetNames
 import com.coparently.app.presentation.widget.TodayWidgetRefresher
 import com.coparently.app.utils.NetworkMonitor
-import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
 
@@ -18,12 +14,11 @@ import org.koin.dsl.module
  * bundles (a `factory` each, as they were unscoped). `ParentsSource`, `FamilyKindSource` and
  * `FamilyMembersSource` moved to `:shared-ui`'s `commonUiModule` with their classes (MON-24 phase 2,
  * Task 10), `PendingCustodyConflict` and `PlanReferenceSource` to its `custodyUiModule`,
- * `RequestsSource` to its `requestsUiModule`, and `MonthSpendDependencies` to its `familyUiModule`.
+ * `RequestsSource` to its `requestsUiModule`, `MonthSpendDependencies` to its `familyUiModule`,
+ * `HomeIdentityDependencies` to its `homeUiModule`, and `MonthReviewAssist` and `MonthReviewSources`
+ * to its `reviewUiModule`.
  */
 val presentationModule = module {
-    factoryOf(::HomeIdentityDependencies)
-    factoryOf(::MonthReviewAssist)
-    factoryOf(::MonthReviewSources)
     singleOf(::TodayWidgetNames)
     singleOf(::TodayWidgetRefresher)
     singleOf(::NetworkMonitor)

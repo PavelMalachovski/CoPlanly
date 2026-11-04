@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlin.time.Clock
 
 /**
  * How a withdrawal of the child-health consent ended.
@@ -83,7 +84,10 @@ class HealthConsentManager(
      * @return the consent recorded
      */
     suspend fun grant(): HealthConsent {
-        val consent = HealthConsent(version = HEALTH_CONSENT_VERSION, atMillis = System.currentTimeMillis())
+        val consent = HealthConsent(
+            version = HEALTH_CONSENT_VERSION,
+            atMillis = Clock.System.now().toEpochMilliseconds()
+        )
         userRepository.setHealthConsent(consent)
         return consent
     }

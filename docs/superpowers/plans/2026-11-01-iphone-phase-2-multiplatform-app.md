@@ -847,7 +847,9 @@ Then payments and child support:
   (same event names and parameters; the two members left `AnalyticsManager`), `java.io.IOException` →
   `kotlinx.io.IOException`. Parameter names unchanged. `CalendarFeedViewModel` moved unchanged.
 - iPhone: `platformDataModule` binds `NoPushRegistration` (off; turning it on fails) and
-  `NoAccountDeletion` (fails, wipes nothing).
+  `NoAccountDeletion` (fails, wipes nothing). (Slice 10f, from the 10e review: `NoPushRegistration`
+  and `NoPushDevice` became one object, `NoPush`, bound under both types, so phase 3 replaces push
+  delivery and the token's unregistration together.)
 - Tests: `SettingsViewModelTest` (the push mock a `PushRegistration`) and `CalendarFeedViewModelTest`
   (MockK) to androidUnitTest.
 
@@ -890,6 +892,32 @@ Then the session and the profile:
 - `@InternalSharedApi`: `coParentOnScreen`, `observeSignedInUser` and `projectedCoParentUid` stay
   public behind the marker for `HomeViewModel` and `ParentingPlanViewModel` (10f).
 
+**Slice 10f notes (November 2026).** Home, the month in review, stickers and the consents first:
+- `HomeViewModel` (with `HomeIdentityDependencies`, a `factory`) and `PutOffAsksViewModel` in
+  `homeUiModule`, with `HomeFeed.kt`, `ChildrenToday.kt` and `RequestsRow.kt`. Today is
+  `Clock.System.todayIn(TimeZone.currentSystemDefault())`, now `wallClockNow()`, the week's end
+  `wallClockNow().plus(HomeWeek.DAYS, DateTimeUnit.DAY)` and the day's start `today.atTime(0, 0)`;
+  `Log` → `logger`; "Later" in `SecurePreferences` (same key). `RequestsRowText.parts`/`relativeDay`
+  take a kotlinx-datetime day (`daysUntil` for `ChronoUnit.DAYS.between`). `HomeAskQueue`,
+  `SettleUpPosition` and the composables stay with the screen.
+- `MonthReviewViewModel` (with `MonthReviewSources` and `MonthReviewAssist`, `factory`s) in
+  `reviewUiModule`; `StickersViewModel` in `stickersUiModule`; `HealthConsentViewModel` (`Log` →
+  `logger`) and `TelemetryConsentViewModel` in `consentUiModule`; `AiConsentViewModel` in
+  `aiUiModule`. `HomeIdentityDependencies`, `MonthReviewSources` and `MonthReviewAssist` left the
+  app's `presentationModule`.
+- `data/consent/HealthConsentManager` (with `HealthConsentWithdrawal`) to `:shared-data`
+  (`consentDataModule`; `System.currentTimeMillis()` → `Clock.System.now().toEpochMilliseconds()`),
+  its test to `shared-data`'s `androidUnitTest`.
+- Screen edge: `HomeScreen`'s Requests row passes `today.toKotlinLocalDate()`.
+- Tests: `HomeFeedTest` and `ChildrenTodayTest` to commonTest (six names lost a comma); the seven
+  ViewModel tests and `RequestsRowTextTest` (its `java.time` fixture converted at the call) to
+  androidUnitTest.
+- From the 10e review: the iPhone's `NoPushDevice` and `NoPushRegistration` are one `NoPush`, bound
+  under `PushDevice`, `PushQueue` and `PushRegistration`; "replace together" notes on
+  `NoAccountTraces` and `NoAccountDeletion`; `PlatformUiModule.android.kt` names `InviteQrCodes`;
+  `pairingMessageRes`'s KDoc names its callers; `tools/manual-test-plan.js` maps `PushRegistration.kt`
+  to §3.7 and `AnalyticsEvents.kt` to §2.2.
+
 ### Task 11: The screens to `commonMain`
 
 **Files:**
@@ -920,6 +948,9 @@ Then the session and the profile:
   shared screens must not offer a receipt scan or a child support reminder on the iPhone (design
   refresh item 8): a scan there always fails and a reminder is never scheduled. Hide both until the
   iPhone has the capability, as `CameraCapture` and `Dictation` are hidden.
+- While `platformDataModule` binds `NoPush` (as `PushRegistration`), the shared Settings screen must
+  not offer the push switch on the iPhone: turning it on always fails there, which reads as a
+  network error.
 - While `platformUiModule` binds `NoInviteQrCodes`, the shared pairing screen must not draw the QR
   frame on the iPhone (it would wait for a code that never comes); the code and the link are how an
   invitation leaves the phone there.

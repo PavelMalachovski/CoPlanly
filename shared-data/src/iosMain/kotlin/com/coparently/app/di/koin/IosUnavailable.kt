@@ -69,12 +69,23 @@ internal object NoAuthSession : AuthSession {
 
 /**
  * Nothing kept outside the database to remove at sign-out (slice 10e): with no Cloud Storage
- * ([NoStorageBucket]) no file is downloaded, and no notification is posted.
+ * ([NoStorageBucket]) no file is downloaded, and no notification is posted ([NoPush]). Replace it
+ * with those two: once the iPhone downloads files or posts notifications, sign-out must remove them.
  */
 internal val NoAccountTraces = AccountTraces { }
 
-/** No push token and no push: the iPhone registers with no messaging service yet. */
-internal object NoPushDevice : PushDevice {
+/**
+ * No push token and no push (the sync and the repositories ask [PushDevice]; slice 10e: Settings'
+ * switch and sign-out ask [PushRegistration]): the iPhone registers with no messaging service yet,
+ * so nothing is queued, no token is read or written, the switch reads off, turning it on fails as a
+ * phone with no messaging service would, and there is no token to detach.
+ *
+ * **One object for both, as `FcmService` is on Android**, bound under both types: phase 3 must
+ * replace push delivery and the token's unregistration together. A real token with this
+ * unregistration left behind would keep a signed-out account's pushes arriving on the phone
+ * (CLAUDE.md item 23).
+ */
+internal object NoPush : PushDevice, PushRegistration {
     override suspend fun queueNotificationForUser(
         targetUserId: String,
         notificationData: Map<String, String>
@@ -84,13 +95,7 @@ internal object NoPushDevice : PushDevice {
 
     override suspend fun updateUserToken(token: String): Result<Unit> =
         Result.failure(IllegalStateException(UNAVAILABLE))
-}
 
-/**
- * No push registration (slice 10e: Settings' switch and sign-out ask for it): the switch reads off,
- * turning it on fails as a phone with no messaging service would, and there is no token to detach.
- */
-internal object NoPushRegistration : PushRegistration {
     override fun isPushEnabled(): Boolean = false
 
     override suspend fun setPushEnabled(enabled: Boolean): Result<Unit> =
@@ -102,6 +107,9 @@ internal object NoPushRegistration : PushRegistration {
 /**
  * No account to erase yet (slice 10e: Settings asks for it): with nobody signed in
  * ([NoSignedInUser]) the erasure fails and nothing is wiped, rather than reporting an account gone.
+ * It must not outlive the iPhone's lack of sign-in: an app where an account can be created must
+ * offer to delete it in the app (the App Store's rule, as Google Play's), so replace it together with
+ * [NoSignedInUser] and [NoAuthSession].
  */
 internal val NoAccountDeletion = AccountDeletion { Result.failure(IllegalStateException(UNAVAILABLE)) }
 

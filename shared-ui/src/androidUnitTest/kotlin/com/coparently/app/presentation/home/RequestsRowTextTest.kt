@@ -35,6 +35,9 @@ class RequestsRowTextTest {
     private val now = LocalDateTime.of(2026, 10, 14, 12, 0)
     private val today = now.toLocalDate()
 
+    /** [today] as the row reads it. */
+    private val rowToday = today.toKotlinLocalDate()
+
     /** [now] as the row reads it. */
     private val rowNow = now.toKotlinLocalDateTime()
 
@@ -58,7 +61,7 @@ class RequestsRowTextTest {
     fun `nothing waiting and no recent answer reads no requests yet`() {
         assertEquals(
             listOf(UiText.Res(Res.string.home_requests_none)),
-            RequestsRowText.parts(RequestsRowState(), "Pavel", today)
+            RequestsRowText.parts(RequestsRowState(), "Pavel", rowToday)
         )
     }
 
@@ -85,7 +88,7 @@ class RequestsRowTextTest {
 
                     assertEquals(
                         expected,
-                        RequestsRowText.parts(RequestsRowState(waitingOnMe, waitingOnThem, latest), "Pavel", today),
+                        RequestsRowText.parts(RequestsRowState(waitingOnMe, waitingOnThem, latest), "Pavel", rowToday),
                         "waiting on me $waitingOnMe, on them $waitingOnThem, answer ${latest != null}"
                     )
                 }
@@ -100,7 +103,7 @@ class RequestsRowTextTest {
                     listOf(UiText.Res(Res.string.home_requests_day_today), "Pavel")
                 )
             ),
-            RequestsRowText.parts(RequestsRowState(latestAnswer = declined), "Pavel", today)
+            RequestsRowText.parts(RequestsRowState(latestAnswer = declined), "Pavel", rowToday)
         )
     }
 
@@ -144,15 +147,18 @@ class RequestsRowTextTest {
 
     @Test
     fun `relative days`() {
-        assertEquals(UiText.Res(Res.string.home_requests_day_today), RequestsRowText.relativeDay(today, today))
+        assertEquals(UiText.Res(Res.string.home_requests_day_today), RequestsRowText.relativeDay(rowToday, rowToday))
         assertEquals(
             UiText.Res(Res.string.home_requests_day_yesterday),
-            RequestsRowText.relativeDay(today.minusDays(1), today)
+            RequestsRowText.relativeDay(today.minusDays(1).toKotlinLocalDate(), rowToday)
         )
-        assertEquals(UiText.Weekday(DayOfWeek.SUNDAY), RequestsRowText.relativeDay(LocalDate.of(2026, 10, 11), today))
+        assertEquals(
+            UiText.Weekday(DayOfWeek.SUNDAY),
+            RequestsRowText.relativeDay(LocalDate.of(2026, 10, 11).toKotlinLocalDate(), rowToday)
+        )
         assertEquals(
             UiText.Date(today.minusDays(7).toKotlinLocalDate()),
-            RequestsRowText.relativeDay(today.minusDays(7), today)
+            RequestsRowText.relativeDay(today.minusDays(7).toKotlinLocalDate(), rowToday)
         )
     }
 }

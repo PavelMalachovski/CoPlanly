@@ -25,13 +25,13 @@ import org.jetbrains.compose.resources.StringResource
 /**
  * The string resource that explains a failed invitation to the user.
  *
- * Shared by every screen that redeems or mints one — pairing, guest access and the calendar
- * friend (item 16) — because the three flows fail in the same ways and a second copy of this
- * `when` would be a second place for a new [PairingError] to go unhandled. It returns the resource
- * rather than the resolved string so a ViewModel can hold it without a `Context`, exactly as
- * `AuthError.messageRes()` does for the login screen. In `:shared-ui` since MON-24 phase 2 (Task
- * 10), a Compose Multiplatform [StringResource] the screen reads with that library's
- * `stringResource`.
+ * Shared by every screen that redeems or mints one through these callables — pairing, the
+ * calendar friend (item 16) and professionals (item 29) — because the three flows fail in the same
+ * ways and a second copy of this `when` would be a second place for a new [PairingError] to go
+ * unhandled. (A child's guest access words its own failures.) It returns the resource rather than
+ * the resolved string so a ViewModel can hold it without a `Context` (CQ-14). In `:shared-ui` since
+ * MON-24 phase 2 (Task 10), a Compose Multiplatform [StringResource] the screen reads with that
+ * library's `stringResource`.
  *
  * @return the localized message for whatever went wrong.
  */

@@ -2,8 +2,8 @@ package com.coparently.app.presentation.home
 
 import com.coparently.app.data.family.FamilyView
 import com.coparently.app.data.family.FamilyViewSource
-import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.SecurePreferences
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -29,7 +29,7 @@ class PutOffAsksViewModelTest {
     private val view = MutableStateFlow(onScreen(BOB_FAMILY))
     private val familyViewSource = mockk<FamilyViewSource> { every { observe() } returns view }
 
-    private fun preferences(initial: String?): EncryptedPreferences = mockk(relaxed = true) {
+    private fun preferences(initial: String?): SecurePreferences = mockk(relaxed = true) {
         every { getString(PreferenceKeys.PUT_OFF_ASKS, null) } answers {
             if (stored.isCaptured) stored.captured else initial
         }

@@ -1,10 +1,10 @@
 package com.coparently.app.presentation.consent
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.consent.HealthConsentManager
 import com.coparently.app.data.consent.HealthConsentWithdrawal
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.consent.HealthConsent
 import com.coparently.app.domain.consent.isCurrent
 import kotlinx.coroutines.CancellationException
@@ -86,7 +86,7 @@ class HealthConsentViewModel(
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
                 // The section simply stays locked; the parent can agree again.
-                Log.e(TAG, "Recording the health consent failed", e)
+                logger.e(TAG, "Recording the health consent failed", e)
             }
         }
     }
@@ -106,7 +106,7 @@ class HealthConsentViewModel(
             } catch (
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
-                Log.e(TAG, "Withdrawing the health consent failed", e)
+                logger.e(TAG, "Withdrawing the health consent failed", e)
                 _withdrawal.emit(HealthConsentWithdrawal.FAILED)
             } finally {
                 _withdrawing.value = false

@@ -1,5 +1,6 @@
 package com.coparently.app.di.koin
 
+import com.coparently.app.presentation.ai.AiConsentViewModel
 import com.coparently.app.presentation.calendar.CalendarViewModel
 import com.coparently.app.presentation.changerequests.ChangeRequestViewModel
 import com.coparently.app.presentation.changerequests.RequestChangeViewModel
@@ -18,6 +19,8 @@ import com.coparently.app.presentation.common.FamilySwitcherViewModel
 import com.coparently.app.presentation.common.FamilyViewViewModel
 import com.coparently.app.presentation.common.ParentPaletteViewModel
 import com.coparently.app.presentation.common.ParentsSource
+import com.coparently.app.presentation.consent.HealthConsentViewModel
+import com.coparently.app.presentation.consent.TelemetryConsentViewModel
 import com.coparently.app.presentation.custody.CustodySetupViewModel
 import com.coparently.app.presentation.custody.SeasonalScheduleViewModel
 import com.coparently.app.presentation.event.EventOwnerViewModel
@@ -27,7 +30,10 @@ import com.coparently.app.presentation.expenses.SettleUpViewModel
 import com.coparently.app.presentation.family.EarlierFamiliesViewModel
 import com.coparently.app.presentation.family.FamilyViewModel
 import com.coparently.app.presentation.family.UnassignedRecordsViewModel
+import com.coparently.app.presentation.home.HomeIdentityDependencies
+import com.coparently.app.presentation.home.HomeViewModel
 import com.coparently.app.presentation.home.MonthSpendDependencies
+import com.coparently.app.presentation.home.PutOffAsksViewModel
 import com.coparently.app.presentation.onboarding.OnboardingViewModel
 import com.coparently.app.presentation.pairing.CustodyConflictViewModel
 import com.coparently.app.presentation.pairing.PairingViewModel
@@ -35,8 +41,12 @@ import com.coparently.app.presentation.pairing.PendingCustodyConflict
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
 import com.coparently.app.presentation.payments.PaymentsViewModel
 import com.coparently.app.presentation.profile.ProfileViewModel
+import com.coparently.app.presentation.review.MonthReviewAssist
+import com.coparently.app.presentation.review.MonthReviewSources
+import com.coparently.app.presentation.review.MonthReviewViewModel
 import com.coparently.app.presentation.settings.CalendarFeedViewModel
 import com.coparently.app.presentation.settings.SettingsViewModel
+import com.coparently.app.presentation.stickers.StickersViewModel
 import com.coparently.app.presentation.support.SupportViewModel
 import com.coparently.app.presentation.sync.AuthStateViewModel
 import org.koin.core.module.Module
@@ -135,7 +145,7 @@ val requestsUiModule: Module = module {
  * The family (MON-24 phase 2, Task 10): the Family tab's hub with its month's money, Family →
  * Earlier families, and "Records without a family" with Home's one question about them. Beside them
  * the bundle the month's money is computed from, a `factory` as in the app's `presentationModule` it
- * came from, which Home's ViewModel, still in the app, resolves from here too.
+ * came from, which Home's ViewModel ([homeUiModule]) resolves from here too.
  */
 val familyUiModule: Module = module {
     factoryOf(::MonthSpendDependencies)
@@ -226,6 +236,56 @@ val profileUiModule: Module = module {
 }
 
 /**
+ * Home (MON-24 phase 2, Task 10): the dashboard — the next handover and each child's day, today
+ * and the week, the month's money, the unread count, the co-parent's changes and the Requests row
+ * with what Home asks — and which of those asks this parent put off with "Later", kept per family
+ * in the sealed preference store [platformDataModule] binds. Beside them the bundle of who the
+ * family is, a `factory` as in the app's `presentationModule` it came from.
+ */
+val homeUiModule: Module = module {
+    factoryOf(::HomeIdentityDependencies)
+    viewModelOf(::HomeViewModel)
+    viewModelOf(::PutOffAsksViewModel)
+}
+
+/**
+ * The month in review (MON-24 phase 2, Task 10): a month in figures and, when the build offers it
+ * and the parent agrees, the AI-written summary of those figures. Beside it its two bundles, a
+ * `factory` each as in the app's `presentationModule` they came from. The callable and whether the
+ * build offers it are the platform's, as for the chat's suggested reply.
+ */
+val reviewUiModule: Module = module {
+    factoryOf(::MonthReviewAssist)
+    factoryOf(::MonthReviewSources)
+    viewModelOf(::MonthReviewViewModel)
+}
+
+/**
+ * Stickers between the parents (MON-24 phase 2, Task 10; CLAUDE.md item 47): the ones received and
+ * sent in the family on screen, sending one, and the parent's own answer to "dad, mom or parent".
+ */
+val stickersUiModule: Module = module {
+    viewModelOf(::StickersViewModel)
+}
+
+/**
+ * The consents (MON-24 phase 2, Task 10): the child-health consent the child's medical section is
+ * locked behind (Legal item 4), asked and withdrawn, and the telemetry question (REL-5).
+ */
+val consentUiModule: Module = module {
+    viewModelOf(::HealthConsentViewModel)
+    viewModelOf(::TelemetryConsentViewModel)
+}
+
+/**
+ * The AI assist's consent (MON-24 phase 2, Task 10; CLAUDE.md item 36), as Settings shows and
+ * withdraws it, and whether the build offers the assist at all, which is the platform's.
+ */
+val aiUiModule: Module = module {
+    viewModelOf(::AiConsentViewModel)
+}
+
+/**
  * Every module of the UI both apps run, grouped by feature as [dataModules] is. The app's
  * `appModules` includes them, with [platformUiModule]; the iPhone app's will (phase 3). The
  * ViewModels move here group by group (Task 10's slices); a screen still in the app resolves a moved
@@ -246,7 +306,12 @@ val uiModules: List<Module> = listOf(
     pairingUiModule,
     onboardingUiModule,
     sessionUiModule,
-    profileUiModule
+    profileUiModule,
+    homeUiModule,
+    reviewUiModule,
+    stickersUiModule,
+    consentUiModule,
+    aiUiModule
 )
 
 /**

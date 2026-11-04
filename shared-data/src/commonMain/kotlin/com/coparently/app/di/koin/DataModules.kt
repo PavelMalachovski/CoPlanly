@@ -5,6 +5,7 @@ import com.coparently.app.data.chat.ChatAttachmentOutbox
 import com.coparently.app.data.chat.ChatMirror
 import com.coparently.app.data.chat.ChatPartnerSource
 import com.coparently.app.data.chat.DepartedThreadSource
+import com.coparently.app.data.consent.HealthConsentManager
 import com.coparently.app.data.documents.FamilyDocumentIndex
 import com.coparently.app.data.documents.FamilyDocumentIndexCache
 import com.coparently.app.data.documents.FamilyDocumentRepositoryImpl
@@ -450,6 +451,17 @@ val aiDataModule: Module = module {
 }
 
 /**
+ * The child-health consent (GDPR Art. 9(2)(a); CLAUDE.md Legal item 4), moved here from the app
+ * with the ViewModel that asks it (MON-24 phase 2, Task 10): one per process, as it was, shared by
+ * the child editor, onboarding and Settings, so the gate means one thing on every screen. A
+ * withdrawal deletes the medical photographs through the domain's `RecordPhotoStorage`, which the
+ * platform binds.
+ */
+val consentDataModule: Module = module {
+    singleOf(::HealthConsentManager)
+}
+
+/**
  * Every module of this layer both apps use. The app's `appModules` includes them, with
  * [platformDataModule]; the iPhone app's will.
  */
@@ -469,7 +481,8 @@ val dataModules: List<Module> = listOf(
     schoolDataModule,
     sessionDataModule,
     useCaseDataModule,
-    aiDataModule
+    aiDataModule,
+    consentDataModule
 )
 
 /**
