@@ -747,6 +747,27 @@ Then the events:
 - Left for 10c–10f: custody and requests; family and expenses; settings, pairing, onboarding, auth
   and sync; the rest (among them `FriendCalendarViewModel` and `ProfessionalCalendarViewModel`).
 
+**Slice 10c notes (November 2026).** Custody first:
+- `CustodySetupViewModel` (shared with onboarding's schedule step), `SeasonalScheduleViewModel` and,
+  from `pairing/`, `CustodyConflictViewModel`, in `custodyUiModule`, with what they read and nothing
+  Android holds: `ChildScheduleForm.kt` (`toPatternModel` public for `CustodySetupScreen`'s preview;
+  the rest stays `internal`), `ChildScope`, `ContactWindowDraft`, `SeasonalLayerDraft`,
+  `PendingCustodyConflict` and `CustodyConflictResolver` (which `PairingViewModel`, still in the app,
+  calls), and `parentingplan/PlanReferenceSource`. `PendingCustodyConflict` and `PlanReferenceSource`
+  left the app's `presentationModule` for `custodyUiModule` as `single`s.
+- Platform calls: `Log` → `logger`; `UUID` → `Uuid`; today (`java.time.LocalDate.now()`, in the
+  form's default start and the seasonal ViewModel's year and suggestions) →
+  `Clock.System.todayIn(TimeZone.currentSystemDefault())`. No public API was `java.time`, so no
+  screen converts anything.
+- `SavedStateHandle` (the plan question both editors are opened with): `:shared-ui` adds
+  `org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-savedstate` 2.9.6 (`api`), androidx's 2.9.4 on
+  every target (which the app resolved already through `koin-core-viewmodel`), with
+  `org.jetbrains.androidx.savedstate` 1.3.6, androidx.savedstate 1.3.3.
+- Tests: `CandidateModelTest`, `ChildScheduleFormTest`, `ContactWindowDraftTest` and
+  `CustodyConflictResolverTest` to commonTest on `kotlin.test` (seven names lost a comma);
+  `CustodySetupViewModelTest`, `SeasonalScheduleViewModelTest` and `CustodyConflictViewModelTest`
+  (MockK) to androidUnitTest, unchanged but for their location.
+
 ### Task 11: The screens to `commonMain`
 
 **Files:**

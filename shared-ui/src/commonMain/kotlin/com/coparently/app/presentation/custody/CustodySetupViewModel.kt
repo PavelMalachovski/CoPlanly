@@ -1,10 +1,12 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package com.coparently.app.presentation.custody
 
-import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.family.FamilyViewSource
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.PatternSubmission
 import com.coparently.app.domain.changerequests.AnswerByPick
@@ -48,10 +50,10 @@ import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.previousOrSame
-import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.todayIn
-import java.util.UUID
 import kotlin.time.Clock
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /** Keeps the parents flow warm across brief unsubscriptions (config changes). */
 private const val PARENTS_STOP_TIMEOUT_MS = 5_000L
@@ -165,7 +167,7 @@ class CustodySetupViewModel(
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
                 // The editor still works without the quote; the proposal simply cites nothing.
-                Log.w(TAG, "Could not read the parenting plan answer", e)
+                logger.w(TAG, "Could not read the parenting plan answer", e)
                 null
             }
             _uiState.update { state ->
@@ -399,7 +401,7 @@ class CustodySetupViewModel(
                 onSuccess()
             } catch (e: Exception) {
                 // The exception's own text is English and technical: it goes to the log.
-                Log.w(TAG, "Saving the custody model failed", e)
+                logger.w(TAG, "Saving the custody model failed", e)
                 _uiState.value = state.copy(
                     isLoading = false,
                     error = UiText.Res(Res.string.custody_setup_save_failed)
@@ -453,7 +455,7 @@ class CustodySetupViewModel(
         viewModelScope.launch {
             val result = try {
                 custodyModelRepository.activateFirstSchedule(
-                    state.toPatternModel(UUID.randomUUID().toString()).copy(contactWindows = state.contactWindows),
+                    state.toPatternModel(Uuid.random().toString()).copy(contactWindows = state.contactWindows),
                     linkedToCoParent
                 )
             } catch (e: CancellationException) {
@@ -461,7 +463,7 @@ class CustodySetupViewModel(
             } catch (
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
-                Log.w(TAG, "Saving the first custody schedule failed", e)
+                logger.w(TAG, "Saving the first custody schedule failed", e)
                 FirstSchedule.Unavailable
             }
             when (result) {
@@ -563,7 +565,7 @@ data class CustodySetupUiState(
      * put a Saturday handover in front of a parent who never chose one, and the weekend read as the
      * other parent's.
      */
-    val startDate: LocalDate = java.time.LocalDate.now().toKotlinLocalDate().previousOrSame(DayOfWeek.MONDAY),
+    val startDate: LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefault()).previousOrSame(DayOfWeek.MONDAY),
     val momFirst: Boolean = true,
     val customPatternDays: Int = 14,
     val customMomDays: Set<Int> = emptySet(),

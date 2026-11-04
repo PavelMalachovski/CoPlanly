@@ -1,9 +1,11 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package com.coparently.app.presentation.custody
 
-import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.PatternSubmission
 import com.coparently.app.domain.changerequests.AnswerByPick
@@ -50,12 +52,12 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.todayIn
-import java.time.LocalDate
-import java.util.UUID
 import kotlin.time.Clock
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /** Keeps the flows warm across a configuration change. */
 private const val STOP_TIMEOUT_MS = 5_000L
@@ -121,7 +123,7 @@ class SeasonalScheduleViewModel(
     val parents: StateFlow<Parents> = parentsSource.observe()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), Parents())
 
-    private val today: LocalDate = LocalDate.now()
+    private val today: LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefault())
 
     private val transient = MutableStateFlow(SeasonalLayersUiState())
     private val selectedYear = MutableStateFlow(today.year)
@@ -167,7 +169,7 @@ class SeasonalScheduleViewModel(
             layers = model?.seasonalLayers.orEmpty().filterNot { it.isHistory },
             coParentProposalPending = CustodyProposalTransition.pendingFromCoParent(remote, uid),
             ownProposalPending = proposer != null && proposer == uid,
-            suggestions = SchoolVacationSuggestions.upcoming(location.provider, today.toKotlinLocalDate())
+            suggestions = SchoolVacationSuggestions.upcoming(location.provider, today)
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), SeasonalLayersUiState())
 
@@ -217,7 +219,7 @@ class SeasonalScheduleViewModel(
             } catch (
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
-                Log.w(TAG, "Could not read the parenting plan answer", e)
+                logger.w(TAG, "Could not read the parenting plan answer", e)
                 null
             }
             transient.update { state ->
@@ -314,7 +316,7 @@ class SeasonalScheduleViewModel(
             } catch (
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
-                Log.w(TAG, "Submitting the seasonal layers failed", e)
+                logger.w(TAG, "Submitting the seasonal layers failed", e)
                 UiText.Res(Res.string.seasonal_save_failed)
             }
             transient.update { it.copy(isSaving = false, message = message) }
@@ -354,7 +356,7 @@ class SeasonalScheduleViewModel(
         return CustodyProposalTransition.pendingFromCoParent(read.custody, userRepository.getCurrentUserId())
     }
 
-    private fun newId(): String = UUID.randomUUID().toString()
+    private fun newId(): String = Uuid.random().toString()
 
     private companion object {
         const val TAG = "SeasonalScheduleVM"

@@ -15,8 +15,13 @@ import com.coparently.app.presentation.common.FamilySwitcherViewModel
 import com.coparently.app.presentation.common.FamilyViewViewModel
 import com.coparently.app.presentation.common.ParentPaletteViewModel
 import com.coparently.app.presentation.common.ParentsSource
+import com.coparently.app.presentation.custody.CustodySetupViewModel
+import com.coparently.app.presentation.custody.SeasonalScheduleViewModel
 import com.coparently.app.presentation.event.EventOwnerViewModel
 import com.coparently.app.presentation.event.EventViewModel
+import com.coparently.app.presentation.pairing.CustodyConflictViewModel
+import com.coparently.app.presentation.pairing.PendingCustodyConflict
+import com.coparently.app.presentation.parentingplan.PlanReferenceSource
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModelOf
@@ -73,11 +78,26 @@ val calendarUiModule: Module = module {
  * The events (MON-24 phase 2, Task 10): the events every calendar surface shows with their
  * operations, an event's photo and the new-event draft, and whose day an event's start date is for
  * the form. An event's photo goes through the domain's `RecordPhotoStorage`, which the app binds on
- * Android and [platformUiModule] stands in for on the iPhone.
+ * Android and [platformDataModule] stands in for on the iPhone.
  */
 val eventUiModule: Module = module {
     viewModelOf(::EventOwnerViewModel)
     viewModelOf(::EventViewModel)
+}
+
+/**
+ * Custody (MON-24 phase 2, Task 10): the schedule editor, which onboarding's schedule step shares,
+ * the seasonal layers with the holiday-fairness card, and the choice between two patterns that
+ * pairing can leave. Beside them, a `single` each as in the app's `presentationModule` they came
+ * from: the parenting plan's answers as the custody editors quote and cite them, and the pending
+ * pattern conflict, which pairing sets and the conflict screen reads.
+ */
+val custodyUiModule: Module = module {
+    singleOf(::PendingCustodyConflict)
+    singleOf(::PlanReferenceSource)
+    viewModelOf(::CustodyConflictViewModel)
+    viewModelOf(::CustodySetupViewModel)
+    viewModelOf(::SeasonalScheduleViewModel)
 }
 
 /**
@@ -90,7 +110,8 @@ val uiModules: List<Module> = listOf(
     commonUiModule,
     chatUiModule,
     calendarUiModule,
-    eventUiModule
+    eventUiModule,
+    custodyUiModule
 )
 
 /**

@@ -18,8 +18,11 @@ private const val CANDIDATE_ID = "candidate"
  * to describe different fortnights. A custom pattern with no slot-1 day is still a pattern here —
  * "always with the other parent" is the ordinary case for a child's own schedule — and the
  * preview decides separately whether it has anything to draw.
+ *
+ * Public, where the rest of this file is `internal`, because the custody screen's preview calls it
+ * from the app (MON-24 phase 2, Task 10).
  */
-internal fun CustodySetupUiState.toPatternModel(id: String): CustodyModel = when (selectedModelType) {
+fun CustodySetupUiState.toPatternModel(id: String): CustodyModel = when (selectedModelType) {
     CustodyModelType.WEEK_ON_WEEK_OFF -> CustodyModel.weekOnWeekOff(id, startDate, momFirst)
     CustodyModelType.EVERY_OTHER_WEEKEND -> CustodyModel.everyOtherWeekend(id, startDate, momFirst, midweek)
     CustodyModelType.TWO_TWO_THREE -> CustodyModel.twoTwoThree(id, startDate, momFirst)

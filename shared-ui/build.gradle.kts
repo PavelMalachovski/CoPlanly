@@ -90,6 +90,12 @@ kotlin {
             // 2.10 or 2.11, which lift Compose, activity and lifecycle past the app's BOM 2025.10.00,
             // the reason Koin waits at 4.1.1 (see the app's build file).
             api("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel:2.9.6")
+            // `SavedStateHandle`, which the custody editors take for the parenting-plan question they
+            // were opened from (slice 10c). The same release; on every target it is
+            // androidx.lifecycle:lifecycle-viewmodel-savedstate 2.9.4, which the app already resolves
+            // through Koin, with org.jetbrains.androidx.savedstate 1.3.6, which is androidx.savedstate
+            // 1.3.3. `api`, because the constructors that take it are public.
+            api("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-savedstate:2.9.6")
             // `viewModelOf` in `uiModules`, which the app's Koin graph includes. 4.1.1, the version
             // of the app's Koin BOM; it asks for lifecycle-viewmodel 2.9.3, which the line above
             // lifts. `koinViewModel()` in common code (koin-compose-viewmodel) waits for the screens

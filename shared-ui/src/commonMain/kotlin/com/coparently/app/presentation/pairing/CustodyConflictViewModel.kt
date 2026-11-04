@@ -1,8 +1,8 @@
 package com.coparently.app.presentation.pairing
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.presentation.common.Parents
@@ -80,7 +80,7 @@ class CustodyConflictViewModel(
                 .onSuccess { _resolved.value = true }
                 .onFailure { e ->
                     if (e is CancellationException) throw e
-                    Log.e(TAG, "Failed to save the chosen custody pattern", e)
+                    logger.e(TAG, "Failed to save the chosen custody pattern", e)
                     _saveFailed.value = true
                 }
             _isSaving.value = false

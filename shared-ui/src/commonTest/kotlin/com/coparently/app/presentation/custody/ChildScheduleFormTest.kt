@@ -6,7 +6,7 @@ import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertSame
 
@@ -21,7 +21,7 @@ class ChildScheduleFormTest {
     private val family = CustodyModel.weekOnWeekOff(id = "m1", startDate = start)
 
     @Test
-    fun `a preset saved for a child is its days, its anchor and the windows its cycle reaches`() {
+    fun `a preset saved for a child is its days - its anchor and the windows its cycle reaches`() {
         val state = CustodySetupUiState(
             selectedModelType = CustodyModelType.WEEK_ON_WEEK_OFF,
             startDate = start,
@@ -39,7 +39,7 @@ class ChildScheduleFormTest {
     }
 
     @Test
-    fun `a child who is always with the other parent is a schedule, not an empty form`() {
+    fun `a child who is always with the other parent is a schedule - not an empty form`() {
         val state = CustodySetupUiState(
             selectedModelType = CustodyModelType.CUSTOM,
             startDate = start,
@@ -55,7 +55,7 @@ class ChildScheduleFormTest {
     }
 
     @Test
-    fun `the editor opens on the child's own schedule, or on the family pattern without one`() {
+    fun `the editor opens on the child's own schedule - or on the family pattern without one`() {
         val own = ChildScheduleOverride("baby", 1, setOf(0), start, emptyList())
         val model = family.copy(childOverrides = listOf(own))
 

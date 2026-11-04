@@ -6,7 +6,7 @@ import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.plus
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -17,7 +17,7 @@ import kotlin.test.assertTrue
 class ContactWindowDraftTest {
 
     @Test
-    fun `every Wednesday in a fortnight is two windows, one per week`() {
+    fun `every Wednesday in a fortnight is two windows - one per week`() {
         val windows = draft(week = null).toWindows(MONDAY, cycleDays = 14)
 
         assertEquals(listOf(2, 9), windows.map { it.dayIndex })
@@ -30,7 +30,7 @@ class ContactWindowDraftTest {
     }
 
     @Test
-    fun `the weekday is read from the start date, not assumed to be Monday`() {
+    fun `the weekday is read from the start date - not assumed to be Monday`() {
         // A cycle anchored on a Wednesday has its Wednesdays at 0 and 7.
         val wednesday = MONDAY.plus(2, DateTimeUnit.DAY)
 
@@ -38,7 +38,7 @@ class ContactWindowDraftTest {
     }
 
     @Test
-    fun `a week past the end of the cycle, or an inverted time, gives nothing`() {
+    fun `a week past the end of the cycle - or an inverted time - gives nothing`() {
         assertEquals(emptyList(), draft(week = 2).toWindows(MONDAY, 14))
         assertEquals(emptyList(), draft(week = null).copy(end = FROM).toWindows(MONDAY, 14))
     }

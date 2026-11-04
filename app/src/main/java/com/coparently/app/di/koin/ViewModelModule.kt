@@ -8,8 +8,6 @@ import com.coparently.app.presentation.childinfo.ChildInfoViewModel
 import com.coparently.app.presentation.consent.HealthConsentViewModel
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
 import com.coparently.app.presentation.contacts.ContactsViewModel
-import com.coparently.app.presentation.custody.CustodySetupViewModel
-import com.coparently.app.presentation.custody.SeasonalScheduleViewModel
 import com.coparently.app.presentation.documents.FamilyDocumentsViewModel
 import com.coparently.app.presentation.expenses.ExpenseViewModel
 import com.coparently.app.presentation.expenses.SettleUpViewModel
@@ -25,7 +23,6 @@ import com.coparently.app.presentation.home.PutOffAsksViewModel
 import com.coparently.app.presentation.journal.JournalEditorViewModel
 import com.coparently.app.presentation.journal.JournalListViewModel
 import com.coparently.app.presentation.onboarding.OnboardingViewModel
-import com.coparently.app.presentation.pairing.CustodyConflictViewModel
 import com.coparently.app.presentation.pairing.PairingViewModel
 import com.coparently.app.presentation.parentingplan.ParentingPlanViewModel
 import com.coparently.app.presentation.payments.PaymentsViewModel
@@ -63,8 +60,6 @@ val viewModelModule = module {
     viewModelOf(::HealthConsentViewModel)
     viewModelOf(::TelemetryConsentViewModel)
     viewModelOf(::ContactsViewModel)
-    viewModelOf(::CustodySetupViewModel)
-    viewModelOf(::SeasonalScheduleViewModel)
     viewModelOf(::FamilyDocumentsViewModel)
     viewModelOf(::ExpenseViewModel)
     viewModelOf(::SettleUpViewModel)
@@ -80,7 +75,6 @@ val viewModelModule = module {
     viewModelOf(::JournalEditorViewModel)
     viewModelOf(::JournalListViewModel)
     viewModelOf(::OnboardingViewModel)
-    viewModelOf(::CustodyConflictViewModel)
     viewModelOf(::PairingViewModel)
     viewModelOf(::ParentingPlanViewModel)
     viewModelOf(::PaymentsViewModel)

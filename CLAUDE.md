@@ -570,7 +570,9 @@ When touching the UI, keep these invariants:
    Multiplatform 1.9.3 pairs with, which on Android is androidx's 2.9.4, so the app's lifecycle
    artifacts — 2.8.7 declared, 2.9.3 through Koin — resolve to 2.9.4; not 2.10, which lifts Compose
    past the BOM, the reason Koin waits below; `viewModelOf` in common code is `koin-core-viewmodel`
-   4.1.1),
+   4.1.1; `SavedStateHandle` in common code, since slice 10c, JetBrains'
+   `lifecycle-viewmodel-savedstate` 2.9.6, androidx's 2.9.4 on every target, with
+   `org.jetbrains.androidx.savedstate` 1.3.6, which is androidx.savedstate 1.3.3),
    **Koin 4.1.1** (BOM; `koin-android`, `koin-androidx-compose`, `koin-androidx-workmanager`, and
    `koin-test` for the JVM tests — MON-24 phase 2 replaced Hilt 2.58 with it; 4.2.x is newer but its
    Compose artifacts pull Compose 1.10, activity 1.12 and lifecycle 2.10 past the BOM, so it waits
@@ -1595,7 +1597,7 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              components of presentation/common/ that need no ViewModel and no Android API (the
              design system's primitives), with UiText (slice 9c); and, from Task 10, the shared
              state of presentation/common/ (ParentsSource and its siblings) and the ViewModels,
-             group by group (so far common/'s, chat's, the calendar's and the events'), with
+             group by group (so far common/'s, chat's, the calendar's, the events' and custody's), with
              their Koin modules: uiModules and platformUiModule, which appModules includes.
              Screens follow (Task 11). It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
@@ -2043,6 +2045,21 @@ is a stored model, so `:shared-ui` applies the serialization plugin and `check-i
 `EventViewModelTest` keeps Gson as the oracle for a draft an older build wrote (Gson 2.11.0 in
 `:shared-ui`'s `androidUnitTest`), and `EventOwnerViewModelTest`'s check of the form's
 `autoEventOwner` moved to the app's `AddEditEventScreenTest`, where that function is.
+Slice 10c moved **custody**: `CustodySetupViewModel`, which onboarding's schedule step shares (a new
+schedule's Monday from `Clock.System.todayIn` in the system zone, the first schedule's id from
+`Uuid`, its log lines through `logger`), with the form helpers it reads — `ChildScheduleForm.kt`
+(`toPatternModel` public, because `CustodySetupScreen`'s preview calls it; the rest `internal`),
+`ChildScope` and `ContactWindowDraft`; `SeasonalScheduleViewModel` (today from `Clock.System.todayIn`,
+a new layer's id from `Uuid`) with `SeasonalLayerDraft`; `CustodyConflictViewModel` from `pairing/`,
+with `PendingCustodyConflict` and `CustodyConflictResolver`, which `PairingViewModel` still calls
+from the app; and `parentingplan/PlanReferenceSource`, which both editors and the requests inbox
+read. They are in `custodyUiModule`, the pending conflict and the plan's source `single`s as they were
+in `presentationModule`. The two editors take the plan question they were opened with through
+`SavedStateHandle`, so `:shared-ui` declares JetBrains' `lifecycle-viewmodel-savedstate` (`api`). Their
+public API was kotlinx-datetime already, so no screen converts anything. `CandidateModelTest`,
+`ChildScheduleFormTest`, `ContactWindowDraftTest` and `CustodyConflictResolverTest` run in
+`commonTest` (seven names lost a comma for Kotlin/Native); the three ViewModel tests (MockK) in
+`androidUnitTest`, where `java.time` stays their oracle for today.
 
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller

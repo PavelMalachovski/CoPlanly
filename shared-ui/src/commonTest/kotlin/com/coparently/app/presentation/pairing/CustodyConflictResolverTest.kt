@@ -3,8 +3,8 @@ package com.coparently.app.presentation.pairing
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import kotlinx.datetime.LocalDate
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 /**
  * The decision behind the pairing conflict screen.
@@ -112,7 +112,7 @@ class CustodyConflictResolverTest {
     }
 
     @Test
-    fun `a settled outcome names the pattern to write, a conflict names none`() {
+    fun `a settled outcome names the pattern to write - a conflict names none`() {
         val mine = model(14, (0..6).toSet(), id = "mine")
         val theirs = model(14, setOf(0, 1, 4, 5, 6, 9, 10), id = "theirs")
 
