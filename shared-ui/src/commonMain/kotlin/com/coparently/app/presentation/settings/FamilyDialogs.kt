@@ -54,7 +54,7 @@ import kotlin.math.roundToInt
  * reader's language, which a ViewModel has no `Context` to resolve.
  */
 @Composable
-fun caresForSummary(kinds: Set<FamilyKind>): String {
+internal fun caresForSummary(kinds: Set<FamilyKind>): String {
     val children = stringResource(Res.string.onboarding_family_children)
     val pets = stringResource(Res.string.onboarding_family_pets)
     return when {
@@ -80,7 +80,7 @@ fun caresForSummary(kinds: Set<FamilyKind>): String {
  * @param onDismiss Closes without changing anything.
  */
 @Composable
-fun FamilyKindDialog(
+internal fun FamilyKindDialog(
     selected: Set<FamilyKind>,
     onConfirm: (Set<FamilyKind>) -> Unit,
     onDismiss: () -> Unit
@@ -149,7 +149,7 @@ fun FamilyKindDialog(
  * @param onDismiss Closes without proposing anything.
  */
 @Composable
-fun SplitRatioDialog(
+internal fun SplitRatioDialog(
     current: SplitRatio,
     parentNames: ParentNames,
     proposes: Boolean,

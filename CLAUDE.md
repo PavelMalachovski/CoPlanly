@@ -1843,7 +1843,8 @@ request clocks) and the request clocks' keeper, steps, records, `RequestClocks` 
 (the Android notification manager, WorkManager and a `java.time.ZoneId`) until Task 8h (below);
 `UnassignedRecords` (records dated in `java.time` for its screen) until Task 8i, `ChatAttachmentOutbox`
 (`java.io.File` and `data/files/`) until Task 8j, and the clocks' notices and worker still. `data/money/`'s `MinorUnits` stays too (`BigDecimal` for
-the screens' `NumberFormat`). Task 8f, the last repositories that waited on `BigDecimal`, Auth's `FirebaseUser`,
+the screens' `NumberFormat`; since slice 11e no screen calls it, and its one production caller is
+`SupportReminderWorker`'s `toDecimal`). Task 8f, the last repositories that waited on `BigDecimal`, Auth's `FirebaseUser`,
 the raw Firestore SDK or the stay list's `java.time`: in `commonMain`, from `data/repository/`,
 `ExpenseRepositoryImpl` with `ExpenseMappers.kt` (the expense's four mappers, lifted out as the
 pets' were, so `ExpenseWireContract` moved to `shared-data`'s `wire/` and its list), whose push
@@ -2133,7 +2134,7 @@ question), with what they read from screens still in the app: `changerequests/Sp
 `stickers/StickerViews.kt` (`HomeStickers`, `StickersRow`, `ParentRolePrompt`, `ParentRoleDialog`,
 `StickerBadge`, and `roleOrNull` and `senderLine`, public for `MyStickersScreen`), the new
 `settings/FamilyDialogs.kt` (`caresForSummary`, `FamilyKindDialog` and `SplitRatioDialog`, out of
-`SettingsScreen.kt`, which no longer called them), and Home's money text, `home/MoneyText.kt`
+`SettingsScreen.kt`, which no longer called them; `internal`, the Family tab being their one caller), and Home's money text, `home/MoneyText.kt`
 (`formatMoney` and `balanceCaption`, out of `HomeScreen.kt`, which calls them from the app) with
 `home/SettleUpPosition.kt` (its test in `commonTest`). Every amount goes through the money seam's
 new `ReaderMoneyText.amount(value: Double, currency)`, which on Android is
@@ -2146,7 +2147,7 @@ with `ExpenseList` and its `SwipeToDeleteRow`, `ExpenseSummaryHeader`, `ExpenseA
 `AddExpenseScreen`, `SettleUpDialog`, `CurrencySelector`, `ExpenseCategoryLabel`, `CategoryPalette`,
 `MonthSwipe`), with `common/MonthPaging.kt` (the month's direction and transition, on a kotlinx-datetime
 `YearMonth`). Each `currencyFormat(currency)` the screens held is a `MoneyFormat(currency)` (new,
-`expenses/MoneyFormat.kt`: the money seam's `Double` and plain-text amounts, which on Android are
+`internal`, `expenses/MoneyFormat.kt`: the money seam's `Double` and plain-text amounts, which on Android are
 that `NumberFormat`), the analytics' shares `ReaderMoneyText.percent`, a payment's amount on the
 header's strip plain decimal text (`PaymentStrip.amount`, `DecimalText.plain`, where it was a
 `BigDecimal`), "I paid"'s minor units `DecimalText.parseHalfUp` of the double's text (what
@@ -2385,7 +2386,8 @@ holds: `HomeFeed.kt`, `ChildrenToday.kt` and `RequestsRow.kt` (`RequestsRowText.
 Home's today is `Clock.System.todayIn` in the system zone and its now `wallClockNow()`, the week's
 end `plus(HomeWeek.DAYS, DateTimeUnit.DAY)` (`domain/time/WallClock.kt`, java.time's `plusDays`);
 its log line goes through `logger`, and "Later" is kept in `SecurePreferences` under the same key.
-`HomeAskQueue`, `SettleUpPosition` and the composables stay with the screen. `MonthReviewViewModel`
+`HomeAskQueue`, `SettleUpPosition` and the composables stay with the screen (`SettleUpPosition` moved
+in slice 11e). `MonthReviewViewModel`
 (with `MonthReviewSources` and `MonthReviewAssist`, `factory`s) is in `reviewUiModule`;
 `StickersViewModel` in `stickersUiModule`; `HealthConsentViewModel` (its log lines through
 `logger`) and `TelemetryConsentViewModel` in `consentUiModule`; `AiConsentViewModel` in
@@ -4573,8 +4575,8 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   composition, which carries the composition's language and date locale (it replaced
   `asString(context)` with the Activity's `Context`; never resolve with the application's). An
   argument that is not a `UiText` is printed with `toString()`, all Compose Multiplatform's
-  `%<n>$s` and `%<n>$d` do, so pass a `%<n>$d` an `Int` or a `Long`, never a formatted number, and
-  a percent sign as an argument, never `%%` beside the arguments ("Localization"). Still don't inject `Context` into
+  `%<n>$s` and `%<n>$d` do, so pass a `%<n>$d` an `Int` or a `Long`, never a formatted number; and a
+  literal percent sign beside arguments goes in as an argument, never as `%%` ("Localization"). Still don't inject `Context` into
   a ViewModel: the application's configuration can lag AppCompat's per-app locale on older APIs,
   while composition follows the Activity. Three rules. **A screen that branches on an outcome
   gets a typed code, not text** — `CalendarScreen` used to compare the literal

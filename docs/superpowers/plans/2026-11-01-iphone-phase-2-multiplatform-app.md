@@ -1349,7 +1349,7 @@ Then the export and the school import:
   `RequestClockTextTest` → `androidUnitTest` (it holds the history line to `answerByText` in UTC);
   `RequestHistoryGroupTest` stays in the app. The java twins: `JavaTimePicker.kt`'s overload had no
   caller left and is gone (the previews are `components/TimePickerPreviews.kt`); `JavaPickerDates.kt`
-  stays for `ExportScreen`, `AddExpenseScreen`, the child records' `DatePickerDialog`, `PickerDatesTest`
+  stays for `ExportScreen`, `AddExpenseScreen` (expenses left it in 11e), the child records' `DatePickerDialog`, `PickerDatesTest`
   and `LocalDatePickerDialogTest`.
 
 **Slice 11e notes (November 2026).** The family's and the money's screens.

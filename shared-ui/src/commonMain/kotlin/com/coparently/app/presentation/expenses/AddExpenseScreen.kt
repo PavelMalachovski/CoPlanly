@@ -229,7 +229,9 @@ fun AddExpenseScreen(
     // The camera asks for its permission first, as the form did; a refusal and a phone with no
     // camera app are said through the app's message host.
     val cameraCapture = LocalCameraCapture.current
-    val hasCamera = cameraCapture.available
+    // Read once: on API 26-29 Android's answer is a binder call, and this body recomposes on
+    // every keystroke.
+    val hasCamera = remember(cameraCapture) { cameraCapture.available }
     val cameraUnavailable = stringResource(Res.string.receipt_camera_unavailable)
     val cameraDenied = stringResource(Res.string.receipt_camera_denied)
     val camera = cameraCapture.rememberCapture(CaptureTarget.RECEIPT) { result ->
@@ -746,7 +748,7 @@ private fun restoreReceiptScanSnapshot(snapshot: ReceiptUndoSnapshot, callbacks:
  * Extracted out of [AddExpenseScreen] so the apply/undo branching does not count toward that
  * composable's cyclomatic complexity.
  *
- * Internal (not private) so `ReceiptScanEffectTest` can drive it directly from a fake
+ * Public (not private) so `ReceiptScanEffectTest` (androidTest, in the app) can drive it directly from a fake
  * `MutableStateFlow<ReceiptScanState>` and assert the Undo snackbar survives the recomposition
  * that follows [ReceiptScanCallbacks.onScanConsumed].
  */

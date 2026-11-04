@@ -11,7 +11,7 @@ import com.coparently.app.utils.ReaderMoneyText
  * @property currency The ISO 4217 code the amounts are in; an unknown one is written in the
  *   locale's own currency, as `currencyFormat` tolerates it.
  */
-class MoneyFormat(val currency: String) {
+internal class MoneyFormat(val currency: String) {
 
     /** [value] as the expense screens hold it, a `Double`: `currencyFormat(currency).format(value)`. */
     fun format(value: Double): String = ReaderMoneyText.amount(value, currency)
