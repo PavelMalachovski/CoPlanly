@@ -1,16 +1,16 @@
 package com.coparently.app.presentation.export
 
-import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.chat.DepartedThreadSource
 import com.coparently.app.data.export.CommunicationRecordSource
-import com.coparently.app.data.export.ExportFileWriter
 import com.coparently.app.data.export.ExportReceipts
 import com.coparently.app.data.export.ExportedFile
 import com.coparently.app.data.export.OptionalRecordSections
+import com.coparently.app.data.export.RecordFileWriter
 import com.coparently.app.data.local.dao.KnownFamilyDao
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.chat.DepartedThread
 import com.coparently.app.domain.export.CommunicationRecord
@@ -41,11 +41,12 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toKotlinLocalDate
-import kotlinx.datetime.toKotlinTimeZone
-import java.time.LocalDate
-import java.time.ZoneId
+import kotlinx.datetime.minus
+import kotlinx.datetime.todayIn
+import kotlin.time.Clock
 
 /**
  * The export screen's state.
@@ -158,7 +159,7 @@ internal data class EarlierFamilyName(val familyId: String, val name: String?, v
 class ExportViewModel(
     private val source: CommunicationRecordSource,
     private val sections: OptionalRecordSections,
-    private val writer: ExportFileWriter,
+    private val writer: RecordFileWriter,
     private val receipts: ExportReceipts,
     private val parentsSource: ParentsSource,
     private val userRepository: UserRepository,
@@ -175,13 +176,13 @@ class ExportViewModel(
     private val requestedFamily: String? =
         savedStateHandle.get<String>(ARG_FAMILY)?.takeIf { it.isNotBlank() }
 
-    private val zone: ZoneId = ZoneId.systemDefault()
-
-    /** [zone] as the record's model holds it (kotlinx-datetime, MON-24): the same zone. */
-    private val recordZone: TimeZone = zone.toKotlinTimeZone()
+    /** The device's zone, read once: the record's times and today's date are in it. */
+    private val recordZone: TimeZone = TimeZone.currentSystemDefault()
 
     private val _state = MutableStateFlow(
-        LocalDate.now(zone).let { today -> ExportUiState(from = today.minusMonths(DEFAULT_MONTHS), to = today) }
+        Clock.System.todayIn(recordZone).let { today ->
+            ExportUiState(from = today.minus(DEFAULT_MONTHS, DateTimeUnit.MONTH), to = today)
+        }
     )
 
     /** The range and whether an export is running. */
@@ -228,7 +229,7 @@ class ExportViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-                Log.e(TAG, "Export failed", e)
+                logger.e(TAG, "Export failed", e)
                 _state.update { it.copy(error = UiText.Res(Res.string.export_error_failed)) }
             } finally {
                 _state.update { it.copy(working = null) }
@@ -251,7 +252,7 @@ class ExportViewModel(
         val record = buildRecord(myUid, counterpart, request, fallbacks)
         val family = FamilyKey.orNull(myUid, partnerUid).orEmpty()
         val recordId =
-            receipts.reserve(family, request.from.toKotlinLocalDate(), request.to.toKotlinLocalDate(), format)
+            receipts.reserve(family, request.from, request.to, format)
         val registered = recordId?.let { registeredBytes(record, labels, format, it) }
         val bytes = registered
             ?: writer.render(record.copy(verification = RecordVerification.Unregistered), labels, format)
@@ -302,8 +303,8 @@ class ExportViewModel(
         request: ExportUiState,
         fallbacks: NameFallbacks
     ): CommunicationRecord {
-        val from = request.from.toKotlinLocalDate()
-        val to = request.to.toKotlinLocalDate()
+        val from = request.from
+        val to = request.to
         val partnerUid = counterpart.uid
         val departed = counterpart.departed
         val earlier = counterpart.earlier
@@ -356,10 +357,10 @@ class ExportViewModel(
         val departed = counterpart.departed
         val earlier = counterpart.earlier
         return RecordScope(
-            from = request.from.toKotlinLocalDate(),
-            to = request.to.toKotlinLocalDate(),
+            from = request.from,
+            to = request.to,
             zone = recordZone,
-            generatedAtMillis = System.currentTimeMillis(),
+            generatedAtMillis = Clock.System.now().toEpochMilliseconds(),
             families = setOfNotNull(FamilyKey.orNull(myUid, partnerUid)),
             parents = listOfNotNull(parents.me, parents.coParent).map { nameForUid(it.uid, parents, fallbacks) } +
                 listOfNotNull(departed?.let { departedName(it, fallbacks) }) +
@@ -409,7 +410,7 @@ class ExportViewModel(
         private const val TAG = "ExportViewModel"
 
         /** The range a parent starts from: the last quarter, which is what a hearing usually asks. */
-        private const val DEFAULT_MONTHS = 3L
+        private const val DEFAULT_MONTHS = 3
 
         /** How long an export waits for the co-parent's name before printing the fallback. */
         private const val NAMES_WAIT_MS = 3_000L

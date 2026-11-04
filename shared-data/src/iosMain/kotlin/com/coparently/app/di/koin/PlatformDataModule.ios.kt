@@ -1,6 +1,7 @@
 package com.coparently.app.di.koin
 
 import com.coparently.app.data.export.ExportVerifyAddress
+import com.coparently.app.data.export.RecordFileWriter
 import com.coparently.app.data.files.PickedFiles
 import com.coparently.app.data.files.StorageBucket
 import com.coparently.app.data.http.HttpTimeouts
@@ -51,6 +52,7 @@ import com.coparently.app.data.requests.RequestClockNotices
 import com.coparently.app.data.school.SchoolImportScheduler
 import com.coparently.app.data.school.SchoolImportWordings
 import com.coparently.app.data.school.bakalari.BakalariClient
+import com.coparently.app.data.school.bakalari.BakalariSchoolDirectory
 import com.coparently.app.data.session.AccountConsistency
 import com.coparently.app.data.session.AccountDeletion
 import com.coparently.app.data.session.AccountTraces
@@ -108,6 +110,8 @@ actual val platformDataModule: Module = module {
 
     single { GoogleCalendarApi(httpClient(HttpTimeouts.GOOGLE_CALENDAR)) }
     single { BakalariClient(httpClient(HttpTimeouts.SCHOOL)) }
+    // The school directory the connect screen's ViewModel searches (slice 10f), on the same client.
+    single { BakalariSchoolDirectory(httpClient(HttpTimeouts.SCHOOL)) }
 
     single<SignedInUser> { NoSignedInUser }
     single<AuthSession> { NoAuthSession }
@@ -133,4 +137,5 @@ actual val platformDataModule: Module = module {
     single<ReceiptTextRecognizer> { NoReceiptText }
     single<PickedFiles> { NoPickedFiles }
     single<ExportVerifyAddress> { NoExportVerifyAddress }
+    single<RecordFileWriter> { NoRecordFiles }
 }

@@ -2975,7 +2975,11 @@ bytes are identical on Android):
   family friends (`friendsUiModule`), a child's guest (`guestsUiModule`), professionals
   (`professionalsUiModule`, with the agenda both read-only calendars build, now on kotlinx-datetime)
   and the parenting plan (`parentingPlanUiModule`); with the last ViewModel in the app that read the
-  co-parent on screen gone, those three helpers are `internal` to `:shared-ui` again.
+  co-parent on screen gone, those three helpers are `internal` to `:shared-ui` again. Then the
+  export (`exportUiModule`; its file rendered and saved through a new `RecordFileWriter` seam the
+  app's PDF writer answers, its range now kotlinx-datetime; the iPhone has no record file yet) and
+  the school import (`schoolUiModule`). **Task 10 is done** but for the login screen's and Google
+  Calendar's connection ViewModels, which move with their screens in Task 11.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

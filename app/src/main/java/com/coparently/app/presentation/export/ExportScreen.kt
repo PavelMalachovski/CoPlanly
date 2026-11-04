@@ -48,6 +48,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.data.export.ExportedFile
+import com.coparently.app.data.export.contentUri
 import com.coparently.app.domain.export.ExportFormat
 import com.coparently.app.domain.export.JournalLabels
 import com.coparently.app.domain.export.PlanLabels
@@ -67,6 +68,7 @@ import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.parentingplan.PlanStrings
 import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.flow.Flow
+import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDate
 import org.koin.compose.viewmodel.koinViewModel
 import java.time.LocalDate
@@ -108,8 +110,9 @@ fun ExportScreen(
 
     picking?.let { end ->
         RangeDatePicker(
-            initial = if (end == RangeEnd.FROM) state.from else state.to,
-            onPicked = { date ->
+            initial = (if (end == RangeEnd.FROM) state.from else state.to).toJavaLocalDate(),
+            onPicked = { picked ->
+                val date = picked.toKotlinLocalDate()
                 if (end == RangeEnd.FROM) viewModel.setFrom(date) else viewModel.setTo(date)
                 picking = null
             },
@@ -222,14 +225,14 @@ private fun RangeGroup(state: ExportUiState, onPick: (RangeEnd) -> Unit) {
             SectionRow(
                 icon = Icons.Default.DateRange,
                 title = stringResource(R.string.export_from),
-                supporting = UiText.Date(state.from.toKotlinLocalDate()).asString(),
+                supporting = UiText.Date(state.from).asString(),
                 onClick = { onPick(RangeEnd.FROM) }.takeIf { state.working == null }
             )
             Divider()
             SectionRow(
                 icon = Icons.Default.DateRange,
                 title = stringResource(R.string.export_to),
-                supporting = UiText.Date(state.to.toKotlinLocalDate()).asString(),
+                supporting = UiText.Date(state.to).asString(),
                 onClick = { onPick(RangeEnd.TO) }.takeIf { state.working == null }
             )
         }
@@ -487,7 +490,7 @@ private fun share(context: Context, file: ExportedFile, title: String) {
  */
 fun recordShareIntent(file: ExportedFile): Intent = Intent(Intent.ACTION_SEND).apply {
     type = file.mimeType
-    putExtra(Intent.EXTRA_STREAM, file.uri)
-    clipData = ClipData.newRawUri(null, file.uri)
+    putExtra(Intent.EXTRA_STREAM, file.contentUri)
+    clipData = ClipData.newRawUri(null, file.contentUri)
     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
 }

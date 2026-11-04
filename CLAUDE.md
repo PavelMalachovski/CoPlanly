@@ -1347,7 +1347,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `app/src/main/java/com/coparently/app/di/koin/` and are listed in `appModules` (`AppModules.kt`),
   which also includes `:shared-data`'s `dataModules` and `platformDataModule` and `:shared-ui`'s
   `uiModules` and `platformUiModule` (`shared-ui/.../di/koin/UiModules.kt`, MON-24 phase 2, Task 10:
-  the shared state and every ViewModel that has moved there, one module per feature);
+  the shared state and every ViewModel but the two whose sign-ins run on an Android activity, one
+  module per feature; a new ViewModel goes there);
   a class the graph builds is a `singleOf`/`factoryOf`/`viewModelOf`/`workerOf` there (a `single`
   for what is one per process, as a Hilt `@Singleton` was), an interface is bound with
   `single<I> { get<Impl>() }` in the module named after its feature, and a qualifier is
@@ -1584,7 +1585,8 @@ shared-data/ — Kotlin Multiplatform module (MON-24 phase 2): the data layer bo
              SessionProfileSynchronizer and SignedInAccountSource, and the export's
              ExportReceipts (on CallableFunctions, behind ExportVerifyAddress), and (Task 10)
              the AI-assist and child-health consents (data/ai/AiConsentManager,
-             data/consent/HealthConsentManager), with the ViewModels that ask them.
+             data/consent/HealthConsentManager), with the ViewModels that ask them, and the
+             export's file seam (data/export/RecordFileWriter, with ExportedFile).
              Its Koin modules are dataModules and platformDataModule, which appModules includes;
              on the iPhone platformDataModule binds every seam itself (Task 8j: stand-ins in
              di/koin/IosUnavailable.kt where the iPhone has nothing yet).
@@ -1602,7 +1604,8 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              child support's, settings', pairing's, onboarding's, the session's, the profile's,
              Home's, the month review's, the stickers', the consents', the AI consent's, the
              child's and pet's records', the contacts', the documents', the journal's, family
-             friends', the guest's, professionals' and the parenting plan's),
+             friends', the guest's, professionals', the parenting plan's, the export's and the
+             school import's: every one but the two whose sign-ins run on an Android activity),
              with their Koin modules: uiModules and platformUiModule, which appModules includes.
              Screens follow (Task 11). It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
@@ -1616,9 +1619,10 @@ data/      — Room (v46 + migrations), Firestore/Google clients, repository imp
              sync but its WorkManager classes, the request clocks but their notices and worker,
              data/family/, the school import but its wording and worker, the export but its file
              writer, and some of data/chat/, data/support/ and data/session/
-presentation/ — Compose screens per feature, and the ViewModels not moved yet (their strings,
-             the theme, the design system's components, the shared state and the ViewModels
-             moved so far — Task 10's slices — in shared-ui/)
+presentation/ — Compose screens per feature, and the two ViewModels whose sign-ins run on an
+             Android activity (AuthViewModel, SyncViewModel; Task 11). Their strings, the theme,
+             the design system's components, the shared state and every other ViewModel are in
+             shared-ui/ (Task 10)
 di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
              listed in appModules); the database builder (DatabaseBuilder.kt) and the file name
              (DatabaseName.kt) are in shared-data/ since MON-24 phase 2
@@ -1935,13 +1939,15 @@ task; the iPhone has no `koin-test`). Phase 3's app replaces each stand-in. Ever
 interfaces**: a new data-layer class takes `SecurePreferences`, `AppDirectories`, `CrashReporter`,
 `Analytics`, `DeviceRegion`, `SignedInUser`, `AuthSession`, `PushQueue`, `PushDevice`,
 `PushRegistration`, `AccountConsistency`, `AccountDeletion`, `AccountTraces`, `RequestClockNotices`,
-`RequestClockScheduler`, `GoogleCalendarConnectionSource`, `StorageBucket`, `PickedFiles` or
-`ExportVerifyAddress` rather than `EncryptedPreferences`, a `Context` directory,
-`CrashlyticsManager`, `AnalyticsManager`, `FirebaseAuthService`, `FcmService`, `AccountSwitchGuard`,
-`AccountDeletionService`, `DeviceTraces`, `RequestNotices`, `WorkRequestClockScheduler`,
-`CredentialManagerService`, `FirebaseStorage`, a `ContentResolver` or `BuildConfig`, and logs with
-`logger.e/w/i/d(TAG, …)`, never `android.util.Log`. A ViewModel in `:shared-ui` takes the same seams
-(`AuthSession`, `PushRegistration`, `AccountDeletion` and `AccountTraces` came with slice 10e).
+`RequestClockScheduler`, `GoogleCalendarConnectionSource`, `StorageBucket`, `PickedFiles`,
+`ExportVerifyAddress` or `RecordFileWriter` rather than `EncryptedPreferences`, a `Context`
+directory, `CrashlyticsManager`, `AnalyticsManager`, `FirebaseAuthService`, `FcmService`,
+`AccountSwitchGuard`, `AccountDeletionService`, `DeviceTraces`, `RequestNotices`,
+`WorkRequestClockScheduler`, `CredentialManagerService`, `FirebaseStorage`, a `ContentResolver`,
+`ExportFileWriter` or `BuildConfig`, and logs with `logger.e/w/i/d(TAG, …)`, never
+`android.util.Log`. A ViewModel in `:shared-ui` takes the same seams (`AuthSession`,
+`PushRegistration`, `AccountDeletion` and `AccountTraces` came with slice 10e, `RecordFileWriter`
+with slice 10f).
 
 **Where a `presentation/theme/…` or `presentation/common/…` path in this file lives** (MON-24
 phase 2, Task 9, slice 9b, November 2026). The theme moved whole to
@@ -2232,7 +2238,23 @@ logs through `logger`. It was the last ViewModel in the app to call `coParentOnS
 `observeSignedInUser` and `projectedCoParentUid`, so they are `internal` again and the seven files
 in `:shared-ui` that opted in to `@InternalSharedApi` for them no longer do. The seven tests (MockK)
 run in `androidUnitTest`; the app's copies of `testFamilyViewSource` and `testFamilyMembersSource`
-are gone with their last users (the app keeps `testParentsSource` for `FriendsScreenTest`).
+are gone with their last users (the app keeps `testParentsSource` for `FriendsScreenTest`). The
+fourth group is **the export and the school import**: `ExportViewModel` (`exportUiModule`) and
+`ConnectSchoolViewModel` with `SchoolImportViewModel` (`schoolUiModule`). The export's file is
+rendered and saved through `data/export/RecordFileWriter` (new in `:shared-data`: `render` and
+`save`, the split MON-16 needs), which the app's `ExportFileWriter` answers with `PdfDocument` and its
+`FileProvider`, as before; `ExportedFile` moved with the interface and holds the `content://` URI as
+text, which the share sheet and `ExportFileWriterTest` read back through the app's
+`ExportedFile.contentUri` (`Uri.parse`, the same `Uri`). The export's range (`ExportUiState.from`,
+`to`, `setFrom`, `setTo`) is kotlinx-datetime, which `ExportScreen` converts for its pickers; the
+zone `TimeZone.currentSystemDefault()`, today `Clock.System.todayIn`, the default start three months
+back with `minus(3, DateTimeUnit.MONTH)` (java.time's `minusMonths`, the day clamped the same way).
+`ConnectSchoolViewModel`'s town filter folds case with `lowercase()`, what `lowercase(Locale.ROOT)`
+did. The iPhone's `platformDataModule` binds `NoRecordFiles` (rendering fails, nothing saved; the
+screen says the export failed) and the school directory over its own client, as it binds the
+Bakaláři client. The three tests (MockK) run in `androidUnitTest`. **Task 10 is done but for
+`AuthViewModel` and `SyncViewModel`**, which stay in the app until Task 11 (above); the app's
+`viewModelModule` holds those two alone.
 
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller

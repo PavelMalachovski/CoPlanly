@@ -1,16 +1,14 @@
 package com.coparently.app.di.koin
 
 import com.coparently.app.presentation.auth.AuthViewModel
-import com.coparently.app.presentation.export.ExportViewModel
-import com.coparently.app.presentation.school.ConnectSchoolViewModel
-import com.coparently.app.presentation.school.SchoolImportViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
 /**
- * Every ViewModel still in the app; the ones that have moved to `:shared-ui` are defined in its
- * `uiModules` (MON-24 phase 2, Task 10), and resolve the same way. `koinViewModel()` in a
+ * Every ViewModel still in the app: since Task 10 (MON-24 phase 2) only the two whose sign-ins
+ * run on an Android activity, which move with their screens in Task 11. Every other one is defined
+ * in `:shared-ui`'s `uiModules`, and resolves the same way. `koinViewModel()` in a
  * composable and `by viewModel()` in `MainActivity` create
  * them in the caller's `ViewModelStoreOwner`, exactly as Hilt's ViewModel helpers did, and hand a
  * `SavedStateHandle` holding the destination's arguments to a constructor that asks for one
@@ -18,8 +16,5 @@ import org.koin.dsl.module
  */
 val viewModelModule = module {
     viewModelOf(::AuthViewModel)
-    viewModelOf(::ExportViewModel)
-    viewModelOf(::ConnectSchoolViewModel)
-    viewModelOf(::SchoolImportViewModel)
     viewModelOf(::SyncViewModel)
 }

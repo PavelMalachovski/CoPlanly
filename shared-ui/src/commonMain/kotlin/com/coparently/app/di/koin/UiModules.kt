@@ -30,6 +30,7 @@ import com.coparently.app.presentation.event.EventOwnerViewModel
 import com.coparently.app.presentation.event.EventViewModel
 import com.coparently.app.presentation.expenses.ExpenseViewModel
 import com.coparently.app.presentation.expenses.SettleUpViewModel
+import com.coparently.app.presentation.export.ExportViewModel
 import com.coparently.app.presentation.family.EarlierFamiliesViewModel
 import com.coparently.app.presentation.family.FamilyViewModel
 import com.coparently.app.presentation.family.UnassignedRecordsViewModel
@@ -57,6 +58,8 @@ import com.coparently.app.presentation.profile.ProfileViewModel
 import com.coparently.app.presentation.review.MonthReviewAssist
 import com.coparently.app.presentation.review.MonthReviewSources
 import com.coparently.app.presentation.review.MonthReviewViewModel
+import com.coparently.app.presentation.school.ConnectSchoolViewModel
+import com.coparently.app.presentation.school.SchoolImportViewModel
 import com.coparently.app.presentation.settings.CalendarFeedViewModel
 import com.coparently.app.presentation.settings.SettingsViewModel
 import com.coparently.app.presentation.stickers.StickersViewModel
@@ -372,6 +375,25 @@ val parentingPlanUiModule: Module = module {
 }
 
 /**
+ * The communication record (MON-24 phase 2, Task 10; CLAUDE.md item 26): a period exported as CSV
+ * or PDF, registered for verification, of the family on screen, an earlier one or a kept thread.
+ * The file is rendered and saved through `RecordFileWriter`, which the app binds on Android
+ * (`PdfDocument`) and [platformDataModule] stands in for on the iPhone.
+ */
+val exportUiModule: Module = module {
+    viewModelOf(::ExportViewModel)
+}
+
+/**
+ * The school import (MON-24 phase 2, Task 10; CLAUDE.md item 35): connecting a Bakaláři account
+ * for one child in one family, and the connections with their imports.
+ */
+val schoolUiModule: Module = module {
+    viewModelOf(::ConnectSchoolViewModel)
+    viewModelOf(::SchoolImportViewModel)
+}
+
+/**
  * Every module of the UI both apps run, grouped by feature as [dataModules] is. The app's
  * `appModules` includes them, with [platformUiModule]; the iPhone app's will (phase 3). The
  * ViewModels move here group by group (Task 10's slices); a screen still in the app resolves a moved
@@ -406,7 +428,9 @@ val uiModules: List<Module> = listOf(
     friendsUiModule,
     guestsUiModule,
     professionalsUiModule,
-    parentingPlanUiModule
+    parentingPlanUiModule,
+    exportUiModule,
+    schoolUiModule
 )
 
 /**

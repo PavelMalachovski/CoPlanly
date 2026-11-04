@@ -87,7 +87,7 @@ class ExportFileWriterTest {
         assertTrue("the column header is a record of its own", rows.any { it == labels.columns.all() })
 
         assertEquals(exported.mimeType, "text/csv")
-        assertEquals(text, readThroughProvider(exported.uri))
+        assertEquals(text, readThroughProvider(exported.contentUri))
     }
 
     @Test
@@ -122,7 +122,7 @@ class ExportFileWriterTest {
 
         assertTrue(File(context.cacheDir, "exports/coplanly-record-$FROM-$TO.pdf").exists())
         assertEquals("application/pdf", exported.mimeType)
-        val descriptor = requireNotNull(context.contentResolver.openFileDescriptor(exported.uri, "r"))
+        val descriptor = requireNotNull(context.contentResolver.openFileDescriptor(exported.contentUri, "r"))
         PdfRenderer(descriptor).use { renderer ->
             assertTrue("page count", renderer.pageCount >= 1)
             renderer.openPage(0).use { page ->
@@ -141,12 +141,12 @@ class ExportFileWriterTest {
         assertEquals(Intent.ACTION_SEND, intent.action)
         assertEquals("text/csv", intent.type)
         val stream = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
-        assertEquals(exported.uri, stream)
-        assertEquals("content", exported.uri.scheme)
-        assertEquals("${context.packageName}.fileprovider", exported.uri.authority)
+        assertEquals(exported.contentUri, stream)
+        assertEquals("content", exported.contentUri.scheme)
+        assertEquals("${context.packageName}.fileprovider", exported.contentUri.authority)
         assertTrue((intent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION) != 0)
         assertFalse((intent.flags and Intent.FLAG_GRANT_WRITE_URI_PERMISSION) != 0)
-        assertEquals(exported.uri, requireNotNull(intent.clipData).getItemAt(0).uri)
+        assertEquals(exported.contentUri, requireNotNull(intent.clipData).getItemAt(0).uri)
     }
 
     private fun readThroughProvider(uri: Uri): String =

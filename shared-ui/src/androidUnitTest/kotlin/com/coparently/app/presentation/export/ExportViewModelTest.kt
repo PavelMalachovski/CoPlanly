@@ -1,16 +1,15 @@
 package com.coparently.app.presentation.export
 
-import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.cash.turbine.test
 import com.coparently.app.data.chat.DepartedThreadSource
 import com.coparently.app.data.export.CommunicationRecordSource
-import com.coparently.app.data.export.ExportFileWriter
 import com.coparently.app.data.export.ExportReceipts
 import com.coparently.app.data.export.ExportedFile
 import com.coparently.app.data.export.OptionalRecordSections
 import com.coparently.app.data.export.ParentingPlanRecordSource
+import com.coparently.app.data.export.RecordFileWriter
 import com.coparently.app.data.local.dao.KnownFamilyDao
 import com.coparently.app.data.local.entity.KnownFamilyEntity
 import com.coparently.app.domain.chat.DepartedThread
@@ -48,6 +47,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDate
 import org.junit.After
 import org.junit.Before
@@ -79,7 +79,7 @@ class ExportViewModelTest {
     private val source = mockk<CommunicationRecordSource>()
     private val planSource = mockk<ParentingPlanRecordSource>()
     private val journal = mockk<JournalRepository>()
-    private val writer = mockk<ExportFileWriter>()
+    private val writer = mockk<RecordFileWriter>()
     private val receipts = mockk<ExportReceipts>()
     private val userRepository = mockk<UserRepository>()
     private val departedThreads = mockk<DepartedThreadSource>()
@@ -178,26 +178,26 @@ class ExportViewModelTest {
         val state = viewModel().state.value
         val today = LocalDate.now(ZoneId.systemDefault())
 
-        assertEquals(today, state.to)
-        assertEquals(today.minusMonths(3), state.from)
+        assertEquals(today, state.to.toJavaLocalDate())
+        assertEquals(today.minusMonths(3), state.from.toJavaLocalDate())
     }
 
     @Test
     fun `a start moved past the end takes the end with it, and the other way round`() {
         val vm = viewModel()
 
-        vm.setTo(LocalDate.of(2026, 3, 31))
-        vm.setFrom(LocalDate.of(2026, 4, 10))
-        assertEquals(LocalDate.of(2026, 4, 10), vm.state.value.to)
+        vm.setTo(LocalDate.of(2026, 3, 31).toKotlinLocalDate())
+        vm.setFrom(LocalDate.of(2026, 4, 10).toKotlinLocalDate())
+        assertEquals(LocalDate.of(2026, 4, 10), vm.state.value.to.toJavaLocalDate())
 
-        vm.setTo(LocalDate.of(2026, 1, 5))
-        assertEquals(LocalDate.of(2026, 1, 5), vm.state.value.from)
+        vm.setTo(LocalDate.of(2026, 1, 5).toKotlinLocalDate())
+        assertEquals(LocalDate.of(2026, 1, 5), vm.state.value.from.toJavaLocalDate())
     }
 
     @Test
     fun `a CSV is built for the pair on screen and handed to the share sheet`() = runTest {
         val record = slot<CommunicationRecord>()
-        val file = ExportedFile(mockk<Uri>(), "text/csv")
+        val file = ExportedFile("content://test/record", "text/csv")
         coEvery { writer.save(any(), capture(record), ExportFormat.CSV) } returns file
         val parents = testParentsSource(me, partner = partner)
         namesReady(parents, coParentUid = "u2")
@@ -234,7 +234,7 @@ class ExportViewModelTest {
             role = "dad"
         )
         val record = slot<CommunicationRecord>()
-        coEvery { writer.save(any(), capture(record), any()) } returns ExportedFile(mockk<Uri>(), "text/csv")
+        coEvery { writer.save(any(), capture(record), any()) } returns ExportedFile("content://test/record", "text/csv")
         val parents = testParentsSource(me, partner = partner, onScreen = carol)
         namesReady(parents, coParentUid = "u3")
         val vm = viewModel(partnerOnScreen = carol, serverPartner = partner, parents = parents)
@@ -251,7 +251,7 @@ class ExportViewModelTest {
 
     @Test
     fun `a PDF goes through the PDF writer`() = runTest {
-        val file = ExportedFile(mockk<Uri>(), "application/pdf")
+        val file = ExportedFile("content://test/record", "application/pdf")
         coEvery { writer.save(any(), any(), ExportFormat.PDF) } returns file
         val vm = viewModel()
 
@@ -312,7 +312,7 @@ class ExportViewModelTest {
     @Test
     fun `the plan is included by default, read for the pair on screen`() = runTest {
         val record = slot<CommunicationRecord>()
-        coEvery { writer.save(any(), capture(record), any()) } returns ExportedFile(mockk<Uri>(), "text/csv")
+        coEvery { writer.save(any(), capture(record), any()) } returns ExportedFile("content://test/record", "text/csv")
         val vm = viewModel()
         assertEquals(true, vm.state.value.includePlan)
 
@@ -328,7 +328,7 @@ class ExportViewModelTest {
     @Test
     fun `a plan left out is not read, and the record carries none`() = runTest {
         val record = slot<CommunicationRecord>()
-        coEvery { writer.save(any(), capture(record), any()) } returns ExportedFile(mockk<Uri>(), "text/csv")
+        coEvery { writer.save(any(), capture(record), any()) } returns ExportedFile("content://test/record", "text/csv")
         val vm = viewModel()
 
         vm.setIncludePlan(false)
@@ -346,7 +346,7 @@ class ExportViewModelTest {
     @Test
     fun `the journal is left out by default and not even read`() = runTest {
         val record = slot<CommunicationRecord>()
-        coEvery { writer.save(any(), capture(record), any()) } returns ExportedFile(mockk<Uri>(), "text/csv")
+        coEvery { writer.save(any(), capture(record), any()) } returns ExportedFile("content://test/record", "text/csv")
         val vm = viewModel()
         assertFalse(vm.state.value.includeJournal)
 
@@ -362,10 +362,10 @@ class ExportViewModelTest {
     @Test
     fun `a ticked journal carries this parent's own entries for the period, by name`() = runTest {
         val record = slot<CommunicationRecord>()
-        coEvery { writer.save(any(), capture(record), any()) } returns ExportedFile(mockk<Uri>(), "text/csv")
+        coEvery { writer.save(any(), capture(record), any()) } returns ExportedFile("content://test/record", "text/csv")
         val vm = viewModel()
-        val from = vm.state.value.from
-        val to = vm.state.value.to
+        val from = vm.state.value.from.toJavaLocalDate()
+        val to = vm.state.value.to.toJavaLocalDate()
         coEvery { journal.entriesBetween("u1", from.toKotlinLocalDate(), to.toKotlinLocalDate()) } returns listOf(
             JournalEntry(
                 id = "j1",
@@ -394,7 +394,7 @@ class ExportViewModelTest {
 
     @Test
     fun `a registered export hashes exactly the bytes it saves, under the id it prints`() = runTest {
-        val file = ExportedFile(mockk<Uri>(), "application/pdf")
+        val file = ExportedFile("content://test/record", "application/pdf")
         val saved = slot<ByteArray>()
         coEvery { receipts.reserve("u1__u2", any(), any(), ExportFormat.PDF) } returns RECORD_ID
         coEvery { receipts.register(any(), any(), any()) } returns true
@@ -413,7 +413,7 @@ class ExportViewModelTest {
 
     @Test
     fun `offline, the file says it is not registered and nothing is registered`() = runTest {
-        val file = ExportedFile(mockk<Uri>(), "text/csv")
+        val file = ExportedFile("content://test/record", "text/csv")
         val saved = slot<ByteArray>()
         coEvery { writer.save(capture(saved), any(), any()) } returns file
         val vm = viewModel()
@@ -429,7 +429,7 @@ class ExportViewModelTest {
 
     @Test
     fun `an id reserved but not registered is taken off the file before it is saved`() = runTest {
-        val file = ExportedFile(mockk<Uri>(), "application/pdf")
+        val file = ExportedFile("content://test/record", "application/pdf")
         val saved = slot<ByteArray>()
         coEvery { receipts.reserve(any(), any(), any(), any()) } returns RECORD_ID
         coEvery { receipts.register(any(), any(), any()) } returns false
@@ -447,7 +447,7 @@ class ExportViewModelTest {
 
     @Test
     fun `an account with no co-parent reserves under a blank family`() = runTest {
-        coEvery { writer.save(any(), any(), any()) } returns ExportedFile(mockk<Uri>(), "text/csv")
+        coEvery { writer.save(any(), any(), any()) } returns ExportedFile("content://test/record", "text/csv")
         val vm = viewModel(partnerOnScreen = null)
 
         vm.files.test {
@@ -464,7 +464,7 @@ class ExportViewModelTest {
     fun `with nobody paired, the thread the departed co-parent left is the one exported`() = runTest {
         val record = slot<CommunicationRecord>()
         coEvery { departedThreads.current("u1") } returns listOf(kept("u1__u9", "u9", "Vera"))
-        coEvery { writer.save(any(), capture(record), any()) } returns ExportedFile(mockk<Uri>(), "text/csv")
+        coEvery { writer.save(any(), capture(record), any()) } returns ExportedFile("content://test/record", "text/csv")
         val vm = viewModel(partnerOnScreen = null)
 
         vm.files.test {
@@ -483,7 +483,7 @@ class ExportViewModelTest {
     fun `the banner's thread is exported even while another family is on screen`() = runTest {
         val record = slot<CommunicationRecord>()
         coEvery { departedThreads.current("u1") } returns listOf(kept("u1__u9", "u9", ""))
-        coEvery { writer.save(any(), capture(record), any()) } returns ExportedFile(mockk<Uri>(), "text/csv")
+        coEvery { writer.save(any(), capture(record), any()) } returns ExportedFile("content://test/record", "text/csv")
         val vm = viewModel(thread = "u1__u9")
 
         vm.files.test {
@@ -503,7 +503,7 @@ class ExportViewModelTest {
         val record = slot<CommunicationRecord>()
         coEvery { knownFamilies.get("u1__u7") } returns
             KnownFamilyEntity("u1__u7", "u7", coParentName = "Zuzana", coParentSlot = "dad", updatedAtMillis = 1L)
-        coEvery { writer.save(any(), capture(record), any()) } returns ExportedFile(mockk<Uri>(), "text/csv")
+        coEvery { writer.save(any(), capture(record), any()) } returns ExportedFile("content://test/record", "text/csv")
         val vm = viewModel(family = "u1__u7")
 
         vm.files.test {
@@ -519,7 +519,7 @@ class ExportViewModelTest {
 
     @Test
     fun `an ordinary export does not read the kept threads at all`() = runTest {
-        coEvery { writer.save(any(), any(), any()) } returns ExportedFile(mockk<Uri>(), "text/csv")
+        coEvery { writer.save(any(), any(), any()) } returns ExportedFile("content://test/record", "text/csv")
         val vm = viewModel()
 
         vm.files.test {

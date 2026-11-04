@@ -957,6 +957,26 @@ Then the people outside the pair, and the plan:
   `recordException`. The app's `TestFamilyViewSource.kt` and `TestFamilyMembersSource.kt` were
   deleted (no user left); its `testParentsSource` stays for `FriendsScreenTest`.
 
+Then the export and the school import:
+- `ExportViewModel` (`exportUiModule`): new seam `data/export/RecordFileWriter` in `:shared-data`
+  (`render`, `save`), with `ExportedFile` moved beside it (`uri` a `String`); the app's
+  `ExportFileWriter` implements it (bound in `dataModule`) and keeps `PdfDocument` and the
+  `FileProvider`, and the app reads the URI back with `ExportedFile.contentUri` (`ExportScreen`'s
+  share intent, `ExportFileWriterTest`). `ExportUiState.from`/`to`, `setFrom`/`setTo` →
+  kotlinx-datetime (`ZoneId.systemDefault()` → `TimeZone.currentSystemDefault()`, `minusMonths(3)` →
+  `minus(3, DateTimeUnit.MONTH)`); `Log` → `logger`; `System.currentTimeMillis()` → `Clock.System`.
+  iPhone: `platformDataModule` binds `NoRecordFiles` (render and save throw `IOException`).
+- `ConnectSchoolViewModel` and `SchoolImportViewModel` (`schoolUiModule`): `lowercase(Locale.ROOT)` →
+  `lowercase()`. iPhone: `platformDataModule` binds `BakalariSchoolDirectory` over
+  `httpClient(HttpTimeouts.SCHOOL)`, as it binds `BakalariClient`.
+- A JVM `verify()` of `dataModules + uiModules` with the iPhone's bindings resolves (185
+  definitions), and fails without either new binding.
+- Screen edges: `ExportScreen` (`toJavaLocalDate()` into the picker, `toKotlinLocalDate()` out,
+  `UiText.Date(state.from)` directly; the share intent through `contentUri`).
+- Tests: the three to androidUnitTest; `ExportViewModelTest` mocks `RecordFileWriter`, its files carry
+  a URI string where they carried a mocked `Uri`, and its range assertions convert at the edge.
+- **Task 10 is done but for `AuthViewModel` and `SyncViewModel`** (Task 11's carried notes).
+
 ### Task 11: The screens to `commonMain`
 
 **Files:**
@@ -990,6 +1010,9 @@ Then the people outside the pair, and the plan:
 - While `platformDataModule` binds `NoPush` (as `PushRegistration`), the shared Settings screen must
   not offer the push switch on the iPhone: turning it on always fails there, which reads as a
   network error.
+- While `platformDataModule` binds `NoRecordFiles`, the shared export screen must not offer an
+  export on the iPhone (it always fails there); say instead that the record is made on Android for
+  now, or hide the row on the Family tab.
 - While `platformUiModule` binds `NoInviteQrCodes`, the shared pairing screen must not draw the QR
   frame on the iPhone (it would wait for a code that never comes); the code and the link are how an
   invitation leaves the phone there.

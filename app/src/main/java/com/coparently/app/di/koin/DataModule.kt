@@ -8,6 +8,7 @@ import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.dictation.OnDeviceSpeechDictation
 import com.coparently.app.data.export.ExportFileWriter
 import com.coparently.app.data.export.ExportVerifyAddress
+import com.coparently.app.data.export.RecordFileWriter
 import com.coparently.app.data.files.AndroidPickedFiles
 import com.coparently.app.data.files.FirebaseStorageBucket
 import com.coparently.app.data.files.PickedFiles
@@ -73,6 +74,8 @@ val dataModule = module {
     singleOf(::CrashlyticsManager)
     singleOf(::OnDeviceSpeechDictation)
     singleOf(::ExportFileWriter)
+    // The export's file, rendered and saved for the share sheet, which its ViewModel in `:shared-ui` asks for.
+    single<RecordFileWriter> { get<ExportFileWriter>() }
     // Where the export receipts in `:shared-data` say a file can be checked (MON-16).
     single<ExportVerifyAddress> { ExportVerifyAddress { BuildConfig.EXPORT_VERIFY_URL } }
     singleOf(::RecordPhotoImageLoader)

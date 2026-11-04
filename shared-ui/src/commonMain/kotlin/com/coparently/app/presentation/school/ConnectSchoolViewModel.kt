@@ -32,7 +32,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
-import java.util.Locale
 
 /** The steps of connecting a school, in order (MON-8). */
 enum class ConnectStep {
@@ -127,8 +126,8 @@ data class ConnectSchoolUiState(
     /** The towns whose name contains [townQuery], ignoring case. */
     val visibleTowns: List<SchoolTown>
         get() {
-            val query = townQuery.trim().lowercase(Locale.ROOT)
-            return if (query.isEmpty()) towns else towns.filter { query in it.name.lowercase(Locale.ROOT) }
+            val query = townQuery.trim().lowercase()
+            return if (query.isEmpty()) towns else towns.filter { query in it.name.lowercase() }
         }
 
     /** Whether the parent chooses the family: only when there are two or more. */
