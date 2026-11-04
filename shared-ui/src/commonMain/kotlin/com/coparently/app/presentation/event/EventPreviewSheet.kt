@@ -54,6 +54,7 @@ import com.coparently.app.presentation.common.RecordPlaceMark
 import com.coparently.app.presentation.common.placeOf
 import com.coparently.app.presentation.common.rememberRecordPhoto
 import com.coparently.app.presentation.platform.AppImage
+import com.coparently.app.presentation.platform.LocalPlatformImages
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
@@ -246,8 +247,15 @@ fun EventPreviewContent(
 
         // Only the family's two parents see an event's photo (L-4): a calendar friend or a
         // professional previews the same event without it, and a legacy download URL is never
-        // fetched — `rememberRecordPhoto` answers null for all three, and nothing is drawn.
-        rememberRecordPhoto(event.imageUrl, RecordPhotoKind.EVENT, event.id, event.familyId)?.let { photo ->
+        // fetched — `rememberRecordPhoto` answers null for all three, and nothing is drawn. Nor is
+        // anything drawn where the platform draws no images (the iPhone until phase 3), rather than
+        // an empty box that opens a black viewer.
+        val eventPhoto = if (LocalPlatformImages.current.available) {
+            rememberRecordPhoto(event.imageUrl, RecordPhotoKind.EVENT, event.id, event.familyId)
+        } else {
+            null
+        }
+        eventPhoto?.let { photo ->
             // Cropped to 180dp here, so the photo is a hint at what is attached rather than
             // the thing itself; tapping opens the zoomable viewer that shows all of it.
             var viewingPhoto by rememberSaveable { mutableStateOf(false) }

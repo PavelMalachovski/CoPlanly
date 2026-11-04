@@ -1190,13 +1190,14 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   with Kotlin 2.3 (metadata 2.3.0) like every release since 1.61.0, so it needs this project's
   Kotlin 2.3 or later. Never take a Roborazzi built with a newer Kotlin than the project's, because
   the compiler reads metadata at most one minor version ahead. Upgrade the two together. And **a private composable a test needs becomes
-  `internal`**, never public (`HandoverHero`, `StatTiles`, `TimelineRow`, `ChatThreadHeader`), and
-  a sheet's body is split out of the sheet (`EventPreviewContent`), because a `ModalBottomSheet`
-  opens its own window that a node capture does not see. **Once it moves to `:shared-ui` (Task 11),
-  what the app's tests call becomes public**, because `internal` stops at the module (slice 11a:
-  `TwoPane`'s `TWO_PANE_MAX_WIDTH`, `WIDE_COLUMN_MAX_WIDTH` and `WideColumn`; slice 11b:
-  `ChatThreadHeader`, `EventPreviewContent` and `eventTimeLine`, which the app's
-  `FriendEventDetails` reads). The screenshot frame
+  `internal`**, never public, while it is in the app (`HandoverHero`, `StatTiles`, `TimelineRow`),
+  and a sheet's body is split out of the sheet (`EventPreviewContent`), because a
+  `ModalBottomSheet` opens its own window that a node capture does not see. **Once it moves to
+  `:shared-ui` (Task 11), what the app calls across the module boundary becomes public** — its
+  tests and its own code alike — because `internal` stops at the module (slice 11a: `TwoPane`'s
+  `TWO_PANE_MAX_WIDTH`, `WIDE_COLUMN_MAX_WIDTH` and `WideColumn`; slice 11b: `ChatThreadHeader` and
+  `EventPreviewContent`, which the screenshots render, and `eventTimeLine`, which the app's main
+  code calls from `FriendEventDetails`). The screenshot frame
   provides the platform capabilities as the app does (`ProvideAndroidPlatform`), so a moved screen
   that reads one renders as it does on a phone. Every fixture date is pinned (May 2026,
   `ScreenshotFixtures`) so an image does not change with the calendar — keep it that way, or the

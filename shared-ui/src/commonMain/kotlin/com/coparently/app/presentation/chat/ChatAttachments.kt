@@ -199,6 +199,9 @@ internal fun ChatAttachmentBlock(
             .filter { ChatAttachmentCodec.belongsTo(it, message.conversationId, message.id) }
     }
     if (attachments.isEmpty()) return
+    // Where nothing can open a file (the iPhone until phase 3), the attachment stays as information
+    // and offers no tap that could only fail (design refresh item 8).
+    val canOpen = LocalOpenUrl.current.available
     val thumbnails by viewModel.thumbnails.collectAsState()
     val progress = viewModel.progress.collectAsState().value[message.id]
     val pending = isCurrentUser &&
@@ -211,7 +214,11 @@ internal fun ChatAttachmentBlock(
         attachments.forEach { attachment ->
             key(attachment.storagePath) {
                 LaunchedEffect(attachment.storagePath) { viewModel.requestThumbnail(message, attachment) }
-                val onOpen = { viewModel.open(message, attachment) }
+                val onOpen: (() -> Unit)? = if (canOpen) {
+                    { viewModel.open(message, attachment) }
+                } else {
+                    null
+                }
                 if (attachment.isImage) {
                     ImageAttachment(attachment, thumbnails[attachment.storagePath], onOpen)
                 } else {
@@ -224,14 +231,20 @@ internal fun ChatAttachmentBlock(
 }
 
 @Composable
-private fun ImageAttachment(attachment: ChatAttachment, file: Path?, onOpen: () -> Unit) {
+private fun ImageAttachment(attachment: ChatAttachment, file: Path?, onOpen: (() -> Unit)?) {
     val label = stringResource(Res.string.chat_attach_open, attachment.fileName)
     Box(
         modifier = Modifier
             .size(THUMBNAIL_SIZE)
             .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            .clickable(onClickLabel = label, role = Role.Image, onClick = onOpen),
+            .then(
+                if (onOpen != null) {
+                    Modifier.clickable(onClickLabel = label, role = Role.Image, onClick = onOpen)
+                } else {
+                    Modifier
+                }
+            ),
         contentAlignment = Alignment.Center
     ) {
         // The checked copy, where the platform draws images; else the image glyph, as while the
@@ -250,7 +263,7 @@ private fun ImageAttachment(attachment: ChatAttachment, file: Path?, onOpen: () 
 }
 
 @Composable
-private fun FileAttachment(attachment: ChatAttachment, onOpen: () -> Unit) {
+private fun FileAttachment(attachment: ChatAttachment, onOpen: (() -> Unit)?) {
     val fileDetails = LocalFileDetails.current
     val label = stringResource(Res.string.chat_attach_open, attachment.fileName)
     Row(
@@ -258,7 +271,13 @@ private fun FileAttachment(attachment: ChatAttachment, onOpen: () -> Unit) {
             .widthIn(max = THUMBNAIL_SIZE * 2)
             .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            .clickable(onClickLabel = label, role = Role.Button, onClick = onOpen)
+            .then(
+                if (onOpen != null) {
+                    Modifier.clickable(onClickLabel = label, role = Role.Button, onClick = onOpen)
+                } else {
+                    Modifier
+                }
+            )
             .padding(horizontal = Spacing.M, vertical = Spacing.M),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.S)

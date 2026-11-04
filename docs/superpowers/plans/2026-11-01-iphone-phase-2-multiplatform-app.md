@@ -1158,6 +1158,16 @@ Then the export and the school import:
     (androidUnitTest) holds the money seam to `currencyFormat`; `ReaderDateTextTest` holds
     `readerMediumDate` to `FormatStyle.MEDIUM`.
 
+**Slice 11c notes (November 2026).** The calendar's and the events' screens.
+- First, the 11b review's four notes: the event preview draws its photo only where
+  `PlatformImages` is available (the iPhone's `NoImages` no longer leaves an empty box that opens a
+  black viewer); a chat attachment is tappable only where `OpenUrl` is available, and stays as
+  information otherwise; the iPhone's `ReaderMoneyText` writes an amount with no currency as
+  `BigDecimal.toPlainString()` does (the scale kept: "12.50", where `NSDecimalNumber` gave "12.5"),
+  and reads it in the POSIX locale, held on both platforms by `ReaderMoneyPlainTextTest`
+  (commonTest); CLAUDE.md's screenshots paragraph no longer gives `ChatThreadHeader` as an
+  `internal` example.
+
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 
 **Files:**
