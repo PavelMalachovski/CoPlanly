@@ -1010,15 +1010,20 @@ widget's own `RemoteViews` in each variant. What only a phone shows:
 - [ ] Leave the phone past midnight, or move the date forward a day in the system settings.
       Within minutes the widget shows the new day.
 - [ ] Switch the **system** to dark theme, and the widget follows it. Switch the app's own theme
-      setting instead, and the widget does not: the launcher draws it.
+      setting instead, and the widget does not: it follows the system's night mode.
 - [ ] Tap the widget, and the app opens.
 - [ ] Sign out. The widget says "Sign in to CoPlanly to see your day." and names nobody. Sign in
       as another account: until that account's app has been opened once, the widget names nobody
       from the first account.
-- [ ] On Android 13+, set the app's language to Russian: the widget speaks Russian. On Android 12
-      and older it follows the device language, as pushes do.
+- [ ] Set the app's language to Russian (Settings → Language): the widget speaks Russian within a
+      few seconds, on any Android version. Back to **System default** (on Android 12 or older the
+      app restarts): the widget speaks the rule's language again (§3.6).
+- [ ] With the app on System default and its process stopped (force-stop it), change the
+      **phone's** first language between Czech and German in system settings: the widget follows
+      within a few seconds, without the app being opened. If it does not, note how long it took
+      (the next sync tick, midnight or the hourly backstop redraws it at the latest).
 - **If it fails:** `presentation/widget/` — `TodayWidget.kt` (loading, the redraw stamp),
-  `TodayWidgetRefresher.kt` (Room observer, names, midnight), `TodayWidgetLines.kt` (`TodayWidgetText`, the wording);
+  `TodayWidgetRefresher.kt` (Room observer, names, language, midnight), `TodayWidgetLines.kt` (`TodayWidgetText`, the wording);
   `res/xml/today_widget_info.xml`.
 
 ### 3.16 The tour's defects, fixed in week 7 · 1P, "Later" check 2P

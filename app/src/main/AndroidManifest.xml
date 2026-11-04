@@ -165,6 +165,10 @@
             android:label="@string/widget_today_name">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <!-- The phone's language changed: Glance's receiver redraws every widget, and the
+                     process it starts redraws them through TodayWidgetRefresher.start when their
+                     lines were worded in another language (design item 18). -->
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"

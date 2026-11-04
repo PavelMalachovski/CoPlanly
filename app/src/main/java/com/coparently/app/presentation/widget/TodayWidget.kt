@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.GlanceTheme
 import androidx.glance.LocalContext
@@ -31,6 +32,7 @@ import com.coparently.app.presentation.MainActivity
 import com.coparently.app.presentation.common.STACK_CONTROLS_FONT_SCALE
 import com.coparently.app.presentation.theme.DarkColorScheme
 import com.coparently.app.presentation.theme.LightColorScheme
+import com.coparently.app.utils.AppLocale
 import com.coparently.app.utils.inAppLanguage
 import kotlinx.coroutines.flow.first
 import kotlinx.datetime.toKotlinLocalDateTime
@@ -49,8 +51,9 @@ import java.time.LocalDate
  * keeps while it is open, because that name lives in Firestore alone.
  *
  * It is redrawn by [TodayWidgetRefresher] — when events or the custody schedule change in Room,
- * when the parents' names change, just after midnight — and hourly by the system as a backstop
- * (`updatePeriodMillis` in `res/xml/today_widget_info.xml`). A tap opens the app.
+ * when the parents' names change, when the language the app speaks changes, just after midnight —
+ * and hourly by the system as a backstop (`updatePeriodMillis` in `res/xml/today_widget_info.xml`).
+ * A tap opens the app.
  *
  * Home screen only (`widgetCategory="home_screen"`): the family's day is not for a lock screen.
  */
@@ -81,6 +84,12 @@ class TodayWidget : GlanceAppWidget() {
 
         /** Written by [refreshAll]; a changed value makes an open session reload its lines. */
         private val REFRESH_STAMP = longPreferencesKey("today_widget_refresh")
+
+        /**
+         * The language [refreshAll] last asked the lines for (a BCP 47 tag), which
+         * [refreshIfLanguageChanged] compares with the one the app speaks now.
+         */
+        private val WORDED_IN = stringPreferencesKey("today_widget_language")
 
         /**
          * Today, read from this device's Room and worded in [context]'s language — what the widget
@@ -114,15 +123,41 @@ class TodayWidget : GlanceAppWidget() {
         /** Redraws every placed Today widget. Does nothing when none is placed. */
         suspend fun refreshAll(context: Context) {
             val widget = TodayWidget()
+            val language = AppLocale.effective(context).toLanguageTag()
             GlanceAppWidgetManager(context).getGlanceIds(TodayWidget::class.java).forEach { id ->
-                updateAppWidgetState(context, id) { it[REFRESH_STAMP] = System.currentTimeMillis() }
+                updateAppWidgetState(context, id) {
+                    it[REFRESH_STAMP] = System.currentTimeMillis()
+                    it[WORDED_IN] = language
+                }
                 widget.update(context, id)
             }
+        }
+
+        /**
+         * Redraws every placed Today widget when one was last asked for its lines in a language
+         * other than the one the app speaks now ([AppLocale]), or was never asked through
+         * [refreshAll] at all (a widget placed or last drawn by the system alone). Nothing
+         * happens when none is placed, or when every one already speaks it.
+         */
+        suspend fun refreshIfLanguageChanged(context: Context) {
+            val widget = TodayWidget()
+            val language = AppLocale.effective(context).toLanguageTag()
+            val wordedIn = GlanceAppWidgetManager(context).getGlanceIds(TodayWidget::class.java)
+                .map { id -> widget.getAppWidgetState<Preferences>(context, id)[WORDED_IN] }
+            if (needsLanguageRedraw(wordedIn, language)) refreshAll(context)
         }
 
         private fun entryPoint(): TodayWidgetEntryPoint = TodayWidgetEntryPoint()
     }
 }
+
+/**
+ * Whether placed widgets whose lines were last asked for in [wordedIn] (one tag per widget, null
+ * for one never redrawn through `refreshAll`) need redrawing for an app that speaks [speaksNow]:
+ * when any of them speaks another, or is not known to speak it. None placed, none to redraw.
+ */
+internal fun needsLanguageRedraw(wordedIn: List<String?>, speaksNow: String): Boolean =
+    wordedIn.any { it != speaksNow }
 
 /** What the widget reads, from the app's Koin graph: the widget itself is not built by Koin. */
 class TodayWidgetEntryPoint : KoinComponent {

@@ -279,8 +279,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         // While the app is on screen, the Today widget learns the parents' names from the same
-        // source every screen uses; the widget itself cannot reach the co-parent's.
+        // source every screen uses; the widget itself cannot reach the co-parent's. And its lines
+        // follow a per-app language chosen below Android 13, which recreates this activity and
+        // reaches no other callback.
         todayWidgetRefresher.followParents(this)
+        todayWidgetRefresher.followLanguage()
 
         // Enable edge-to-edge display for modern Android UI
         // This makes the app draw behind the system bars

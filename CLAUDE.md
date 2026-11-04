@@ -387,7 +387,12 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     cleared with them and refused for another uid). Never attach `ParentsSource` from a widget
     update, which would cost four Firestore listeners for a label. **Every redraw has a trigger**:
     a Room write to `events`, `custody_models` or `users` (the invalidation tracker, debounced; the
-    signed-in parent's row says which family's schedule is drawn), a change of names, a unique
+    signed-in parent's row says which family's schedule is drawn), a change of names, a change of
+    the language the app speaks (`TodayWidgetRefresher.followLanguage`: each widget's state records
+    the language `refreshAll` last asked its lines in, compared at every process start, every
+    configuration change and every `MainActivity.onCreate` — a per-app choice below 13 reaches no
+    other callback, and "System default" there restarts the process; the receiver also takes
+    `LOCALE_CHANGED`, which starts a process when the phone's language changes), a unique
     periodic work a minute past midnight, and hourly `updatePeriodMillis` as the backstop. A table the widget starts to read joins `WATCHED_TABLES`. **Nothing the schema does
     not hold**: a handover is a day and a person, never an hour, as on Home. It is home-screen
     only. It adds no XML layout: `initialLayout` is Glance's own, and the picker preview is a

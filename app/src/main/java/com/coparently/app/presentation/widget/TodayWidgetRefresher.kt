@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * which does nothing when no widget is placed, so none of this costs a device without one more
  * than a Room observer.
  *
- * Three triggers, each for a fact the widget shows:
+ * Four triggers, each for a fact the widget shows:
  * - **Room** ([start]): an event or the custody schedule changed — a parent's own edit, the
  *   co-parent's arriving by sync, an accepted swap — or the signed-in parent's row did, whose
  *   family on screen decides which family's schedule is drawn (schema 45). Observed through
@@ -48,6 +48,10 @@ import java.util.concurrent.atomic.AtomicBoolean
  *   [ParentsSource] loads are remembered for the widget by [TodayWidgetNames], and a change
  *   redraws it. Only while on screen, because that source attaches Firestore listeners and must
  *   be let go in the background, as every screen already does.
+ * - **The language** ([followLanguage]): the lines are worded in the language the app speaks
+ *   (`AppLocale`), which a change of the phone's languages or of the per-app choice moves with
+ *   nothing written in Room. Checked against the language the widget was last redrawn in, which
+ *   its own state records, so a change made while no process ran is caught at the next start.
  * - **Midnight** ([TodayWidgetMidnight]): "today" moves on with nothing written anywhere.
  */
 class TodayWidgetRefresher(
@@ -59,15 +63,31 @@ class TodayWidgetRefresher(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val started = AtomicBoolean(false)
 
-    /** Starts redrawing on Room changes; from `CoPlanlyApplication.onCreate`, once per process. */
+    /**
+     * Starts redrawing on Room changes, and redraws now if the language moved since the last
+     * redraw ([followLanguage]); from `CoPlanlyApplication.onCreate`, once per process.
+     */
     @OptIn(FlowPreview::class)
     fun start() {
         if (!started.compareAndSet(false, true)) return
+        followLanguage()
         scope.launch {
             roomChanges()
                 .debounce(REDRAW_DEBOUNCE_MS)
                 .collect { redraw() }
         }
+    }
+
+    /**
+     * Redraws the widget if it was last redrawn in a language other than the one the app speaks
+     * now ([TodayWidget.refreshIfLanguageChanged]). From [start] (a process start: the phone's
+     * language changed while no process ran — `LOCALE_CHANGED` starts one — or "System default"
+     * below Android 13 restarted the app), `CoPlanlyApplication.onConfigurationChanged` (the
+     * phone's language, or a per-app choice on Android 13 and later) and `MainActivity.onCreate`
+     * (a per-app choice below 13, which recreates the activities and changes nothing else).
+     */
+    fun followLanguage() {
+        scope.launch { redraw { TodayWidget.refreshIfLanguageChanged(context) } }
     }
 
     /**
@@ -85,9 +105,9 @@ class TodayWidgetRefresher(
         }
     }
 
-    private suspend fun redraw() {
+    private suspend fun redraw(draw: suspend () -> Unit = { TodayWidget.refreshAll(context) }) {
         try {
-            TodayWidget.refreshAll(context)
+            draw()
         } catch (e: CancellationException) {
             throw e
         } catch (e: IOException) {

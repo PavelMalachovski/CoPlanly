@@ -128,11 +128,12 @@ class CoPlanlyApplication : Application(), Configuration.Provider, ImageLoaderFa
     /**
      * The framework has just reset the default locale to the one Android's resources resolved
      * (`ConfigurationController.updateLocaleListFromAppContext`, before it calls back here): put
-     * the app's own back.
+     * the app's own back. The Today widget's lines follow the language too.
      */
     override fun onConfigurationChanged(newConfig: AndroidConfiguration) {
         super.onConfigurationChanged(newConfig)
         AppLocale.follow(this)
+        todayWidgetRefresher.followLanguage()
     }
 
     /**
