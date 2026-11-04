@@ -1551,6 +1551,18 @@ Then the export and the school import:
   `rememberUiTextResolver`; `GuestInviteSheet.onShare` nullable, no button where unavailable). The
   child/pet `DatePickerDialog` is kotlinx-datetime now (`LocalDatePickerDialogTest` and
   `PickerDatesTest` convert their `java.time` fixtures at the call).
+- Group 3, the vault, the export and the journal: `documents/FamilyDocumentsScreen.kt`,
+  `FamilyDocumentsContent.kt`, `export/ExportScreen.kt`, `journal/JournalListScreen.kt`,
+  `JournalEditorScreen.kt`. Replaced: the vault's `OpenDocument`/`TakePicture`/`RequestPermission`
+  launchers → `FilePicker.rememberDocumentPicker` and `CameraCapture.rememberCapture(SHARED_FILE)`
+  (each button only where available; `NoCameraApp` → the same message), `openSharedFile` →
+  `OpenUrl.openFile`, `Formatter.formatShortFileSize` → `FileDetails.formatSize`, the row's date →
+  `readerMediumDate`; the export's `Intent.createChooser(recordShareIntent(file))` →
+  `ShareSheet.shareFile` (its Android half now builds through `fileShareIntent`, which the app's
+  `recordShareIntent`, kept for `ExportFileWriterTest`, also calls), its pickers kotlinx without
+  conversion. Carried note: `RecordFileWriter.available` (default true; `NoRecordFiles` false),
+  `ExportViewModel.exportAvailable`; no format rows where it or the share sheet is unavailable.
+  `JavaPickerDates.kt` deleted (no caller left).
 
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 

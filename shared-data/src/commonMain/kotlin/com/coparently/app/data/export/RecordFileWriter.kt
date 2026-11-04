@@ -26,6 +26,13 @@ data class ExportedFile(val uri: String, val mimeType: String)
  */
 interface RecordFileWriter {
 
+    /**
+     * Whether this phone draws and saves a record at all. The export screen offers its formats only
+     * when it does (design item 8): the app's `ExportFileWriter` on Android always does; the iPhone's
+     * stand-in does not yet (MON-24 phase 2, slice 11g).
+     */
+    val available: Boolean get() = true
+
     /** The file's exact bytes, before anything is written. */
     suspend fun render(record: CommunicationRecord, labels: RecordLabels, format: ExportFormat): ByteArray
 

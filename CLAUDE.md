@@ -1662,7 +1662,8 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              sign-in's and the profile's (presentation/auth/, presentation/profile/) with
              AuthViewModel; and, from slice 11g, Home's, the month review's and the stickers'
              screens (presentation/home/, presentation/review/, presentation/stickers/), then the
-             family's records (presentation/childinfo/, pets/, contacts/, guests/).
+             family's records (presentation/childinfo/, pets/, contacts/, guests/), then the
+             vault's, the export's and the journal's (presentation/documents/, export/, journal/).
              It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
@@ -1682,8 +1683,8 @@ presentation/ — Compose screens per feature not moved yet (slice 11g), MainAct
              since slice 11f), and so are chat's, the event form's, the calendar's, custody's, the
              requests', the family's, the expenses', child support's, Settings', pairing's,
              onboarding's, the sign-in's, the profile's, Home's, the month review's, the
-             stickers', the child and pet records', the contacts' and the guest's screens (Task 11,
-             slices 11b–11g); the
+             stickers', the child and pet records', the contacts', the guest's, the vault's, the
+             export's and the journal's screens (Task 11, slices 11b–11g); the
              app keeps their previews and the Android halves of the platform interfaces
              (presentation/platform/, the language picker's AndroidAppLanguages, Google's
              sign-in's AndroidGoogleCalendarSignIn, the credential sheets' AndroidCredentialSignIn
@@ -2065,10 +2066,11 @@ move with the screens that pass them ids. **Slice
 11c moved the calendar's and the event form's helpers** onto kotlinx-datetime and `StringResource`,
 packages unchanged: `Today` (`rememberToday()` and `LocalFixedToday` are kotlinx-datetime days; the
 app's `JavaToday.kt` gave the screens that still held a `java.time.LocalDate` the same state
-converted, until the calendar's move left it no caller), `PickerDates` (the UTC rule in kotlinx-datetime; `JavaPickerDates.kt` in
-the app keeps a `java.time` overload of `LocalDatePickerDialog` and of `PickerDates.toPickerMillis`,
-and `fromPickerMillisJava`, each calling the shared one, for the export, the child records' picker
-and two androidTest classes; expenses left it in slice 11e), `components/TimePicker`
+converted, until the calendar's move left it no caller), `PickerDates` (the UTC rule in kotlinx-datetime; the app's
+`JavaPickerDates.kt`, a `java.time` overload of `LocalDatePickerDialog` and of
+`PickerDates.toPickerMillis` and `fromPickerMillisJava`, served the screens that held a
+`java.time.LocalDate` until slice 11g moved its last callers, and was deleted then; the two
+androidTest classes convert their fixtures at the call), `components/TimePicker`
 (`TimePickerDialog` on a kotlinx `LocalTime`, its dial's 12/24 hours `ClockFormat.is24Hour`, which
 `MainActivity` follows from `DateFormat.is24HourFormat` of the activity; the app's `java.time`
 overload went with its last caller, the change request form, in slice 11d, and the previews are the
@@ -2305,6 +2307,22 @@ on Android, of the instant's day in the system zone). The contacts dial through 
 through `ShareSheet` (its message worded through `rememberUiTextResolver` at the tap), and the guest
 sheet offers no Share button where there is none (`GuestInviteSheet`'s `onShare` is null then); the
 app's `guestShareIntent` is gone.
+**Then the vault, the export and the journal** (slice 11g): `presentation/documents/`
+(`FamilyDocumentsScreen`, `FamilyDocumentsContent`), `export/ExportScreen.kt` and `journal/`
+(`JournalListScreen`, `JournalEditorScreen`). The vault's document picker and camera go through
+`FilePicker.rememberDocumentPicker` (`SharedFilePolicy.CONTENT_TYPES`) and
+`CameraCapture.rememberCapture(CaptureTarget.SHARED_FILE)` (the same `OpenDocument`, `TakePicture`
+into `cache/shared_files/capture/` and CAMERA permission the screen built), each button drawn only
+where its capability is available (the bar not at all when neither is), a missing camera app the
+same "camera unavailable" message; a document opens through `OpenUrl.openFile`, its size through
+`FileDetails.formatSize`, its day through `readerMediumDate`, and a category's label is a
+`StringResource`. The export's range is kotlinx-datetime throughout (no conversion at the pickers),
+and a finished file goes to `ShareSheet.shareFile`, whose Android half builds the intent the screen
+built (`fileShareIntent` in `AndroidPlatform.kt`; the app keeps `recordShareIntent(file)` over it in
+`presentation/export/RecordShareIntent.kt` for `ExportFileWriterTest`). **The export offers its
+formats only where the phone draws and shares the file** (`RecordFileWriter.available`, new, true
+by default; the iPhone's `NoRecordFiles` says false; `ExportViewModel.exportAvailable`, and
+`ShareSheet.available`), the carried note's hiding.
 **A Robolectric test runs `RobolectricTestApplication`**
 (`app/src/test/.../testing/`, `@Config(application = …)`): Robolectric installs no content
 provider from the manifest, so it hands Compose Multiplatform's resource reader the context its

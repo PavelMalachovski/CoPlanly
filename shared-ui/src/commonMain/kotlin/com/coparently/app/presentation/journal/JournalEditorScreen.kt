@@ -31,9 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.SectionGroup
@@ -44,6 +42,20 @@ import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_back
+import com.coparently.app.resources.journal_delete
+import com.coparently.app.resources.journal_delete_confirm_message
+import com.coparently.app.resources.journal_delete_confirm_title
+import com.coparently.app.resources.journal_editor_edit_title
+import com.coparently.app.resources.journal_editor_new_title
+import com.coparently.app.resources.journal_editor_notice
+import com.coparently.app.resources.journal_entry_date
+import com.coparently.app.resources.journal_entry_text
+import com.coparently.app.resources.journal_pick_cancel
+import com.coparently.app.resources.journal_pick_ok
+import com.coparently.app.resources.journal_save
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -76,8 +88,8 @@ fun JournalEditorScreen(
     if (picking) {
         LocalDatePickerDialog(
             initialDate = state.entryDate,
-            confirmLabel = stringResource(R.string.journal_pick_ok),
-            dismissLabel = stringResource(R.string.journal_pick_cancel),
+            confirmLabel = stringResource(Res.string.journal_pick_ok),
+            dismissLabel = stringResource(Res.string.journal_pick_cancel),
             onConfirm = { date ->
                 viewModel.setDate(date)
                 picking = false
@@ -106,7 +118,7 @@ fun JournalEditorScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             StickyActionBar(
-                label = stringResource(R.string.journal_save),
+                label = stringResource(Res.string.journal_save),
                 onClick = viewModel::save,
                 enabled = state.canSave,
                 busy = state.saving
@@ -130,9 +142,9 @@ fun JournalEditorScreen(
 @Composable
 private fun DeleteEntryDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     ConfirmationDialog(
-        title = stringResource(R.string.journal_delete_confirm_title),
-        message = stringResource(R.string.journal_delete_confirm_message),
-        confirmText = stringResource(R.string.journal_delete),
+        title = stringResource(Res.string.journal_delete_confirm_title),
+        message = stringResource(Res.string.journal_delete_confirm_message),
+        confirmText = stringResource(Res.string.journal_delete),
         onConfirm = onConfirm,
         onDismiss = onDismiss,
         isDestructive = true
@@ -157,14 +169,14 @@ private fun EditorForm(
         verticalArrangement = Arrangement.spacedBy(Spacing.L)
     ) {
         Text(
-            text = stringResource(R.string.journal_editor_notice),
+            text = stringResource(Res.string.journal_editor_notice),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         SectionGroup {
             SectionRow(
                 icon = Icons.Default.DateRange,
-                title = stringResource(R.string.journal_entry_date),
+                title = stringResource(Res.string.journal_entry_date),
                 supporting = UiText.Date(state.entryDate).asString(),
                 onClick = onPickDate.takeIf { editable }
             )
@@ -172,7 +184,7 @@ private fun EditorForm(
         OutlinedTextField(
             value = state.text,
             onValueChange = onTextChange,
-            label = { Text(stringResource(R.string.journal_entry_text)) },
+            label = { Text(stringResource(Res.string.journal_entry_text)) },
             enabled = editable,
             modifier = Modifier
                 .fillMaxWidth()
@@ -182,7 +194,7 @@ private fun EditorForm(
         if (!state.isNew) {
             SectionGroup {
                 SectionRow(
-                    title = stringResource(R.string.journal_delete),
+                    title = stringResource(Res.string.journal_delete),
                     icon = Icons.Default.Delete,
                     iconTint = MaterialTheme.colorScheme.error,
                     titleColor = MaterialTheme.colorScheme.error,
@@ -199,13 +211,15 @@ private fun EditorForm(
 private fun EditorTopBar(isNew: Boolean, onNavigateUp: () -> Unit) {
     TopAppBar(
         title = {
-            Text(stringResource(if (isNew) R.string.journal_editor_new_title else R.string.journal_editor_edit_title))
+            Text(
+                stringResource(if (isNew) Res.string.journal_editor_new_title else Res.string.journal_editor_edit_title)
+            )
         },
         navigationIcon = {
             IconButton(onClick = onNavigateUp) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.common_back)
+                    contentDescription = stringResource(Res.string.common_back)
                 )
             }
         }

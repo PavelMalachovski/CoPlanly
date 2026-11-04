@@ -303,12 +303,15 @@ internal object NoReceiptText : ReceiptTextRecognizer {
 /**
  * No communication record's file yet (slice 10f: the export's ViewModel asks for it): the PDF is
  * drawn with Android's `PdfDocument` and the file handed to its share sheet, and the iPhone has
- * neither yet, so rendering fails and nothing is saved. The export screen then says the export
- * failed, which is true. An id reserved before the render is left with no hash, as after any failed
- * export on Android, and no file names it (MON-16); the server sweeps such reservations after seven
- * days (Legal item 6). Replace it when the iPhone draws a PDF and shares a file.
+ * neither yet, so it says it is not [available] and the export screen offers no format (slice 11g);
+ * were it asked anyway, rendering fails, nothing is saved and the screen says the export failed.
+ * An id reserved before the render is left with no hash, as after any failed export on Android,
+ * and no file names it (MON-16); the server sweeps such reservations after seven days (Legal item
+ * 6). Replace it when the iPhone draws a PDF and shares a file.
  */
 internal object NoRecordFiles : RecordFileWriter {
+    override val available: Boolean = false
+
     override suspend fun render(record: CommunicationRecord, labels: RecordLabels, format: ExportFormat): ByteArray =
         throw IOException(UNAVAILABLE)
 

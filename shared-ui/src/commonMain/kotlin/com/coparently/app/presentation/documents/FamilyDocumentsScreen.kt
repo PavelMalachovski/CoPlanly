@@ -1,11 +1,5 @@
 package com.coparently.app.presentation.documents
 
-import android.Manifest
-import android.content.ActivityNotFoundException
-import android.content.pm.PackageManager
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -33,23 +27,31 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import androidx.core.content.ContextCompat
-import com.coparently.app.R
 import com.coparently.app.domain.documents.FamilyDocument
 import com.coparently.app.domain.files.SharedFilePolicy
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.SideBySideOrStacked
 import com.coparently.app.presentation.common.asString
-import com.coparently.app.presentation.common.newSharedFileCaptureUri
-import com.coparently.app.presentation.common.openSharedFile
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberUiTextResolver
+import com.coparently.app.presentation.platform.CameraCapture
+import com.coparently.app.presentation.platform.CaptureResult
+import com.coparently.app.presentation.platform.CaptureTarget
+import com.coparently.app.presentation.platform.LocalCameraCapture
+import com.coparently.app.presentation.platform.LocalFilePicker
+import com.coparently.app.presentation.platform.LocalOpenUrl
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_back
+import com.coparently.app.resources.documents_add_file
+import com.coparently.app.resources.documents_camera_unavailable
+import com.coparently.app.resources.documents_no_family_description
+import com.coparently.app.resources.documents_no_family_title
+import com.coparently.app.resources.documents_take_photo
+import com.coparently.app.resources.documents_title
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import java.io.File
 
 /**
  * The family's document vault (MON-23): court orders, school letters, identity scans.
@@ -74,7 +76,7 @@ fun FamilyDocumentsScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val names = rememberParentNames(viewModel.parents.collectAsState().value)
-    val context = LocalContext.current
+    val openUrl = LocalOpenUrl.current
     val textResolver = rememberUiTextResolver()
     val snackbarHostState = remember { SnackbarHostState() }
     var pendingUri by rememberSaveable { mutableStateOf<String?>(null) }
@@ -88,23 +90,23 @@ fun FamilyDocumentsScreen(
     }
     LaunchedEffect(viewModel) {
         viewModel.opened.collect { opened ->
-            if (!openSharedFile(context, File(opened.path.toString()), opened.contentType)) viewModel.noViewer()
+            if (!openUrl.openFile(opened.path.toString(), opened.contentType)) viewModel.noViewer()
         }
     }
 
     val canAdd = state.list !is DocumentsList.NoFamily && !state.uploading && !state.readOnly
-    val pickers = rememberDocumentPickers(onPicked = { pendingUri = it.toString() })
+    val pickers = rememberDocumentPickers(onPicked = { pendingUri = it })
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.documents_title)) },
+                title = { Text(stringResource(Res.string.documents_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.common_back)
+                            contentDescription = stringResource(Res.string.common_back)
                         )
                     }
                 }
@@ -122,8 +124,8 @@ fun FamilyDocumentsScreen(
         when (val list = state.list) {
             DocumentsList.NoFamily -> EmptyState(
                 icon = Icons.Default.FolderShared,
-                title = stringResource(R.string.documents_no_family_title),
-                description = stringResource(R.string.documents_no_family_description),
+                title = stringResource(Res.string.documents_no_family_title),
+                description = stringResource(Res.string.documents_no_family_description),
                 modifier = bodyModifier
             )
             else -> DocumentsBody(
@@ -159,45 +161,37 @@ fun FamilyDocumentsScreen(
     }
 }
 
-/** The two ways into the vault: a file from the system picker, or a photo taken now. */
-private class DocumentPickers(val pickFile: () -> Unit, val takePhoto: () -> Unit)
+/**
+ * The two ways into the vault: a file from the system picker, or a photo taken now. Each is null
+ * where the phone cannot offer it, so no button promises what it cannot do (design item 8).
+ */
+private class DocumentPickers(val pickFile: (() -> Unit)?, val takePhoto: (() -> Unit)?)
 
 /**
  * The system file picker, limited to what the rules accept, and the camera behind its runtime
- * permission (the manifest declares `CAMERA`, so the capture intent needs it granted).
+ * permission (on Android the manifest declares `CAMERA`, so the capture needs it granted:
+ * [CameraCapture] asks first).
  */
 @Composable
-private fun rememberDocumentPickers(onPicked: (Uri) -> Unit): DocumentPickers {
-    val context = LocalContext.current
+private fun rememberDocumentPickers(onPicked: (String) -> Unit): DocumentPickers {
     val appMessages = LocalAppMessages.current
-    var captureUri by rememberSaveable { mutableStateOf<String?>(null) }
-    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri?.let(onPicked)
-    }
-    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { taken ->
-        val uri = captureUri
-        if (taken && uri != null) onPicked(Uri.parse(uri))
-    }
-    val launchCamera = {
-        val uri = newSharedFileCaptureUri(context)
-        captureUri = uri.toString()
-        try {
-            camera.launch(uri)
-        } catch (e: ActivityNotFoundException) {
-            appMessages?.show(context.getString(R.string.documents_camera_unavailable))
+    val files = LocalFilePicker.current
+    val cameraCapture = LocalCameraCapture.current
+    val cameraUnavailable = stringResource(Res.string.documents_camera_unavailable)
+    val filePicker = files.rememberDocumentPicker(SharedFilePolicy.CONTENT_TYPES) { uri -> onPicked(uri) }
+    val camera = cameraCapture.rememberCapture(CaptureTarget.SHARED_FILE) { result ->
+        when (result) {
+            is CaptureResult.Taken -> onPicked(result.contentUri)
+            CaptureResult.NoCameraApp -> appMessages?.show(cameraUnavailable)
+            CaptureResult.Cancelled, CaptureResult.PermissionDenied -> Unit
         }
     }
-    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) launchCamera()
-    }
-    return remember(filePicker, camera, permission) {
+    val canPick = remember(files) { files.available }
+    val canPhotograph = remember(cameraCapture) { cameraCapture.available }
+    return remember(filePicker, camera, canPick, canPhotograph) {
         DocumentPickers(
-            pickFile = { filePicker.launch(SharedFilePolicy.CONTENT_TYPES.toTypedArray()) },
-            takePhoto = {
-                val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
-                    PackageManager.PERMISSION_GRANTED
-                if (granted) launchCamera() else permission.launch(Manifest.permission.CAMERA)
-            }
+            pickFile = if (canPick) filePicker::launch else null,
+            takePhoto = if (canPhotograph) camera::launch else null
         )
     }
 }
@@ -205,25 +199,37 @@ private fun rememberDocumentPickers(onPicked: (Uri) -> Unit): DocumentPickers {
 /**
  * The two add actions, pinned under the list: side by side, or one above the other from
  * [com.coparently.app.presentation.common.STACK_CONTROLS_FONT_SCALE], where half the width broke
- * German labels inside a word ("hinzufüge|n").
+ * German labels inside a word ("hinzufüge|n"). An action the phone cannot offer is left out.
  */
 @Composable
-private fun AddActions(enabled: Boolean, onPickFile: () -> Unit, onTakePhoto: () -> Unit) {
-    SideBySideOrStacked(
-        controls = listOf<@Composable (Modifier) -> Unit>(
-            { modifier ->
+private fun AddActions(enabled: Boolean, onPickFile: (() -> Unit)?, onTakePhoto: (() -> Unit)?) {
+    val controls = buildList<@Composable (Modifier) -> Unit> {
+        if (onPickFile != null) {
+            add { modifier ->
                 Button(onClick = onPickFile, enabled = enabled, modifier = modifier) {
                     Icon(Icons.Default.AttachFile, contentDescription = null)
-                    Text(stringResource(R.string.documents_add_file), modifier = Modifier.padding(start = Spacing.S))
-                }
-            },
-            { modifier ->
-                OutlinedButton(onClick = onTakePhoto, enabled = enabled, modifier = modifier) {
-                    Icon(Icons.Default.PhotoCamera, contentDescription = null)
-                    Text(stringResource(R.string.documents_take_photo), modifier = Modifier.padding(start = Spacing.S))
+                    Text(
+                        stringResource(Res.string.documents_add_file),
+                        modifier = Modifier.padding(start = Spacing.S)
+                    )
                 }
             }
-        ),
+        }
+        if (onTakePhoto != null) {
+            add { modifier ->
+                OutlinedButton(onClick = onTakePhoto, enabled = enabled, modifier = modifier) {
+                    Icon(Icons.Default.PhotoCamera, contentDescription = null)
+                    Text(
+                        stringResource(Res.string.documents_take_photo),
+                        modifier = Modifier.padding(start = Spacing.S)
+                    )
+                }
+            }
+        }
+    }
+    if (controls.isEmpty()) return
+    SideBySideOrStacked(
+        controls = controls,
         modifier = Modifier
             .navigationBarsPadding()
             .padding(horizontal = Spacing.L, vertical = Spacing.M),

@@ -24,8 +24,9 @@ import kotlin.time.Instant
  * place to come back in, and one place the instrumented test pins in four time zones.
  *
  * kotlinx-datetime's days (MON-24 phase 2, slice 11c), read in UTC as the `java.time` code read
- * them (`atStartOfDay(ZoneOffset.UTC)`, `atZone(ZoneOffset.UTC)`); the app's screens that still
- * hold a `java.time.LocalDate` call the overloads in the app's `JavaPickerDates.kt`.
+ * them (`atStartOfDay(ZoneOffset.UTC)`, `atZone(ZoneOffset.UTC)`). The app's `java.time` overloads
+ * (`JavaPickerDates.kt`) went with their last callers in slice 11g; the instrumented tests convert
+ * their `java.time` fixtures at the call.
  */
 object PickerDates {
 

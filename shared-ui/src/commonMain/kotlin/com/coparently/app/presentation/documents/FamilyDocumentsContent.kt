@@ -1,7 +1,5 @@
 package com.coparently.app.presentation.documents
 
-import android.text.format.Formatter
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -32,10 +30,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import com.coparently.app.R
 import com.coparently.app.domain.documents.DocumentCategory
 import com.coparently.app.domain.documents.FamilyDocument
 import com.coparently.app.domain.files.SharedFilePolicy
@@ -44,20 +39,44 @@ import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.platform.LocalFileDetails
 import com.coparently.app.presentation.theme.Spacing
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.documents_add_dialog_category_label
+import com.coparently.app.resources.documents_add_dialog_confirm
+import com.coparently.app.resources.documents_add_dialog_name_label
+import com.coparently.app.resources.documents_add_dialog_title
+import com.coparently.app.resources.documents_category_court_order
+import com.coparently.app.resources.documents_category_identity
+import com.coparently.app.resources.documents_category_medical
+import com.coparently.app.resources.documents_category_other
+import com.coparently.app.resources.documents_category_school
+import com.coparently.app.resources.documents_delete
+import com.coparently.app.resources.documents_delete_confirm
+import com.coparently.app.resources.documents_delete_confirm_body
+import com.coparently.app.resources.documents_delete_confirm_title
+import com.coparently.app.resources.documents_empty_description
+import com.coparently.app.resources.documents_empty_title
+import com.coparently.app.resources.documents_possibly_outdated
+import com.coparently.app.resources.documents_row_meta
+import com.coparently.app.resources.documents_shared_notice
+import com.coparently.app.resources.documents_unavailable
+import com.coparently.app.resources.documents_uploading
+import com.coparently.app.resources.shared_file_cancel
+import com.coparently.app.utils.readerMediumDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
+import kotlin.time.Instant
 
 /** The words a category is listed under. */
-@StringRes
-internal fun DocumentCategory.labelRes(): Int = when (this) {
-    DocumentCategory.COURT_ORDER -> R.string.documents_category_court_order
-    DocumentCategory.SCHOOL -> R.string.documents_category_school
-    DocumentCategory.MEDICAL -> R.string.documents_category_medical
-    DocumentCategory.IDENTITY -> R.string.documents_category_identity
-    DocumentCategory.OTHER -> R.string.documents_category_other
+internal fun DocumentCategory.labelRes(): StringResource = when (this) {
+    DocumentCategory.COURT_ORDER -> Res.string.documents_category_court_order
+    DocumentCategory.SCHOOL -> Res.string.documents_category_school
+    DocumentCategory.MEDICAL -> Res.string.documents_category_medical
+    DocumentCategory.IDENTITY -> Res.string.documents_category_identity
+    DocumentCategory.OTHER -> Res.string.documents_category_other
 }
 
 /**
@@ -85,9 +104,9 @@ internal fun DocumentsBody(
     if (list is DocumentsList.Loaded && documents.isEmpty() && !uploading) {
         EmptyState(
             icon = Icons.Default.Description,
-            title = stringResource(R.string.documents_empty_title),
-            description = stringResource(R.string.documents_shared_notice) + "\n\n" +
-                stringResource(R.string.documents_empty_description),
+            title = stringResource(Res.string.documents_empty_title),
+            description = stringResource(Res.string.documents_shared_notice) + "\n\n" +
+                stringResource(Res.string.documents_empty_description),
             modifier = modifier
         )
         return
@@ -100,7 +119,7 @@ internal fun DocumentsBody(
         item(key = "notice") { SharedNotice() }
         if (uploading) item(key = "uploading") { UploadingRow() }
         if (list is DocumentsList.Unavailable) {
-            item(key = "unavailable") { Text(stringResource(R.string.documents_unavailable)) }
+            item(key = "unavailable") { Text(stringResource(Res.string.documents_unavailable)) }
         }
         if (list is DocumentsList.Loaded && list.possiblyOutdated) {
             item(key = "outdated") { OutdatedNotice() }
@@ -130,7 +149,7 @@ internal fun DocumentsBody(
 /** "Everything here is shared" — first on the screen, never collapsible. */
 @Composable
 private fun SharedNotice() {
-    InlineBanner(text = stringResource(R.string.documents_shared_notice), icon = Icons.Default.Info)
+    InlineBanner(text = stringResource(Res.string.documents_shared_notice), icon = Icons.Default.Info)
 }
 
 /**
@@ -139,14 +158,14 @@ private fun SharedNotice() {
  */
 @Composable
 private fun OutdatedNotice() {
-    InlineBanner(text = stringResource(R.string.documents_possibly_outdated), icon = Icons.Default.CloudOff)
+    InlineBanner(text = stringResource(Res.string.documents_possibly_outdated), icon = Icons.Default.CloudOff)
 }
 
 /** An upload in flight; the list gains the row only once the server holds it. */
 @Composable
 private fun UploadingRow() {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.XS)) {
-        Text(stringResource(R.string.documents_uploading), style = MaterialTheme.typography.labelMedium)
+        Text(stringResource(Res.string.documents_uploading), style = MaterialTheme.typography.labelMedium)
         LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
     }
 }
@@ -160,13 +179,15 @@ private fun DocumentRow(
     onOpen: () -> Unit,
     onDelete: () -> Unit
 ) {
-    val context = LocalContext.current
-    val date = Instant.ofEpochMilli(document.createdAtMillis).atZone(ZoneId.systemDefault()).toLocalDate()
+    val fileDetails = LocalFileDetails.current
+    val date = Instant.fromEpochMilliseconds(document.createdAtMillis)
+        .toLocalDateTime(TimeZone.currentSystemDefault())
+        .date
     val meta = stringResource(
-        R.string.documents_row_meta,
-        Formatter.formatShortFileSize(context, document.sizeBytes),
+        Res.string.documents_row_meta,
+        fileDetails.formatSize(document.sizeBytes),
         addedBy,
-        date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
+        readerMediumDate(date)
     )
     SectionRow(
         title = document.title,
@@ -176,7 +197,7 @@ private fun DocumentRow(
         trailing = if (canDelete) {
             {
                 IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.documents_delete))
+                    Icon(Icons.Default.Delete, contentDescription = stringResource(Res.string.documents_delete))
                 }
             }
         } else {
@@ -195,19 +216,19 @@ internal fun AddDocumentDialog(onConfirm: (String, DocumentCategory) -> Unit, on
     var category by rememberSaveable { mutableStateOf(DocumentCategory.OTHER) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.documents_add_dialog_title)) },
+        title = { Text(stringResource(Res.string.documents_add_dialog_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
-                Text(stringResource(R.string.documents_shared_notice), style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(Res.string.documents_shared_notice), style = MaterialTheme.typography.bodySmall)
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it.take(TITLE_MAX_LENGTH) },
-                    label = { Text(stringResource(R.string.documents_add_dialog_name_label)) },
+                    label = { Text(stringResource(Res.string.documents_add_dialog_name_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
-                    stringResource(R.string.documents_add_dialog_category_label),
+                    stringResource(Res.string.documents_add_dialog_category_label),
                     style = MaterialTheme.typography.labelLarge
                 )
                 DocumentCategory.entries.forEach { option ->
@@ -217,11 +238,11 @@ internal fun AddDocumentDialog(onConfirm: (String, DocumentCategory) -> Unit, on
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(title, category) }) {
-                Text(stringResource(R.string.documents_add_dialog_confirm))
+                Text(stringResource(Res.string.documents_add_dialog_confirm))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.shared_file_cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.shared_file_cancel)) }
         }
     )
 }
@@ -245,15 +266,15 @@ private fun CategoryOption(category: DocumentCategory, selected: Boolean, onSele
 internal fun DeleteDocumentDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.documents_delete_confirm_title)) },
-        text = { Text(stringResource(R.string.documents_delete_confirm_body)) },
+        title = { Text(stringResource(Res.string.documents_delete_confirm_title)) },
+        text = { Text(stringResource(Res.string.documents_delete_confirm_body)) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text(stringResource(R.string.documents_delete_confirm), color = MaterialTheme.colorScheme.error)
+                Text(stringResource(Res.string.documents_delete_confirm), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.shared_file_cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.shared_file_cancel)) }
         }
     )
 }

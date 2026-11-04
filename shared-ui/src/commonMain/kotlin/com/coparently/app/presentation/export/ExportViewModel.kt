@@ -188,6 +188,13 @@ class ExportViewModel(
     /** The range and whether an export is running. */
     val state: StateFlow<ExportUiState> = _state.asStateFlow()
 
+    /**
+     * Whether this phone can draw and save a record at all ([RecordFileWriter.available]); the screen
+     * offers the formats only when it can (MON-24 phase 2, slice 11g: the iPhone's stand-in cannot).
+     */
+    val exportAvailable: Boolean
+        get() = writer.available
+
     private val _files = Channel<FinishedExport>(Channel.BUFFERED)
 
     /** Each finished file, once — the screen hands it to the share sheet. */

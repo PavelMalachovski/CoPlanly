@@ -3071,6 +3071,9 @@ bytes are identical on Android):
   Then the family's records — the child and pet records, the contacts and the guest's screen: their
   photo pickers, dialler and share sheet through the platform interfaces, with no add, dial or share
   affordance where the phone has none.
+  Then the vault, the export and the journal: the vault's picker, camera and viewer and the export's
+  share sheet through the platform interfaces; on a phone that cannot draw or share the record (the
+  iPhone for now) the export offers no format. The app's `java.time` picker overloads are gone.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

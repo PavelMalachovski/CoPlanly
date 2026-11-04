@@ -40,8 +40,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.journal.JournalEntry
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.InlineBanner
@@ -49,7 +47,18 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_back
+import com.coparently.app.resources.journal_add
+import com.coparently.app.resources.journal_delete
+import com.coparently.app.resources.journal_deleted
+import com.coparently.app.resources.journal_empty_description
+import com.coparently.app.resources.journal_empty_title
+import com.coparently.app.resources.journal_private_notice
+import com.coparently.app.resources.journal_title
+import com.coparently.app.resources.journal_undo
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /** How much of an entry's first line the list shows under its date. */
@@ -79,8 +88,8 @@ fun JournalListScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     // Resolved in composable scope: the delete lambda below is not composable.
-    val deletedMessage = stringResource(R.string.journal_deleted)
-    val undoLabel = stringResource(R.string.journal_undo)
+    val deletedMessage = stringResource(Res.string.journal_deleted)
+    val undoLabel = stringResource(Res.string.journal_undo)
     val deleteWithUndo: (JournalEntry) -> Unit = { entry ->
         viewModel.delete(entry)
         scope.launch {
@@ -96,12 +105,12 @@ fun JournalListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.journal_title)) },
+                title = { Text(stringResource(Res.string.journal_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.common_back)
+                            contentDescription = stringResource(Res.string.common_back)
                         )
                     }
                 }
@@ -115,7 +124,7 @@ fun JournalListScreen(
             val current = state
             if (current is JournalListState.Loaded && current.entries.isNotEmpty()) {
                 FloatingActionButton(onClick = onNewEntry) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(R.string.journal_add))
+                    Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(Res.string.journal_add))
                 }
             }
         }
@@ -155,9 +164,9 @@ private fun JournalList(
             PrivacyNotice()
             EmptyState(
                 icon = Icons.Default.Lock,
-                title = stringResource(R.string.journal_empty_title),
-                description = stringResource(R.string.journal_empty_description),
-                actionLabel = stringResource(R.string.journal_add),
+                title = stringResource(Res.string.journal_empty_title),
+                description = stringResource(Res.string.journal_empty_description),
+                actionLabel = stringResource(Res.string.journal_add),
                 onAction = onNewEntry,
                 modifier = Modifier.weight(1f)
             )
@@ -181,7 +190,7 @@ private fun JournalList(
 @Composable
 private fun PrivacyNotice() {
     InlineBanner(
-        text = stringResource(R.string.journal_private_notice),
+        text = stringResource(Res.string.journal_private_notice),
         icon = Icons.Default.Lock,
         modifier = Modifier.padding(bottom = Spacing.S)
     )
@@ -209,7 +218,7 @@ private fun SwipeableJournalRow(entry: JournalEntry, onOpen: () -> Unit, onDelet
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = stringResource(R.string.journal_delete),
+                    contentDescription = stringResource(Res.string.journal_delete),
                     tint = MaterialTheme.colorScheme.onError
                 )
             }

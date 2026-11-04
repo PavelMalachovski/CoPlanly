@@ -98,19 +98,26 @@ private class AndroidShareSheet(private val context: Context) : ShareSheet {
         context.startActivity(Intent.createChooser(send, chooserTitle))
     }
 
-    /**
-     * The grant is on the intent *and* its `ClipData`, because some targets read the URI from the
-     * clip and the chooser only forwards the grant it can see there (the export's `recordShareIntent`).
-     */
+    /** [fileShareIntent] in the chooser: the exported record's share (`recordShareIntent`). */
     override fun shareFile(contentUri: String, mimeType: String, chooserTitle: String) {
-        val uri = Uri.parse(contentUri)
-        val send = Intent(Intent.ACTION_SEND).apply {
-            type = mimeType
-            putExtra(Intent.EXTRA_STREAM, uri)
-            clipData = ClipData.newRawUri(null, uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-        context.startActivity(Intent.createChooser(send, chooserTitle))
+        context.startActivity(Intent.createChooser(fileShareIntent(contentUri, mimeType), chooserTitle))
+    }
+}
+
+/**
+ * The `ACTION_SEND` intent a file is shared with: its `FileProvider` URI and a one-off read grant,
+ * and nothing else.
+ *
+ * The grant is on the intent *and* its `ClipData`, because some targets read the URI from the clip
+ * and the chooser only forwards the grant it can see there.
+ */
+internal fun fileShareIntent(contentUri: String, mimeType: String): Intent {
+    val uri = Uri.parse(contentUri)
+    return Intent(Intent.ACTION_SEND).apply {
+        type = mimeType
+        putExtra(Intent.EXTRA_STREAM, uri)
+        clipData = ClipData.newRawUri(null, uri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
 }
 

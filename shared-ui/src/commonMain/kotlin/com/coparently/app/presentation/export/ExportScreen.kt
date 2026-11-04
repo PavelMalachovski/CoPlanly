@@ -1,8 +1,5 @@
 package com.coparently.app.presentation.export
 
-import android.content.ClipData
-import android.content.Context
-import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -42,13 +39,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.data.export.ExportedFile
-import com.coparently.app.data.export.contentUri
 import com.coparently.app.domain.export.ExportFormat
 import com.coparently.app.domain.export.JournalLabels
 import com.coparently.app.domain.export.PlanLabels
@@ -66,13 +59,105 @@ import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.parentingplan.PlanStrings
+import com.coparently.app.presentation.platform.LocalShareSheet
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.export_action_created
+import com.coparently.app.resources.export_action_current
+import com.coparently.app.resources.export_action_deleted
+import com.coparently.app.resources.export_action_not_sent
+import com.coparently.app.resources.export_action_recorded
+import com.coparently.app.resources.export_action_sent
+import com.coparently.app.resources.export_action_server_recorded
+import com.coparently.app.resources.export_action_updated
+import com.coparently.app.resources.export_back
+import com.coparently.app.resources.export_col_action
+import com.coparently.app.resources.export_col_amount
+import com.coparently.app.resources.export_col_by
+import com.coparently.app.resources.export_col_currency
+import com.coparently.app.resources.export_col_device_time
+import com.coparently.app.resources.export_col_ends
+import com.coparently.app.resources.export_col_item
+import com.coparently.app.resources.export_col_notes
+import com.coparently.app.resources.export_col_parent
+import com.coparently.app.resources.export_col_revision
+import com.coparently.app.resources.export_col_section
+import com.coparently.app.resources.export_col_server_time
+import com.coparently.app.resources.export_col_starts
+import com.coparently.app.resources.export_col_text
+import com.coparently.app.resources.export_csv
+import com.coparently.app.resources.export_csv_supporting
+import com.coparently.app.resources.export_from
+import com.coparently.app.resources.export_include_journal
+import com.coparently.app.resources.export_include_journal_supporting
+import com.coparently.app.resources.export_include_label
+import com.coparently.app.resources.export_include_plan
+import com.coparently.app.resources.export_include_plan_supporting
+import com.coparently.app.resources.export_intro
+import com.coparently.app.resources.export_journal_clock_note
+import com.coparently.app.resources.export_journal_edited
+import com.coparently.app.resources.export_journal_none
+import com.coparently.app.resources.export_journal_private_note
+import com.coparently.app.resources.export_journal_written
+import com.coparently.app.resources.export_pdf
+import com.coparently.app.resources.export_pdf_supporting
+import com.coparently.app.resources.export_pick_cancel
+import com.coparently.app.resources.export_pick_ok
+import com.coparently.app.resources.export_plan_cited
+import com.coparently.app.resources.export_plan_current_state
+import com.coparently.app.resources.export_plan_last_changed
+import com.coparently.app.resources.export_plan_none
+import com.coparently.app.resources.export_plan_not_agreed
+import com.coparently.app.resources.export_plan_not_from_server
+import com.coparently.app.resources.export_plan_retired
+import com.coparently.app.resources.export_plan_unsent_here
+import com.coparently.app.resources.export_range_label
+import com.coparently.app.resources.export_record_generated
+import com.coparently.app.resources.export_record_incomplete
+import com.coparently.app.resources.export_record_no_server_time
+import com.coparently.app.resources.export_record_not_on_server
+import com.coparently.app.resources.export_record_nothing
+import com.coparently.app.resources.export_record_page
+import com.coparently.app.resources.export_record_parents
+import com.coparently.app.resources.export_record_period
+import com.coparently.app.resources.export_record_revision
+import com.coparently.app.resources.export_record_section_events
+import com.coparently.app.resources.export_record_section_expenses
+import com.coparently.app.resources.export_record_section_messages
+import com.coparently.app.resources.export_record_time_zone
+import com.coparently.app.resources.export_record_title
+import com.coparently.app.resources.export_share_title
+import com.coparently.app.resources.export_statement_limits
+import com.coparently.app.resources.export_statement_messages
+import com.coparently.app.resources.export_statement_revisions
+import com.coparently.app.resources.export_statement_what
+import com.coparently.app.resources.export_title
+import com.coparently.app.resources.export_to
+import com.coparently.app.resources.export_unregistered_body
+import com.coparently.app.resources.export_unregistered_not_now
+import com.coparently.app.resources.export_unregistered_share
+import com.coparently.app.resources.export_unregistered_title
+import com.coparently.app.resources.export_verify_at
+import com.coparently.app.resources.export_verify_explainer
+import com.coparently.app.resources.export_verify_instruction
+import com.coparently.app.resources.export_verify_instruction_no_url
+import com.coparently.app.resources.export_verify_not_registered
+import com.coparently.app.resources.export_verify_not_registered_short
+import com.coparently.app.resources.export_verify_record_id
+import com.coparently.app.resources.export_what_it_says
+import com.coparently.app.resources.export_working
+import com.coparently.app.resources.journal_title
+import com.coparently.app.resources.parent_label_coparent
+import com.coparently.app.resources.parent_label_unknown
+import com.coparently.app.resources.parent_label_you
+import com.coparently.app.resources.parenting_plan_disclaimer
+import com.coparently.app.resources.parenting_plan_not_answered
+import com.coparently.app.resources.parenting_plan_status_agreed
+import com.coparently.app.resources.parenting_plan_title
 import kotlinx.coroutines.flow.Flow
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.LocalDate
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import java.time.LocalDate
 
 /**
  * Exporting the communication record (MON-3): a period, and a CSV or a PDF of it.
@@ -95,11 +180,15 @@ fun ExportScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val labels = rememberRecordLabels()
     val fallbacks = NameFallbacks(
-        you = stringResource(R.string.parent_label_you),
-        coParent = stringResource(R.string.parent_label_coparent),
-        unknown = stringResource(R.string.parent_label_unknown)
+        you = stringResource(Res.string.parent_label_you),
+        coParent = stringResource(Res.string.parent_label_coparent),
+        unknown = stringResource(Res.string.parent_label_unknown)
     )
     var picking by rememberSaveable { mutableStateOf<RangeEnd?>(null) }
+    // A phone that cannot draw the file or hand it on offers no format to export (design item 8;
+    // the iPhone's stand-ins for now).
+    val shareSheet = LocalShareSheet.current
+    val canExport = remember(shareSheet) { viewModel.exportAvailable && shareSheet.available }
 
     ShareWhenFinished(viewModel.files)
     LaunchedEffect(state.error) {
@@ -111,9 +200,8 @@ fun ExportScreen(
 
     picking?.let { end ->
         RangeDatePicker(
-            initial = (if (end == RangeEnd.FROM) state.from else state.to).toJavaLocalDate(),
-            onPicked = { picked ->
-                val date = picked.toKotlinLocalDate()
+            initial = if (end == RangeEnd.FROM) state.from else state.to,
+            onPicked = { date ->
                 if (end == RangeEnd.FROM) viewModel.setFrom(date) else viewModel.setTo(date)
                 picking = null
             },
@@ -125,12 +213,12 @@ fun ExportScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.export_title)) },
+                title = { Text(stringResource(Res.string.export_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.export_back)
+                            contentDescription = stringResource(Res.string.export_back)
                         )
                     }
                 }
@@ -145,7 +233,7 @@ fun ExportScreen(
                 onPick = { end -> picking = end },
                 onIncludePlan = viewModel::setIncludePlan,
                 onIncludeJournal = viewModel::setIncludeJournal,
-                onExport = { format -> viewModel.export(format, labels, fallbacks) }
+                onExport = { format: ExportFormat -> viewModel.export(format, labels, fallbacks) }.takeIf { canExport }
             )
         )
     }
@@ -159,7 +247,8 @@ private class ExportActions(
     val onPick: (RangeEnd) -> Unit,
     val onIncludePlan: (Boolean) -> Unit,
     val onIncludeJournal: (Boolean) -> Unit,
-    val onExport: (ExportFormat) -> Unit
+    /** Null where the phone cannot export, which leaves the format rows out. */
+    val onExport: ((ExportFormat) -> Unit)?
 )
 
 /**
@@ -181,7 +270,7 @@ private fun ExportContent(
         verticalArrangement = Arrangement.spacedBy(Spacing.L)
     ) {
         Text(
-            text = stringResource(R.string.export_intro),
+            text = stringResource(Res.string.export_intro),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -189,12 +278,14 @@ private fun ExportContent(
         IncludeGroup(state = state, actions = actions)
         // The formats before the statement (UX audit M10): the screen's one action used to sit
         // under five paragraphs a parent had to scroll past. The file prints them first anyway.
-        SectionGroup {
-            ExportRow(format = ExportFormat.PDF, working = state.working, onClick = actions.onExport)
-            Divider()
-            ExportRow(format = ExportFormat.CSV, working = state.working, onClick = actions.onExport)
+        actions.onExport?.let { onExport ->
+            SectionGroup {
+                ExportRow(format = ExportFormat.PDF, working = state.working, onClick = onExport)
+                Divider()
+                ExportRow(format = ExportFormat.CSV, working = state.working, onClick = onExport)
+            }
         }
-        ExpandableDetails(label = stringResource(R.string.export_what_it_says)) {
+        ExpandableDetails(label = stringResource(Res.string.export_what_it_says)) {
             Surface(
                 color = MaterialTheme.colorScheme.surfaceContainer,
                 shape = MaterialTheme.shapes.large
@@ -207,7 +298,7 @@ private fun ExportContent(
                         Text(text = paragraph, style = MaterialTheme.typography.bodySmall)
                     }
                     Text(
-                        text = stringResource(R.string.export_verify_explainer),
+                        text = stringResource(Res.string.export_verify_explainer),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -221,18 +312,18 @@ private fun ExportContent(
 @Composable
 private fun RangeGroup(state: ExportUiState, onPick: (RangeEnd) -> Unit) {
     Column {
-        GroupLabel(stringResource(R.string.export_range_label))
+        GroupLabel(stringResource(Res.string.export_range_label))
         SectionGroup {
             SectionRow(
                 icon = Icons.Default.DateRange,
-                title = stringResource(R.string.export_from),
+                title = stringResource(Res.string.export_from),
                 supporting = UiText.Date(state.from).asString(),
                 onClick = { onPick(RangeEnd.FROM) }.takeIf { state.working == null }
             )
             Divider()
             SectionRow(
                 icon = Icons.Default.DateRange,
-                title = stringResource(R.string.export_to),
+                title = stringResource(Res.string.export_to),
                 supporting = UiText.Date(state.to).asString(),
                 onClick = { onPick(RangeEnd.TO) }.takeIf { state.working == null }
             )
@@ -251,15 +342,15 @@ private fun RangeGroup(state: ExportUiState, onPick: (RangeEnd) -> Unit) {
 private fun IncludeGroup(state: ExportUiState, actions: ExportActions) {
     val enabled = state.working == null
     Column {
-        GroupLabel(stringResource(R.string.export_include_label))
+        GroupLabel(stringResource(Res.string.export_include_label))
         SectionGroup {
             IncludeRow(
                 included = state.includePlan,
                 enabled = enabled,
                 onChange = actions.onIncludePlan,
                 icon = Icons.AutoMirrored.Filled.Assignment,
-                title = stringResource(R.string.export_include_plan),
-                supporting = stringResource(R.string.export_include_plan_supporting)
+                title = stringResource(Res.string.export_include_plan),
+                supporting = stringResource(Res.string.export_include_plan_supporting)
             )
             Divider()
             IncludeRow(
@@ -267,8 +358,8 @@ private fun IncludeGroup(state: ExportUiState, actions: ExportActions) {
                 enabled = enabled,
                 onChange = actions.onIncludeJournal,
                 icon = Icons.Default.Lock,
-                title = stringResource(R.string.export_include_journal),
-                supporting = stringResource(R.string.export_include_journal_supporting)
+                title = stringResource(Res.string.export_include_journal),
+                supporting = stringResource(Res.string.export_include_journal_supporting)
             )
         }
     }
@@ -306,20 +397,24 @@ private fun IncludeRow(
  */
 @Composable
 private fun ShareWhenFinished(files: Flow<FinishedExport>) {
-    val context = LocalContext.current
-    val shareTitle = stringResource(R.string.export_share_title)
+    val shareSheet = LocalShareSheet.current
+    val shareTitle = stringResource(Res.string.export_share_title)
     var unregistered by remember { mutableStateOf<ExportedFile?>(null) }
 
     LaunchedEffect(files) {
         files.collect { finished ->
-            if (finished.recordId != null) share(context, finished.file, shareTitle) else unregistered = finished.file
+            if (finished.recordId != null) {
+                shareSheet.shareFile(finished.file.uri, finished.file.mimeType, shareTitle)
+            } else {
+                unregistered = finished.file
+            }
         }
     }
     unregistered?.let { file ->
         UnregisteredDialog(
             onShare = {
                 unregistered = null
-                share(context, file, shareTitle)
+                shareSheet.shareFile(file.uri, file.mimeType, shareTitle)
             },
             onDismiss = { unregistered = null }
         )
@@ -334,13 +429,13 @@ private fun ShareWhenFinished(files: Flow<FinishedExport>) {
 private fun UnregisteredDialog(onShare: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.export_unregistered_title)) },
-        text = { Text(stringResource(R.string.export_unregistered_body)) },
+        title = { Text(stringResource(Res.string.export_unregistered_title)) },
+        text = { Text(stringResource(Res.string.export_unregistered_body)) },
         confirmButton = {
-            TextButton(onClick = onShare) { Text(stringResource(R.string.export_unregistered_share)) }
+            TextButton(onClick = onShare) { Text(stringResource(Res.string.export_unregistered_share)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.export_unregistered_not_now)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.export_unregistered_not_now)) }
         }
     )
 }
@@ -352,8 +447,8 @@ private enum class RangeEnd { FROM, TO }
 @Composable
 private fun ExportRow(format: ExportFormat, working: ExportFormat?, onClick: (ExportFormat) -> Unit) {
     val (title, supporting) = when (format) {
-        ExportFormat.PDF -> R.string.export_pdf to R.string.export_pdf_supporting
-        ExportFormat.CSV -> R.string.export_csv to R.string.export_csv_supporting
+        ExportFormat.PDF -> Res.string.export_pdf to Res.string.export_pdf_supporting
+        ExportFormat.CSV -> Res.string.export_csv to Res.string.export_csv_supporting
     }
     val spinner: (@Composable () -> Unit)? = if (working == format) {
         @Composable { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp) }
@@ -363,7 +458,7 @@ private fun ExportRow(format: ExportFormat, working: ExportFormat?, onClick: (Ex
     SectionRow(
         icon = if (format == ExportFormat.PDF) Icons.Default.PictureAsPdf else Icons.Default.TableChart,
         title = stringResource(title),
-        supporting = stringResource(if (working == format) R.string.export_working else supporting),
+        supporting = stringResource(if (working == format) Res.string.export_working else supporting),
         // Disabled while either format runs: two exports at once would clear each other's file.
         onClick = { onClick(format) }.takeIf { working == null },
         trailing = spinner
@@ -375,8 +470,8 @@ private fun ExportRow(format: ExportFormat, working: ExportFormat?, onClick: (Ex
 private fun RangeDatePicker(initial: LocalDate, onPicked: (LocalDate) -> Unit, onDismiss: () -> Unit) {
     LocalDatePickerDialog(
         initialDate = initial,
-        confirmLabel = stringResource(R.string.export_pick_ok),
-        dismissLabel = stringResource(R.string.export_pick_cancel),
+        confirmLabel = stringResource(Res.string.export_pick_ok),
+        dismissLabel = stringResource(Res.string.export_pick_cancel),
         onConfirm = onPicked,
         onDismiss = onDismiss
     )
@@ -385,59 +480,59 @@ private fun RangeDatePicker(initial: LocalDate, onPicked: (LocalDate) -> Unit, o
 /** Every word the exported file prints, in the reader's language. */
 @Composable
 private fun rememberRecordLabels(): RecordLabels = RecordLabels(
-    title = stringResource(R.string.export_record_title),
+    title = stringResource(Res.string.export_record_title),
     statement = listOf(
-        stringResource(R.string.export_statement_what),
-        stringResource(R.string.export_statement_messages),
-        stringResource(R.string.export_statement_revisions),
-        stringResource(R.string.export_statement_limits)
+        stringResource(Res.string.export_statement_what),
+        stringResource(Res.string.export_statement_messages),
+        stringResource(Res.string.export_statement_revisions),
+        stringResource(Res.string.export_statement_limits)
     ),
-    period = stringResource(R.string.export_record_period),
-    generated = stringResource(R.string.export_record_generated),
-    timeZone = stringResource(R.string.export_record_time_zone),
-    parents = stringResource(R.string.export_record_parents),
-    incomplete = stringResource(R.string.export_record_incomplete),
-    sectionEvents = stringResource(R.string.export_record_section_events),
-    sectionMessages = stringResource(R.string.export_record_section_messages),
-    sectionExpenses = stringResource(R.string.export_record_section_expenses),
-    nothingInPeriod = stringResource(R.string.export_record_nothing),
+    period = stringResource(Res.string.export_record_period),
+    generated = stringResource(Res.string.export_record_generated),
+    timeZone = stringResource(Res.string.export_record_time_zone),
+    parents = stringResource(Res.string.export_record_parents),
+    incomplete = stringResource(Res.string.export_record_incomplete),
+    sectionEvents = stringResource(Res.string.export_record_section_events),
+    sectionMessages = stringResource(Res.string.export_record_section_messages),
+    sectionExpenses = stringResource(Res.string.export_record_section_expenses),
+    nothingInPeriod = stringResource(Res.string.export_record_nothing),
     columns = RecordColumns(
-        section = stringResource(R.string.export_col_section),
-        item = stringResource(R.string.export_col_item),
-        revision = stringResource(R.string.export_col_revision),
-        action = stringResource(R.string.export_col_action),
-        by = stringResource(R.string.export_col_by),
-        deviceTime = stringResource(R.string.export_col_device_time),
-        serverTime = stringResource(R.string.export_col_server_time),
-        text = stringResource(R.string.export_col_text),
-        starts = stringResource(R.string.export_col_starts),
-        ends = stringResource(R.string.export_col_ends),
-        parent = stringResource(R.string.export_col_parent),
-        notes = stringResource(R.string.export_col_notes),
-        amount = stringResource(R.string.export_col_amount),
-        currency = stringResource(R.string.export_col_currency)
+        section = stringResource(Res.string.export_col_section),
+        item = stringResource(Res.string.export_col_item),
+        revision = stringResource(Res.string.export_col_revision),
+        action = stringResource(Res.string.export_col_action),
+        by = stringResource(Res.string.export_col_by),
+        deviceTime = stringResource(Res.string.export_col_device_time),
+        serverTime = stringResource(Res.string.export_col_server_time),
+        text = stringResource(Res.string.export_col_text),
+        starts = stringResource(Res.string.export_col_starts),
+        ends = stringResource(Res.string.export_col_ends),
+        parent = stringResource(Res.string.export_col_parent),
+        notes = stringResource(Res.string.export_col_notes),
+        amount = stringResource(Res.string.export_col_amount),
+        currency = stringResource(Res.string.export_col_currency)
     ),
     actions = RecordActions(
-        created = stringResource(R.string.export_action_created),
-        updated = stringResource(R.string.export_action_updated),
-        deleted = stringResource(R.string.export_action_deleted),
-        currentState = stringResource(R.string.export_action_current),
-        sent = stringResource(R.string.export_action_sent),
-        notSent = stringResource(R.string.export_action_not_sent),
-        recorded = stringResource(R.string.export_action_recorded),
-        serverRecorded = stringResource(R.string.export_action_server_recorded)
+        created = stringResource(Res.string.export_action_created),
+        updated = stringResource(Res.string.export_action_updated),
+        deleted = stringResource(Res.string.export_action_deleted),
+        currentState = stringResource(Res.string.export_action_current),
+        sent = stringResource(Res.string.export_action_sent),
+        notSent = stringResource(Res.string.export_action_not_sent),
+        recorded = stringResource(Res.string.export_action_recorded),
+        serverRecorded = stringResource(Res.string.export_action_server_recorded)
     ),
-    notYetOnServer = stringResource(R.string.export_record_not_on_server),
-    noServerTime = stringResource(R.string.export_record_no_server_time),
-    revision = stringResource(R.string.export_record_revision),
-    page = stringResource(R.string.export_record_page),
+    notYetOnServer = stringResource(Res.string.export_record_not_on_server),
+    noServerTime = stringResource(Res.string.export_record_no_server_time),
+    revision = stringResource(Res.string.export_record_revision),
+    page = stringResource(Res.string.export_record_page),
     verification = VerificationLabels(
-        recordId = stringResource(R.string.export_verify_record_id),
-        verifyAt = stringResource(R.string.export_verify_at),
-        instruction = stringResource(R.string.export_verify_instruction),
-        instructionNoUrl = stringResource(R.string.export_verify_instruction_no_url),
-        notRegistered = stringResource(R.string.export_verify_not_registered),
-        notRegisteredShort = stringResource(R.string.export_verify_not_registered_short)
+        recordId = stringResource(Res.string.export_verify_record_id),
+        verifyAt = stringResource(Res.string.export_verify_at),
+        instruction = stringResource(Res.string.export_verify_instruction),
+        instructionNoUrl = stringResource(Res.string.export_verify_instruction_no_url),
+        notRegistered = stringResource(Res.string.export_verify_not_registered),
+        notRegisteredShort = stringResource(Res.string.export_verify_not_registered_short)
     ),
     plan = rememberPlanLabels(),
     journal = rememberJournalLabels()
@@ -446,52 +541,32 @@ private fun rememberRecordLabels(): RecordLabels = RecordLabels(
 /** The private-journal section's words (MON-22). */
 @Composable
 private fun rememberJournalLabels(): JournalLabels = JournalLabels(
-    section = stringResource(R.string.journal_title),
-    privateNote = stringResource(R.string.export_journal_private_note),
-    clockNote = stringResource(R.string.export_journal_clock_note),
-    none = stringResource(R.string.export_journal_none),
-    written = stringResource(R.string.export_journal_written),
-    edited = stringResource(R.string.export_journal_edited)
+    section = stringResource(Res.string.journal_title),
+    privateNote = stringResource(Res.string.export_journal_private_note),
+    clockNote = stringResource(Res.string.export_journal_clock_note),
+    none = stringResource(Res.string.export_journal_none),
+    written = stringResource(Res.string.export_journal_written),
+    edited = stringResource(Res.string.export_journal_edited)
 )
 
 /** The parenting-plan section's words; the questions are the plan screen's own wording. */
 @Composable
 private fun rememberPlanLabels(): PlanLabels = PlanLabels(
-    section = stringResource(R.string.parenting_plan_title),
-    disclaimer = stringResource(R.string.parenting_plan_disclaimer),
-    currentState = stringResource(R.string.export_plan_current_state),
-    notFromServer = stringResource(R.string.export_plan_not_from_server),
-    unsentHere = stringResource(R.string.export_plan_unsent_here),
-    noPlan = stringResource(R.string.export_plan_none),
-    lastChanged = stringResource(R.string.export_plan_last_changed),
-    agreed = stringResource(R.string.parenting_plan_status_agreed),
-    notAgreed = stringResource(R.string.export_plan_not_agreed),
-    notAnswered = stringResource(R.string.parenting_plan_not_answered),
-    retired = stringResource(R.string.export_plan_retired),
+    section = stringResource(Res.string.parenting_plan_title),
+    disclaimer = stringResource(Res.string.parenting_plan_disclaimer),
+    currentState = stringResource(Res.string.export_plan_current_state),
+    notFromServer = stringResource(Res.string.export_plan_not_from_server),
+    unsentHere = stringResource(Res.string.export_plan_unsent_here),
+    noPlan = stringResource(Res.string.export_plan_none),
+    lastChanged = stringResource(Res.string.export_plan_last_changed),
+    agreed = stringResource(Res.string.parenting_plan_status_agreed),
+    notAgreed = stringResource(Res.string.export_plan_not_agreed),
+    notAnswered = stringResource(Res.string.parenting_plan_not_answered),
+    retired = stringResource(Res.string.export_plan_retired),
     // The catalogue is fixed for the life of the process, so this loop calls the same resources in
     // the same order on every composition.
     questions = ParentingPlanCatalogue.questions.mapNotNull { question ->
         PlanStrings.questionPrompt(question.id)?.let { question.id to stringResource(it) }
     }.toMap(),
-    cited = stringResource(R.string.export_plan_cited)
+    cited = stringResource(Res.string.export_plan_cited)
 )
-
-/** Hands [file] to the share sheet, through [recordShareIntent]. */
-private fun share(context: Context, file: ExportedFile, title: String) {
-    context.startActivity(Intent.createChooser(recordShareIntent(file), title))
-}
-
-/**
- * The `ACTION_SEND` intent an exported record is shared with: the file's `FileProvider` URI and a
- * one-off read grant, and nothing else.
- *
- * The grant is on the intent *and* its `ClipData`, because some targets read the URI from the clip
- * and the chooser only forwards the grant it can see there. Public so the instrumented export test
- * can check the intent the share sheet receives without driving the chooser.
- */
-fun recordShareIntent(file: ExportedFile): Intent = Intent(Intent.ACTION_SEND).apply {
-    type = file.mimeType
-    putExtra(Intent.EXTRA_STREAM, file.contentUri)
-    clipData = ClipData.newRawUri(null, file.contentUri)
-    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-}
