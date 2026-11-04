@@ -709,6 +709,25 @@ ViewModels are about 57 of those files.
   expenses; settings, pairing, onboarding, auth and sync; the rest), and the app's copy of
   `testParentsSource` until its last user moves.
 
+**Slice 10b notes (November 2026).** Calendar first:
+- `CalendarViewModel` in `calendarUiModule`, on `SecurePreferences` (constructor parameter still
+  named `encryptedPreferences`) and kotlinx-datetime: `displayedMonth`/`queryAnchorMonth` are
+  `StateFlow<kotlinx.datetime.YearMonth>`, `selectedDate` a `StateFlow<kotlinx.datetime.LocalDate?>`,
+  and `setSelectedDate`, `showMonth` and `getCustodyForDate` take them. Today is
+  `Clock.System.todayIn(TimeZone.currentSystemDefault())`, a swap's id `Uuid.random()`, its `atIso`
+  `IsoText.dateTimeShortest(wallClockNow())` (what `LocalDateTime.now().toString()` wrote).
+- Moved with it because it reads them, converted to kotlinx-datetime: `CalendarViewMode.kt`
+  (`CalendarViewMode`, `ParentFilter`), `CalendarSelection` (`monthsUntil` for
+  `ChronoUnit.MONTHS.between`) and `CustodyHelper` (all five functions; `isoDayNumber`, `todayIn`).
+- Screen edges: `CalendarScreen` reads the month and the selection through
+  `collectAsJavaMonth`/`collectAsJavaDate` and converts back on every call (`showMonth`,
+  `setSelectedDate`, `CalendarSelection.anchorDate`); `MonthView`, `DayWeekView` and `MiniMonth`
+  call `CustodyHelper.isToday`/`isWeekend` with `toKotlinLocalDate()`; the screen's legacy lookup
+  lost its `toJavaLocalDate()`.
+- Tests: `CalendarSelectionTest` to commonTest (kotlinx-datetime); `CalendarViewModelTest`,
+  `CalendarViewModelCustodyChangeTest` and `TestFriendRepository.kt` to androidUnitTest, mocking
+  `SecurePreferences`, the first keeping `java.time` as its oracle at the ViewModel's edge.
+
 ### Task 11: The screens to `commonMain`
 
 **Files:**

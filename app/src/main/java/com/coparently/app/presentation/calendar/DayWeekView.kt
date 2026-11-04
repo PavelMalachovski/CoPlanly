@@ -120,6 +120,7 @@ import com.coparently.app.utils.localizedDate
 import com.coparently.app.utils.shortTime
 import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toJavaLocalTime
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -545,7 +546,7 @@ private fun DayWeekPage(
                                 currentDates.forEachIndexed { dayIndex, date ->
                                     val isToday = date == today
                                     val custody = getCustody(date)
-                                    val isWeekend = CustodyHelper.isWeekend(date)
+                                    val isWeekend = CustodyHelper.isWeekend(date.toKotlinLocalDate())
                                     // Custody wins over the today tint, matching MonthView:
                                     // it is the product's core signal, and today already
                                     // reads as today from its coloured header above. The old
@@ -694,7 +695,7 @@ private fun DayWeekPage(
                             // hour band in the window parent's tint over the day's own, on the
                             // same base (weekend grey or surface) the hour cells use, so the
                             // weekend layer survives inside the band too (DayCellFills).
-                            val bandBase = if (CustodyHelper.isWeekend(date)) {
+                            val bandBase = if (CustodyHelper.isWeekend(date.toKotlinLocalDate())) {
                                 if (isDarkTheme) {
                                     CoPlanlyColors.WeekendBackgroundDark
                                 } else {

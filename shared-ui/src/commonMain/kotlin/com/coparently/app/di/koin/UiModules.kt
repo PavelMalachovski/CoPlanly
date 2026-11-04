@@ -1,5 +1,6 @@
 package com.coparently.app.di.koin
 
+import com.coparently.app.presentation.calendar.CalendarViewModel
 import com.coparently.app.presentation.chat.ChatAttachmentViewModel
 import com.coparently.app.presentation.chat.ChatEventCardViewModel
 import com.coparently.app.presentation.chat.ChatSearchViewModel
@@ -58,6 +59,15 @@ val chatUiModule: Module = module {
 }
 
 /**
+ * The calendar (MON-24 phase 2, Task 10): the month, week and day grid's state — the custody it
+ * draws, the swaps offered from it, the filters and the "schedule changed" banner. Its filters and
+ * the dismissed change are kept in the sealed preference store [platformDataModule] binds.
+ */
+val calendarUiModule: Module = module {
+    viewModelOf(::CalendarViewModel)
+}
+
+/**
  * Every module of the UI both apps run, grouped by feature as [dataModules] is. The app's
  * `appModules` includes them, with [platformUiModule]; the iPhone app's will (phase 3). The
  * ViewModels move here group by group (Task 10's slices); a screen still in the app resolves a moved
@@ -65,7 +75,8 @@ val chatUiModule: Module = module {
  */
 val uiModules: List<Module> = listOf(
     commonUiModule,
-    chatUiModule
+    chatUiModule,
+    calendarUiModule
 )
 
 /**

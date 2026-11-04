@@ -87,6 +87,7 @@ import com.kizitonwose.calendar.core.OutDateStyle
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
@@ -404,9 +405,9 @@ private fun DayCell(
     val dims = dimensions()
     val date = day.date
     val isCurrentMonth = day.position == DayPosition.MonthDate
-    val isToday = CustodyHelper.isToday(date)
+    val isToday = CustodyHelper.isToday(date.toKotlinLocalDate())
     val custody = getCustody(date)
-    val isWeekend = CustodyHelper.isWeekend(date)
+    val isWeekend = CustodyHelper.isWeekend(date.toKotlinLocalDate())
     // Use the actually-rendered theme (the app can force light while the system is
     // dark); isSystemInDarkTheme() would pick the dark weekend fill on a light grid.
     val isDarkTheme =

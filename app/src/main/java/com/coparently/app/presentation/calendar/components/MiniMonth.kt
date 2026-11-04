@@ -44,6 +44,7 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.localizedDate
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
@@ -130,7 +131,7 @@ private fun MiniMonthCell(date: LocalDate, model: MiniMonthModel, isToday: Boole
     // The month grid's two layers. No previous day and no holiday, so no handover diagonal and no
     // holiday tint: neither reads at this size, and the spec leaves both to the full grid.
     val fill = DayCellFills.monthCell(
-        isWeekend = CustodyHelper.isWeekend(date),
+        isWeekend = CustodyHelper.isWeekend(date.toKotlinLocalDate()),
         isCurrentMonth = inMonth,
         custody = model.custody[date],
         previousCustody = null,

@@ -2926,8 +2926,12 @@ bytes are identical on Android):
   kotlinx-io `Path`s the screens open as `File`s), the event card's, the search's, dictation's, the
   suggested reply's with `AiAssistSession`, and the settle-up payment's — with `AiConsentManager`
   moved to `:shared-data`. On the iPhone, `platformUiModule` stands in for dictation and the AI
-  assist (neither offered). Calendar and event,
-  custody and requests, family and expenses, settings to sync and the rest follow as slices 10b–10f.
+  assist (neither offered). **Slice 10b built, CI pending**: the calendar's ViewModel (its filters
+  and the dismissed custody change in `SecurePreferences`; its months, selection and custody lookup
+  on kotlinx-datetime, which the calendar screen converts at its edge) with `CalendarViewMode`,
+  `ParentFilter`, `CalendarSelection` and `CustodyHelper`. Event,
+  custody and requests, family and expenses, settings to sync and the rest follow as the rest of
+  10b and slices 10c–10f.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

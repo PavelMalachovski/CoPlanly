@@ -2,9 +2,12 @@ package com.coparently.app.presentation.calendar
 
 import com.coparently.app.data.local.entity.CustodyScheduleEntity
 import com.coparently.app.domain.model.CustodyModel
-import kotlinx.datetime.toKotlinLocalDate
-import java.time.DayOfWeek
-import java.time.LocalDate
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.todayIn
+import kotlin.time.Clock
 
 /**
  * Helper utility for determining custody based on schedule.
@@ -13,6 +16,9 @@ import java.time.LocalDate
  * Supports two modes:
  * 1. Legacy: Day-of-week based schedules (CustodyScheduleEntity)
  * 2. New: Pattern-based custody models (CustodyModel)
+ *
+ * On kotlinx-datetime since MON-24 phase 2, when it moved to `:shared-ui` with [CalendarViewModel],
+ * which reads the legacy lookup; the grid's composables, still on `java.time`, convert at the call.
  */
 object CustodyHelper {
     /**
@@ -24,7 +30,7 @@ object CustodyHelper {
      * @return "mom" or "dad"
      */
     fun getCustodyForDate(date: LocalDate, model: CustodyModel): String {
-        return model.getCustodyFor(date.toKotlinLocalDate())
+        return model.getCustodyFor(date)
     }
 
     /**
@@ -41,7 +47,7 @@ object CustodyHelper {
     ): String? {
         if (schedules.isEmpty()) return null
 
-        val dayOfWeek = date.dayOfWeek.value // 1 = Monday, 7 = Sunday
+        val dayOfWeek = date.dayOfWeek.isoDayNumber // 1 = Monday, 7 = Sunday
         val scheduleForDay = schedules.find { it.dayOfWeek == dayOfWeek }
 
         return scheduleForDay?.parentOwner
@@ -54,7 +60,7 @@ object CustodyHelper {
      * @return true if the date is today, false otherwise
      */
     fun isToday(date: LocalDate): Boolean {
-        return date == LocalDate.now()
+        return date == Clock.System.todayIn(TimeZone.currentSystemDefault())
     }
 
     /**
@@ -64,7 +70,7 @@ object CustodyHelper {
      * @return Day of week value (1 = Monday, 7 = Sunday)
      */
     fun getDayOfWeekValue(date: LocalDate): Int {
-        return date.dayOfWeek.value
+        return date.dayOfWeek.isoDayNumber
     }
 
     /**

@@ -1,8 +1,9 @@
 package com.coparently.app.presentation.calendar
 
-import java.time.LocalDate
-import java.time.YearMonth
-import java.time.temporal.ChronoUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.YearMonth
+import kotlinx.datetime.monthsUntil
+import kotlinx.datetime.yearMonth
 import kotlin.math.abs
 
 /**
@@ -11,6 +12,9 @@ import kotlin.math.abs
  * These were the same value until August 2026, which is why paging a month silently "selected"
  * its 1st and the agenda card underneath announced that nothing was scheduled on a day nobody
  * had picked.
+ *
+ * On kotlinx-datetime since MON-24 phase 2 (it moved to `:shared-ui` with [CalendarViewModel]); the
+ * calendar screen, still on `java.time`, converts at its edge.
  */
 object CalendarSelection {
 
@@ -21,7 +25,7 @@ object CalendarSelection {
      *   "what is on today" — and null otherwise, because no day in another month has been chosen.
      */
     fun forMonth(month: YearMonth, today: LocalDate): LocalDate? =
-        today.takeIf { YearMonth.from(it) == month }
+        today.takeIf { it.yearMonth == month }
 
     /**
      * The date [month] resolves to for a view mode.
@@ -37,15 +41,16 @@ object CalendarSelection {
         selectedDate: LocalDate?,
         today: LocalDate
     ): LocalDate = when (viewMode) {
-        CalendarViewMode.MONTH -> month.atDay(1)
+        CalendarViewMode.MONTH -> month.firstDay
         CalendarViewMode.WEEK, CalendarViewMode.DAY -> selectedDate ?: today
     }
 
     /**
      * Months the event query's anchor may drift from the displayed month before the loaded
-     * window is re-centred. Paired with the window radius in [queryRangeFor]: the radius must
-     * stay strictly larger, or a month reachable without a re-anchor would fall outside the
-     * loaded range. `CalendarQueryRangeTest` is what defends that relationship.
+     * window is re-centred. Paired with the window radius in the calendar screen's
+     * `queryRangeFor`: the radius must stay strictly larger, or a month reachable without a
+     * re-anchor would fall outside the loaded range. `CalendarQueryRangeTest` is what defends that
+     * relationship.
      */
     const val QUERY_ANCHOR_TOLERANCE_MONTHS = 2L
 
@@ -59,7 +64,7 @@ object CalendarSelection {
      * backward paging drop frames.
      */
     fun reanchor(current: YearMonth, displayed: YearMonth): YearMonth =
-        if (abs(ChronoUnit.MONTHS.between(current, displayed)) > QUERY_ANCHOR_TOLERANCE_MONTHS) {
+        if (abs(current.monthsUntil(displayed)) > QUERY_ANCHOR_TOLERANCE_MONTHS) {
             displayed
         } else {
             current

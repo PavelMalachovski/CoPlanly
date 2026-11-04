@@ -1593,7 +1593,8 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              components of presentation/common/ that need no ViewModel and no Android API (the
              design system's primitives), with UiText (slice 9c); and, from Task 10, the shared
              state of presentation/common/ (ParentsSource and its siblings) and the ViewModels,
-             group by group, with their Koin modules: uiModules and platformUiModule, which
+             group by group (so far common/'s, chat's and the calendar's), with their Koin
+             modules: uiModules and platformUiModule, which
              appModules includes. Screens follow (Task 11). It makes the iPhone's
              one framework, Shared (static, exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
@@ -2012,7 +2013,21 @@ On the iPhone `platformUiModule` binds the chat's two platform seams the data la
 dictation (`NoSpeechDictation`, unavailable) and no AI assist (`AiAssistAvailability(false)`,
 `NoAiAssist` answering `Disabled`), in `di/koin/IosUiUnavailable.kt`. `coParentOnScreen`, `observeSignedInUser` and
 `projectedCoParentUid` are public behind `@InternalSharedApi` until the five ViewModels still in the
-app that call them move (see the `@InternalSharedApi` paragraph below).
+app that call them move (see the `@InternalSharedApi` paragraph below). Slice 10b moved **the
+calendar**: `CalendarViewModel` (its filters and the dismissed custody change in `SecurePreferences`,
+under the same keys; its displayed month, query anchor, selection and custody lookup kotlinx-datetime
+`YearMonth`s and `LocalDate`s, today from `Clock.System.todayIn` in the system zone, a swap's group id
+from `Uuid` and its time `IsoText.dateTimeShortest(wallClockNow())`, the text
+`LocalDateTime.now().toString()` wrote) with the pure helpers it reads — `CalendarViewMode.kt`
+(`CalendarViewMode`, `ParentFilter`), `CalendarSelection` and `CustodyHelper`, on kotlinx-datetime too
+— in `calendarUiModule`. `CalendarScreen` converts at its edge: it reads the month and the selected
+day through `collectAsJavaMonth`/`collectAsJavaDate` (a `derivedStateOf` over `collectAsState`, so a
+click handler reads the value the ViewModel holds now, as the delegated `collectAsState` did), calls
+back with `toKotlinYearMonth()`/`toKotlinLocalDate()`, and `MonthView`, `DayWeekView` and `MiniMonth`
+hand `CustodyHelper` their `java.time` day as `toKotlinLocalDate()`. The grid's other helpers
+(`queryRangeFor`, `DayCellFills`, `MiniMonthModel`, `OpeningHour`, `SwapSelection`, …) stay with the
+screens, because no ViewModel reads them. `CalendarSelectionTest` runs in `commonTest`; the two
+ViewModel tests (MockK) in `androidUnitTest`, where they keep `java.time` as their oracle.
 
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller

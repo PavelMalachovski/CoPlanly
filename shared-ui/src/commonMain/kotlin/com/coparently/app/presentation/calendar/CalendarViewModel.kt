@@ -1,11 +1,13 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package com.coparently.app.presentation.calendar
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.local.dao.CustodyScheduleDao
 import com.coparently.app.data.local.entity.CustodyScheduleEntity
-import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.PartialSwapRun
 import com.coparently.app.data.repository.SwapOfferer
@@ -23,6 +25,7 @@ import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.repository.FriendRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.time.IsoText
+import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -40,12 +43,14 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toKotlinLocalDate
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.YearMonth
-import java.util.UUID
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.YearMonth
+import kotlinx.datetime.todayIn
+import kotlinx.datetime.yearMonth
+import kotlin.time.Clock
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /** Keeps the shared flows warm across brief unsubscriptions (config changes). */
 private const val HANDOVER_STOP_TIMEOUT_MS = 5_000L
@@ -87,15 +92,24 @@ sealed interface SwapError {
     data class Partial(val written: Int, val total: Int) : SwapError
 }
 
+/** Today in the phone's zone, as `java.time.LocalDate.now()` read it. */
+private fun today(): LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefault())
+
 /**
  * ViewModel for calendar screen.
  * Handles custody schedule data, custody model, view mode,
  * parent filtering (You / Both / Co-parent) and event type filters.
+ *
+ * In `:shared-ui` since MON-24 phase 2, on kotlinx-datetime: the displayed month, the query anchor,
+ * the selection and the custody lookup are kotlinx-datetime values, which the calendar screen, still
+ * on `java.time`, converts at its edge. The filters and the dismissed change live in the sealed
+ * preference store ([SecurePreferences], which on Android is the app's `EncryptedPreferences`),
+ * under the same keys.
  */
 class CalendarViewModel(
     private val custodyScheduleDao: CustodyScheduleDao,
     private val custodyModelRepository: CustodyModelRepository,
-    private val encryptedPreferences: EncryptedPreferences,
+    private val encryptedPreferences: SecurePreferences,
     friendRepository: FriendRepository,
     parentsSource: ParentsSource,
     userRepository: UserRepository
@@ -210,7 +224,7 @@ class CalendarViewModel(
         .distinctUntilChanged()
 
     /**
-     * The changes dismissed while this screen lived, by family, ahead of what [EncryptedPreferences]
+     * The changes dismissed while this screen lived, by family, ahead of what [SecurePreferences]
      * holds ([storedDismissal]): the stored instant, one per family, is what keeps an acknowledged
      * change acknowledged across process death and across a family switch.
      */
@@ -271,12 +285,12 @@ class CalendarViewModel(
     private val _viewMode = MutableStateFlow(CalendarViewMode.MONTH)
     val viewMode: StateFlow<CalendarViewMode> = _viewMode.asStateFlow()
 
-    private val _displayedMonth = MutableStateFlow(YearMonth.now())
+    private val _displayedMonth = MutableStateFlow(today().yearMonth)
 
     /** Month the grid is showing. Independent of [selectedDate], which may be absent. */
     val displayedMonth: StateFlow<YearMonth> = _displayedMonth.asStateFlow()
 
-    private val _queryAnchorMonth = MutableStateFlow(YearMonth.now())
+    private val _queryAnchorMonth = MutableStateFlow(today().yearMonth)
 
     /**
      * Month the event query window is centred on. Distinct from [displayedMonth]: it stays put
@@ -286,7 +300,7 @@ class CalendarViewModel(
      */
     val queryAnchorMonth: StateFlow<YearMonth> = _queryAnchorMonth.asStateFlow()
 
-    private val _selectedDate = MutableStateFlow<LocalDate?>(LocalDate.now())
+    private val _selectedDate = MutableStateFlow<LocalDate?>(today())
 
     /**
      * The day the user has chosen, or null when none is. Paging to another month clears it,
@@ -352,7 +366,7 @@ class CalendarViewModel(
      *   goes without a clock, as it did before.
      */
     fun offerDaySwap(
-        date: kotlinx.datetime.LocalDate,
+        date: LocalDate,
         toParent: String,
         note: String? = null,
         answerBy: AnswerByPick? = null
@@ -365,7 +379,7 @@ class CalendarViewModel(
                 return@launch
             }
             val iso = IsoText.date(date)
-            val groupId = UUID.randomUUID().toString()
+            val groupId = Uuid.random().toString()
             custodyModelRepository.applyDayOverrides(
                 date = iso,
                 transform = { current ->
@@ -374,7 +388,7 @@ class CalendarViewModel(
                         date = iso,
                         toParent = toParent,
                         byUid = myUid,
-                        atIso = LocalDateTime.now().toString(),
+                        atIso = IsoText.dateTimeShortest(wallClockNow()),
                         note = note,
                         groupId = groupId
                     )
@@ -404,8 +418,8 @@ class CalendarViewModel(
      *   the whole group.
      */
     fun offerDaySwapForDates(
-        dates: Collection<kotlinx.datetime.LocalDate>,
-        toParentFor: (kotlinx.datetime.LocalDate) -> String?,
+        dates: Collection<LocalDate>,
+        toParentFor: (LocalDate) -> String?,
         note: String? = null,
         answerBy: AnswerByPick? = null
     ) {
@@ -423,8 +437,8 @@ class CalendarViewModel(
                 _swapError.value = SwapError.Refused
                 return@launch
             }
-            val groupId = UUID.randomUUID().toString()
-            val atIso = LocalDateTime.now().toString()
+            val groupId = Uuid.random().toString()
+            val atIso = IsoText.dateTimeShortest(wallClockNow())
             custodyModelRepository.applyDayOverridesForDates(
                 dates = targets.keys.toList(),
                 transform = { current, date ->
@@ -462,7 +476,7 @@ class CalendarViewModel(
     /**
      * Dismisses the custody-changed banner for the change stamped with [lastModifiedAtMillis].
      *
-     * Persisted to [EncryptedPreferences] rather than kept only in memory: a change the user has
+     * Persisted to [SecurePreferences] rather than kept only in memory: a change the user has
      * already acknowledged must not reappear just because the app process died. Keying on the
      * change's own instant (instead of, say, a boolean) is what lets the *next* change — a
      * different instant — be announced again without a separate "seen" reset. Kept for the family
@@ -479,7 +493,7 @@ class CalendarViewModel(
     /**
      * The instant of [familyId]'s change the user last dismissed the banner for, or null.
      *
-     * Stored as decimal text, because EncryptedPreferences deals in strings. A value written before
+     * Stored as decimal text, because the preference store deals in strings. A value written before
      * schema 29 is an ISO date-time and will not parse — it reads as "nothing dismissed", so the
      * current change is announced once more and its dismissal is then stored in the new form.
      * Announcing one change twice is the right way to be wrong here. A family with no dismissal of
@@ -525,8 +539,8 @@ class CalendarViewModel(
     fun getCustodyForDate(date: LocalDate): String? = CustodyResolver.custodyFor(
         model = _custodyModel.value,
         overrides = dayOverrides.value,
-        legacy = { day -> CustodyHelper.getCustodyForDate(day.toJavaLocalDate(), custodySchedules.value) },
-        date = date.toKotlinLocalDate()
+        legacy = { day -> CustodyHelper.getCustodyForDate(day, custodySchedules.value) },
+        date = date
     )
 
     /**
@@ -543,7 +557,7 @@ class CalendarViewModel(
      */
     fun setSelectedDate(date: LocalDate) {
         _selectedDate.value = date
-        moveTo(YearMonth.from(date))
+        moveTo(date.yearMonth)
     }
 
     /**
@@ -552,7 +566,7 @@ class CalendarViewModel(
      */
     fun showMonth(month: YearMonth) {
         moveTo(month)
-        _selectedDate.value = CalendarSelection.forMonth(month, LocalDate.now())
+        _selectedDate.value = CalendarSelection.forMonth(month, today())
     }
 
     /** Shows [month] and re-centres the query window only if it has drifted too far. */

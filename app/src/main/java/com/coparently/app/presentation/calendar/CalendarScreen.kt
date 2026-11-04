@@ -32,7 +32,9 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -90,10 +92,13 @@ import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.parentingplan.planCitationShortLine
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.dimensions
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toJavaYearMonth
 import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
+import kotlinx.datetime.toKotlinYearMonth
 import org.koin.compose.viewmodel.koinViewModel
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -152,6 +157,26 @@ internal fun queryRangeFor(
 }
 
 /**
+ * [this] month as the `java.time` value the grid and the calendar library read: the ViewModel speaks
+ * kotlinx-datetime since MON-24 phase 2. Read through, as `collectAsState` is, so a lambda that reads
+ * it reads the month the ViewModel holds now, not the one of the last composition.
+ */
+@Composable
+private fun StateFlow<kotlinx.datetime.YearMonth>.collectAsJavaMonth(): State<YearMonth> {
+    val state = collectAsState()
+    // The types are spelled out for lint, which cannot always read a newer library's Kotlin
+    // metadata and then takes a `remember` for one returning Unit (RememberReturnType).
+    return remember<State<YearMonth>>(state) { derivedStateOf<YearMonth> { state.value.toJavaYearMonth() } }
+}
+
+/** [this] day as the grid's `java.time` value, read through like [collectAsJavaMonth]; null stays null. */
+@Composable
+private fun StateFlow<kotlinx.datetime.LocalDate?>.collectAsJavaDate(): State<LocalDate?> {
+    val state = collectAsState()
+    return remember<State<LocalDate?>>(state) { derivedStateOf<LocalDate?> { state.value?.toJavaLocalDate() } }
+}
+
+/**
  * Main calendar screen showing calendar view with events.
  * Supports Month, Week and Day view modes with parent and event type filters,
  * the parent's country's public holidays and custody indication.
@@ -184,20 +209,33 @@ fun CalendarScreen(
     val dayOverrides by calendarViewModel.dayOverrides.collectAsState()
     val swapError by calendarViewModel.swapError.collectAsState()
     val viewMode by calendarViewModel.viewMode.collectAsState()
-    val selectedDate by calendarViewModel.selectedDate.collectAsState()
-    val displayedMonth by calendarViewModel.displayedMonth.collectAsState()
-    val queryAnchorMonth by calendarViewModel.queryAnchorMonth.collectAsState()
+    // The ViewModel's months and days are kotlinx-datetime (MON-24 phase 2); the grid, the calendar
+    // library and the pickers below are java.time, so they are read through as java.time here, and
+    // each call back into the ViewModel converts again.
+    val selectedDate by calendarViewModel.selectedDate.collectAsJavaDate()
+    val displayedMonth by calendarViewModel.displayedMonth.collectAsJavaMonth()
+    val queryAnchorMonth by calendarViewModel.queryAnchorMonth.collectAsJavaMonth()
     // Not `remember { LocalDate.now() }`: that captures the date at first composition and
     // never revisits it, so an app left open overnight goes on highlighting yesterday.
     val today by rememberToday()
 
     // What the screen says it is showing: the header title, and the day DAY/WEEK render.
-    val anchorDate = CalendarSelection.anchorDate(viewMode, displayedMonth, selectedDate, today)
+    val anchorDate = CalendarSelection.anchorDate(
+        viewMode,
+        displayedMonth.toKotlinYearMonth(),
+        selectedDate?.toKotlinLocalDate(),
+        today.toKotlinLocalDate()
+    ).toJavaLocalDate()
 
     // What is loaded. In MONTH mode this lags the displayed month by up to
     // CalendarSelection.QUERY_ANCHOR_TOLERANCE_MONTHS, which is the entire point; in DAY and WEEK
     // the two are the same value.
-    val queryAnchorDate = CalendarSelection.anchorDate(viewMode, queryAnchorMonth, selectedDate, today)
+    val queryAnchorDate = CalendarSelection.anchorDate(
+        viewMode,
+        queryAnchorMonth.toKotlinYearMonth(),
+        selectedDate?.toKotlinLocalDate(),
+        today.toKotlinLocalDate()
+    ).toJavaLocalDate()
     val parentFilter by calendarViewModel.parentFilter.collectAsState()
     val hiddenEventTypes by calendarViewModel.hiddenEventTypes.collectAsState()
     val customEventTypes by calendarViewModel.customEventTypes.collectAsState()
@@ -306,7 +344,7 @@ fun CalendarScreen(
         when (val tap = swapTapFor(date, displayedMonth, selecting = true)) {
             is SwapTap.Toggle -> swapSelection = SwapSelection.toggled(swapSelection, tap.date)
             is SwapTap.PageAndToggle -> {
-                calendarViewModel.showMonth(tap.month)
+                calendarViewModel.showMonth(tap.month.toKotlinYearMonth())
                 swapSelection = SwapSelection.toggled(swapSelection, tap.date)
             }
             is SwapTap.OpenDay -> Unit
@@ -334,7 +372,7 @@ fun CalendarScreen(
             val resolve = CustodyResolver.resolver(
                 model = custodyModel,
                 overrides = dayOverrides,
-                legacy = { date -> CustodyHelper.getCustodyForDate(date.toJavaLocalDate(), custodySchedules) }
+                legacy = { date -> CustodyHelper.getCustodyForDate(date, custodySchedules) }
             )
             val lookup: (LocalDate) -> String? = { date -> resolve(date.toKotlinLocalDate()) }
             lookup
@@ -619,7 +657,7 @@ fun CalendarScreen(
             dayOpenedFromMonth = false
             endSwapSelection()
             calendarViewModel.setViewMode(CalendarViewMode.MONTH)
-            calendarViewModel.showMonth(YearMonth.now())
+            calendarViewModel.showMonth(YearMonth.now().toKotlinYearMonth())
         }
     }
     // Leaving Day by any other route (the view picker, the date picker) ends the drill-down, so
@@ -633,8 +671,10 @@ fun CalendarScreen(
             if (selectingSwap && viewMode == CalendarViewMode.MONTH) {
                 SwapSelectionHeader(
                     month = displayedMonth,
-                    onPreviousMonth = { calendarViewModel.showMonth(displayedMonth.minusMonths(1)) },
-                    onNextMonth = { calendarViewModel.showMonth(displayedMonth.plusMonths(1)) },
+                    onPreviousMonth = {
+                        calendarViewModel.showMonth(displayedMonth.minusMonths(1).toKotlinYearMonth())
+                    },
+                    onNextMonth = { calendarViewModel.showMonth(displayedMonth.plusMonths(1).toKotlinYearMonth()) },
                     onClose = ::endSwapSelection
                 )
             } else {
@@ -642,7 +682,7 @@ fun CalendarScreen(
                     selectedDate = anchorDate,
                     viewMode = viewMode,
                     onViewModeChange = { mode -> calendarViewModel.setViewMode(mode) },
-                    onNavigateToToday = { calendarViewModel.showMonth(YearMonth.now()) },
+                    onNavigateToToday = { calendarViewModel.showMonth(YearMonth.now().toKotlinYearMonth()) },
                     onJumpToDate = { showDatePicker = true },
                     onFiltersClick = { showTypeFilters = true },
                     filtersActive = parentFilter != ParentFilter.BOTH ||
@@ -957,7 +997,7 @@ fun CalendarScreen(
                                     getProposedCustody = grid.proposed,
                                     getContactWindows = grid.windows,
                                     parentNames = parentNames,
-                                    onDateChange = { calendarViewModel.setSelectedDate(it) },
+                                    onDateChange = { calendarViewModel.setSelectedDate(it.toKotlinLocalDate()) },
                                     onEventClick = { event ->
                                         previewEventStart = event.startDateTime
                                         previewEventId = event.id
@@ -1023,14 +1063,14 @@ fun CalendarScreen(
                                     // leaving a tap with no visible outcome and no tap route to
                                     // creating an event on a chosen day.
                                     onDayClick = { clickedDate ->
-                                        calendarViewModel.setSelectedDate(clickedDate)
+                                        calendarViewModel.setSelectedDate(clickedDate.toKotlinLocalDate())
                                         dayOpenedFromMonth = true
                                         calendarViewModel.setViewMode(CalendarViewMode.DAY)
                                     },
                                     // Paging is not choosing: the new month gets today if it
                                     // holds today, and no selection at all otherwise.
                                     onMonthChange = { newMonth ->
-                                        calendarViewModel.showMonth(newMonth)
+                                        calendarViewModel.showMonth(newMonth.toKotlinYearMonth())
                                     },
                                     holidays = holidays,
                                     schoolVacationDays = schoolVacationDays
@@ -1058,7 +1098,7 @@ fun CalendarScreen(
             confirmLabel = stringResource(R.string.calendar_dialog_ok),
             dismissLabel = stringResource(R.string.calendar_dialog_cancel),
             onConfirm = { pickedDate ->
-                calendarViewModel.setSelectedDate(pickedDate)
+                calendarViewModel.setSelectedDate(pickedDate.toKotlinLocalDate())
                 if (viewMode != CalendarViewMode.MONTH) {
                     calendarViewModel.setViewMode(CalendarViewMode.MONTH)
                 }

@@ -1,8 +1,8 @@
 package com.coparently.app.presentation.calendar
 
 import com.coparently.app.data.local.dao.CustodyScheduleDao
-import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.domain.custody.CustodyTimestamp
 import com.coparently.app.domain.custody.SharedCustody
@@ -44,7 +44,7 @@ import kotlin.test.assertNull
  * The decision itself — is there a change to announce, and whose is it — is covered on its own,
  * with no ViewModel involved, in `CustodyChangeAnnouncementTest`. These tests exist only to prove
  * the ViewModel actually feeds that decision the right inputs (this device's own uid from
- * [ParentsSource], the persisted dismissal from [EncryptedPreferences]) and that dismissal
+ * [ParentsSource], the persisted dismissal from [SecurePreferences]) and that dismissal
  * actually persists.
  *
  * [ParentsSource] is mocked directly rather than built through the real `testParentsSource()`
@@ -59,7 +59,7 @@ class CalendarViewModelCustodyChangeTest {
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var custodyScheduleDao: CustodyScheduleDao
-    private lateinit var encryptedPreferences: EncryptedPreferences
+    private lateinit var encryptedPreferences: SecurePreferences
     private lateinit var sharedCustody: MutableStateFlow<SharedCustody?>
 
     @Before
