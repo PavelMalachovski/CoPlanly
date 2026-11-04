@@ -2722,11 +2722,11 @@ moved (phase 2, Task 8e). `governing` lost its marker when `OtherFamiliesSignals
 **Carried into phase 2** (found in phase 1's reviews; none changes what a parent sees, and the
 bytes are identical on Android):
 - **`java.time` beyond the edges** in app code, converting losslessly with kotlinx's own
-  converters: the calendar's day model (`EventsByDay`, `OpeningHour`, `MiniMonthModel`,
-  `DayWeekView`, `queryRangeFor`) and the holiday lookups it converts at; the event, expense and
-  change-request forms, whose `rememberSaveable` state is Java-serialised (give each saved date a
-  `Saver` over its text, never a raw kotlinx value — the event form's are `common/DateTimeSavers.kt`'s
-  since phase 2, slice 11c); `AnswerByField`'s picker,
+  converters: ~~the calendar's day model (`EventsByDay`, `OpeningHour`, `MiniMonthModel`,
+  `DayWeekView`, `queryRangeFor`) and the holiday lookups it converts at~~ (kotlinx-datetime since
+  phase 2, slice 11c); the ~~event,~~ expense and change-request forms, whose `rememberSaveable`
+  state is Java-serialised (give each saved date a `Saver` over its text, never a raw kotlinx value —
+  the event form's are `common/DateTimeSavers.kt`'s since phase 2, slice 11c); `AnswerByField`'s picker,
   `VaccinationListEditor` and the child-info `DatePickerDialog`; ~~`RequestTime.zone()` (`ZoneId`)~~
   (a kotlinx-datetime `TimeZone` since phase 2, Task 8h), `RequestsRowText` and `answerByText`; `ExpenseViewModel.selectedMonth` (java `YearMonth`, shared
   with the calendar's paging); ~~`UnassignedRecord.date`~~ (kotlinx-datetime since phase 2, Task 8i).

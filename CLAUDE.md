@@ -1649,7 +1649,8 @@ data/      — Room (v46 + migrations), Firestore/Google clients, repository imp
 presentation/ — Compose screens per feature, and the two ViewModels whose sign-ins run on an
              Android activity (AuthViewModel, SyncViewModel; Task 11). Their strings, the theme,
              the design system's components, the shared state and every other ViewModel are in
-             shared-ui/ (Task 10)
+             shared-ui/ (Task 10), and so are chat's, the event form's and the calendar's screens
+             (Task 11, slices 11b–11c); the app keeps their previews
 di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
              listed in appModules); the database builder (DatabaseBuilder.kt) and the file name
              (DatabaseName.kt) are in shared-data/ since MON-24 phase 2

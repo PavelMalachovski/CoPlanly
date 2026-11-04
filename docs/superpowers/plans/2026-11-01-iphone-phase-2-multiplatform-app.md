@@ -1169,7 +1169,7 @@ Then the export and the school import:
   `internal` example.
 - Group 1, the helpers the calendar and the event form read (`git mv`, packages unchanged, onto
   kotlinx-datetime and `StringResource`): `Today` (with `LocalFixedToday`; the app's `JavaToday.kt`
-  gives the screens still there `rememberJavaToday()`), `PickerDates` with `LocalDatePickerDialog`
+  gave the screens still there `rememberJavaToday()` until round 2 deleted it), `PickerDates` with `LocalDatePickerDialog`
   (the app's `JavaPickerDates.kt` keeps `java.time` overloads that call the shared conversion),
   `components/TimePicker` (`ClockFormat.is24Hour` for the dial; `JavaTimePicker.kt` keeps a `java.time`
   overload and the previews), `AnswerByField`, `HolidayNames` (`readerLanguage()`, an `expect`),
@@ -1187,7 +1187,11 @@ Then the export and the school import:
   lambdas used are read in composition. `utils/ValidationUtils` moved with it (its unused email and URL
   checks, on Android's `Patterns`, left out; two detekt baseline entries,
   `MagicNumber:ValidationUtils.kt$ValidationUtils$254` and `TooManyFunctions:ValidationUtils.kt$ValidationUtils`,
-  are stale since, and harmless: the next Regenerate run drops them). `NavGraph` parses the date with
+  are stale since, and harmless: the next Regenerate run drops them; so are three more since the
+  calendar's round 2 moved `CalendarHeader`'s preview, and its date `LocalDate.of(2026, 7, 20)`, to the
+  app's `CalendarPreviews.kt` as a property: `MagicNumber:CalendarHeader.kt$20`,
+  `MagicNumber:CalendarHeader.kt$2026` and `MagicNumber:CalendarHeader.kt$7`; the baseline is not
+  edited by hand). `NavGraph` parses the date with
   kotlinx-datetime. Its two JVM tests run in `commonTest`, their names without commas.
 - Round 1's review notes, done before the calendar: the form's saved state as text (above); the
   iPhone's `ReaderMoneyText` reads an amount whose scale does not fit an `Int` ("1e-2147483648") as
@@ -1195,7 +1199,11 @@ Then the export and the school import:
   start date, the seasonal layer's range and the journal's day call the kotlinx `LocalDatePickerDialog`
   directly instead of converting through the app's `java.time` twin, which keeps its other callers
   (the export, expenses, the child records, the change request and two androidTest classes).
-- **Left for 11c's next round: the calendar** (`presentation/calendar/` but the ViewModels and models
+- **Left for 11c's next round: the calendar** *(superseded by "Round 2" below, which is what was
+  done: `JavaToday.kt` was deleted rather than kept for 11d, and `SwapSelection`, `SwapTap`,
+  `OpeningHour`, `GridCustody`, `ChildCustodyBand`, `swapMarks`, `drawSwapMark`, `LocalDateSetSaver` and
+  `DayCellColors`' helpers stayed `internal`, their tests having moved with them; the list is kept as
+  the round's plan)* (`presentation/calendar/` but the ViewModels and models
   Task 10 moved, and `calendar/components/`). Moving it piece by piece costs more than moving it at
   once: the helpers (`SwapSelection`, `SwapTap`, `SwapMark`, `OpeningHour`, `ChildCustodyBand`,
   `DateRangeHelper`, `DayCellColors`, `DayCellFills`, `EventMemberMark`) are called from about twenty
@@ -1243,8 +1251,8 @@ Then the export and the school import:
     `TitleLinesTest` and `components/DaySwapStripStateTest`; and `CalendarScreenshots`,
     `HomeScreenshots` and `RequestScreenshots` convert their fixtures' days at the call.
   - **The app's calendar screens call `rememberJavaToday()`** (group 1) until they move; the moved
-    calendar reads `rememberToday()`, and `JavaToday.kt` stays for Home, custody and the requests
-    until 11d.
+    calendar reads `rememberToday()`, and ~~`JavaToday.kt` stays for Home, custody and the requests
+    until 11d~~ (deleted in round 2: Home, custody and the requests read `rememberToday()`).
 - **Round 2, the calendar (done):** every file of `presentation/calendar/` and `calendar/components/`
   (`git mv`, packages unchanged; round 1's stashed helper conversion was the start of it, the stash
   dropped once committed), in one commit with the dependency switch: `:shared-ui` takes
