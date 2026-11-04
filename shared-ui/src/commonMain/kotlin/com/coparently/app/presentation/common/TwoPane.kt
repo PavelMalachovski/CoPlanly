@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.theme.Spacing
@@ -26,17 +25,17 @@ import com.coparently.app.presentation.theme.Spacing
 const val TWO_PANE_FROM_WIDTH_DP = 840
 
 /** The widest the two panes are together; the window's background shows either side. */
-internal val TWO_PANE_MAX_WIDTH = 1200.dp
+val TWO_PANE_MAX_WIDTH = 1200.dp
 
 /**
  * The widest a tab that stays one column is laid out on a wide window: a chat thread. Wider than
  * a detail screen's 640 dp, because a thread holds two columns of bubbles, one per parent.
  */
-internal val WIDE_COLUMN_MAX_WIDTH = 840.dp
+val WIDE_COLUMN_MAX_WIDTH = 840.dp
 
 /** Whether this window is wide enough for [TwoPanes]. Read from the configuration, as the rail is. */
 @Composable
-fun rememberTwoPane(): Boolean = LocalConfiguration.current.screenWidthDp >= TWO_PANE_FROM_WIDTH_DP
+fun rememberTwoPane(): Boolean = windowWidthDp() >= TWO_PANE_FROM_WIDTH_DP
 
 /**
  * Two panes side by side, each half of the width and the whole height, [Spacing.L] apart, the
@@ -79,7 +78,7 @@ fun TwoPanes(
  * @param content The column's content, which fills it
  */
 @Composable
-internal fun WideColumn(maxWidth: Dp = WIDE_COLUMN_MAX_WIDTH, content: @Composable () -> Unit) {
+fun WideColumn(maxWidth: Dp = WIDE_COLUMN_MAX_WIDTH, content: @Composable () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Box(
             modifier = Modifier
@@ -91,3 +90,11 @@ internal fun WideColumn(maxWidth: Dp = WIDE_COLUMN_MAX_WIDTH, content: @Composab
         }
     }
 }
+
+/**
+ * The window's width in dp, as the rail and the theme's window size read it: on Android the
+ * configuration's `screenWidthDp`, which this function read before it moved (MON-24 phase 2, Task
+ * 11); on the iPhone the window's container.
+ */
+@Composable
+internal expect fun windowWidthDp(): Int

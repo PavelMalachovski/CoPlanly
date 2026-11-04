@@ -1192,7 +1192,11 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   the compiler reads metadata at most one minor version ahead. Upgrade the two together. And **a private composable a test needs becomes
   `internal`**, never public (`HandoverHero`, `StatTiles`, `TimelineRow`, `ChatThreadHeader`), and
   a sheet's body is split out of the sheet (`EventPreviewContent`), because a `ModalBottomSheet`
-  opens its own window that a node capture does not see. Every fixture date is pinned (May 2026,
+  opens its own window that a node capture does not see. **Once it moves to `:shared-ui` (Task 11),
+  what the app's tests call becomes public**, because `internal` stops at the module (slice 11a:
+  `TwoPane`'s `TWO_PANE_MAX_WIDTH`, `WIDE_COLUMN_MAX_WIDTH` and `WideColumn`). The screenshot frame
+  provides the platform capabilities as the app does (`ProvideAndroidPlatform`), so a moved screen
+  that reads one renders as it does on a phone. Every fixture date is pinned (May 2026,
   `ScreenshotFixtures`) so an image does not change with the calendar — keep it that way, or the
   suite can never move to verify.
 - **A pull request runs only the jobs its diff can affect** (September 2026). The `changes` job
@@ -1980,18 +1984,26 @@ stay in the app, `DesignSystemPreviews.kt`), `AddItemButton`, `AnswerButtons`, `
 `ErrorState`, `ExpandableDetails`, `FabScrollVisibility`, `InlineBanner`, `InviteCodeText`,
 `LargeFontLayout`, `StickyActionBar` and `animations/`. Their own labels are `Res.string`, and
 `GroupLabel` uppercases with Compose's `toUpperCase(Locale.current)`, which on Android is the
-`Locale.getDefault()` it used. Still in the app, each for its reason: `AuthViewModel` and
-`SyncViewModel`, whose sign-ins run on an Android activity (Task 11, below); Coil's users
-(`AccountAvatar`, `PhotoStrip`, `ZoomableImage`, `SignedInAsRow`, which draws an avatar); the Android requesters and handlers
-(`NotificationPermission`, `MicrophonePermission`, `SharedFileViewer`, `SensitiveClipboard`,
-`PrivacyPolicyLink`, `TermsOfServiceLink`; Task 11's platform interfaces);
-`DiscardGuard` (`PredictiveBackHandler`); `FamilySwitcher` (`koinViewModel`); `TwoPane`
-(`LocalConfiguration`, Task 12 with the navigation); `ListSkeleton` (`components/SkeletonBox`); the
-`java.time` and `java.util.Locale` users (`AnswerByField`, `HolidayNames`, `MonthPaging`,
-`PickerDates`, `Today`, `VaccinationListEditor`); the `@StringRes` label helpers (`BloodTypeLabel`,
+`Locale.getDefault()` it used. Slice 11a (Task 11) moved the rest that its seams allow, packages
+unchanged: `AccountAvatar`, `PhotoStrip` (`PhotoStripStrings` holds `StringResource`s now),
+`ZoomableImage`, `SignedInAsRow` and `childinfo/components/MedicalPhotoStrip` (the image seam);
+`DiscardGuard` (Compose Multiplatform's `PredictiveBackHandler`, androidx.activity's on Android);
+`FamilySwitcher` (`koinViewModel` from koin-compose-viewmodel); `TwoPane` (the window's width through
+an `expect`, `screenWidthDp` on Android; `TWO_PANE_MAX_WIDTH`, `WIDE_COLUMN_MAX_WIDTH` and `WideColumn`
+public for the app's `TwoPaneTest` and Chat); `ListSkeleton` with `components/SkeletonLoading`;
+`RecordPlaceMark`; and the notification and microphone requesters (`PermissionRequesters.kt`, over
+`PermissionRequester`; `hasNotificationPermission(context)` and `hasMicrophonePermission(context)`
+stay in the app's `AndroidPermissionChecks.kt`). Still in the app, each for its reason:
+`AuthViewModel` and `SyncViewModel`, whose sign-ins run on an Android activity (Task 11, below);
+the Android halves of the platform interfaces (`SharedFileViewer`, `SensitiveClipboard`,
+`PrivacyPolicyLink`, `TermsOfServiceLink`, which `AndroidPlatform.kt` calls or which read
+`BuildConfig` for screens still in the app); the `java.time` and `java.util.Locale` users whose
+signatures carry `java.time` to their callers (`AnswerByField`, `HolidayNames`, `MonthPaging`,
+`PickerDates`, `Today`, `VaccinationListEditor`, and `components/TimePicker`), each moving with its
+screens onto kotlinx-datetime and the date seam; the `@StringRes` label helpers (`BloodTypeLabel`,
 `EventTypeLabel`, `PetSpeciesLabel`, `CountryPicker`) and the components that read them
-(`MedicalProfileEditor`, `FamilyMemberChips`); and, not moved yet though
-nothing Android holds it, `RecordPlaceMark` (with the screens that draw it, Task 11). **A Robolectric test runs `RobolectricTestApplication`**
+(`MedicalProfileEditor`, `FamilyMemberChips`), which move with the screens that pass them ids.
+**A Robolectric test runs `RobolectricTestApplication`**
 (`app/src/test/.../testing/`, `@Config(application = …)`): Robolectric installs no content
 provider from the manifest, so it hands Compose Multiplatform's resource reader the context its
 `AndroidContextProvider` hands it on a device; without it every `stringResource(Res.string.…)` a

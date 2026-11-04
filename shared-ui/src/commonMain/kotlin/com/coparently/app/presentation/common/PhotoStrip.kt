@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.common
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -32,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -40,6 +38,8 @@ import com.coparently.app.domain.files.RecordPhotoAccess
 import com.coparently.app.presentation.platform.AppImage
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 /** Edge of a square thumbnail in the strip. Large enough to recognise what is in it. */
 private val THUMBNAIL_SIZE = 96.dp
@@ -53,14 +53,14 @@ private val THUMBNAIL_SIZE = 96.dp
  * app knows what is in the picture.
  */
 data class PhotoStripStrings(
-    @StringRes val title: Int,
-    @StringRes val empty: Int,
-    @StringRes val add: Int,
-    @StringRes val hint: Int,
-    @StringRes val thumbnailDescription: Int,
-    @StringRes val open: Int,
-    @StringRes val remove: Int,
-    @StringRes val close: Int
+    val title: StringResource,
+    val empty: StringResource,
+    val add: StringResource,
+    val hint: StringResource,
+    val thumbnailDescription: StringResource,
+    val open: StringResource,
+    val remove: StringResource,
+    val close: StringResource
 )
 
 /** One entry the strip draws: the stored or picked string, and what the image loader is given. */

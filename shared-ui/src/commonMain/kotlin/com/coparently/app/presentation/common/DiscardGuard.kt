@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.common
 
-import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.Stable
@@ -12,11 +11,17 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.backhandler.PredictiveBackHandler
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.family.FamilyMemberRef
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_discard
+import com.coparently.app.resources.common_discard_changes_message
+import com.coparently.app.resources.common_discard_changes_title
+import com.coparently.app.resources.common_keep_editing
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Asks before a form holding unsaved edits is left (docs/AUDIT-2026-10-design.md D-11).
@@ -34,6 +39,8 @@ import com.coparently.app.domain.family.FamilyMemberRef
  * @param onLeave Leaves the form, dropping them.
  * @return What the form's up arrow calls, carrying the gesture's preview for the form to wear.
  */
+// Compose Multiplatform's back handler is experimental at 1.9.3; on Android it is androidx.activity's.
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun rememberDiscardGuard(dirty: Boolean, onLeave: () -> Unit): DiscardGuard {
     var asking by rememberSaveable { mutableStateOf(false) }
@@ -52,10 +59,10 @@ fun rememberDiscardGuard(dirty: Boolean, onLeave: () -> Unit): DiscardGuard {
 
     if (asking) {
         ConfirmationDialog(
-            title = stringResource(R.string.common_discard_changes_title),
-            message = stringResource(R.string.common_discard_changes_message),
-            confirmText = stringResource(R.string.common_discard),
-            dismissText = stringResource(R.string.common_keep_editing),
+            title = stringResource(Res.string.common_discard_changes_title),
+            message = stringResource(Res.string.common_discard_changes_message),
+            confirmText = stringResource(Res.string.common_discard),
+            dismissText = stringResource(Res.string.common_keep_editing),
             onConfirm = {
                 asking = false
                 currentOnLeave()

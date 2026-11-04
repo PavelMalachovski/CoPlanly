@@ -2995,6 +2995,12 @@ bytes are identical on Android):
   Foundation's. Then the image seam: `AppImage`, through which every image a screen loads is drawn,
   Coil 2 on Android exactly as each screen called it (the record photo fetcher and the image loader
   factory unchanged; no Coil 3), a placeholder on the iPhone for now.
+  Then the rest of `presentation/common/` and `presentation/components/` those seams allow:
+  the avatar, the photo strip and viewer, the signed-in row, the discard guard (Compose
+  Multiplatform's predictive back, androidx.activity's on Android), the family switcher, the two
+  panes, the list skeleton, the record-place mark and the notification and microphone requesters.
+  What carries `java.time` or `@StringRes` to its callers moves with their screens. **Slice 11a
+  built, CI pending.**
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

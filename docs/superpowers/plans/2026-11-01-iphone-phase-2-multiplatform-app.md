@@ -1077,6 +1077,26 @@ Then the export and the school import:
     arguments: `AccountAvatar`, `ZoomableImage`, `PhotoStrip`, the event form and preview, the
     expense list and form, the chat's attachment thumbnail. No `coil` import is left outside
     `AndroidPlatform.kt`.
+- Group 4, the common components the seams allow (`git mv`, packages unchanged, `R.string` →
+  `Res.string`):
+  - `common/AccountAvatar`, `PhotoStrip` (`PhotoStripStrings` → `StringResource`; its two callers,
+    `childinfo/components/MedicalPhotoStrip`, moved too, and `AddEditPetScreen`, pass `Res.string`),
+    `ZoomableImage`, `SignedInAsRow`, `ListSkeleton` with `components/SkeletonLoading`,
+    `RecordPlaceMark`, `DiscardGuard` (`androidx.compose.ui.backhandler.PredictiveBackHandler`, opt-in
+    `ExperimentalComposeUiApi`), `FamilySwitcher` (private `@StringRes` getters →
+    `StringResource`), `TwoPane` (`internal expect fun windowWidthDp()`: Android
+    `LocalConfiguration.current.screenWidthDp`, iPhone `LocalWindowInfo.containerSize`; the two
+    widths and `WideColumn` public).
+  - `NotificationPermission.kt` and `MicrophonePermission.kt` → one common `PermissionRequesters.kt`,
+    the same two `remember…Requester` functions and requester classes over
+    `LocalPermissionRequester`; `hasNotificationPermission`/`hasMicrophonePermission(context)` →
+    the app's `common/AndroidPermissionChecks.kt`.
+  - Left in the app, for the screens' slices: the `java.time` signatures (`AnswerByField`,
+    `HolidayNames`, `MonthPaging`, `PickerDates`/`LocalDatePickerDialog`, `Today`/`rememberToday`,
+    `VaccinationListEditor`, `components/TimePicker`), the `@StringRes` label helpers and their
+    readers (`BloodTypeLabel`, `EventTypeLabel`, `PetSpeciesLabel`, `CountryPicker`,
+    `MedicalProfileEditor`, `FamilyMemberChips`), the Android halves (`SharedFileViewer`,
+    `SensitiveClipboard`, `PrivacyPolicyLink`, `TermsOfServiceLink`), `DesignSystemPreviews.kt`.
 
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 

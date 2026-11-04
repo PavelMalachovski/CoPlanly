@@ -9,14 +9,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.presentation.components.SkeletonBox
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_loading
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * The placeholder a list shows while it does not yet know what is in it.
@@ -38,7 +39,7 @@ fun ListSkeleton(
     rows: Int = DEFAULT_ROWS,
     rowHeight: Dp = DEFAULT_ROW_HEIGHT
 ) {
-    val loading = stringResource(R.string.common_loading)
+    val loading = stringResource(Res.string.common_loading)
 
     Column(
         modifier = modifier

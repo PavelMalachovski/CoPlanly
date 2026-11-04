@@ -9,12 +9,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.model.AccountSummary
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_signed_in_as
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * "Signed in as <name> / <email>", with the account's avatar.
@@ -47,7 +48,7 @@ fun SignedInAsRow(
         AccountAvatar(name = displayName, photoUrl = account.photoUrl, size = 36.dp)
         Column(modifier = Modifier.padding(start = Spacing.M)) {
             Text(
-                text = stringResource(R.string.common_signed_in_as),
+                text = stringResource(Res.string.common_signed_in_as),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

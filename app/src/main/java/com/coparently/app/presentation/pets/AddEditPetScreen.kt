@@ -65,6 +65,15 @@ import com.coparently.app.presentation.common.field
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.pet_photos_add
+import com.coparently.app.resources.pet_photos_close
+import com.coparently.app.resources.pet_photos_hint
+import com.coparently.app.resources.pet_photos_none
+import com.coparently.app.resources.pet_photos_open
+import com.coparently.app.resources.pet_photos_remove
+import com.coparently.app.resources.pet_photos_thumbnail_description
+import com.coparently.app.resources.pet_photos_title
 import com.coparently.app.utils.format
 import com.coparently.app.utils.localizedDate
 import kotlinx.datetime.LocalDateTime
@@ -516,12 +525,12 @@ private fun SectionCard(title: String, content: @Composable () -> Unit) {
 /** The pet-photo string set for the shared [PhotoStrip]. */
 @Composable
 private fun petPhotoStripStrings() = PhotoStripStrings(
-    title = R.string.pet_photos_title,
-    empty = R.string.pet_photos_none,
-    add = R.string.pet_photos_add,
-    hint = R.string.pet_photos_hint,
-    thumbnailDescription = R.string.pet_photos_thumbnail_description,
-    open = R.string.pet_photos_open,
-    remove = R.string.pet_photos_remove,
-    close = R.string.pet_photos_close
+    title = Res.string.pet_photos_title,
+    empty = Res.string.pet_photos_none,
+    add = Res.string.pet_photos_add,
+    hint = Res.string.pet_photos_hint,
+    thumbnailDescription = Res.string.pet_photos_thumbnail_description,
+    open = Res.string.pet_photos_open,
+    remove = Res.string.pet_photos_remove,
+    close = Res.string.pet_photos_close
 )

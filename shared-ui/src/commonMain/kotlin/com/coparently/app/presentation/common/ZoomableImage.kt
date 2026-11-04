@@ -25,13 +25,14 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.coparently.app.R
 import com.coparently.app.presentation.platform.AppImage
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.image_viewer_close
+import org.jetbrains.compose.resources.stringResource
 
 /** Furthest in a pinch may go. Beyond this a 1600px upload is only bigger, not clearer. */
 private const val MAX_SCALE = 5f
@@ -201,7 +202,7 @@ fun FullScreenImageDialog(
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = stringResource(R.string.image_viewer_close),
+                    contentDescription = stringResource(Res.string.image_viewer_close),
                     tint = Color.White
                 )
             }

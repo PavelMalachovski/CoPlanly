@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.common
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,16 +27,34 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.data.family.FamilyOption
 import com.coparently.app.data.family.FamilySignal
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.family_switcher_plan_other
+import com.coparently.app.resources.family_switcher_plan_row
+import com.coparently.app.resources.family_switcher_professional_other
+import com.coparently.app.resources.family_switcher_professional_row
+import com.coparently.app.resources.family_switcher_request_other
+import com.coparently.app.resources.family_switcher_request_row
+import com.coparently.app.resources.family_switcher_schedule_other
+import com.coparently.app.resources.family_switcher_schedule_row
+import com.coparently.app.resources.family_switcher_split_other
+import com.coparently.app.resources.family_switcher_split_row
+import com.coparently.app.resources.family_switcher_support_other
+import com.coparently.app.resources.family_switcher_support_row
+import com.coparently.app.resources.family_switcher_unread_other
+import com.coparently.app.resources.family_switcher_unread_row
+import com.coparently.app.resources.settings_family_kind_cancel
+import com.coparently.app.resources.settings_family_switch
+import com.coparently.app.resources.settings_family_unnamed
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /** Wide enough for a first name and a surname; a longer one ellipsises. */
@@ -82,7 +99,7 @@ fun FamilySwitcherChip(
             modifier = Modifier.widthIn(max = CHIP_MAX_WIDTH),
             icon = Icons.Default.Groups,
             // The label is a person's name, which on its own says nothing about what a tap does.
-            iconDescription = stringResource(R.string.settings_family_switch),
+            iconDescription = stringResource(Res.string.settings_family_switch),
             onClick = { showDialog = true }
         )
     }
@@ -118,7 +135,7 @@ fun FamilySwitcherChip(
 @Composable
 fun familyLabel(family: FamilyOption?): String =
     family?.partnerName?.takeIf { it.isNotBlank() }
-        ?: stringResource(R.string.settings_family_unnamed)
+        ?: stringResource(Res.string.settings_family_unnamed)
 
 /**
  * Which family this device is showing.
@@ -148,7 +165,7 @@ fun FamilySwitcherDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_family_switch)) },
+        title = { Text(stringResource(Res.string.settings_family_switch)) },
         text = {
             Column {
                 families.forEach { family ->
@@ -163,7 +180,7 @@ fun FamilySwitcherDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.settings_family_kind_cancel))
+                Text(stringResource(Res.string.settings_family_kind_cancel))
             }
         }
     )
@@ -220,27 +237,25 @@ private const val SENTENCE_JOIN = ". "
 private const val PHRASE_JOIN = " · "
 
 /** The chip's sentence for one kind: "… in another family". */
-@get:StringRes
-private val FamilySignal.otherFamilyText: Int
+private val FamilySignal.otherFamilyText: StringResource
     get() = when (this) {
-        FamilySignal.CHAT -> R.string.family_switcher_unread_other
-        FamilySignal.CHANGE_REQUEST -> R.string.family_switcher_request_other
-        FamilySignal.SCHEDULE -> R.string.family_switcher_schedule_other
-        FamilySignal.SPLIT -> R.string.family_switcher_split_other
-        FamilySignal.SUPPORT -> R.string.family_switcher_support_other
-        FamilySignal.PROFESSIONAL -> R.string.family_switcher_professional_other
-        FamilySignal.PLAN -> R.string.family_switcher_plan_other
+        FamilySignal.CHAT -> Res.string.family_switcher_unread_other
+        FamilySignal.CHANGE_REQUEST -> Res.string.family_switcher_request_other
+        FamilySignal.SCHEDULE -> Res.string.family_switcher_schedule_other
+        FamilySignal.SPLIT -> Res.string.family_switcher_split_other
+        FamilySignal.SUPPORT -> Res.string.family_switcher_support_other
+        FamilySignal.PROFESSIONAL -> Res.string.family_switcher_professional_other
+        FamilySignal.PLAN -> Res.string.family_switcher_plan_other
     }
 
 /** A dialog row's phrase for one kind; the row already names the family. */
-@get:StringRes
-private val FamilySignal.rowText: Int
+private val FamilySignal.rowText: StringResource
     get() = when (this) {
-        FamilySignal.CHAT -> R.string.family_switcher_unread_row
-        FamilySignal.CHANGE_REQUEST -> R.string.family_switcher_request_row
-        FamilySignal.SCHEDULE -> R.string.family_switcher_schedule_row
-        FamilySignal.SPLIT -> R.string.family_switcher_split_row
-        FamilySignal.SUPPORT -> R.string.family_switcher_support_row
-        FamilySignal.PROFESSIONAL -> R.string.family_switcher_professional_row
-        FamilySignal.PLAN -> R.string.family_switcher_plan_row
+        FamilySignal.CHAT -> Res.string.family_switcher_unread_row
+        FamilySignal.CHANGE_REQUEST -> Res.string.family_switcher_request_row
+        FamilySignal.SCHEDULE -> Res.string.family_switcher_schedule_row
+        FamilySignal.SPLIT -> Res.string.family_switcher_split_row
+        FamilySignal.SUPPORT -> Res.string.family_switcher_support_row
+        FamilySignal.PROFESSIONAL -> Res.string.family_switcher_professional_row
+        FamilySignal.PLAN -> Res.string.family_switcher_plan_row
     }

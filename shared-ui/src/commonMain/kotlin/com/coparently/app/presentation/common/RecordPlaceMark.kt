@@ -4,12 +4,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import com.coparently.app.R
 import com.coparently.app.data.family.FamilyView
 import com.coparently.app.data.family.RecordPlace
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.record_place_earlier_family
+import com.coparently.app.resources.record_place_earlier_family_description
+import com.coparently.app.resources.record_place_only_me
+import com.coparently.app.resources.record_place_only_me_description
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * The signed-in parent's [FamilyView] for the whole tree, provided by `MainActivity` the way
@@ -35,9 +39,9 @@ fun placeOf(familyId: String?, createdBy: String?): RecordPlace =
 fun RecordPlaceMark(place: RecordPlace, modifier: Modifier = Modifier) {
     val (label, description) = when (place) {
         RecordPlace.ONLY_ME ->
-            R.string.record_place_only_me to R.string.record_place_only_me_description
+            Res.string.record_place_only_me to Res.string.record_place_only_me_description
         RecordPlace.EARLIER_FAMILY ->
-            R.string.record_place_earlier_family to R.string.record_place_earlier_family_description
+            Res.string.record_place_earlier_family to Res.string.record_place_earlier_family_description
         RecordPlace.ON_SCREEN, RecordPlace.OTHER_FAMILY -> return
     }
     val spoken = stringResource(description)
@@ -51,7 +55,7 @@ fun RecordPlaceMark(place: RecordPlace, modifier: Modifier = Modifier) {
 /** The spoken words of [place]'s mark, or null for a record of the family on screen. */
 @Composable
 fun placeDescription(place: RecordPlace): String? = when (place) {
-    RecordPlace.ONLY_ME -> stringResource(R.string.record_place_only_me_description)
-    RecordPlace.EARLIER_FAMILY -> stringResource(R.string.record_place_earlier_family_description)
+    RecordPlace.ONLY_ME -> stringResource(Res.string.record_place_only_me_description)
+    RecordPlace.EARLIER_FAMILY -> stringResource(Res.string.record_place_earlier_family_description)
     RecordPlace.ON_SCREEN, RecordPlace.OTHER_FAMILY -> null
 }

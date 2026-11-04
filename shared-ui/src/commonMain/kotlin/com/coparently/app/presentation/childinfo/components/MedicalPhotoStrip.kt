@@ -2,10 +2,18 @@ package com.coparently.app.presentation.childinfo.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.coparently.app.R
 import com.coparently.app.presentation.common.PhotoOwner
 import com.coparently.app.presentation.common.PhotoStrip
 import com.coparently.app.presentation.common.PhotoStripStrings
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.medical_photos_add
+import com.coparently.app.resources.medical_photos_close
+import com.coparently.app.resources.medical_photos_hint
+import com.coparently.app.resources.medical_photos_none
+import com.coparently.app.resources.medical_photos_open
+import com.coparently.app.resources.medical_photos_remove
+import com.coparently.app.resources.medical_photos_thumbnail_description
+import com.coparently.app.resources.medical_photos_title
 
 /**
  * The photographs attached to a child's medical notes.
@@ -37,14 +45,14 @@ fun MedicalPhotoStrip(
         photos = photos,
         owner = owner,
         strings = PhotoStripStrings(
-            title = R.string.medical_photos_title,
-            empty = R.string.medical_photos_none,
-            add = R.string.medical_photos_add,
-            hint = R.string.medical_photos_hint,
-            thumbnailDescription = R.string.medical_photos_thumbnail_description,
-            open = R.string.medical_photos_open,
-            remove = R.string.medical_photos_remove,
-            close = R.string.medical_photos_close
+            title = Res.string.medical_photos_title,
+            empty = Res.string.medical_photos_none,
+            add = Res.string.medical_photos_add,
+            hint = Res.string.medical_photos_hint,
+            thumbnailDescription = Res.string.medical_photos_thumbnail_description,
+            open = Res.string.medical_photos_open,
+            remove = Res.string.medical_photos_remove,
+            close = Res.string.medical_photos_close
         ),
         modifier = modifier,
         onAdd = onAdd,
