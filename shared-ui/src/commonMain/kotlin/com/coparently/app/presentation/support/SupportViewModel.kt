@@ -156,6 +156,13 @@ class SupportViewModel(
     /** Records that [payment]'s money arrived. */
     fun confirm(payment: Payment) = write { payments.confirm(payment) }
 
+    /**
+     * Whether this phone reminds the payer at all ([SupportReminderScheduler.available]); the screen
+     * offers the reminder only when it does (MON-24 phase 2, slice 11e: the iPhone's stand-in does not).
+     */
+    val remindersAvailable: Boolean
+        get() = reminderScheduler.available
+
     /** Turns this phone's reminder in [familyId] on with [days] before the due day, or off with null. */
     fun setReminder(familyId: String, days: Int?) {
         val uid = myUid ?: return

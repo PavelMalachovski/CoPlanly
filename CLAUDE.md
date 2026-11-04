@@ -1648,7 +1648,8 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              screens (presentation/changerequests/: the inbox, its cards and the change request
              form); and, from slice 11e, the family's screens (presentation/family/), with the
              split's wording, the stickers' views, the family's two dialogs and Home's money text,
-             and the expenses' screens (presentation/expenses/).
+             and the expenses' and child support's screens (presentation/expenses/,
+             presentation/support/).
              It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
@@ -1666,8 +1667,8 @@ presentation/ — Compose screens per feature, and the two ViewModels whose sign
              Android activity (AuthViewModel, SyncViewModel; Task 11). Their strings, the theme,
              the design system's components, the shared state and every other ViewModel are in
              shared-ui/ (Task 10), and so are chat's, the event form's, the calendar's, custody's,
-             the requests', the family's and the expenses' screens (Task 11, slices 11b–11e); the
-             app keeps their previews
+             the requests', the family's, the expenses' and child support's screens (Task 11, slices
+             11b–11e); the app keeps their previews
 di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
              listed in appModules); the database builder (DatabaseBuilder.kt) and the file name
              (DatabaseName.kt) are in shared-data/ since MON-24 phase 2
@@ -2033,8 +2034,8 @@ stay in the app's `AndroidPermissionChecks.kt`). Still in the app, each for its 
 the Android halves of the platform interfaces (`SharedFileViewer`, `SensitiveClipboard`,
 `PrivacyPolicyLink`, `TermsOfServiceLink`, which `AndroidPlatform.kt` calls or which read
 `BuildConfig` for screens still in the app); the `java.time` users whose signatures carry
-`java.time` to their callers (`MonthPaging`'s direction and transition, Expenses', and
-`VaccinationListEditor`), each moving with its screens onto kotlinx-datetime and the date seam; the
+`java.time` to their callers (~~`MonthPaging`'s direction and transition, Expenses'~~, moved with
+Expenses in slice 11e onto kotlinx-datetime, and `VaccinationListEditor`), each moving with its screens onto kotlinx-datetime and the date seam; the
 `@StringRes` label helpers (`BloodTypeLabel`, `PetSpeciesLabel`, `CountryPicker`) and the component
 that reads them (`MedicalProfileEditor`), which move with the screens that pass them ids. **Slice
 11c moved the calendar's and the event form's helpers** onto kotlinx-datetime and `StringResource`,
@@ -2164,7 +2165,13 @@ carried note's hiding. Public for the app's tests: `CollapsedMonthSummary` (the 
 androidTest, its form's date a kotlinx-datetime day now). The header's previews are the app's
 `expenses/ExpensePreviews.kt`. `BuildReceiptScanUpdateTest`, `CategoryPaletteTest`,
 `ExpenseSummaryChoiceTest`, `MonthSwipeTest` and `MonthPagingTest` run in `commonTest` (kotlinx-datetime
-fixtures, names without commas).
+fixtures, names without commas). **Then child support's screen** (slice 11e, `support/SupportScreen.kt`;
+`presentation/payments/` has no screen of its own, its strip and cards being the Expenses header's and
+chat's): its months through `Clock.System.todayIn`, a due day `ReaderDateText.pattern(…, "d MMMM")`,
+the dialog's amount `DecimalText.plain` (what `MinorUnits.toDecimal(…).toPlainString()` wrote), and
+**the payer's reminder offered only where this phone runs its job**
+(`SupportReminderScheduler.available`, new, true by default; the iPhone's `NoSupportReminderJob` says
+false; `SupportViewModel.remindersAvailable`), the carried note's hiding.
 **A Robolectric test runs `RobolectricTestApplication`**
 (`app/src/test/.../testing/`, `@Config(application = …)`): Robolectric installs no content
 provider from the manifest, so it hands Compose Multiplatform's resource reader the context its

@@ -3047,6 +3047,8 @@ bytes are identical on Android):
   analytics, the settle-up question and the expense form, its date a kotlinx-datetime day kept as
   text and its receipt's photo through the shell's picker and camera; on a phone with no picker,
   image loader or text recognition (the iPhone for now) the form offers no receipt and scans nothing.
+  Then child support's screen, whose payer's reminder is offered only where the phone runs its job.
+  **Slice 11e built, CI pending.**
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

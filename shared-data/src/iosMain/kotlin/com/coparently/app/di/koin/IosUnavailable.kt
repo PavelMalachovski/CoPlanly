@@ -150,9 +150,14 @@ internal object NoSchoolImportJob : SchoolImportScheduler {
 /**
  * No background jobs yet: the child support reminder's job is not scheduled, so the iPhone reminds
  * nobody (slice 10d: the child support screen's ViewModel asks for it when the payer turns the
- * reminder on). The choice is still kept, in the sealed store, for the job phase 3 brings.
+ * reminder on). [available] says so, so the shared screen offers no reminder here (slice 11e); a
+ * choice made elsewhere is still kept, in the sealed store, for the job phase 3 brings.
  */
 internal object NoSupportReminderJob : SupportReminderScheduler {
+
+    /** Says so, so the shared child support screen offers no reminder here. */
+    override val available: Boolean = false
+
     override fun schedule() = Unit
     override fun cancel() = Unit
 }

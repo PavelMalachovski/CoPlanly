@@ -8,6 +8,14 @@ package com.coparently.app.data.support
  * `SupportReminderWorker`) answers it on Android, and the iPhone schedules nothing yet.
  */
 interface SupportReminderScheduler {
+
+    /**
+     * Whether this phone runs the reminder's job at all. The child support screen offers the payer
+     * a reminder only when it does (design item 8): WorkManager's job on Android always does; the
+     * iPhone's stand-in does not yet (MON-24 phase 2, slice 11e).
+     */
+    val available: Boolean get() = true
+
     /** Makes sure the job runs; a no-op when it already does. */
     fun schedule()
 

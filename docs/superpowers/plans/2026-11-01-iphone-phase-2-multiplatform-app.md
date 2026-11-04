@@ -1416,6 +1416,14 @@ Then the export and the school import:
   `ReaderMoneyTextTest` holds the `Double` overload and the percent to `NumberFormat`.
   `JavaPickerDates.kt` keeps the export, the child records' picker and the two androidTest classes
   (11g).
+- Group 4, child support's screen: `support/SupportScreen.kt` (`git mv`; `presentation/payments/` holds no
+  screen, its strip and cards being the Expenses header's and chat's, both moved). Replaced:
+  `LocalDate.now()`/`YearMonth.now()` → `Clock.System.todayIn` in the system zone (`.yearMonth`); the due
+  day's `ofPattern("d MMMM")` → `ReaderDateText.pattern`; `MinorUnits.toDecimal(…).toPlainString()` →
+  `DecimalText.plain(…, 2)`. **The carried note:** `SupportReminderScheduler` gains `available` (`true` by
+  default; `NoSupportReminderJob` answers `false`), `SupportViewModel.remindersAvailable` reads it, and the
+  screen's `SupportActions.setReminder` is null where it is false, so the payer's reminder group is not
+  drawn. No visibility widened; no app test sat in `presentation/support/`.
 
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 
