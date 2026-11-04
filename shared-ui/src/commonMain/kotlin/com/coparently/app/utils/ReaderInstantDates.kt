@@ -18,3 +18,11 @@ import kotlin.time.Instant
  */
 fun readerLongDateAt(millis: Long): String =
     readerLongDate(Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.currentSystemDefault()).date)
+
+/**
+ * The day the instant [millis] falls on in the device's zone, in the language's medium style: when a
+ * family friend's or a professional's access ends, as `ofLocalizedDate(FormatStyle.MEDIUM)` over the
+ * instant's day in `ZoneId.systemDefault()` wrote it (slice 11g).
+ */
+fun readerMediumDateAt(millis: Long): String =
+    readerMediumDate(Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.currentSystemDefault()).date)

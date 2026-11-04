@@ -32,9 +32,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.friends.FriendRole
 import com.coparently.app.presentation.common.AccountAvatar
 import com.coparently.app.presentation.common.ConfirmationDialog
@@ -42,7 +40,22 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_back
+import com.coparently.app.resources.friend_detail_title
+import com.coparently.app.resources.friend_profile_blood_group
+import com.coparently.app.resources.friend_profile_phone
+import com.coparently.app.resources.friend_revoke
+import com.coparently.app.resources.friend_revoke_confirm_message
+import com.coparently.app.resources.friend_revoke_confirm_title
+import com.coparently.app.resources.friend_revoke_failed
+import com.coparently.app.resources.friend_role_friend
+import com.coparently.app.resources.friend_role_grandparent
+import com.coparently.app.resources.friend_role_guardian
+import com.coparently.app.resources.pairing_cancel
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -78,13 +91,13 @@ fun FriendDetailScreen(
     val grant = friends.firstOrNull { it.friendUid == friendUid }
     val name = profile?.name?.takeIf { it.isNotBlank() }
         ?: grant?.name?.takeIf { it.isNotBlank() }
-        ?: stringResource(R.string.friend_detail_title)
+        ?: stringResource(Res.string.friend_detail_title)
     val photoUrl = profile?.photoUrl ?: grant?.photoUrl
 
     var confirmingRevoke by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val revokeFailed = stringResource(R.string.friend_revoke_failed)
+    val revokeFailed = stringResource(Res.string.friend_revoke_failed)
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -95,7 +108,7 @@ fun FriendDetailScreen(
                     IconButton(onClick = onNavigateUp) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.common_back)
+                            contentDescription = stringResource(Res.string.common_back)
                         )
                     }
                 }
@@ -139,7 +152,7 @@ fun FriendDetailScreen(
                         SectionRow(
                             icon = Icons.Default.Phone,
                             title = phone,
-                            supporting = stringResource(R.string.friend_profile_phone)
+                            supporting = stringResource(Res.string.friend_profile_phone)
                         )
                         if (index != phones.lastIndex || !bloodGroup.isNullOrBlank()) Divider()
                     }
@@ -147,7 +160,7 @@ fun FriendDetailScreen(
                         SectionRow(
                             icon = Icons.Default.Bloodtype,
                             title = group,
-                            supporting = stringResource(R.string.friend_profile_blood_group)
+                            supporting = stringResource(Res.string.friend_profile_blood_group)
                         )
                     }
                 }
@@ -156,7 +169,7 @@ fun FriendDetailScreen(
             // Last on the screen, per the destructive-action anatomy.
             SectionGroup {
                 SectionRow(
-                    title = stringResource(R.string.friend_revoke),
+                    title = stringResource(Res.string.friend_revoke),
                     titleColor = MaterialTheme.colorScheme.error,
                     onClick = { confirmingRevoke = true }
                 )
@@ -166,10 +179,10 @@ fun FriendDetailScreen(
 
     if (confirmingRevoke) {
         ConfirmationDialog(
-            title = stringResource(R.string.friend_revoke_confirm_title, name),
-            message = stringResource(R.string.friend_revoke_confirm_message),
-            confirmText = stringResource(R.string.friend_revoke),
-            dismissText = stringResource(R.string.pairing_cancel),
+            title = stringResource(Res.string.friend_revoke_confirm_title, name),
+            message = stringResource(Res.string.friend_revoke_confirm_message),
+            confirmText = stringResource(Res.string.friend_revoke),
+            dismissText = stringResource(Res.string.pairing_cancel),
             onConfirm = {
                 confirmingRevoke = false
                 viewModel.revoke(friendUid) { succeeded ->
@@ -188,8 +201,8 @@ fun FriendDetailScreen(
 
 /** The localized name of a role, as the parents read it. */
 @androidx.annotation.StringRes
-private fun FriendRole.detailLabelRes(): Int = when (this) {
-    FriendRole.GUARDIAN -> R.string.friend_role_guardian
-    FriendRole.FRIEND -> R.string.friend_role_friend
-    FriendRole.GRANDPARENT -> R.string.friend_role_grandparent
+private fun FriendRole.detailLabelRes(): StringResource = when (this) {
+    FriendRole.GUARDIAN -> Res.string.friend_role_guardian
+    FriendRole.FRIEND -> Res.string.friend_role_friend
+    FriendRole.GRANDPARENT -> Res.string.friend_role_grandparent
 }

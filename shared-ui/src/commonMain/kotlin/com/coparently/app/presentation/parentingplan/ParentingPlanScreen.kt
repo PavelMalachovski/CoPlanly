@@ -30,8 +30,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.parentingplan.ParentingPlanCatalogue
 import com.coparently.app.domain.parentingplan.ParentingPlanComparison
 import com.coparently.app.domain.parentingplan.ParentingPlanPair
@@ -44,6 +42,23 @@ import com.coparently.app.presentation.common.SectionGroupScope
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.parenting_plan_back
+import com.coparently.app.resources.parenting_plan_disclaimer
+import com.coparently.app.resources.parenting_plan_intro
+import com.coparently.app.resources.parenting_plan_needs_coparent_body
+import com.coparently.app.resources.parenting_plan_needs_coparent_title
+import com.coparently.app.resources.parenting_plan_progress_agreed
+import com.coparently.app.resources.parenting_plan_progress_answered
+import com.coparently.app.resources.parenting_plan_propose_blocked
+import com.coparently.app.resources.parenting_plan_propose_hint
+import com.coparently.app.resources.parenting_plan_propose_schedule
+import com.coparently.app.resources.parenting_plan_status_agreed
+import com.coparently.app.resources.parenting_plan_status_only_theirs
+import com.coparently.app.resources.parenting_plan_status_only_yours
+import com.coparently.app.resources.parenting_plan_status_open
+import com.coparently.app.resources.parenting_plan_status_unanswered
+import com.coparently.app.resources.parenting_plan_title
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -83,12 +98,12 @@ fun ParentingPlanScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.parenting_plan_title)) },
+                title = { Text(stringResource(Res.string.parenting_plan_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.parenting_plan_back)
+                            contentDescription = stringResource(Res.string.parenting_plan_back)
                         )
                     }
                 }
@@ -142,12 +157,12 @@ private fun NoCoParentBody(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = stringResource(R.string.parenting_plan_needs_coparent_title),
+            text = stringResource(Res.string.parenting_plan_needs_coparent_title),
             style = MaterialTheme.typography.titleMedium
         )
         Spacer(Modifier.height(Spacing.S))
         Text(
-            text = stringResource(R.string.parenting_plan_needs_coparent_body),
+            text = stringResource(Res.string.parenting_plan_needs_coparent_body),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -205,21 +220,21 @@ private fun PlanBody(
 private fun PlanHeader(agreed: Int, answered: Int, total: Int) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         Text(
-            text = stringResource(R.string.parenting_plan_progress_agreed, agreed, total),
+            text = stringResource(Res.string.parenting_plan_progress_agreed, agreed, total),
             style = MaterialTheme.typography.headlineSmall
         )
         Text(
-            text = stringResource(R.string.parenting_plan_progress_answered, answered, total),
+            text = stringResource(Res.string.parenting_plan_progress_answered, answered, total),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = stringResource(R.string.parenting_plan_intro),
+            text = stringResource(Res.string.parenting_plan_intro),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = stringResource(R.string.parenting_plan_disclaimer),
+            text = stringResource(Res.string.parenting_plan_disclaimer),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -268,12 +283,12 @@ private fun SectionGroupScope.ProposeScheduleRow(
     if (!offered && !blocked) return
     Divider()
     SectionRow(
-        title = stringResource(R.string.parenting_plan_propose_schedule),
+        title = stringResource(Res.string.parenting_plan_propose_schedule),
         icon = Icons.Default.DateRange,
         supporting = if (blocked) {
-            stringResource(R.string.parenting_plan_propose_blocked, coParentName)
+            stringResource(Res.string.parenting_plan_propose_blocked, coParentName)
         } else {
-            stringResource(R.string.parenting_plan_propose_hint)
+            stringResource(Res.string.parenting_plan_propose_hint)
         },
         onClick = onPropose.takeIf { offered }
     )
@@ -289,12 +304,12 @@ private fun SectionGroupScope.ProposeScheduleRow(
 @Composable
 private fun StatusChip(status: PlanQuestionStatus, coParentName: String) {
     val label = when (status) {
-        PlanQuestionStatus.UNANSWERED -> stringResource(R.string.parenting_plan_status_unanswered)
+        PlanQuestionStatus.UNANSWERED -> stringResource(Res.string.parenting_plan_status_unanswered)
         PlanQuestionStatus.ONLY_YOURS ->
-            stringResource(R.string.parenting_plan_status_only_yours, coParentName)
-        PlanQuestionStatus.ONLY_THEIRS -> stringResource(R.string.parenting_plan_status_only_theirs)
-        PlanQuestionStatus.OPEN -> stringResource(R.string.parenting_plan_status_open)
-        PlanQuestionStatus.AGREED -> stringResource(R.string.parenting_plan_status_agreed)
+            stringResource(Res.string.parenting_plan_status_only_yours, coParentName)
+        PlanQuestionStatus.ONLY_THEIRS -> stringResource(Res.string.parenting_plan_status_only_theirs)
+        PlanQuestionStatus.OPEN -> stringResource(Res.string.parenting_plan_status_open)
+        PlanQuestionStatus.AGREED -> stringResource(Res.string.parenting_plan_status_agreed)
     }
     PillChip(
         label = label,

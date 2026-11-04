@@ -1,11 +1,16 @@
 package com.coparently.app.presentation.friends
 
-import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.friends.FriendAccessDuration
 import com.coparently.app.domain.guests.GuestAccessDuration
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.friend_compare_duration_choice
+import com.coparently.app.resources.friend_invite_duration_while_linked
+import com.coparently.app.resources.guest_invite_duration_month
+import com.coparently.app.resources.guest_invite_duration_quarter
+import com.coparently.app.resources.guest_invite_duration_week
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * The localized name of a grant length.
@@ -13,20 +18,18 @@ import com.coparently.app.domain.guests.GuestAccessDuration
  * Reuses the guest sheet's strings: they name a duration ("30 days"), not what it grants, so a
  * second set worded identically would be five more files to keep in step for no gain.
  */
-@StringRes
-internal fun GuestAccessDuration.labelRes(): Int = when (this) {
-    GuestAccessDuration.WEEK -> R.string.guest_invite_duration_week
-    GuestAccessDuration.MONTH -> R.string.guest_invite_duration_month
-    GuestAccessDuration.QUARTER -> R.string.guest_invite_duration_quarter
+internal fun GuestAccessDuration.labelRes(): StringResource = when (this) {
+    GuestAccessDuration.WEEK -> Res.string.guest_invite_duration_week
+    GuestAccessDuration.MONTH -> Res.string.guest_invite_duration_month
+    GuestAccessDuration.QUARTER -> Res.string.guest_invite_duration_quarter
 }
 
 /** The localized name of a family friend's access length: the guest strings, and "While we are linked". */
-@StringRes
-internal fun FriendAccessDuration.labelRes(): Int = when (this) {
-    FriendAccessDuration.WEEK -> R.string.guest_invite_duration_week
-    FriendAccessDuration.MONTH -> R.string.guest_invite_duration_month
-    FriendAccessDuration.QUARTER -> R.string.guest_invite_duration_quarter
-    FriendAccessDuration.WHILE_LINKED -> R.string.friend_invite_duration_while_linked
+internal fun FriendAccessDuration.labelRes(): StringResource = when (this) {
+    FriendAccessDuration.WEEK -> Res.string.guest_invite_duration_week
+    FriendAccessDuration.MONTH -> Res.string.guest_invite_duration_month
+    FriendAccessDuration.QUARTER -> Res.string.guest_invite_duration_quarter
+    FriendAccessDuration.WHILE_LINKED -> Res.string.friend_invite_duration_while_linked
 }
 
 /**
@@ -40,7 +43,7 @@ internal fun FriendAccessDuration.labelRes(): Int = when (this) {
 internal fun durationChoicesText(): String {
     val labels = FriendAccessDuration.entries.map { stringResource(it.labelRes()) }
     val choice = if (labels.size >= 2) {
-        stringResource(R.string.friend_compare_duration_choice, labels[labels.size - 2], labels.last())
+        stringResource(Res.string.friend_compare_duration_choice, labels[labels.size - 2], labels.last())
     } else {
         ""
     }

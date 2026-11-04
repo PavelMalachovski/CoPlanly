@@ -1218,7 +1218,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `ReceiptScanFormState` and `ReceiptScanCallbacks`, which an androidTest drives; slice 11f:
 `ParentColorPicker` and `CUSTOM_COLOUR`, which the screenshots and `ParentColorPickerTest` render, and
 `GridSwatch`, which onboarding draws, then `InvitationView`, which `InvitationViewTest` and the
-screenshots render; slice 11g: Home's `HandoverHero`, `StatTiles` and `TimelineRow`, which the
+screenshots render; slice 11g: Home's `HandoverHero`, `StatTiles` and `TimelineRow`, then
+`FriendAgendaDay`, `FriendComparisonTable`, `FriendEventDetails` and `FriendInviteContent`, which the
 screenshots render). A test that moves with its code to `:shared-ui` keeps `internal`
   reachable, as the calendar's ten pure tests do. The screenshot frame
   provides the platform capabilities as the app does (`ProvideAndroidPlatform`), so a moved screen
@@ -1663,7 +1664,9 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              AuthViewModel; and, from slice 11g, Home's, the month review's and the stickers'
              screens (presentation/home/, presentation/review/, presentation/stickers/), then the
              family's records (presentation/childinfo/, pets/, contacts/, guests/), then the
-             vault's, the export's and the journal's (presentation/documents/, export/, journal/).
+             vault's, the export's and the journal's (presentation/documents/, export/, journal/),
+             then family friends', professionals' and the parenting plan's (presentation/friends/,
+             professionals/, parentingplan/).
              It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
@@ -1684,7 +1687,8 @@ presentation/ — Compose screens per feature not moved yet (slice 11g), MainAct
              requests', the family's, the expenses', child support's, Settings', pairing's,
              onboarding's, the sign-in's, the profile's, Home's, the month review's, the
              stickers', the child and pet records', the contacts', the guest's, the vault's, the
-             export's and the journal's screens (Task 11, slices 11b–11g); the
+             export's, the journal's, family friends', professionals' and the parenting plan's
+             screens (Task 11, slices 11b–11g); the
              app keeps their previews and the Android halves of the platform interfaces
              (presentation/platform/, the language picker's AndroidAppLanguages, Google's
              sign-in's AndroidGoogleCalendarSignIn, the credential sheets' AndroidCredentialSignIn
@@ -2323,6 +2327,21 @@ built (`fileShareIntent` in `AndroidPlatform.kt`; the app keeps `recordShareInte
 formats only where the phone draws and shares the file** (`RecordFileWriter.available`, new, true
 by default; the iPhone's `NoRecordFiles` says false; `ExportViewModel.exportAvailable`, and
 `ShareSheet.available`), the carried note's hiding.
+**Then the people outside the pair, and the plan** (slice 11g): `presentation/friends/` (the
+Friends screen, a friend's card and profile, the friend's calendar, the comparison table, the event
+details, the invite sheet and `GuestDurationText`, whose `GuestDurationTextTest` is in `commonTest`),
+`professionals/` (the Professionals screen, their calendar and plan, the grant dialog, the invite
+sheet and `ProfessionalText`) and `parentingplan/` (`ParentingPlanScreen`, `PlanQuestionSheet`).
+`FriendAgendaDay`, `FriendComparisonTable`, `FriendEventDetails` and `FriendInviteContent` are public
+for the screenshots; every label helper is a `StringResource`. An agenda day's date is
+`readerFullDate`, an event's time `ReaderDateText.time`, an access end the new `readerMediumDateAt`
+(`FormatStyle.MEDIUM` of the instant's day in the system zone, beside `readerLongDateAt` in
+`utils/ReaderInstantDates.kt`, a file of its own: a top-level function in `ReaderDateText.kt` would
+clash with the Android actuals' `ReaderDateTextKt` class), a grant's
+"now" `Clock.System.now().toEpochMilliseconds()`. A friend's and a professional's code are shared
+through `ShareSheet` (worded through `rememberUiTextResolver` at the tap), and neither sheet offers
+Share where there is none (`FriendInviteContent`'s `onShare` is null then); `FriendsScreenTest`
+(Robolectric, in the app) composes the screen with the sheet closed, so it reads no platform local.
 **A Robolectric test runs `RobolectricTestApplication`**
 (`app/src/test/.../testing/`, `@Config(application = …)`): Robolectric installs no content
 provider from the manifest, so it hands Compose Multiplatform's resource reader the context its

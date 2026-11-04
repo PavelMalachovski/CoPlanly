@@ -25,12 +25,22 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.parentingplan.ParentingPlanPair
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_discard
+import com.coparently.app.resources.common_discard_changes_title
+import com.coparently.app.resources.common_keep_editing
+import com.coparently.app.resources.parenting_plan_agree
+import com.coparently.app.resources.parenting_plan_agree_hint
+import com.coparently.app.resources.parenting_plan_answer_hint
+import com.coparently.app.resources.parenting_plan_discard_message
+import com.coparently.app.resources.parenting_plan_save
+import com.coparently.app.resources.parenting_plan_their_answer
+import com.coparently.app.resources.parenting_plan_their_answer_missing
+import com.coparently.app.resources.parenting_plan_your_answer
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -116,7 +126,7 @@ fun PlanQuestionSheet(
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(stringResource(R.string.parenting_plan_save))
+                Text(stringResource(Res.string.parenting_plan_save))
             }
         }
     }
@@ -148,10 +158,10 @@ private fun rememberGuardedSheetState(unsaved: Boolean, onRefused: () -> Unit): 
 @Composable
 private fun DiscardAnswerDialog(onKeep: () -> Unit, onDiscard: () -> Unit) {
     ConfirmationDialog(
-        title = stringResource(R.string.common_discard_changes_title),
-        message = stringResource(R.string.parenting_plan_discard_message),
-        confirmText = stringResource(R.string.common_discard),
-        dismissText = stringResource(R.string.common_keep_editing),
+        title = stringResource(Res.string.common_discard_changes_title),
+        message = stringResource(Res.string.parenting_plan_discard_message),
+        confirmText = stringResource(Res.string.common_discard),
+        dismissText = stringResource(Res.string.common_keep_editing),
         isDestructive = true,
         onDismiss = onKeep,
         onConfirm = onDiscard
@@ -174,8 +184,8 @@ private fun YourAnswerField(draft: String, onDraftChange: (String) -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 120.dp),
-        label = { Text(stringResource(R.string.parenting_plan_your_answer)) },
-        placeholder = { Text(stringResource(R.string.parenting_plan_answer_hint)) }
+        label = { Text(stringResource(Res.string.parenting_plan_your_answer)) },
+        placeholder = { Text(stringResource(Res.string.parenting_plan_answer_hint)) }
     )
 }
 
@@ -183,7 +193,7 @@ private fun YourAnswerField(draft: String, onDraftChange: (String) -> Unit) {
 private fun TheirAnswer(theirAnswer: String?, coParentName: String) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.XS)) {
         Text(
-            text = stringResource(R.string.parenting_plan_their_answer, coParentName),
+            text = stringResource(Res.string.parenting_plan_their_answer, coParentName),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -194,7 +204,7 @@ private fun TheirAnswer(theirAnswer: String?, coParentName: String) {
         ) {
             Text(
                 text = theirAnswer
-                    ?: stringResource(R.string.parenting_plan_their_answer_missing, coParentName),
+                    ?: stringResource(Res.string.parenting_plan_their_answer_missing, coParentName),
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (theirAnswer == null) {
                     MaterialTheme.colorScheme.onSurfaceVariant
@@ -217,12 +227,12 @@ private fun AgreementRow(agreed: Boolean, onToggle: () -> Unit) {
         ) {
             Checkbox(checked = agreed, onCheckedChange = { onToggle() })
             Text(
-                text = stringResource(R.string.parenting_plan_agree),
+                text = stringResource(Res.string.parenting_plan_agree),
                 style = MaterialTheme.typography.bodyMedium
             )
         }
         Text(
-            text = stringResource(R.string.parenting_plan_agree_hint),
+            text = stringResource(Res.string.parenting_plan_agree_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

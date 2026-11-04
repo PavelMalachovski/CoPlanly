@@ -29,9 +29,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.friends.CalendarFriendGrant
 import com.coparently.app.domain.friends.FriendAccessDuration
 import com.coparently.app.presentation.common.AccountAvatar
@@ -39,12 +37,27 @@ import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_back
+import com.coparently.app.resources.friend_access_several
+import com.coparently.app.resources.friend_access_several_while_linked
+import com.coparently.app.resources.friend_access_until
+import com.coparently.app.resources.friend_access_while_linked
+import com.coparently.app.resources.friend_calendar_row_supporting
+import com.coparently.app.resources.friend_calendar_row_supporting_while_linked
+import com.coparently.app.resources.friend_calendar_title
+import com.coparently.app.resources.friend_empty
+import com.coparently.app.resources.friend_intro
+import com.coparently.app.resources.friend_invite_action
+import com.coparently.app.resources.friend_profile_title
+import com.coparently.app.resources.friend_redeem_code_label
+import com.coparently.app.resources.friend_redeem_open_calendar
+import com.coparently.app.resources.friend_redeem_row_supporting
+import com.coparently.app.resources.friend_redeem_row_title
+import com.coparently.app.resources.friend_section_title
+import com.coparently.app.utils.readerMediumDateAt
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 
 /**
  * Who outside the family can see the calendar, and the one control that changes it (item 16).
@@ -146,12 +159,12 @@ fun FriendsScreen(
 @Composable
 private fun FriendsTopBar(onNavigateUp: () -> Unit) {
     TopAppBar(
-        title = { Text(stringResource(R.string.friend_section_title)) },
+        title = { Text(stringResource(Res.string.friend_section_title)) },
         navigationIcon = {
             IconButton(onClick = onNavigateUp) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.common_back)
+                    contentDescription = stringResource(Res.string.common_back)
                 )
             }
         }
@@ -174,7 +187,7 @@ private data class ParentViewActions(
 @Composable
 private fun ParentView(friends: List<CalendarFriendGrant>, redeem: FriendRedeemState, actions: ParentViewActions) {
     Text(
-        text = stringResource(R.string.friend_intro),
+        text = stringResource(Res.string.friend_intro),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
@@ -185,7 +198,7 @@ private fun ParentView(friends: List<CalendarFriendGrant>, redeem: FriendRedeemS
         // saying the same thing would be two answers to one question.
         EmptyState(
             icon = Icons.Default.Diversity3,
-            title = stringResource(R.string.friend_empty),
+            title = stringResource(Res.string.friend_empty),
             modifier = Modifier.fillMaxWidth()
         )
     } else {
@@ -200,7 +213,7 @@ private fun ParentView(friends: List<CalendarFriendGrant>, redeem: FriendRedeemS
     SectionGroup {
         SectionRow(
             icon = Icons.Default.PersonAdd,
-            title = stringResource(R.string.friend_invite_action),
+            title = stringResource(Res.string.friend_invite_action),
             onClick = actions.onInvite
         )
     }
@@ -243,11 +256,11 @@ private fun MyFamilies(
     SectionGroup {
         SectionRow(
             icon = Icons.Default.Diversity3,
-            title = stringResource(R.string.friend_profile_title),
+            title = stringResource(Res.string.friend_profile_title),
             supporting = when {
                 grants.size == 1 -> accessText(first)
-                whileLinked -> stringResource(R.string.friend_access_several_while_linked, grants.size)
-                else -> stringResource(R.string.friend_access_several, grants.size, until)
+                whileLinked -> stringResource(Res.string.friend_access_several_while_linked, grants.size)
+                else -> stringResource(Res.string.friend_access_several, grants.size, until)
             },
             onClick = onOpenMyProfile,
             trailing = {}
@@ -262,12 +275,12 @@ private fun FamilyCalendarRow(grant: CalendarFriendGrant, onOpen: () -> Unit) {
     val names = grant.familyParents.mapNotNull { grant.parentNames[it] }
     SectionRow(
         icon = Icons.Default.CalendarMonth,
-        title = stringResource(R.string.friend_calendar_title),
+        title = stringResource(Res.string.friend_calendar_title),
         supporting = when {
             names.size != 2 -> accessText(grant.expiresAtMillis)
             FriendAccessDuration.isWhileLinked(grant.expiresAtMillis) ->
-                stringResource(R.string.friend_calendar_row_supporting_while_linked, names[0], names[1])
-            else -> stringResource(R.string.friend_calendar_row_supporting, names[0], names[1], until)
+                stringResource(Res.string.friend_calendar_row_supporting_while_linked, names[0], names[1])
+            else -> stringResource(Res.string.friend_calendar_row_supporting, names[0], names[1], until)
         },
         onClick = onOpen,
         trailing = {
@@ -284,18 +297,14 @@ private fun FamilyCalendarRow(grant: CalendarFriendGrant, onOpen: () -> Unit) {
 @Composable
 private fun accessText(expiresAtMillis: Long): String =
     if (FriendAccessDuration.isWhileLinked(expiresAtMillis)) {
-        stringResource(R.string.friend_access_while_linked)
+        stringResource(Res.string.friend_access_while_linked)
     } else {
-        stringResource(R.string.friend_access_until, rememberDate(expiresAtMillis))
+        stringResource(Res.string.friend_access_until, rememberDate(expiresAtMillis))
     }
 
 /** An expiry instant as the reader's medium date. */
 @Composable
-private fun rememberDate(epochMillis: Long): String = remember(epochMillis) {
-    DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).format(
-        Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()).toLocalDate()
-    )
-}
+private fun rememberDate(epochMillis: Long): String = remember(epochMillis) { readerMediumDateAt(epochMillis) }
 
 /** One friend: their face, their name, when their access ends, and the way into their card. */
 @Composable
@@ -335,8 +344,8 @@ private fun FriendRedeemRow(
     SectionGroup {
         SectionRow(
             icon = Icons.Default.Key,
-            title = stringResource(R.string.friend_redeem_row_title),
-            supporting = stringResource(R.string.friend_redeem_row_supporting),
+            title = stringResource(Res.string.friend_redeem_row_title),
+            supporting = stringResource(Res.string.friend_redeem_row_supporting),
             onClick = if (state.isExpanded) null else onExpand
         )
         if (state.isExpanded) {
@@ -349,7 +358,7 @@ private fun FriendRedeemRow(
                     onValueChange = onCodeChange,
                     // Asks for a code; the invite sheet's "Give them this code" is the other
                     // direction and read here as an instruction to share (release audit R-10).
-                    label = { Text(stringResource(R.string.friend_redeem_code_label)) },
+                    label = { Text(stringResource(Res.string.friend_redeem_code_label)) },
                     singleLine = true,
                     enabled = !state.isBusy,
                     modifier = Modifier.fillMaxWidth()
@@ -366,7 +375,7 @@ private fun FriendRedeemRow(
                     enabled = !state.isBusy && state.code.isNotBlank(),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(stringResource(R.string.friend_redeem_open_calendar))
+                    Text(stringResource(Res.string.friend_redeem_open_calendar))
                 }
             }
         }

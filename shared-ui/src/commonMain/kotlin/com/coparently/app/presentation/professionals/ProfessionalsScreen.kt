@@ -35,9 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.professionals.ProfessionalGrant
 import com.coparently.app.domain.professionals.ProfessionalGrantPolicy
 import com.coparently.app.presentation.common.AccountAvatar
@@ -49,8 +47,23 @@ import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_back
+import com.coparently.app.resources.professional_empty
+import com.coparently.app.resources.professional_invite_action
+import com.coparently.app.resources.professional_my_access_title
+import com.coparently.app.resources.professional_open_calendar
+import com.coparently.app.resources.professional_open_plan
+import com.coparently.app.resources.professional_redeem_action
+import com.coparently.app.resources.professional_redeem_done
+import com.coparently.app.resources.professional_redeem_label
+import com.coparently.app.resources.professional_redeem_title
+import com.coparently.app.resources.professional_row_supporting
+import com.coparently.app.resources.professional_section_supporting
+import com.coparently.app.resources.professional_section_title
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.time.Clock
 
 /**
  * Who outside the family can read it as a professional, and the controls that change that
@@ -136,12 +149,12 @@ fun ProfessionalsScreen(
 @Composable
 private fun ProfessionalsTopBar(onNavigateUp: () -> Unit) {
     TopAppBar(
-        title = { Text(stringResource(R.string.professional_section_title)) },
+        title = { Text(stringResource(Res.string.professional_section_title)) },
         navigationIcon = {
             IconButton(onClick = onNavigateUp) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.common_back)
+                    contentDescription = stringResource(Res.string.common_back)
                 )
             }
         }
@@ -159,8 +172,8 @@ private fun FamilyGrantsSection(
     if (grants.isEmpty()) {
         EmptyState(
             icon = Icons.Default.Gavel,
-            title = stringResource(R.string.professional_empty),
-            description = stringResource(R.string.professional_section_supporting),
+            title = stringResource(Res.string.professional_empty),
+            description = stringResource(Res.string.professional_section_supporting),
             modifier = Modifier.fillMaxWidth()
         )
     } else {
@@ -170,7 +183,7 @@ private fun FamilyGrantsSection(
                 SectionRow(
                     title = grant.name,
                     supporting = stringResource(
-                        R.string.professional_row_supporting,
+                        Res.string.professional_row_supporting,
                         stringResource(grant.role.labelRes()),
                         grantStatusText(grant, viewerUid)
                     ),
@@ -184,7 +197,7 @@ private fun FamilyGrantsSection(
     SectionGroup {
         SectionRow(
             icon = Icons.Default.PersonAdd,
-            title = stringResource(R.string.professional_invite_action),
+            title = stringResource(Res.string.professional_invite_action),
             onClick = onInvite
         )
     }
@@ -202,9 +215,9 @@ private fun MyAccessSection(
     onOpenCalendar: (String) -> Unit,
     onOpenPlan: (String) -> Unit
 ) {
-    GroupLabel(stringResource(R.string.professional_my_access_title))
+    GroupLabel(stringResource(Res.string.professional_my_access_title))
     grants.forEach { grant ->
-        val active = ProfessionalGrantPolicy.isActive(grant, System.currentTimeMillis())
+        val active = ProfessionalGrantPolicy.isActive(grant, Clock.System.now().toEpochMilliseconds())
         SectionGroup {
             SectionRow(
                 title = professionalFamilyLabel(grant),
@@ -213,14 +226,14 @@ private fun MyAccessSection(
             Divider()
             SectionRow(
                 icon = Icons.Default.CalendarMonth,
-                title = stringResource(R.string.professional_open_calendar),
+                title = stringResource(Res.string.professional_open_calendar),
                 onClick = if (active) ({ onOpenCalendar(grant.id) }) else null,
                 trailing = { if (active) Chevron() }
             )
             Divider()
             SectionRow(
                 icon = Icons.AutoMirrored.Filled.Assignment,
-                title = stringResource(R.string.professional_open_plan),
+                title = stringResource(Res.string.professional_open_plan),
                 onClick = if (active) ({ onOpenPlan(grant.id) }) else null,
                 trailing = { if (active) Chevron() }
             )
@@ -248,21 +261,21 @@ private fun RedeemSection(
     var asked by rememberSaveable { mutableStateOf(false) }
     val open = asked || isProfessional || state.code.isNotEmpty() || state.errorRes != null || state.accepted
     if (!open) {
-        TextButton(onClick = { asked = true }) { Text(stringResource(R.string.professional_redeem_title)) }
+        TextButton(onClick = { asked = true }) { Text(stringResource(Res.string.professional_redeem_title)) }
         return
     }
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
-        GroupLabel(stringResource(R.string.professional_redeem_title))
+        GroupLabel(stringResource(Res.string.professional_redeem_title))
         OutlinedTextField(
             value = state.code,
             onValueChange = onCodeChange,
-            label = { Text(stringResource(R.string.professional_redeem_label)) },
+            label = { Text(stringResource(Res.string.professional_redeem_label)) },
             singleLine = true,
             enabled = !state.isBusy,
             modifier = Modifier.fillMaxWidth()
         )
         val message = state.errorRes?.let { stringResource(it) }
-            ?: if (state.accepted) stringResource(R.string.professional_redeem_done) else null
+            ?: if (state.accepted) stringResource(Res.string.professional_redeem_done) else null
         message?.let {
             Text(
                 text = it,
@@ -279,7 +292,7 @@ private fun RedeemSection(
             enabled = !state.isBusy && state.code.isNotBlank(),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(stringResource(R.string.professional_redeem_action))
+            Text(stringResource(Res.string.professional_redeem_action))
         }
     }
 }

@@ -1563,6 +1563,14 @@ Then the export and the school import:
   conversion. Carried note: `RecordFileWriter.available` (default true; `NoRecordFiles` false),
   `ExportViewModel.exportAvailable`; no format rows where it or the share sheet is unavailable.
   `JavaPickerDates.kt` deleted (no caller left).
+- Group 4, the people outside the pair and the plan: every file of `friends/`, `professionals/` and
+  `parentingplan/` still in the app (screens, sheets, `GuestDurationText.kt` with its test to
+  `commonTest`, `ProfessionalText.kt`). Replaced: `ofLocalizedDate(FULL)` → `readerFullDate`,
+  `format(shortTime())` → `ReaderDateText.time`, `ofLocalizedDate(MEDIUM)` of an instant → the new
+  `readerMediumDateAt`, `System.currentTimeMillis()` → `Clock.System`, every `@StringRes Int` →
+  `StringResource`, the friend's and professional's share intents → `ShareSheet.shareText` (worded at
+  the tap; no Share where unavailable). Public for the screenshots: `FriendAgendaDay`,
+  `FriendComparisonTable`, `FriendEventDetails`, `FriendInviteContent`.
 
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 

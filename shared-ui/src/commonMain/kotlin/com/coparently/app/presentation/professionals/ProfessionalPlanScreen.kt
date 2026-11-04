@@ -24,8 +24,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.parentingplan.ParentingPlanCatalogue
 import com.coparently.app.domain.parentingplan.ParentingPlanComparison
 import com.coparently.app.domain.parentingplan.PlanQuestionStatus
@@ -36,6 +34,15 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.parentingplan.PlanStrings
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_back
+import com.coparently.app.resources.parenting_plan_disclaimer
+import com.coparently.app.resources.parenting_plan_status_agreed
+import com.coparently.app.resources.parenting_plan_title
+import com.coparently.app.resources.professional_parent_fallback
+import com.coparently.app.resources.professional_plan_answer_by
+import com.coparently.app.resources.professional_plan_not_answered
+import com.coparently.app.resources.professional_unavailable
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -60,12 +67,12 @@ fun ProfessionalPlanScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.parenting_plan_title)) },
+                title = { Text(stringResource(Res.string.parenting_plan_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.common_back)
+                            contentDescription = stringResource(Res.string.common_back)
                         )
                     }
                 }
@@ -80,7 +87,7 @@ fun ProfessionalPlanScreen(
             ) { CircularProgressIndicator() }
             ProfessionalPlanUiState.Unavailable -> EmptyState(
                 icon = Icons.AutoMirrored.Filled.Assignment,
-                title = stringResource(R.string.professional_unavailable),
+                title = stringResource(Res.string.professional_unavailable),
                 modifier = Modifier.fillMaxSize().padding(padding)
             )
             is ProfessionalPlanUiState.Ready -> PlanList(state, Modifier.padding(padding))
@@ -90,7 +97,7 @@ fun ProfessionalPlanScreen(
 
 @Composable
 private fun PlanList(state: ProfessionalPlanUiState.Ready, modifier: Modifier = Modifier) {
-    val fallback = stringResource(R.string.professional_parent_fallback)
+    val fallback = stringResource(Res.string.professional_parent_fallback)
     val firstName = state.grant.parentNames[state.grant.familyParents.first()]?.takeIf { it.isNotBlank() }
         ?: fallback
     val secondName = state.grant.parentNames[state.grant.familyParents.last()]?.takeIf { it.isNotBlank() }
@@ -107,7 +114,7 @@ private fun PlanList(state: ProfessionalPlanUiState.Ready, modifier: Modifier = 
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(
-                    text = stringResource(R.string.parenting_plan_disclaimer),
+                    text = stringResource(Res.string.parenting_plan_disclaimer),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -136,19 +143,19 @@ private fun QuestionRow(
     secondName: String
 ) {
     val prompt = PlanStrings.questionPrompt(questionId) ?: return
-    val notAnswered = stringResource(R.string.professional_plan_not_answered)
+    val notAnswered = stringResource(Res.string.professional_plan_not_answered)
     val first = state.first.answerTo(questionId) ?: notAnswered
     val second = state.second?.answerTo(questionId) ?: notAnswered
     val agreed = ParentingPlanComparison.statusOf(questionId, state.first, state.second) ==
         PlanQuestionStatus.AGREED
     SectionRow(
         title = stringResource(prompt),
-        supporting = stringResource(R.string.professional_plan_answer_by, firstName, first) + "\n" +
-            stringResource(R.string.professional_plan_answer_by, secondName, second),
+        supporting = stringResource(Res.string.professional_plan_answer_by, firstName, first) + "\n" +
+            stringResource(Res.string.professional_plan_answer_by, secondName, second),
         trailing = {
             if (agreed) {
                 PillChip(
-                    label = stringResource(R.string.parenting_plan_status_agreed),
+                    label = stringResource(Res.string.parenting_plan_status_agreed),
                     icon = Icons.Default.CheckCircle,
                     contentColor = MaterialTheme.colorScheme.primary
                 )

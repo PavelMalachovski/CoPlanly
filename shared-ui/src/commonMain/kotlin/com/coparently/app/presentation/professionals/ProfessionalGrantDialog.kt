@@ -11,13 +11,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.professionals.ProfessionalGrant
 import com.coparently.app.domain.professionals.ProfessionalGrantPolicy
 import com.coparently.app.domain.professionals.ProfessionalGrantStatus
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.professional_dialog_body
+import com.coparently.app.resources.professional_dialog_close
+import com.coparently.app.resources.professional_dialog_consent
+import com.coparently.app.resources.professional_dialog_revoke
+import com.coparently.app.resources.professional_revoke_confirm
 import org.jetbrains.compose.resources.stringResource
+import kotlin.time.Clock
 
 /**
  * One professional's card, as a parent reads it (MON-18): who they are, what they can read and
@@ -43,7 +48,7 @@ fun ProfessionalGrantDialog(
     onDismiss: () -> Unit
 ) {
     var confirmingRevoke by rememberSaveable(grant.id) { mutableStateOf(false) }
-    val waitingForMe = ProfessionalGrantPolicy.statusFor(grant, viewerUid, System.currentTimeMillis()) ==
+    val waitingForMe = ProfessionalGrantPolicy.statusFor(grant, viewerUid, Clock.System.now().toEpochMilliseconds()) ==
         ProfessionalGrantStatus.WAITING_FOR_YOU
     val until = rememberAccessDate(grant.expiresAtMillis)
 
@@ -59,9 +64,9 @@ fun ProfessionalGrantDialog(
                 Text(grantStatusText(grant, viewerUid))
                 Text(
                     text = if (confirmingRevoke) {
-                        stringResource(R.string.professional_revoke_confirm, grant.name)
+                        stringResource(Res.string.professional_revoke_confirm, grant.name)
                     } else {
-                        stringResource(R.string.professional_dialog_body, grant.name, until)
+                        stringResource(Res.string.professional_dialog_body, grant.name, until)
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -72,7 +77,7 @@ fun ProfessionalGrantDialog(
             when {
                 confirmingRevoke -> TextButton(onClick = onRevoke) { RevokeLabel() }
                 waitingForMe -> TextButton(onClick = onConsent) {
-                    Text(stringResource(R.string.professional_dialog_consent))
+                    Text(stringResource(Res.string.professional_dialog_consent))
                 }
                 else -> TextButton(onClick = { confirmingRevoke = true }) { RevokeLabel() }
             }
@@ -82,7 +87,7 @@ fun ProfessionalGrantDialog(
                 TextButton(onClick = { confirmingRevoke = true }) { RevokeLabel() }
             } else {
                 TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.professional_dialog_close))
+                    Text(stringResource(Res.string.professional_dialog_close))
                 }
             }
         }
@@ -93,7 +98,7 @@ fun ProfessionalGrantDialog(
 @Composable
 private fun RevokeLabel() {
     Text(
-        stringResource(R.string.professional_dialog_revoke),
+        stringResource(Res.string.professional_dialog_revoke),
         color = MaterialTheme.colorScheme.error
     )
 }

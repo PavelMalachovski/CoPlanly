@@ -17,8 +17,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.event.eventTimeLine
@@ -26,6 +24,10 @@ import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.titleLargeEmphasized
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.friend_calendar_added_by
+import com.coparently.app.resources.friend_calendar_you_take_part
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * The body of a family friend's event sheet (phase 2, spec §4.4): the event's title, when it is,
@@ -41,7 +43,7 @@ import com.coparently.app.presentation.theme.titleLargeEmphasized
  * @param takesPart Whether the event names this friend as taking part.
  */
 @Composable
-internal fun FriendEventDetails(event: Event, addedBy: String?, takesPart: Boolean) {
+fun FriendEventDetails(event: Event, addedBy: String?, takesPart: Boolean) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -52,7 +54,7 @@ internal fun FriendEventDetails(event: Event, addedBy: String?, takesPart: Boole
         Text(text = event.title, style = MaterialTheme.typography.titleLargeEmphasized)
         DetailRow(icon = Icons.Default.Schedule, text = eventTimeLine(event))
         addedBy?.let { name ->
-            DetailRow(icon = Icons.Default.Person, text = stringResource(R.string.friend_calendar_added_by, name))
+            DetailRow(icon = Icons.Default.Person, text = stringResource(Res.string.friend_calendar_added_by, name))
         }
         event.description?.takeIf { it.isNotBlank() }?.let { description ->
             DetailRow(icon = Icons.Default.Description, text = description)
@@ -69,7 +71,7 @@ internal fun FriendEventDetails(event: Event, addedBy: String?, takesPart: Boole
 @Composable
 internal fun TakesPartChip() {
     PillChip(
-        label = stringResource(R.string.friend_calendar_you_take_part),
+        label = stringResource(Res.string.friend_calendar_you_take_part),
         leadingDot = ParentColors.friendText,
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant
     )

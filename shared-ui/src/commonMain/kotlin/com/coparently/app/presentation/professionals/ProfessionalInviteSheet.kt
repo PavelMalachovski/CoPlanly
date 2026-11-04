@@ -1,7 +1,5 @@
 package com.coparently.app.presentation.professionals
 
-import android.content.Context
-import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -21,18 +19,30 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.professionals.ProfessionalAccessDuration
 import com.coparently.app.domain.professionals.ProfessionalRole
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.InviteCodeText
 import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.common.UiText
+import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.pairing.PLAY_STORE_URL
+import com.coparently.app.presentation.platform.LocalShareSheet
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.professional_invite_action
+import com.coparently.app.resources.professional_invite_code_label
+import com.coparently.app.resources.professional_invite_create
+import com.coparently.app.resources.professional_invite_duration_label
+import com.coparently.app.resources.professional_invite_explainer
+import com.coparently.app.resources.professional_invite_role_label
+import com.coparently.app.resources.professional_invite_share
+import com.coparently.app.resources.professional_share_message
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -71,11 +81,11 @@ fun ProfessionalInviteSheet(
             verticalArrangement = Arrangement.spacedBy(Spacing.M)
         ) {
             Text(
-                text = stringResource(R.string.professional_invite_action),
+                text = stringResource(Res.string.professional_invite_action),
                 style = MaterialTheme.typography.titleLarge
             )
             Text(
-                text = stringResource(R.string.professional_invite_explainer),
+                text = stringResource(Res.string.professional_invite_explainer),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -104,7 +114,7 @@ private fun InviteChoices(
     onChooseDuration: (ProfessionalAccessDuration) -> Unit,
     onCreate: () -> Unit
 ) {
-    GroupLabel(stringResource(R.string.professional_invite_role_label))
+    GroupLabel(stringResource(Res.string.professional_invite_role_label))
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(Spacing.S),
         verticalArrangement = Arrangement.spacedBy(Spacing.S)
@@ -113,7 +123,7 @@ private fun InviteChoices(
             ChoiceChip(stringResource(role.labelRes()), role == state.role) { onChooseRole(role) }
         }
     }
-    GroupLabel(stringResource(R.string.professional_invite_duration_label))
+    GroupLabel(stringResource(Res.string.professional_invite_duration_label))
     FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
         ProfessionalAccessDuration.entries.forEach { duration ->
             ChoiceChip(stringResource(duration.labelRes()), duration == state.duration) {
@@ -129,7 +139,7 @@ private fun InviteChoices(
                 color = MaterialTheme.colorScheme.onPrimary
             )
         } else {
-            Text(stringResource(R.string.professional_invite_create))
+            Text(stringResource(Res.string.professional_invite_create))
         }
     }
 }
@@ -150,30 +160,35 @@ private fun ChoiceChip(label: String, selected: Boolean, onClick: () -> Unit) {
     )
 }
 
-/** The minted code, large enough to read out, and the share sheet for sending it. */
+/**
+ * The minted code, large enough to read out, and the share sheet for sending it — where the phone
+ * has one (design item 8): the message is worded at the tap, through Compose Multiplatform's reader,
+ * which reads a string outside composition in a coroutine.
+ */
 @Composable
 private fun InviteCode(code: String) {
-    val context = LocalContext.current
+    val shareSheet = LocalShareSheet.current
+    val textResolver = rememberUiTextResolver()
+    val scope = rememberCoroutineScope()
     Text(
-        text = stringResource(R.string.professional_invite_code_label),
+        text = stringResource(Res.string.professional_invite_code_label),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
     InviteCodeText(code = code)
+    if (!shareSheet.available) return
     OutlinedButton(
-        onClick = { context.startActivity(shareIntent(context, code)) },
+        onClick = {
+            scope.launch {
+                shareSheet.shareText(
+                    text = UiText.Res(Res.string.professional_share_message, listOf(code, PLAY_STORE_URL))
+                        .asString(textResolver),
+                    chooserTitle = UiText.Res(Res.string.professional_invite_share).asString(textResolver)
+                )
+            }
+        },
         modifier = Modifier.fillMaxWidth()
     ) {
-        Text(stringResource(R.string.professional_invite_share))
+        Text(stringResource(Res.string.professional_invite_share))
     }
-}
-
-/** Builds the share-sheet intent for a professional code. */
-private fun shareIntent(context: Context, code: String): Intent {
-    val message = context.getString(R.string.professional_share_message, code, PLAY_STORE_URL)
-    val sendIntent = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, message)
-    }
-    return Intent.createChooser(sendIntent, context.getString(R.string.professional_invite_share))
 }

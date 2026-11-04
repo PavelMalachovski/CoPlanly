@@ -31,10 +31,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.friends.FriendRole
 import com.coparently.app.presentation.common.AccountAvatar
 import com.coparently.app.presentation.common.PillChip
@@ -42,6 +40,18 @@ import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.labelLargeEmphasized
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_back
+import com.coparently.app.resources.friend_profile_blood_group
+import com.coparently.app.resources.friend_profile_name
+import com.coparently.app.resources.friend_profile_phone
+import com.coparently.app.resources.friend_profile_save
+import com.coparently.app.resources.friend_profile_title
+import com.coparently.app.resources.friend_role_friend
+import com.coparently.app.resources.friend_role_grandparent
+import com.coparently.app.resources.friend_role_guardian
+import com.coparently.app.resources.friend_section_title
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -90,12 +100,12 @@ fun FriendProfileScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.friend_profile_title)) },
+                title = { Text(stringResource(Res.string.friend_profile_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.common_back)
+                            contentDescription = stringResource(Res.string.common_back)
                         )
                     }
                 }
@@ -123,14 +133,14 @@ fun FriendProfileScreen(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text(stringResource(R.string.friend_profile_name)) },
+                    label = { Text(stringResource(Res.string.friend_profile_name)) },
                     singleLine = true,
                     modifier = Modifier.weight(1f)
                 )
             }
 
             Text(
-                text = stringResource(R.string.friend_section_title),
+                text = stringResource(Res.string.friend_section_title),
                 style = MaterialTheme.typography.labelLargeEmphasized
             )
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
@@ -156,7 +166,7 @@ fun FriendProfileScreen(
             OutlinedTextField(
                 value = phone,
                 onValueChange = { phone = it },
-                label = { Text(stringResource(R.string.friend_profile_phone)) },
+                label = { Text(stringResource(Res.string.friend_profile_phone)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
@@ -164,7 +174,7 @@ fun FriendProfileScreen(
             OutlinedTextField(
                 value = bloodGroup,
                 onValueChange = { bloodGroup = it },
-                label = { Text(stringResource(R.string.friend_profile_blood_group)) },
+                label = { Text(stringResource(Res.string.friend_profile_blood_group)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -195,7 +205,7 @@ fun FriendProfileScreen(
                 enabled = name.isNotBlank(),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(stringResource(R.string.friend_profile_save))
+                Text(stringResource(Res.string.friend_profile_save))
             }
         }
     }
@@ -203,8 +213,8 @@ fun FriendProfileScreen(
 
 /** The localized name of a role. */
 @androidx.annotation.StringRes
-private fun FriendRole.labelRes(): Int = when (this) {
-    FriendRole.GUARDIAN -> R.string.friend_role_guardian
-    FriendRole.FRIEND -> R.string.friend_role_friend
-    FriendRole.GRANDPARENT -> R.string.friend_role_grandparent
+private fun FriendRole.labelRes(): StringResource = when (this) {
+    FriendRole.GUARDIAN -> Res.string.friend_role_guardian
+    FriendRole.FRIEND -> Res.string.friend_role_friend
+    FriendRole.GRANDPARENT -> Res.string.friend_role_grandparent
 }

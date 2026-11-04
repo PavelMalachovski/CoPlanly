@@ -29,10 +29,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import com.coparently.app.R
 import com.coparently.app.domain.events.AllDayEvent
 import com.coparently.app.domain.friends.CalendarFriendGrant
 import com.coparently.app.domain.model.Event
@@ -43,12 +41,22 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.professionals.ProfessionalDay
 import com.coparently.app.presentation.professionals.WindowPager
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.utils.format
-import com.coparently.app.utils.shortTime
-import kotlinx.datetime.toJavaLocalDate
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_back
+import com.coparently.app.resources.event_all_day
+import com.coparently.app.resources.friend_calendar_access_ended
+import com.coparently.app.resources.friend_calendar_added_by
+import com.coparently.app.resources.friend_calendar_event_supporting
+import com.coparently.app.resources.friend_calendar_failed
+import com.coparently.app.resources.friend_calendar_family
+import com.coparently.app.resources.friend_calendar_no_events_window
+import com.coparently.app.resources.friend_calendar_read_only
+import com.coparently.app.resources.friend_calendar_title
+import com.coparently.app.resources.professional_calendar_no_events
+import com.coparently.app.utils.ReaderDateText
+import com.coparently.app.utils.readerFullDate
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 
 /**
  * A family friend's read-only calendar of one family (phase 2, spec §4.4): four weeks at a time,
@@ -79,12 +87,12 @@ fun FriendCalendarScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.friend_calendar_title)) },
+                title = { Text(stringResource(Res.string.friend_calendar_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.common_back)
+                            contentDescription = stringResource(Res.string.common_back)
                         )
                     }
                 }
@@ -99,11 +107,11 @@ fun FriendCalendarScreen(
             ) { CircularProgressIndicator() }
             FriendCalendarUiState.AccessEnded -> EmptyState(
                 icon = Icons.Default.EventBusy,
-                title = stringResource(R.string.friend_calendar_access_ended),
+                title = stringResource(Res.string.friend_calendar_access_ended),
                 modifier = Modifier.fillMaxSize().padding(padding)
             )
             FriendCalendarUiState.Failed -> ErrorState(
-                message = stringResource(R.string.friend_calendar_failed),
+                message = stringResource(Res.string.friend_calendar_failed),
                 onRetry = viewModel::retry,
                 modifier = Modifier.fillMaxSize().padding(padding)
             )
@@ -154,12 +162,12 @@ private fun FriendAgenda(
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
                 state.grant?.familyNames()?.let { (first, second) ->
                     Text(
-                        text = stringResource(R.string.friend_calendar_family, first, second),
+                        text = stringResource(Res.string.friend_calendar_family, first, second),
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
                 Text(
-                    text = stringResource(R.string.friend_calendar_read_only),
+                    text = stringResource(Res.string.friend_calendar_read_only),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -173,7 +181,7 @@ private fun FriendAgenda(
             item(key = "empty") {
                 SectionGroup {
                     SectionRow(
-                        title = stringResource(R.string.friend_calendar_no_events_window),
+                        title = stringResource(Res.string.friend_calendar_no_events_window),
                         titleColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -196,16 +204,16 @@ private fun FriendAgenda(
  * @param onOpenEvent Opens an event's details.
  */
 @Composable
-internal fun FriendAgendaDay(day: ProfessionalDay, grant: CalendarFriendGrant?, onOpenEvent: (Event) -> Unit) {
+fun FriendAgendaDay(day: ProfessionalDay, grant: CalendarFriendGrant?, onOpenEvent: (Event) -> Unit) {
     val dateText = remember(day.date) {
-        DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).format(day.date.toJavaLocalDate())
+        readerFullDate(day.date)
     }
     SectionGroup {
         SectionRow(title = dateText, modifier = Modifier.semantics { heading() })
         if (day.events.isEmpty()) {
             Divider()
             SectionRow(
-                title = stringResource(R.string.professional_calendar_no_events),
+                title = stringResource(Res.string.professional_calendar_no_events),
                 titleColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
         } else {
@@ -223,9 +231,9 @@ private fun FriendEventRow(event: Event, grant: CalendarFriendGrant?, onClick: (
     // "All day" rather than the midnight start an all-day event is stored with, as the parents'
     // preview says it.
     val time = if (AllDayEvent.isAllDay(event)) {
-        stringResource(R.string.event_all_day)
+        stringResource(Res.string.event_all_day)
     } else {
-        event.startDateTime.format(shortTime())
+        ReaderDateText.time(event.startDateTime)
     }
     val addedBy = grant.addedBy(event)
     SectionRow(
@@ -234,9 +242,9 @@ private fun FriendEventRow(event: Event, grant: CalendarFriendGrant?, onClick: (
             time
         } else {
             stringResource(
-                R.string.friend_calendar_event_supporting,
+                Res.string.friend_calendar_event_supporting,
                 time,
-                stringResource(R.string.friend_calendar_added_by, addedBy)
+                stringResource(Res.string.friend_calendar_added_by, addedBy)
             )
         },
         onClick = onClick,

@@ -1,7 +1,5 @@
 package com.coparently.app.presentation.friends
 
-import android.content.Context
-import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -24,22 +22,36 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.friends.FriendAccessDuration
 import com.coparently.app.presentation.common.InviteCodeText
 import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.common.UiText
+import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.pairing.PLAY_STORE_URL
+import com.coparently.app.presentation.platform.LocalShareSheet
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyMediumEmphasized
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.friend_invite_action
+import com.coparently.app.resources.friend_invite_code_label
+import com.coparently.app.resources.friend_invite_done
+import com.coparently.app.resources.friend_invite_share
+import com.coparently.app.resources.friend_invite_where_to_enter
+import com.coparently.app.resources.friend_invite_will_see_body
+import com.coparently.app.resources.friend_invite_will_see_lead
+import com.coparently.app.resources.friend_invite_wont_see_body
+import com.coparently.app.resources.friend_invite_wont_see_lead
+import com.coparently.app.resources.friend_share_message
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -66,7 +78,9 @@ fun FriendInviteSheet(
     onCreate: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val context = LocalContext.current
+    val shareSheet = LocalShareSheet.current
+    val textResolver = rememberUiTextResolver()
+    val scope = rememberCoroutineScope()
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -75,7 +89,20 @@ fun FriendInviteSheet(
             state = state,
             onChooseDuration = onChooseDuration,
             onCreate = onCreate,
-            onShare = { code -> context.startActivity(friendShareIntent(context, myName, code)) },
+            // Worded at the tap, through Compose Multiplatform's reader, which reads a string outside
+            // composition in a coroutine; no Share button where the phone has no share sheet.
+            onShare = if (shareSheet.available) {
+                { code ->
+                    scope.launch {
+                        shareSheet.shareText(
+                            text = friendShareMessage(myName, code).asString(textResolver),
+                            chooserTitle = UiText.Res(Res.string.friend_invite_share).asString(textResolver)
+                        )
+                    }
+                }
+            } else {
+                null
+            },
             onDone = onDismiss
         )
     }
@@ -93,16 +120,17 @@ fun FriendInviteSheet(
  * @param state What to show — see [FriendInviteState].
  * @param onChooseDuration Picks a different length; ignored once a code exists.
  * @param onCreate Mints the invitation.
- * @param onShare Opens the share sheet for the minted code.
+ * @param onShare Opens the share sheet for the minted code; null where there is none, which leaves
+ *   the code to read out and no button that does nothing (design item 8).
  * @param onDone Closes the sheet; the invitation stands.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun FriendInviteContent(
+fun FriendInviteContent(
     state: FriendInviteState,
     onChooseDuration: (FriendAccessDuration) -> Unit,
     onCreate: () -> Unit,
-    onShare: (String) -> Unit,
+    onShare: ((String) -> Unit)?,
     onDone: () -> Unit
 ) {
     Column(
@@ -114,18 +142,18 @@ internal fun FriendInviteContent(
         verticalArrangement = Arrangement.spacedBy(Spacing.M)
     ) {
         Text(
-            text = stringResource(R.string.friend_invite_action),
+            text = stringResource(Res.string.friend_invite_action),
             style = MaterialTheme.typography.titleLarge
         )
         ScopeLine(
             icon = Icons.Default.Check,
-            lead = stringResource(R.string.friend_invite_will_see_lead),
-            body = stringResource(R.string.friend_invite_will_see_body)
+            lead = stringResource(Res.string.friend_invite_will_see_lead),
+            body = stringResource(Res.string.friend_invite_will_see_body)
         )
         ScopeLine(
             icon = Icons.Default.Close,
-            lead = stringResource(R.string.friend_invite_wont_see_lead),
-            body = stringResource(R.string.friend_invite_wont_see_body)
+            lead = stringResource(Res.string.friend_invite_wont_see_lead),
+            body = stringResource(Res.string.friend_invite_wont_see_body)
         )
 
         val code = state.invite?.code
@@ -200,7 +228,7 @@ private fun CreateButton(isBusy: Boolean, onCreate: () -> Unit) {
                 color = MaterialTheme.colorScheme.onPrimary
             )
         } else {
-            Text(stringResource(R.string.friend_invite_action))
+            Text(stringResource(Res.string.friend_invite_action))
         }
     }
 }
@@ -210,35 +238,31 @@ private fun CreateButton(isBusy: Boolean, onCreate: () -> Unit) {
  * way to send it.
  */
 @Composable
-private fun MintedCode(code: String, onShare: (String) -> Unit, onDone: () -> Unit) {
+private fun MintedCode(code: String, onShare: ((String) -> Unit)?, onDone: () -> Unit) {
     Text(
-        text = stringResource(R.string.friend_invite_code_label),
+        text = stringResource(Res.string.friend_invite_code_label),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
     InviteCodeText(code = code)
     Text(
-        text = stringResource(R.string.friend_invite_where_to_enter),
+        text = stringResource(Res.string.friend_invite_where_to_enter),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
-    Button(onClick = { onShare(code) }, modifier = Modifier.fillMaxWidth()) {
-        Text(stringResource(R.string.friend_invite_share))
+    if (onShare != null) {
+        Button(onClick = { onShare(code) }, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(Res.string.friend_invite_share))
+        }
     }
     TextButton(onClick = onDone, modifier = Modifier.fillMaxWidth()) {
-        Text(stringResource(R.string.friend_invite_done))
+        Text(stringResource(Res.string.friend_invite_done))
     }
 }
 
 /**
- * The share sheet for a friend's code: who invites, the code, where to type it and where to get
+ * The message a friend's code is shared with: who invites, the code, where to type it and where to get
  * the app, in one message, as the co-parent and professional invitations are shared.
  */
-private fun friendShareIntent(context: Context, myName: String?, code: String): Intent {
-    val message = context.getString(R.string.friend_share_message, myName.orEmpty(), code, PLAY_STORE_URL)
-    val send = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, message)
-    }
-    return Intent.createChooser(send, context.getString(R.string.friend_invite_share))
-}
+private fun friendShareMessage(myName: String?, code: String): UiText =
+    UiText.Res(Res.string.friend_share_message, listOf(myName.orEmpty(), code, PLAY_STORE_URL))

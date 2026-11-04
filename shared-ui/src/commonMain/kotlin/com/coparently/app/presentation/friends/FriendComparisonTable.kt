@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.friends
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,14 +18,29 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import com.coparently.app.R
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.titleSmallEmphasized
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.friend_compare_calendar
+import com.coparently.app.resources.friend_compare_chat
+import com.coparently.app.resources.friend_compare_children
+import com.coparently.app.resources.friend_compare_column_coparent
+import com.coparently.app.resources.friend_compare_column_friend
+import com.coparently.app.resources.friend_compare_custody
+import com.coparently.app.resources.friend_compare_expenses
+import com.coparently.app.resources.friend_compare_how_long
+import com.coparently.app.resources.friend_compare_no
+import com.coparently.app.resources.friend_compare_only_views
+import com.coparently.app.resources.friend_compare_row_desc
+import com.coparently.app.resources.friend_compare_views_and_changes
+import com.coparently.app.resources.friend_compare_while_linked
+import com.coparently.app.resources.friend_compare_yes
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * What a family friend can do, beside what a co-parent can (phase 2, spec §4.2) — the answer to
@@ -50,7 +64,7 @@ import com.coparently.app.presentation.theme.titleSmallEmphasized
  * @param modifier Placement in the parent's layout.
  */
 @Composable
-internal fun FriendComparisonTable(modifier: Modifier = Modifier) {
+fun FriendComparisonTable(modifier: Modifier = Modifier) {
     val stacked = LocalDensity.current.fontScale >= STACK_FONT_SCALE
     SectionGroup(modifier = modifier) {
         if (!stacked) HeaderRow()
@@ -63,24 +77,24 @@ internal fun FriendComparisonTable(modifier: Modifier = Modifier) {
 
 /** One cell's content: words, a yes or a no, or the friend's lengths. */
 private sealed interface Cell {
-    data class Words(@StringRes val res: Int) : Cell
+    data class Words(val res: StringResource) : Cell
     data class Mark(val yes: Boolean) : Cell
     data object Durations : Cell
 }
 
-private data class Comparison(@StringRes val label: Int, val coParent: Cell, val friend: Cell)
+private data class Comparison(val label: StringResource, val coParent: Cell, val friend: Cell)
 
 private val ROWS = listOf(
     Comparison(
-        R.string.friend_compare_calendar,
-        Cell.Words(R.string.friend_compare_views_and_changes),
-        Cell.Words(R.string.friend_compare_only_views)
+        Res.string.friend_compare_calendar,
+        Cell.Words(Res.string.friend_compare_views_and_changes),
+        Cell.Words(Res.string.friend_compare_only_views)
     ),
-    Comparison(R.string.friend_compare_custody, Cell.Mark(yes = true), Cell.Mark(yes = false)),
-    Comparison(R.string.friend_compare_expenses, Cell.Mark(yes = true), Cell.Mark(yes = false)),
-    Comparison(R.string.friend_compare_chat, Cell.Mark(yes = true), Cell.Mark(yes = false)),
-    Comparison(R.string.friend_compare_children, Cell.Mark(yes = true), Cell.Mark(yes = false)),
-    Comparison(R.string.friend_compare_how_long, Cell.Words(R.string.friend_compare_while_linked), Cell.Durations)
+    Comparison(Res.string.friend_compare_custody, Cell.Mark(yes = true), Cell.Mark(yes = false)),
+    Comparison(Res.string.friend_compare_expenses, Cell.Mark(yes = true), Cell.Mark(yes = false)),
+    Comparison(Res.string.friend_compare_chat, Cell.Mark(yes = true), Cell.Mark(yes = false)),
+    Comparison(Res.string.friend_compare_children, Cell.Mark(yes = true), Cell.Mark(yes = false)),
+    Comparison(Res.string.friend_compare_how_long, Cell.Words(Res.string.friend_compare_while_linked), Cell.Durations)
 )
 
 /** From this font scale the table's columns stack under each row's label. */
@@ -93,8 +107,8 @@ private const val LABEL_WEIGHT = 1.2f
 private fun HeaderRow() {
     TableRow {
         Spacer(modifier = Modifier.weight(LABEL_WEIGHT))
-        HeaderCell(stringResource(R.string.friend_compare_column_coparent))
-        HeaderCell(stringResource(R.string.friend_compare_column_friend))
+        HeaderCell(stringResource(Res.string.friend_compare_column_coparent))
+        HeaderCell(stringResource(Res.string.friend_compare_column_friend))
     }
 }
 
@@ -103,7 +117,7 @@ private fun ComparisonRow(row: Comparison, stacked: Boolean) {
     val label = stringResource(row.label)
     val coParent = row.coParent.text()
     val friend = row.friend.text()
-    val description = stringResource(R.string.friend_compare_row_desc, label, coParent, friend)
+    val description = stringResource(Res.string.friend_compare_row_desc, label, coParent, friend)
     val oneNode = Modifier.clearAndSetSemantics { contentDescription = description }
     if (stacked) {
         Column(
@@ -113,8 +127,8 @@ private fun ComparisonRow(row: Comparison, stacked: Boolean) {
             verticalArrangement = Arrangement.spacedBy(Spacing.XS)
         ) {
             Text(text = label, style = MaterialTheme.typography.titleSmallEmphasized)
-            StackedCell(stringResource(R.string.friend_compare_column_coparent), row.coParent, coParent)
-            StackedCell(stringResource(R.string.friend_compare_column_friend), row.friend, friend)
+            StackedCell(stringResource(Res.string.friend_compare_column_coparent), row.coParent, coParent)
+            StackedCell(stringResource(Res.string.friend_compare_column_friend), row.friend, friend)
         }
     } else {
         TableRow(modifier = oneNode) {
@@ -193,6 +207,6 @@ private fun MarkIcon(cell: Cell) {
 @Composable
 private fun Cell.text(): String = when (this) {
     is Cell.Words -> stringResource(res)
-    is Cell.Mark -> stringResource(if (yes) R.string.friend_compare_yes else R.string.friend_compare_no)
+    is Cell.Mark -> stringResource(if (yes) Res.string.friend_compare_yes else Res.string.friend_compare_no)
     Cell.Durations -> durationChoicesText()
 }
