@@ -44,6 +44,7 @@ import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.theme.Spacing
+import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDate
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -76,11 +77,11 @@ fun JournalEditorScreen(
     }
     if (picking) {
         LocalDatePickerDialog(
-            initialDate = state.entryDate,
+            initialDate = state.entryDate.toJavaLocalDate(),
             confirmLabel = stringResource(R.string.journal_pick_ok),
             dismissLabel = stringResource(R.string.journal_pick_cancel),
             onConfirm = { date ->
-                viewModel.setDate(date)
+                viewModel.setDate(date.toKotlinLocalDate())
                 picking = false
             },
             onDismiss = { picking = false }
@@ -166,7 +167,7 @@ private fun EditorForm(
             SectionRow(
                 icon = Icons.Default.DateRange,
                 title = stringResource(R.string.journal_entry_date),
-                supporting = UiText.Date(state.entryDate.toKotlinLocalDate()).asString(),
+                supporting = UiText.Date(state.entryDate).asString(),
                 onClick = onPickDate.takeIf { editable }
             )
         }

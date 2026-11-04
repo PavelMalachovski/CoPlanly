@@ -2967,7 +2967,11 @@ bytes are identical on Android):
   kept in the sealed store), the month in review (`reviewUiModule`), stickers (`stickersUiModule`),
   the consents (`consentUiModule`; the child-health consent's manager moved to `:shared-data`) and
   the AI consent (`aiUiModule`). The 10e review's four notes came with it: on the iPhone one push
-  stand-in for `PushDevice` and `PushRegistration`, as `FcmService` is one class on Android.
+  stand-in for `PushDevice` and `PushRegistration`, as `FcmService` is one class on Android. Then
+  the family's records: the child's and pet's records (`childInfoUiModule`, `petsUiModule`, on the
+  signed-in account's, the analytics and the crash report's seams; a crash report keeps its
+  identifiers through a new `CrashReporter.recordWithContext`), the contacts, the documents and the
+  private journal (its day now kotlinx-datetime).
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

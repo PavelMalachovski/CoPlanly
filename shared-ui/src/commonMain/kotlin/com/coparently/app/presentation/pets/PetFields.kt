@@ -10,7 +10,7 @@ import kotlinx.datetime.LocalDateTime
  * The values the pet form edits, compared with what it was seeded with to tell whether Back
  * would drop an edit (D-11). A photo picked or marked for removal counts as an edit.
  */
-internal data class PetFields(
+data class PetFields(
     val name: String,
     val species: PetSpecies,
     val breed: String,

@@ -1600,7 +1600,8 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              and its siblings) and the ViewModels, group by group (so far common/'s, chat's, the
              calendar's, the events', custody's, the requests', the family's, expenses', payments',
              child support's, settings', pairing's, onboarding's, the session's, the profile's,
-             Home's, the month review's, the stickers', the consents' and the AI consent's),
+             Home's, the month review's, the stickers', the consents', the AI consent's, the
+             child's and pet's records', the contacts', the documents' and the journal's),
              with their Koin modules: uiModules and platformUiModule, which appModules includes.
              Screens follow (Task 11). It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
@@ -2198,7 +2199,23 @@ its log line goes through `logger`, and "Later" is kept in `SecurePreferences` u
 ViewModel (`consentDataModule`; a consent's time `Clock.System.now().toEpochMilliseconds()`), its
 test to `shared-data`'s `androidUnitTest`. No new seam. `HomeFeedTest` and `ChildrenTodayTest` run
 in `commonTest` (six names lost a comma); the ViewModels' tests and `RequestsRowTextTest` (its
-`java.time` fixture converted at the call) in `androidUnitTest`.
+`java.time` fixture converted at the call) in `androidUnitTest`. The second group is **the family's
+records**: `ChildInfoViewModel` (with `ChildFields`) in `childInfoUiModule`, `PetsViewModel` (with
+`PetFields`) in `petsUiModule`, `ContactsViewModel`, `FamilyDocumentsViewModel` and the journal's two
+ViewModels, each in its module. The child's and pet's ViewModels take `SignedInUser`, `Analytics`
+and `CrashReporter` where they took `FirebaseAuthService`, `AnalyticsManager` and
+`CrashlyticsManager` (parameter names kept): the six record events are
+`data/platform/AnalyticsEvents.kt`'s `logChildInfoAdded` and its siblings, with the names
+`AnalyticsManager`'s functions logged (they left it), and a failure with its identifiers goes through
+`CrashReporter.recordWithContext` (new, by default `record`; `CrashlyticsManager` answers it with
+`recordExceptionWithContext`, so the custom keys are set as before). `GuestInviteState.errorRes`
+is a `StringResource` (`GuestInviteSheet` reads it through Compose Multiplatform's
+`stringResource`), and `ChildFields`, `PetFields`, `childForm` and `petForm` are public now, for
+the editors still in the app. `FamilyDocumentsViewModel` asks `SignedInUser` for the uid. The
+journal editor's day (`JournalEditorState.entryDate`, `seededDate`, `setDate`) is a kotlinx-datetime
+`LocalDate`, which `JournalEditorScreen` converts for the date picker; a new entry's id is a `Uuid`
+and its times `Clock.System`. The six tests (MockK) run in `androidUnitTest`, the pet test verifying
+`Analytics.log("pet_updated", …)` where it verified `logPetUpdated()`.
 
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller

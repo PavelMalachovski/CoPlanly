@@ -1,14 +1,15 @@
 package com.coparently.app.presentation.childinfo
 
-import android.util.Log
-import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.R
-import com.coparently.app.data.analytics.AnalyticsManager
-import com.coparently.app.data.crashlytics.CrashlyticsManager
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.platform.Analytics
+import com.coparently.app.data.platform.CrashReporter
+import com.coparently.app.data.platform.logChildInfoAdded
+import com.coparently.app.data.platform.logChildInfoDeleted
+import com.coparently.app.data.platform.logChildInfoUpdated
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.PairingException
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.files.RecordPhotoAccess
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.guests.GuestAccessDuration
@@ -23,6 +24,9 @@ import com.coparently.app.presentation.common.UiText
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.childinfo_delete_failed
 import com.coparently.app.resources.childinfo_load_failed
+import com.coparently.app.resources.guest_error_grant_ended
+import com.coparently.app.resources.guest_invite_error_unknown
+import com.coparently.app.resources.pairing_error_network
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -32,6 +36,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 import kotlin.time.Clock
 
 /**
@@ -75,7 +80,7 @@ data class GuestInviteState(
     val duration: GuestAccessDuration = GuestAccessDuration.DEFAULT,
     val invite: GuestInvite? = null,
     val isBusy: Boolean = false,
-    @StringRes val errorRes: Int? = null
+    val errorRes: StringResource? = null
 )
 
 /**
@@ -86,9 +91,9 @@ class ChildInfoViewModel(
     private val childInfoRepository: ChildInfoRepository,
     private val photoStorage: RecordPhotoStorage,
     private val guestRepository: GuestRepository,
-    private val firebaseAuthService: FirebaseAuthService,
-    private val analyticsManager: AnalyticsManager,
-    private val crashlyticsManager: CrashlyticsManager
+    private val firebaseAuthService: SignedInUser,
+    private val analyticsManager: Analytics,
+    private val crashlyticsManager: CrashReporter
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ChildInfoUiState>(ChildInfoUiState.Loading)
@@ -98,7 +103,7 @@ class ChildInfoViewModel(
      * The editor's fields, here rather than in the screen so a rotation keeps what was typed
      * (docs/AUDIT-2026-10-design.md D-11). Seeded once per record by the editor.
      */
-    internal val childForm = FormDraft(ChildFields.EMPTY)
+    val childForm = FormDraft(ChildFields.EMPTY)
 
     /**
      * The one child an editor is open on, set only by [loadChildInfoById]. Null until a child is
@@ -180,7 +185,7 @@ class ChildInfoViewModel(
             } catch (
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
-                crashlyticsManager.recordException(e)
+                crashlyticsManager.record(e)
                 _guestRevokeFailed.value = true
             }
         }
@@ -239,12 +244,11 @@ class ChildInfoViewModel(
      * long enough for a chosen expiry to fall into the past — and it deserves its own line
      * rather than "something went wrong", because the fix is to pick a length again.
      */
-    @StringRes
-    private fun guestMessageFor(throwable: Throwable): Int =
+    private fun guestMessageFor(throwable: Throwable): StringResource =
         when ((throwable as? PairingException)?.error) {
-            PairingError.Network -> R.string.pairing_error_network
-            PairingError.GrantEnded -> R.string.guest_error_grant_ended
-            else -> R.string.guest_invite_error_unknown
+            PairingError.Network -> Res.string.pairing_error_network
+            PairingError.GrantEnded -> Res.string.guest_error_grant_ended
+            else -> Res.string.guest_invite_error_unknown
         }
 
     init {
@@ -276,7 +280,7 @@ class ChildInfoViewModel(
                 // The previous collector, replaced above: not a failure to show.
                 throw e
             } catch (e: Exception) {
-                Log.w(TAG, "Loading child info failed", e)
+                logger.w(TAG, "Loading child info failed", e)
                 _uiState.value = ChildInfoUiState.Error(UiText.Res(Res.string.childinfo_load_failed))
             }
         }
@@ -326,12 +330,12 @@ class ChildInfoViewModel(
      */
     private suspend fun persist(childInfo: ChildInfo, isNewChild: Boolean): Boolean {
         return try {
-            val currentUser = firebaseAuthService.getCurrentUser()
+            val currentUid = firebaseAuthService.getCurrentUid()
                 ?: throw IllegalStateException("User not authenticated")
 
             val finalChildInfo = childInfo.copy(
-                createdByFirebaseUid = childInfo.createdByFirebaseUid ?: currentUser.uid,
-                lastModifiedBy = currentUser.uid,
+                createdByFirebaseUid = childInfo.createdByFirebaseUid ?: currentUid,
+                lastModifiedBy = currentUid,
                 syncedToFirestore = false
             )
 
@@ -347,7 +351,7 @@ class ChildInfoViewModel(
         } catch (e: CancellationException) {
             throw e
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            crashlyticsManager.recordExceptionWithContext(
+            crashlyticsManager.recordWithContext(
                 e,
                 // The child's *id*, never their name: a Crashlytics custom key is uploaded
                 // to Firebase and, being set on the session rather than the report, rides
@@ -355,7 +359,7 @@ class ChildInfoViewModel(
                 // diagnostic — the id points at the same row and identifies nobody.
                 mapOf("action" to "upsert_child_info", "child_id" to childInfo.id)
             )
-            Log.e(TAG, "Saving child ${childInfo.id} failed", e)
+            logger.e(TAG, "Saving child ${childInfo.id} failed", e)
             false
         }
     }
@@ -417,11 +421,11 @@ class ChildInfoViewModel(
     } catch (
         @Suppress("TooGenericExceptionCaught") e: Exception
     ) {
-        crashlyticsManager.recordExceptionWithContext(
+        crashlyticsManager.recordWithContext(
             e,
             mapOf("action" to "delete_medical_photo")
         )
-        Log.e(TAG, "Deleting a medical photo failed", e)
+        logger.e(TAG, "Deleting a medical photo failed", e)
         _photoError.value = MedicalPhotoError.DELETE_FAILED
         false
     }
@@ -446,13 +450,13 @@ class ChildInfoViewModel(
     } catch (
         @Suppress("TooGenericExceptionCaught") e: Exception
     ) {
-        crashlyticsManager.recordExceptionWithContext(
+        crashlyticsManager.recordWithContext(
             e,
             mapOf("action" to "upload_medical_photo", "child_id" to childInfoId)
         )
         // Crashlytics writes nothing to logcat, so without this line an upload failure on a
-        // device in front of you is undiagnosable. `Log.e` survives the R8 strip.
-        Log.e(TAG, "Uploading a medical photo to medical_photos/$childInfoId failed", e)
+        // device in front of you is undiagnosable. `logger.e` (logcat on Android) survives the R8 strip.
+        logger.e(TAG, "Uploading a medical photo to medical_photos/$childInfoId failed", e)
         _photoError.value = MedicalPhotoError.UPLOAD_FAILED
         null
     }
@@ -467,7 +471,7 @@ class ChildInfoViewModel(
                 analyticsManager.logChildInfoDeleted()
                 loadChildInfo()
             } catch (e: Exception) {
-                crashlyticsManager.recordExceptionWithContext(
+                crashlyticsManager.recordWithContext(
                     e,
                     mapOf("action" to "delete_child_info", "child_id" to childInfo.id)
                 )

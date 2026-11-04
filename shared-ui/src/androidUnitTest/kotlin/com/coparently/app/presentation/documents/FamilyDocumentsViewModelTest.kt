@@ -5,7 +5,7 @@ import com.coparently.app.data.family.FamilyOption
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.files.SharedFileIntegrityException
 import com.coparently.app.data.files.SharedFileRejectedException
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.documents.DocumentCategory
 import com.coparently.app.domain.documents.FamilyDocument
 import com.coparently.app.domain.documents.VaultListing
@@ -17,7 +17,6 @@ import com.coparently.app.presentation.common.UiText
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.shared_file_error_integrity
 import com.coparently.app.resources.shared_file_error_type
-import com.google.firebase.auth.FirebaseUser
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -52,8 +51,8 @@ class FamilyDocumentsViewModelTest {
     private val selectedFamilySource = mockk<SelectedFamilySource> {
         every { observe("alice") } returns onScreen
     }
-    private val authService = mockk<FirebaseAuthService> {
-        every { getCurrentUser() } returns mockk<FirebaseUser> { every { uid } returns "alice" }
+    private val authService = mockk<SignedInUser> {
+        every { getCurrentUid() } returns "alice"
     }
     private val parentsSource = mockk<ParentsSource> { every { observe() } returns flowOf(Parents()) }
 

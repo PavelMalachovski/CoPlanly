@@ -1,9 +1,11 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package com.coparently.app.presentation.journal
 
-import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.journal.JournalEntry
 import com.coparently.app.domain.repository.JournalRepository
@@ -20,10 +22,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toKotlinLocalDate
-import java.time.LocalDate
-import java.util.UUID
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
+import kotlin.time.Clock
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * The journal editor's state.
@@ -81,7 +85,11 @@ class JournalEditorViewModel(
     private var original: JournalEntry? = null
 
     private val _state = MutableStateFlow(
-        JournalEditorState(loading = entryId != null, isNew = entryId == null, entryDate = LocalDate.now())
+        JournalEditorState(
+            loading = entryId != null,
+            isNew = entryId == null,
+            entryDate = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        )
     )
 
     /** The form. */
@@ -104,9 +112,9 @@ class JournalEditorViewModel(
                 current.copy(
                     loading = false,
                     isNew = false,
-                    entryDate = entry.entryDate.toJavaLocalDate(),
+                    entryDate = entry.entryDate,
                     text = entry.text,
-                    seededDate = entry.entryDate.toJavaLocalDate(),
+                    seededDate = entry.entryDate,
                     seededText = entry.text
                 )
             }
@@ -139,7 +147,7 @@ class JournalEditorViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-                Log.e(TAG, "Journal entry not saved", e)
+                logger.e(TAG, "Journal entry not saved", e)
                 _state.update { it.copy(error = UiText.Res(Res.string.journal_error_save)) }
             } finally {
                 _state.update { it.copy(saving = false) }
@@ -162,7 +170,7 @@ class JournalEditorViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-                Log.e(TAG, "Journal entry not deleted", e)
+                logger.e(TAG, "Journal entry not deleted", e)
                 _state.update { it.copy(error = UiText.Res(Res.string.journal_error_delete)) }
             } finally {
                 _state.update { it.copy(saving = false) }
@@ -171,12 +179,12 @@ class JournalEditorViewModel(
     }
 
     private suspend fun entryFrom(form: JournalEditorState, uid: String): JournalEntry {
-        val now = System.currentTimeMillis()
+        val now = Clock.System.now().toEpochMilliseconds()
         val text = form.text.trim()
-        return original?.copy(entryDate = form.entryDate.toKotlinLocalDate(), text = text, updatedAtMillis = now)
+        return original?.copy(entryDate = form.entryDate, text = text, updatedAtMillis = now)
             ?: JournalEntry(
-                id = UUID.randomUUID().toString(),
-                entryDate = form.entryDate.toKotlinLocalDate(),
+                id = Uuid.random().toString(),
+                entryDate = form.entryDate,
                 text = text,
                 createdAtMillis = now,
                 updatedAtMillis = now,

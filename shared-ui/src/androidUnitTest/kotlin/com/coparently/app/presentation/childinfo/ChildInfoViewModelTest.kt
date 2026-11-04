@@ -1,8 +1,8 @@
 package com.coparently.app.presentation.childinfo
 
-import com.coparently.app.data.analytics.AnalyticsManager
-import com.coparently.app.data.crashlytics.CrashlyticsManager
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.platform.Analytics
+import com.coparently.app.data.platform.CrashReporter
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.GuestRepository
@@ -64,9 +64,9 @@ class ChildInfoViewModelTest {
         childInfoRepository,
         mockk<RecordPhotoStorage>(relaxed = true),
         mockk<GuestRepository>(relaxed = true),
-        mockk<FirebaseAuthService>(relaxed = true),
-        mockk<AnalyticsManager>(relaxed = true),
-        mockk<CrashlyticsManager>(relaxed = true)
+        mockk<SignedInUser>(relaxed = true),
+        mockk<Analytics>(relaxed = true),
+        mockk<CrashReporter>(relaxed = true)
     )
 
     @Test

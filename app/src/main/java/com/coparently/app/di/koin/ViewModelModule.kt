@@ -1,17 +1,11 @@
 package com.coparently.app.di.koin
 
 import com.coparently.app.presentation.auth.AuthViewModel
-import com.coparently.app.presentation.childinfo.ChildInfoViewModel
-import com.coparently.app.presentation.contacts.ContactsViewModel
-import com.coparently.app.presentation.documents.FamilyDocumentsViewModel
 import com.coparently.app.presentation.export.ExportViewModel
 import com.coparently.app.presentation.friends.FriendCalendarViewModel
 import com.coparently.app.presentation.friends.FriendViewModel
 import com.coparently.app.presentation.guests.GuestAcceptViewModel
-import com.coparently.app.presentation.journal.JournalEditorViewModel
-import com.coparently.app.presentation.journal.JournalListViewModel
 import com.coparently.app.presentation.parentingplan.ParentingPlanViewModel
-import com.coparently.app.presentation.pets.PetsViewModel
 import com.coparently.app.presentation.professionals.ProfessionalCalendarViewModel
 import com.coparently.app.presentation.professionals.ProfessionalPlanViewModel
 import com.coparently.app.presentation.professionals.ProfessionalsViewModel
@@ -31,17 +25,11 @@ import org.koin.dsl.module
  */
 val viewModelModule = module {
     viewModelOf(::AuthViewModel)
-    viewModelOf(::ChildInfoViewModel)
-    viewModelOf(::ContactsViewModel)
-    viewModelOf(::FamilyDocumentsViewModel)
     viewModelOf(::ExportViewModel)
     viewModelOf(::FriendCalendarViewModel)
     viewModelOf(::FriendViewModel)
     viewModelOf(::GuestAcceptViewModel)
-    viewModelOf(::JournalEditorViewModel)
-    viewModelOf(::JournalListViewModel)
     viewModelOf(::ParentingPlanViewModel)
-    viewModelOf(::PetsViewModel)
     viewModelOf(::ProfessionalCalendarViewModel)
     viewModelOf(::ProfessionalPlanViewModel)
     viewModelOf(::ProfessionalsViewModel)

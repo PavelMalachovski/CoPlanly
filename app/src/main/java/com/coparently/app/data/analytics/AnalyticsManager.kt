@@ -86,48 +86,6 @@ class AnalyticsManager(
     }
 
     /**
-     * Log child info added event.
-     */
-    fun logChildInfoAdded() {
-        analytics.logEvent("child_info_added", null)
-    }
-
-    /**
-     * Log child info updated event.
-     */
-    fun logChildInfoUpdated() {
-        analytics.logEvent("child_info_updated", null)
-    }
-
-    /**
-     * Log child info deleted event.
-     */
-    fun logChildInfoDeleted() {
-        analytics.logEvent("child_info_deleted", null)
-    }
-
-    /**
-     * Log pet added event.
-     */
-    fun logPetAdded() {
-        analytics.logEvent("pet_added", null)
-    }
-
-    /**
-     * Log pet updated event.
-     */
-    fun logPetUpdated() {
-        analytics.logEvent("pet_updated", null)
-    }
-
-    /**
-     * Log pet deleted event.
-     */
-    fun logPetDeleted() {
-        analytics.logEvent("pet_deleted", null)
-    }
-
-    /**
      * Log Google Calendar sync event.
      *
      * @param success Whether sync was successful

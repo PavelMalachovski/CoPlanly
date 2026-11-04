@@ -1,7 +1,7 @@
 package com.coparently.app.presentation.pets
 
-import com.coparently.app.data.analytics.AnalyticsManager
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.platform.Analytics
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.repository.PetRepository
@@ -9,7 +9,6 @@ import com.coparently.app.domain.repository.RecordPhotoStorage
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.pets_delete_failed
-import com.google.firebase.auth.FirebaseUser
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -47,9 +46,9 @@ class PetsViewModelTest {
         every { getAllPets() } returns flowOf(emptyList())
     }
     private val photoStorage = mockk<RecordPhotoStorage>()
-    private val authService = mockk<FirebaseAuthService>()
-    private val analytics = mockk<AnalyticsManager>(relaxed = true)
-    private val signedIn = mockk<FirebaseUser> { every { uid } returns "u1" }
+    private val authService = mockk<SignedInUser>()
+    private val analytics = mockk<Analytics>(relaxed = true)
+    private val signedIn = "u1"
 
     private val rex = Pet(id = "p1", name = "Rex", createdAt = now, updatedAt = now, familyId = FAMILY)
 
@@ -88,7 +87,7 @@ class PetsViewModelTest {
 
     @Test
     fun `a save with nobody signed in fails and writes nothing`() = runTest(dispatcher) {
-        every { authService.getCurrentUser() } returns null
+        every { authService.getCurrentUid() } returns null
         val vm = viewModel()
         val outcomes = outcomesOf(vm)
 
@@ -101,7 +100,7 @@ class PetsViewModelTest {
 
     @Test
     fun `an edit keeps the original creator, stamps the editor and queues the upload`() = runTest(dispatcher) {
-        every { authService.getCurrentUser() } returns signedIn
+        every { authService.getCurrentUid() } returns signedIn
         val saved = slot<Pet>()
         coEvery { petRepository.upsertPet(capture(saved)) } returns Unit
         val vm = viewModel()
@@ -114,12 +113,12 @@ class PetsViewModelTest {
         assertEquals("u2", saved.captured.createdByFirebaseUid)
         assertEquals("u1", saved.captured.lastModifiedBy)
         assertEquals(false, saved.captured.syncedToFirestore)
-        verify(exactly = 1) { analytics.logPetUpdated() }
+        verify(exactly = 1) { analytics.log("pet_updated", emptyMap()) }
     }
 
     @Test
     fun `a photo whose delete failed stays on the record`() = runTest(dispatcher) {
-        every { authService.getCurrentUser() } returns signedIn
+        every { authService.getCurrentUid() } returns signedIn
         coEvery { photoStorage.delete(REF_A, FAMILY) } returns Unit
         coEvery { photoStorage.delete(REF_B, FAMILY) } throws IllegalStateException("denied")
         val saved = slot<Pet>()
@@ -143,7 +142,7 @@ class PetsViewModelTest {
 
     @Test
     fun `a failed upload is reported and the pet is still saved without it`() = runTest(dispatcher) {
-        every { authService.getCurrentUser() } returns signedIn
+        every { authService.getCurrentUid() } returns signedIn
         coEvery { photoStorage.upload(RecordPhotoKind.PET, "p1", FAMILY, "content://one") } returns REF_A
         coEvery {
             photoStorage.upload(RecordPhotoKind.PET, "p1", FAMILY, "content://two")
@@ -168,7 +167,7 @@ class PetsViewModelTest {
 
     @Test
     fun `a legacy download URL is dropped on save and never deleted from the client`() = runTest(dispatcher) {
-        every { authService.getCurrentUser() } returns signedIn
+        every { authService.getCurrentUid() } returns signedIn
         val saved = slot<Pet>()
         coEvery { petRepository.upsertPet(capture(saved)) } returns Unit
         val vm = viewModel()

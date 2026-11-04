@@ -13,7 +13,7 @@ import kotlinx.datetime.LocalDateTime
  * them, and compared with what they were seeded with to tell whether Back would drop an edit
  * (D-11). A photo picked or marked for removal counts as an edit.
  */
-internal data class ChildFields(
+data class ChildFields(
     val childName: String,
     val dateOfBirth: LocalDateTime?,
     val medications: List<Medication>,

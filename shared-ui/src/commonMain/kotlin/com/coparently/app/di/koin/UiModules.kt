@@ -12,6 +12,7 @@ import com.coparently.app.presentation.chat.ChatViewModel
 import com.coparently.app.presentation.chat.DictationViewModel
 import com.coparently.app.presentation.chat.ReplySuggestionViewModel
 import com.coparently.app.presentation.chat.SettleUpPaymentViewModel
+import com.coparently.app.presentation.childinfo.ChildInfoViewModel
 import com.coparently.app.presentation.common.ConnectivityViewModel
 import com.coparently.app.presentation.common.FamilyKindSource
 import com.coparently.app.presentation.common.FamilyMembersSource
@@ -21,8 +22,10 @@ import com.coparently.app.presentation.common.ParentPaletteViewModel
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.consent.HealthConsentViewModel
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
+import com.coparently.app.presentation.contacts.ContactsViewModel
 import com.coparently.app.presentation.custody.CustodySetupViewModel
 import com.coparently.app.presentation.custody.SeasonalScheduleViewModel
+import com.coparently.app.presentation.documents.FamilyDocumentsViewModel
 import com.coparently.app.presentation.event.EventOwnerViewModel
 import com.coparently.app.presentation.event.EventViewModel
 import com.coparently.app.presentation.expenses.ExpenseViewModel
@@ -34,12 +37,15 @@ import com.coparently.app.presentation.home.HomeIdentityDependencies
 import com.coparently.app.presentation.home.HomeViewModel
 import com.coparently.app.presentation.home.MonthSpendDependencies
 import com.coparently.app.presentation.home.PutOffAsksViewModel
+import com.coparently.app.presentation.journal.JournalEditorViewModel
+import com.coparently.app.presentation.journal.JournalListViewModel
 import com.coparently.app.presentation.onboarding.OnboardingViewModel
 import com.coparently.app.presentation.pairing.CustodyConflictViewModel
 import com.coparently.app.presentation.pairing.PairingViewModel
 import com.coparently.app.presentation.pairing.PendingCustodyConflict
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
 import com.coparently.app.presentation.payments.PaymentsViewModel
+import com.coparently.app.presentation.pets.PetsViewModel
 import com.coparently.app.presentation.profile.ProfileViewModel
 import com.coparently.app.presentation.review.MonthReviewAssist
 import com.coparently.app.presentation.review.MonthReviewSources
@@ -286,6 +292,44 @@ val aiUiModule: Module = module {
 }
 
 /**
+ * A child's record (MON-24 phase 2, Task 10): the list, the editor with its photographs behind the
+ * health consent, the delete, and a guest's access to one child. The photographs go through the
+ * domain's `RecordPhotoStorage`, and the events and failures through `Analytics` and
+ * `CrashReporter`, which the platform binds.
+ */
+val childInfoUiModule: Module = module {
+    viewModelOf(::ChildInfoViewModel)
+}
+
+/** A pet's record (MON-24 phase 2, Task 10): the list, the editor with its photographs and the delete. */
+val petsUiModule: Module = module {
+    viewModelOf(::PetsViewModel)
+}
+
+/** The contacts gathered from the children's and pets' records (MON-24 phase 2, Task 10). */
+val contactsUiModule: Module = module {
+    viewModelOf(::ContactsViewModel)
+}
+
+/**
+ * The family's documents (MON-24 phase 2, Task 10; CLAUDE.md item 31): the vault of the family on
+ * screen or, read-only, of an earlier one, a file added and one opened. The files go through the
+ * data layer's `StorageBucket` and `PickedFiles`, which the platform binds.
+ */
+val documentsUiModule: Module = module {
+    viewModelOf(::FamilyDocumentsViewModel)
+}
+
+/**
+ * The private journal (MON-24 phase 2, Task 10; CLAUDE.md item 34): this parent's entries and the
+ * editor of one, on this phone alone.
+ */
+val journalUiModule: Module = module {
+    viewModelOf(::JournalEditorViewModel)
+    viewModelOf(::JournalListViewModel)
+}
+
+/**
  * Every module of the UI both apps run, grouped by feature as [dataModules] is. The app's
  * `appModules` includes them, with [platformUiModule]; the iPhone app's will (phase 3). The
  * ViewModels move here group by group (Task 10's slices); a screen still in the app resolves a moved
@@ -311,7 +355,12 @@ val uiModules: List<Module> = listOf(
     reviewUiModule,
     stickersUiModule,
     consentUiModule,
-    aiUiModule
+    aiUiModule,
+    childInfoUiModule,
+    petsUiModule,
+    contactsUiModule,
+    documentsUiModule,
+    journalUiModule
 )
 
 /**

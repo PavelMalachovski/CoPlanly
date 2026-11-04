@@ -12,4 +12,12 @@ interface CrashReporter {
 
     /** Reports [error], a failure the caller has already handled. */
     fun record(error: Throwable)
+
+    /**
+     * Reports [error] with [context]: identifiers, actions and enum names, **never anything a user
+     * typed** (on Android they become Crashlytics custom keys, set on the session). By default
+     * [record] alone; `CrashlyticsManager` keeps the keys, as its `recordExceptionWithContext` did
+     * for the ViewModels that called it (MON-24 phase 2, Task 10).
+     */
+    fun recordWithContext(error: Throwable, context: Map<String, String>) = record(error)
 }

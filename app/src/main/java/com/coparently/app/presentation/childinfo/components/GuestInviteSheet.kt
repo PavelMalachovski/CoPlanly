@@ -32,6 +32,7 @@ import com.coparently.app.presentation.childinfo.GuestInviteState
 import com.coparently.app.presentation.common.InviteCodeText
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.theme.Spacing
+import org.jetbrains.compose.resources.stringResource
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter

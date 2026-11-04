@@ -1,11 +1,14 @@
 package com.coparently.app.presentation.pets
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.data.analytics.AnalyticsManager
-import com.coparently.app.data.crashlytics.CrashlyticsManager
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.platform.Analytics
+import com.coparently.app.data.platform.CrashReporter
+import com.coparently.app.data.platform.logPetAdded
+import com.coparently.app.data.platform.logPetDeleted
+import com.coparently.app.data.platform.logPetUpdated
+import com.coparently.app.data.platform.logger
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.files.RecordPhotoAccess
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Pet
@@ -74,9 +77,9 @@ enum class PetSaveOutcome {
 class PetsViewModel(
     private val petRepository: PetRepository,
     private val photoStorage: RecordPhotoStorage,
-    private val firebaseAuthService: FirebaseAuthService,
-    private val analyticsManager: AnalyticsManager,
-    private val crashlyticsManager: CrashlyticsManager
+    private val firebaseAuthService: SignedInUser,
+    private val analyticsManager: Analytics,
+    private val crashlyticsManager: CrashReporter
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<PetsUiState>(PetsUiState.Loading)
@@ -86,7 +89,7 @@ class PetsViewModel(
      * The editor's fields, here rather than in the screen so a rotation keeps what was typed
      * (docs/AUDIT-2026-10-design.md D-11). Seeded once per record by the editor.
      */
-    internal val petForm = FormDraft(PetFields.EMPTY)
+    val petForm = FormDraft(PetFields.EMPTY)
 
     /** The one pet the editor is open on, or null while nothing has loaded. */
     private val _currentPet = MutableStateFlow<Pet?>(null)
@@ -130,7 +133,7 @@ class PetsViewModel(
             } catch (
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
-                Log.w(TAG, "Loading pets failed", e)
+                logger.w(TAG, "Loading pets failed", e)
                 _uiState.value = PetsUiState.Error(UiText.Res(Res.string.pets_load_failed))
             }
         }
@@ -179,12 +182,12 @@ class PetsViewModel(
      */
     private suspend fun persist(pet: Pet, isNewPet: Boolean): Boolean {
         return try {
-            val currentUser = firebaseAuthService.getCurrentUser()
+            val currentUid = firebaseAuthService.getCurrentUid()
                 ?: throw IllegalStateException("User not authenticated")
 
             val finalPet = pet.copy(
-                createdByFirebaseUid = pet.createdByFirebaseUid ?: currentUser.uid,
-                lastModifiedBy = currentUser.uid,
+                createdByFirebaseUid = pet.createdByFirebaseUid ?: currentUid,
+                lastModifiedBy = currentUid,
                 syncedToFirestore = false
             )
 
@@ -201,14 +204,14 @@ class PetsViewModel(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            crashlyticsManager.recordExceptionWithContext(
+            crashlyticsManager.recordWithContext(
                 e,
                 // The id rather than the name, matching `ChildInfoViewModel`: custom keys are
                 // uploaded and persist across the Crashlytics session, so nothing a family
                 // typed belongs in one.
                 mapOf("action" to "upsert_pet", "pet_id" to pet.id)
             )
-            Log.e(TAG, "Saving pet ${pet.id} failed", e)
+            logger.e(TAG, "Saving pet ${pet.id} failed", e)
             false
         }
     }
@@ -256,8 +259,8 @@ class PetsViewModel(
     } catch (
         @Suppress("TooGenericExceptionCaught") e: Exception
     ) {
-        crashlyticsManager.recordExceptionWithContext(e, mapOf("action" to "delete_pet_photo"))
-        Log.e(TAG, "Deleting a pet photo failed", e)
+        crashlyticsManager.recordWithContext(e, mapOf("action" to "delete_pet_photo"))
+        logger.e(TAG, "Deleting a pet photo failed", e)
         _photoError.value = PetPhotoError.DELETE_FAILED
         false
     }
@@ -280,14 +283,14 @@ class PetsViewModel(
     } catch (
         @Suppress("TooGenericExceptionCaught") e: Exception
     ) {
-        crashlyticsManager.recordExceptionWithContext(
+        crashlyticsManager.recordWithContext(
             e,
             mapOf("action" to "upload_pet_photo", "pet_id" to petId)
         )
         // Crashlytics writes nothing to logcat, so without this line an upload failure on a
         // device in front of you is undiagnosable — which is how the `pet_photos` Storage rule
-        // gap stayed invisible. `Log.e` survives the R8 strip.
-        Log.e(TAG, "Uploading a pet photo to pet_photos/$petId failed", e)
+        // gap stayed invisible. `logger.e` (logcat on Android) survives the R8 strip.
+        logger.e(TAG, "Uploading a pet photo to pet_photos/$petId failed", e)
         _photoError.value = PetPhotoError.UPLOAD_FAILED
         null
     }
@@ -305,7 +308,7 @@ class PetsViewModel(
             } catch (
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
-                crashlyticsManager.recordExceptionWithContext(
+                crashlyticsManager.recordWithContext(
                     e,
                     mapOf("action" to "delete_pet", "pet_id" to pet.id)
                 )

@@ -83,7 +83,7 @@ class JournalEditorViewModelTest {
         advanceUntilIdle()
 
         assertTrue(model.state.value.isNew)
-        assertEquals(LocalDate.now(), model.state.value.entryDate)
+        assertEquals(LocalDate.now().toKotlinLocalDate(), model.state.value.entryDate)
         model.setText("   ")
         assertFalse(model.state.value.canSave)
         model.save()
@@ -98,7 +98,7 @@ class JournalEditorViewModelTest {
         val model = editor(JournalEditorViewModel.NEW_ENTRY)
         advanceUntilIdle()
 
-        model.setDate(LocalDate.of(2026, 8, 30))
+        model.setDate(LocalDate.of(2026, 8, 30).toKotlinLocalDate())
         model.setText("  Missed the call again  ")
         model.save()
         advanceUntilIdle()
@@ -243,7 +243,7 @@ class JournalEditorViewModelTest {
         model.setText("Late pickup")
         assertFalse(model.state.value.hasUnsavedEdits)
 
-        model.setDate(LocalDate.of(2026, 9, 2))
+        model.setDate(LocalDate.of(2026, 9, 2).toKotlinLocalDate())
         assertTrue(model.state.value.hasUnsavedEdits)
     }
 

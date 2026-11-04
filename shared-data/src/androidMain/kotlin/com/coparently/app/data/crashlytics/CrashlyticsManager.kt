@@ -22,6 +22,11 @@ class CrashlyticsManager(
         recordException(error)
     }
 
+    /** [recordExceptionWithContext], as the data layer's [CrashReporter]. */
+    override fun recordWithContext(error: Throwable, context: Map<String, String>) {
+        recordExceptionWithContext(error, context)
+    }
+
     /**
      * Records a non-fatal exception to Crashlytics.
      *

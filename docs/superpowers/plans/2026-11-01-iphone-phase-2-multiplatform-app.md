@@ -918,6 +918,25 @@ Then the session and the profile:
   `pairingMessageRes`'s KDoc names its callers; `tools/manual-test-plan.js` maps `PushRegistration.kt`
   to §3.7 and `AnalyticsEvents.kt` to §2.2.
 
+Then the family's records:
+- `ChildInfoViewModel` (with `ChildFields`, `childInfoUiModule`) and `PetsViewModel` (with
+  `PetFields`, `petsUiModule`): `FirebaseAuthService` → `SignedInUser` (`getCurrentUser()?.uid` →
+  `getCurrentUid()`), `AnalyticsManager` → `Analytics` (the six record events as extensions in
+  `data/platform/AnalyticsEvents.kt`; the members left), `CrashlyticsManager` → `CrashReporter`
+  (`recordException` → `record`, `recordExceptionWithContext` → the new `recordWithContext`, which
+  `CrashlyticsManager` overrides with its own), `Log` → `logger`; parameter names kept.
+  `GuestInviteState.errorRes` and `guestMessageFor` → `StringResource`.
+- `ContactsViewModel`, `FamilyDocumentsViewModel` (`SignedInUser`) and `JournalListViewModel`
+  unchanged but for those; `JournalEditorViewModel`: `java.time.LocalDate` → kotlinx-datetime in
+  `JournalEditorState` and `setDate`, `UUID` → `Uuid`, `System.currentTimeMillis()` →
+  `Clock.System`, `Log` → `logger`. Each in its own module.
+- Visibility: `ChildFields`, `PetFields` (were `internal`), `childForm`, `petForm` public for the
+  editors in the app.
+- Screen edges: `JournalEditorScreen` (`toJavaLocalDate()` into the picker, `toKotlinLocalDate()` out
+  of it); `GuestInviteSheet` reads the error with CMP `stringResource`.
+- Tests: the six to androidUnitTest (MockK); `PetsViewModelTest` verifies `Analytics.log("pet_updated",
+  emptyMap())` and its uid answers a string where it answered a `FirebaseUser`.
+
 ### Task 11: The screens to `commonMain`
 
 **Files:**

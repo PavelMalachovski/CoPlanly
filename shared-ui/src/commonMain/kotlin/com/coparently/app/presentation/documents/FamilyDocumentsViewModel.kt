@@ -4,7 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.family.SelectedFamilySource
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.documents.DocumentCategory
 import com.coparently.app.domain.documents.FamilyDocument
 import com.coparently.app.domain.repository.FamilyDocumentRepository
@@ -86,7 +86,7 @@ data class DocumentsUiState(
 class FamilyDocumentsViewModel(
     private val repository: FamilyDocumentRepository,
     private val selectedFamilySource: SelectedFamilySource,
-    private val authService: FirebaseAuthService,
+    private val authService: SignedInUser,
     parentsSource: ParentsSource,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -112,7 +112,7 @@ class FamilyDocumentsViewModel(
     private var familyId: String? = null
 
     init {
-        val myUid = authService.getCurrentUser()?.uid.orEmpty()
+        val myUid = authService.getCurrentUid().orEmpty()
         _state.update { it.copy(myUid = myUid, readOnly = earlierFamily != null) }
         val families = when {
             myUid.isBlank() -> flowOf(null)
