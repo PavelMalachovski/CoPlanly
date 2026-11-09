@@ -1618,6 +1618,23 @@ Then the export and the school import:
   with the last one from `main`. **Expected: identical screens.**
 - [ ] **Step 4: Commit.** `refactor: make the Android app a thin shell over shared-ui (MON-24)`
 
+**Slice 12a notes (November 2026).** The dependency and the graph's leaves.
+- `:shared-ui` takes `org.jetbrains.androidx.navigation:navigation-compose:2.9.2` as an `api` in
+  `commonMain` (androidx's 2.9.7 on Android); the app's own `navigation-compose:2.9.3` line is gone.
+- `Screen` moved first, in a file of its own (`navigation/Screen.kt`, split out of `NavGraph.kt`),
+  because `BottomNavDestination` names its routes and could not move without it. Its
+  `Uri.encode` calls are `domain/text/UriComponent.encode` (`:shared`, new), which writes what
+  `android.net.Uri.encode` writes: `A–Z a–z 0–9 _ - ! . ~ ' ( ) *` kept, every other character as
+  upper-case `%XX` of its UTF-8 bytes, an unpaired surrogate `%3F`. `UriComponentTest` (commonTest)
+  holds the vectors; `UriComponentParityTest` (the app's Robolectric tests) holds it to `Uri.encode`
+  over a corpus, every UTF-16 unit and 10 000 random texts.
+- `ReadablePane.kt` and `BottomNavDestination.kt` moved (`git mv`): the labels are `Res.string`
+  (`labelRes` a `StringResource`; the androidTest walks read it as the app's `R.string` of its key),
+  the badge reads CMP's `pluralStringResource`, and the bar-or-rail width is the common
+  `windowWidthDp()` (`TwoPane`'s, `screenWidthDp` on Android). `navigateToTab` left `NavGraph.kt`
+  for `BottomNavDestination.kt`. `ReadablePane` and `READABLE_PANE_WIDTH` are public for the app's
+  `ReadablePaneTest`; `pane` and `navigateToTab` are public while `NavGraph` is still in the app.
+
 ### Task 13: AGP 9 and Kotlin 2.4
 
 `CLAUDE.md`'s toolchain line names two blockers for Kotlin 2.4: AGP 9, and Dagger 2.60. Task 2

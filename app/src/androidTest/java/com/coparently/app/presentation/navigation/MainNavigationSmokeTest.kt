@@ -25,6 +25,7 @@ import com.coparently.app.testing.assertIconOnlyControlsAreAccessible
 import com.coparently.app.testing.exists
 import com.coparently.app.testing.pumpUntil
 import com.coparently.app.testing.settle
+import org.jetbrains.compose.resources.StringResource
 import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Before
@@ -187,4 +188,8 @@ class MainNavigationSmokeTest {
     private fun isMenuItem(): SemanticsMatcher = !hasAnyAncestor(bottomBar)
 
     private fun string(@StringRes id: Int): String = context.getString(id)
+
+    /** A tab's label (`Res`, since the bar moved to `:shared-ui`), read as the app's `R.string` of its key. */
+    private fun string(resource: StringResource): String =
+        string(context.resources.getIdentifier(resource.key, "string", context.packageName))
 }

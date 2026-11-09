@@ -21,13 +21,21 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import com.coparently.app.R
+import androidx.navigation.NavHostController
+import com.coparently.app.presentation.common.windowWidthDp
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.chat_unread_count_overflow
+import com.coparently.app.resources.chat_unread_messages_badge
+import com.coparently.app.resources.nav_calendar
+import com.coparently.app.resources.nav_chat
+import com.coparently.app.resources.nav_family
+import com.coparently.app.resources.nav_home
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Above this many unread messages the badge stops growing the digit count and shows
@@ -56,26 +64,26 @@ const val BOTTOM_BAR_TEST_TAG = "bottom_nav_bar"
  */
 enum class BottomNavDestination(
     val route: String,
-    val labelRes: Int,
+    val labelRes: StringResource,
     val selectedIcon: ImageVector,
     val unselectedIcon: ImageVector,
     val navRoute: String = route
 ) {
     HOME(
         route = Screen.Home.route,
-        labelRes = R.string.nav_home,
+        labelRes = Res.string.nav_home,
         selectedIcon = Icons.Filled.Home,
         unselectedIcon = Icons.Outlined.Home
     ),
     CALENDAR(
         route = Screen.Calendar.route,
-        labelRes = R.string.nav_calendar,
+        labelRes = Res.string.nav_calendar,
         selectedIcon = Icons.Filled.CalendarMonth,
         unselectedIcon = Icons.Outlined.CalendarMonth
     ),
     CHAT(
         route = Screen.Conversations.route,
-        labelRes = R.string.nav_chat,
+        labelRes = Res.string.nav_chat,
         selectedIcon = Icons.AutoMirrored.Filled.Chat,
         unselectedIcon = Icons.AutoMirrored.Outlined.Chat,
         // The pattern carries an optional draft argument; the tab opens the plain list.
@@ -88,7 +96,7 @@ enum class BottomNavDestination(
      */
     FAMILY(
         route = Screen.Family.route,
-        labelRes = R.string.nav_family,
+        labelRes = Res.string.nav_family,
         selectedIcon = Icons.Filled.Groups,
         unselectedIcon = Icons.Outlined.Groups
     );
@@ -100,6 +108,25 @@ enum class BottomNavDestination(
     companion object {
         /** Routes on which the bottom bar is visible. */
         val topLevelRoutes: Set<String> = entries.mapTo(mutableSetOf()) { it.route }
+    }
+}
+
+/**
+ * Switches to a top-level tab.
+ *
+ * Extracted from the bottom bar's own handler because the home dashboard's stat tiles are
+ * deep links into Expenses and Chat and must land the user in exactly the state tapping the
+ * tab would have: one instance per tab, each tab's own scroll position restored, and a back
+ * stack that unwinds to Home rather than accumulating tab entries.
+ *
+ * @param destination Tab to show
+ */
+fun NavHostController.navigateToTab(destination: BottomNavDestination) {
+    navigate(destination.navRoute) {
+        // Keep one instance per tab, preserve each tab's state
+        popUpTo(Screen.Home.route) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
     }
 }
 
@@ -129,7 +156,7 @@ private const val RAIL_FROM_WIDTH_DP = 600
  */
 @Composable
 fun rememberNavigationLayout(): NavigationLayout =
-    if (LocalConfiguration.current.screenWidthDp >= RAIL_FROM_WIDTH_DP) NavigationLayout.RAIL else NavigationLayout.BAR
+    if (windowWidthDp() >= RAIL_FROM_WIDTH_DP) NavigationLayout.RAIL else NavigationLayout.BAR
 
 /** Test tag on the navigation rail, the rail's counterpart of [BOTTOM_BAR_TEST_TAG]. */
 const val NAVIGATION_RAIL_TEST_TAG = "navigation_rail"
@@ -224,12 +251,12 @@ private fun TabIcon(destination: BottomNavDestination, selected: Boolean, chatUn
     val icon = if (selected) destination.selectedIcon else destination.unselectedIcon
     if (destination == BottomNavDestination.CHAT && chatUnreadCount > 0) {
         val unreadDescription = pluralStringResource(
-            R.plurals.chat_unread_messages_badge,
+            Res.plurals.chat_unread_messages_badge,
             chatUnreadCount,
             chatUnreadCount
         )
         val badgeText = if (chatUnreadCount > MAX_BADGE_DISPLAY_COUNT) {
-            stringResource(R.string.chat_unread_count_overflow, MAX_BADGE_DISPLAY_COUNT)
+            stringResource(Res.string.chat_unread_count_overflow, MAX_BADGE_DISPLAY_COUNT)
         } else {
             chatUnreadCount.toString()
         }

@@ -391,8 +391,9 @@ dependencies {
     implementation("androidx.compose.material3:material3-window-size-class")
     implementation("androidx.compose.material:material-icons-extended")
 
-    // Navigation - 2.9.x (predictive-back aware transitions)
-    implementation("androidx.navigation:navigation-compose:2.9.3")
+    // Navigation: `:shared-ui`'s, since the graph moved there (MON-24 phase 2, Task 12). JetBrains'
+    // multiplatform navigation-compose 2.9.2, which on Android is androidx's 2.9.7 (predictive-back
+    // aware transitions), reaches the app through that module's `api`.
 
     // Splash Screen API for Android 12+
     implementation("androidx.core:core-splashscreen:1.0.1")

@@ -131,6 +131,13 @@ kotlin {
             //   `com.kizitonwose.calendar:compose:2.6.1`, whose packages are the same: the two cannot
             //   both be on the classpath.
             implementation("com.kizitonwose.calendar:compose-multiplatform:2.9.1")
+            // - The navigation graph (`presentation/navigation/`, Task 12): JetBrains' multiplatform
+            //   Navigation, the release that pairs with Compose Multiplatform 1.9.3, lifecycle 2.9.6
+            //   and savedstate 1.3.6 above. On Android it is androidx's navigation-compose 2.9.7, a
+            //   lift from the 2.9.3 the app declared before the graph moved. `api`, because the
+            //   graph's public signatures carry `NavHostController` and `NavGraphBuilder`, and the
+            //   app's tests build a `NavHost` of their own (`ViewModelScopeTest`).
+            api("org.jetbrains.androidx.navigation:navigation-compose:2.9.2")
         }
         androidMain.dependencies {
             // `WindowCompat`, for the system bars (`Theme.android.kt`). The app's version.

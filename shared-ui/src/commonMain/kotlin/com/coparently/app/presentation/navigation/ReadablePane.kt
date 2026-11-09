@@ -26,9 +26,9 @@ import androidx.navigation.compose.composable
  * Forms, Settings and every other detail screen are single columns of fields and rows. Stretched
  * across a tablet or an unfolded phone they became lines a metre long, with a Save button at one
  * edge and its label at the other. 640 dp holds the widest phone and a portrait foldable whole,
- * so on those the cap changes nothing.
+ * so on those the cap changes nothing. Public for the app's `ReadablePaneTest`, which measures it.
  */
-internal val READABLE_PANE_WIDTH = 640.dp
+val READABLE_PANE_WIDTH = 640.dp
 
 /** The test tag of [ReadablePane]'s column, for a test that measures it. */
 internal const val READABLE_PANE_TEST_TAG = "readable_pane"
@@ -45,7 +45,7 @@ internal const val READABLE_PANE_TEST_TAG = "readable_pane"
  * NavHost's, and a pop transition defaults to its push.
  */
 @Suppress("LongParameterList") // mirrors navigation's own composable(), transition by transition
-internal fun NavGraphBuilder.pane(
+fun NavGraphBuilder.pane(
     route: String,
     arguments: List<NamedNavArgument> = emptyList(),
     enterTransition: (AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition?)? = null,
@@ -71,10 +71,10 @@ internal fun NavGraphBuilder.pane(
 /**
  * Lays [content] out in a column at most [READABLE_PANE_WIDTH] wide, centred in the window, at
  * the window's full height. The screen's own Scaffold fills the column, its top bar included; the
- * window's background shows either side.
+ * window's background shows either side. Public for the app's `ReadablePaneTest`.
  */
 @Composable
-internal fun ReadablePane(content: @Composable () -> Unit) {
+fun ReadablePane(content: @Composable () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Box(
             modifier = Modifier

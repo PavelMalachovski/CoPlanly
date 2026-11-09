@@ -559,16 +559,20 @@ When touching the UI, keep these invariants:
    is `com.kizitonwose.calendar:compose-multiplatform` 2.9.1** there since slice 11c, the month grid's
    `HorizontalCalendar` on kotlinx-datetime (it asks for CMP 1.9.0, kotlinx-datetime 0.7.1 and
    serialization 1.9.0, all below what the graph resolves; 2.10 asks for CMP 1.10, past the BOM), in
-   place of the app's Android `compose:2.6.1`, whose packages it shares, so never both; no
-   multiplatform Navigation or Coil 3 yet — each arrives with the task that first needs it in common
-   code), Room 2.7.2 (2.6.x breaks on
+   place of the app's Android `compose:2.6.1`, whose packages it shares, so never both; no Coil 3
+   yet — it arrives with the task that first needs it in common code), Room 2.7.2 (2.6.x breaks on
    Kotlin 2.x metadata), Room on **KSP2** (KSP `2.3.11`; kapt is gone) — **Room for Kotlin
    Multiplatform in `:shared-data` since MON-24 phase 2**, its processor run there for Android and
    both iPhone targets and the app running none, with androidx.sqlite 2.5.2's bundled driver
    (`sqlite-bundled`, released with Room 2.7.2) on iOS only; the schema goes to `app/schemas/`
    through the `room.schemaLocation` KSP argument, which the app already used, rather than the Room
    Gradle plugin, which was not tried in this task (Google's Maven repository, where the plugin is
-   published, is unreachable from the cloud sessions this was built in) — Navigation 2.9.3,
+   published, is unreachable from the cloud sessions this was built in) — **Navigation 2.9.7**
+   (MON-24 phase 2, Task 12: the navigation graph is in `:shared-ui`'s `commonMain` on JetBrains'
+   multiplatform `org.jetbrains.androidx.navigation:navigation-compose` 2.9.2, an `api` there, the
+   release that pairs with Compose Multiplatform 1.9.3, lifecycle 2.9.6 and savedstate 1.3.6, which
+   on Android is androidx's navigation-compose 2.9.7, a lift from the 2.9.3 the app declared; the
+   app declares none of its own now),
    **lifecycle 2.9.4** (MON-24 phase 2, Task 10: `:shared-ui`'s ViewModels extend JetBrains'
    multiplatform `org.jetbrains.androidx.lifecycle:lifecycle-viewmodel` 2.9.6, the release Compose
    Multiplatform 1.9.3 pairs with, which on Android is androidx's 2.9.4, so the app's lifecycle

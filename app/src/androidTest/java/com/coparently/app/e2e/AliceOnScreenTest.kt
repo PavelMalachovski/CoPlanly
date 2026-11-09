@@ -61,6 +61,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
+import org.jetbrains.compose.resources.StringResource
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -378,6 +379,13 @@ abstract class AliceOnScreenTest {
     /** The app's own string, in the language [strings] reads — the emulator's, unless a test switched it. */
     protected fun string(id: Int, vararg args: Any): String =
         if (args.isEmpty()) strings.getString(id) else strings.getString(id, *args)
+
+    /**
+     * A `:shared-ui` string (`Res`, such as a tab's label since the navigation moved there, MON-24
+     * phase 2, Task 12), read as the app's `R.string` of the same key: the two are one file.
+     */
+    protected fun string(resource: StringResource): String =
+        string(strings.resources.getIdentifier(resource.key, "string", strings.packageName))
 
     /** A few characters that make a title or a message unique to this run. */
     protected fun shortId(): String = UUID.randomUUID().toString().take(SHORT_ID_LENGTH)
