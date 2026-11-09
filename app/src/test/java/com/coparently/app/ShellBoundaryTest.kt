@@ -115,7 +115,8 @@ class ShellBoundaryTest {
                 "the dictation language the Android `Dictation` reads in composition",
             "$APP_PACKAGE/presentation/pairing/QrScannerScreen.kt" to
                 "`QRScannerActivity`'s own camera screen (CameraX), an activity of its own",
-            "$APP_PACKAGE/presentation/widget/TodayWidget.kt" to "the home-screen widget's Glance content, not the app's UI",
+            "$APP_PACKAGE/presentation/widget/TodayWidget.kt" to
+                "the home-screen widget's Glance content, not the app's UI",
             "$APP_PACKAGE/presentation/widget/TodayWidgetContent.kt" to "the home-screen widget's Glance content",
             "$APP_PACKAGE/presentation/calendar/CalendarPreviews.kt" to PREVIEWS,
             "$APP_PACKAGE/presentation/chat/ChatPreviews.kt" to PREVIEWS,
