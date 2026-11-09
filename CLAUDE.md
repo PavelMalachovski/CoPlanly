@@ -1444,7 +1444,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    **A reminder is an alarm, on the minute** (owner decision, 9 November 2026: a 30-minute reminder
    arrived 25 minutes before the event). `EventReminderScheduler` arms one `AlarmManager` alarm per
    event through `data/notification/ReminderAlarms.kt` (`setExactAndAllowWhileIdle`, which fires in
-   Doze); `ReminderAlarmReceiver` delivers it through `DueReminders`. Five things not to undo.
+   Doze); `ReminderAlarmReceiver` delivers it through `DueReminders`. Six things not to undo.
    - **Not WorkManager.** Its delay is a JobScheduler job, which Doze and app standby hold back
      for minutes; that was the late reminder. `ReminderWorker` survives only so an older build's
      queued work can still start; it steps aside for an armed alarm.
@@ -1462,6 +1462,10 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
      after the update moves an older build's queued work onto alarms, once.
    - **One alarm per event, told apart by the intent's data** (`coplanly-reminder:<id>`), never by
      a hashed request code, which collides.
+   - **A receiver never throws for want of the app's graph** (`reminderEntryPoint`). Installing the
+     test APK delivers `MY_PACKAGE_REPLACED` into an instrumentation process whose
+     `HiltTestApplication` has no component yet; the exception out of `onReceive` crashed it and
+     the 16 KB leg ran no test (`ReminderReceiversTest`).
    A reminder's tap opens the calendar on the event's own family.
 10. **Receipt OCR is on-device only** (`ReceiptTextRecognizer`/ML Kit, parsed by
     `ReceiptParser`, wired up in `AddExpenseScreen`/`ExpenseViewModel.scanReceipt`) — no
