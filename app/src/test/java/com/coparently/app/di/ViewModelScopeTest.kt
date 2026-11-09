@@ -1,12 +1,12 @@
 package com.coparently.app.di
 
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -149,7 +149,7 @@ class ViewModelScopeTest {
         var familyViewFromContent: FamilyViewViewModel? = null
         var familyViewFromActivity: FamilyViewViewModel? = null
         rule.setContent {
-            val activity = LocalContext.current as ComponentActivity
+            val activity = checkNotNull(LocalActivity.current as? ComponentActivity)
             paletteFromActivity = remember { activity.getViewModel<ParentPaletteViewModel>() }
             paletteFromContent = koinViewModel()
             familyViewFromContent = koinViewModel()
