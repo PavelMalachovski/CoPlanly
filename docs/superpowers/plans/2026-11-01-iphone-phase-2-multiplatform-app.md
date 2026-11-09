@@ -1606,17 +1606,17 @@ Then the export and the school import:
   `PlatformServices` bundles the Task 11 interfaces and the launch state (deep link, push
   destination and family).
 
-- [ ] **Step 1: Write `ShellBoundaryTest`.** It fails if any file under `app/src/main/java/`
+- [x] **Step 1: Write `ShellBoundaryTest`.** It fails if any file under `app/src/main/java/`
   declares a `@Composable` other than `MainActivity`'s `setContent` call and the Android
   implementations of `presentation/platform/`, or declares a `ViewModel`.
-- [ ] **Step 2: Move the navigation.** `MainActivity.readLaunchIntent` still switches the family
+- [x] **Step 2: Move the navigation.** `MainActivity.readLaunchIntent` still switches the family
   before arming any deep link (CLAUDE.md item 15). Insets are still applied once at the `NavHost`
   (design item 14).
-- [ ] **Step 3: Verify.** `ShellBoundaryTest` passes. Every job is green: release with the
+- [ ] **Step 3: Verify.** *(Here: `ShellBoundaryTest` passes, on the JVM over this tree; every CI job and the UI tour are the controller's.)* `ShellBoundaryTest` passes. Every job is green: release with the
   baseline-profile check (the profile's package wildcards still reach the moved classes), r8-runtime,
   e2e, upgrade and all three instrumented legs. Run the UI tour workflow once and compare its gallery
   with the last one from `main`. **Expected: identical screens.**
-- [ ] **Step 4: Commit.** `refactor: make the Android app a thin shell over shared-ui (MON-24)`
+- [x] **Step 4: Commit.** `refactor: make the Android app a thin shell over shared-ui (MON-24)`
 
 **Slice 12a notes (November 2026).** The dependency and the graph's leaves.
 - `:shared-ui` takes `org.jetbrains.androidx.navigation:navigation-compose:2.9.2` as an `api` in
@@ -1661,6 +1661,21 @@ Then the export and the school import:
   switches the family before it arms any link: item 15), the Google sign-in launcher and the
   credential sheets, and calls `CoPlanlyApp` from `setContent`. The baseline profile names
   `CoPlanlyAppKt` beside the activity; its package wildcards reach the moved classes unchanged.
+
+**Slice 12c notes (November 2026).** The boundary, and the docs.
+- `app/src/test/java/com/coparently/app/ShellBoundaryTest.kt` reads every `.kt` file under
+  `app/src/main/java/com/coparently/app/`, with comments and literals blanked, and fails on a
+  `@Composable` declaration (a function, a property or a getter; not a function type or a lambda)
+  in a file outside `ALLOWED`, or on a `ViewModel`/`AndroidViewModel` supertype anywhere. `ALLOWED`
+  has twelve entries, each with its reason: `AndroidPlatform.kt`, `DictationLanguage.kt`,
+  `QrScannerScreen.kt`, the widget's two Glance files, the six `*Previews.kt` and `PreviewHelpers.kt`.
+  A third test fails on an entry whose file is gone or declares no composable, and a fourth runs the
+  detector over snippets (KDoc, strings, function types, a getter, a second supertype).
+- The plan departs in one place: `CoPlanlyApp` takes `AppLaunch` and the theme choice beside
+  `PlatformServices` rather than one `PlatformServices` holding the launch state (slice 12b), and is
+  composed inside the shell's providers.
+- Carried, not done here: 11g's review notes on the export's entry points and on narrowing the
+  symbols Task 11 made public (ROADMAP MON-24).
 
 ### Task 13: AGP 9 and Kotlin 2.4
 

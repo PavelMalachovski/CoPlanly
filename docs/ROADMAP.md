@@ -3116,6 +3116,22 @@ bytes are identical on Android):
   Then the school import. **Slice 11g built, CI pending: every screen is in `:shared-ui`** — the app
   keeps `MainActivity`, the widget, navigation (Task 12), the previews and the Android halves of the
   platform interfaces.
+- **The navigation to `:shared-ui`, and a thin Android shell** — **built, CI pending (phase 2, Task 12,
+  November 2026; slices 12a–12c)**. The navigation graph, its routes, the bar and the rail and the
+  readable pane are in `:shared-ui`'s `commonMain` on JetBrains' multiplatform navigation-compose
+  2.9.2 (androidx's 2.9.7 on Android, up from 2.9.3), the same code with its strings on `Res`, its
+  route arguments read from the multiplatform `SavedState` as `Bundle` read them, and its
+  `Uri.encode` replaced by `UriComponent`, held to `Uri.encode` byte for byte. `CoPlanlyApp(launch,
+  darkTheme)` is the one composable a shell sets as its content, with the launch state (`AppLaunch`)
+  beside the platform's capabilities; `MainActivity` keeps the splash, the launch intent (the family
+  switch before any link, as before), the two activity-bound sign-ins and the theme preference, and
+  calls it. `ShellBoundaryTest` keeps it that way: no `@Composable` in the app beyond the platform's
+  Android halves, the QR scanner's screen, the widget and the previews, and no `ViewModel`. Not yet
+  proven: that androidx navigation-compose 2.9.7 leaves the app's Compose at the BOM's (Google's Maven
+  repository is unreachable here, so its module metadata was not read), the screenshots, the emulator
+  legs and the UI tour against `main`'s gallery. Still owed from 11g's review: hiding the export's
+  ways in (Family, Earlier families, the chat) where the phone cannot draw or share the record, and
+  narrowing the symbols Task 11 made public for app callers that have since moved.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

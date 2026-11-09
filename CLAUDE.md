@@ -1380,6 +1380,10 @@ screenshots render). A test that moves with its code to `:shared-ui` keeps `inte
 ## Hard project rules
 
 - **Jetpack Compose only** — never add XML layouts.
+- **The Android app is a thin shell** (MON-24 phase 2, Task 12): a screen, a composable component
+  or a ViewModel goes in `:shared-ui`, never in `app/src/main/java/`, which keeps `MainActivity`
+  calling `CoPlanlyApp`, the platform's Android halves, the widget and the previews.
+  `ShellBoundaryTest` fails on anything else; its allow-list is short and says why for each file.
 - **Stateless composables** — state lives in ViewModels (`StateFlow`), UI receives values
   and callbacks. Follow the existing `UiState` sealed-class pattern.
 - **Koin** for all DI (Hilt until MON-24 phase 2). Modules live in
@@ -1671,7 +1675,10 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              vault's, the export's and the journal's (presentation/documents/, export/, journal/),
              then family friends', professionals' and the parenting plan's (presentation/friends/,
              professionals/, parentingplan/), then the school import's (presentation/school/):
-             every screen, Task 11 done.
+             every screen, Task 11 done. Then (Task 12) the navigation graph
+             (presentation/navigation/: NavGraph, Screen, the bar and the rail, ReadablePane) and
+             the app's root, CoPlanlyApp with AppLaunch (presentation/), the one composable a
+             shell sets as its content.
              It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
@@ -1685,9 +1692,12 @@ data/      — Room (v46 + migrations), Firestore/Google clients, repository imp
              sync but its WorkManager classes, the request clocks but their notices and worker,
              data/family/, the school import but its wording and worker, the export but its file
              writer, and some of data/chat/, data/support/ and data/session/
-presentation/ — MainActivity, the widget and navigation (Task 12). Every screen is in shared-ui/
-             since Task 11 (slices 11b–11g), with the strings, the theme, the design system's
-             components, the shared state and every ViewModel (Task 10; SyncViewModel and
+presentation/ — MainActivity and the widget: the app is a thin shell since Task 12
+             (ShellBoundaryTest), whose activity reads the launch, holds the splash, hosts the
+             two sign-ins and calls shared-ui's CoPlanlyApp. Every screen is in shared-ui/
+             since Task 11 (slices 11b–11g), and the navigation since Task 12, with the strings,
+             the theme, the design system's components, the shared state and every ViewModel
+             (Task 10; SyncViewModel and
              AuthViewModel since slice 11f); the app keeps their previews and the Android halves
              of the platform interfaces (presentation/platform/, the language picker's
              AndroidAppLanguages, Google's sign-in's AndroidGoogleCalendarSignIn, the credential
@@ -2359,8 +2369,40 @@ Share where there is none (`FriendInviteContent`'s `onShare` is null then); `Fri
 `SchoolImportScreen`. Back goes through Compose Multiplatform's `BackHandler` (opted in as the
 onboarding's is), and the last import's time through `ReaderDateText.dateWithTime` of the instant in
 the system zone. **Task 11 is done with it**: what is left under `app/.../presentation/` is
-`MainActivity`, `widget/`, `navigation/` (Task 12), the previews and the Android halves of the
-platform interfaces.
+`MainActivity`, `widget/`, ~~`navigation/` (Task 12)~~ (moved, below), the previews and the Android
+halves of the platform interfaces.
+**Then the navigation, and the thin shell** (Task 12). `presentation/navigation/` moved whole to
+`:shared-ui`'s `commonMain` (`NavGraph.kt`, `BottomNavDestination.kt` with `NavigationLayout` and
+`navigateToTab`, `ReadablePane.kt`, and `Screen`, split out of `NavGraph.kt` into `Screen.kt`), packages
+unchanged, on JetBrains' multiplatform navigation-compose 2.9.2 (the toolchain line). Design items 5,
+11, 14 and 19 and the UX overhaul's item 1 are the same code, moved: the `NavHost`'s inset line, its
+default push, the tabs' fade-through, `pane()`, the bar from 600 dp to the rail, `topLevelRoutes` and
+`navigateToTab`'s back-stack policy. The tabs' labels are `Res.string` (`labelRes` a
+`StringResource`; the androidTest walks read it as the app's `R.string` of the same key), the bar or
+rail is decided from the common `windowWidthDp()`, and a route argument is read from the
+multiplatform `SavedState` through `NavGraph.kt`'s `stringArgument`, `intArgument` and
+`booleanArgument`, which answer what `Bundle` did. **An id or a text in a route is encoded by
+`domain/text/UriComponent`** (`:shared`), which writes what `android.net.Uri.encode` writes, because
+a route a pending deep link carries across a process death is written by one build and read by the
+next: `UriComponentParityTest` (the app's Robolectric tests) holds it to `Uri.encode`.
+`PushDestination` moved to `:shared-data`'s `data/remote/firebase/` (package unchanged), because the
+graph opens it; `PushChannel` and `PushRouting` stay in the app. **The shell's one call is
+`CoPlanlyApp(launch: AppLaunch, darkTheme: Boolean?)`** (`presentation/CoPlanlyApp.kt`): the theme,
+the navigation controller, the app-wide locals (the palette, the family view, the app messages, the
+photo viewer's uid from `SignedInUser`) and `NavGraph`. It is composed inside the shell's providers —
+`ProvideAndroidPlatform` with `LocalCredentialSignIn` and `LocalGoogleCalendarSignIn` on Android,
+`ProvideIosShell` on the iPhone — and the launch state (`AppLaunch`: the invite codes, the chat link
+and the push's screen, no defaults) travels beside `PlatformServices`, not inside it, since the
+screenshot frame and `QRScannerActivity` build the platform and launch nothing. `MainActivity`
+keeps the AppCompat requirement, the splash (`startDestinationFor`, public for it), `readLaunchIntent`
+— which still switches the family **before** it arms any link (item 15) — the Google sign-in
+launcher and the credential sheets, and the theme preference it passes in. The ViewModels both read
+(`SyncViewModel`, the splash's two) are one instance: `by viewModel()` and `koinViewModel()` resolve
+the same key in the activity's store (`ViewModelScopeTest`). **`ShellBoundaryTest`** (the app's unit
+tests) fails when a file under `app/src/main/java/` declares a `@Composable` outside its short
+allow-list (the platform's Android halves, the dictation language, the QR scanner's own screen, the
+widget's Glance content and the previews, each with its reason) or a `ViewModel` subclass at all:
+a screen or a ViewModel written in the app is one the iPhone will never have.
 **A Robolectric test runs `RobolectricTestApplication`**
 (`app/src/test/.../testing/`, `@Config(application = …)`): Robolectric installs no content
 provider from the manifest, so it hands Compose Multiplatform's resource reader the context its
@@ -2656,8 +2698,8 @@ the screens called (`Intent.createChooser`, the activity-result contracts, `QRSc
 iPhone's `iosPlatformServices(buildValues)` (`iosMain`) answers with stand-ins that are not available
 until phase 3 and 4, and its `ProvideIosShell(buildValues, content)` provides those with the two locals
 `MainActivity` provides on its own (`LocalCredentialSignIn`, `LocalGoogleCalendarSignIn`), as the
-unavailable `NoCredentialSignIn` and `NoGoogleCalendarSignIn`: the one call the phase-3 view
-controller makes. Three things not to undo. **A local read outside the provider throws** — no
+unavailable `NoCredentialSignIn` and `NoGoogleCalendarSignIn`: with `CoPlanlyApp` inside it (Task
+12), the one call the phase-3 view controller makes. Three things not to undo. **A local read outside the provider throws** — no
 "unavailable" default, which would hide a feature in production with no test noticing; a test that
 composes a screen provides the platform as the app does. **`AndroidPlatformTest`** (the app's,
 Robolectric) reads every local of `PlatformLocals.all` through `ProvideAndroidPlatform`, and
