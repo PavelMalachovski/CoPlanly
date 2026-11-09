@@ -10,23 +10,14 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.compose.rememberNavController
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.notification.NotificationManager
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.PushDestination
 import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.data.remote.google.CredentialAuthenticator
@@ -38,15 +29,8 @@ import com.coparently.app.domain.pairing.InstallReferrerSource
 import com.coparently.app.domain.pairing.PairingUri
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.presentation.auth.AndroidCredentialSignIn
-import com.coparently.app.presentation.common.FamilyViewViewModel
-import com.coparently.app.presentation.common.LocalAppMessages
-import com.coparently.app.presentation.common.LocalFamilyView
-import com.coparently.app.presentation.common.LocalPhotoViewerUid
-import com.coparently.app.presentation.common.ParentPaletteViewModel
 import com.coparently.app.presentation.common.UiText
-import com.coparently.app.presentation.common.rememberAppMessages
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
-import com.coparently.app.presentation.navigation.NavGraph
 import com.coparently.app.presentation.navigation.PendingChatLink
 import com.coparently.app.presentation.navigation.PendingChatOpen
 import com.coparently.app.presentation.navigation.PendingDestinationOpen
@@ -60,8 +44,6 @@ import com.coparently.app.presentation.sync.AndroidGoogleCalendarSignIn
 import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
 import com.coparently.app.presentation.sync.signInAnswer
-import com.coparently.app.presentation.theme.CoPlanlyTheme
-import com.coparently.app.presentation.theme.LocalParentPalette
 import com.coparently.app.presentation.widget.TodayWidgetRefresher
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.sync_google_sign_in_cancelled
@@ -72,7 +54,6 @@ import com.coparently.app.utils.follow
 import com.coparently.app.utils.inAppLanguage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -96,6 +77,10 @@ private const val SPLASH_HOLD_MAX_MS = 1_500L
  * phone's first language when the app ships it, else English): its base context is put in that
  * locale before AppCompat's delegate sees it ([attachBaseContext]), and the process's default
  * locale follows it once AppCompat has applied a per-app choice ([onCreate], [onResume]).
+ *
+ * A thin shell since MON-24 phase 2 (Task 12): it reads the launch, holds the splash, hosts the
+ * activity-bound sign-ins and provides the platform, and its content is `:shared-ui`'s
+ * [CoPlanlyApp] — the theme, the app-wide locals and the navigation graph.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -104,9 +89,6 @@ class MainActivity : AppCompatActivity() {
     private val preferencesRepository: PreferencesRepository by inject()
 
     private val selectedFamilySource: SelectedFamilySource by inject()
-
-    /** Source of [LocalPhotoViewerUid]: who is signed in decides which record photos draw (L-4). */
-    private val firebaseAuthService: FirebaseAuthService by inject()
 
     /** Google Calendar's sign-in client, and the redeeming of its answer. */
     private val credentialManagerService: CredentialManagerService by inject()
@@ -124,7 +106,7 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * A pairing code carried by a `coplanly://pair` deep link, awaiting hand-off
-     * to the pairing screen. [NavGraph] consumes it (setting it back to null)
+     * to the pairing screen. `NavGraph` consumes it (setting it back to null)
      * once it has navigated there — see [readPairingCode] for why redeeming it
      * is never automatic.
      */
@@ -136,10 +118,10 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * A `coplanly://chat` deep link (opened by a chat-message push notification), awaiting
-     * hand-off to the Chat tab or a specific thread — null while none is pending. [NavGraph]
+     * hand-off to the Chat tab or a specific thread — null while none is pending. `NavGraph`
      * consumes it (setting it back to null) once it has navigated there — same hand-off shape
-     * as [pendingPairingCode], bundled into a single [PendingChatOpen] so [NavGraph]'s own
-     * parameter count does not grow by two for every deep link it gains (see [NavGraph]'s
+     * as [pendingPairingCode], bundled into a single [PendingChatOpen] so `NavGraph`'s own
+     * parameter count does not grow by two for every deep link it gains (see `NavGraph`'s
      * doc).
      */
     /**
@@ -154,7 +136,7 @@ class MainActivity : AppCompatActivity() {
     private val pendingGuestCode: StateFlow<String?> = _pendingGuestCode
 
     /**
-     * The two invitation codes, bundled for [NavGraph] — see [PendingInviteCodes] for why they
+     * The two invitation codes, bundled for `NavGraph` — see [PendingInviteCodes] for why they
      * travel together and why they stay distinct fields.
      */
     private val pendingInviteCodes = PendingInviteCodes(
@@ -176,13 +158,27 @@ class MainActivity : AppCompatActivity() {
         onConsumed = { _pendingChatLink.value = null }
     )
 
-    /** The screen a tapped push names (D-13), awaiting hand-off to [NavGraph]. */
+    /** The screen a tapped push names (D-13), awaiting hand-off to `NavGraph`. */
     private val _pendingDestination = MutableStateFlow<PushDestination?>(null)
     private val pendingDestinationOpen = PendingDestinationOpen(
         destination = _pendingDestination,
         onConsumed = { _pendingDestination.value = null }
     )
 
+    /**
+     * Every hand-off above, as [CoPlanlyApp] takes them. [readLaunchIntent] arms them, after the
+     * family switch a push names (CLAUDE.md item 15).
+     */
+    private val appLaunch = AppLaunch(
+        inviteCodes = pendingInviteCodes,
+        chatOpen = pendingChatOpen,
+        destinationOpen = pendingDestinationOpen
+    )
+
+    /**
+     * Google Calendar's sign-in answer goes here. The same instance [CoPlanlyApp] gets from
+     * `koinViewModel()` and hands Settings: both are scoped to this activity (`ViewModelScopeTest`).
+     */
     private val syncViewModel: SyncViewModel by viewModel()
 
     /**
@@ -192,12 +188,6 @@ class MainActivity : AppCompatActivity() {
      */
     private val authStateViewModel: AuthStateViewModel by viewModel()
     private val telemetryConsentViewModel: TelemetryConsentViewModel by viewModel()
-
-    /** Source of [LocalParentPalette] for the whole tree (UX-15). */
-    private val parentPaletteViewModel: ParentPaletteViewModel by viewModel()
-
-    /** Source of [LocalFamilyView]: where each record stands for the family on screen. */
-    private val familyViewViewModel: FamilyViewViewModel by viewModel()
 
     // Google Sign-In Activity Result launcher for sync
     private val googleSignInLauncher = registerForActivityResult(
@@ -349,22 +339,6 @@ class MainActivity : AppCompatActivity() {
 
         setContent {
             val darkTheme by darkThemeState.collectAsState()
-            val systemDarkTheme = isSystemInDarkTheme()
-
-            // Use saved preference or fall back to system default
-            val useDarkTheme = darkTheme ?: systemDarkTheme
-
-            // The family's chosen parent colours, provided once for every ParentColors call in
-            // the app (UX-15). Lifecycle-aware so the ParentsSource upstream can stop while the
-            // app is in the background.
-            val parentPalette by parentPaletteViewModel.palette.collectAsStateWithLifecycle()
-            val familyView by familyViewViewModel.view.collectAsStateWithLifecycle()
-
-            // The signed-in uid, for the record photos only the family's two parents may see
-            // (L-4). Follows sign-in and sign-out, so a photo never draws for the wrong account.
-            val photoViewerUid by remember(firebaseAuthService) {
-                firebaseAuthService.getAuthStateFlow().map { it?.uid }
-            }.collectAsStateWithLifecycle(initialValue = firebaseAuthService.getCurrentUser()?.uid)
 
             // Google's sign-in for Google Calendar (`presentation/platform/GoogleCalendarSignIn`),
             // launched through this activity's result, whose answer reaches [syncViewModel].
@@ -376,35 +350,14 @@ class MainActivity : AppCompatActivity() {
             val credentialSignIn = remember { AndroidCredentialSignIn(this@MainActivity, credentialAuthenticator) }
 
             // Every platform capability the shared screens read (`presentation/platform/`, MON-24
-            // phase 2, Task 11), from this activity.
+            // phase 2, Task 11), from this activity, and the two sign-ins only an activity can
+            // host; then the app itself, from `:shared-ui` (Task 12).
             ProvideAndroidPlatform {
-                CoPlanlyTheme(darkTheme = useDarkTheme) {
-                    Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.background
-                    ) {
-                        val navController = rememberNavController()
-                        // Snackbars that outlive the screen that raised them (D-25), shown by the
-                        // navigation graph's root Scaffold.
-                        val appMessages = rememberAppMessages()
-
-                        CompositionLocalProvider(
-                            LocalGoogleCalendarSignIn provides googleCalendarSignIn,
-                            LocalCredentialSignIn provides credentialSignIn,
-                            LocalParentPalette provides parentPalette,
-                            LocalFamilyView provides familyView,
-                            LocalAppMessages provides appMessages,
-                            LocalPhotoViewerUid provides photoViewerUid
-                        ) {
-                            NavGraph(
-                                navController = navController,
-                                syncViewModel = syncViewModel,
-                                pendingInviteCodes = pendingInviteCodes,
-                                pendingChatOpen = pendingChatOpen,
-                                pendingDestinationOpen = pendingDestinationOpen
-                            )
-                        }
-                    }
+                CompositionLocalProvider(
+                    LocalGoogleCalendarSignIn provides googleCalendarSignIn,
+                    LocalCredentialSignIn provides credentialSignIn
+                ) {
+                    CoPlanlyApp(launch = appLaunch, darkTheme = darkTheme)
                 }
             }
         }
@@ -422,7 +375,7 @@ class MainActivity : AppCompatActivity() {
      * Reads every deep link [intent] may carry, after switching to the family it names.
      *
      * A push tap carries the family the push belongs to ([PushPayload.FAMILY_ID], M-8). The
-     * switch has to land **before** the links are armed: [NavGraph] navigates the moment a
+     * switch has to land **before** the links are armed: `NavGraph` navigates the moment a
      * pending link appears, and a chat thread, a proposal or an event opened while the device
      * still shows the other family would be read against the wrong co-parent. So with a family
      * to switch to, the links are armed from the coroutine that switched; without one they are
@@ -489,8 +442,7 @@ class MainActivity : AppCompatActivity() {
      * push notification opens — see [com.coparently.app.data.remote.firebase.CoPlanlyMessagingService])
      * still needs to land on the pairing screen, just without a prefill. Empty
      * string is used as that "link present, no code" signal rather than null,
-     * because [NavGraph][com.coparently.app.presentation.navigation.NavGraph]'s
-     * deep-link effect only navigates when this flow holds a non-null value;
+     * because `NavGraph`'s deep-link effect only navigates when this flow holds a non-null value;
      * null is reserved for "no pairing link is pending" so a plain app launch
      * does not force a navigation. `Screen.Pairing.routeWithCode` already
      * treats null and empty identically, so the pairing screen itself sees no
@@ -523,7 +475,7 @@ class MainActivity : AppCompatActivity() {
     /**
      * Recognises a `coplanly://chat` intent (opened by a chat-message push
      * notification — see [com.coparently.app.data.remote.firebase.CoPlanlyMessagingService])
-     * and arms [pendingChatOpen] so [NavGraph] navigates to the specific thread, or the
+     * and arms [pendingChatOpen] so `NavGraph` navigates to the specific thread, or the
      * Chat tab's list when the link carries no `conversationId` (a manual test push, an
      * older payload, or a hand-typed link).
      */

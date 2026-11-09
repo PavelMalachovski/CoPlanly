@@ -121,7 +121,7 @@ enum class BottomNavDestination(
  *
  * @param destination Tab to show
  */
-fun NavHostController.navigateToTab(destination: BottomNavDestination) {
+internal fun NavHostController.navigateToTab(destination: BottomNavDestination) {
     navigate(destination.navRoute) {
         // Keep one instance per tab, preserve each tab's state
         popUpTo(Screen.Home.route) { saveState = true }

@@ -1,9 +1,12 @@
 package com.coparently.app.di
 
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -42,6 +45,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.koin.android.ext.koin.androidContext
+import org.koin.androidx.viewmodel.ext.android.getViewModel
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
@@ -130,6 +134,31 @@ class ViewModelScopeTest {
         assertSame(a.palette, b.palette)
         assertSame(a.familyView, b.familyView)
         assertSame(a.switcher, b.switcher)
+    }
+
+    /**
+     * `MainActivity` reads its ViewModels with `by viewModel()` and its content, `CoPlanlyApp` in
+     * `:shared-ui`, with `koinViewModel()` (MON-24 phase 2, Task 12). They must be one instance
+     * whichever asks first: Google Calendar's sign-in answer reaches the activity's `SyncViewModel`,
+     * and Settings reads the one `CoPlanlyApp` hands it.
+     */
+    @Test
+    fun theActivityAndItsContentResolveOneInstanceWhicheverAsksFirst() {
+        var paletteFromActivity: ParentPaletteViewModel? = null
+        var paletteFromContent: ParentPaletteViewModel? = null
+        var familyViewFromContent: FamilyViewViewModel? = null
+        var familyViewFromActivity: FamilyViewViewModel? = null
+        rule.setContent {
+            val activity = LocalContext.current as ComponentActivity
+            paletteFromActivity = remember { activity.getViewModel<ParentPaletteViewModel>() }
+            paletteFromContent = koinViewModel()
+            familyViewFromContent = koinViewModel()
+            familyViewFromActivity = remember { activity.getViewModel<FamilyViewViewModel>() }
+        }
+        rule.waitForIdle()
+
+        assertSame(checkNotNull(paletteFromActivity), checkNotNull(paletteFromContent))
+        assertSame(checkNotNull(familyViewFromContent), checkNotNull(familyViewFromActivity))
     }
 
     @Test

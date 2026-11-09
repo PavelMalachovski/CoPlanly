@@ -30,7 +30,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
@@ -39,7 +38,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
-import com.coparently.app.R
+import androidx.savedstate.read
 import com.coparently.app.data.remote.firebase.PushDestination
 import com.coparently.app.domain.telemetry.TelemetryConsent
 import com.coparently.app.presentation.auth.AuthScreen
@@ -70,7 +69,10 @@ import com.coparently.app.presentation.stickers.MyStickersScreen
 import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.navigation_loading
 import kotlinx.coroutines.flow.StateFlow
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -81,8 +83,8 @@ import org.koin.compose.viewmodel.koinViewModel
  * navigation bar; detail screens hide it.
  *
  * @param pendingInviteCodes The `coplanly://pair` and `coplanly://guest` codes awaiting
- *   hand-off ([MainActivity][com.coparently.app.presentation.MainActivity] owns both), each
- *   with its own consumption callback — see [PendingInviteCodes].
+ *   hand-off (the shell owns both: `MainActivity` on Android), each with its own consumption
+ *   callback — see [PendingInviteCodes].
  * @param pendingChatOpen A `coplanly://chat` deep link awaiting hand-off to the Chat tab,
  *   bundled with its own consumption callback (see [PendingChatOpen]) rather than as two more
  *   loose parameters — that shape would have pushed this function's parameter count to
@@ -358,8 +360,8 @@ fun NavGraph(
                         }
                     )
                 ) { backStackEntry ->
-                    val dateString = backStackEntry.arguments?.getString(Screen.AddEvent.ARG_DATE)
-                    val hourValue = backStackEntry.arguments?.getInt(Screen.AddEvent.ARG_HOUR) ?: -1
+                    val dateString = backStackEntry.stringArgument(Screen.AddEvent.ARG_DATE)
+                    val hourValue = backStackEntry.intArgument(Screen.AddEvent.ARG_HOUR) ?: -1
                     val hour = if (hourValue >= 0) hourValue else null
                     val initialDate = dateString?.takeIf { it != "null" }?.let { kotlinx.datetime.LocalDate.parse(it) }
 
@@ -384,7 +386,7 @@ fun NavGraph(
                         }
                     )
                 ) { backStackEntry ->
-                    val eventId = backStackEntry.arguments?.getString(Screen.EditEvent.ARG_EVENT_ID)
+                    val eventId = backStackEntry.stringArgument(Screen.EditEvent.ARG_EVENT_ID)
                         ?: return@pane
                     AddEditEventScreen(
                         eventId = eventId,
@@ -436,8 +438,7 @@ fun NavGraph(
                     popEnterTransition = { slideInFromLeft() },
                     popExitTransition = { slideOutToRight() }
                 ) { backStackEntry ->
-                    val linkedEventId = backStackEntry.arguments
-                        ?.getString(Screen.ChangeRequests.ARG_EVENT_ID)
+                    val linkedEventId = backStackEntry.stringArgument(Screen.ChangeRequests.ARG_EVENT_ID)
                         ?.takeIf { it != "null" }
                     com.coparently.app.presentation.changerequests.ChangeRequestsScreen(
                         onBack = { navController.popBackStack() },
@@ -446,7 +447,7 @@ fun NavGraph(
                         },
                         linkedEventId = linkedEventId,
                         openSection = com.coparently.app.presentation.changerequests.InboxSection.fromRoute(
-                            backStackEntry.arguments?.getString(Screen.ChangeRequests.ARG_SECTION)
+                            backStackEntry.stringArgument(Screen.ChangeRequests.ARG_SECTION)
                         ),
                         onOpenAgreement = { screen -> navController.navigate(screen.route) }
                     )
@@ -462,7 +463,7 @@ fun NavGraph(
                         }
                     )
                 ) { backStackEntry ->
-                    val eventId = backStackEntry.arguments?.getString(Screen.RequestChange.ARG_EVENT_ID) ?: return@pane
+                    val eventId = backStackEntry.stringArgument(Screen.RequestChange.ARG_EVENT_ID) ?: return@pane
                     com.coparently.app.presentation.changerequests.RequestChangeScreen(
                         eventId = eventId,
                         onBack = {
@@ -623,7 +624,7 @@ fun NavGraph(
                     popEnterTransition = { slideInFromLeft() },
                     popExitTransition = { slideOutToRight() }
                 ) { entry ->
-                    val familyId = entry.arguments?.getString(Screen.EarlierFamily.ARG_FAMILY_ID).orEmpty()
+                    val familyId = entry.stringArgument(Screen.EarlierFamily.ARG_FAMILY_ID).orEmpty()
                     com.coparently.app.presentation.family.EarlierFamilyScreen(
                         familyId = familyId,
                         onNavigateUp = { navController.popBackStack() },
@@ -709,8 +710,7 @@ fun NavGraph(
                     popEnterTransition = { slideInFromLeft() },
                     popExitTransition = { slideOutToRight() }
                 ) { backStackEntry ->
-                    val childInfoId = backStackEntry.arguments
-                        ?.getString(Screen.ChildDetail.ARG_CHILD_INFO_ID)
+                    val childInfoId = backStackEntry.stringArgument(Screen.ChildDetail.ARG_CHILD_INFO_ID)
                         .orEmpty()
                     com.coparently.app.presentation.childinfo.ChildDetailScreen(
                         childInfoId = childInfoId,
@@ -729,7 +729,7 @@ fun NavGraph(
                         }
                     )
                 ) { backStackEntry ->
-                    val childInfoId = backStackEntry.arguments?.getString(Screen.EditChildInfo.ARG_CHILD_INFO_ID)
+                    val childInfoId = backStackEntry.stringArgument(Screen.EditChildInfo.ARG_CHILD_INFO_ID)
                         ?: "new"
                     com.coparently.app.presentation.childinfo.AddEditChildInfoScreen(
                         childInfoId = childInfoId,
@@ -764,7 +764,7 @@ fun NavGraph(
                         }
                     )
                 ) { backStackEntry ->
-                    val petId = backStackEntry.arguments?.getString(Screen.EditPet.ARG_PET_ID) ?: "new"
+                    val petId = backStackEntry.stringArgument(Screen.EditPet.ARG_PET_ID) ?: "new"
                     AddEditPetScreen(
                         petId = petId,
                         onNavigateBack = { navController.popBackStack() }
@@ -799,13 +799,10 @@ fun NavGraph(
                         onCustodyConflict = {
                             navController.navigate(Screen.CustodyConflict.route)
                         },
-                        prefilledCode = backStackEntry.arguments
-                            ?.getString(Screen.Pairing.ARG_CODE)
+                        prefilledCode = backStackEntry.stringArgument(Screen.Pairing.ARG_CODE)
                             ?.takeIf { it.isNotEmpty() },
-                        startOnCodeEntry = backStackEntry.arguments
-                            ?.getBoolean(Screen.Pairing.ARG_ENTER) ?: false,
-                        startOnUnpair = backStackEntry.arguments
-                            ?.getBoolean(Screen.Pairing.ARG_UNPAIR) ?: false
+                        startOnCodeEntry = backStackEntry.booleanArgument(Screen.Pairing.ARG_ENTER) ?: false,
+                        startOnUnpair = backStackEntry.booleanArgument(Screen.Pairing.ARG_UNPAIR) ?: false
                     )
                 }
 
@@ -824,8 +821,7 @@ fun NavGraph(
                 ) { backStackEntry ->
                     com.coparently.app.presentation.guests.GuestAcceptScreen(
                         onDone = { navController.popBackStack() },
-                        prefilledCode = backStackEntry.arguments
-                            ?.getString(Screen.GuestAccept.ARG_CODE)
+                        prefilledCode = backStackEntry.stringArgument(Screen.GuestAccept.ARG_CODE)
                             ?.takeIf { it.isNotEmpty() }
                     )
                 }
@@ -911,8 +907,7 @@ fun NavGraph(
                         }
                     )
                 ) { backStackEntry ->
-                    val friendUid = backStackEntry.arguments
-                        ?.getString(Screen.FriendDetail.ARG_FRIEND_UID).orEmpty()
+                    val friendUid = backStackEntry.stringArgument(Screen.FriendDetail.ARG_FRIEND_UID).orEmpty()
                     com.coparently.app.presentation.friends.FriendDetailScreen(
                         friendUid = friendUid,
                         onNavigateUp = { navController.popBackStack() },
@@ -1040,8 +1035,7 @@ fun NavGraph(
                     popEnterTransition = { tabEnter(forward = false) },
                     popExitTransition = { tabExit(forward = false) }
                 ) { backStackEntry ->
-                    val draft = backStackEntry.arguments
-                        ?.getString(Screen.Conversations.ARG_DRAFT).orEmpty()
+                    val draft = backStackEntry.stringArgument(Screen.Conversations.ARG_DRAFT).orEmpty()
                     com.coparently.app.presentation.chat.ConversationsScreen(
                         onConversationClick = { conversationId ->
                             navController.navigate(
@@ -1105,11 +1099,11 @@ fun NavGraph(
                     popEnterTransition = { slideInFromLeft() },
                     popExitTransition = { slideOutToRight() }
                 ) { backStackEntry ->
-                    val conversationId = backStackEntry.arguments?.getString(Screen.Chat.ARG_CONVERSATION_ID)
+                    val conversationId = backStackEntry.stringArgument(Screen.Chat.ARG_CONVERSATION_ID)
                         ?: return@pane
                     com.coparently.app.presentation.chat.ChatScreen(
                         conversationId = conversationId,
-                        draft = backStackEntry.arguments?.getString(Screen.Chat.ARG_DRAFT).orEmpty(),
+                        draft = backStackEntry.stringArgument(Screen.Chat.ARG_DRAFT).orEmpty(),
                         onBack = {
                             navController.popBackStack()
                         },
@@ -1226,8 +1220,7 @@ fun NavGraph(
                         }
                     )
                 ) { backStackEntry ->
-                    val expenseId = backStackEntry.arguments
-                        ?.getString(Screen.EditExpense.ARG_EXPENSE_ID) ?: return@pane
+                    val expenseId = backStackEntry.stringArgument(Screen.EditExpense.ARG_EXPENSE_ID) ?: return@pane
                     com.coparently.app.presentation.expenses.AddExpenseScreen(
                         onBack = {
                             navController.popBackStack()
@@ -1377,18 +1370,19 @@ data class PendingChatLink(val conversationId: String?)
  * every time another deep link is added — see [NavGraph]'s `pendingChatOpen` doc.
  *
  * @property link The pending link, or null when none is outstanding.
- * @property onConsumed Called once the link has been acted on, so the owner (
- *   [MainActivity][com.coparently.app.presentation.MainActivity]) can clear it and avoid
- *   re-navigating on the next recomposition.
+ * @property onConsumed Called once the link has been acted on, so the owner (the shell:
+ *   `MainActivity` on Android) can clear it and avoid re-navigating on the next recomposition.
  */
 class PendingChatOpen(val link: StateFlow<PendingChatLink?>, val onConsumed: () -> Unit)
 
 /**
  * The route the graph starts on, in the order [NavGraph]'s comment explains: the telemetry
  * question before everything, then loading, sign-in, and the first-run questionnaire while its
- * answer is unknown or owed. A function of its own so [NavGraph] stays one flat list of routes.
+ * answer is unknown or owed. A function of its own so [NavGraph] stays one flat list of routes,
+ * and public because the Android shell holds its system splash while this answers
+ * [Screen.Loading] (`MainActivity.firstScreenUnknown`).
  */
-internal fun startDestinationFor(
+fun startDestinationFor(
     telemetryConsent: TelemetryConsent,
     isLoading: Boolean,
     isAuthenticated: Boolean?,
@@ -1584,7 +1578,7 @@ private fun LoadingScreen() {
         ) {
             CircularProgressIndicator()
             Text(
-                text = stringResource(R.string.navigation_loading),
+                text = stringResource(Res.string.navigation_loading),
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center
             )
@@ -1623,3 +1617,25 @@ private val AgreementScreen.route: String
         AgreementScreen.PROFESSIONALS -> Screen.Professionals.route
         AgreementScreen.PARENTING_PLAN -> Screen.ParentingPlan.route
     }
+
+/**
+ * A string argument of this entry's route, as `Bundle.getString` read it before the graph moved to
+ * common code (MON-24 phase 2, Task 12): the value, or null when the entry has no arguments, the
+ * key is absent or its value is null.
+ */
+private fun NavBackStackEntry.stringArgument(key: String): String? =
+    arguments?.read { if (!contains(key) || isNull(key)) null else getString(key) }
+
+/**
+ * An integer argument of this entry's route, as `Bundle.getInt` read it: null when the entry has
+ * no arguments, and 0 for an absent key, which a declared argument with a default never is.
+ */
+private fun NavBackStackEntry.intArgument(key: String): Int? =
+    arguments?.read { if (!contains(key) || isNull(key)) 0 else getInt(key) }
+
+/**
+ * A boolean argument of this entry's route, as `Bundle.getBoolean` read it: null when the entry
+ * has no arguments, and false for an absent key, which a declared argument with a default never is.
+ */
+private fun NavBackStackEntry.booleanArgument(key: String): Boolean? =
+    arguments?.read { if (!contains(key) || isNull(key)) false else getBoolean(key) }

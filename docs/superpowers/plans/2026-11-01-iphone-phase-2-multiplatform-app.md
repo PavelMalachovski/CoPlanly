@@ -1635,6 +1635,33 @@ Then the export and the school import:
   for `BottomNavDestination.kt`. `ReadablePane` and `READABLE_PANE_WIDTH` are public for the app's
   `ReadablePaneTest`; `pane` and `navigateToTab` are public while `NavGraph` is still in the app.
 
+**Slice 12b notes (November 2026).** The graph, and the shell's one call.
+- `NavGraph.kt` moved (`git mv`, package unchanged). Its loading text is `Res.string`; every route
+  argument is read through three private helpers over the multiplatform `SavedState`
+  (`stringArgument`, `intArgument`, `booleanArgument`, `arguments?.read { … }`), each answering what
+  `Bundle.getString`, `getInt` and `getBoolean` answered; the KDoc names `MainActivity` in text.
+  `pane` and `navigateToTab` are `internal` again; `startDestinationFor` is public, because the
+  activity holds its splash on it. `ChatDeepLinkRouteTest` moved to `commonTest` (`kotlin.test`).
+- `PushDestination` left the app's `PushRouting.kt` for `:shared-data`'s
+  `data/remote/firebase/PushDestination.kt` (package unchanged): the graph opens it. `PushChannel`
+  and `PushRouting`, which name string resources, stay in the app.
+- **`CoPlanlyApp(launch: AppLaunch, darkTheme: Boolean?)`** (`presentation/CoPlanlyApp.kt`) is the
+  shell's one call: the theme, `rememberNavController`, `rememberAppMessages`, the four app-wide
+  locals (the palette, the family view, the messages and the photo viewer's uid, the last from the
+  data layer's `SignedInUser`, which on Android is the same `FirebaseAuthService` the activity read)
+  and `NavGraph`. **The launch state is passed beside the platform, not folded into
+  `PlatformServices`** (`presentation/AppLaunch.kt`, no defaults): the screenshot frame and
+  `QRScannerActivity` build `PlatformServices` too and launch nothing. `CoPlanlyApp` is composed
+  inside the shell's providers — `ProvideAndroidPlatform` and the two sign-in locals on Android,
+  `ProvideIosShell` on the iPhone — and resolves `SyncViewModel`, the palette's and the family
+  view's ViewModels with `koinViewModel()`, the activity's own instances (`ViewModelScopeTest` now
+  holds that either way round). The theme choice stays the activity's (`darkTheme`, its preference
+  flow), passed in.
+- `MainActivity` keeps the AppCompat requirement, the splash, `readLaunchIntent` (which still
+  switches the family before it arms any link: item 15), the Google sign-in launcher and the
+  credential sheets, and calls `CoPlanlyApp` from `setContent`. The baseline profile names
+  `CoPlanlyAppKt` beside the activity; its package wildcards reach the moved classes unchanged.
+
 ### Task 13: AGP 9 and Kotlin 2.4
 
 `CLAUDE.md`'s toolchain line names two blockers for Kotlin 2.4: AGP 9, and Dagger 2.60. Task 2

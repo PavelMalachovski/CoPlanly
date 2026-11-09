@@ -1,7 +1,7 @@
 package com.coparently.app.presentation.navigation
 
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 /**
  * Pins [chatDeepLinkRoute]'s fallback: a `coplanly://chat` deep link with no conversation id

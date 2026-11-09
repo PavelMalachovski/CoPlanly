@@ -45,7 +45,7 @@ internal const val READABLE_PANE_TEST_TAG = "readable_pane"
  * NavHost's, and a pop transition defaults to its push.
  */
 @Suppress("LongParameterList") // mirrors navigation's own composable(), transition by transition
-fun NavGraphBuilder.pane(
+internal fun NavGraphBuilder.pane(
     route: String,
     arguments: List<NamedNavArgument> = emptyList(),
     enterTransition: (AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition?)? = null,
