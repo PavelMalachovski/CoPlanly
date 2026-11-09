@@ -111,39 +111,8 @@ class FcmService @Inject constructor(
     }
 
     /**
-     * The payload for an event being created, updated or deleted.
-     *
-     * Facts, not sentences (SEC-3). This used to build `"New Event: $eventTitle"` and
-     * `"$performedBy created an event"` here and hand them to the other phone to render
-     * verbatim — English regardless of the reader's language, and forgeable, because nothing
-     * between the two devices decided what a notification was allowed to say.
-     * [CoPlanlyMessagingService] now writes the sentence from its own string resources.
-     *
-     * @param eventId The event, for the deep link
-     * @param eventTitle The event's title, as the co-parent typed it
-     * @param action `created`, `updated` or `deleted`
-     * @param performedBy Display name of the parent who did it
-     * @return The payload, or null when [action] is one nothing announces — see
-     *   [PushPayload.eventType].
-     */
-    fun createEventNotificationPayload(
-        eventId: String,
-        eventTitle: String,
-        action: String,
-        performedBy: String
-    ): Map<String, String>? {
-        val type = PushPayload.eventType(action) ?: return null
-        return mapOf(
-            PushPayload.TYPE to type,
-            PushPayload.EVENT_ID to eventId,
-            PushPayload.SUBJECT to eventTitle,
-            PushPayload.ACTOR to performedBy
-        )
-    }
-
-    /**
-     * The payload for a child's information being updated. Facts, not sentences — see
-     * [createEventNotificationPayload].
+     * The payload for a child's information being updated. Facts, not sentences (SEC-3): the
+     * receiving phone writes the sentence from its own string resources, in its reader's language.
      *
      * @param childInfoId The record, for the deep link
      * @param childName The child's name

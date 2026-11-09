@@ -1430,16 +1430,39 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    library's `catholic` category and the Augsburg pseudo-state are excluded on purpose —
    `GermanState`'s KDoc says why. The Room schema JSON for v36 (which carries this column) is exported by the Regenerate
    workflow, not by hand.
-9. **Reminders** are scheduled through the `ReminderScheduler` domain interface
-   (WorkManager impl `EventReminderScheduler`, one unique work per event id, `REPLACE`, tag
-   `event_reminder`), hooked into the event use cases — schedule on create/update, cancel on
-   delete — **and into the sync's event download** (`SyncService.rearmReminder`: the co-parent's
-   events remind too, a downloaded tombstone cancels). A reminder is for **one occurrence**:
-   `domain/notification/ReminderPlanner` picks the next one whose reminder time is still ahead
-   through `RecurrenceExpander`, and `ReminderWorker` re-checks it against Room when due
-   (`ReminderPlanner.isOccurrence`) and then schedules the next, so a weekly event reminds every
-   week. `cancelAll()` runs at sign-out, account switch and deletion, because the worker reads the
-   title from Room and Room survives sign-out; `null` `reminderMinutes` is "no reminder".
+9. **Reminders** are scheduled through the `ReminderScheduler` domain interface, hooked into the
+   event use cases — schedule on create/update, cancel on delete — **and into the sync's event
+   download** (`SyncService.rearmReminder`: the co-parent's events remind too, a downloaded
+   tombstone cancels). A reminder is for **one occurrence**: `domain/notification/ReminderPlanner`
+   picks the next one whose reminder time is still ahead through `RecurrenceExpander`, and
+   `DueReminders` re-checks it against Room when due (`ReminderPlanner.isOccurrence`) and then arms
+   the next, so a weekly event reminds every week. `cancelAll()` runs at sign-out, account switch
+   and deletion, because the reminder reads the title from Room and Room survives sign-out; `null`
+   `reminderMinutes` is "no reminder". **A new event opens with a one-hour reminder** (owner
+   decision, 9 November 2026; `DEFAULT_REMINDER_MINUTES` in `AddEditEventScreen`), which the parent
+   can set to None; an edit keeps what the event holds, and imports set none.
+   **A reminder is an alarm, on the minute** (owner decision, 9 November 2026: a 30-minute reminder
+   arrived 25 minutes before the event). `EventReminderScheduler` arms one `AlarmManager` alarm per
+   event through `data/notification/ReminderAlarms.kt` (`setExactAndAllowWhileIdle`, which fires in
+   Doze); `ReminderAlarmReceiver` delivers it through `DueReminders`. Five things not to undo.
+   - **Not WorkManager.** Its delay is a JobScheduler job, which Doze and app standby hold back
+     for minutes; that was the late reminder. `ReminderWorker` survives only so an older build's
+     queued work can still start; it steps aside for an armed alarm.
+   - **Exact needs a permission, and not holding it is not an error.** `USE_EXACT_ALARM` on API 33+
+     (Play allows it to a calendar that shows event notifications; it is declared in the Play
+     Console), `SCHEDULE_EXACT_ALARM` on 31–32 (`maxSdkVersion="32"`), nothing below. Without it
+     the alarm is armed inexact (`setAndAllowWhileIdle`), never dropped.
+   - **The wall clock becomes an instant at arming, for the reminder's own date** (`atZone`), so a
+     daylight-saving change between arming and firing does not move it; the old `Duration` between
+     two wall clocks was an hour off across one. A clock or zone change re-arms.
+   - **`ArmedReminders` remembers which events have an alarm.** Alarms do not survive a reboot and
+     cannot be cancelled by tag, so `ReminderRearmReceiver` (boot, update, clock, zone, the exact
+     permission granted) arms that list again through `ReminderRearm`, and `cancelAll` cancels and
+     empties it — a signed-out account's reminders never return after a reboot. The first re-arm
+     after the update moves an older build's queued work onto alarms, once.
+   - **One alarm per event, told apart by the intent's data** (`coplanly-reminder:<id>`), never by
+     a hashed request code, which collides.
+   A reminder's tap opens the calendar on the event's own family.
 10. **Receipt OCR is on-device only** (`ReceiptTextRecognizer`/ML Kit, parsed by
     `ReceiptParser`, wired up in `AddExpenseScreen`/`ExpenseViewModel.scanReceipt`) — no
     receipt text or photo may be sent to a model or any other remote service without an
@@ -1561,6 +1584,25 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     <time>." on the reader's clock. Every push is posted with a `BigTextStyle` beside its content
     text, and so is every request notice (`RequestNotices`); don't drop it: a two-sentence body is
     cut on the collapsed line exactly where the deadline sits.
+    **The notification audit of 9 November 2026 fixed four things; keep them.**
+    - **A chat card is worded on the receiving phone.** `notifyOfChatMessage` sends the card's
+      facts beside its preview (`activityKind`, `activityEntityType`, `activityEntityId`,
+      `activityTitle`, `activityWhenIso`, `activityAmount`, `activityCurrency` — fields, not types)
+      and `PushNotifier` words them through `presentation/chat/cardPushText`, the thread's sentence
+      without Compose. The preview is the card's base-English fallback, which an older build shows;
+      every reader used to get it.
+    - **A card whose news has a push type of its own pushes nobody** (`SILENT_CARD_KINDS`: a
+      change request, a day swap offered or answered, a custody proposal and its answer, a new
+      expense, a split proposal and its answer; an important event's card through
+      `announcedByItsOwnPush`). Each used to reach the reader twice. A withdrawal has no type and
+      is still pushed as its card. A kind added there must have its own push on every path.
+    - **Each chat push has its own tray id** (`PushNotifier.chatNotificationId`): one per
+      conversation for messages, one per card. A single fixed id let a card replace a message and
+      one family's thread replace the other's.
+    - **The sync queues no push for an upload it carries up** (`SyncService.syncEvents`): the save's
+      card announces the event. `event_created` is produced by nothing now.
+    And a request reminder or a child support reminder counts as given only when it was shown
+    (`notificationsAllowed`: the permission, the app's notifications and the channel).
 16. **`sharedWith` is computed at upload time and never recomputed for a row already marked
     synced.** An event created while the account was unpaired is uploaded with an audience of
     one uid, and nothing revisits it — so it stays unreadable by a co-parent who arrives later.
@@ -2618,7 +2660,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       change until the proposer's phone withdraws it; swaps, change requests and events show no
       answer then (`hidesAnswers`).
     - **The two chat cards push nobody.** `REQUEST_LAST_CHANCE` and `REQUEST_UNANSWERED` are in
-      `functions/index.js`' `SILENT_CARD_KINDS`, which `notifyOfChatMessage` skips: the last chance
+      `functions/index.js`' `SILENT_CARD_KINDS` (with the cards item 15 lists, whose news has a push
+      type of its own), which `notifyOfChatMessage` skips: the last chance
       has its own push (`request_last_chance`, item 15's four places), and "No answer" must not
       wake the parent who was just told nothing more comes. Until the functions are deployed they
       are pushed like any message. Opening a request pushes nobody either; DPIA R22.

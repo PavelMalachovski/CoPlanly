@@ -201,8 +201,8 @@ class SyncService @Inject constructor(
     /**
      * Syncs events between local database and Firestore.
      *
-     * @return The co-parents the audience backfill ran for that a quiet re-upload now names — the
-     *   ones [announceSharedRecords] tells. Empty when the backfill did not run.
+     * @return The co-parents the audience backfill ran for that an upload now names — the ones
+     *   [announceSharedRecords] tells. Empty when the backfill did not run.
      */
     // Its size and nesting were baselined under the signature it had before it returned who to
     // announce to (`detekt/baseline.xml` keys an entry on the exact signature); the body's shape
@@ -214,18 +214,12 @@ class SyncService @Inject constructor(
         // Every live co-parent, so an event keeps its own family's audience whichever family the
         // device is showing (`FamilyAudience`; a school import writes into its connection's).
         val livePartners = EventVersionDocument.decodeAudience(me?.partnerIdsJson ?: "[]")
-        // What was already waiting to go up before the backfill: those rows are genuinely new
-        // or edited, and their pushes are wanted. Everything the backfill adds on top is a
-        // re-publication of an old record and is announced once, together, at the end.
-        val queuedBefore = eventDao.getUnsyncedEvents().map { it.id }.toSet()
         // Before the read below, not after: the backfill's whole effect is to clear the flag
         // `getUnsyncedEvents` selects on, so a read taken first would not see it.
         val backfill = backfillAudienceForPartner(userId, coParentsOf(userId, me))
 
         // Upload unsynced local events; private events never leave the device
         val unsynced = eventDao.getUnsyncedEvents().filterNot { it.isPrivate }
-        val quiet: Set<String> =
-            if (backfill.requeued > 0) unsynced.map { it.id }.toSet() - queuedBefore else emptySet()
         val sharedWithNewCoParents = mutableSetOf<String>()
         val (pendingDeletions, unsyncedEvents) = unsynced.partition { it.deletedAtMillis != null }
 
@@ -268,18 +262,15 @@ class SyncService @Inject constructor(
             if (result.isSuccess) {
                 eventDao.markAsSynced(entity.id)
 
-                // Notify everyone the event is shared with, except the uploader — unless this
-                // is a re-publication for a new co-parent, which `announceSharedRecords` covers:
-                // it is told once, and only if this event now names them.
-                if (entity.id in quiet) {
-                    sharedWithNewCoParents += audience.filter { it in backfill.newCoParents }
-                    continue
-                }
-                for (recipientId in audience) {
-                    if (recipientId != userId) {
-                        notifyEventUpdate(recipientId, entity.id, entity.title, "created")
-                    }
-                }
+                // **No push per upload** (notification audit, 9 November 2026). The save that
+                // queued this row already announced it with a card in the family's thread, which
+                // reaches the co-parent as a push of its own; this used to queue `event_created`
+                // as well, for every row the sync carried up — so an event saved offline arrived
+                // twice, and an offline *edit* (or a co-parent's answer to this parent's event)
+                // arrived as "created". A co-parent who arrived since the row was written is told
+                // once, together with everything else re-published for them, by
+                // `announceSharedRecords`, when the backfill re-published anything for them.
+                if (backfill.requeued > 0) sharedWithNewCoParents += audience.filter { it in backfill.newCoParents }
             }
         }
 
@@ -985,31 +976,6 @@ class SyncService @Inject constructor(
                 mapOf(PushPayload.TYPE to PushPayload.RECORDS_SHARED, PushPayload.ACTOR to user.name)
             )
         }
-    }
-
-    /**
-     * Notifies partner about event update.
-     */
-    private suspend fun notifyEventUpdate(
-        partnerId: String,
-        eventId: String,
-        eventTitle: String,
-        action: String
-    ) {
-        val currentUser = firebaseAuthService.getCurrentUser() ?: return
-        val userData = userDao.getUserById(currentUser.uid) ?: return
-
-        // Null for an action nothing announces. Skipping is the whole of the handling: the
-        // receiving device composes the sentence from the type now, so a payload it has no
-        // type for is a push that would be dropped on arrival.
-        val notificationPayload = fcmService.createEventNotificationPayload(
-            eventId = eventId,
-            eventTitle = eventTitle,
-            action = action,
-            performedBy = userData.name
-        ) ?: return
-
-        fcmService.queueNotificationForUser(partnerId, notificationPayload)
     }
 
     /**

@@ -215,7 +215,8 @@ class ChangeRequestRepositoryImpl @Inject constructor(
         answerByMillis: Long?
     ) {
         if (targetUserId.isEmpty() || targetUserId == firebaseAuthService.getCurrentUser()?.uid) return
-        // Null for an action nothing announces — see `FcmService.createEventNotificationPayload`.
+        // Null for an action nothing announces: a type the receiving phone cannot word would be
+        // dropped on arrival, so none is invented here.
         val type = PushPayload.changeRequestType(action) ?: return
         // Empty rather than "Your co-parent": the receiving device holds a translated fallback
         // for a missing name, and an English one written here would win over it.

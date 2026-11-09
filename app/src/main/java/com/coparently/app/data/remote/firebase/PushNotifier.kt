@@ -12,8 +12,10 @@ import android.util.Log
 import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import com.coparently.app.R
+import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.chat.ChatUri
 import com.coparently.app.domain.pairing.PairingUri
+import com.coparently.app.presentation.chat.cardPushText
 import com.coparently.app.utils.DAY_IN_SENTENCE
 import com.coparently.app.utils.answerByText
 import com.coparently.app.utils.isoDateText
@@ -85,7 +87,8 @@ class PushNotifier(private val context: Context) {
             text = text,
             type = type,
             conversationId = data[PushPayload.CONVERSATION_ID],
-            familyId = data[PushPayload.FAMILY_ID]?.takeIf { it.isNotBlank() }
+            familyId = data[PushPayload.FAMILY_ID]?.takeIf { it.isNotBlank() },
+            card = if (type == TYPE_CHAT_MESSAGE) chatCardOf(data) else null
         )
         return show(target)
     }
@@ -115,10 +118,16 @@ class PushNotifier(private val context: Context) {
         // `notifyOfChatMessage`, which is the only party that has seen the message, and
         // `firestore.rules` refuses `chat_message` from a client — so this relays rather than
         // composes, without reopening what the rest of this function closes.
+        //
+        // A chat card is the exception inside the exception (notification audit, 9 November 2026):
+        // its preview is the card's base-English fallback, so this phone words the card from the
+        // facts the function sent beside it, in its reader's language, as the thread does. A push
+        // from before the function sent them, or a card this build cannot read, shows the preview.
         if (type == TYPE_CHAT_MESSAGE) {
             val sender = data[PushPayload.ACTOR]?.takeIf { it.isNotBlank() }
                 ?: context.getString(R.string.app_name)
-            return PushText(sender, data[PushPayload.PREVIEW].orEmpty())
+            val body = chatCardOf(data)?.let { cardPushText(context, it) } ?: data[PushPayload.PREVIEW].orEmpty()
+            return PushText(sender, body)
         }
 
         return framedText(type, data)
@@ -290,11 +299,10 @@ class PushNotifier(private val context: Context) {
      * Pairing notifications reuse [PAIRING_NOTIFICATION_ID] instead of a timestamp-derived id: a
      * `pairing_accepted` followed by a `pairing_removed` (or vice versa) describes the *current*
      * pairing state, not two separate things worth reviewing together, so the second should
-     * replace the first in the tray rather than stack next to it. A chat message reuses
-     * [CHAT_NOTIFICATION_ID] for the same reason — the latest preview is what matters, and the
-     * thread itself holds the full history — and, being a distinct constant, never collides with
-     * (or is replaced by) a pairing notification. Every other notification type keeps a
-     * timestamp id so unrelated notifications keep accumulating.
+     * replace the first in the tray rather than stack next to it. A chat message reuses one id per
+     * conversation ([chatNotificationId]) for the same reason — the latest preview is what matters,
+     * and the thread itself holds the full history — and a chat card one of its own. Every other
+     * notification type keeps a timestamp id so unrelated notifications keep accumulating.
      *
      * **The body is set twice, on purpose** (phase 3a). `setContentText` is the collapsed line and
      * what `EXTRA_TEXT` holds; a [NotificationCompat.BigTextStyle] carries the whole body for when
@@ -326,7 +334,7 @@ class PushNotifier(private val context: Context) {
 
         val notificationId = when (target.type) {
             TYPE_PAIRING_ACCEPTED, TYPE_PAIRING_REMOVED -> PAIRING_NOTIFICATION_ID
-            TYPE_CHAT_MESSAGE -> CHAT_NOTIFICATION_ID
+            TYPE_CHAT_MESSAGE -> chatNotificationId(target.conversationId ?: target.familyId, target.card)
             else -> System.currentTimeMillis().toInt()
         }
         notificationManager.notify(notificationId, notification)
@@ -369,13 +377,34 @@ class PushNotifier(private val context: Context) {
      *   [TYPE_COPARENT_ACCOUNT_DELETED].
      * @property familyId The family the push belongs to ([PushPayload.FAMILY_ID]), or null for
      *   a payload from an older sender or one that names no family.
+     * @property card The chat card a [TYPE_CHAT_MESSAGE] push carries, which gives it a tray id of
+     *   its own ([chatNotificationId]); null for a message, and for every other type.
      */
     internal data class NotificationTarget(
         val text: PushText,
         val type: String?,
         val conversationId: String?,
-        val familyId: String?
+        val familyId: String?,
+        val card: ActivityAnnouncement? = null
     )
+
+    /**
+     * The chat card a `chat_message` push carries ([PushPayload.ACTIVITY_KIND] and its siblings),
+     * read as the thread reads a message's `activity`: null for a plain message, a push from before
+     * the function sent the facts, and a kind or entity this build does not know.
+     */
+    private fun chatCardOf(data: Map<String, String>): ActivityAnnouncement? =
+        ActivityAnnouncement.fromMap(
+            mapOf(
+                "kind" to data[PushPayload.ACTIVITY_KIND],
+                "entityType" to data[PushPayload.ACTIVITY_ENTITY_TYPE],
+                "entityId" to data[PushPayload.ACTIVITY_ENTITY_ID],
+                "title" to data[PushPayload.ACTIVITY_TITLE],
+                "whenIso" to data[PushPayload.ACTIVITY_WHEN_ISO],
+                "amount" to data[PushPayload.ACTIVITY_AMOUNT],
+                "currency" to data[PushPayload.ACTIVITY_CURRENCY]
+            )
+        )
 
     /** Which of the payload's names a body string takes, in order. */
     internal enum class BodyArgs {
@@ -438,11 +467,21 @@ class PushNotifier(private val context: Context) {
         const val PAIRING_NOTIFICATION_ID = 918_273
 
         /**
-         * Stable id for a chat-message notification, distinct from
-         * [PAIRING_NOTIFICATION_ID] so neither type ever replaces the other in
-         * the tray (see [show]).
+         * The tray id of a chat push (notification audit, 9 November 2026): one per conversation
+         * for its messages, so the latest message replaces the one before it, and one per card
+         * (its kind and what it is about), so a card never replaces a message. Every chat push
+         * used to share one fixed id: an expense's card a second after "pick up Emma at five"
+         * took its place in the tray, and the second family's message took the first family's.
+         *
+         * @param conversation The conversation (or, failing that, the family) the push is from.
+         * @param card The card the push carries, or null for a message.
          */
-        const val CHAT_NOTIFICATION_ID = 918_274
+        fun chatNotificationId(conversation: String?, card: ActivityAnnouncement?): Int =
+            if (card == null) {
+                listOf("chat", conversation.orEmpty()).hashCode()
+            } else {
+                listOf("chat-card", conversation.orEmpty(), card.kind.name, card.entityId).hashCode()
+            }
 
         /**
          * The PendingIntent request code for a push of [type] from [familyId].
