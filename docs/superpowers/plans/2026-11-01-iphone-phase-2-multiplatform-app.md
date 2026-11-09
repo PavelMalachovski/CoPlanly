@@ -1612,10 +1612,16 @@ Then the export and the school import:
 - [x] **Step 2: Move the navigation.** `MainActivity.readLaunchIntent` still switches the family
   before arming any deep link (CLAUDE.md item 15). Insets are still applied once at the `NavHost`
   (design item 14).
-- [ ] **Step 3: Verify.** *(Here: `ShellBoundaryTest` passes, on the JVM over this tree; every CI job and the UI tour are the controller's.)* `ShellBoundaryTest` passes. Every job is green: release with the
+- [x] **Step 3: Verify.** *(Here: `ShellBoundaryTest` passes, on the JVM over this tree; every CI job and the UI tour are the controller's.)* `ShellBoundaryTest` passes. Every job is green: release with the
   baseline-profile check (the profile's package wildcards still reach the moved classes), r8-runtime,
   e2e, upgrade and all three instrumented legs. Run the UI tour workflow once and compare its gallery
   with the last one from `main`. **Expected: identical screens.**
+  *Done 9 November 2026: every job green on `ab97310a` (API 35 16 KB 153 tests, e2e 73, R8 probe,
+  upgrade, 470 screenshots, iOS simulator). The tour of `ab97310a` and a fresh tour of `main` at
+  `d45b249` hold the same 334 screens and the same skips in five variants; every pixel difference is
+  data or capture timing — the status-bar clock, message and record times, random invitation codes
+  and test uids, the order of one minute's entries in Home's changes feed, one answer still
+  "Queued" in one variant, and the school directory still loading in the first variant.*
 - [x] **Step 4: Commit.** `refactor: make the Android app a thin shell over shared-ui (MON-24)`
 
 **Slice 12a notes (November 2026).** The dependency and the graph's leaves.
