@@ -7,6 +7,19 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.CAMERA" />
     <!--
+      Event reminders fire on the minute (data/notification/ReminderAlarms.kt). USE_EXACT_ALARM is
+      Google Play's permission for a calendar that shows event notifications (declared in the Play
+      Console); it exists from API 33. On 31 and 32 the app asks for SCHEDULE_EXACT_ALARM instead,
+      granted at install and revocable; below 31 neither is needed. Without either, a reminder is
+      armed inexact rather than not at all.
+    -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission
+        android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32" />
+    <!-- Alarms do not survive a reboot: ReminderRearmReceiver arms the reminders again after one. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!--
       Voice dictation in the chat composer, and nothing else. Asked for on the first tap of the
       composer's microphone, never on start. The audio goes to the phone's on-device speech
       recognizer only (OnDeviceSpeechDictation) and is not recorded, stored or sent.
@@ -173,6 +186,26 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/today_widget_info" />
+        </receiver>
+
+        <!--
+          Event reminders (data/notification/ReminderReceivers.kt). Neither is exported: the alarm
+          is the app's own PendingIntent, and the system delivers the re-arm broadcasts to a
+          receiver that is not exported, as it does to WorkManager's own RescheduleReceiver.
+        -->
+        <receiver
+            android:name=".data.notification.ReminderAlarmReceiver"
+            android:exported="false" />
+        <receiver
+            android:name=".data.notification.ReminderRearmReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+            </intent-filter>
         </receiver>
 
         <!-- Firebase Cloud Messaging Service -->

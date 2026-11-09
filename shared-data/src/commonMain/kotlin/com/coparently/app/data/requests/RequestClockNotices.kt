@@ -11,12 +11,19 @@ import com.coparently.app.domain.changerequests.RequestDeadline
  * Android that is the app's `RequestNotices`: the notification manager, the schedule channel, a
  * `BigTextStyle` beside the content text (CLAUDE.md item 15), the strings in this phone's language,
  * and the other parent named by name, never by role. Posting is quiet when the platform does not
- * allow notifications; nothing here reports whether it was shown.
+ * allow notifications. Only a reminder reports whether it was shown, because only a reminder is
+ * counted (the proposer's card says how many the other parent saw; notification audit, 9 November
+ * 2026).
  */
 interface RequestClockNotices {
 
-    /** Reminds the answering parent that the proposer waits for an answer until the deadline. */
-    suspend fun remind(clock: RequestDeadline)
+    /**
+     * Reminds the answering parent that the proposer waits for an answer until the deadline.
+     *
+     * @return Whether the reminder was shown: false while notifications are not allowed or the
+     *   channel is muted, when the proposer's card must not count it.
+     */
+    suspend fun remind(clock: RequestDeadline): Boolean
 
     /** Tells the proposer that the answering parent did not answer by the deadline. */
     suspend fun deadlinePassed(clock: RequestDeadline)

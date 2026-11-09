@@ -112,20 +112,20 @@ npm run serve
 ### Автоматические уведомления
 
 The server-side event and child-record triggers were removed in September 2026: an event is
-announced by its chat activity card, and an upload the sync carries up queues `event_created` or
-`child_info_updated` from `SyncService`.
+announced by its chat activity card, and an upload the sync carries up queues `child_info_updated`
+from `SyncService` (an event's upload queues nothing since the notification audit of 9 November
+2026).
 
 ### Ручная отправка уведомлений
 
 Для ручной отправки уведомлений используйте `RecordPushes` и `FcmService` в Android приложении:
 
 ```kotlin
-// Пример: отправка уведомления партнеру о новом событии
-val notificationData = RecordPushes.event(
-    eventId = event.id,
-    eventTitle = event.title,
-    action = "created",
-    performedBy = currentUser.email
+// Пример: отправка уведомления партнеру об изменении данных ребенка
+val notificationData = RecordPushes.childInfo(
+    childInfoId = child.id,
+    childName = child.name,
+    updatedBy = currentUser.name
 )
 
 fcmService.queueNotificationForUser(

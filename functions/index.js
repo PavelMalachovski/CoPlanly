@@ -4212,7 +4212,7 @@ function sentAtMillisOf(timestamp) {
 
 /**
  * The chat cards (`ActivityKind` names in `message.activity.kind`) that are a record and never
- * a push (phase 3a, request deadlines). Every other message is pushed, cards included.
+ * a push. Every other message is pushed, cards included.
  *
  * - `REQUEST_LAST_CHANCE`: the proposer gave the other parent a last chance. They are told by
  *   its own push type, `request_last_chance`, which carries the new end; a chat push as well
@@ -4223,13 +4223,69 @@ function sentAtMillisOf(timestamp) {
  * - `STICKER_SENT`: a sticker's card in the thread (25 October 2026). The sticker has its own
  *   push, `sticker_received`, queued by the sender's phone; a chat push as well would tell the
  *   receiver twice.
+ * - The cards whose news the sender's phone always pushes under its own type as well (notification
+ *   audit, 9 November 2026): a change request (`change_request_created`), a day swap offered,
+ *   accepted or declined (`day_swap_*`, `day_swap_group_*`), a custody proposal and its answer
+ *   (`custody_proposal_*`), a new expense (`expense_added`) and an expense split proposal and its
+ *   answer (`split_ratio_*`). Each reached the other parent twice — once in English on the chat
+ *   channel, once in their language on the channel muting is for. A withdrawal has no push type
+ *   of its own, so its card is still pushed.
  *
  * The names must stay the ones the app writes (`ActivityKind` in `ActivityAnnouncement.kt`): a
- * name that drifts here is a card that is pushed again, with nothing failing.
+ * name that drifts here is a card that is pushed again, with nothing failing. An important event's
+ * `EVENT_CREATED` card is skipped too, by [announcedByItsOwnPush], since only the event says it is
+ * important.
  *
  * @const {!Set<string>}
  */
-const SILENT_CARD_KINDS = new Set(['REQUEST_LAST_CHANCE', 'REQUEST_UNANSWERED', 'STICKER_SENT']);
+const SILENT_CARD_KINDS = new Set([
+  'REQUEST_LAST_CHANCE', 'REQUEST_UNANSWERED', 'STICKER_SENT',
+  'CHANGE_REQUESTED',
+  'DAY_SWAP_OFFERED', 'DAY_SWAP_ACCEPTED', 'DAY_SWAP_DECLINED',
+  'CUSTODY_PROPOSED', 'CUSTODY_ACCEPTED', 'CUSTODY_DECLINED',
+  'EXPENSE_ADDED',
+  'SPLIT_PROPOSED', 'SPLIT_ACCEPTED', 'SPLIT_DECLINED',
+]);
+
+/**
+ * Whether [message] is the `EVENT_CREATED` card of an event marked important, whose sender's phone
+ * pushes `event_important` for it: the card is then a record only, as for [SILENT_CARD_KINDS]. A
+ * missing event document (its upload has not landed yet) pushes the card, as before.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {Object} message The created `messages/{messageId}` document's data.
+ * @return {Promise<boolean>}
+ */
+async function announcedByItsOwnPush(db, message) {
+  const activity = message.activity;
+  if (!activity || activity.kind !== 'EVENT_CREATED' || !activity.entityId) return false;
+  const eventSnap = await db.collection('events').doc(String(activity.entityId)).get();
+  return eventSnap.exists === true && (eventSnap.data() || {}).isImportant === true;
+}
+
+/**
+ * A chat card's facts for its push, so the receiving phone words the card in its reader's language
+ * the way the thread does (notification audit, 9 November 2026). `preview` stays beside them: it is
+ * the card's base-English fallback, which an older build shows, and which every reader used to get.
+ * Plain strings under keys of their own, never the sentence; a message that is not a card adds
+ * nothing.
+ *
+ * @param {Object} activity The message's `activity` map, or undefined.
+ * @return {!Object<string, string>}
+ */
+function cardPushFields(activity) {
+  if (!activity || !activity.kind || !activity.entityType || !activity.entityId) return {};
+  const fields = {
+    activityKind: String(activity.kind),
+    activityEntityType: String(activity.entityType),
+    activityEntityId: String(activity.entityId).slice(0, CHAT_MESSAGE_PREVIEW_LENGTH),
+    activityTitle: String(activity.title || '').slice(0, CHAT_MESSAGE_PREVIEW_LENGTH),
+  };
+  if (activity.whenIso) fields.activityWhenIso = String(activity.whenIso).slice(0, CHAT_MESSAGE_PREVIEW_LENGTH);
+  if (activity.amount) fields.activityAmount = String(activity.amount).slice(0, CHAT_MESSAGE_PREVIEW_LENGTH);
+  if (activity.currency) fields.activityCurrency = String(activity.currency).slice(0, CHAT_MESSAGE_PREVIEW_LENGTH);
+  return fields;
+}
 
 /**
  * Queues a push notification for the other participant when a chat message is created,
@@ -4272,8 +4328,10 @@ const SILENT_CARD_KINDS = new Set(['REQUEST_LAST_CHANCE', 'REQUEST_UNANSWERED', 
  * notification for it — not a live bug, but worth fixing at that point rather than being
  * rediscovered as one.
  *
- * A chat card's kind (`message.activity.kind`) is read first: the two in [SILENT_CARD_KINDS]
- * push nobody, and are skipped before anything is looked up.
+ * A chat card's kind (`message.activity.kind`) is read first: those in [SILENT_CARD_KINDS]
+ * push nobody, and are skipped before anything is looked up; an important event's card is skipped
+ * once the event is read ([announcedByItsOwnPush]). Every other card carries its facts
+ * ([cardPushFields]) for the receiving phone to word.
  *
  * @param {FirebaseFirestore.Firestore} db Firestore instance.
  * @param {Object} message The created `messages/{messageId}` document's data.
@@ -4309,6 +4367,8 @@ async function notifyOfChatMessage(db, message) {
   const sentAt = Number.isFinite(parsedTimestamp) ? parsedTimestamp : Date.now();
   if (readMark >= sentAt) return;
 
+  if (await announcedByItsOwnPush(db, message)) return;
+
   await db.collection('notification_queue').add({
     targetUserId: recipient,
     data: {
@@ -4325,6 +4385,7 @@ async function notifyOfChatMessage(db, message) {
       // not the hole that relaying the others was.
       actorName: sender.name || '',
       preview: String(message.content || '').slice(0, CHAT_MESSAGE_PREVIEW_LENGTH),
+      ...cardPushFields(message.activity),
     },
     status: 'pending',
     createdAt: FieldValue.serverTimestamp(),

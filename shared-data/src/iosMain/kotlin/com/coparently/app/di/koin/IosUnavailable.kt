@@ -189,9 +189,9 @@ internal object NoSyncRequests : SyncRequester {
     override fun requestSyncNow() = Unit
 }
 
-/** No notifications yet: a request clock's notice is not shown. */
+/** No notifications yet: a request clock's notice is not shown, so a reminder is never counted. */
 internal object NoRequestClockNotices : RequestClockNotices {
-    override suspend fun remind(clock: RequestDeadline) = Unit
+    override suspend fun remind(clock: RequestDeadline): Boolean = false
     override suspend fun deadlinePassed(clock: RequestDeadline) = Unit
     override suspend fun noAnswer(clock: RequestDeadline) = Unit
 }

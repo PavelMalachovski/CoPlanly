@@ -82,6 +82,13 @@ interface EventDao {
     suspend fun getEventById(id: String): EventEntity?
 
     /**
+     * The ids of every event with a reminder set, pending tombstones left out: the events an older
+     * build may have queued reminder work for, which `ReminderRearm` moves onto alarms once.
+     */
+    @Query("SELECT id FROM events WHERE reminderMinutes IS NOT NULL AND deletedAtMillis IS NULL")
+    suspend fun getEventIdsWithReminders(): List<String>
+
+    /**
      * Inserts a new event.
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)

@@ -8,14 +8,14 @@ import com.coparently.app.domain.model.Event
  * The part of a stored event a reminder reads — when its occurrences start, its title and its
  * lead time — as the [Event] [com.coparently.app.domain.notification.ReminderScheduler] takes.
  *
- * For the two callers that hold a Room row rather than a domain event: `ReminderWorker`, which
- * re-arms a recurring event after it fires, and the sync, which arms the co-parent's events as
- * they arrive. Deliberately not a full mapping (audience, members and the rest are left at their
- * defaults): the result is handed to the scheduler and never saved, and the full mapping is
- * `EventRepositoryImpl`'s.
+ * For the callers that hold a Room row rather than a domain event: the app's `DueReminders`, which
+ * re-arms a recurring event after it fires, and its `ReminderRearm`, which arms every remembered
+ * reminder again after a reboot; and the sync, which arms the co-parent's events as they arrive.
+ * Deliberately not a full mapping (audience, members and the rest are left at their defaults): the
+ * result is handed to the scheduler and never saved, and the full mapping is `EventRepositoryImpl`'s.
  *
- * In `:shared-data` since MON-24 phase 2 (Task 8g), with the sync; `ReminderWorker` is still in the
- * app, so [InternalSharedApi] marks it public only for it.
+ * In `:shared-data` since MON-24 phase 2 (Task 8g), with the sync; the reminders' alarms are still in
+ * the app, so [InternalSharedApi] marks it public only for them.
  */
 @InternalSharedApi
 fun EventEntity.toReminderEvent(): Event = Event(

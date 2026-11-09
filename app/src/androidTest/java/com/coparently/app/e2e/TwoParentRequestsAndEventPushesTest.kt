@@ -41,14 +41,14 @@ import java.util.UUID
  * `notification_queue`, addressed as the repository decides: creation and cancellation to the
  * addressee, acceptance and decline to the requester.
  *
- * **Event pushes.** `event_created` is queued by `SyncService` for an event whose own upload
- * failed and which the sync carries up. An event saved and uploaded at once is announced in the
- * chat instead (its activity card, which `notifyOfChatMessage` pushes), so the server no longer
- * queues a second push: the legacy `onEventCreated` trigger — English text, the creator's e-mail
- * address, addressed to whichever family the creator was showing — was deleted. Nothing in the
- * client or the functions produces `event_updated` or `event_deleted` any more:
- * `SyncService.notifyEventUpdate` is only ever called with `"created"`. They remain in
- * `PushPayload` and the rules' allow-list for older builds.
+ * **Event pushes.** An event is announced in the chat (its activity card, which
+ * `notifyOfChatMessage` pushes), whether its upload landed at once or the sync carried it up later:
+ * since the notification audit of 9 November 2026 the sync queues no `event_created` of its own,
+ * which arrived beside the card and called an offline edit "created". The legacy `onEventCreated`
+ * trigger — English text, the creator's e-mail address, addressed to whichever family the creator
+ * was showing — was deleted before that. Nothing in the client or the functions produces
+ * `event_created`, `event_updated` or `event_deleted` any more; they remain in `PushPayload` and the
+ * rules' allow-list for older builds. `event_important` is the event push that is still sent.
  *
  * **Revisions (CLAUDE.md item 25).** A create and an edit of a shared event each leave a phone
  * revision in `event_versions`, readable by Bob through the export's own query
@@ -107,7 +107,7 @@ class TwoParentRequestsAndEventPushesTest : TwoParentTest() {
     }
 
     @Test
-    fun anEventTheSyncUploadsQueuesEventCreatedForBob() = runBlocking<Unit> {
+    fun anEventTheSyncUploadsQueuesNoPushOfItsOwn() = runBlocking<Unit> {
         // One pass first, so the pairing backfill has run and armed its marker: an upload it
         // re-queues is announced once as `records_shared`, not per event.
         alice.syncService.performFullSync().getOrThrow()
@@ -121,11 +121,13 @@ class TwoParentRequestsAndEventPushesTest : TwoParentTest() {
 
         alice.syncService.performFullSync().getOrThrow()
 
-        val push = withTimeout(EmulatorParent.WAIT_MS) {
-            pollPush(bob) { it[PushPayload.TYPE] == PushPayload.EVENT_CREATED && it[PushPayload.EVENT_ID] == event.id }
+        // Carried up, and announced by nothing but the card the save posted: the sync's own
+        // `event_created` arrived beside it, and called an offline edit "created".
+        assertTrue(checkNotNull(dao.getEventById(event.id)).syncedToFirestore)
+        val typed = payloadsFor(bob).filter {
+            it[PushPayload.EVENT_ID] == event.id && it[PushPayload.TYPE] == PushPayload.EVENT_CREATED
         }
-        assertEquals(FamilyKey.of(alice.uid, bob.uid), push[PushPayload.FAMILY_ID])
-        assertTrue("a client push must not carry its own text (SEC-3)", "title" !in push && "body" !in push)
+        assertTrue("the sync queued $typed", typed.isEmpty())
     }
 
     @Test

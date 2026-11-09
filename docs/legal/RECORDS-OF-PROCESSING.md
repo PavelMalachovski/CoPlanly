@@ -168,7 +168,7 @@ only what is specific to it.
 | | |
 | --- | --- |
 | Purpose | Tell a parent something changed |
-| Data | Push type, addressee uid, family id, record id, the sender's name and the record's title; for a new shared expense also its amount, currency and the reader's share (21 October 2026); for a chat message, the **first 120 characters of its text** (`notifyOfChatMessage`, `CHAT_MESSAGE_PREVIEW_LENGTH`), which Firebase Cloud Messaging carries to the reader's phone. Every other sentence is written on the receiving phone |
+| Data | Push type, addressee uid, family id, record id, the sender's name and the record's title; for a new shared expense also its amount, currency and the reader's share (21 October 2026); for a chat message, the **first 120 characters of its text** (`notifyOfChatMessage`, `CHAT_MESSAGE_PREVIEW_LENGTH`), which Firebase Cloud Messaging carries to the reader's phone; for a chat card, also the card's own facts (its kind, the record's id and title, a date, an amount and currency, each at most 120 characters — the same facts the card's text already held), so the receiving phone words it in its reader's language (9 November 2026). Every other sentence is written on the receiving phone |
 | Legal basis | Art. 6(1)(b) |
 | Retention | Queue entries swept after **30 days** |
 | Where | `notification_queue`; FCM |

@@ -14,7 +14,7 @@ import kotlinx.coroutines.tasks.await
  *
  * It is also the Android [PushQueue], through which the repositories in `:shared-data` queue a
  * push (MON-24 phase 2, Task 8b), and the Android [PushDevice], through which the sync keeps this
- * device's token on the profile (Task 8g). The sync's event and child-info payloads are
+ * device's token on the profile (Task 8g). The sync's child-info payload is
  * [RecordPushes]' since then. And it is the Android [PushRegistration], the Settings switch and the
  * sign-out's detach that the shared ViewModels ask for (Task 10).
  */

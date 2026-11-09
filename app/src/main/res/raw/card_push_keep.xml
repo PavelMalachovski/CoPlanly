@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The strings a chat card's push is worded with on the receiving phone (`cardPushText`). The app
+  reads them by name, the key Compose Multiplatform names, so no code references their R ids and
+  the release build's resource shrinker would otherwise remove them: the push would then show the
+  card's base-English preview. `activity_*` are the cards' sentences and subjects, `sticker_*` a
+  sticker card's phrase.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@string/activity_*,@string/sticker_*" />

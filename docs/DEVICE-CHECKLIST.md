@@ -109,7 +109,7 @@ so.
 | `TwoParentExpensesTest`, `TwoParentAgreementsTest` | A shared expense on the other parent's balance; the split ratio agreed, proposed, accepted, declined, withdrawn; the parenting plan's agreement lapsing on a reword, the other half unwritable | The Expenses and plan screens, the banners |
 | `TwoParentFamilyRecordsTest` | Children and pets both ways with tombstones; records made before pairing shared and announced once | The forms |
 | `TwoParentRecordPhotosTest` | Medical, pet, receipt and event photos (L-4): uploaded under the family's path, the co-parent's download matching its digest, a stranger refused, either parent deleting, no overwrite, the old flat paths closed; a photo taken before pairing moved into the family by `onFamilyCreated` and still opening for the co-parent after the uploader's phone writes its stale reference back (§3.10) | The thumbnails as drawn, a guest's screen without them, and the live bucket before `firebase deploy --only storage` |
-| `TwoParentRequestsAndEventPushesTest` | Change requests accepted, declined, cancelled; `event_created`; event revisions immutable, none for a private event | The request screens |
+| `TwoParentRequestsAndEventPushesTest` | Change requests accepted, declined, cancelled; no `event_created` from the sync; event revisions immutable, none for a private event | The request screens |
 | `TwoParentCustodyTest` | A pattern proposed, accepted, declined in two zones; single-day and group swaps; a self-accepted swap refused | The grid's band, markers and banners |
 | `OnScreenAgreementsTest` | A's **real app** answering B on screen: B's change request raises the calendar's inline banner, A opens the inbox from it and accepts, B holds it accepted and the event moved; B's custody proposal pops up on A's Home naming B, accepted then (a second one) declined; B's day swaps pop up on Home, one accepted, one declined; a seasonal layer A accepts makes today's month cell say "With B" (§3.11) | Two screens at once, the push that makes A look, the band's colours and motion, the plan citation line (§3.12), a child's own band (§3.13) |
 | `OnScreenFamiliesTest` | A paired with B and C, B's family on screen: C's family reaching A's open app with no sync run by hand, B's staying on screen; C's message puts the dot on Home's switcher chip, named "New messages in another family"; C's row in the dialog says so; switching there makes the new-event form name C rather than B and brings C's thread onto the Chat tab, and A's reply reaches C (§5.2) | The push from the other family switching on tap, the chip on Expenses, TalkBack, change-request and schedule dots |
@@ -1281,29 +1281,52 @@ few messages from both, a custody schedule and a couple of expenses this month. 
 
 ### 3.23 Event reminders · 1P, co-parent check 2P
 
-Preconditions: notifications allowed for the app. WorkManager's delays are not exact on a phone in
-Doze: allow a few minutes' slack, and keep the screen on or the phone charging while you wait.
-Which occurrence a reminder is for is pinned on the JVM (`ReminderPlannerTest`,
-`ReminderWorkerTest`, `SyncServiceTest`); what is left is that the phone actually posts it.
+Preconditions: notifications allowed for the app. Reminders are exact alarms since 9 November 2026
+(a 30-minute reminder used to arrive 25 minutes before, on a WorkManager job Doze held back), so a
+reminder is due **on the minute**, screen off and phone idle included.
+Which occurrence a reminder is for, the instant it is armed for (a daylight-saving change
+included), and what a re-arm restores are pinned on the JVM (`ReminderPlannerTest`,
+`DueRemindersTest`, `EventReminderSchedulerTest`, `SyncServiceTest`); what is left is that the phone
+fires the alarm and posts it.
 
+- [ ] **On the minute, in Doze.** Create an event starting 40 minutes from now with a 30-minute
+      reminder, lock the phone and leave it unplugged and untouched. The reminder arrives at the
+      minute it is due, not minutes later. (Faster: `adb shell dumpsys deviceidle force-idle`
+      after arming, then wait.) `adb shell dumpsys alarm | grep -A3 coparently` lists the alarm,
+      `RTC_WAKEUP`, flagged exact and allow-while-idle.
+- [ ] **A new event offers an hour.** Tap **+**: the Reminder row says **1 hour**. Set it to
+      **None** and save: no reminder. Edit an older event with no reminder: the row still says
+      **None**.
 - [ ] **A weekly event reminds every week.** Create a **weekly** event whose first occurrence was
       last week, starting 15 minutes from now today, with a 10-minute reminder. It reminds in about
-      5 minutes. Right after, Android Studio's App Inspection → Background Task Inspector (debug
-      build) shows a new `ReminderWorker`, tagged `event_reminder`, enqueued for the same time next
-      week. (Moving the phone's clock does not speed WorkManager up; for an end-to-end check, use a
-      **daily** event and look again tomorrow.)
+      5 minutes. Right after, `adb shell dumpsys alarm` shows the event's alarm again, for the same
+      time next week. (For an end-to-end check, use a **daily** event and look again tomorrow.)
+- [ ] **After a reboot.** Create an event 30 minutes ahead with a 10-minute reminder, restart the
+      phone and unlock it: the reminder still arrives on time.
+- [ ] **After a time-zone change.** Create an event 2 hours ahead with a 1-hour reminder, then
+      move the phone's time zone one hour east (Settings → System → Date & time). The reminder
+      comes an hour before the event's wall-clock time in the new zone.
 - [ ] **The co-parent's event reminds here.** On the co-parent's phone, create an event starting
       30 minutes from now with a 10-minute reminder. On this phone, pull a sync (open the calendar,
       or wait for the tick) and wait: the reminder appears with the co-parent's title. Have them
       move it an hour later: the reminder comes an hour later, not at the old time. Have them
       delete another such event: no reminder for it.
-- [ ] **Sign-out clears.** Create an event 20 minutes ahead with a 10-minute reminder, then
-      Settings → Account → **Sign out**. Nothing appears at the reminder time. Sign in again with
-      the same account: the event's reminder comes back once the next full sync has delivered it
-      (at most a day; editing the event re-arms it at once).
-- **If it fails:** `data/notification/EventReminderScheduler.kt`, `data/notification/ReminderWorker.kt`,
-  `domain/notification/ReminderPlanner.kt`, `SyncService.rearmReminder`; `adb shell dumpsys jobscheduler`
-  lists the pending work, tagged `event_reminder`.
+- [ ] **The tap opens the calendar.** Tap a reminder: the app opens on the Calendar tab, on the
+      event's family when the parent has two.
+- [ ] **Sign-out clears, a reboot does not bring it back.** Create an event 20 minutes ahead with a
+      10-minute reminder, then Settings → Account → **Sign out**, and restart the phone. Nothing
+      appears at the reminder time. Sign in again with the same account: the event's reminder comes
+      back once the next full sync has delivered it (at most a day; editing the event re-arms it at
+      once).
+- [ ] **Upgrade from a build before alarms.** On the previous build, create an event an hour ahead
+      with a 30-minute reminder, then install this build over it without opening the app. The
+      reminder arrives on the minute, once.
+- **If it fails:** `data/notification/EventReminderScheduler.kt`, `ReminderAlarms.kt`,
+  `ReminderReceivers.kt`, `ReminderRearm.kt`, `DueReminders.kt`, `ArmedReminders.kt`,
+  `domain/notification/ReminderPlanner.kt`, `SyncService.rearmReminder`; tags `ReminderAlarms`,
+  `ReminderAlarmReceiver`, `ReminderRearmReceiver`. `adb shell dumpsys alarm` lists the armed
+  alarms; on Android 12 and 12L, Settings → Apps → CoPlanly → **Alarms & reminders** must be on for
+  them to be exact.
 
 ### 3.24 Owner decisions of 30 September · 1P, banner check needs a custody schedule
 

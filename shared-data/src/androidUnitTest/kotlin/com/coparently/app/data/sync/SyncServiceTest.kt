@@ -209,9 +209,9 @@ class SyncServiceTest {
         // re-uploads are silent now and the whole backfill is one `records_shared` push, which
         // is also the wake-up the other phone needs to download what it can now read.
         pairWith(partnerId = BOB)
-        // Nothing was waiting before the backfill; the one row it re-queues is old, and
-        // `FamilyIdBackfill` has given it the family by now.
-        coEvery { eventDao.getUnsyncedEvents() } returns emptyList() andThen listOf(
+        // The one row the backfill re-queues is old, and `FamilyIdBackfill` has given it the
+        // family by now.
+        coEvery { eventDao.getUnsyncedEvents() } returns listOf(
             eventEntity(createdByFirebaseUid = ALICE, sharedWith = listOf(ALICE)).copy(familyId = BOB_FAMILY)
         )
         coEvery { eventDao.markOwnEventsUnsynced(ALICE) } returns 1
@@ -229,19 +229,28 @@ class SyncServiceTest {
     }
 
     @Test
-    fun `an event that was already waiting still announces itself as created`() = runTest {
-        // The backfill must not silence a genuinely new event that happened to be queued when
-        // it ran: the co-parent wants to hear about that one.
+    fun `an upload the sync carries up queues no push of its own`() = runTest {
+        // Notification audit, 9 November 2026: the save that queued the row announced it with a
+        // card in the family's thread, which is pushed. The sync used to queue `event_created` for
+        // every row it carried up as well — twice for an event saved offline, and "created" for an
+        // offline edit or for the co-parent's answer to this parent's own event.
         pairWith(partnerId = BOB)
-        val fresh = eventEntity(createdByFirebaseUid = ALICE, sharedWith = listOf(ALICE)).copy(familyId = BOB_FAMILY)
-        coEvery { eventDao.getUnsyncedEvents() } returns listOf(fresh)
-        coEvery { eventDao.markOwnEventsUnsynced(ALICE) } returns 1
+        val edited = eventEntity(createdByFirebaseUid = ALICE, sharedWith = listOf(ALICE, BOB))
+            .copy(familyId = BOB_FAMILY)
+        coEvery { eventDao.getUnsyncedEvents() } returns listOf(edited)
+        coEvery { eventDao.markOwnEventsUnsynced(ALICE) } returns 0
+        coEvery { childInfoDao.markOwnChildInfoUnsynced(ALICE) } returns 0
         coEvery { firestoreEventDataSource.insertEvent(any(), any()) } returns Result.success(Unit)
+
         syncService.performFullSync()
 
-        val queued = mutableListOf<Map<String, String>>()
-        coVerify { fcmService.queueNotificationForUser(BOB, capture(queued)) }
-        assertTrue(PushPayload.EVENT_CREATED in queued.map { it[PushPayload.TYPE] })
+        coVerify { eventDao.markAsSynced(edited.id) }
+        coVerify(exactly = 0) {
+            fcmService.queueNotificationForUser(
+                any(),
+                match { it[PushPayload.TYPE] in setOf(PushPayload.EVENT_CREATED, PushPayload.EVENT_UPDATED) }
+            )
+        }
     }
 
     @Test

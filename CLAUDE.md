@@ -1896,7 +1896,8 @@ unchanged) and asks the platform through four narrow seams: `SignedInUser` for t
 **`AccountConsistency`** (`data/session/`: `ensureAccountConsistency`; `AccountSwitchGuard`
 implements it) and the new **`RequestClockSweep`** (`data/requests/`: `sweep`; `RequestClockKeeper`
 implements it). The event and child-info push payloads left `FcmService` for `RecordPushes`
-(`data/remote/firebase/`), unchanged; `data/notification/ReminderEvents.kt` (`toReminderEvent`) moved
+(`data/remote/firebase/`), unchanged (the event's was deleted since, with the sync's per-upload
+push: notification audit, 9 November 2026); `data/notification/ReminderEvents.kt` (`toReminderEvent`) moved
 with the sync. `data/repository/ParentSlotMigrator.kt` runs its two re-stamps in
 `EventDao.reslotOwnerAndPickup`, a Room `@Transaction` method like `KnownFamilyDao`'s, where it used
 Android's `RoomDatabase.withTransaction`, so it no longer takes the database
@@ -1930,7 +1931,9 @@ everything else unchanged), `RequestClockSteps` and `RequestRecords`, and from `
 `OtherFamiliesSignals` (its "today" and "now" from `kotlin.time`'s system clock in the system zone,
 what `LocalDate.now()` and `System.currentTimeMillis()` read). The steps post through the new
 **`RequestClockNotices`** (`data/requests/`: `remind`, `deadlinePassed` and `noAnswer`; the app's
-`RequestNotices` implements it) and keep their jobs through the domain's `RequestClockScheduler`, as
+`RequestNotices` implements it; `remind` answers whether it was shown since the notification audit
+of 9 November 2026, and the iPhone's stand-in answers false, so a reminder is counted only when
+shown) and keep their jobs through the domain's `RequestClockScheduler`, as
 before. Every constructor kept its parameter names, so the e2e parents build them unchanged. They
 are bound in `requestsDataModule` (with `RequestClockSweep`, which the app bound in Task 8g) and
 `familyDataModule`, and the app binds `RequestClockNotices`. Still in the app from `data/requests/`
@@ -2700,8 +2703,8 @@ in `shared-data/` `EventDocument`
 (the events and revisions wire contracts, in `shared-data`'s `wire/` since Task 8j and so compiled
 by the app's tests too, and `:shared-ui`'s `ChatEventCardViewModelTest`, since Task 10;
 `StampedFamily` is `internal` again since `SyncService` moved, Task 8g), `toReminderEvent`
-(`ReminderWorker`), `RequestTime.of` (its one caller `RequestsSourceTest`, in `:shared-ui` since
-slice 10c; `minuteTicks` beside it is public without the marker, because its caller,
+(`DueReminders` and `ReminderRearm`), `RequestTime.of` (its one caller `RequestsSourceTest`, in
+`:shared-ui` since slice 10c; `minuteTicks` beside it is public without the marker, because its caller,
 `AnswerByField`, is presentation code that stays in another module and so it never becomes
 `internal` again, as `governing`), and
 `ChatMappers`' entity and document mappers (the R8 probe and the messages wire contract; the mark
@@ -2897,16 +2900,49 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    library's `catholic` category and the Augsburg pseudo-state are excluded on purpose —
    `GermanState`'s KDoc says why. The Room schema JSON for v36 (which carries this column) is exported by the Regenerate
    workflow, not by hand.
-9. **Reminders** are scheduled through the `ReminderScheduler` domain interface
-   (WorkManager impl `EventReminderScheduler`, one unique work per event id, `REPLACE`, tag
-   `event_reminder`), hooked into the event use cases — schedule on create/update, cancel on
-   delete — **and into the sync's event download** (`SyncService.rearmReminder`: the co-parent's
-   events remind too, a downloaded tombstone cancels). A reminder is for **one occurrence**:
-   `domain/notification/ReminderPlanner` picks the next one whose reminder time is still ahead
-   through `RecurrenceExpander`, and `ReminderWorker` re-checks it against Room when due
-   (`ReminderPlanner.isOccurrence`) and then schedules the next, so a weekly event reminds every
-   week. `cancelAll()` runs at sign-out, account switch and deletion, because the worker reads the
-   title from Room and Room survives sign-out; `null` `reminderMinutes` is "no reminder".
+9. **Reminders** are scheduled through the `ReminderScheduler` domain interface, hooked into the
+   event use cases — schedule on create/update, cancel on delete — **and into the sync's event
+   download** (`SyncService.rearmReminder`: the co-parent's events remind too, a downloaded
+   tombstone cancels). A reminder is for **one occurrence**: `domain/notification/ReminderPlanner`
+   picks the next one whose reminder time is still ahead through `RecurrenceExpander`, and
+   `DueReminders` re-checks it against Room when due (`ReminderPlanner.isOccurrence`) and then arms
+   the next, so a weekly event reminds every week. `cancelAll()` runs at sign-out, account switch
+   and deletion, because the reminder reads the title from Room and Room survives sign-out; `null`
+   `reminderMinutes` is "no reminder". **A new event opens with a one-hour reminder** (owner
+   decision, 9 November 2026; `DEFAULT_REMINDER_MINUTES` in `AddEditEventScreen`, in `:shared-ui`),
+   which the parent can set to None; an edit keeps what the event holds, and imports set none.
+   **A reminder is an alarm, on the minute** (owner decision, 9 November 2026: a 30-minute reminder
+   arrived 25 minutes before the event). `EventReminderScheduler` arms one `AlarmManager` alarm per
+   event through `data/notification/ReminderAlarms.kt` (`setExactAndAllowWhileIdle`, which fires in
+   Doze); `ReminderAlarmReceiver` delivers it through `DueReminders`. Six things not to undo.
+   - **Not WorkManager.** Its delay is a JobScheduler job, which Doze and app standby hold back
+     for minutes; that was the late reminder. `ReminderWorker` survives only so an older build's
+     queued work can still start; it steps aside for an armed alarm.
+   - **Exact needs a permission, and not holding it is not an error.** `USE_EXACT_ALARM` on API 33+
+     (Play allows it to a calendar that shows event notifications; it is declared in the Play
+     Console), `SCHEDULE_EXACT_ALARM` on 31–32 (`maxSdkVersion="32"`), nothing below. Without it
+     the alarm is armed inexact (`setAndAllowWhileIdle`), never dropped.
+   - **The wall clock becomes an instant at arming, for the reminder's own date**
+     (kotlinx-datetime's `toInstant(zone)`, which resolves the offset as `atZone` did), so a
+     daylight-saving change between arming and firing does not move it; the old `Duration` between
+     two wall clocks was an hour off across one. A clock or zone change re-arms.
+   - **`ArmedReminders` remembers which events have an alarm.** Alarms do not survive a reboot and
+     cannot be cancelled by tag, so `ReminderRearmReceiver` (boot, update, clock, zone, the exact
+     permission granted) arms that list again through `ReminderRearm`, and `cancelAll` cancels and
+     empties it — a signed-out account's reminders never return after a reboot. The first re-arm
+     after the update moves an older build's queued work onto alarms, once.
+   - **One alarm per event, told apart by the intent's data** (`coplanly-reminder:<id>`), never by
+     a hashed request code, which collides.
+   - **A receiver never throws for want of the app's graph** (`hasReminderGraph`). Installing the
+     test APK delivers `MY_PACKAGE_REPLACED` into an instrumentation process whose test application
+     starts no Koin graph (`KoinTestApplication`; `HiltTestApplication` had no component yet, which
+     is how it was found); the exception out of `onReceive` crashed it and the 16 KB leg ran no test
+     (`ReminderReceiversTest`). The two receivers are `KoinComponent`s, check
+     `GlobalContext.getOrNull()` before anything else, and resolve `DueReminders` or
+     `ReminderRearm` inside the async work, where a failure is logged.
+   A reminder's tap opens the calendar on the event's own family. These classes are the app's
+   (`data/notification/`, Koin's `notificationModule`), on kotlinx-datetime like the planner they
+   call; the reminder and its channel are worded through `inAppLanguage()`, as before.
 10. **Receipt OCR is on-device only** (`ReceiptTextRecognizer`/ML Kit, parsed by
     `ReceiptParser`, wired up in `AddExpenseScreen`/`ExpenseViewModel.scanReceipt`) — no
     receipt text or photo may be sent to a model or any other remote service without an
@@ -3030,6 +3066,30 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     <time>." on the reader's clock. Every push is posted with a `BigTextStyle` beside its content
     text, and so is every request notice (`RequestNotices`); don't drop it: a two-sentence body is
     cut on the collapsed line exactly where the deadline sits.
+    **The notification audit of 9 November 2026 fixed four things; keep them.**
+    - **A chat card is worded on the receiving phone.** `notifyOfChatMessage` sends the card's
+      facts beside its preview (`activityKind`, `activityEntityType`, `activityEntityId`,
+      `activityTitle`, `activityWhenIso`, `activityAmount`, `activityCurrency` — fields, not types)
+      and `PushNotifier` words them through `presentation/chat/cardPushText`, the thread's sentence
+      without Compose. It stays in the app beside its one caller, and reads `ActivityCardText`'s
+      decisions (in `:shared-ui`, Compose Multiplatform `StringResource`s) as the app's `R.string` of
+      the same key, so the push speaks the language of the context it is worded in;
+      `res/raw/card_push_keep.xml` keeps those keys from the release build's resource shrinker, and
+      `ChatCardPushTest` checks every one resolves. The preview is the card's base-English
+      fallback, which an older build shows; every reader used to get it.
+    - **A card whose news has a push type of its own pushes nobody** (`SILENT_CARD_KINDS`: a
+      change request, a day swap offered or answered, a custody proposal and its answer, a new
+      expense, a split proposal and its answer; an important event's card through
+      `announcedByItsOwnPush`). Each used to reach the reader twice. A withdrawal has no type and
+      is still pushed as its card. A kind added there must have its own push on every path.
+    - **Each chat push has its own tray id** (`PushNotifier.chatNotificationId`): one per
+      conversation for messages, one per card. A single fixed id let a card replace a message and
+      one family's thread replace the other's.
+    - **The sync queues no push for an upload it carries up** (`SyncService.syncEvents`, in
+      `shared-data` since MON-24 phase 2; `RecordPushes.event` went with it): the save's
+      card announces the event. `event_created` is produced by nothing now.
+    And a request reminder or a child support reminder counts as given only when it was shown
+    (`notificationsAllowed`: the permission, the app's notifications and the channel).
 16. **`sharedWith` is computed at upload time and never recomputed for a row already marked
     synced.** An event created while the account was unpaired is uploaded with an audience of
     one uid, and nothing revisits it — so it stays unreadable by a co-parent who arrives later.
@@ -4117,7 +4177,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       change until the proposer's phone withdraws it; swaps, change requests and events show no
       answer then (`hidesAnswers`).
     - **The two chat cards push nobody.** `REQUEST_LAST_CHANCE` and `REQUEST_UNANSWERED` are in
-      `functions/index.js`' `SILENT_CARD_KINDS`, which `notifyOfChatMessage` skips: the last chance
+      `functions/index.js`' `SILENT_CARD_KINDS` (with the cards item 15 lists, whose news has a push
+      type of its own), which `notifyOfChatMessage` skips: the last chance
       has its own push (`request_last_chance`, item 15's four places), and "No answer" must not
       wake the parent who was just told nothing more comes. Until the functions are deployed they
       are pushed like any message. Opening a request pushes nobody either; DPIA R22.
@@ -4879,7 +4940,8 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
   - **Every reader outside an activity words through `Context.inAppLanguage()`**, a configuration
     context made afresh for each use (only the locale and its layout direction overridden, so night
     mode and font scale stay the base's): `CoPlanlyMessagingService`'s `PushNotifier` and its
-    channels, `RequestNotices`, `ReminderWorker`, `SupportReminderWorker`, the Today widget's lines
+    channels, `RequestNotices`, `DueReminders` and `EventReminderScheduler` (an event reminder, its
+    channel and its start time), `SupportReminderWorker`, the Today widget's lines
     (`TodayWidget.provideGlance`), `SchoolImportWordingSource` and `AndroidPairingWording`. Never
     wrap the application context once and keep it — it would miss a change of language — and never
     read `R.string` from a bare application or service context: that is Android's resolution, not
