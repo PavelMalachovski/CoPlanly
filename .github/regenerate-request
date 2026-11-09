@@ -104,3 +104,5 @@ day swap flow baselines, after the workflow fix 2026-10-28T10:55:08Z
 day swap pill initials 2026-10-28T11:03:24Z
 2026-10-28T12:31:34Z requests gather everything
 2026-10-28T12:35:10Z requests gather everything, again
+requested: 2026-11-09 — screenshot baselines for the swap sheet (buttons pinned under a scrolling
+           body, owner report) — no schema change; check the detekt half for new entries
