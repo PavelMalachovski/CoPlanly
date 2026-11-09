@@ -37,13 +37,15 @@ const PAIRED_USERS = {
  * @param {?Object} conversation The `conversations/{conversationId}` document data, or
  *     `null`/`undefined` to model a missing document.
  * @param {!Object<string, !Object>=} users Profiles keyed by uid; defaults to [PAIRED_USERS].
+ * @param {!Object<string, !Object>=} events `events/{id}` documents keyed by id; none by default.
  * @return {!Object} The fake, carrying `_added` and `_reads` (every document looked up, as
  *     `collection/id`) for assertions.
  */
-function fakeDb(conversation, users) {
+function fakeDb(conversation, users, events) {
   const added = [];
   const reads = [];
   const profiles = users || PAIRED_USERS;
+  const eventDocs = events || {};
   return {
     _added: added,
     _reads: reads,
@@ -55,6 +57,10 @@ function fakeDb(conversation, users) {
             if (name === 'users') {
               const profile = profiles[id];
               return {exists: profile != null, data: () => profile};
+            }
+            if (name === 'events') {
+              const event = eventDocs[id];
+              return {exists: event != null, data: () => event};
             }
             return {
               exists: conversation != null,
@@ -406,13 +412,35 @@ describe('notifyOfChatMessage', () => {
     }
   });
 
-  it('still pushes every other card', async () => {
+  // Notification audit, 9 November 2026: each of these reached the other parent twice, once in
+  // English on the chat channel and once in their language under the card's own push type.
+  it('pushes nothing for a card whose news has a push type of its own', async () => {
+    const kinds = [
+      'CHANGE_REQUESTED', 'DAY_SWAP_OFFERED', 'DAY_SWAP_ACCEPTED', 'DAY_SWAP_DECLINED',
+      'CUSTODY_PROPOSED', 'CUSTODY_ACCEPTED', 'CUSTODY_DECLINED', 'EXPENSE_ADDED',
+      'SPLIT_PROPOSED', 'SPLIT_ACCEPTED', 'SPLIT_DECLINED',
+    ];
+    for (const kind of kinds) {
+      const db = fakeDb({participants: ['alice', 'bob']});
+      const message = {
+        conversationId: 'alice__bob', senderId: 'alice', senderName: 'Alice',
+        content: 'Day swap offered: 2026-10-16', timestamp: '2026-08-02T10:00:00',
+        activity: {kind, entityType: 'DAY_SWAP', entityId: '2026-10-16', title: '2026-10-16'},
+      };
+
+      await notifyOfChatMessage(db, message);
+
+      assert.deepStrictEqual(db._added, [], `${kind} was pushed`);
+    }
+  });
+
+  it('pushes every other card, with its facts for the reader\'s phone to word', async () => {
     const db = fakeDb({participants: ['alice', 'bob']});
     const message = {
       conversationId: 'alice__bob', senderId: 'alice', senderName: 'Alice',
-      content: 'Day swap offered: 2026-10-16', timestamp: '2026-08-02T10:00:00',
+      content: 'Day swap withdrawn: 2026-10-16', timestamp: '2026-08-02T10:00:00',
       activity: {
-        kind: 'DAY_SWAP_OFFERED', entityType: 'DAY_SWAP', entityId: '2026-10-16',
+        kind: 'DAY_SWAP_WITHDRAWN', entityType: 'DAY_SWAP', entityId: '2026-10-16',
         title: '2026-10-16',
       },
     };
@@ -420,7 +448,85 @@ describe('notifyOfChatMessage', () => {
     await notifyOfChatMessage(db, message);
 
     assert.strictEqual(db._added.length, 1);
+    const data = db._added[0].data.data;
     assert.strictEqual(db._added[0].data.targetUserId, 'bob');
-    assert.strictEqual(db._added[0].data.data.type, 'chat_message');
+    assert.strictEqual(data.type, 'chat_message');
+    // The English fallback an older build shows, and the facts this one words.
+    assert.strictEqual(data.preview, 'Day swap withdrawn: 2026-10-16');
+    assert.strictEqual(data.activityKind, 'DAY_SWAP_WITHDRAWN');
+    assert.strictEqual(data.activityEntityType, 'DAY_SWAP');
+    assert.strictEqual(data.activityEntityId, '2026-10-16');
+    assert.strictEqual(data.activityTitle, '2026-10-16');
+    assert.strictEqual(data.activityAmount, undefined);
+    for (const value of Object.values(data)) assert.strictEqual(typeof value, 'string');
+  });
+
+  it('carries an expense card\'s amount and currency', async () => {
+    const db = fakeDb({participants: ['alice', 'bob']});
+    const message = {
+      conversationId: 'alice__bob', senderId: 'alice', senderName: 'Alice',
+      content: 'Expense updated: Shoes', timestamp: '2026-08-02T10:00:00',
+      activity: {
+        kind: 'EXPENSE_UPDATED', entityType: 'EXPENSE', entityId: 'x1', title: 'Shoes',
+        amount: '1 200 Kč', currency: 'CZK',
+      },
+    };
+
+    await notifyOfChatMessage(db, message);
+
+    const data = db._added[0].data.data;
+    assert.strictEqual(data.activityAmount, '1 200 Kč');
+    assert.strictEqual(data.activityCurrency, 'CZK');
+  });
+
+  it('carries a settle-up card\'s month, which its sentence names', async () => {
+    const db = fakeDb({participants: ['alice', 'bob']});
+    const message = {
+      conversationId: 'alice__bob', senderId: 'alice', senderName: 'Alice',
+      content: 'Settle up', timestamp: '2026-08-02T10:00:00',
+      activity: {
+        kind: 'SETTLE_UP_OWED', entityType: 'EXPENSE', entityId: 'alice__bob', title: '2026-10',
+        whenIso: '2026-10-01', amount: '450.00', currency: 'CZK',
+      },
+    };
+
+    await notifyOfChatMessage(db, message);
+
+    assert.strictEqual(db._added[0].data.data.activityWhenIso, '2026-10-01');
+  });
+
+  it('adds nothing to a message that is not a card', async () => {
+    const db = fakeDb({participants: ['alice', 'bob']});
+    const message = {
+      conversationId: 'alice__bob', senderId: 'alice', senderName: 'Alice',
+      content: 'Hello Bob', timestamp: '2026-08-02T10:00:00',
+    };
+
+    await notifyOfChatMessage(db, message);
+
+    const keys = Object.keys(db._added[0].data.data).filter((key) => key.startsWith('activity'));
+    assert.deepStrictEqual(keys, []);
+  });
+
+  it('pushes a new event\'s card, but not an important one\'s, which has its own push', async () => {
+    const card = (id) => ({
+      conversationId: 'alice__bob', senderId: 'alice', senderName: 'Alice',
+      content: 'New event: Dentist', timestamp: '2026-08-02T10:00:00',
+      activity: {kind: 'EVENT_CREATED', entityType: 'EVENT', entityId: id, title: 'Dentist'},
+    });
+    const events = {plain: {isImportant: false}, important: {isImportant: true}};
+
+    const plainDb = fakeDb({participants: ['alice', 'bob']}, undefined, events);
+    await notifyOfChatMessage(plainDb, card('plain'));
+    assert.strictEqual(plainDb._added.length, 1);
+
+    const importantDb = fakeDb({participants: ['alice', 'bob']}, undefined, events);
+    await notifyOfChatMessage(importantDb, card('important'));
+    assert.deepStrictEqual(importantDb._added, []);
+
+    // An event whose upload has not landed yet is not known to be important: the card is pushed.
+    const missingDb = fakeDb({participants: ['alice', 'bob']}, undefined, events);
+    await notifyOfChatMessage(missingDb, card('not-yet-uploaded'));
+    assert.strictEqual(missingDb._added.length, 1);
   });
 });

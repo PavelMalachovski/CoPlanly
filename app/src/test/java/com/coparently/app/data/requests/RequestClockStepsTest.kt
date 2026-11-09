@@ -48,6 +48,7 @@ class RequestClockStepsTest {
     @Before
     fun setUp() {
         coEvery { repository.reportReminderShown(any()) } returns true
+        coEvery { notices.remind(any()) } returns true
         coEvery { repository.close(any()) } returns true
         coEvery { records.withdrawUnansweredProposal(any()) } returns true
     }
@@ -67,6 +68,21 @@ class RequestClockStepsTest {
             notices.remind(clock)
             repository.reportReminderShown(clock)
         }
+    }
+
+    @Test
+    fun `a reminder nothing showed is not counted`() = runTest {
+        // Notification audit, 9 November 2026: notifications off on the answering phone, and the
+        // proposer's card still said "Reminders: 2 of 3".
+        val clock = clock(RequestKind.CHANGE)
+        signedInAs(BOB)
+        reads(clock, RecordStatus.PENDING)
+        now = DAYTIME
+        coEvery { notices.remind(clock) } returns false
+
+        assertEquals(StepResult.DONE, steps.reminder(clock.id, plannedAtMillis = now - 5 * MINUTE))
+
+        coVerify(exactly = 0) { repository.reportReminderShown(any()) }
     }
 
     // The plan's name, less the comma before "or": with it the declaration is a character over the

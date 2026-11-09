@@ -1,15 +1,12 @@
 package com.coparently.app.data.requests
 
-import android.Manifest
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
-import android.content.pm.PackageManager
-import android.os.Build
 import android.text.format.DateFormat
 import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
 import com.coparently.app.R
+import com.coparently.app.data.notification.notificationsAllowed
 import com.coparently.app.data.remote.firebase.PushChannel
 import com.coparently.app.data.remote.firebase.PushDestination
 import com.coparently.app.data.remote.firebase.PushNotifier
@@ -44,15 +41,20 @@ class RequestNotices @Inject constructor(
     private val pairingRepository: PairingRepository
 ) {
 
-    /** Reminds the answering parent that the proposer waits for an answer until the deadline. */
-    suspend fun remind(clock: RequestDeadline) {
+    /**
+     * Reminds the answering parent that the proposer waits for an answer until the deadline.
+     *
+     * @return Whether the reminder was shown — false while notifications are not allowed or the
+     *   channel is muted, when the proposer's card must not count it.
+     */
+    suspend fun remind(clock: RequestDeadline): Boolean {
         val name = nameOf(clock.proposerUid)
         val until = answerByText(
             clock.answerByMillis,
             locale = context.resources.configuration.locales[0],
             is24Hour = DateFormat.is24HourFormat(context)
         )
-        post(
+        return post(
             clock,
             STEP_REMINDER,
             context.getString(R.string.request_notice_reminder_title),
@@ -99,17 +101,13 @@ class RequestNotices @Inject constructor(
     }
 
     /**
-     * Posts one notice. Its id and its tap's request code are derived from the clock and the step,
-     * so the same notice posted twice replaces itself and two clocks never replace each other.
+     * Posts one notice, and says whether it is shown ([notificationsAllowed]). Its id and its tap's
+     * request code are derived from the clock and the step, so the same notice posted twice
+     * replaces itself and two clocks never replace each other.
      */
-    private fun post(clock: RequestDeadline, step: String, title: String, body: String) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
-            PackageManager.PERMISSION_GRANTED
-        ) {
-            return
-        }
+    private fun post(clock: RequestDeadline, step: String, title: String, body: String): Boolean {
         PushNotifier(context).createChannels()
+        if (!notificationsAllowed(context, PushChannel.SCHEDULE.id)) return false
         val key = listOf(clock.id, step).hashCode()
         val tap = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
             putExtra(PushDestination.EXTRA, PushDestination.CHANGE_REQUESTS.key)
@@ -137,6 +135,7 @@ class RequestNotices @Inject constructor(
             }
             .build()
         context.getSystemService(NotificationManager::class.java).notify(key, notification)
+        return true
     }
 
     private companion object {

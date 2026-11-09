@@ -191,9 +191,12 @@ const RULES = [
   },
   {
     sections: ['3.23'],
-    why: 'event reminders: which occurrence, synced events, cleared at sign-out',
+    why: 'event reminders: on the minute, which occurrence, synced events, after a reboot, cleared at sign-out',
     paths: ['K/data/notification/EventReminderScheduler.kt', 'K/data/notification/ReminderWorker.kt',
       'K/data/notification/ReminderEvents.kt', 'K/domain/notification/Reminder*',
+      'K/data/notification/ReminderAlarms.kt', 'K/data/notification/ReminderReceivers.kt',
+      'K/data/notification/ReminderRearm.kt', 'K/data/notification/DueReminders.kt',
+      'K/data/notification/ArmedReminders.kt',
       'K/data/session/AccountSwitchGuard.kt', 'K/data/session/AccountDeletionService.kt'],
   },
   {

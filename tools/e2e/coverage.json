@@ -322,9 +322,7 @@
       ]
     },
     "event_created": {
-      "e2e": [
-        "TwoParentRequestsAndEventPushesTest#anEventTheSyncUploadsQueuesEventCreatedForBob"
-      ]
+      "exempt": "Nothing produces it since the notification audit of 9 November 2026: an event is announced by its chat card, and SyncService no longer queues a push for the rows it carries up (TwoParentRequestsAndEventPushesTest#anEventTheSyncUploadsQueuesNoPushOfItsOwn pins the absence). It survives in PushPayload, PUSH_TEXT and the rules allow-list for older builds."
     },
     "event_important": {
       "e2e": [
@@ -332,7 +330,7 @@
       ]
     },
     "event_updated": {
-      "exempt": "Nothing produces it: SyncService.notifyEventUpdate is only called with \"created\", and no function writes event pushes any more. It survives in PushPayload, PUSH_TEXT and the rules allow-list for older builds."
+      "exempt": "Nothing produces it: no client path queues it since SyncService.notifyEventUpdate was deleted (notification audit, 9 November 2026), and no function writes event pushes any more. It survives in PushPayload, PUSH_TEXT and the rules allow-list for older builds."
     },
     "event_deleted": {
       "exempt": "Nothing produces it: no client path or function queues it. It survives in PushPayload, PUSH_TEXT and the rules allow-list for older builds."

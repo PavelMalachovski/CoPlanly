@@ -1,14 +1,10 @@
 package com.coparently.app.data.support
 
-import android.Manifest
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
-import android.content.pm.PackageManager
-import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
@@ -18,6 +14,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.coparently.app.R
+import com.coparently.app.data.notification.notificationsAllowed
 import com.coparently.app.data.payment.PaymentStore
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.PushChannel
@@ -102,8 +99,10 @@ class SupportReminderWorker @AssistedInject constructor(
         val lastReminded = reminders.lastReminded(uid, familyId)
         if (!SupportReminderRule.shouldRemind(terms, today, days, payment != null, lastReminded)) return
         val payee = terms.payeeIn(read.agreement.participants) ?: return
-        post(familyId, terms, month, nameOf(payee))
-        reminders.reminded(uid, familyId, month)
+        // The month is spent only on a reminder that was shown (notification audit, 9 November
+        // 2026): with notifications off it used to be recorded anyway, and the month's reminder was
+        // lost even once they were allowed again.
+        if (post(familyId, terms, month, nameOf(payee))) reminders.reminded(uid, familyId, month)
     }
 
     private suspend fun nameOf(uid: String): String {
@@ -117,15 +116,11 @@ class SupportReminderWorker @AssistedInject constructor(
         return name?.takeIf { it.isNotBlank() } ?: applicationContext.getString(R.string.push_actor_fallback)
     }
 
-    private fun post(familyId: String, terms: SupportTerms, month: YearMonth, payeeName: String) {
+    /** Posts the reminder, and says whether it is shown ([notificationsAllowed]). */
+    private fun post(familyId: String, terms: SupportTerms, month: YearMonth, payeeName: String): Boolean {
         val context = applicationContext
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
-            PackageManager.PERMISSION_GRANTED
-        ) {
-            return
-        }
         PushNotifier(context).createChannels()
+        if (!notificationsAllowed(context, PushChannel.MONEY.id)) return false
         val due = terms.dueDate(month).format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
         val amount = currencyFormat(terms.currency).format(terms.amount)
         val title = context.getString(R.string.support_reminder_title, due)
@@ -156,6 +151,7 @@ class SupportReminderWorker @AssistedInject constructor(
             }
             .build()
         context.getSystemService(NotificationManager::class.java).notify(key, notification)
+        return true
     }
 
     private companion object {

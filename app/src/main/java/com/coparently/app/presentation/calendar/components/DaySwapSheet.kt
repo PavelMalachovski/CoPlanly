@@ -6,8 +6,11 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -98,6 +101,12 @@ internal fun DaySwapSheet(offer: SwapSheetOffer, parentNames: ParentNames, actio
 /**
  * The sheet's body, split out of the `ModalBottomSheet` so a screenshot can capture it (a sheet
  * opens its own window, which a node capture does not see).
+ *
+ * **The buttons are pinned under a part that scrolls.** The months, the message and the deadline
+ * outgrew a phone's height at a large font, and a sheet does not scroll its content by itself: the
+ * column was cut at the window's edge with "Send" below it, and an offer could not be sent at all
+ * (owner report, 9 November 2026). Everything above the buttons scrolls now, and the buttons stay
+ * on screen whatever the height; a divider shows while there is more to scroll to.
  */
 @Composable
 internal fun DaySwapSheetContent(
@@ -109,66 +118,99 @@ internal fun DaySwapSheetContent(
     var note by rememberSaveable { mutableStateOf("") }
     var answerBy by rememberSaveable(stateSaver = AnswerByPickSaver) { mutableStateOf(AnswerByPick.DEFAULT) }
     val sides = offer.sides
-    val name = offer.coParentName
-    val me = parentNames.parents.me?.slot
+    val scroll = rememberScrollState()
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = Spacing.XL)
-            .padding(bottom = Spacing.XL),
-        verticalArrangement = Arrangement.spacedBy(Spacing.M)
+            .padding(bottom = Spacing.XL)
     ) {
-        Text(
-            text = stringResource(R.string.day_swap_sheet_title_with, name),
-            style = MaterialTheme.typography.titleLargeEmphasized
-        )
-        if (sides.isEmpty) {
-            Text(
-                text = stringResource(R.string.day_swap_needs_coparent),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        } else {
-            receiverOf(me)?.let { other ->
-                SwapSideGroup(stringResource(R.string.day_swap_you_give, name), sides.toOther, other)
-            }
-            me?.let { SwapSideGroup(stringResource(R.string.day_swap_you_take), sides.toOfferer, it) }
-            if (sides.unknown.isNotEmpty()) {
-                Text(
-                    text = pluralStringResource(
-                        R.plurals.day_swap_skipped_days,
-                        sides.unknown.size,
-                        sides.unknown.size
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            if (offer.months.isNotEmpty()) {
-                SwapMonths(offer.months, parentNames)
-                Text(
-                    text = stringResource(R.string.day_swap_sheet_caption, name),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            OutlinedTextField(
-                value = note,
-                onValueChange = { note = it },
-                label = { Text(stringResource(R.string.day_swap_note_to, name)) },
-                modifier = Modifier.fillMaxWidth()
-            )
-            SwapDeadline(sides.offerable, name, answerBy) { answerBy = it }
+        Column(
+            modifier = Modifier
+                // Wraps a short offer; takes what is left above the buttons, and scrolls, for a long one.
+                .weight(1f, fill = false)
+                .verticalScroll(scroll)
+                .padding(horizontal = Spacing.XL)
+                .padding(bottom = Spacing.M),
+            verticalArrangement = Arrangement.spacedBy(Spacing.M)
+        ) {
+            SwapSheetBody(offer, parentNames, note, { note = it }, answerBy) { answerBy = it }
         }
-        SwapSheetButtons(sides, name, actions) { actions.onOffer(sides.offerable, note.ifBlank { null }, answerBy) }
+        if (scroll.canScrollForward || scroll.canScrollBackward) HorizontalDivider()
+        SwapSheetButtons(
+            sides = sides,
+            name = offer.coParentName,
+            actions = actions,
+            modifier = Modifier.padding(horizontal = Spacing.XL).padding(top = Spacing.S)
+        ) { actions.onOffer(sides.offerable, note.ifBlank { null }, answerBy) }
     }
+}
+
+/** Everything above the buttons: the title, both sides, the months, the message and the deadline. */
+@Composable
+@Suppress("LongParameterList") // the body's two fields are hoisted, each with its setter
+private fun SwapSheetBody(
+    offer: SwapSheetOffer,
+    parentNames: ParentNames,
+    note: String,
+    onNoteChange: (String) -> Unit,
+    answerBy: AnswerByPick,
+    onAnswerByChange: (AnswerByPick) -> Unit
+) {
+    val sides = offer.sides
+    val name = offer.coParentName
+    val me = parentNames.parents.me?.slot
+    Text(
+        text = stringResource(R.string.day_swap_sheet_title_with, name),
+        style = MaterialTheme.typography.titleLargeEmphasized
+    )
+    if (sides.isEmpty) {
+        Text(
+            text = stringResource(R.string.day_swap_needs_coparent),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        return
+    }
+    receiverOf(me)?.let { other ->
+        SwapSideGroup(stringResource(R.string.day_swap_you_give, name), sides.toOther, other)
+    }
+    me?.let { SwapSideGroup(stringResource(R.string.day_swap_you_take), sides.toOfferer, it) }
+    if (sides.unknown.isNotEmpty()) {
+        Text(
+            text = pluralStringResource(R.plurals.day_swap_skipped_days, sides.unknown.size, sides.unknown.size),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+    if (offer.months.isNotEmpty()) {
+        SwapMonths(offer.months, parentNames)
+        Text(
+            text = stringResource(R.string.day_swap_sheet_caption, name),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+    OutlinedTextField(
+        value = note,
+        onValueChange = onNoteChange,
+        label = { Text(stringResource(R.string.day_swap_note_to, name)) },
+        modifier = Modifier.fillMaxWidth()
+    )
+    SwapDeadline(sides.offerable, name, answerBy, onAnswerByChange)
 }
 
 /** "Change days" (or "Not now") and "Send to {name}", wrapping under each other at a large font. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SwapSheetButtons(sides: SwapSides, name: String, actions: SwapSheetActions, onSend: () -> Unit) {
+private fun SwapSheetButtons(
+    sides: SwapSides,
+    name: String,
+    actions: SwapSheetActions,
+    modifier: Modifier = Modifier,
+    onSend: () -> Unit
+) {
     FlowRow(
+        modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(Spacing.S),
         verticalArrangement = Arrangement.spacedBy(Spacing.XS)
     ) {

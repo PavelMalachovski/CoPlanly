@@ -77,6 +77,7 @@ invocation is yours.
 | --- | --- | --- | --- |
 | **M-5** | Multi-family cleanup: delete `partnerId`, `User.role`, `Event.sharedWith`, `isPartnerOf` — **after** the ops steps in REL-3 | P2 | M |
 | **CQ-17** | WorkManager moved; the Calendar client pair was tried in PR #101 and reverted (it splits Firestore's gRPC family under R8). Pinning gRPC to what the Firebase BoM resolves needs Google Maven (`dl.google.com`), which cloud sessions cannot reach — so the next attempt is a machine with an SDK (`./gradlew :app:dependencies`), then a device | P3 | S |
+| **CQ-21** | Notification audit leftovers (§5): a push token per device, private events' reminders after sign-in, the sign-out race, an FCM time-to-live, `guest_accepted`'s wording, `onDeletedMessages` | P2 | M |
 | **MON-2** | Market facts checked (23 and 24 Sep 2026): **app2us has an Android build**, ~309 registered mediators (half in Prague), ~12.5k divorces a year with children, 27.4% alternating care; left: the family-mediator subset, ARPU, closed Facebook groups, app2us price on a phone | P0 | S |
 | **MON-3** | The export ships, ungated; left: a PDF read on a device, and the paywall with MON-11 | P2 | S |
 | **MON-4** | **Built**, `Event.updatedAt`'s compared instant included (schema 39, `39.json` committed); left: the deploy in 💻 | P1 | — |
@@ -1122,6 +1123,40 @@ Queued rather than "Accepted", which is the honest report of what the co-parent 
 
 The state that lied is renamed `Saved`: the screen pops on it whether or not the write landed, so
 the honest report of what happened is the chip, not the state's name.
+
+### CQ-21 · **PARTLY DONE** · P2 · M · The notification audit of 9 November 2026
+
+The owner's 30-minute event reminder arrived 25 minutes before the event. The cause was the
+mechanism, not the arithmetic: a reminder was WorkManager work, a JobScheduler job that Doze and app
+standby hold back. Reminders are exact alarms now (`USE_EXACT_ALARM`, CLAUDE.md item 9), re-armed
+after a reboot, an update and a clock or zone change; the alarm's instant is resolved for the
+reminder's own date, which also fixes an hour's error across a daylight-saving change. A new event
+opens with a one-hour reminder (owner decision). The same pass fixed four push defects (CLAUDE.md
+item 15): chat cards were pushed in English, cards with a push type of their own reached the reader
+twice, every chat push shared one tray id, and the sync pushed "created" for every row it carried
+up, edits and answers included; a request or child support reminder counted as given while
+notifications were off.
+
+**Open, found by the audit and not fixed here:**
+
+- **One push token per account.** `users/{uid}.fcmToken` holds one device. With a phone and a
+  tablet only the device last opened gets pushes, and signing out on one deletes the field even
+  when it holds the other's token (`FcmService.unregisterToken`). Fix: a map of tokens, deleted by
+  the device's own token, compared with the server's value rather than Room's. Server and client.
+- **A private event's reminder does not come back after sign-out and sign-in.** Sign-out cancels
+  every reminder; shared events are re-armed when the next full sync downloads them, private ones
+  never are. Fix: re-arm every own event with a reminder from Room after sign-in.
+- **Sign-out race.** `AuthStateViewModel.signOut` awaits `unregisterToken` (network) before
+  `cancelAll`; a sync running in that window can re-arm reminders after it. Fix: cancel first,
+  or stop the sync before.
+- **No FCM time-to-live.** The default is 28 days, so a request's push delivered days late shows an
+  "Answer by" already past. Fix: a TTL per type in `buildFcmMessage`.
+- **`guest_accepted` has no wording on the phone**, so a high-priority push ends in no notification,
+  which Android may count against the app. Fix: word it, or stop sending it.
+- **No `onDeletedMessages`.** When FCM drops a device's backlog, no sync is triggered. Fix: override
+  it in `CoPlanlyMessagingService` to request a sync.
+- **The device half.** `docs/DEVICE-CHECKLIST.md` §3.23 (exact, after a reboot, after a zone change,
+  the upgrade from WorkManager) and the Play Console's exact-alarm declaration (`DATA-SAFETY.md`).
 
 ---
 

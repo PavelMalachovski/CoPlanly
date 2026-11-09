@@ -138,7 +138,7 @@ class PushNotificationTest {
     fun aChatMessage_relaysSenderAndPreview_underItsOwnId() {
         val id = PushNotifier(appContext).receive(chatPayload(), SIGNED_IN)
 
-        assertEquals(PushNotifier.CHAT_NOTIFICATION_ID, id)
+        assertEquals(PushNotifier.chatNotificationId(CONVERSATION, null), id)
         val shown = read(awaitPosted(id!!))
         assertEquals(ACTOR_NAME, shown.title)
         assertEquals(PREVIEW, shown.text)

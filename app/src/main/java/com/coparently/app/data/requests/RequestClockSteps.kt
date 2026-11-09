@@ -77,8 +77,9 @@ class RequestClockSteps @Inject constructor(
         return when (records.look(clock).status) {
             RecordStatus.UNKNOWN -> StepResult.RETRY
             RecordStatus.PENDING -> {
-                notices.remind(clock)
-                repository.reportReminderShown(clock)
+                // Counted only when shown: the proposer's card says how many reminders the other
+                // parent saw, and a phone with notifications off saw none.
+                if (notices.remind(clock)) repository.reportReminderShown(clock)
                 StepResult.DONE
             }
             RecordStatus.ANSWERED, RecordStatus.GONE -> StepResult.DONE

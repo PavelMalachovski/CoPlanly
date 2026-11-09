@@ -153,6 +153,21 @@ object PushPayload {
      */
     const val RETAINED_UNTIL = "retainedUntilMillis"
 
+    /**
+     * A chat card's facts on its `chat_message` push (notification audit, 9 November 2026): the
+     * `activity` sub-map's `kind`, `entityType`, `entityId`, `title`, `whenIso`, `amount` and `currency`, each
+     * under a key of its own. **Fields**, not types, written by `notifyOfChatMessage` alone. The
+     * receiving phone words the card from them in its reader's language, as the thread does;
+     * [PREVIEW] beside them is the card's base-English fallback, which an older build shows.
+     */
+    const val ACTIVITY_KIND = "activityKind"
+    const val ACTIVITY_ENTITY_TYPE = "activityEntityType"
+    const val ACTIVITY_ENTITY_ID = "activityEntityId"
+    const val ACTIVITY_TITLE = "activityTitle"
+    const val ACTIVITY_WHEN_ISO = "activityWhenIso"
+    const val ACTIVITY_AMOUNT = "activityAmount"
+    const val ACTIVITY_CURRENCY = "activityCurrency"
+
     // ---- types a client may produce -------------------------------------------
 
     const val EVENT_CREATED = "event_created"
@@ -340,20 +355,6 @@ object PushPayload {
         EXPENSE_ADDED,
         STICKER_RECEIVED
     )
-
-    /**
-     * The type for an event action, or null for an action nothing announces.
-     *
-     * Returns null rather than falling back to a generic type: a payload whose type the
-     * receiving device cannot compose renders nothing at all now, so inventing one here would
-     * queue a push that is guaranteed to be dropped on arrival.
-     */
-    fun eventType(action: String): String? = when (action) {
-        "created" -> EVENT_CREATED
-        "updated" -> EVENT_UPDATED
-        "deleted" -> EVENT_DELETED
-        else -> null
-    }
 
     /** The type for a change-request action, or null for one nothing announces. */
     fun changeRequestType(action: String): String? = when (action) {
