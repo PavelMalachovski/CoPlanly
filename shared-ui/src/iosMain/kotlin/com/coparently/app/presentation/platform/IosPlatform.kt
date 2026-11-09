@@ -46,8 +46,10 @@ fun iosPlatformServices(buildValues: AppBuildValues): PlatformServices = Platfor
  * sign-in ([LocalGoogleCalendarSignIn]). Their locals throw outside a provider, so Settings and the
  * sign-in screen would fail before their `available` checks; here both are stand-ins that say they
  * are not available, so the sign-in offers neither Google nor a saved password and Settings draws no
- * Google Calendar row (the 11f review's I1). Its content is `CoPlanlyApp` (Task 12), as
- * `MainActivity`'s is inside the Android providers.
+ * Google Calendar row (the 11f review's I1). Its content will be `CoPlanlyApp` (Task 12), as
+ * `MainActivity`'s is inside the Android providers; nothing composes that yet, until phase 3's view
+ * controller. That shell must also switch the family before it arms any link (CLAUDE.md item 15):
+ * `AppLaunch` carries no family, so the order is the shell's.
  */
 @Composable
 fun ProvideIosShell(buildValues: AppBuildValues, content: @Composable () -> Unit) {

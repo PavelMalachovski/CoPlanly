@@ -3131,7 +3131,10 @@ bytes are identical on Android):
   repository is unreachable here, so its module metadata was not read), the screenshots, the emulator
   legs and the UI tour against `main`'s gallery. Still owed from 11g's review: hiding the export's
   ways in (Family, Earlier families, the chat) where the phone cannot draw or share the record, and
-  narrowing the symbols Task 11 made public for app callers that have since moved.
+  narrowing the symbols Task 11 made public for app callers that have since moved. **For phase 3**: the
+  iPhone's view controller composes `CoPlanlyApp` inside `ProvideIosShell` (nothing does yet), and,
+  since `AppLaunch` carries no family, it must switch the family before it arms any link, as
+  `MainActivity.readLaunchIntent` does (CLAUDE.md item 15).
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

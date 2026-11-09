@@ -618,7 +618,6 @@ dependencies {
     androidTestImplementation("androidx.work:work-testing:2.10.5")
 
     // Navigation Testing
-    androidTestImplementation("androidx.navigation:navigation-testing:2.9.3")
 
     // JVM screenshot tests — Roborazzi on Robolectric's native graphics, no emulator
     // (`app/src/test/java/com/coparently/app/screenshots`, recorded by `recordRoborazziDebug`).

@@ -2124,7 +2124,7 @@ weekday's or a month's name, `getDisplayName(TextStyle…)` before, is the patte
 `IsoWeekNumberTest`), Compose Multiplatform's `BackHandler`, the pull to refresh's sync through the
 data layer's `SyncRequester` (`koinInject`, `SyncWorker.syncNow` on Android, nothing on the iPhone)
 and the partial swap's snackbar through `rememberUiTextResolver`. What they read from other features
-moved with them: `navigation/CalendarTabTaps` (pure, ahead of Task 12; the app's bar counts the taps),
+moved with them: `navigation/CalendarTabTaps` (pure, ahead of Task 12; the bar counts the taps, in `:shared-ui` since Task 12),
 `changerequests/SwapMonths` (out of `SwapDayAnswers.kt`), `parentingplan/PlanStrings` (its wording a
 `StringResource` now) and `PlanCitationText.kt` (`planCitationLine`, `planCitationShortLine`,
 `coParentLabel`, out of the app's `PlanReferenceCard.kt`, which stays), `custody/CustodyModelTypeLabel`
@@ -2398,7 +2398,8 @@ keeps the AppCompat requirement, the splash (`startDestinationFor`, public for i
 — which still switches the family **before** it arms any link (item 15) — the Google sign-in
 launcher and the credential sheets, and the theme preference it passes in. The ViewModels both read
 (`SyncViewModel`, the splash's two) are one instance: `by viewModel()` and `koinViewModel()` resolve
-the same key in the activity's store (`ViewModelScopeTest`). **`ShellBoundaryTest`** (the app's unit
+the same key in the activity's store (`ViewModelScopeTest` holds it, both ways round, for the palette's
+and the family view's; `SyncViewModel` resolves the same way, untested by name). **`ShellBoundaryTest`** (the app's unit
 tests) fails when a file under `app/src/main/java/` declares a `@Composable` outside its short
 allow-list (the platform's Android halves, the dictation language, the QR scanner's own screen, the
 widget's Glance content and the previews, each with its reason) or a `ViewModel` subclass at all:
@@ -2673,7 +2674,7 @@ back with `minus(3, DateTimeUnit.MONTH)` (java.time's `minusMonths`, the day cla
 `ConnectSchoolViewModel`'s town filter folds case with `lowercase()`, what `lowercase(Locale.ROOT)`
 did. The iPhone's `platformDataModule` binds `NoRecordFiles` (it says `available` false, so the
 screen offers no format since slice 11g; rendering would fail and save nothing; the Family tab's,
-Earlier families' and the chat's ways into the export are still drawn there, a Task 12 note) and the school directory over its own client, as it binds the
+Earlier families' and the chat's ways into the export are still drawn there, carried past Task 12 in ROADMAP MON-24) and the school directory over its own client, as it binds the
 Bakaláři client. The three tests (MockK) run in `androidUnitTest`. **Task 10 is done but for
 `AuthViewModel` and `SyncViewModel`**, which stay in the app until Task 11 (above); the app's
 `viewModelModule` holds those two alone (both moved in slice 11f, and `viewModelModule` with them).

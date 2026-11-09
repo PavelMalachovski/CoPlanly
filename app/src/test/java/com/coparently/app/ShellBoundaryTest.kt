@@ -14,6 +14,10 @@ import java.io.File
  * [ALLOWED] names with its reason, or declares a `ViewModel` subclass at all. `MainActivity`'s
  * `setContent { … }` and `QRScannerActivity`'s are lambdas, not declarations, and need no entry.
  * Comments and string literals are not read, so a KDoc that mentions a composable is not one.
+ * Every `.kt` file under `src/main/` is read (`java/` and `kotlin/`, any package), a use-site target
+ * (`@get:Composable`), a fully qualified annotation and a `context(…)` clause are matched, and an
+ * import that renames `Composable`, `ViewModel` or `AndroidViewModel` fails on its own, because a
+ * renamed one would hide from both patterns (Task 12 review, I1).
  */
 class ShellBoundaryTest {
 
@@ -32,7 +36,8 @@ class ShellBoundaryTest {
 
     @Test
     fun theShellDeclaresNoViewModel() {
-        val offenders = shellSources().filter { (_, text) -> declaresViewModel(text) }.map { it.first }
+        val offenders = shellSources().filter { (_, text) -> declaresViewModel(text) || renamesWatchedImport(text) }
+            .map { it.first }
         assertEquals("a ViewModel in the app's main sources: it belongs in :shared-ui", emptyList<String>(), offenders)
     }
 
@@ -63,12 +68,21 @@ class ShellBoundaryTest {
         assertTrue(declaresViewModel("class A(x: Int) : Base(), androidx.lifecycle.ViewModel()"))
         assertTrue(!declaresViewModel("val vm: SyncViewModel by viewModel()\nval f = ViewModelProvider(store)"))
         assertTrue(!declaresViewModel("// class A : ViewModel()"))
+        assertTrue(declaresComposable("val a: Int\n    @get:Composable get() = 1"))
+        assertTrue(declaresComposable("@androidx.compose.runtime.Composable\nfun A() {}"))
+        assertTrue(declaresComposable("@Composable\ncontext(scope: RowScope)\nfun A() {}"))
+        assertTrue(declaresComposable("context(scope: RowScope)\n@Composable\nfun A() {}"))
+        assertTrue(renamesWatchedImport("import androidx.compose.runtime.Composable as C"))
+        assertTrue(renamesWatchedImport("import androidx.lifecycle.ViewModel as VM"))
+        assertTrue(renamesWatchedImport("import androidx.lifecycle.AndroidViewModel as Avm"))
+        assertTrue(!renamesWatchedImport("import androidx.compose.runtime.Composable\nimport a.b.C as D"))
     }
 
     /** Each `.kt` file under the app's main sources, by its path below [SOURCE_ROOT], with its text. */
     private fun shellSources(): List<Pair<String, String>> {
         val root = listOf(File(SOURCE_ROOT), File("app", SOURCE_ROOT)).firstOrNull { it.isDirectory }
             ?: error("$SOURCE_ROOT is not under the app module")
+        assertTrue("no java sources under $root", File(root, APP_PACKAGE).isDirectory)
         return root.walkTopDown()
             .filter { it.isFile && it.extension == "kt" }
             .map { it.relativeTo(root).invariantSeparatorsPath to it.readText() }
@@ -79,8 +93,11 @@ class ShellBoundaryTest {
 
     private companion object {
 
-        /** The app's main Kotlin sources, below the app module. */
-        const val SOURCE_ROOT = "src/main/java/com/coparently/app"
+        /** The app's main source sets, below the app module: `java/` and `kotlin/`, every package. */
+        const val SOURCE_ROOT = "src/main"
+
+        /** The app's own package below [SOURCE_ROOT], which [ALLOWED]'s paths start with. */
+        const val APP_PACKAGE = "java/com/coparently/app"
 
         private const val TRIPLE_QUOTE = "\"\"\""
 
@@ -91,22 +108,22 @@ class ShellBoundaryTest {
          * shell keeps it. Paths are below [SOURCE_ROOT].
          */
         val ALLOWED: Map<String, String> = mapOf(
-            "presentation/platform/AndroidPlatform.kt" to
+            "$APP_PACKAGE/presentation/platform/AndroidPlatform.kt" to
                 "the Android halves of `presentation/platform/`: the pickers, the camera, the " +
                 "permissions and the images are composable members, and `ProvideAndroidPlatform`",
-            "presentation/chat/DictationLanguage.kt" to
+            "$APP_PACKAGE/presentation/chat/DictationLanguage.kt" to
                 "the dictation language the Android `Dictation` reads in composition",
-            "presentation/pairing/QrScannerScreen.kt" to
+            "$APP_PACKAGE/presentation/pairing/QrScannerScreen.kt" to
                 "`QRScannerActivity`'s own camera screen (CameraX), an activity of its own",
-            "presentation/widget/TodayWidget.kt" to "the home-screen widget's Glance content, not the app's UI",
-            "presentation/widget/TodayWidgetContent.kt" to "the home-screen widget's Glance content",
-            "presentation/calendar/CalendarPreviews.kt" to PREVIEWS,
-            "presentation/chat/ChatPreviews.kt" to PREVIEWS,
-            "presentation/common/DesignSystemPreviews.kt" to PREVIEWS,
-            "presentation/components/TimePickerPreviews.kt" to PREVIEWS,
-            "presentation/expenses/ExpensePreviews.kt" to PREVIEWS,
-            "presentation/home/HomePreviews.kt" to PREVIEWS,
-            "utils/PreviewHelpers.kt" to "the previews' wrapper and sample data",
+            "$APP_PACKAGE/presentation/widget/TodayWidget.kt" to "the home-screen widget's Glance content, not the app's UI",
+            "$APP_PACKAGE/presentation/widget/TodayWidgetContent.kt" to "the home-screen widget's Glance content",
+            "$APP_PACKAGE/presentation/calendar/CalendarPreviews.kt" to PREVIEWS,
+            "$APP_PACKAGE/presentation/chat/ChatPreviews.kt" to PREVIEWS,
+            "$APP_PACKAGE/presentation/common/DesignSystemPreviews.kt" to PREVIEWS,
+            "$APP_PACKAGE/presentation/components/TimePickerPreviews.kt" to PREVIEWS,
+            "$APP_PACKAGE/presentation/expenses/ExpensePreviews.kt" to PREVIEWS,
+            "$APP_PACKAGE/presentation/home/HomePreviews.kt" to PREVIEWS,
+            "$APP_PACKAGE/utils/PreviewHelpers.kt" to "the previews' wrapper and sample data",
         )
 
         /**
@@ -115,9 +132,15 @@ class ShellBoundaryTest {
          * followed by `(`, a receiver type or `{`, which this does not match.
          */
         private val COMPOSABLE_DECLARATION = Regex(
-            "@Composable\\b(?:\\s|@[\\w.]+(?:\\((?:[^()]|\\([^()]*\\))*\\))?)*" +
+            "@(?:get:|set:)?(?:androidx\\.compose\\.runtime\\.)?Composable\\b" +
+                "(?:\\s|@[\\w.:]+(?:\\((?:[^()]|\\([^()]*\\))*\\))?|context\\((?:[^()]|\\([^()]*\\))*\\))*" +
                 "(?:(?:private|internal|public|protected|override|inline|actual|expect|operator|open|" +
                 "abstract|final|suspend)\\s+)*(?:fun|val|var|get)\\b"
+        )
+
+        /** An import that renames `Composable`, `ViewModel` or `AndroidViewModel`. */
+        private val RENAMED_IMPORT = Regex(
+            "import\\s+[\\w.]*\\.(?:Composable|ViewModel|AndroidViewModel)\\s+as\\s+\\w+"
         )
 
         /** A supertype entry naming `ViewModel` or `AndroidViewModel`, with its constructor call. */
@@ -126,6 +149,8 @@ class ShellBoundaryTest {
         fun declaresComposable(text: String): Boolean = COMPOSABLE_DECLARATION.containsMatchIn(code(text))
 
         fun declaresViewModel(text: String): Boolean = VIEW_MODEL_SUPERTYPE.containsMatchIn(code(text))
+
+        fun renamesWatchedImport(text: String): Boolean = RENAMED_IMPORT.containsMatchIn(code(text))
 
         /**
          * [text] with its comments and the contents of its string and character literals blanked,
