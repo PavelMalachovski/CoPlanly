@@ -191,6 +191,7 @@
     <ID>ReturnCount:FirestoreCustodyDataSource.kt$FirestoreCustodyDataSource$private fun Map&lt;*, *&gt;.toDayOverride(): DayOverride?</ID>
     <ID>ReturnCount:FirestoreFamilySettingsDataSource.kt$FirestoreFamilySettingsDataSource$private fun Map&lt;String, Any?&gt;.toSettings(): FamilySettings?</ID>
     <ID>ReturnCount:HandoverCalculator.kt$HandoverCalculator$fun nextHandoverFrom( model: CustodyModel, today: LocalDate, overrides: Map&lt;String, DayOverride&gt; = emptyMap() ): HandoverInfo?</ID>
+    <ID>ReturnCount:NotificationsAllowed.kt$internal fun notificationsAllowed(context: Context, channelId: String): Boolean</ID>
     <ID>ReturnCount:RecurrenceExpander.kt$RecurrenceExpander$private fun firstIndexEndingAtOrAfter( start: LocalDateTime, pattern: String, rangeStart: LocalDateTime, duration: Duration? ): Long</ID>
     <ID>TooGenericExceptionCaught:AddEditEventScreen.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:CalendarSyncRepository.kt$CalendarSyncRepository$e: Exception</ID>
