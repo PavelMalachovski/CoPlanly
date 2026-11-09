@@ -2,82 +2,63 @@ package com.coparently.app.data.notification
 
 import android.content.Context
 import android.text.format.DateFormat
-import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
-import androidx.work.workDataOf
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.notification.ReminderPlanner
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.utils.shortTime
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.time.Duration
 import java.time.LocalDateTime
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * WorkManager-based implementation of [ReminderScheduler].
- * Each event has at most one pending reminder, keyed by its id, so
- * rescheduling replaces the previous work request. For a recurring event it is the next
- * occurrence's ([ReminderPlanner]); [ReminderWorker] schedules the one after when it fires.
+ * [ReminderScheduler] on alarms ([ReminderAlarms]; exact where the phone allows it).
+ *
+ * Each event has at most one alarm armed, for its next occurrence whose reminder is still ahead
+ * ([ReminderPlanner]); arming again replaces it, and [DueReminders] arms the one after when it
+ * fires. Three things not to undo.
+ * - **The wall clock becomes an instant here, in the system zone, for the reminder's own date**:
+ *   `remindAt.atZone(zone)` resolves the offset in force *at* the reminder, so a reminder armed
+ *   before a daylight-saving change fires at its wall-clock time after it. The WorkManager version
+ *   waited `Duration.between` two wall clocks, and was an hour off across the change. A clock or
+ *   zone change re-arms everything ([ReminderRearm]), because an event's time is a naive local time.
+ * - **Every armed event is remembered** ([ArmedReminders]): alarms do not survive a reboot, and
+ *   [cancelAll] has no tag to cancel by.
+ * - **[cancelAll] forgets them all**, so nothing re-arms a signed-out account's reminders.
  */
 @Singleton
 class EventReminderScheduler @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val alarms: ReminderAlarms,
+    private val armed: ArmedReminders
 ) : ReminderScheduler {
 
     override fun schedule(event: Event) {
-        val now = LocalDateTime.now()
-        val plan = ReminderPlanner.nextReminder(event, now)
-        if (plan == null) {
-            cancel(event.id)
-            return
-        }
-
-        val request = OneTimeWorkRequestBuilder<ReminderWorker>()
-            .setInitialDelay(Duration.between(now, plan.remindAt))
-            .addTag(WORK_TAG)
-            .setInputData(
-                workDataOf(
-                    ReminderWorker.KEY_EVENT_ID to event.id,
-                    ReminderWorker.KEY_TITLE to event.title,
-                    // The occurrence this reminder is for, which the worker checks the stored
-                    // event against when it is due: the master start for a single event, one of
-                    // its occurrences for a recurring one.
-                    ReminderWorker.KEY_START_AT to plan.occurrenceStart.toString(),
-                    ReminderWorker.KEY_START_TIME to
-                        // The reader's clock (release audit R-9), read here: no activity need
-                        // have run in the process that schedules a reminder.
-                        plan.occurrenceStart.format(shortTime(is24Hour = DateFormat.is24HourFormat(context)))
-                )
-            )
-            .build()
-
-        WorkManager.getInstance(context).enqueueUniqueWork(
-            uniqueWorkName(event.id),
-            ExistingWorkPolicy.REPLACE,
-            request
+        val plan = ReminderPlanner.nextReminder(event, LocalDateTime.now()) ?: return cancel(event.id)
+        val due = DueReminder(
+            eventId = event.id,
+            occurrenceStart = plan.occurrenceStart,
+            // The reader's clock (release audit R-9), read here: no activity need have run in the
+            // process that arms or delivers a reminder.
+            startTime = plan.occurrenceStart.format(shortTime(is24Hour = DateFormat.is24HourFormat(context)))
         )
+        alarms.set(due, triggerAtMillis = plan.remindAt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
+        armed.add(event.id)
     }
 
     override fun cancel(eventId: String) {
-        WorkManager.getInstance(context).cancelUniqueWork(uniqueWorkName(eventId))
+        alarms.cancel(eventId)
+        armed.remove(eventId)
     }
 
     /**
-     * By tag rather than by name: the names are per event, and the rows that would list them are
-     * what is being wiped. Work an older build enqueued carries no tag and is not reached here;
-     * [ReminderWorker] finds no row for it after a wipe and stays silent.
+     * Cancels the alarm of every event [ArmedReminders] names, and every reminder work an older
+     * build queued. The rows that would name the events are what is being wiped, which is why the
+     * armed list exists.
      */
     override fun cancelAll() {
-        WorkManager.getInstance(context).cancelAllWorkByTag(WORK_TAG)
-    }
-
-    private fun uniqueWorkName(eventId: String) = "event_reminder_$eventId"
-
-    private companion object {
-        /** Carried by every reminder this build enqueues, for [cancelAll]. */
-        const val WORK_TAG = "event_reminder"
+        armed.takeAll().forEach(alarms::cancel)
+        alarms.cancelLegacyWork()
     }
 }

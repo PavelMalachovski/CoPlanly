@@ -154,6 +154,13 @@ private val REMINDER_OPTIONS: List<Pair<Int?, Int>> = listOf(
 )
 
 /**
+ * The reminder a new event opens with: an hour before (owner decision, 9 November 2026 — every
+ * event should remind unless the parent says otherwise). One of [REMINDER_OPTIONS], so the row names
+ * it. An edit keeps what the event holds, None included, and imports set none.
+ */
+internal const val DEFAULT_REMINDER_MINUTES = 60
+
+/**
  * Whether the parent-owner picker (the two animated cards) should render.
  *
  * **Only when the form has no other way to name an owner** (21 October 2026, Zuzana's test: the
@@ -273,7 +280,9 @@ fun AddEditEventScreen(
     var recurrencePattern by rememberSaveable { mutableStateOf<String?>(null) }
     var recurrenceEndDate by rememberSaveable { mutableStateOf<LocalDate?>(null) }
     var showRecurrenceEndPicker by remember { mutableStateOf(false) }
-    var reminderMinutes by rememberSaveable { mutableStateOf<Int?>(null) }
+    var reminderMinutes by rememberSaveable {
+        mutableStateOf<Int?>(if (eventId == null) DEFAULT_REMINDER_MINUTES else null)
+    }
     var isPrivate by rememberSaveable { mutableStateOf(false) }
     var isImportant by rememberSaveable { mutableStateOf(false) }
     // Which calendar friend takes part, or null. Not an owner — see Event.friendParticipates.
@@ -509,7 +518,7 @@ fun AddEditEventScreen(
                 allDay = false
                 recurrencePattern = null
                 recurrenceEndDate = null
-                reminderMinutes = null
+                reminderMinutes = DEFAULT_REMINDER_MINUTES
                 isPrivate = false
                 isImportant = false
                 friendParticipates = null
