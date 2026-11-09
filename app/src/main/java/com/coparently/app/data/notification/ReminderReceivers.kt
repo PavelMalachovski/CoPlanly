@@ -40,10 +40,7 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
         val eventId = intent.data?.schemeSpecificPart ?: return
         val startAt = intent.getStringExtra(EXTRA_START_AT)
         val startTime = intent.getStringExtra(EXTRA_START_TIME)
-        val entryPoint = EntryPointAccessors.fromApplication(
-            context.applicationContext,
-            ReminderReceiverEntryPoint::class.java
-        )
+        val entryPoint = reminderEntryPoint(context, TAG) ?: return
         runAsync(TAG) { entryPoint.dueReminders().deliver(eventId, startAt, startTime) }
     }
 
@@ -83,10 +80,7 @@ class ReminderRearmReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action !in REARM_ACTIONS) return
-        val entryPoint = EntryPointAccessors.fromApplication(
-            context.applicationContext,
-            ReminderReceiverEntryPoint::class.java
-        )
+        val entryPoint = reminderEntryPoint(context, TAG) ?: return
         runAsync(TAG) { entryPoint.reminderRearm().rearm() }
     }
 
@@ -103,6 +97,23 @@ class ReminderRearmReceiver : BroadcastReceiver() {
             "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"
         )
     }
+}
+
+/**
+ * The app's graph for a reminder receiver, or null when the process has none to give.
+ *
+ * In the app it always has one: `CoPlanlyApplication` builds it before any receiver runs. An
+ * instrumentation run is the exception, and it is what took CI down on 9 November 2026: installing
+ * the test APK over the app delivers `MY_PACKAGE_REPLACED` into the test process, whose
+ * `HiltTestApplication` has no component until a test's `HiltAndroidRule` creates one — never, on a
+ * leg that runs no Hilt test — and the exception thrown out of `onReceive` crashed the process
+ * before the first test. A broadcast with nothing to act on is logged and dropped, never thrown.
+ */
+private fun reminderEntryPoint(context: Context, tag: String): ReminderReceiverEntryPoint? = try {
+    EntryPointAccessors.fromApplication(context.applicationContext, ReminderReceiverEntryPoint::class.java)
+} catch (e: IllegalStateException) {
+    Log.w(tag, "No application component; the broadcast is dropped", e)
+    null
 }
 
 /** How long a receiver may keep its broadcast open: well inside the system's ten seconds. */
