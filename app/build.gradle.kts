@@ -357,9 +357,9 @@ dependencies {
     // classes keep their `com.coparently.app.domain` packages, so nothing here imports
     // differently, and R8 shrinks them with the app's own.
     implementation(project(":shared"))
-    // Its Android unit tests' coverage joins this module's Kover report (`koverXmlReportDebug`
-    // runs `:shared`'s debug tests too), so the one figure in the PR comment still covers the
-    // domain after it moves.
+    // Its JVM tests' coverage joins this module's Kover report (`koverXmlReportUnit` runs
+    // `:shared`'s `testAndroidHostTest` too, through the `unit` variant below), so the one figure in
+    // the PR comment still covers the domain after it moves.
     kover(project(":shared"))
     // The data layer both apps share (MON-24 phase 2): so far the school import's and Google
     // Calendar's HTTP clients, on Ktor. Packages unchanged, as for `:shared`; its tests' coverage
@@ -819,7 +819,7 @@ tasks.withType<Test>().configureEach {
     }
 }
 
-// Unit-test coverage, for visibility only: CI runs `koverXmlReportDebug koverHtmlReportDebug`
+// Unit-test coverage, for visibility only: CI runs `koverXmlReportUnit koverHtmlReportUnit`
 // after the unit tests and prints the line percentage in the PR summary comment. There is no
 // verification rule, deliberately — a gate on a number nobody has yet watched move would be
 // tuned to pass rather than to mean something.
@@ -829,6 +829,16 @@ tasks.withType<Test>().configureEach {
 // measure of how much the annotation processors emit.
 // In Kover's class filters `*` matches any characters, dots and `$` included.
 kover {
+    // `unit` joins this module's `debug` unit tests with the shared modules' JVM tests, each of
+    // which declares a `unit` variant of its own over its `jvm` one. Kover merges a dependency's
+    // variant of the same name only, and AGP 9's Android KMP library is a JVM target to Kover,
+    // with no `debug` variant: the plain `koverXmlReportDebug` counted this module alone after
+    // Task 13 (MON-24 phase 2), where it had counted all four.
+    currentProject {
+        createVariant("unit") {
+            add("debug")
+        }
+    }
     reports {
         filters {
             excludes {

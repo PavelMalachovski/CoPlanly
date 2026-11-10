@@ -290,7 +290,7 @@ jobs:
       # which is the one place in this file `continue-on-error` is the right tool.
       - name: Coverage report (Kover)
         continue-on-error: true
-        run: ./gradlew :app:koverXmlReportDebug :app:koverHtmlReportDebug
+        run: ./gradlew :app:koverXmlReportUnit :app:koverHtmlReportUnit
 
       - name: Upload coverage report
         if: always()

@@ -197,6 +197,17 @@ compose.resources {
     generateResClass = always
 }
 
+// Unit-test coverage for the app's merged Kover report (`:app:koverXmlReportUnit`): the JVM tests,
+// which AGP 9's Android KMP library is to Kover. The app merges a variant of this name only.
+kover {
+    currentProject {
+        createVariant("unit") {
+            // Optional: should Kover stop finding the target, coverage shrinks; configuring never fails.
+            add("jvm", optional = true)
+        }
+    }
+}
+
 // The app's detekt configuration and the app's one baseline file, as the other shared modules read
 // them (see shared/build.gradle.kts). The generated `Res` is under `build/` and is not checked.
 detekt {

@@ -241,6 +241,17 @@ kotlin {
     }
 }
 
+// Unit-test coverage for the app's merged Kover report (`:app:koverXmlReportUnit`): the JVM tests,
+// which AGP 9's Android KMP library is to Kover. The app merges a variant of this name only.
+kover {
+    currentProject {
+        createVariant("unit") {
+            // Optional: should Kover stop finding the target, coverage shrinks; configuring never fails.
+            add("jvm", optional = true)
+        }
+    }
+}
+
 // The app's detekt configuration and the app's one baseline file, as `:shared` reads them (see
 // shared/build.gradle.kts): a file moved here keeps the baseline entries it had.
 detekt {
