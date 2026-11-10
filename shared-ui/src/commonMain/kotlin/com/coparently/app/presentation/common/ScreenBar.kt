@@ -13,8 +13,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.ProvidableCompositionLocal
-import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -88,10 +91,23 @@ data class ScreenBar(
     val trailingContent: (@Composable () -> Unit)? = null
 )
 
-/** A shell that draws screens' bars itself: the iPhone's navigation controller. */
+/**
+ * A shell that draws screens' bars itself: the iPhone's navigation controller.
+ *
+ * [show] is called when the screen's bar first composes and then only when something the host
+ * would draw changes: the title, the subtitle, [ScreenBar.largeTitle], the leading's kind, label or
+ * `enabled`, an action's label, icon, SF Symbol, `enabled`, `primary` or `dot`, the actions' order,
+ * or whether there is trailing content. A recomposition that changes none of them hands the host
+ * nothing, however fresh the screen's lambdas are, so a host may rebuild its bar on every call.
+ *
+ * The bar the host holds stays live: its `onClick`s and its trailing content always run the
+ * screen's latest lambdas, so a tap on a bar shown several recompositions ago does what the
+ * screen does now. Two bars handed to a host are not to be compared with `equals` (their lambdas
+ * differ); a new call is the change.
+ */
 fun interface BarHost {
 
-    /** Shows [bar] as the bar of the screen now composed. Called after every composition. */
+    /** Shows [bar] as the bar of the screen now composed; see [BarHost] for when it is called. */
     fun show(bar: ScreenBar)
 }
 
@@ -117,7 +133,7 @@ val LocalBarHost: ProvidableCompositionLocal<BarHost?> = staticCompositionLocalO
 fun AppTopBar(bar: ScreenBar) {
     val host = LocalBarHost.current
     if (host != null) {
-        SideEffect { host.show(bar) }
+        HandToHost(host, bar)
         return
     }
     TopAppBar(
@@ -170,5 +186,60 @@ private fun BarActionButton(action: BarAction) {
         } else {
             Icon(imageVector = action.icon, contentDescription = action.label)
         }
+    }
+}
+
+/**
+ * Hands [bar] to [host] when something the host draws changes, as [BarHost] promises: the bar
+ * shown is the visible part of [bar] with lambdas that call the latest bar's, rebuilt only when
+ * the visible part changes.
+ */
+@Composable
+private fun HandToHost(host: BarHost, bar: ScreenBar) {
+    val latest = rememberUpdatedState(bar)
+    val visible = bar.visibleOnly()
+    val shown = remember(visible) { visible.delegatingTo(latest) }
+    DisposableEffect(host, shown) {
+        host.show(shown)
+        onDispose { }
+    }
+}
+
+private val NoClick: () -> Unit = {}
+
+private val NoContent: @Composable () -> Unit = {}
+
+/** What a host draws, every lambda replaced by one constant, so two equal bars compare equal. */
+private fun ScreenBar.visibleOnly(): ScreenBar = copy(
+    leading = when (val current = leading) {
+        BarLeading.None -> current
+        is BarLeading.Back -> current.copy(onClick = NoClick)
+        is BarLeading.Close -> current.copy(onClick = NoClick)
+    },
+    actions = actions.map { it.copy(onClick = NoClick) },
+    trailingContent = trailingContent?.let { NoContent }
+)
+
+/** This visible bar with lambdas that run [latest]'s, whose visible part is this one's. */
+private fun ScreenBar.delegatingTo(latest: State<ScreenBar>): ScreenBar {
+    val content: @Composable () -> Unit = { latest.value.trailingContent?.invoke() }
+    return copy(
+        leading = when (val current = leading) {
+            BarLeading.None -> current
+            is BarLeading.Back -> current.copy(onClick = { latest.value.leading.click() })
+            is BarLeading.Close -> current.copy(onClick = { latest.value.leading.click() })
+        },
+        actions = actions.mapIndexed { index, action ->
+            action.copy(onClick = { latest.value.actions.getOrNull(index)?.onClick?.invoke() })
+        },
+        trailingContent = trailingContent?.let { content }
+    )
+}
+
+private fun BarLeading.click() {
+    when (this) {
+        BarLeading.None -> Unit
+        is BarLeading.Back -> onClick()
+        is BarLeading.Close -> onClick()
     }
 }

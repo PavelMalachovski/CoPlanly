@@ -7,6 +7,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertHasClickAction
@@ -22,7 +24,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import com.coparently.app.testing.RobolectricTestApplication
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertSame
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -75,6 +78,22 @@ class AppTopBarTest {
         }
     )
 
+    /** A bar like a screen's: built afresh on each composition, every lambda new. */
+    private fun liveBar(title: String, enabled: Boolean, now: Int) = ScreenBar(
+        title = title,
+        leading = BarLeading.Back(BACK, onClick = { clicks += "$BACK $now" }),
+        actions = listOf(
+            BarAction(
+                label = ADD,
+                icon = Icons.Default.Add,
+                sfSymbol = "plus",
+                onClick = { clicks += "$ADD $now" },
+                enabled = enabled
+            )
+        ),
+        trailingContent = { Box(Modifier.size(24.dp)) }
+    )
+
     @Test
     fun `with a host the bar goes to the host and nothing is drawn`() {
         val shown = mutableListOf<ScreenBar>()
@@ -93,8 +112,84 @@ class AppTopBarTest {
         rule.onNodeWithContentDescription(SETTINGS).assertDoesNotExist()
         rule.onNodeWithContentDescription(BACK).assertDoesNotExist()
         rule.onNodeWithTag(TRAILING).assertDoesNotExist()
-        assertTrue("the host was never handed the bar", shown.isNotEmpty())
-        assertSame(bar, shown.last())
+        assertEquals("one bar, one show", 1, shown.size)
+        val held = shown.single()
+        assertEquals(TITLE, held.title)
+        assertEquals(SUBTITLE, held.subtitle)
+        assertEquals(BACK, (held.leading as BarLeading.Back).label)
+        assertEquals(listOf(ADD, SETTINGS, DISABLED), held.actions.map { it.label })
+        assertEquals(listOf("plus", "gearshape", "plus"), held.actions.map { it.sfSymbol })
+        assertEquals(listOf(true, true, false), held.actions.map { it.enabled })
+        assertNotNull(held.trailingContent)
+        held.actions[1].onClick()
+        assertEquals(listOf(SETTINGS), clicks)
+    }
+
+    @Test
+    fun `a recomposition that changes nothing visible shows nothing new`() {
+        val shown = mutableListOf<ScreenBar>()
+        val host = BarHost { shown += it }
+        val tick = mutableIntStateOf(0)
+        rule.setContent {
+            val now = tick.intValue
+            CompositionLocalProvider(LocalBarHost provides host) {
+                // Fresh lambdas on every composition, as a screen's are.
+                AppTopBar(liveBar(title = TITLE, enabled = true, now = now))
+            }
+        }
+        rule.waitForIdle()
+
+        tick.intValue = 1
+        rule.waitForIdle()
+        tick.intValue = 2
+        rule.waitForIdle()
+
+        assertEquals("a recomposition with nothing visible changed reached the host", 1, shown.size)
+    }
+
+    @Test
+    fun `a changed title or enabled shows the bar again`() {
+        val shown = mutableListOf<ScreenBar>()
+        val host = BarHost { shown += it }
+        val title = mutableStateOf(TITLE)
+        val enabled = mutableStateOf(true)
+        rule.setContent {
+            CompositionLocalProvider(LocalBarHost provides host) {
+                AppTopBar(liveBar(title = title.value, enabled = enabled.value, now = 0))
+            }
+        }
+        rule.waitForIdle()
+
+        title.value = "Settings"
+        rule.waitForIdle()
+        assertEquals(2, shown.size)
+        assertEquals("Settings", shown.last().title)
+
+        enabled.value = false
+        rule.waitForIdle()
+        assertEquals(3, shown.size)
+        assertFalse(shown.last().actions.single().enabled)
+    }
+
+    @Test
+    fun `the bar the host holds runs the screen's latest lambda`() {
+        val shown = mutableListOf<ScreenBar>()
+        val host = BarHost { shown += it }
+        val tick = mutableIntStateOf(0)
+        rule.setContent {
+            val now = tick.intValue
+            CompositionLocalProvider(LocalBarHost provides host) {
+                AppTopBar(liveBar(title = TITLE, enabled = true, now = now))
+            }
+        }
+        rule.waitForIdle()
+        tick.intValue = 1
+        rule.waitForIdle()
+
+        shown.first().actions.single().onClick()
+        (shown.first().leading as BarLeading.Back).onClick()
+
+        assertEquals(listOf("$ADD 1", "$BACK 1"), clicks)
     }
 
     @Test
