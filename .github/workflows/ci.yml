@@ -358,8 +358,12 @@ jobs:
           # the cache still works within one job, just not across runs.
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
+      # The three shared modules hold nearly all the code, and their Android target is AGP 9's
+      # KMP library, whose main code `lint` alone did not analyse (it ran only their host tests'
+      # analysis): NewApi, the per-pull-request guard for minSdk 26, saw none of it. Their main
+      # lint tasks are named here so the job fails if one stops existing.
       - name: Android lint
-        run: ./gradlew lint
+        run: ./gradlew lint :shared:lintAndroidMain :shared-data:lintAndroidMain :shared-ui:lintAndroidMain
 
       - name: Upload reports
         if: always()
@@ -477,6 +481,15 @@ jobs:
       # rule worked, which a typo in a package name would otherwise hide.
       - name: Verify R8 kept the reflected field names
         run: node tools/check-r8-mapping.js
+
+      # About fifty Koin bindings answer an interface by asking for its implementation
+      # (`single<I> { get<Impl>() }`), which works only while the two are different classes. Should
+      # R8 merge an interface into its one implementer, the alias would replace the definition it
+      # asks for and the app would overflow the stack at launch, in the minified build alone, which
+      # nothing else starts the graph in. This reads R8's mapping and fails when a class of an
+      # alias has no entry of its own.
+      - name: Verify R8 kept each Koin alias's two classes apart
+        run: node tools/check-koin-aliases.js
 
       # Week 8 of the release audit: the app ships a hand-written baseline profile
       # (app/src/main/baseline-prof.txt). Libraries bring profiles of their own, so this checks

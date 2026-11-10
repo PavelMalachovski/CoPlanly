@@ -135,7 +135,7 @@ const UPGRADE_INPUTS = new RegExp(
  * `app/src/main/java/` as a whole is here because what reaches the stored data lives in the
  * directories [UPGRADE_INPUTS] names; a new package that stores something belongs there.
  */
-const UPGRADE_UNAFFECTED = /^(docs\/|functions\/|firestore-tests\/|web\/|web-tests\/|\.cursor\/|[^/]*\.md$|.*\.rules(\.simple)?$|firestore\.indexes\.json$|firebase\.json$|\.gitignore$|LICENSE$|app\/src\/main\/java\/|app\/src\/main\/res\/|app\/src\/test\/|app\/src\/androidTest\/|app\/src\/debug\/|tools\/(test\/|e2e\/|(check-e2e-coverage|check-invariants|check-r8-mapping|ci-changes|ci-report|manual-test-plan|mocha-ci-reporter|screenshot-gallery|wrap-legal-page)\.js$|generate-[^/]+\.py$|with-screen-recording\.sh$))/;
+const UPGRADE_UNAFFECTED = /^(docs\/|functions\/|firestore-tests\/|web\/|web-tests\/|\.cursor\/|[^/]*\.md$|.*\.rules(\.simple)?$|firestore\.indexes\.json$|firebase\.json$|\.gitignore$|LICENSE$|app\/src\/main\/java\/|app\/src\/main\/res\/|app\/src\/test\/|app\/src\/androidTest\/|app\/src\/debug\/|tools\/(test\/|e2e\/|(check-e2e-coverage|check-invariants|check-koin-aliases|check-r8-mapping|ci-changes|ci-report|manual-test-plan|mocha-ci-reporter|screenshot-gallery|wrap-legal-page)\.js$|generate-[^/]+\.py$|with-screen-recording\.sh$))/;
 
 /**
  * Android paths the R8 runtime probe (`r8-runtime` job) cannot be affected by: nothing in them is

@@ -754,12 +754,18 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   say fourteen, before `shared` and `shared-ios`; thirteen, before `web`; eleven before `upgrade` and `r8-runtime`; ten before detekt left the lint job; eight before `screenshots`
   and `e2e`; seven before `instrumented`), plus `report`, which only reads them (below): `changes` (a cheap gate,
   below), four Android ones — `build-test` (`assembleDebug` + `testDebugUnitTest` in a
-  single invocation), `static` (`lint` alone — the id is kept), `detekt` (its own job since
+  single invocation), `static` (`lint`, and since the final review of phases 1–2 the three shared modules' own
+  `lintAndroidMain`, named one by one: under AGP 9's KMP library target `lint` alone analysed only
+  their host tests, so NewApi saw none of the code that moved there — the id is kept), `detekt` (its own job since
   September 2026: the two ran in sequence, lint 5:15 then detekt 0:52), `release` (`assembleRelease`, where
   R8 runs, and where `node tools/check-r8-mapping.js` then reads R8's own `mapping.txt` and
   fails if a field a keep rule names came out renamed — the Google Calendar models, which
   google-http-client filled by reflection, until MON-24 phase 2 removed that client; since then no
-  rule names one, and the check says so and passes, holding the next reflective reader's rule) —
+  rule names one, and the check says so and passes, holding the next reflective reader's rule; and
+  where `node tools/check-koin-aliases.js` reads the same mapping and fails when a class of a Koin
+  alias, `single<I> { get<Impl>() }`, has no entry of its own: were R8 to merge an interface into
+  its one implementer, the alias would replace the definition it asks for and the minified app would
+  overflow the stack at launch, and nothing else starts the graph in a minified build) —
   plus the shared modules' two, `shared` and `shared-ios` (below), Cloud Functions, `web` (below), the
   Firestore rules suite against the emulator, and `invariants` (`node tools/check-invariants.js`, no
   dependencies and no Android SDK: locale completeness, format-argument agreement across the
@@ -3884,7 +3890,10 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     bytes, because the event ids below hash the address `BakalariUrls.normalize` writes. It also
     waits and follows redirects as OkHttp did (`HttpTimeouts.SCHOOL`, `Redirects.OKHTTP_4`: a sign-in
     answered 307 or 308 is posted again; `BakalariRedirectsTest`), because Ktor's own redirect plugin
-    follows GET only. Don't hand
+    follows GET only. And it names itself as OkHttp did, `User-Agent: okhttp/4.12.0`
+    (`Redirects.userAgent`): Ktor's engines say `ktor-client` when a request sets none, and a
+    school's proxy may let through only the agents it knows. Ktor also adds `Accept: */*` where the
+    client asks for no type (the sign-in and the `/api` check), which OkHttp did not send. Don't hand
     an address or a form to Ktor's own encoders, and don't let a logging plugin near the client (the
     form carries the password). Six things not to undo.
     - **The password is used once and dropped.** A connection is one `EncryptedPreferences` key,

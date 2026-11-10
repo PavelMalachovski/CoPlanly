@@ -61,6 +61,21 @@ internal enum class Redirects {
      */
     GOOGLE_HTTP_CLIENT;
 
+    /**
+     * The `User-Agent` this library sent with every request, where the client must still send it.
+     *
+     * OkHttp named itself (`okhttp/4.12.0`) on each request the school import made, the follow-ups
+     * included. Ktor's engines name themselves `ktor-client` when a request sets none, so the school
+     * client sets the old one: a school's server or the proxy in front of it may let through the
+     * agents it knows, and a parent whose import stopped at a 403 could do nothing about it. Google
+     * reads no agent, so the Calendar import leaves the engine's own.
+     */
+    val userAgent: String?
+        get() = when (this) {
+            OKHTTP_4 -> OKHTTP_4_USER_AGENT
+            GOOGLE_HTTP_CLIENT -> null
+        }
+
     /** Whether this library followed [status]. */
     fun follows(status: Int): Boolean = when (this) {
         OKHTTP_4 -> status in MULTIPLE_CHOICES..SEE_OTHER || status.keepsMethod()
@@ -110,6 +125,7 @@ internal enum class Redirects {
         const val TEMPORARY_REDIRECT = 307
         const val PERMANENT_REDIRECT = 308
         const val MAX_OKHTTP_FOLLOW_UPS = 20
+        const val OKHTTP_4_USER_AGENT = "okhttp/4.12.0"
         const val MAX_GOOGLE_REDIRECTS = 10
     }
 }
@@ -142,6 +158,7 @@ private suspend fun HttpClient.followingRedirects(outgoing: Outgoing, redirects:
             method = current.method
             url(current.url)
             current.headers.forEach { (name, value) -> header(name, value) }
+            redirects.userAgent?.let { header(HttpHeaders.UserAgent, it) }
             current.form?.let { setBody(TextContent(it, ContentType.Application.FormUrlEncoded)) }
         }
         val status = response.status.value

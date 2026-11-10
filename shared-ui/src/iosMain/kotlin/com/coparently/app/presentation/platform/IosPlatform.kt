@@ -217,7 +217,10 @@ private object NoQrCodes : QrCodes {
 
 /**
  * No language picker in the app: the iPhone sets an app's language in its own Settings app, which
- * phase 3 links to. Until then the app follows the phone (the owner's rule, `AppLanguageRule`).
+ * phase 3 links to. Until then the app speaks whatever iOS resolves for it. That is not the owner's
+ * rule yet (`AppLanguageRule`: the phone's first language when shipped, else English): nothing on
+ * the iPhone applies it, and the date and money seams read `NSLocale.currentLocale` directly.
+ * Phase 3's first part gives them one reader's locale that follows the rule.
  */
 private object NoAppLanguages : AppLanguages {
     override val available: Boolean = false

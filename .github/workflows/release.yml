@@ -98,6 +98,9 @@ jobs:
       - name: Verify R8 kept the Gson field names
         run: node tools/check-r8-mapping.js
 
+      - name: Verify R8 kept each Koin alias's two classes apart
+        run: node tools/check-koin-aliases.js
+
       - name: Say whether the bundle is signed
         env:
           STORE_PASSWORD: ${{ secrets.COPLANLY_RELEASE_STORE_PASSWORD }}

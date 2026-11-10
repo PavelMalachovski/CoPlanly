@@ -2838,6 +2838,37 @@ notes list each file):
   any link, as `MainActivity.readLaunchIntent` does (CLAUDE.md item 15).
 - The lists of tests to add, edge cases and CI hygiene below stay open as written.
 
+**The final review of phases 1–2** (10 November 2026, five reviewers, each on one risk: the Android
+wiring, stored and sent bytes, screens and ViewModels, the build and CI, the iPhone half). Nothing
+critical. No write, codec, key, derived id or audience differs from `main`; no test was lost (3,414
+test methods at the base, each accounted for); no screen or ViewModel changed for an Android user
+beyond the documented camera-button gating. Fixed on the branch before the merge:
+- **Android lint analysed none of the shared modules' main code** after Task 13: under AGP 9's KMP
+  library target `./gradlew lint` ran only their host tests' analysis. The `static` job now names
+  each module's `lintAndroidMain`.
+- **The Koin graph had never been checked against a minified build.** `tools/check-koin-aliases.js`
+  reads R8's mapping in the `release` job and in `release.yml` (CLAUDE.md, the CI section).
+- **The school client's `User-Agent`** was Ktor's; it is OkHttp 4.12's again (CLAUDE.md item 35).
+- A comment in `IosPlatform.kt` that said the owner's language rule held on the iPhone.
+
+Still owed before the first beta build from this code goes to testers, and not something CI can do:
+**`release.yml` has not run on AGP 9.** The Google Services and Crashlytics Gradle plugins apply
+only where `google-services.json` exists, which is that workflow alone. Run it on the merged
+commit and install its APK over the current beta (`docs/DEVICE-CHECKLIST.md` §2.1); that is also the
+first launch of the Koin graph under R8 on a phone, and the first Google account picture loaded by
+Coil 2.7 over OkHttp 5.5.
+
+Carried from the review to phase 3's first part (design
+`docs/superpowers/specs/2026-11-10-iphone-phase-3-native-shell-design.md` §5.6): the Keychain store
+outliving a deleted app while the database does not; the iPhone's date seam building an instant in
+one zone and printing it in another; the owner's language rule having no iPhone half; no check that
+protected data is readable before the database or the sealed store is opened; no shared list of
+migrations from 47 on (`IosDatabase.kt` registers none); the shared modules' iOS deployment target
+(15.0 against the design's 17). Small and recorded, not fixed: `Utf8.encode` on ART for an unpaired
+surrogate has no device test; `MessageWireContract` runs on the JVM alone; the wrapper has no
+`distributionSha256Sum`; the app still declares `androidx.sqlite` 2.4.0 and lifecycle 2.8.7, which
+resolve higher.
+
 **Phase 3's start conditions:**
 1. **Phases 1 and 2 merged** (draft pull request #158), after the Android release and its first
    feedback round (spec §2 and §6, phase 0), with the full CI green on the merge.

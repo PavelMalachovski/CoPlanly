@@ -36,6 +36,21 @@ class BakalariRequestShapeTest {
     }
 
     @Test
+    fun `every request names OkHttp 4_12 as its agent - as the client it replaced did`() = runTest {
+        val server = RecordingServer { answer(tokens) }
+        val client = BakalariClient(server.client)
+
+        client.signIn(BASE, "novak", "tajneHeslo1")
+        runCatching { client.timetableJson(BASE, "token-1", LocalDate(2026, 9, 14)) }
+        runCatching { client.checkServer(BASE) }
+
+        assertEquals(3, server.requests.size)
+        server.requests.forEach { request ->
+            assertEquals("okhttp/4.12.0", request.headers[HttpHeaders.UserAgent], request.url.toString())
+        }
+    }
+
+    @Test
     fun `the refresh grant is a form POST with the refresh token alone`() = runTest {
         val server = RecordingServer { answer(tokens) }
 

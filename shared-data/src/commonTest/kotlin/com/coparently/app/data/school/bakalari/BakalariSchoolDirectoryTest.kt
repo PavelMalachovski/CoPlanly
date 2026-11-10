@@ -30,6 +30,7 @@ class BakalariSchoolDirectoryTest {
         val request = server.requests.single()
         assertEquals("https://sluzby.bakalari.cz/api/v1/municipality", request.url.toString())
         assertEquals("application/json", request.headers[HttpHeaders.Accept])
+        assertEquals("okhttp/4.12.0", request.headers[HttpHeaders.UserAgent])
     }
 
     @Test

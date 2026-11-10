@@ -69,6 +69,7 @@ class BakalariRedirectsTest {
             assertEquals("GET", sameHost.requests[1].method.value, "after $status")
             assertEquals("Bearer token-1", sameHost.requests[1].headers[HttpHeaders.Authorization])
             assertEquals("application/json", sameHost.requests[1].headers[HttpHeaders.Accept])
+            assertEquals("okhttp/4.12.0", sameHost.requests[1].headers[HttpHeaders.UserAgent])
 
             val otherPort = redirecting(status, location = "https://skola.example.cz:444/elsewhere", then = "{}")
             BakalariClient(otherPort.client).userJson(BASE, "token-1")
