@@ -1,6 +1,7 @@
 # CoPlanly for iPhone, phase 3: the native shell
 
-**Status:** draft for the owner's approval, 10 November 2026.
+**Status:** draft for the owner's approval, 10 November 2026. A builder has read it; §10 lists the
+calls made on its questions.
 **Parent design:** `docs/superpowers/specs/2026-10-27-iphone-app-design.md` (§5.2, §5.3, §6 phase 3).
 This document replaces that design's §5.2 and narrows its §5.3 into parts. Where the two disagree,
 this one is newer.
@@ -34,8 +35,19 @@ and again on 10 November. This phase is where that look is first built.
 | The seven iPhone boards on the canvas | Accepted as the target for the shell: Home, Calendar, Chat, New event (October), Family, Expenses, Settings (November). | Owner, 10 Nov 2026 |
 | Before merging phases 1–2 | A final review of the whole branch, then the full CI, then the merge of pull request #158. Phase 3 starts from `main` after it. | Owner, 10 Nov 2026 |
 
-How design is agreed from here on: every change of look the owner has not yet seen comes as a
-before/after pair on the canvas before it is built, and as simulator screenshots after.
+How design is agreed from here on:
+
+- **A new kind of thing gets a before/after pair on the canvas before it is built**, drawn by the
+  session that plans the part: a kind of screen the owner has not seen on iPhone (sign-in,
+  onboarding, a form sheet other than New event) and each kind of adaptive control (part C).
+- **A screen that only applies rules already agreed needs no pair first.** §5.3 to §5.5 are those
+  rules for bars, sheets and insets.
+- **Everything built is shown after**, as simulator screenshots beside the Android ones.
+
+**What the boards bind.** They bind the frame (bars, tab bar, sheets), the controls and the style.
+They do not bind a screen's content: what a screen shows is what the shared screen shows on
+Android, because a screen is written once. Where a board's content differs from the Android screen
+(§10 lists the places), the Android content stands unless the owner says otherwise.
 
 ## 3. Approaches
 
@@ -122,9 +134,11 @@ on the owner's Mac, the app reaches the real project.
 
 The shell is a `UITabBarController` with four tabs (Home, Calendar, Chat, Family), each a
 `UINavigationController`. Built with the iOS 26 SDK, these draw Liquid Glass on iOS 26 and the
-classic bars on iOS 17 and 18 without code of ours. Before sign-in (loading, the telemetry
-question, sign-in, onboarding) the window shows one navigation controller with no tab bar; the
-shell swaps the two when the start destination changes, as `startDestinationFor` decides today.
+classic bars on iOS 17 and 18 without code of ours. Before sign-in (loading, sign-in, onboarding)
+the window shows one navigation controller with no tab bar; the shell swaps the two when the start
+destination changes, as `startDestinationFor` decides today. The telemetry question is not asked
+on iPhone in phase 3: the iPhone collects nothing and links no Analytics or Crashlytics, so there
+is nothing to ask about. The answer stays "unanswered", and phase 4 asks if it adds telemetry.
 
 Each pushed screen is its own view controller hosting one Compose screen.
 
@@ -144,8 +158,10 @@ Three things follow.
   `pane()`, widened to the tabs), which on Android calls `composable()` with today's transitions
   and on iPhone registers the content with the host. The destination's route, arguments and
   content lambda do not change.
-- **Tabs are stacks, not destinations.** `navigateToTab` on iPhone selects a tab. "Open Family,
-  then Expenses" (Home's month tile, a money push) selects the tab and pushes onto its stack. The
+- **Tabs are stacks, not destinations.** `navigateToTab` on iPhone selects a tab. A push from
+  inside a tab goes onto that tab's stack, as on Android: Home's month tile opens Expenses on
+  Home's stack and Back returns to Home. A money notification's "Family, then Expenses" selects the
+  Family tab and pushes onto its stack. The
   rule that every tap on the Calendar tab opens Month on today (`CalendarTabTaps`) is fed by the
   tab bar's delegate. The Chat tab's badge is the tab item's badge.
 - **What the whole app shares is provided to every screen host.** The theme, the platform
@@ -173,10 +189,14 @@ Decided by the canvas:
 
 - a tab's first screen has a large title and its actions as glass buttons (gear; the family
   switcher at two families);
-- a pushed screen has the system's back button and an inline title;
+- a pushed screen has the system's back button and an inline title; Settings keeps a large
+  title, as on its board;
 - a floating "+" on Android is a bar button on iPhone (Calendar, Expenses);
-- the calendar's title is its Month/Week/Day menu, with Today beside it; choosing days for a swap
-  replaces the bar's content, as `SwapSelectionHeader` does on Android;
+- the calendar's title is the month. Month/Week/Day is a segmented control under the bar on
+  iPhone (the board, and the parent design's §5.3) and stays the title's menu on Android: one
+  adaptive control, two looks. Today and "+" are bar buttons. Filters and the gear stay reachable
+  from the bar, as on Android. Choosing days for a swap replaces the bar's content, as
+  `SwapSelectionHeader` does on Android;
 - the chat thread's bar shows the co-parent's initial and name, search and the overflow menu;
 - the offline line sits under the bar, in the screen.
 
@@ -214,6 +234,8 @@ Phase 3 replaces these stand-ins with real halves, because a signed-in app canno
 | Images (`PlatformImages`) | Account pictures and record photos |
 | Links, sharing, clipboard, the file and photo pickers, the language row | The system's (part C) |
 | Storage (`StorageBucket`), for attachments and photos | Firebase Storage |
+| Telling the other parent (`PushQueue`) | Real in part A. Queueing a push is a Firestore write, the same on both platforms; only *receiving* one is phase 4. Without it a request made on an iPhone would reach the Android co-parent with no notification at all, since the request's chat card is one the server does not push (CLAUDE.md item 15) |
+| Deleting the account (`AccountDeletion`) | Real in part B: the server's deletion and the local wipe. Hidden until then |
 
 Three defects the final review found in the iPhone half are fixed first, before any of the above
 runs for real:
@@ -230,7 +252,17 @@ runs for real:
   Settings opens iOS Settings, where iOS keeps that choice.
 
 Everything else stays a stand-in until phase 4, and each row, button or switch that leads to one
-stays hidden.
+is hidden. Two are drawn today and get their check in part A: the event form's Reminder row (no
+reminder fires on iPhone until phase 4; a new event still carries the default reminder, which the
+co-parent's Android phone acts on) and Settings' delete-account row (until part B).
+
+**Before the iPhone writes to the real project.** The wire fixtures hold what the mappers produce.
+They do not hold what GitLive's iOS encoder then sends, or what the rules make of it: no test has
+ever sent an iPhone write to a server. So part A has a gate before any sign-in to the production
+project: on the Firebase emulators, with the real rules, the iPhone data layer writes one document
+of every synced collection and every kind of push, and a reader on the other side checks each
+value's type and content against what Android writes. The owner's first sign-in on the real project
+is with a test pair of accounts; their own family comes after the gate is green.
 
 ## 6. Parts
 
@@ -239,7 +271,7 @@ owner has agreed, and ends with simulator screenshots beside the canvas.
 
 | Part | What | Leaves |
 | --- | --- | --- |
-| **A. Proof and skeleton** | The Xcode project and its CI job. The shell with the four tabs. Native bars on the tabs' first screens and on one path three levels deep (Family → Expenses → Add expense as a sheet) and Settings. Sign-in by e-mail and Google. The foreground sync. The three fixes of §5.6. | The owner signs in on their Mac and walks that path with real data. §7's open points get their answers. |
+| **A. Proof and skeleton** | The Xcode project and its CI job. The shell with the four tabs. Native bars on the tabs' first screens and on one path three levels deep (Family → Expenses → Add expense as a sheet) and Settings. Sign-in by e-mail and Google. The foreground sync. The three fixes and the write gate of §5.6. | The owner signs in on their Mac and walks that path with real data. §7's open points get their answers. |
 | **B. Every screen** | All 45 bars and 51 destinations on the shell. Every form a sheet. Insets as §5.5. Deep links. | Every screen reachable on iPhone with a system bar. Android unchanged. |
 | **C. Adaptive controls** | The parent design's §5.3 table: date and time pickers, switch, segmented choice, menus, in-screen sheets, confirmation dialogs and action sheets, grouped rows and lists, the share, file and photo pickers. | Controls are the system's. Each kind is agreed as a before/after pair first. |
 | **D. Theme** | System colours for backgrounds, labels and separators with the CoPlanly indigo as tint; dark mode; SF Pro and Dynamic Type; SF Symbols in content, mapped one to one from the 131 Material icons in use; Increase Contrast. | The seven boards are met, in light and dark. |
@@ -321,7 +353,17 @@ Calls made while writing this. They are the author's; the owner may overturn any
   Sign-In.
 - **Minimum iOS 17**, as the parent design called it. The shared modules' deployment target (15.0
   today) is raised to match.
-- **iPhone only** as the device family until phase 5 decides how an iPad runs it.
+- **iPhone only** as the device family until phase 5 decides how an iPad runs it, and **portrait
+  only**: the shared code's rail (from 600 dp) and two panes (from 840 dp) are for tablets and do
+  not meet the system tab bar on a phone held sideways.
+- **The boards' content is illustration.** Places where a board differs from the Android screen,
+  and what is built: Home keeps its two stat tiles (the board has none); the calendar has no
+  selected-day card under the grid (the board has one; on Android a tap opens Day view); the chat
+  keeps its ticks and the header's send status (the board says "Read 9:44 AM"). Changing any of
+  these is a change to both apps, and a decision for the owner.
+- **The write gate of §5.6**, and a test pair before the owner's own family.
+- **Outgoing pushes are real from part A; account deletion from part B; the telemetry question
+  waits for phase 4** (§5.2, §5.6).
 - **The Theme setting stays** on iPhone (Light, Dark, System), as on the Settings board.
 - **Settings is pushed** onto the stack of the tab it was opened from, as on the board.
 - **Swift-only SDKs sit behind Kotlin interfaces** (§5.1).
