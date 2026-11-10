@@ -2844,8 +2844,8 @@ critical. No write, codec, key, derived id or audience differs from `main`; no t
 test methods at the base, each accounted for); no screen or ViewModel changed for an Android user
 beyond the documented camera-button gating. Fixed on the branch before the merge:
 - **Android lint analysed none of the shared modules' main code** after Task 13: under AGP 9's KMP
-  library target `./gradlew lint` ran only their host tests' analysis. The `static` job now names
-  each module's `lintAndroidMain`.
+  library target `./gradlew lint` ran only their host tests' analysis, and the target has no main
+  lint task of its own. The app's lint now analyses them as its dependencies (`checkDependencies`).
 - **The Koin graph had never been checked against a minified build.** `tools/check-koin-aliases.js`
   reads R8's mapping in the `release` job and in `release.yml` (CLAUDE.md, the CI section).
 - **The school client's `User-Agent`** was Ktor's; it is OkHttp 4.12's again (CLAUDE.md item 35).

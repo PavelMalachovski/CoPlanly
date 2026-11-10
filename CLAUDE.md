@@ -754,9 +754,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   say fourteen, before `shared` and `shared-ios`; thirteen, before `web`; eleven before `upgrade` and `r8-runtime`; ten before detekt left the lint job; eight before `screenshots`
   and `e2e`; seven before `instrumented`), plus `report`, which only reads them (below): `changes` (a cheap gate,
   below), four Android ones — `build-test` (`assembleDebug` + `testDebugUnitTest` in a
-  single invocation), `static` (`lint`, and since the final review of phases 1–2 the three shared modules' own
-  `lintAndroidMain`, named one by one: under AGP 9's KMP library target `lint` alone analysed only
-  their host tests, so NewApi saw none of the code that moved there — the id is kept), `detekt` (its own job since
+  single invocation), `static` (`lint`, which since the final review of phases 1–2 also analyses the three shared
+  modules as the app's dependencies, `checkDependencies = true` in the app's `lint {}`: AGP 9's KMP
+  library target has no lint task for its main source set, so `lint` alone analysed only their host
+  tests and NewApi saw none of the code that moved there — the id is kept), `detekt` (its own job since
   September 2026: the two ran in sequence, lint 5:15 then detekt 0:52), `release` (`assembleRelease`, where
   R8 runs, and where `node tools/check-r8-mapping.js` then reads R8's own `mapping.txt` and
   fails if a field a keep rule names came out renamed — the Google Calendar models, which

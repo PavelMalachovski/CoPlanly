@@ -362,16 +362,9 @@ jobs:
       # KMP library, whose main code `lint` alone did not analyse (it ran only their host tests'
       # analysis): NewApi, the per-pull-request guard for minSdk 26, saw none of it. Their main
       # lint tasks are named here so the job fails if one stops existing.
-      # Temporary, while the right task name is found: AGP 9.3's KMP library has no
-      # `lintAndroidMain`. Prints every lint task the shared modules have, and what `lint` runs.
-      - name: List the shared modules' lint tasks
-        run: |
-          for module in shared shared-data shared-ui; do
-            echo "== :$module"
-            ./gradlew ":$module:tasks" --all --console=plain | grep -i lint || echo "(no lint task)"
-          done
-          echo "== what lint runs"
-          ./gradlew lint --dry-run --console=plain | grep -i "lint" || true
+      # Temporary, until a run shows the shared modules' main code reached: what `lint` runs.
+      - name: Show what lint analyses
+        run: ./gradlew lint --dry-run --console=plain | grep -i lint || true
 
       - name: Android lint
         run: ./gradlew lint

@@ -305,6 +305,13 @@ android {
         // Re-enable this check together with the App Links work, when a domain exists
         // (docs/ROADMAP.md, CQ-16).
         disable += "CredManMissingDal"
+
+        // The three shared modules hold nearly all the code, and their Android target is AGP 9's
+        // KMP library, which has no lint task for its main source set of its own (MON-24 phase 2,
+        // Task 13): `lint` ran only their host tests' analysis, so NewApi, the per-pull-request guard
+        // for minSdk 26, and Compose's checks saw none of what moved there. Linting them as this
+        // module's dependencies is how they are analysed now (the final review of phases 1-2).
+        checkDependencies = true
     }
 
     // Compose compiler is applied via the org.jetbrains.kotlin.plugin.compose plugin
