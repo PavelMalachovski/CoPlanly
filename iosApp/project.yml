@@ -45,6 +45,9 @@ targets:
         product: FirebaseFirestore
       - package: Firebase
         product: FirebaseFunctions
+      # The sign-in (MON-24 phase 3, Task 5): GitLive's Auth bindings in `Shared` call it.
+      - package: Firebase
+        product: FirebaseAuth
     preBuildScripts:
       # Builds `Shared` for the configuration and simulator or device Xcode is building, into
       # shared-ui/build/xcode-frameworks/<configuration>/<sdk>, which FRAMEWORK_SEARCH_PATHS names.

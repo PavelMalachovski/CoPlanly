@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Simulated entitlements for the shared modules' iPhone simulator test executables (MON-24 phase 3,
+  Task 5), linked into their __TEXT,__entitlements section by shared-data/build.gradle.kts and
+  shared-ui/build.gradle.kts. A bare process the simulator spawns has no Keychain without them, and
+  Firebase Auth fails every sign-in it cannot save there. GitLive's own iOS tests do the same
+  (firebase-auth/build.gradle.kts, `enableKeychainForTests`). Never part of the app.
+-->
+<plist version="1.0">
+<dict>
+	<key>application-identifier</key>
+	<string>SIMULATOR.app.coplanly.tests</string>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>SIMULATOR.app.coplanly.tests</string>
+	</array>
+</dict>
+</plist>
