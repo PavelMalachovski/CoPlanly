@@ -24,6 +24,7 @@ import platform.CoreFoundation.kCFTypeDictionaryValueCallBacks
 import platform.Foundation.CFBridgingRelease
 import platform.Foundation.CFBridgingRetain
 import platform.Foundation.NSData
+import platform.Foundation.NSUserDefaults
 import platform.Foundation.create
 import platform.Security.SecItemAdd
 import platform.Security.SecItemCopyMatching
@@ -145,8 +146,27 @@ class KeychainTextStore(
 class KeychainException(operation: String, val status: Int) :
     IllegalStateException("Keychain $operation failed: OSStatus $status")
 
-/** The app's [SecurePreferences] on the iPhone: one Keychain item (see [KeychainTextStore]). */
-fun keychainSecurePreferences(): SecurePreferences = SealedSecurePreferences(KeychainTextStore())
+/**
+ * The app's [SecurePreferences] on the iPhone: one Keychain item (see [KeychainTextStore]). The
+ * Keychain outlives an uninstall, so the first launch of an install clears what an earlier one
+ * left ([FreshInstall]) before the store is built.
+ */
+fun keychainSecurePreferences(): SecurePreferences {
+    val store = KeychainTextStore()
+    FreshInstall(UserDefaultsInstallMarker, store).clearIfFirstLaunch()
+    return SealedSecurePreferences(store)
+}
+
+/** The install marker in `NSUserDefaults`, which iOS deletes with the app (the Keychain it does not). */
+private object UserDefaultsInstallMarker : InstallMarker {
+    private const val KEY = "coplanly.installed"
+
+    override fun isSet(): Boolean = NSUserDefaults.standardUserDefaults.boolForKey(KEY)
+
+    override fun set() {
+        NSUserDefaults.standardUserDefaults.setBool(true, forKey = KEY)
+    }
+}
 
 private fun ByteArray.toNSData(): NSData =
     if (isEmpty()) NSData() else usePinned { NSData.create(bytes = it.addressOf(0), length = size.convert()) }

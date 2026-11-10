@@ -141,7 +141,7 @@ kotlin {
         version = "1.0"
         summary = "CoPlanly's shared data layer"
         homepage = "https://github.com/PavelMalachovski/CoPlanly"
-        ios.deploymentTarget = "15.0"
+        ios.deploymentTarget = "17.0"
         noPodspec()
         framework {
             baseName = "SharedData"

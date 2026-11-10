@@ -3,6 +3,7 @@ package com.coparently.app.presentation.common
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.text.intl.Locale
+import com.coparently.app.utils.readerLocale
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.isoDayNumber
@@ -13,16 +14,17 @@ import platform.Foundation.NSDateFormatter
 import platform.Foundation.NSDateFormatterMediumStyle
 import platform.Foundation.NSDateFormatterNoStyle
 import platform.Foundation.NSLocale
-import platform.Foundation.currentLocale
+import platform.Foundation.NSTimeZone
+import platform.Foundation.timeZoneWithName
 
 /**
- * The iPhone's current locale, renewed when Compose's locale changes. Which locale the iPhone
- * app's own language choice sets is phase 3's to decide.
+ * The reader's locale ([readerLocale], the owner's language rule), renewed when Compose's
+ * locale changes.
  */
 @Composable
 internal actual fun rememberReaderDates(): ReaderDates {
     val composeLocale = Locale.current
-    return remember<ReaderDates>(composeLocale) { FoundationDates(NSLocale.currentLocale) }
+    return remember<ReaderDates>(composeLocale) { FoundationDates(readerLocale()) }
 }
 
 /**
@@ -31,13 +33,16 @@ internal actual fun rememberReaderDates(): ReaderDates {
  */
 private class FoundationDates(private val readerLocale: NSLocale) : ReaderDates {
 
-    private val gregorian = NSCalendar(calendarIdentifier = NSCalendarIdentifierGregorian)
+    private val gregorian = NSCalendar(calendarIdentifier = NSCalendarIdentifierGregorian).apply {
+        timeZone = NSTimeZone.timeZoneWithName("UTC")!!
+    }
 
     override fun date(date: LocalDate): String {
         val instant = gregorian.dateFromComponents(date.toNSDateComponents()) ?: return date.toString()
         val formatter = NSDateFormatter()
         formatter.locale = readerLocale
         formatter.calendar = gregorian
+        formatter.timeZone = gregorian.timeZone
         formatter.dateStyle = NSDateFormatterMediumStyle
         formatter.timeStyle = NSDateFormatterNoStyle
         return formatter.stringFromDate(instant)
@@ -47,6 +52,7 @@ private class FoundationDates(private val readerLocale: NSLocale) : ReaderDates 
         val formatter = NSDateFormatter()
         formatter.locale = readerLocale
         formatter.calendar = gregorian
+        formatter.timeZone = gregorian.timeZone
         // Foundation counts from Sunday (index 0), ISO from Monday (1) to Sunday (7).
         val name = formatter.weekdaySymbols.getOrNull(day.isoDayNumber % DAYS_IN_WEEK) as? String
             ?: day.name.lowercase()

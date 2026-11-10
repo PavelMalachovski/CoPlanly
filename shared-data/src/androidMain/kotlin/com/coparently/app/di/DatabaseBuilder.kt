@@ -5,6 +5,7 @@ package com.coparently.app.di
 import android.content.Context
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.coparently.app.data.local.COMMON_MIGRATIONS
 import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.local.DatabaseMigrations
 import com.coparently.app.data.local.security.EncryptedDatabase
@@ -57,6 +58,7 @@ fun coPlanlyDatabaseBuilder(
             encryptedDatabase.openHelperFactory(name)?.let { openHelperFactory(it) }
         }
         .addMigrations(*DatabaseMigrations.ALL_MIGRATIONS)
+        .addMigrations(*COMMON_MIGRATIONS)
         // The migration chain starts at 5->6 and is complete up to the current version;
         // installs older than schema v5 have no upgrade path (a v3 install crashed with
         // "migration from 3 to 9 required but not found" during the 2026-07 review), so

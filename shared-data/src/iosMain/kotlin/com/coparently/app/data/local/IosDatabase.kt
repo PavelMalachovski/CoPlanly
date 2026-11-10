@@ -44,6 +44,7 @@ fun buildCoPlanlyDatabase(directories: AppDirectories): CoPlanlyDatabase {
     DatabaseFileProtection.prepareForBuild(folder, path)
     return Room.databaseBuilder<CoPlanlyDatabase>(name = path)
         .setDriver(BundledSQLiteDriver())
+        .addMigrations(*COMMON_MIGRATIONS)
         .setQueryCoroutineContext(Dispatchers.IO)
         // Room's default for a driver, said out loud: the `-wal` and `-shm` files are part of the
         // database, and what [DatabaseFileProtection] protects.
