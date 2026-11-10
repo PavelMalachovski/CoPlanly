@@ -1,7 +1,7 @@
 # CoPlanly for iPhone, phase 3: the native shell
 
-**Status:** draft for the owner's approval, 10 November 2026. A builder has read it; §10 lists the
-calls made on its questions.
+**Status:** approved by the owner, 10 November 2026. A builder read the draft; §10 lists the calls
+made on its questions.
 **Parent design:** `docs/superpowers/specs/2026-10-27-iphone-app-design.md` (§5.2, §5.3, §6 phase 3).
 This document replaces that design's §5.2 and narrows its §5.3 into parts. Where the two disagree,
 this one is newer.
@@ -33,6 +33,8 @@ and again on 10 November. This phase is where that look is first built.
 | Tab bar on pushed screens | Always visible. Android hides its bar on detail screens; the iPhone does not. | Owner, 10 Nov 2026 |
 | Lists of records | One grouped list with separators on iPhone (expenses, children, pets, documents), not a card per record. | Owner, 10 Nov 2026 |
 | The seven iPhone boards on the canvas | Accepted as the target for the shell: Home, Calendar, Chat, New event (October), Family, Expenses, Settings (November). | Owner, 10 Nov 2026 |
+| What a screen shows where a board differs from Android | What Android shows: the boards bind the frame, the controls and the style, not a screen's content. | Owner, 10 Nov 2026 |
+| The release build on the new toolchain | Built from `main` after the merge (`release.yml`), then installed over the beta on a phone. | Owner, 10 Nov 2026 |
 | Before merging phases 1–2 | A final review of the whole branch, then the full CI, then the merge of pull request #158. Phase 3 starts from `main` after it. | Owner, 10 Nov 2026 |
 
 How design is agreed from here on:
@@ -47,7 +49,7 @@ How design is agreed from here on:
 **What the boards bind.** They bind the frame (bars, tab bar, sheets), the controls and the style.
 They do not bind a screen's content: what a screen shows is what the shared screen shows on
 Android, because a screen is written once. Where a board's content differs from the Android screen
-(§10 lists the places), the Android content stands unless the owner says otherwise.
+(§10 lists the places), the Android content stands: the owner confirmed it on 10 November.
 
 ## 3. Approaches
 
@@ -356,7 +358,7 @@ Calls made while writing this. They are the author's; the owner may overturn any
 - **iPhone only** as the device family until phase 5 decides how an iPad runs it, and **portrait
   only**: the shared code's rail (from 600 dp) and two panes (from 840 dp) are for tablets and do
   not meet the system tab bar on a phone held sideways.
-- **The boards' content is illustration.** Places where a board differs from the Android screen,
+- **The boards' content is illustration** (confirmed by the owner, §2). Places where a board differs from the Android screen,
   and what is built: Home keeps its two stat tiles (the board has none); the calendar has no
   selected-day card under the grid (the board has one; on Android a tap opens Day view); the chat
   keeps its ticks and the header's send status (the board says "Read 9:44 AM"). Changing any of
