@@ -20,6 +20,7 @@ interface InstallMarker {
 class FreshInstall(private val marker: InstallMarker, private val store: SealedTextStore) {
 
     /** Runs the first-launch cleanup, once per install. */
+    @Suppress("TooGenericExceptionCaught") // any store failure (the Keychain's own type is iOS-only) is logged
     fun clearIfFirstLaunch() {
         if (marker.isSet()) return
         try {

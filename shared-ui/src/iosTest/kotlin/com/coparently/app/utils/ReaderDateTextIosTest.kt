@@ -3,7 +3,6 @@ package com.coparently.app.utils
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
-import platform.Foundation.NSLocale
 import platform.Foundation.NSTimeZone
 import platform.Foundation.defaultTimeZone
 import platform.Foundation.localeIdentifier
