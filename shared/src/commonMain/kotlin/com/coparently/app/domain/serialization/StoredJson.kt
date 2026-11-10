@@ -95,23 +95,6 @@ object StoredJson {
         json.decodeFromJsonElement(serializer, StoredJsonTolerance.fill(element, serializer.descriptor))
     }
 
-    /**
-     * [block], with an exception a serializer threw passed on as the serializer threw it.
-     *
-     * kotlinx-serialization 1.12 wraps an exception from inside a serializer that is not its own
-     * (the `DateTimeParseException` of a stored date that does not parse, an `IllegalStateException`
-     * from a Gson-shaped reader) in a `JsonDecodingException` or `JsonEncodingException`, with the
-     * original as its cause. 1.11 let it through, and so did Gson, so a caller catching what the
-     * stored text used to throw would now catch something else. Its own failures carry no such
-     * cause and pass unchanged.
-     */
-    private inline fun <R> serializersOwnFailure(block: () -> R): R = try {
-        block()
-    } catch (e: SerializationException) {
-        val cause = e.cause
-        throw if (cause != null && cause !is SerializationException) cause else e
-    }
-
     /** [text] as a tree, read as leniently as Gson's `JsonParser` read it. */
     fun parse(text: String): JsonElement = json.parseToJsonElement(text)
 
@@ -171,4 +154,21 @@ object StoredJson {
             is List<*> -> value
             else -> throw SerializationException("Expected a JSON array")
         }
+}
+
+/**
+ * [block], with an exception a serializer threw passed on as the serializer threw it.
+ *
+ * kotlinx-serialization 1.12 wraps an exception from inside a serializer that is not its own
+ * (the `DateTimeParseException` of a stored date that does not parse, an `IllegalStateException`
+ * from a Gson-shaped reader) in a `JsonDecodingException` or `JsonEncodingException`, with the
+ * original as its cause. 1.11 let it through, and so did Gson, so a caller catching what the
+ * stored text used to throw would now catch something else. Its own failures carry no such
+ * cause and pass unchanged.
+ */
+private inline fun <R> serializersOwnFailure(block: () -> R): R = try {
+    block()
+} catch (e: SerializationException) {
+    val cause = e.cause
+    throw if (cause != null && cause !is SerializationException) cause else e
 }
