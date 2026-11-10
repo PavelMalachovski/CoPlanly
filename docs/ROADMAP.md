@@ -2806,27 +2806,30 @@ notes list each file):
   `rememberAccessDate`. No app source or test names them at `edff7f71`. Return each to `internal`,
   in one sweep; none has a detekt baseline entry. (`PLAY_STORE_URL` and `playStoreUrlFor` stay
   public for the app's `PairingLinkTest`.)
-- **`IosSignInStandInsTest`** (`shared-ui`'s `iosTest`) is compiled by the `shared` job but never
-  run: no job runs `:shared-ui:iosSimulatorArm64Test`, whose test executable would need
-  `shared-data`'s Firebase pods. Run it once the iPhone app's test host links them.
+- ~~**`IosSignInStandInsTest`** (`shared-ui`'s `iosTest`) is compiled by the `shared` job but never
+  run.~~ Runs since phase 3's Task 5: the `ios-app` job runs `:shared-ui:iosSimulatorArm64Test`, its
+  test executable linking the Firebase frameworks `shared-data`'s pods build
+  (`gatherFirebaseFrameworksForTests` in `shared-ui/build.gradle.kts`).
 - **Kover's gap under AGP 9**: the coverage figure counts the app's unit tests alone, because Kover
   0.9.x does not recognise AGP 9.3's Android KMP library target; the `unit` variant is wired for the
   shared modules (CI hygiene, below).
 - **The iPhone's stand-ins, which phase 3 and 4 replace.** In `:shared-data`'s
-  `di/koin/IosUnavailable.kt` and `platformDataModule`: `NoSignedInUser`, `NoAuthSession`,
-  `NoAccountSignIn`, `NoAccountSwitch`, `NoAccountDeletion`, `NoAccountTraces`, `NoPush` (one object
+  `di/koin/IosUnavailable.kt` and `platformDataModule`: `NoAccountDeletion` (an account can be
+  created on the iPhone since phase 3's Task 5, so it must go before the App Store), `NoPush` (one object
   for `PushDevice` and `PushRegistration`, replaced together), `NoGoogleCalendar`, `NoStorageBucket`,
   `NoPickedFiles`, `NoRecordPhotoStorage`, `NoReceiptText`, `NoRecordFiles`, `NoSyncRequests`,
   `NoEventReminders`, `NoRequestClockJobs`, `NoRequestClockNotices`, `NoSchoolImportJob`,
   `NoSupportReminderJob`, `NoExportVerifyAddress` and `NoWording` (which throws: a pairing's thread
   title and a school import's titles are stored data, so no English stand-in is written). In
   `:shared-ui`: `NoSpeechDictation`, `NoAiAssist` with `AiAssistAvailability(false)`,
-  `NoAuthErrors` and `NoInviteQrCodes` (`di/koin/IosUiUnavailable.kt`), and in
+  and `NoInviteQrCodes` (`di/koin/IosUiUnavailable.kt`), and in
   `presentation/platform/IosPlatform.kt` the platform interfaces' (`NoShareSheet`, `NoFilePicker`,
   `NoCameraCapture`, `NoQrScanner`, `NoDictation`, `NoPermissions`, `NoOpenUrl`, `NoClipboard`,
   `NoImages`, `NoQrCodes`, `NoAppLanguages`) with `NoCredentialSignIn` and `NoGoogleCalendarSignIn`,
   which `ProvideIosShell` provides. Each says it is unavailable, and the screens hide what it
-  stands for.
+  stands for. The sign-in's (`NoSignedInUser`, `NoAuthSession`, `NoAccountSignIn`,
+  `NoAccountSwitch`, `NoAccountTraces`, `NoAuthErrors`) were replaced in phase 3's Task 5 by
+  `IosFirebaseAuth`, `IosAccountSwitch`, `IosAccountTraces` and `IosAuthErrors`.
 - **From the data-layer move** (Task 8, and "Carried into the data-layer move" below): the sign-in's
   ID-token-only path through GitLive (Android passes no access token; GitLive's iOS side needs
   both); `getToken()` of the FCM and APNs token on a phone with a real project; GitLive's iOS

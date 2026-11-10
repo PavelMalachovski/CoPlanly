@@ -6,8 +6,6 @@ import com.coparently.app.domain.ai.AiAssistResult
 import com.coparently.app.domain.dictation.DictationFailure
 import com.coparently.app.domain.dictation.DictationListener
 import com.coparently.app.domain.dictation.SpeechDictation
-import com.coparently.app.presentation.auth.AuthError
-import com.coparently.app.presentation.auth.AuthErrors
 import com.coparently.app.presentation.pairing.InviteQrCodes
 import kotlinx.datetime.YearMonth
 
@@ -15,7 +13,8 @@ import kotlinx.datetime.YearMonth
  * What the ViewModels in `uiModules` ask of the platform that the iPhone does not have yet (MON-24
  * phase 2, Task 10), beside `:shared-data`'s `IosUnavailable.kt`: each answers as a phone with
  * nothing of the kind would, so `platformUiModule` resolves every ViewModel's definition without
- * promising a feature (design item 8). Each is replaced as the iPhone app gains it (phase 3 and 4).
+ * promising a feature (design item 8). Each is replaced as the iPhone app gains it (phase 3 and 4);
+ * `NoAuthErrors` left in phase 3's Task 5, for `IosAuthErrors`.
  */
 
 /**
@@ -62,17 +61,4 @@ internal val NoInviteQrCodes: InviteQrCodes = object : InviteQrCodes {
     override val available: Boolean = false
 
     override fun forInvite(code: String): ImageBitmap? = null
-}
-
-/**
- * Nobody signs in yet (the data layer's `NoAccountSignIn` fails every call): any failure is
- * [AuthError.Unknown], since there is no SDK yet whose exceptions could say more. Phase 3's Firebase
- * Auth replaces it together with `NoAccountSignIn`.
- */
-internal object NoAuthErrors : AuthErrors {
-    override fun fromEmailPassword(cause: Throwable): AuthError = AuthError.Unknown
-
-    override fun fromGoogle(cause: Throwable): AuthError? = AuthError.Unknown
-
-    override fun fromSavedPassword(cause: Throwable): AuthError? = AuthError.Unknown
 }

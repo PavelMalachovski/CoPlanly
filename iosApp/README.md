@@ -45,7 +45,8 @@ committed); nothing else changes.
 
 **The emulators, unless you give it the real project.** Without a `GoogleService-Info.plist` in
 `CoPlanly/`, the app starts Firebase with fake options for the `demo-coplanly` project and points
-Firestore (8080) and Functions (5001) at `127.0.0.1`. Start the emulators from `firestore-tests/`,
+Firestore (8080), Functions (5001) and Auth (9099) at `127.0.0.1`, so an account you create on the
+sign-in screen lives in the Auth emulator. Start the emulators from `firestore-tests/`,
 which pins the Firebase CLI:
 
 ```bash
