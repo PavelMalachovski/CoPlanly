@@ -44,14 +44,12 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -84,10 +82,13 @@ import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.presentation.calendar.components.DayAgendaCard
 import com.coparently.app.presentation.changerequests.ChangeRequestViewModel
 import com.coparently.app.presentation.changerequests.swapDatesText
+import com.coparently.app.presentation.common.AppTopBar
+import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.FamilySwitcherChip
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.common.ScreenBar
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.TwoPanes
@@ -264,27 +265,22 @@ fun HomeScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = stringResource(Res.string.home_title),
-                            style = MaterialTheme.typography.titleLarge
+            AppTopBar(
+                ScreenBar(
+                    title = stringResource(Res.string.home_title),
+                    largeTitle = true,
+                    subtitle = ReaderDateText.date(today, "EEEEMMMMd"),
+                    actions = listOf(
+                        BarAction(
+                            label = stringResource(Res.string.nav_settings),
+                            icon = Icons.Default.Settings,
+                            sfSymbol = "gearshape",
+                            onClick = onOpenSettings
                         )
-                        Text(
-                            text = ReaderDateText.date(today, "EEEEMMMMd"),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                actions = {
+                    ),
                     // Only with two families or more (M-8); nothing at all with one.
-                    FamilySwitcherChip()
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = stringResource(Res.string.nav_settings))
-                    }
-                }
+                    trailingContent = { FamilySwitcherChip() }
+                )
             )
         }
     ) { padding ->

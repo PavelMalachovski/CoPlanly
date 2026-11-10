@@ -15,7 +15,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
@@ -23,7 +22,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
@@ -35,7 +33,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -62,7 +59,9 @@ import com.coparently.app.domain.payments.Payment
 import com.coparently.app.domain.payments.PaymentKind
 import com.coparently.app.domain.payments.PaymentState
 import com.coparently.app.presentation.changerequests.splitSharesText
+import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.BannerTone
+import com.coparently.app.presentation.common.BarLeading
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.FamilyMemberFilterStrip
 import com.coparently.app.presentation.common.FamilySwitcherChip
@@ -70,6 +69,7 @@ import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.ListSkeleton
 import com.coparently.app.presentation.common.Loadable
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.ScreenBar
 import com.coparently.app.presentation.common.ScrollAwareFab
 import com.coparently.app.presentation.common.TwoPanes
 import com.coparently.app.presentation.common.asString
@@ -285,25 +285,17 @@ fun ExpenseScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(Res.string.expenses_title)) },
-                // A detail screen since the Family tab replaced the Expenses tab (new-user review,
-                // October 2026): opened from the tab's money card, Home's tile or a push.
-                navigationIcon = {
-                    onNavigateUp?.let { navigateUp ->
-                        IconButton(onClick = navigateUp) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(Res.string.expenses_back)
-                            )
-                        }
-                    }
-                },
-                actions = {
+            val backLabel = stringResource(Res.string.expenses_back)
+            AppTopBar(
+                ScreenBar(
+                    title = stringResource(Res.string.expenses_title),
+                    // A detail screen since the Family tab replaced the Expenses tab (new-user review,
+                    // October 2026): opened from the tab's money card, Home's tile or a push.
+                    leading = onNavigateUp?.let { BarLeading.Back(backLabel, it) } ?: BarLeading.None,
                     // Only with two families or more (M-8). A ledger is the screen where being in
                     // the wrong family costs most: an expense is recorded against the one shown.
-                    FamilySwitcherChip()
-                }
+                    trailingContent = { FamilySwitcherChip() }
+                )
             )
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },

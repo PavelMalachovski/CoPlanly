@@ -21,7 +21,6 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
@@ -60,7 +59,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -89,10 +87,13 @@ import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.telemetry.TelemetryConsent
 import com.coparently.app.presentation.ai.AiConsentSettingsEntry
 import com.coparently.app.presentation.chat.SendHold
+import com.coparently.app.presentation.common.AppTopBar
+import com.coparently.app.presentation.common.BarLeading
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.FamilySwitcherDialog
 import com.coparently.app.presentation.common.FamilySwitcherViewModel
 import com.coparently.app.presentation.common.GroupLabel
+import com.coparently.app.presentation.common.ScreenBar
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.SignedInAsRow
@@ -403,18 +404,12 @@ fun SettingsScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(Res.string.settings_title)) },
-                navigationIcon = {
-                    onNavigateUp?.let { navigateUp ->
-                        IconButton(onClick = navigateUp) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(Res.string.settings_back)
-                            )
-                        }
-                    }
-                }
+            val backLabel = stringResource(Res.string.settings_back)
+            AppTopBar(
+                ScreenBar(
+                    title = stringResource(Res.string.settings_title),
+                    leading = onNavigateUp?.let { BarLeading.Back(backLabel, it) } ?: BarLeading.None
+                )
             )
         }
     ) { paddingValues ->
