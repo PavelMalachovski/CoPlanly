@@ -170,7 +170,7 @@ test('an unfamiliar path is never skipped by the Android gate', () => {
 test('format writes one GITHUB_OUTPUT line per key, the matrix as one-line JSON', () => {
   const lines = format(decide(['app/src/main/res/values/strings.xml'])).trim().split('\n');
   assert.deepEqual(lines.map((l) => l.split('=')[0]),
-    ['android', 'e2e', 'screenshots', 'upgrade', 'matrix', 'r8runtime', 'web', 'shared']);
+    ['android', 'e2e', 'screenshots', 'upgrade', 'matrix', 'r8runtime', 'web', 'shared', 'ios']);
   const matrix = JSON.parse(lines[4].slice('matrix='.length));
   assert.equal(matrix[0]['api-level'], 30);
 });
@@ -453,4 +453,51 @@ test('the event decision prints three output lines', () => {
   assert.equal(formatEvent(decideEmulators({ EVENT_NAME: 'pull_request', PR_DRAFT: 'true' })),
     'emulators=false\nunrelated_label=false\nemulators_skipped_on_draft=true\n');
   assert.equal(format(nothing()).includes('android=false'), true);
+});
+
+test('an iPhone app path runs the iPhone app job alone (MON-24 phase 3)', () => {
+  const d = decide(['iosApp/CoPlanly/AppDelegate.swift']);
+  assert.equal(d.ios, true);
+  assert.equal(d.shared, false);
+  assert.equal(d.android, false);
+  assert.equal(d.e2e, false);
+  assert.equal(d.screenshots, false);
+  assert.equal(d.upgrade, false);
+  assert.equal(d.r8runtime, false);
+  assert.equal(d.web, false);
+  assert.deepEqual(legs(d), [30]);
+  for (const path of ['iosApp/project.yml', 'iosApp/README.md', 'iosApp/CoPlanly/Info.plist']) {
+    assert.equal(decide([path]).ios, true, path);
+    assert.equal(decide([path]).android, false, path);
+  }
+});
+
+test('the iPhone app job runs whenever the shared jobs do', () => {
+  for (const path of [
+    'shared-ui/src/iosMain/kotlin/com/coparently/app/ios/IosApp.kt',
+    'shared-ui/src/commonMain/kotlin/com/coparently/app/presentation/home/HomeScreen.kt',
+    'shared-ui/src/commonMain/composeResources/values/strings.xml',
+    'shared-data/src/iosMain/kotlin/com/coparently/app/data/local/IosDatabase.kt',
+    'shared/src/commonMain/kotlin/x.kt',
+    'build.gradle.kts',
+    '.github/workflows/ci.yml',
+  ]) {
+    assert.equal(decide([path]).ios, true, path);
+  }
+  assert.equal(everything().ios, true);
+});
+
+test('the iPhone app job skips what the app cannot read', () => {
+  for (const path of [
+    'docs/x.md',
+    'CLAUDE.md',
+    'functions/index.js',
+    'app/src/main/java/com/coparently/app/presentation/MainActivity.kt',
+    'app/src/main/res/values/colors.xml',
+  ]) {
+    assert.equal(decide([path]).ios, false, path);
+  }
+  assert.equal(nothing().ios, false);
+  assert.equal(format(nothing()).includes('ios=false'), true);
+  assert.equal(format(everything()).includes('ios=true'), true);
 });

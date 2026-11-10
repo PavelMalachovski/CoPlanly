@@ -164,6 +164,13 @@ kotlin {
             // `WindowCompat`, for the system bars (`Theme.android.kt`). The app's version.
             implementation("androidx.core:core-ktx:1.13.1")
         }
+        iosMain.dependencies {
+            // The iPhone app's entry point (`ios/IosFirebase.kt`, MON-24 phase 3) points Functions
+            // at the emulators before the graph reads it. `:shared-data` reaches Functions through
+            // an `implementation` of its own, so this module names it too, at `:shared-data`'s
+            // `gitliveVersion`: move the two together.
+            implementation("dev.gitlive:firebase-functions:2.7.0")
+        }
         commonTest.dependencies {
             implementation(kotlin("test"))
             // The ViewModels' and the shared state's tests (Task 10), at the app's versions:

@@ -89,7 +89,9 @@ jobs:
   #    build files and this workflow. A change in `shared/` or `shared-data/` counts as the build
   #    does for everything else (the app compiles them); in `shared-ui/`, its strings
   #    (`composeResources/`), screens (`presentation/`) and tests count as the app's `res/`,
-  #    `presentation/` and tests they stand for, and the rest of it as the build.
+  #    `presentation/` and tests they stand for, and the rest of it as the build;
+  #  * the iPhone app (`ios-app`) runs whenever the shared jobs do, and on `iosApp/**`, its own
+  #    project, which runs no other job.
   #
   # The build files and `.github/workflows/**` run everything: editing this file is exactly when
   # you want to see the build it describes. A push to `main` and a manual run always run everything
@@ -120,6 +122,9 @@ jobs:
       # `shared-ui/**`), the build files and the workflow. A path in any of them is also an Android
       # path for every output above (a `shared-ui/` string or screen as the app path it stands for).
       shared: ${{ steps.filter.outputs.shared }}
+      # The `ios-app` job: whatever runs the shared jobs, and the iPhone app's own project
+      # (`iosApp/**`), which no Android job reads.
+      ios: ${{ steps.filter.outputs.ios }}
       # The four emulator jobs (`instrumented`, `e2e`, `upgrade`, `r8-runtime`) may run: false on a
       # draft pull request without the `full-ci` label. ANDed into each of them beside its path
       # gate; true for a ready pull request, a push to `main` and a manual run.
@@ -2215,6 +2220,119 @@ jobs:
           # A job that died before writing results must not publish a green check.
           require_tests: true
 
+  # The iPhone app built and launched (MON-24 phase 3): XcodeGen writes the Xcode project from
+  # `iosApp/project.yml`, `xcodebuild` builds it for a simulator — its first build phase runs
+  # `:shared-ui:embedAndSignAppleFrameworkForXcode`, the same Gradle call the owner's Xcode makes,
+  # and Swift Package Manager brings the Firebase iOS SDK 11.8.0 the static `Shared` framework links
+  # against — and `iosApp/scripts/simulator.sh` installs it, launches it, fails unless it is still
+  # running 20 s later, and saves a screenshot as the `ios-launch` artifact.
+  #
+  # No `GoogleService-Info.plist` exists in CI (and none is ever committed), so the app runs on its
+  # emulator configuration, `demo-coplanly` on 127.0.0.1, and no emulator runs here: its Firestore
+  # listeners fail quietly and it must stay alive regardless. It never reaches production.
+  #
+  # The simulator is chosen at run time from what the image has, "iPhone 16" when it exists, and
+  # the Xcode is the image's default, as `shared-ios`'s is (the "Xcode" step prints both).
+  ios-app:
+    name: iPhone app — build and launch (macOS)
+    needs: changes
+    if: needs.changes.outputs.ios == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      # As in `shared-ios`: the Kotlin/Native compiler and its dependencies.
+      - name: Cache Kotlin/Native
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('build.gradle.kts') }}
+
+      # As in `shared-ios`: Gradle configures every project, and `:app` and the shared modules apply
+      # the Android plugin, which fails configuration without an SDK location.
+      - name: Set up the Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Xcode
+        run: |
+          xcodebuild -version
+          xcrun simctl list runtimes available
+
+      - name: XcodeGen
+        run: |
+          brew install xcodegen
+          xcodegen --version
+
+      - name: Generate the Xcode project
+        run: cd iosApp && xcodegen generate
+
+      - name: Pick a simulator
+        id: simulator
+        run: echo "udid=$(iosApp/scripts/simulator.sh pick)" >> "$GITHUB_OUTPUT"
+
+      # The Firebase iOS SDK's sources and binary frameworks, as Swift Package Manager resolves them
+      # under the derived data path. Keyed on the project spec, which pins the version.
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: iosApp/build/SourcePackages
+          key: spm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('iosApp/project.yml') }}
+
+      - name: Build the app
+        env:
+          UDID: ${{ steps.simulator.outputs.udid }}
+        run: |
+          set -o pipefail
+          mkdir -p iosApp/build
+          xcodebuild \
+            -project iosApp/CoPlanly.xcodeproj \
+            -scheme CoPlanly \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=$UDID" \
+            -derivedDataPath iosApp/build \
+            -skipPackagePluginValidation \
+            -skipMacroValidation \
+            build 2>&1 | tee iosApp/build/xcodebuild.log
+
+      - name: Launch it on the simulator
+        env:
+          UDID: ${{ steps.simulator.outputs.udid }}
+        run: |
+          iosApp/scripts/simulator.sh launch "$UDID" \
+            iosApp/build/Build/Products/Debug-iphonesimulator/CoPlanly.app iosApp/build/launch
+
+      - name: Upload the launch screenshot and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-launch
+          path: iosApp/build/launch/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload the build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-log
+          path: iosApp/build/xcodebuild.log
+          if-no-files-found: ignore
+          retention-days: 14
+
   # One sticky comment per pull request, edited on every run, saying what CI found — so a result
   # can be read without opening a log, by a person or by an assistant reading the PR through the
   # API (the comment also carries the facts as JSON in an HTML comment; see tools/ci-report.js).
@@ -2226,7 +2344,7 @@ jobs:
   # `main` there is no pull request: the summary goes to the run's job summary only.
   report:
     name: CI report
-    needs: [changes, build-test, static, detekt, release, r8-runtime, screenshots, instrumented, e2e, upgrade, invariants, functions, web, rules, shared, shared-ios]
+    needs: [changes, build-test, static, detekt, release, r8-runtime, screenshots, instrumented, e2e, upgrade, invariants, functions, web, rules, shared, shared-ios, ios-app]
     # Not for the run an unrelated label starts: it built nothing and would replace the real run's
     # comment with an empty one.
     if: always() && needs.changes.outputs.unrelated_label != 'true'
