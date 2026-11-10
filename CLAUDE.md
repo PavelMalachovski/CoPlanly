@@ -1112,8 +1112,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   in commonTest may not contain a comma or parentheses**: the JVM accepts them and Kotlin/Native
   refuses them (`Name contains illegal characters`), so write "a - b", not "a, b". `build-test` runs the
   same tests once more (`testAndroidHostTest` beside `testDebugUnitTest`, which now names the app's
-  alone), because Kover merges `:shared`, `:shared-data` and `:shared-ui` into the
-  app's coverage report. `shared` also runs `:shared-ui:testAndroidHostTest` — the theme's JVM tests,
+  alone), because Kover is meant to merge `:shared`, `:shared-data` and `:shared-ui` into the
+  app's coverage report (the `unit` variant; since AGP 9 it counts the app alone, below). `shared` also runs `:shared-ui:testAndroidHostTest` — the theme's JVM tests,
   which moved with it to `shared-ui/src/androidHostTest/` (slice 9b), and the moved ViewModels' and
   shared state's (Task 10, commonTest and `androidHostTest`) — and compiles
   `:shared-ui:compileKotlinIosSimulatorArm64`, its iOS klib with `Res`, the theme, the common
@@ -1390,7 +1390,14 @@ screenshots render). A test that moves with its code to `:shared-ui` keeps `inte
   encoder aborted `media.codec` and surfaceflinger followed, which Gradle reports as "System has
   crashed" mid-suite — the recorder had become the failure it was meant to explain.
   `coverage-report` — Kover (`org.jetbrains.kotlinx.kover` 0.9.9, `app/build.gradle.kts`, Room- and
-  Compose-generated classes filtered out). Coverage is **visibility, not a gate**: there is no
+  Compose-generated classes filtered out), written by `:app:koverXmlReportUnit`, a custom variant
+  that joins the app's `debug` unit tests with each shared module's `jvm` one. **Since AGP 9 (MON-24
+  phase 2, Task 13) the figure counts the app alone**: Kover 0.9.9 and 0.9.11 recognise AGP's
+  Android KMP library by class names (`KotlinMultiplatformAndroidLibraryTargetImpl`, an
+  `AndroidUnitTest` task) that AGP 9.3's target no longer matches, so the shared modules' `jvm`
+  variants are empty (added with `optional = true`, so configuration never fails on it); before
+  Task 13 the app's `debug` report merged all four. The wiring stays for a Kover that knows the
+  target (ROADMAP MON-24's CI hygiene). Coverage is **visibility, not a gate**: there is no
   verification rule, and its step is the one place in `ci.yml` where `continue-on-error` is
   right, because failing to *report* a number must not turn a green build red. `screenshots` (the gallery:
   unzip, open `index.html`) and, on a failed verify, `screenshot-diffs`; the comment also carries a

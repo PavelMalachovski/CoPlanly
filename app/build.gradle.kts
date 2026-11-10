@@ -834,6 +834,8 @@ kover {
     // variant of the same name only, and AGP 9's Android KMP library is a JVM target to Kover,
     // with no `debug` variant: the plain `koverXmlReportDebug` counted this module alone after
     // Task 13 (MON-24 phase 2), where it had counted all four.
+    // Kover 0.9.x does not recognise AGP 9.3's target yet, so the shared modules' part is empty
+    // for now and the figure counts this module alone (CLAUDE.md, the CI section).
     currentProject {
         createVariant("unit") {
             add("debug")

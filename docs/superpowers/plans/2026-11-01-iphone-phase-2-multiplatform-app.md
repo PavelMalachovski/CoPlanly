@@ -1714,9 +1714,16 @@ unblocks Ktor 3.6 and later, whose OkHttp 5.5 needs compileSdk 37 (Task 5 stayed
   1.9.3 supports AGP 9), kotlinx-serialization 1.12.0, Ktor 3.6.1 with compileSdk 37, Kover 0.9.9
   and detekt 1.23.7 (unchanged). Xcode up to 26.4. Reasons and sources: the task's report.
 - [x] **Step 2: Bump and migrate the KMP Android targets** to the AGP 9 plugin.
-- [ ] **Step 3: Verify.** All jobs green, and screenshots verify with no baseline change. A
+- [x] **Step 3: Verify.** All jobs green, and screenshots verify with no baseline change. A
   renderer move goes through Regenerate and is stated in the pull request, as phase 1 Task 1 did.
-- [ ] **Step 4: Commit.** `chore: move to AGP 9 and Kotlin 2.4 (MON-24)`
+  *Done 10 November 2026: every job green on `a881fdaa`, with no baseline change (470 screenshots
+  verify; 3170 shared JVM tests, 1321 on the iOS simulator, 456 app unit tests, 73 e2e, the three
+  emulator legs, R8 probe, upgrade). Three fixes followed the bump: kotlin-test's JUnit variant
+  named for the app's unit tests (AGP 9's built-in Kotlin does not infer it); `StoredJson`
+  re-throws a serializer's own exception, which kotlinx-serialization 1.12 wraps; and Kover's
+  `unit` variant, which still counts the app alone, since Kover 0.9.x does not recognise AGP
+  9.3's Android KMP library (CLAUDE.md, ROADMAP MON-24's CI hygiene).*
+- [x] **Step 4: Commit.** `chore: move to AGP 9 and Kotlin 2.4 (MON-24)`
 
 ### Task 14: Record phase 2
 

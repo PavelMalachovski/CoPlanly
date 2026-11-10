@@ -3191,6 +3191,9 @@ bytes are identical on Android):
   throws `IllegalArgumentException` where `java.time` threw `DateTimeException`, for a year
   outside 0..9999 — unreachable, and no caller catches the old type.
 - **CI hygiene**: the `shared` job repeats the shared tests `build-test` already runs (for Kover);
+  since AGP 9 (Task 13) Kover counts the app's unit tests alone, because Kover 0.9.x does not
+  recognise AGP 9.3's Android KMP library target, so the coverage figure leaves out the three
+  shared modules until a Kover release does (the `unit` variant is wired for it);
   a manual run skips `shared-ios`; androidTest runs kotlin-reflect 2.0.0 over 2.3-compiled classes
   (raise it after merge); `ParentsSourceTest` can race a leaked `shareIn` collector (give
   `ParentsSource` an injectable scope); cache Robolectric's `android-all` against Maven Central's

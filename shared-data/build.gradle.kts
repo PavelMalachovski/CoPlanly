@@ -243,6 +243,7 @@ kotlin {
 
 // Unit-test coverage for the app's merged Kover report (`:app:koverXmlReportUnit`): the JVM tests,
 // which AGP 9's Android KMP library is to Kover. The app merges a variant of this name only.
+// Kover 0.9.x does not recognise AGP 9.3's target yet, so this is empty for now (CLAUDE.md, CI).
 kover {
     currentProject {
         createVariant("unit") {
