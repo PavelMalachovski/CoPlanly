@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.nio.file.Files
 
 // The UI both apps run (MON-24 phase 2; docs/superpowers/plans/
 // 2026-11-01-iphone-phase-2-multiplatform-app.md, Task 9 onwards), on Compose Multiplatform. It
@@ -94,7 +95,7 @@ val gatherFirebaseFrameworks = tasks.register("gatherFirebaseFrameworksForTests"
             val frameworks = folder.listFiles { file -> file.isDirectory && file.name.endsWith(".framework") }
             frameworks.orEmpty().forEach { framework ->
                 val link = File(target, framework.name)
-                if (!link.exists()) java.nio.file.Files.createSymbolicLink(link.toPath(), framework.toPath())
+                if (!link.exists()) Files.createSymbolicLink(link.toPath(), framework.toPath())
             }
         }
         val missing = wanted.filterNot { File(target, "$it.framework").exists() }
