@@ -4,7 +4,6 @@
   <CurrentIssues>
     <ID>ComplexCondition:DayWeekView.kt$onDragDrop != null &amp;&amp; draggable &amp;&amp; columnWidthPx &gt; 0f &amp;&amp; hourHeightPx &gt; 0f</ID>
     <ID>ComplexCondition:DayWeekView.kt$showTime &amp;&amp; totalMinutes &gt;= 45 || isResizingStart || isResizingEnd</ID>
-    <ID>CyclomaticComplexMethod:ActivityCardText.kt$ActivityCardText$@StringRes fun resourceFor(kind: ActivityKind): Int</ID>
     <ID>CyclomaticComplexMethod:ActivityFallbackText.kt$ActivityFallbackText$fun of(announcement: ActivityAnnouncement): String</ID>
     <ID>CyclomaticComplexMethod:AddEditChildInfoScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun AddEditChildInfoScreen( childInfoId: String?, onNavigateBack: () -&gt; Unit, viewModel: ChildInfoViewModel = koinViewModel() )</ID>
     <ID>CyclomaticComplexMethod:AddEditEventScreen.kt$@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class) @Composable fun AddEditEventScreen( eventId: String?, initialDate: LocalDate? = null, initialHour: Int? = null, onSave: () -&gt; Unit, onCancel: () -&gt; Unit, onRequestChange: ((String) -&gt; Unit)? = null, viewModel: EventViewModel = koinViewModel(), friendViewModel: com.coparently.app.presentation.friends.FriendViewModel = koinViewModel() )</ID>
@@ -28,7 +27,6 @@
     <ID>LongMethod:AllergyEditor.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable fun AllergyEditor( allergies: List&lt;String&gt;, onAdd: (String) -&gt; Unit, onRemove: (Int) -&gt; Unit, modifier: Modifier = Modifier )</ID>
     <ID>LongMethod:AuthScreen.kt$@Composable fun AuthScreen( onAuthSuccess: () -&gt; Unit, onViewModelReady: ((AuthViewModel) -&gt; Unit)? = null, viewModel: AuthViewModel = koinViewModel() )</ID>
     <ID>LongMethod:CalendarFilters.kt$@OptIn(ExperimentalMaterial3Api::class, FoundationExperimentalLayoutApi::class) @Composable fun EventTypeFilterSheet( allEventTypes: List&lt;String&gt;, hiddenEventTypes: Set&lt;String&gt;, showHolidays: Boolean, parentFilter: ParentFilter, parentNames: ParentNames, friendName: String?, onParentFilterChange: (ParentFilter) -&gt; Unit, onToggleType: (String) -&gt; Unit, onAddCustomType: (String) -&gt; Unit, onShowHolidaysChange: (Boolean) -&gt; Unit, onDismiss: () -&gt; Unit, sheetState: SheetState )</ID>
-    <ID>LongMethod:CalendarSyncRepository.kt$CalendarSyncRepository$suspend fun syncFromGoogle( startDate: LocalDateTime? = null, endDate: LocalDateTime? = null ): Flow&lt;SyncResult&gt;</ID>
     <ID>LongMethod:ChildDetailScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun ChildDetailScreen( childInfoId: String, onNavigateBack: () -&gt; Unit, onEditClick: (String) -&gt; Unit, viewModel: ChildInfoViewModel = koinViewModel() )</ID>
     <ID>LongMethod:ChildInfoScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun ChildInfoScreen( onNavigateBack: () -&gt; Unit, onOpenChild: (String) -&gt; Unit, onAddChild: () -&gt; Unit, viewModel: ChildInfoViewModel = koinViewModel() )</ID>
     <ID>LongMethod:CustodySetupScreen.kt$@Composable private fun MidweekContactSection( uiState: CustodySetupUiState, onEnabledChange: (Boolean) -&gt; Unit, onDayChange: (DayOfWeek) -&gt; Unit, onEveryWeekChange: (Boolean) -&gt; Unit )</ID>
@@ -36,7 +34,6 @@
     <ID>LongMethod:EmergencyContactEditor.kt$@Composable private fun EmergencyContactForm( contact: EmergencyContact? = null, onSave: (EmergencyContact) -&gt; Unit, onCancel: () -&gt; Unit )</ID>
     <ID>LongMethod:FriendDetailScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun FriendDetailScreen( friendUid: String, onNavigateUp: () -&gt; Unit, onRevoked: () -&gt; Unit, viewModel: FriendViewModel = koinViewModel() )</ID>
     <ID>LongMethod:FriendProfileScreen.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable fun FriendProfileScreen( onNavigateUp: () -&gt; Unit, viewModel: FriendViewModel = koinViewModel() )</ID>
-    <ID>LongMethod:MainActivity.kt$MainActivity$override fun onCreate(savedInstanceState: Bundle?)</ID>
     <ID>LongMethod:MedicationEditor.kt$@Composable private fun MedicationForm( medication: Medication? = null, onSave: (Medication) -&gt; Unit, onCancel: () -&gt; Unit )</ID>
     <ID>LongMethod:PetsScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun PetsScreen( onNavigateBack: () -&gt; Unit, onEditPet: (String) -&gt; Unit, viewModel: PetsViewModel = koinViewModel() )</ID>
     <ID>LongMethod:SchoolInfoEditor.kt$@Composable fun SchoolInfoEditor( schoolInfo: SchoolInfo?, onSave: (SchoolInfo?) -&gt; Unit, modifier: Modifier = Modifier )</ID>
@@ -44,11 +41,9 @@
     <ID>LongParameterList:AddEditPetScreen.kt$( name: String, onName: (String) -&gt; Unit, species: PetSpecies, onSpecies: (PetSpecies) -&gt; Unit, breed: String, onBreed: (String) -&gt; Unit, dateOfBirth: LocalDateTime?, onPickDate: () -&gt; Unit, enabled: Boolean )</ID>
     <ID>LongParameterList:AddExpenseScreen.kt$( agreedRatio: SplitRatio, shared: Boolean, onSharedChange: (Boolean) -&gt; Unit, overrideMomPercent: Int?, onOverrideChange: (Int?) -&gt; Unit, enabled: Boolean )</ID>
     <ID>LongParameterList:CalendarFilters.kt$( allEventTypes: List&lt;String&gt;, hiddenEventTypes: Set&lt;String&gt;, showHolidays: Boolean, parentFilter: ParentFilter, parentNames: ParentNames, friendName: String?, onParentFilterChange: (ParentFilter) -&gt; Unit, onToggleType: (String) -&gt; Unit, onAddCustomType: (String) -&gt; Unit, onShowHolidaysChange: (Boolean) -&gt; Unit, onDismiss: () -&gt; Unit, sheetState: SheetState )</ID>
-    <ID>LongParameterList:EventViewModel.kt$EventViewModel$( private val eventUseCases: com.coparently.app.domain.usecase.EventUseCases, private val errorHandler: com.coparently.app.domain.error.ErrorHandler, private val encryptedPreferences: EncryptedPreferences, private val gson: Gson, private val photoStorage: RecordPhotoStorage, private val parentsSource: ParentsSource, familyMembersSource: FamilyMembersSource )</ID>
     <ID>LongParameterList:ExpenseAnalytics.kt$( title: String, titleColor: androidx.compose.ui.graphics.Color, expenses: List&lt;Expense&gt;, currency: String, modifier: Modifier = Modifier, photoUrl: String? = null )</ID>
     <ID>LongParameterList:MessagesList.kt$( message: Message, isCurrentUser: Boolean, startsGroup: Boolean = true, endsGroup: Boolean = true, onEventLinkClick: ((String) -&gt; Unit)? = null, onOpenInbox: (() -&gt; Unit)? = null, onRetryFailed: (() -&gt; Unit)? = null )</ID>
     <ID>LongParameterList:ParentLabels.kt$( slot: String, me: NamedParent?, coParent: NamedParent?, youFallback: String, coParentFallback: String, unknownFallback: String )</ID>
-    <ID>LongParameterList:SettingsViewModel.kt$SettingsViewModel$( private val fcmService: FcmService, private val accountDeletionService: AccountDeletionService, private val userRepository: UserRepository, private val preferencesRepository: PreferencesRepository, private val analyticsManager: AnalyticsManager, signedInAccountSource: SignedInAccountSource, private val familyKindSource: FamilyKindSource, parentsSource: ParentsSource, private val familySettingsRepository: FamilySettingsRepository )</ID>
     <ID>LoopWithTooManyJumpStatements:RecurrenceExpander.kt$RecurrenceExpander$while</ID>
     <ID>LoopWithTooManyJumpStatements:SyncService.kt$SyncService$for</ID>
     <ID>MagicNumber:AdaptiveDimensions.kt$0.8f</ID>
@@ -63,9 +58,6 @@
     <ID>MagicNumber:AddEditEventScreen.kt$500</ID>
     <ID>MagicNumber:AuthScreen.kt$1.5f</ID>
     <ID>MagicNumber:AuthScreen.kt$2000</ID>
-    <ID>MagicNumber:CalendarHeader.kt$20</ID>
-    <ID>MagicNumber:CalendarHeader.kt$2026</ID>
-    <ID>MagicNumber:CalendarHeader.kt$7</ID>
     <ID>MagicNumber:CalendarScreen.kt$1.2f</ID>
     <ID>MagicNumber:CalendarScreen.kt$23</ID>
     <ID>MagicNumber:CalendarScreen.kt$500</ID>
@@ -108,8 +100,6 @@
     <ID>MagicNumber:EventViewModel.kt$EventViewModel$60</ID>
     <ID>MagicNumber:FirebaseAuthService.kt$FirebaseAuthService$10</ID>
     <ID>MagicNumber:FirebaseAuthService.kt$FirebaseAuthService$100</ID>
-    <ID>MagicNumber:GuestAccessDuration.kt$GuestAccessDuration.QUARTER$90</ID>
-    <ID>MagicNumber:GuestAccessDuration.kt$GuestAccessDuration.WEEK$7</ID>
     <ID>MagicNumber:HomeScreen.kt$4</ID>
     <ID>MagicNumber:MonthView.kt$0.8f</ID>
     <ID>MagicNumber:MonthView.kt$6</ID>
@@ -117,8 +107,6 @@
     <ID>MagicNumber:PreviewHelpers.kt$10</ID>
     <ID>MagicNumber:PreviewHelpers.kt$12</ID>
     <ID>MagicNumber:PreviewHelpers.kt$9</ID>
-    <ID>MagicNumber:RecurrenceExpander.kt$RecurrenceExpander$23</ID>
-    <ID>MagicNumber:RecurrenceExpander.kt$RecurrenceExpander$59</ID>
     <ID>MagicNumber:SkeletonLoading.kt$200f</ID>
     <ID>MagicNumber:SyncService.kt$SyncService$10</ID>
     <ID>MagicNumber:SyncService.kt$SyncService$100</ID>
@@ -128,24 +116,16 @@
     <ID>MagicNumber:SyncService.kt$SyncService$90</ID>
     <ID>MagicNumber:ThemePreferences.kt$CustomColorScheme$0xFF1976D2</ID>
     <ID>MagicNumber:ThemePreferences.kt$CustomColorScheme$0xFFE91E63</ID>
-    <ID>MagicNumber:TimePicker.kt$14</ID>
-    <ID>MagicNumber:TimePicker.kt$18</ID>
-    <ID>MagicNumber:TimePicker.kt$30</ID>
-    <ID>MagicNumber:TimePicker.kt$45</ID>
-    <ID>MagicNumber:TimePicker.kt$9</ID>
     <ID>MagicNumber:ValidationUtils.kt$ValidationUtils$10</ID>
     <ID>MagicNumber:ValidationUtils.kt$ValidationUtils$128</ID>
     <ID>MagicNumber:ValidationUtils.kt$ValidationUtils$15</ID>
-    <ID>MagicNumber:ValidationUtils.kt$ValidationUtils$254</ID>
     <ID>MagicNumber:ValidationUtils.kt$ValidationUtils$50</ID>
     <ID>MatchingDeclarationName:Color.kt$CoPlanlyColors</ID>
     <ID>MatchingDeclarationName:WindowSize.kt$Dimensions</ID>
     <ID>MaxLineLength:CalendarScreen.kt$onEventResize</ID>
     <ID>MaxLineLength:DatabaseMigrations.kt$DatabaseMigrations.&lt;no name provided&gt;$"CREATE INDEX IF NOT EXISTS index_events_parentOwner_startDateTime ON events(parentOwner, startDateTime)"</ID>
-    <ID>MaxLineLength:SyncService.kt$SyncService$"emergencyContacts" to gson.fromJson(localEntity.emergencyContactsJson, List::class.java)</ID>
     <ID>MaximumLineLength:CalendarScreen.kt$ </ID>
     <ID>MaximumLineLength:DatabaseMigrations.kt$DatabaseMigrations.&lt;no name provided&gt;$ </ID>
-    <ID>MaximumLineLength:SyncService.kt$SyncService$ </ID>
     <ID>NoWildcardImports:ActivityEditor.kt$import androidx.compose.foundation.layout.*</ID>
     <ID>NoWildcardImports:ActivityEditor.kt$import androidx.compose.material3.*</ID>
     <ID>NoWildcardImports:ActivityEditor.kt$import androidx.compose.runtime.*</ID>
@@ -214,14 +194,12 @@
     <ID>TooGenericExceptionCaught:SyncViewModel.kt$SyncViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:UpdateEventUseCase.kt$UpdateEventUseCase$e: Exception</ID>
     <ID>TooGenericExceptionCaught:UserRepositoryImpl.kt$UserRepositoryImpl$e: Exception</ID>
-    <ID>TooManyFunctions:AnalyticsManager.kt$AnalyticsManager : Analytics</ID>
     <ID>TooManyFunctions:ChildInfoDao.kt$ChildInfoDao</ID>
     <ID>TooManyFunctions:EncryptedPreferences.kt$EncryptedPreferences : SecurePreferences</ID>
     <ID>TooManyFunctions:EventDao.kt$EventDao</ID>
     <ID>TooManyFunctions:EventViewModel.kt$EventViewModel : ViewModel</ID>
     <ID>TooManyFunctions:Extensions.kt$com.coparently.app.utils.Extensions.kt</ID>
     <ID>TooManyFunctions:PetDao.kt$PetDao</ID>
-    <ID>TooManyFunctions:ValidationUtils.kt$ValidationUtils</ID>
     <ID>UnusedParameter:DayWeekView.kt$baseDate: LocalDate</ID>
     <ID>UnusedParameter:DayWeekView.kt$baseHour: Int</ID>
     <ID>UnusedPrivateProperty:CredentialManagerService.kt$CredentialManagerService$private val credentialManager: CredentialManager? = try { CredentialManager.create(context) } catch (e: Exception) { logger.e(TAG, "Failed to create CredentialManager", e) null }</ID>
