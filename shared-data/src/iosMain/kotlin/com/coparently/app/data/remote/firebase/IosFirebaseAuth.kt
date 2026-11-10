@@ -118,13 +118,8 @@ class IosFirebaseAuth(private val auth: FirebaseAuth) : SignedInUser, AuthSessio
      * failure. Unlike Android's `catch (e: Exception)`, a coroutine's cancellation is rethrown
      * rather than reported as a failed sign-in.
      */
-    private inline fun <T> attempt(call: () -> T): Result<T> = try {
-        Result.success(call())
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: Exception) {
-        Result.failure(e)
-    }
+    private inline fun <T> attempt(call: () -> T): Result<T> =
+        runCatching(call).onFailure { if (it is CancellationException) throw it }
 
     private companion object {
         const val TAG = "IosFirebaseAuth"

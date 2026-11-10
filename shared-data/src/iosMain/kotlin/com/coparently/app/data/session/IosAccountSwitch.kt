@@ -1,5 +1,7 @@
 package com.coparently.app.data.session
 
+import androidx.room.Transactor
+import androidx.room.useWriterConnection
 import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.platform.SecurePreferences
@@ -7,11 +9,8 @@ import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.notification.RequestClockScheduler
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import platform.Foundation.NSUserDefaults
 
 /**
@@ -64,7 +63,7 @@ class IosAccountSwitch(
             val previous = lastUid.get()
             if (previous != null && previous != uid) {
                 logger.i(TAG, "Different account signed in; clearing local data")
-                withContext(Dispatchers.IO) { database.clearAllTables() }
+                clearAllTables()
                 // Its event reminders, which would otherwise wake for rows that are gone.
                 reminders.cancelAll()
                 // Its request clocks' steps, so none acts for the next account.
@@ -81,8 +80,30 @@ class IosAccountSwitch(
         }
     }
 
+    /**
+     * Deletes every row of every table Room made, in one write transaction: Room's
+     * `clearAllTables()`, which Android's guard calls, is Android-only in Room 2.7's multiplatform
+     * API. The tables are read from `sqlite_master` rather than listed, so a table a later schema
+     * adds is cleared too; Room's own `room_master_table` (the schema's identity) and SQLite's
+     * internal tables are kept. The schema has no foreign keys, so the order does not matter.
+     */
+    private suspend fun clearAllTables() {
+        database.useWriterConnection { connection ->
+            connection.withTransaction(Transactor.SQLiteTransactionType.IMMEDIATE) {
+                val tables = usePrepared(TABLES) { statement ->
+                    buildList { while (statement.step()) add(statement.getText(0)) }
+                }
+                tables.forEach { table -> usePrepared("DELETE FROM `$table`") { it.step() } }
+            }
+        }
+    }
+
     private companion object {
         const val TAG = "IosAccountSwitch"
+
+        /** Room's tables: every table but its own identity table and SQLite's and Android's. */
+        const val TABLES = "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite\\_%' " +
+            "ESCAPE '\\' AND name NOT IN ('room_master_table', 'android_metadata')"
     }
 }
 
