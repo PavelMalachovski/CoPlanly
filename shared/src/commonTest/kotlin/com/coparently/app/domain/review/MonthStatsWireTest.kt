@@ -122,7 +122,7 @@ class MonthStatsWireTest {
         assertTrue("holidayFairness" !in wire.keys)
         val first = (wire["daysWithParent"] as List<*>).first() as Map<*, *>
         val name = first["name"] as String
-        assertEquals(MonthStatsWire.NAME_MAX, name.length)
+        assertEquals(MonthStatsWire.MAX_NAME_LENGTH, name.length)
         assertTrue('<' !in name && '>' !in name)
     }
 
