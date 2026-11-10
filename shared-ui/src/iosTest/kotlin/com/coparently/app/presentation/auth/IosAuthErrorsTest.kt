@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalForeignApi::class)
+
 package com.coparently.app.presentation.auth
 
 import cocoapods.FirebaseAuth.FIRAuthErrorDomain
@@ -13,6 +15,7 @@ import dev.gitlive.firebase.auth.FirebaseAuthInvalidCredentialsException
 import dev.gitlive.firebase.auth.FirebaseAuthUserCollisionException
 import dev.gitlive.firebase.auth.FirebaseAuthWeakPasswordException
 import dev.gitlive.firebase.auth.auth
+import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.MainScope
