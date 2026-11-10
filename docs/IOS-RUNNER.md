@@ -67,20 +67,21 @@ change or let a maintainer bring it in on a branch of this repository.
    Kotlin picks the simulator from what Xcode lists, so there is no device name to configure.
 
    **Which Xcode.** Kotlin/Native builds against one Xcode and supports a range up to it. The
-   project's Kotlin 2.3.21 supports Xcode up to **26.0**; Kotlin 2.4.21 reaches 26.4, and Xcode 27
-   needs Kotlin 2.5.0, which is not stable yet (ROADMAP MON-24). **Xcode 27.2 works in practice**:
-   on 1 November 2026 it ran this job's two tasks on the owner's Mac — 818 tests, 0 failures, and
-   the framework linked. The link prints eight `warning: could not open …/klib/cache/…-cache.a`
+   project's Kotlin 2.4.21 (since MON-24 phase 2, Task 13; it was 2.3.21, up to 26.0) supports Xcode
+   up to **26.4**, and Xcode 27 needs Kotlin 2.5.0, which is not stable yet (ROADMAP MON-24).
+   **Xcode 27.2 works in practice** with 2.3.21: on 1 November 2026 it ran this job's two tasks on
+   the owner's Mac — 818 tests, 0 failures, and the framework linked; 2.4.21 has not been run on it
+   yet. The link prints eight `warning: could not open …/klib/cache/…-cache.a`
    lines about Kotlin/Native's prebuilt platform caches; they are harmless. So use the Mac's own
    Xcode and skip the rest of this paragraph. **Only if a later build fails on the newer Xcode**,
-   install **Xcode 26.0.1 beside it** for the runner (from
-   developer.apple.com/download/all, unpacked as `/Applications/Xcode-26.0.1.app`). Run the
+   install **Xcode 26.4 beside it** for the runner, the newest the project's Kotlin supports (from
+   developer.apple.com/download/all, unpacked as `/Applications/Xcode-26.4.app`). Run the
    commands above once more against it, so its licence is accepted and its simulator runtime is
    installed. `sudo` does not pass your environment on, so the licence command calls that Xcode's
    own `xcodebuild` by its path; the others run as you and read the exported variable:
 
    ```bash
-   export DEVELOPER_DIR=/Applications/Xcode-26.0.1.app/Contents/Developer
+   export DEVELOPER_DIR=/Applications/Xcode-26.4.app/Contents/Developer
    sudo "$DEVELOPER_DIR/usr/bin/xcodebuild" -license accept
    xcodebuild -runFirstLaunch
    xcodebuild -downloadPlatform iOS
@@ -91,7 +92,7 @@ change or let a maintainer bring it in on a branch of this repository.
    in place of Xcode 27.
 
    Then give the runner that Xcode alone: after step 5, add the line
-   `DEVELOPER_DIR=/Applications/Xcode-26.0.1.app/Contents/Developer` to the `.env` file in the
+   `DEVELOPER_DIR=/Applications/Xcode-26.4.app/Contents/Developer` to the `.env` file in the
    runner's folder (`~/actions-runner-coplanly/.env`) and restart it (`./svc.sh stop`,
    `./svc.sh start`). The runner passes that file's variables to every job, so `xcode-select` can
    keep pointing at Xcode 27 for everything else. When the project moves to a Kotlin that supports

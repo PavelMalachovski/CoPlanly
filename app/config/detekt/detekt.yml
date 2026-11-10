@@ -77,6 +77,12 @@ complexity:
     active: false
   TooManyFunctions:
     active: true
+    # This list, on each rule detekt's default configuration exempts tests from, is that default's
+    # list (detekt 1.23.7) plus `androidHostTest` and `androidDeviceTest`: the Android KMP library
+    # target's test source sets since AGP 9 (MON-24 phase 2, Task 13; they were `androidUnitTest` and
+    # `androidInstrumentedTest`), which detekt 1.23's default does not name. Setting `excludes`
+    # replaces the default list, so the whole list is spelled out.
+    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidHostTest/**', '**/androidInstrumentedTest/**', '**/androidDeviceTest/**', '**/jsTest/**', '**/iosTest/**']
     thresholdInFiles: 20
     thresholdInClasses: 20
     thresholdInInterfaces: 11
@@ -139,6 +145,7 @@ exceptions:
     active: true
   InstanceOfCheckForException:
     active: true
+    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidHostTest/**', '**/androidInstrumentedTest/**', '**/androidDeviceTest/**', '**/jsTest/**', '**/iosTest/**']
   NotImplementedDeclaration:
     active: false
   ObjectExtendsThrowable:
@@ -157,10 +164,12 @@ exceptions:
     active: false
   ThrowingExceptionsWithoutMessageOrCause:
     active: true
+    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidHostTest/**', '**/androidInstrumentedTest/**', '**/androidDeviceTest/**', '**/jsTest/**', '**/iosTest/**']
   ThrowingNewInstanceOfSameException:
     active: true
   TooGenericExceptionCaught:
     active: true
+    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidHostTest/**', '**/androidInstrumentedTest/**', '**/androidDeviceTest/**', '**/jsTest/**', '**/iosTest/**']
     exceptionNames:
       - ArrayIndexOutOfBoundsException
       - Error
@@ -200,6 +209,7 @@ naming:
     active: false
   FunctionNaming:
     active: true
+    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidHostTest/**', '**/androidInstrumentedTest/**', '**/androidDeviceTest/**', '**/jsTest/**', '**/iosTest/**']
     functionPattern: '[a-z][a-zA-Z0-9]*'
     excludeClassPattern: '$^'
     ignoreAnnotated: ['Composable']
@@ -245,6 +255,7 @@ performance:
     active: false
   ForEachOnRange:
     active: true
+    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidHostTest/**', '**/androidInstrumentedTest/**', '**/androidDeviceTest/**', '**/jsTest/**', '**/iosTest/**']
   SpreadOperator:
     active: false
   UnnecessaryPartOfBinaryExpression:
@@ -310,6 +321,7 @@ potential-bugs:
     active: true
   UnsafeCallOnNullableType:
     active: true
+    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidHostTest/**', '**/androidInstrumentedTest/**', '**/androidDeviceTest/**', '**/jsTest/**', '**/iosTest/**']
   UnsafeCast:
     active: false
   UnusedUnaryOperator:
@@ -376,7 +388,7 @@ style:
     maxJumpCount: 1
   MagicNumber:
     active: true
-    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**']
+    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidHostTest/**', '**/androidInstrumentedTest/**', '**/androidDeviceTest/**', '**/jsTest/**', '**/iosTest/**']
     ignoreNumbers:
       - '-1'
       - '0'

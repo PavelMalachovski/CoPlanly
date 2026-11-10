@@ -1700,7 +1700,7 @@ unblocks Ktor 3.6 and later, whose OkHttp 5.5 needs compileSdk 37 (Task 5 stayed
   - `CLAUDE.md` (toolchain line, its Xcode note);
   - `docs/IOS-RUNNER.md` and the spec if the Xcode range changes.
 
-- [ ] **Step 1: Choose versions.** Pick the newest stable Kotlin that has all of these:
+- [x] **Step 1: Choose versions.** Pick the newest stable Kotlin that has all of these:
   - a KSP release;
   - a Roborazzi release built with a Kotlin no newer than it;
   - a Compose Multiplatform release;
@@ -1708,7 +1708,12 @@ unblocks Ktor 3.6 and later, whose OkHttp 5.5 needs compileSdk 37 (Task 5 stayed
   - support for the Xcode on GitHub's `macos-latest` image.
 
   Record the versions and the Xcode range in the pull request.
-- [ ] **Step 2: Bump and migrate the KMP Android targets** to the AGP 9 plugin.
+
+  Chosen (9 November 2026): Kotlin 2.4.21, AGP 9.3.3 on Gradle 9.5.1, KSP 2.3.13, Roborazzi 1.76.0
+  (unchanged, built with Kotlin 2.3), Compose Multiplatform 1.9.3 and Koin 4.1.1 (unchanged; CMP
+  1.9.3 supports AGP 9), kotlinx-serialization 1.12.0, Ktor 3.6.1 with compileSdk 37, Kover 0.9.9
+  and detekt 1.23.7 (unchanged). Xcode up to 26.4. Reasons and sources: the task's report.
+- [x] **Step 2: Bump and migrate the KMP Android targets** to the AGP 9 plugin.
 - [ ] **Step 3: Verify.** All jobs green, and screenshots verify with no baseline change. A
   renderer move goes through Regenerate and is stated in the pull request, as phase 1 Task 1 did.
 - [ ] **Step 4: Commit.** `chore: move to AGP 9 and Kotlin 2.4 (MON-24)`

@@ -7,8 +7,9 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 // package (`com.coparently.app.data.…`), as phase 1's moves into `:shared` did, so no importer in
 // the app changes.
 //
-// It depends on `:shared` (the domain) and is built like it: an `androidTarget()` on the
-// `com.android.library` plugin, and the two iPhone targets. It makes no iOS framework of its own:
+// It depends on `:shared` (the domain) and is built like it: AGP 9's Android KMP library target
+// (`com.android.kotlin.multiplatform.library`, `kotlin { android { } }`, MON-24 phase 2, Task 13)
+// and the two iPhone targets. It makes no iOS framework of its own:
 // the one framework the iPhone app links comes later, from `:shared-ui`, and exports this module.
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
@@ -16,7 +17,7 @@ plugins {
     // this plugin links them. See `cocoapods { }` below.
     id("org.jetbrains.kotlin.native.cocoapods")
     id("org.jetbrains.kotlin.plugin.serialization")
-    id("com.android.library")
+    id("com.android.kotlin.multiplatform.library")
     id("io.gitlab.arturbosch.detekt")
     id("org.jetbrains.kotlinx.kover")
     // Room's processor, for Android and both iPhone targets (Task 7; the app ran it until then).
@@ -24,18 +25,18 @@ plugins {
 }
 
 /**
- * Ktor 3.5.1. Its artifacts are built with Kotlin 2.3.21 (class metadata 2.3.0, a stdlib dependency
- * of 2.3.21), which this project's compiler reads, and it asks for kotlinx-coroutines and
- * kotlinx-serialization 1.11.0, the versions the project already uses. Its OkHttp engine brings
- * OkHttp 5.3.2 (see the app's build file).
+ * Ktor 3.6.1, the newest release (MON-24 phase 2, Task 13; 3.5.1 before). Its artifacts are built
+ * with Kotlin 2.3.21 (a stdlib dependency of 2.3.21), which this project's 2.4.21 compiler reads, and
+ * it asks for kotlinx-coroutines 1.11.0, the project's, and kotlinx-io 0.9.1 (below). Never take a
+ * Ktor built with a newer Kotlin than the project's.
  *
- * Not 3.6: Ktor 3.6.0 brings OkHttp 5.5.0 and 3.6.1 brings 5.5.1, and from OkHttp 5.5 the
- * `okhttp-android` AAR requires compileSdk 37 (5.4 requires 36, 5.3.2 and older 1), which AGP 8.10
- * cannot compile against — `checkDebugAarMetadata` fails. So Ktor 3.6 and later wait for AGP 9, as
- * Kotlin 2.4 does. Don't force an older OkHttp under a newer Ktor: no test here runs the real OkHttp
- * engine, so a binary mismatch would show only on a phone.
+ * Its OkHttp engine brings OkHttp 5.5.1, whose `okhttp-android` AAR requires compileSdk 37 (5.4
+ * requires 36, 5.3.2 and older 1). AGP 8.10 could not compile against 37, which is what held Ktor at
+ * 3.5.1 (and OkHttp at 5.3.2); AGP 9.3 can, so the app and the three shared modules compile against
+ * 37 and Ktor moved with AGP 9. Don't force an older OkHttp under a newer Ktor: no test here runs the
+ * real OkHttp engine, so a binary mismatch would show only on a phone.
  */
-val ktorVersion = "3.5.1"
+val ktorVersion = "3.6.1"
 
 /**
  * Room 2.7.2, the version the app compiled against before the database moved here, so nothing about
@@ -49,9 +50,10 @@ val roomVersion = "2.7.2"
  * GitLive's firebase-kotlin-sdk 2.7.0 (MON-24 Task 1 chose it; ROADMAP MON-24, "Firebase on two
  * platforms"): Firestore from common code, over the Android SDK on Android and the iOS SDK on the
  * iPhone. Its newest stable release, built with Kotlin 2.2.21 (metadata this compiler reads) and on
- * kotlinx-coroutines 1.10.2 and kotlinx-serialization 1.9.0, which the project's 1.11.0 replace.
- * 3.0's alphas are built with Kotlin 2.4 and wait for it. On Android it imports the Firebase BoM
- * [firebaseBom], which the app declares too.
+ * kotlinx-coroutines 1.10.2 and kotlinx-serialization 1.9.0, which the project's 1.11.0 and 1.12.0
+ * replace. 3.0's alphas are built with Kotlin 2.4, which this project now uses (Task 13), and stay
+ * out while they are alphas. On Android it imports the Firebase BoM [firebaseBom], which the app
+ * declares too.
  */
 val gitliveVersion = "2.7.0"
 
@@ -103,9 +105,22 @@ val generateWireFixtureLocation = tasks.register("generateWireFixtureLocation") 
 }
 
 kotlin {
-    androidTarget {
+    android {
+        namespace = "com.coparently.app.shareddata"
+        // API 37: Ktor 3.6's OkHttp 5.5 AAR asks for it (see [ktorVersion]).
+        compileSdk = 37
+        // The app's minSdk. Nothing in this module may need a higher API level.
+        minSdk = 26
+        // Java and Kotlin bytecode alike, as `compileOptions` and `jvmTarget` set them before.
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_17)
+        }
+        // The JVM tests: `androidHostTest`, with commonTest in the same compilation (the new plugin
+        // creates them only when asked). As in the app: `android.util.Log`, which the common code's
+        // `logger` reaches on Android, is a stub in JVM tests and would throw "not mocked" from a
+        // failure path a test drives.
+        withHostTest {
+            isReturnDefaultValues = true
         }
     }
 
@@ -155,8 +170,8 @@ kotlin {
             // `api`, because the clients' public constructors take an `HttpClient`.
             api("io.ktor:ktor-client-core:$ktorVersion")
             // `kotlinx.io.IOException`, which a network failure arrives as on every platform (on
-            // the JVM it is `java.io.IOException` itself). The version Ktor 3.5.1 is built on.
-            api("org.jetbrains.kotlinx:kotlinx-io-core:0.9.0")
+            // the JVM it is `java.io.IOException` itself). The version Ktor 3.6.1 is built on.
+            api("org.jetbrains.kotlinx:kotlinx-io-core:0.9.1")
             // `api`: `CoPlanlyDatabase` extends `RoomDatabase` and the app reaches its DAOs.
             api("androidx.room:room-runtime:$roomVersion")
             // Firestore from common code (`data/remote/firebase/GitLiveFirestoreClient`). Only
@@ -214,8 +229,8 @@ kotlin {
         commonTest {
             kotlin.srcDir(generateWireFixtureLocation)
         }
-        androidUnitTest.dependencies {
-            // commonTest runs here as the Android unit tests, on JUnit 4 like the app's.
+        getByName("androidHostTest").dependencies {
+            // commonTest runs here as the Android host (unit) tests, on JUnit 4 like the app's.
             implementation("junit:junit:4.13.2")
             // `GitLiveFirestoreClientAndroidTest` drives the GitLive client over a mocked Android
             // Firestore and checks each SDK call it makes. The app's version.
@@ -223,27 +238,6 @@ kotlin {
             // The chat repository's tests read its flows with it (Task 8b). The app's version.
             implementation("app.cash.turbine:turbine:1.2.0")
         }
-    }
-}
-
-android {
-    namespace = "com.coparently.app.shareddata"
-    compileSdk = 36
-
-    defaultConfig {
-        // The app's minSdk. Nothing in this module may need a higher API level.
-        minSdk = 26
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    // As in the app: `android.util.Log`, which the common code's `logger` reaches on Android, is a
-    // stub in JVM unit tests and would throw "not mocked" from a failure path a test drives.
-    testOptions {
-        unitTests.isReturnDefaultValues = true
     }
 }
 
@@ -258,7 +252,7 @@ detekt {
         "src/commonMain/kotlin",
         "src/commonTest/kotlin",
         "src/androidMain/kotlin",
-        "src/androidUnitTest/kotlin",
+        "src/androidHostTest/kotlin",
         "src/iosMain/kotlin",
         "src/iosTest/kotlin",
     )

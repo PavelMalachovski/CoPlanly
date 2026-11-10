@@ -16,7 +16,7 @@ import kotlin.test.fail
  *
  * To regenerate after an intended format change, run
  * `UPDATE_WIRE_FIXTURES=1 ./gradlew :app:testDebugUnitTest --tests '*CurrentWireFixturesTest*' --rerun`
- * (every contract; `:shared-data:testDebugUnitTest` the same way rewrites only its own) and review
+ * (every contract; `:shared-data:testAndroidHostTest` the same way rewrites only its own) and review
  * the diff. A missing file is written on any run (and the run fails, so it gets committed). A key
  * an older build will drop when it writes the document back goes in
  * [CurrentWrite.olderBuildsMayDrop], with the reason — the previous build's check fails on any

@@ -1,6 +1,8 @@
+// No `org.jetbrains.kotlin.android`: AGP 9 compiles Kotlin itself ("built-in Kotlin", MON-24 phase 2,
+// Task 13), the migration path its guide recommends, and the old plugin is refused beside AGP 9's DSL.
+// The Compose and serialization compiler plugins apply to the built-in compilation as they did.
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
     id("io.gitlab.arturbosch.detekt")
@@ -132,7 +134,9 @@ android {
     // the tree for no user-visible gain, while the applicationId is the identity Play and
     // Firebase key on. The two are allowed to differ and this is exactly the case for it.
     namespace = "com.coparently.app"
-    compileSdk = 36
+    // API 37 since AGP 9.3 (MON-24 phase 2, Task 13): Ktor 3.6's OkHttp 5.5 AAR asks for it
+    // (shared-data/build.gradle.kts). Compiling against 37 changes no behaviour; `targetSdk` stays 36.
+    compileSdk = 37
 
     defaultConfig {
         // The app's permanent identity. Changed from `com.coparently.app` (REL-1) while it still
@@ -149,6 +153,7 @@ android {
         // gitignored, so the plugin is not applied there at all.
         applicationId = "app.coplanly"
         minSdk = 26
+        // Not raised with compileSdk: a target SDK is a behaviour change, and nothing asks for 37 yet.
         targetSdk = 36
         // Overridden per upload by the release workflow (-PCOPLANLY_VERSION_CODE), because Play
         // refuses a second bundle with the same versionCode.
@@ -325,20 +330,24 @@ android {
     // MigrationTestHelper reads to create a database at a past version and to validate the
     // rebuilt schema after a migration — without this, CoPlanlyDatabaseMigrationTest cannot
     // find 11.json/12.json at instrumentation runtime.
+    // `directories`, AGP 9's form of the deprecated `srcDir`.
     sourceSets {
         getByName("androidTest") {
-            assets.srcDir("$projectDir/schemas")
+            assets.directories += "$projectDir/schemas"
         }
         // The wire contracts' harness lives in `:shared-data`'s commonTest (MON-24 phase 2, Task
         // 8a), where the contracts move as their writers do. The contracts whose writers are
         // still here run from this module, so its unit tests compile the same harness from the
         // same files, beside this module's `WireContracts` (the list of every contract) and its
-        // `WireFixtureLocation`. Only these two directories are shared this way.
+        // `WireFixtureLocation`. Only these two directories are shared this way. They are Kotlin
+        // directories: AGP 9's built-in Kotlin compiles an extra directory only from the `kotlin`
+        // set (its migration guide), where the old Kotlin plugin also read one added to `java`.
         getByName("test") {
-            java.srcDir("$rootDir/shared-data/src/commonTest/kotlin/com/coparently/app/wire")
+            kotlin.directories += "$rootDir/shared-data/src/commonTest/kotlin/com/coparently/app/wire"
             // The recording Firestore and callable fakes the moved contracts and the app's own
             // data-layer tests drive the data sources with.
-            java.srcDir("$rootDir/shared-data/src/commonTest/kotlin/com/coparently/app/data/remote/firebase/testing")
+            kotlin.directories +=
+                "$rootDir/shared-data/src/commonTest/kotlin/com/coparently/app/data/remote/firebase/testing"
         }
     }
 }
@@ -408,7 +417,7 @@ dependencies {
     // activity 1.12 and lifecycle 2.10, which would lift this app's Compose past its BOM above and
     // move every screenshot baseline inside a DI change. 4.1.1 asks for Compose 1.8.2 (the BOM's
     // 1.9 wins), lifecycle 2.9.3 and activity 1.10.1 (above the 2.8.7 and 1.9.3 declared here, so
-    // those two resolve up), and is built with Kotlin 2.1.21, which this project's 2.3.21 compiler
+    // those two resolve up), and is built with Kotlin 2.1.21, which this project's 2.4.21 compiler
     // reads. `koin-androidx-compose` brings `koinViewModel()` (koin-compose-viewmodel) with it.
     val koinBom = platform("io.insert-koin:koin-bom:4.1.1")
     implementation(koinBom)
@@ -473,9 +482,10 @@ dependencies {
 
     // JSON for everything the app stores or sends as text goes through `StoredJson` (`:shared`),
     // on kotlinx.serialization, which replaced Gson in MON-24 and writes the bytes Gson wrote. The
-    // same version as the shared module's, declared here because the app's own models
-    // (`EventDraft`) and the school import's tree reads use it directly.
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    // same version as the shared module's (1.12.0, built with Kotlin 2.4.10, since Task 13), declared
+    // here because the app's own models (`EventDraft`) and the school import's tree reads use it
+    // directly.
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.12.0")
     // Not a dependency: a library on the runtime classpath still brings Gson, asking for 2.10.1,
     // after Google's calendar client left (MON-24 phase 2). This keeps it at 2.11.0, the version the
     // app declared and ran until MON-24, so the library runs the Gson it ran before. It is also the
@@ -513,9 +523,10 @@ dependencies {
     // had no consumer left in `app/src` at all — retrofit already had none before.
     // OkHttp was declared again for the school import (MON-8) and left the app's own dependencies
     // in MON-24 phase 2, when the import moved to Ktor in `:shared-data`. Its OkHttp engine brings
-    // OkHttp 5.3.2, which Coil 2.7 (built against 4.12) now runs on too: Coil uses only OkHttp's
-    // public API (calls, requests, responses, headers, cache control), which 5.x keeps
-    // binary-compatible, and nothing in the app calls OkHttp itself any more.
+    // OkHttp 5.5.1 since Ktor 3.6.1 (Task 13; 5.3.2 under Ktor 3.5.1), which Coil 2.7 (built against
+    // 4.12) now runs on too: Coil uses only OkHttp's public API (calls, requests, responses, headers,
+    // cache control), which 5.x keeps binary-compatible, and nothing in the app calls OkHttp itself
+    // any more.
 
     // Firebase BoM 34 (audit L-2). 34.0.0 removed the `-ktx` modules; their Kotlin extensions
     // (`Firebase`, `logEvent`, `storageMetadata`, …) have lived in the main modules under the
@@ -565,13 +576,13 @@ dependencies {
     testImplementation("com.google.code.gson:gson:2.11.0")
     testImplementation(kotlin("test"))
     // kotlin-reflect at the compiler's own version for the JVM tests. MockK asks for 2.0.0, which
-    // reads Kotlin metadata only up to 2.1, and this module is compiled with Kotlin 2.3; a
+    // reads Kotlin metadata only up to 2.1, and this module is compiled with Kotlin 2.4; a
     // reflection library older than the compiler is unsupported. Unversioned, it follows the
-    // Kotlin plugin. Not for androidTest: the test APK carries kotlin-reflect but not the stdlib,
-    // and the `upgrade` job runs it inside the *base* build's process, on the base's stdlib. A
-    // kotlin-reflect newer than that stdlib fails there (2.3's needs
-    // `kotlin.jvm.internal.KotlinGenericDeclaration`, which stdlib 2.1 lacks), so androidTest keeps
-    // MockK's 2.0.0 until main itself ships stdlib 2.3.
+    // Kotlin Gradle plugin's version (2.4.21), which AGP 9's built-in Kotlin applies. Not for
+    // androidTest: the test APK carries kotlin-reflect but not the stdlib, and the `upgrade` job runs
+    // it inside the *base* build's process, on the base's stdlib. A kotlin-reflect newer than that
+    // stdlib fails there (2.3's needs `kotlin.jvm.internal.KotlinGenericDeclaration`, which stdlib
+    // 2.1 lacks), so androidTest keeps MockK's 2.0.0 until main itself ships the project's stdlib.
     testImplementation(kotlin("reflect"))
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     // `GsonDeviceParityTest`'s oracle: the Gson the app shipped until MON-24, on the device's ART,
@@ -602,7 +613,7 @@ dependencies {
     // Ktor's in-memory server for the school import's tests (MON-8): token rotation and the
     // refresh-and-retry on a 401, through the real client. It replaced OkHttp's MockWebServer when
     // the client moved to Ktor (MON-24); the version is `:shared-data`'s Ktor.
-    testImplementation("io.ktor:ktor-client-mock:3.5.1")
+    testImplementation("io.ktor:ktor-client-mock:3.6.1")
 
     // ArchCore Testing for LiveData and ViewModel
     testImplementation("androidx.arch.core:core-testing:2.2.0")
@@ -647,7 +658,8 @@ configurations.named("androidTestImplementation") {
 }
 
 // The JVM bytecode target, in the compilerOptions DSL: `android { kotlinOptions { … } }` is an
-// error since Kotlin 2.2.
+// error since Kotlin 2.2. AGP 9's built-in Kotlin registers this `kotlin` extension itself; its
+// default would be `compileOptions.targetCompatibility` (17) anyway, so this states the same value.
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)

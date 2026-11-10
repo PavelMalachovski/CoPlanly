@@ -213,7 +213,10 @@ jobs:
 
       # One invocation, not two: `testDebugUnitTest` compiles the same debug sources
       # `assembleDebug` does, so running them together shares a configuration phase and a
-      # Kotlin compile instead of repeating both.
+      # Kotlin compile instead of repeating both. `testAndroidHostTest` is the three shared
+      # modules' JVM tests (AGP 9's Android KMP library target, MON-24 phase 2, Task 13; they ran
+      # under the `testDebugUnitTest` selector until then), run here too because Kover merges them
+      # into the app's coverage.
       # The current version's schema is deleted before the build, so the check after it can tell
       # "written again, identical" from "not written at all": `git status --porcelain` is clean in
       # both cases, and only the first proves the moved database (MON-24 phase 2) still exports
@@ -230,12 +233,12 @@ jobs:
           echo "SCHEMA_FILE=$schema" >> "$GITHUB_ENV"
 
       - name: Assemble debug and run unit tests
-        run: ./gradlew :app:assembleDebug testDebugUnitTest :shared-data:kspDebugKotlinAndroid --rerun
+        run: ./gradlew :app:assembleDebug testDebugUnitTest testAndroidHostTest :shared-data:kspAndroidMain --rerun
 
       # `DatabaseSchemaExportTest` cannot catch what CQ-1 says it catches, and this is the
       # step that can. KSP (Room) writes `app/schemas/<version>.json` during the build above, from
       # the `room.schemaLocation` argument (in shared-data/build.gradle.kts since MON-24 phase 2,
-      # where Room's processor now runs: `:shared-data:kspDebugKotlinAndroid`, which the app's
+      # where Room's processor now runs: `:shared-data:kspAndroidMain`, which the app's
       # compile depends on, so this step still follows the task that writes the schema; the
       # moved database must export exactly the committed `46.json`, identity hash included)
       # — so by the time the unit test reads that directory
@@ -841,7 +844,7 @@ jobs:
   # others cannot:
   #
   #  * **26 — minSdk.** A call to an API newer than the device (`LocalDate.ofInstant` is 34+; the
-  #    CLAUDE.md hard rules name it) compiles against compileSdk 36 and only throws
+  #    CLAUDE.md hard rules name it) compiles against compileSdk 37 and only throws
   #    `NoSuchMethodError` on an old device. Lint's NewApi catches most of it, not all — not a
   #    library that does it for you. 32-bit x86 on purpose: it is a second ABI for SQLCipher's
   #    native library, whose absence is exactly the failure `EncryptedDatabase.fallBackTo` handles.
@@ -1909,10 +1912,12 @@ jobs:
   # components). Two jobs, gated on `changes`' `shared` output (`shared/**`, `shared-data/**`,
   # `shared-ui/**`, the build files, the workflow). `build-test` runs these tests too, because Kover
   # merges `:shared`, `:shared-data` and `:shared-ui` into the app's coverage; this job is where they
-  # get a check run of their own, beside the iOS compile. `:shared-ui`'s own tests are the theme's
-  # (`androidUnitTest`, slice 9b) and the moved ViewModels' and shared state's (Task 10: commonTest
-  # and `androidUnitTest`), run on the JVM; its strings are checked by the app's parity tests
-  # (`StringsParityTest`, `PluralsParityTest`, in `build-test`), and its iOS klib — `Res`, the
+  # get a check run of their own, beside the iOS compile. Each module's JVM tests are its
+  # `androidHostTest` source set with commonTest, run by `testAndroidHostTest` (AGP 9's Android KMP
+  # library target since Task 13; `androidUnitTest` and `testDebugUnitTest` before). `:shared-ui`'s
+  # own tests are the theme's (slice 9b) and the moved ViewModels' and shared state's (Task 10:
+  # commonTest and `androidHostTest`), run on the JVM; its strings are checked by the app's parity
+  # tests (`StringsParityTest`, `PluralsParityTest`, in `build-test`), and its iOS klib — `Res`, the
   # theme, the common components and the ViewModels — and its commonTest are compiled here for iOS.
   # Nothing runs `:shared-ui`'s commonTest on the simulator yet: its test executable would link
   # `shared-data`'s Firebase pods, which only `shared-data` (CocoaPods, `linkOnly`) provides.
@@ -1994,10 +1999,10 @@ jobs:
       - name: Shared tests (JVM) and the iOS compile
         run: >-
           ./gradlew
-          :shared:testDebugUnitTest :shared:compileKotlinIosSimulatorArm64 :shared:compileTestKotlinIosSimulatorArm64
-          :shared-data:testDebugUnitTest :shared-data:compileKotlinIosSimulatorArm64
+          :shared:testAndroidHostTest :shared:compileKotlinIosSimulatorArm64 :shared:compileTestKotlinIosSimulatorArm64
+          :shared-data:testAndroidHostTest :shared-data:compileKotlinIosSimulatorArm64
           :shared-data:compileTestKotlinIosSimulatorArm64
-          :shared-ui:testDebugUnitTest :shared-ui:compileKotlinIosSimulatorArm64
+          :shared-ui:testAndroidHostTest :shared-ui:compileKotlinIosSimulatorArm64
           :shared-ui:compileTestKotlinIosSimulatorArm64
 
       - name: Upload reports
@@ -2020,7 +2025,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: junit-shared
-          path: shared*/build/test-results/testDebugUnitTest/*.xml
+          path: shared*/build/test-results/testAndroidHostTest/*.xml
           if-no-files-found: ignore
           retention-days: 14
 
@@ -2029,7 +2034,7 @@ jobs:
         uses: mikepenz/action-junit-report@v6
         with:
           check_name: Shared tests (JVM)
-          report_paths: shared*/build/test-results/testDebugUnitTest/*.xml
+          report_paths: shared*/build/test-results/testAndroidHostTest/*.xml
           detailed_summary: true
           # A job that died before writing results must not publish a green check.
           require_tests: true
@@ -2040,8 +2045,9 @@ jobs:
   # never on anybody's own (owner decision, 1 November 2026: this replaced the self-hosted Mac of
   # docs/IOS-RUNNER.md, which stays as a fallback). Gated like the Linux job, on `shared`.
   # `macos-latest` rather than a numbered image, so the job never names an image GitHub retired;
-  # the "Xcode" step prints which one ran. Kotlin 2.3.21 builds and runs these tests on Xcode 26
-  # and, on the owner's Mac, on Xcode 27.2 (ROADMAP MON-24).
+  # the "Xcode" step prints which one ran. Kotlin 2.3.21 built and ran these tests on the image's
+  # Xcode 26 and, on the owner's Mac, on Xcode 27.2 (ROADMAP MON-24); Kotlin 2.4.21, since Task 13,
+  # supports Xcode up to 26.4.
   shared-ios:
     name: Shared — iOS simulator tests and framework (macOS)
     needs: changes

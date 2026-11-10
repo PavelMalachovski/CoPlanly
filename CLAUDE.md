@@ -542,12 +542,22 @@ When touching the UI, keep these invariants:
    server's sweeps and account deletion, because an older build may still write one. Don't bring
    a budget screen back without a product decision. Tab switches, including Home's stat-tile deep
    links, go through `NavHostController.navigateToTab` so they share one back-stack policy.)*
-2. **Toolchain**: compileSdk/targetSdk 36, AGP 8.10.1, **Kotlin 2.3.21** (+ `kotlin.plugin.compose`
-   at the same version; MON-24, November 2026),
+2. **Toolchain**: compileSdk 37 and targetSdk 36, **AGP 9.3.3** on **Gradle 9.5.1** (MON-24 phase 2,
+   Task 13: AGP 9 compiles Kotlin itself, so the app applies no `org.jetbrains.kotlin.android`, and
+   the three shared modules' Android target is AGP's `com.android.kotlin.multiplatform.library`,
+   `kotlin { android { … } }`, one variant with no build types, whose JVM tests are the
+   `androidHostTest` source set run by `testAndroidHostTest` and whose Room processor task is
+   `kspAndroidMain`; `shared-ui` enables its Android resources so Compose Multiplatform's reach the
+   APK; AGP 9.3 is the newest minor Kotlin 2.4.21 supports, and 9.3.2 fixed lint on JDK 17; AGP
+   9's new defaults are taken, none opted out of in `gradle.properties` — R8 repackages classes
+   into the default package and no longer keeps a kept class's constructor implicitly, which no
+   keep rule here relied on, resource shrinking considers code, and unit tests exist for `debug`
+   alone, the one CI runs),
+   **Kotlin 2.4.21** (+ `kotlin.plugin.compose` at the same version; MON-24, November 2026),
    Compose BOM 2025.10 (Material 3 1.4 — whose public API has none of M3 Expressive:
    `ButtonGroup`, `LoadingIndicator`, `MotionScheme` and the rest are still alpha, in 1.5; this line
    used to say the BOM shipped them), **Compose Multiplatform 1.9.3** in `:shared-ui` (MON-24 phase
-   2, Task 9: plugin `org.jetbrains.compose`, the Compose compiler still
+   2, Task 9: plugin `org.jetbrains.compose`, which supports AGP 9, the Compose compiler still
    `org.jetbrains.kotlin.plugin.compose` at the Kotlin version; its Android artifacts ask for
    androidx Compose runtime and foundation 1.9.4, so the app's Compose resolves one patch above the
    BOM's 1.9.3, while material3 stays 1.4.0, which CMP material3 1.9.0 asks for; not 1.10, which
@@ -561,9 +571,9 @@ When touching the UI, keep these invariants:
    serialization 1.9.0, all below what the graph resolves; 2.10 asks for CMP 1.10, past the BOM), in
    place of the app's Android `compose:2.6.1`, whose packages it shares, so never both; no Coil 3
    yet — it arrives with the task that first needs it in common code), Room 2.7.2 (2.6.x breaks on
-   Kotlin 2.x metadata), Room on **KSP2** (KSP `2.3.11`; kapt is gone) — **Room for Kotlin
-   Multiplatform in `:shared-data` since MON-24 phase 2**, its processor run there for Android and
-   both iPhone targets and the app running none, with androidx.sqlite 2.5.2's bundled driver
+   Kotlin 2.x metadata), Room on **KSP2** (KSP `2.3.13`, built with Kotlin 2.4.0; kapt is gone) —
+   **Room for Kotlin Multiplatform in `:shared-data` since MON-24 phase 2**, its processor run there
+   for Android and both iPhone targets and the app running none, with androidx.sqlite 2.5.2's bundled driver
    (`sqlite-bundled`, released with Room 2.7.2) on iOS only; the schema goes to `app/schemas/`
    through the `room.schemaLocation` KSP argument, which the app already used, rather than the Room
    Gradle plugin, which was not tried in this task (Google's Maven repository, where the plugin is
@@ -588,24 +598,29 @@ When touching the UI, keep these invariants:
    **Koin 4.1.1** (BOM; `koin-android`, `koin-androidx-compose`, `koin-androidx-workmanager`, and
    `koin-test` for the JVM tests — MON-24 phase 2 replaced Hilt 2.58 with it; 4.2.x is newer but its
    Compose artifacts pull Compose 1.10, activity 1.12 and lifecycle 2.10 past the BOM, so it waits
-   for a Compose BOM that has them), kotlinx-coroutines 1.11.0, **kotlinx-serialization-json 1.11.0**
+   for a Compose BOM that has them), kotlinx-coroutines 1.11.0, **kotlinx-serialization-json 1.12.0**
    with the `org.jetbrains.kotlin.plugin.serialization` plugin at the Kotlin version (MON-24, which
-   replaced Gson; 1.11.0 is built with Kotlin 2.3.20, 1.12.0 with 2.4, so it moves with Kotlin; applied
+   replaced Gson; 1.12.0 is built with Kotlin 2.4.10 and came with Kotlin 2.4 in Task 13, where
+   1.11.0 was built with 2.3.20, so it moves with Kotlin; applied
    in the app, `:shared`, `:shared-data` and, since Task 10's slice 10b and the event form's
    `EventDraft`, `:shared-ui`),
    predictive back on. **Kotlin, KSP
    and Roborazzi move together, and AGP holds them back**: KSP has been versioned apart from Kotlin
-   since 2.3.0 and is KSP2 only; 2.3.12 and later need AGP 8.12. Dagger used to be the second
-   brake — 2.59, the last Dagger for AGP 8, reads Kotlin metadata only up to 2.3 — and it left with
-   Hilt, so **only AGP 9 now blocks Kotlin 2.4** (plan Task 13 of the iPhone work's
-   phase 2). **Kotlin/Native pins Xcode too**: 2.3.21 supports
-   Xcode up to 26.0 (2.4.21 up to 26.4; Xcode 27 needs Kotlin 2.5). In practice 2.3.21 builds, links
-   and runs commonTest on the owner's Xcode 27.2 (November 2026; eight harmless linker warnings about
-   its prebuilt caches), so the runner uses that, with an Xcode 26 beside it through the runner's
-   `DEVELOPER_DIR` as the fallback (`docs/IOS-RUNNER.md`); AGP 9
-   with Kotlin 2.4 comes before the iPhone work's phase 3, and a stable Kotlin 2.5 before the App
-   Store (ROADMAP MON-24). The `upgrade` job runs this branch's test APK on
-   the base build's stdlib, so androidTest must not carry a kotlin-reflect newer than main's
+   since 2.3.0 and is KSP2 only; 2.3.12 and later need AGP 8.12. A Kotlin release supports AGP only
+   up to a version (2.4.21: 8.5.2–9.3.1, and Gradle up to 9.7.0), so a newer AGP waits for the
+   Kotlin that names it, and Kotlin waited for AGP 9 alone once Dagger left with Hilt (plan Task 13
+   of the iPhone work's phase 2 took both). Roborazzi stays 1.76.0 (built with Kotlin 2.3, below the
+   project's) and detekt 1.23.7: both run on AGP 9 and Gradle 9 (detekt's per-variant Android
+   tasks, which look for AGP's old `BaseExtension`, are simply not created; CI runs the plain
+   `detekt`), and detekt 2 is a baseline-format change. detekt 1.23's default configuration exempts
+   tests by their source set names and knows `androidUnitTest`, not `androidHostTest`, so
+   `app/config/detekt/detekt.yml` spells the list out with the new names on each rule it exempts.
+   **Kotlin/Native pins Xcode too**: 2.4.21 supports Xcode up to 26.4 (2.3.21 supported 26.0;
+   Xcode 27 needs Kotlin 2.5). In practice 2.3.21 built, linked and ran commonTest on the owner's
+   Xcode 27.2 (November 2026; eight harmless linker warnings about its prebuilt caches), so the
+   runner uses that, with an Xcode 26 beside it through the runner's `DEVELOPER_DIR` as the fallback
+   (`docs/IOS-RUNNER.md`); a stable Kotlin 2.5 comes before the App Store (ROADMAP MON-24). The
+   `upgrade` job runs this branch's test APK on the base build's stdlib, so androidTest must not carry a kotlin-reflect newer than main's
    Kotlin. Compiler options go through `kotlin { compilerOptions { … } }`;
    `kotlinOptions` is an error since Kotlin 2.2. **Firebase BoM 34.18.0 with no `-ktx`
    artifacts** (audit L-2): 34.0.0 removed them, and the Kotlin extensions (`Firebase`, `logEvent`,
@@ -617,20 +632,21 @@ When touching the UI, keep these invariants:
    Functions on the iPhone. It imports BoM 34.18.0, which is why the app's BoM is that one: Gradle
    resolves one BoM for the graph, and the app and `shared-data` name the same version so their
    artifacts are the ones that run. Move the two together, and only to a BoM a GitLive release
-   names. It is built with Kotlin 2.2.21, and 3.0's alphas with Kotlin 2.4, so 3.0 waits for that
-   step. On the iPhone, `shared-data` links the **Firebase iOS pods 11.8.0** (the version GitLive's
-   bindings were generated against) through the Kotlin CocoaPods plugin with `linkOnly = true`:
+   names. It is built with Kotlin 2.2.21; 3.0's alphas are built with Kotlin 2.4, which the project
+   now uses, and stay out while they are alphas. On the iPhone, `shared-data` links the **Firebase
+   iOS pods 11.8.0** (the version GitLive's bindings were generated against) through the Kotlin CocoaPods plugin with `linkOnly = true`:
    GitLive publishes the bindings, and a second binding of the same headers would clash. A Linux
    host never runs CocoaPods: the plugin reports the host as unsupported, and the iOS klibs need no
    pods because GitLive's own klibs carry the bindings (the `shared` job's iOS compile holds that).
-   **Ktor 3.5.1** (MON-24 phase 2, `shared-data/`) for the two HTTP clients, the school import's and
-   Google Calendar's: built with Kotlin 2.3.21 like this project, on the OkHttp engine on Android
-   (which brings **OkHttp 5.3.2**; the app declares no OkHttp of its own any more, and Coil 2.7 runs
-   on that one) and Darwin on iOS. google-api-client and google-api-services-calendar left the build
-   with it. Like kotlinx-serialization, it moves with Kotlin: never take a Ktor built with a newer
-   Kotlin than the project's (3.5.1 is built with 2.3.21). **And AGP holds it back too**: OkHttp 5.5
-   and later (so Ktor 3.6 and later) need compileSdk 37, which AGP 8.10 cannot compile against
-   (`checkDebugAarMetadata` fails), so Ktor waits for AGP 9 with Kotlin 2.4. Don't force an older
+   **Ktor 3.6.1** (MON-24 phase 2, `shared-data/`) for the two HTTP clients, the school import's and
+   Google Calendar's: built with Kotlin 2.3.21, on the OkHttp engine on Android
+   (which brings **OkHttp 5.5.1**; the app declares no OkHttp of its own any more, and Coil 2.7 runs
+   on that one) and Darwin on iOS, with kotlinx-io 0.9.1. google-api-client and
+   google-api-services-calendar left the build with it. Like kotlinx-serialization, it moves with
+   Kotlin: never take a Ktor built with a newer Kotlin than the project's. **And AGP held it back
+   too**: OkHttp 5.5 and later (so Ktor 3.6 and later) need compileSdk 37, which AGP 8.10 could not
+   compile against (`checkDebugAarMetadata` failed), so Ktor stayed at 3.5.1 until AGP 9.3 (Task
+   13), which is why the app and the shared modules compile against 37. Don't force an older
    OkHttp under a newer Ktor: no test runs the real OkHttp engine, so a mismatch would show only on a
    phone.
 3. **Calendar**: month view is a classic grid from the 1st with horizontal month paging
@@ -702,7 +718,7 @@ crash with "migration from 3 to 9 required but not found".
 ```
 
 ```bash
-./gradlew :shared:testDebugUnitTest                # the shared module's commonTest on the JVM
+./gradlew :shared:testAndroidHostTest              # the shared module's commonTest on the JVM
 ./gradlew :shared:compileKotlinIosSimulatorArm64   # its iOS klib; any host, no Mac (Kotlin 2.2.20+)
 ./gradlew :shared:iosSimulatorArm64Test            # commonTest on an iOS simulator: a Mac with Xcode
 ./gradlew :shared-ui:linkDebugFrameworkIosSimulatorArm64  # Shared.framework for the iPhone app: the Mac too
@@ -987,7 +1003,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   on a wire-format change — `app/src/test/resources/wire/current/` is one of the job's inputs.
 
   **A second workflow file exists and is not part of CI**: `.github/workflows/regenerate.yml` runs
-  `detektBaseline` and exports the Room schema (`:shared-data:kspDebugKotlinAndroid --rerun`, where
+  `detektBaseline` and exports the Room schema (`:shared-data:kspAndroidMain --rerun`, where
   Room's processor runs since MON-24 phase 2), then commits both back to the branch it ran on
   (rebasing onto the branch head first, so a push made while it ran does not lose its work; the
   bot's commit starts no CI run, so the next human push is what verifies it).
@@ -1081,21 +1097,25 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `asAppPath` in `tools/ci-changes.js`), so a string-only change still skips e2e, the upgrade job
   and the R8 probe; the rest of `shared-ui/` is the build.
   **`shared`** (Linux) runs, for `:shared` and `:shared-data` (phase 2's data layer) alike,
-  `testDebugUnitTest` (check run "Shared tests (JVM)"), `compileKotlinIosSimulatorArm64`,
+  `testAndroidHostTest` (check run "Shared tests (JVM)"; the Android KMP library target's JVM
+  tests since AGP 9, MON-24 phase 2, Task 13: the `androidHostTest` source set with commonTest,
+  which were `androidUnitTest` and `testDebugUnitTest` under `com.android.library`),
+  `compileKotlinIosSimulatorArm64`,
   the iOS klib, which Kotlin cross-compiles on Linux without a flag since 2.2.20 — so commonMain
   that does not compile for iOS fails on every pull request, Mac or no Mac — and
   `compileTestKotlinIosSimulatorArm64`, the same for commonTest; before them it deletes the
   current version's schema, reruns Room's iOS processor alone
   (`:shared-data:kspKotlinIosSimulatorArm64 --rerun`) and fails, as `build-test` now does for
-  Android (`:shared-data:kspDebugKotlinAndroid --rerun`, after the same deletion), when the file
+  Android (`:shared-data:kspAndroidMain --rerun`, after the same deletion), when the file
   was not written again or differs from the committed one — a clean `git status` alone cannot tell
   "identical" from "never written". **A backticked test name
   in commonTest may not contain a comma or parentheses**: the JVM accepts them and Kotlin/Native
   refuses them (`Name contains illegal characters`), so write "a - b", not "a, b". `build-test` runs the
-  same tests once more, because Kover merges `:shared`, `:shared-data` and `:shared-ui` into the
-  app's coverage report. `shared` also runs `:shared-ui:testDebugUnitTest` — the theme's JVM tests,
-  which moved with it to `shared-ui/src/androidUnitTest/` (slice 9b), and the moved ViewModels' and
-  shared state's (Task 10, commonTest and `androidUnitTest`) — and compiles
+  same tests once more (`testAndroidHostTest` beside `testDebugUnitTest`, which now names the app's
+  alone), because Kover merges `:shared`, `:shared-data` and `:shared-ui` into the
+  app's coverage report. `shared` also runs `:shared-ui:testAndroidHostTest` — the theme's JVM tests,
+  which moved with it to `shared-ui/src/androidHostTest/` (slice 9b), and the moved ViewModels' and
+  shared state's (Task 10, commonTest and `androidHostTest`) — and compiles
   `:shared-ui:compileKotlinIosSimulatorArm64`, its iOS klib with `Res`, the theme, the common
   components and the ViewModels, and `compileTestKotlinIosSimulatorArm64`, its commonTest (nothing
   runs that on the simulator yet: the test executable would need `shared-data`'s Firebase pods); the strings' parity tests run in the app, in `build-test`. **`shared-ios`** runs `:shared:iosSimulatorArm64Test`,
@@ -1713,14 +1733,16 @@ di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, 
 **Where a `domain/…` path in this file lives** (MON-24 phase 1, November 2026). The domain moved
 to the shared module with every package unchanged, so a path this file writes as
 `domain/<package>/<File>.kt` is `shared/src/commonMain/kotlin/com/coparently/app/domain/<package>/<File>.kt`,
-and its test is under `shared/src/commonTest/` (or `shared/src/androidUnitTest/` when it compares
-with a JVM API or mocks). The rules and items that name those paths were not reworded; only the
-root changed. `domain/activity/ActivityAnnouncer.kt` is the exception the other way: it is in
+and its test is under `shared/src/commonTest/` (or `shared/src/androidHostTest/` when it compares
+with a JVM API or mocks; each shared module's JVM-only test source set is `androidHostTest`, which
+was `androidUnitTest` until AGP 9's Android KMP library target, MON-24 phase 2, Task 13, and this
+file says `androidHostTest` throughout). The rules and items that name those paths were not
+reworded; only the root changed. `domain/activity/ActivityAnnouncer.kt` is the exception the other way: it is in
 `shared-data/src/commonMain/`, not `shared/` (MON-24 phase 2, Task 8c), because it posts through the
 data layer's `MessageRepository` and logger; and so, since Task 8f, are the event use cases and
 `EventValidator` in `domain/usecase/` and `domain/error/ErrorHandler.kt`, which report and log
 through the data layer's `Analytics`, `CrashReporter`, `logger` and `Connectivity` (their tests in
-`shared-data/src/androidUnitTest/`), and, since Task 8j, `domain/repository/FamilyDocumentRepository.kt`,
+`shared-data/src/androidHostTest/`), and, since Task 8j, `domain/repository/FamilyDocumentRepository.kt`,
 whose local copy is a kotlinx-io `Path` and which `shared/` (no kotlinx-io) cannot declare.
 **The phase-1 stay list is empty** (each file's reason is in `docs/ROADMAP.md` MON-24):
 - dependency injection, Android or the data layer — `model/MessageTemplate.kt` (`@StringRes`) left
@@ -1784,7 +1806,7 @@ before); in `androidMain`, `data/local/DatabaseMigrations.kt`, `data/local/secur
 constructors the `upgrade` seed calls) and `di/DatabaseBuilder.kt`; in `iosMain`,
 `data/local/IosDatabase.kt`. **The entities' date columns are `kotlinx.datetime`** since then, and
 `Converters` writes them through `IsoText`, the same text `java.time`'s ISO formatters wrote
-(`ConvertersParityTest`, `shared-data/src/androidUnitTest/`); a mapper converts nothing between an
+(`ConvertersParityTest`, `shared-data/src/androidHostTest/`); a mapper converts nothing between an
 entity and the domain (the journal's entry, the last to bridge `java.time` there, is kotlinx-datetime
 since Task 8f). Task 8a, Firebase on GitLive: in `commonMain`, `data/remote/firebase/`'s
 Firestore data sources (`Firestore*DataSource`), `PairingFunctions`, `GoogleOAuthFunctions` and
@@ -2038,7 +2060,7 @@ with slice 10f, `GoogleCalendarAccount` with slice 11f).
 **Where a `presentation/theme/…` or `presentation/common/…` path in this file lives** (MON-24
 phase 2, Task 9, slice 9b, November 2026). The theme moved whole to
 `shared-ui/src/commonMain/kotlin/com/coparently/app/presentation/theme/`, package unchanged, with
-its tests in `shared-ui/src/androidUnitTest/` (JVM, as they were). What only Android can answer is
+its tests in `shared-ui/src/androidHostTest/` (JVM, as they were). What only Android can answer is
 an `expect` in the common file and the code it was in `androidMain`, beside an iPhone `actual` in
 `iosMain`: the system bars (`Theme.android.kt`; nothing on the iPhone until its view controller,
 phase 3), `rememberSystemContrastLevel` (`ContrastLevel.android.kt`; standard on the iPhone until
@@ -2168,7 +2190,7 @@ moved beside it: `support/SupportText.kt` (`supportAmount`, through the money se
 strings took the percent sign as an argument ("Localization"), and `ChangeRequestsScreen` lost the
 `splitSharesText` parameter 11d gave it.
 `CardClockTest` and `InboxItemsTest` run in `commonTest` (their names without commas),
-`RequestClockTextTest` in `androidUnitTest` (it compares with `answerByText`);
+`RequestClockTextTest` in `androidHostTest` (it compares with `answerByText`);
 `RequestHistoryGroupTest` stays in the app (Robolectric). **Then the family's screens** (slice
 11e): `presentation/family/`'s `FamilyScreen` (the tab's hub, design refresh item 4),
 `EarlierFamiliesScreen`, `UnassignedRecordsScreen` and `UnassignedRecordsEntries` (the row and Home's
@@ -2426,7 +2448,7 @@ made of the same samples, in the five languages.
 settings to sync, the rest), each moved with `git mv` to `shared-ui/src/commonMain/`, package
 unchanged, so a screen still in the app imports nothing new. Its test moves with it: to
 `shared-ui/src/commonTest/` (on `kotlin.test`) when it uses no JVM-only library, else to
-`shared-ui/src/androidUnitTest/` (MockK, a `java.time` fixture). Its `viewModelOf` leaves the app's
+`shared-ui/src/androidHostTest/` (MockK, a `java.time` fixture). Its `viewModelOf` leaves the app's
 `viewModelModule` for `:shared-ui`'s `uiModules` (`di/koin/UiModules.kt`, one module per feature,
 like `dataModules`), with `platformUiModule` beside it (an `expect`: nothing on Android, where the
 app's modules bind what the ViewModels take from the platform; on the iPhone, stand-ins that answer
@@ -2439,7 +2461,7 @@ reads it: `ParentsSource` (its one log line through the data layer's `logger`), 
 from the activity's level: `ConnectivityViewModel` (on the data layer's `Connectivity`, whose
 `online` is `NetworkMonitor`'s `networkStatus` held as a state, in place of `NetworkMonitor`
 itself), `FamilySwitcherViewModel`, `FamilyViewViewModel` and `ParentPaletteViewModel`, in
-`commonUiModule` too. A moved test that builds a `ParentsSource` uses `androidUnitTest`'s copy of
+`commonUiModule` too. A moved test that builds a `ParentsSource` uses `androidHostTest`'s copy of
 `testParentsSource`; the app keeps its own for the tests still there. Then **chat**: `ChatViewModel`
 (its drafts in the data layer's `SecurePreferences`, its "now" from `wallClockNow()` and
 `Clock.System`, a message's id from `kotlin.uuid.Uuid`), `SendHold`, `ChatAttachmentViewModel` (the
@@ -2471,7 +2493,7 @@ it the model's kotlinx days). The grid's other helpers
 no ViewModel reads them (`MiniMonthModel` moved with the requests in 10c, because
 `ChangeRequestViewModel` builds the inbox's mini months, and `eventsByDay` with it, because
 `MiniMonthModel` reads it). `CalendarSelectionTest` runs in `commonTest`; the two
-ViewModel tests (MockK) in `androidUnitTest`, where they keep `java.time` as their oracle. Then **the
+ViewModel tests (MockK) in `androidHostTest`, where they keep `java.time` as their oracle. Then **the
 events**: `EventViewModel` (the new-event draft and the custom event types in `SecurePreferences`,
 under the same keys; the draft written on `Dispatchers.IO`, the common `kotlinx.coroutines.IO`;
 every date and time was kotlinx-datetime already) with `EventDraft`, `EventUiState` and
@@ -2482,7 +2504,7 @@ is a stored model, so `:shared-ui` applies the serialization plugin and `check-i
 `RecordPhotoStorage`, which the iPhone's `platformDataModule` stands in for with
 `NoRecordPhotoStorage` (a data seam, beside `NoStorageBucket`) (every upload and delete an `IOException`: nothing stored, nothing dropped).
 `EventViewModelTest` keeps Gson as the oracle for a draft an older build wrote (Gson 2.11.0 in
-`:shared-ui`'s `androidUnitTest`), and `EventOwnerViewModelTest`'s check of the form's
+`:shared-ui`'s `androidHostTest`), and `EventOwnerViewModelTest`'s check of the form's
 `autoEventOwner` moved to the app's `AddEditEventScreenTest`, where that function is.
 Slice 10c moved **custody**: `CustodySetupViewModel`, which onboarding's schedule step shares (a new
 schedule's Monday from `Clock.System.todayIn` in the system zone, the first schedule's id from
@@ -2498,7 +2520,7 @@ in `presentationModule`. The two editors take the plan question they were opened
 public API was kotlinx-datetime already, so no screen converts anything. `CandidateModelTest`,
 `ChildScheduleFormTest`, `ContactWindowDraftTest` and `CustodyConflictResolverTest` run in
 `commonTest` (seven names lost a comma for Kotlin/Native); the three ViewModel tests (MockK) in
-`androidUnitTest`, where `java.time` stays their oracle for today.
+`androidHostTest`, where `java.time` stays their oracle for today.
 Then **the requests**: `ChangeRequestViewModel` (the inbox; a swap answer's and withdrawal's time
 `IsoText.dateTimeShortest(wallClockNow())`, the text `LocalDateTime.now().toString()` wrote, a
 re-offer's group id from `Uuid`, a proposal's diff anchored on `Clock.System.todayIn`, a
@@ -2519,7 +2541,7 @@ swap sheet keys its days by the kotlinx days `SwapSides` holds and looks custody
 event list, so `MonthView` and the agenda card read the map they did. The screenshot fixtures gained
 `ScreenshotFixtures.custodyOn` (a kotlinx day). `MiniMonthModelTest` and `SwapMiniMonthsTest` run in
 `commonTest` on kotlinx-datetime literals; `EventsByDayTest` and the four request tests (MockK) in
-`androidUnitTest`, converting at the edge where `java.time` stays their oracle.
+`androidHostTest`, converting at the edge where `java.time` stays their oracle.
 Slice 10d moved **the family**: `FamilyViewModel` (the Family tab's hub), `EarlierFamiliesViewModel`
 with the pure `EarlierFamilies.kt` (`EarlierFamily.lastDay` a kotlinx-datetime `LocalDate`, which
 `EarlierFamiliesScreen` formats through `utils/LocalizedDates.kt`'s kotlinx `format` overload, unchanged)
@@ -2529,7 +2551,7 @@ and `UnassignedRecordsViewModel` (its log line through `logger`), with what the 
 there). They are in `familyUiModule`, `MonthSpendDependencies` a `factory` as it was in
 `presentationModule`. `EarlierFamiliesTest` and `MonthMoneyTest` run in `commonTest` (kotlinx-datetime
 literals; four names lost a comma), `FamilyViewModelTest` and `UnassignedRecordsViewModelTest` (MockK)
-in `androidUnitTest`, beside a copy of the app's `testFamilyViewSource`.
+in `androidHostTest`, beside a copy of the app's `testFamilyViewSource`.
 Then **expenses**: `ExpenseViewModel` (a new expense's id from `Uuid`, its log lines — the
 `CoPlanlyUpload` and `CoPlanlyReceiptScan` tags included — through `logger`; `selectedMonth` and
 `MonthOfExpenses.month` kotlinx-datetime `YearMonth`s, this month from `Clock.System.todayIn` in the
@@ -2545,7 +2567,7 @@ receipt's on-device text goes through the domain's `ReceiptTextRecognizer`, whic
 `platformDataModule` stands in for with `NoReceiptText` (every scan an `IOException`, so the form
 shows its failed-scan message, "Couldn't read the receipt" (`ReceiptScanState.Failed`), and keeps
 the photo; nothing is sent anywhere, item 10). The four `ExpenseViewModel` tests (MockK) run in
-`androidUnitTest`, unchanged but for their location.
+`androidHostTest`, unchanged but for their location.
 Then **payments and child support**: `PaymentsViewModel` and `SupportViewModel`, in `paymentsUiModule`
 and `supportUiModule`, on `SignedInUser` for the uid where they took `FirebaseAuthService`
 (`getCurrentUid()`, what `getCurrentUser()?.uid` read). The support screen's reminder job goes through
@@ -2570,7 +2592,7 @@ wrote (they left it). The iPhone's `platformDataModule` binds `NoPush` (one obje
 and `PushRegistration`, as `FcmService` is on Android, so phase 3 replaces them together: the switch
 reads off, turning it on fails, nothing to detach) and `NoAccountDeletion` (it fails and wipes
 nothing).
-Both ViewModel tests (MockK) run in `androidUnitTest`, the push mock now a `PushRegistration`. Then
+Both ViewModel tests (MockK) run in `androidHostTest`, the push mock now a `PushRegistration`. Then
 **pairing and onboarding**: `PairingViewModel` (in `pairingUiModule`; its log lines through
 `logger`, the accepted invitation's event through `Analytics` as `logInvitationAccepted`, which left
 `AnalyticsManager` too) with `PairingErrorText.kt`, whose `pairingMessageRes` now answers a Compose
@@ -2587,7 +2609,7 @@ staying in the app (item 37) — so `PairingFormState.qrBitmap` is an `ImageBitm
 `IsoText.dateTimeShortest(wallClockNow())`, the text `LocalDateTime.now().toString()` wrote. On the
 iPhone `platformUiModule` binds `NoInviteQrCodes` (no QR drawn). `OnboardingStepTest` runs in
 `commonTest` (one name lost its commas); `PairingViewModelTest` and `OnboardingViewModelTest`
-(MockK) in `androidUnitTest`, the first verifying `InviteQrCodes.forInvite` and `Analytics.log`
+(MockK) in `androidHostTest`, the first verifying `InviteQrCodes.forInvite` and `Analytics.log`
 where it verified `QRCodeService` and `AnalyticsManager`, and without its dead `ValidationUtils`
 mock. Then **the session and the profile**: `AuthStateViewModel` (in `sessionUiModule`; the start
 destination's one source and sign-out) on three seams — `data/remote/firebase/AuthSession` (new:
@@ -2600,7 +2622,7 @@ still the ViewModel's own, unchanged; and `ProfileViewModel` (in `profileUiModul
 through `logger`, a save's time `Clock.System.now().toEpochMilliseconds()`, what
 `System.currentTimeMillis()` read). The iPhone's `platformDataModule` binds `NoAuthSession` (nobody
 signed in; ending a session is nothing to do) and `NoAccountTraces` (nothing kept outside the
-database yet). Both tests (MockK) run in `androidUnitTest`, the session's mock answering a uid where
+database yet). Both tests (MockK) run in `androidHostTest`, the session's mock answering a uid where
 it answered a `FirebaseUser`. **Two of the slice's ViewModels stay in the app, on purpose**, until
 Task 11 gives the screens their platform interfaces: `AuthViewModel` hands Credential Manager the
 `Activity` that hosts its sheets on every sign-in call, and maps `androidx.credentials` and Firebase
@@ -2626,9 +2648,9 @@ in slice 11e). `MonthReviewViewModel`
 `logger`) and `TelemetryConsentViewModel` in `consentUiModule`; `AiConsentViewModel` in
 `aiUiModule`. `data/consent/HealthConsentManager` moved to `:shared-data` with the consent's
 ViewModel (`consentDataModule`; a consent's time `Clock.System.now().toEpochMilliseconds()`), its
-test to `shared-data`'s `androidUnitTest`. No new seam. `HomeFeedTest` and `ChildrenTodayTest` run
+test to `shared-data`'s `androidHostTest`. No new seam. `HomeFeedTest` and `ChildrenTodayTest` run
 in `commonTest` (six names lost a comma); the ViewModels' tests and `RequestsRowTextTest` (its
-`java.time` fixture converted at the call) in `androidUnitTest`. The second group is **the family's
+`java.time` fixture converted at the call) in `androidHostTest`. The second group is **the family's
 records**: `ChildInfoViewModel` (with `ChildFields`) in `childInfoUiModule`, `PetsViewModel` (with
 `PetFields`) in `petsUiModule`, `ContactsViewModel`, `FamilyDocumentsViewModel` and the journal's two
 ViewModels, each in its module. The child's and pet's ViewModels take `SignedInUser`, `Analytics`
@@ -2643,7 +2665,7 @@ is a `StringResource` (`GuestInviteSheet` reads it through Compose Multiplatform
 the editors still in the app. `FamilyDocumentsViewModel` asks `SignedInUser` for the uid. The
 journal editor's day (`JournalEditorState.entryDate`, `seededDate`, `setDate`) is a kotlinx-datetime
 `LocalDate`, which `JournalEditorScreen` converts for the date picker; a new entry's id is a `Uuid`
-and its times `Clock.System`. The six tests (MockK) run in `androidUnitTest`, the pet test verifying
+and its times `Clock.System`. The six tests (MockK) run in `androidHostTest`, the pet test verifying
 `Analytics.log("pet_updated", …)` where it verified `logPetUpdated()`. The third group is **the
 people outside the pair, and the plan**: `FriendViewModel` and `FriendCalendarViewModel`
 (`friendsUiModule`), `GuestAcceptViewModel` (`guestsUiModule`), `ProfessionalsViewModel`,
@@ -2659,7 +2681,7 @@ through Compose Multiplatform's `stringResource`, `ProfessionalsScreen`'s snackb
 logs through `logger`. It was the last ViewModel in the app to call `coParentOnScreen`,
 `observeSignedInUser` and `projectedCoParentUid`, so they are `internal` again and the seven files
 in `:shared-ui` that opted in to `@InternalSharedApi` for them no longer do. The seven tests (MockK)
-run in `androidUnitTest`; the app's copies of `testFamilyViewSource` and `testFamilyMembersSource`
+run in `androidHostTest`; the app's copies of `testFamilyViewSource` and `testFamilyMembersSource`
 are gone with their last users (the app keeps `testParentsSource` for `FriendsScreenTest`). The
 fourth group is **the export and the school import**: `ExportViewModel` (`exportUiModule`) and
 `ConnectSchoolViewModel` with `SchoolImportViewModel` (`schoolUiModule`). The export's file is
@@ -2675,7 +2697,7 @@ back with `minus(3, DateTimeUnit.MONTH)` (java.time's `minusMonths`, the day cla
 did. The iPhone's `platformDataModule` binds `NoRecordFiles` (it says `available` false, so the
 screen offers no format since slice 11g; rendering would fail and save nothing; the Family tab's,
 Earlier families' and the chat's ways into the export are still drawn there, carried past Task 12 in ROADMAP MON-24) and the school directory over its own client, as it binds the
-Bakaláři client. The three tests (MockK) run in `androidUnitTest`. **Task 10 is done but for
+Bakaláři client. The three tests (MockK) run in `androidHostTest`. **Task 10 is done but for
 `AuthViewModel` and `SyncViewModel`**, which stay in the app until Task 11 (above); the app's
 `viewModelModule` holds those two alone (both moved in slice 11f, and `viewModelModule` with them).
 

@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.flowOf
  * A real [ParentsSource] over stubbed repositories, for ViewModel tests that only need the
  * dependency to exist.
  *
- * `:shared-ui`'s `androidUnitTest` holds a copy for the ViewModel tests that have moved there
+ * `:shared-ui`'s `androidHostTest` holds a copy for the ViewModel tests that have moved there
  * (MON-24 phase 2, Task 10). Keep the two alike; this one goes when its last user has moved.
  *
  * Deliberately the real class rather than a mock of it: the derivation it performs — matching

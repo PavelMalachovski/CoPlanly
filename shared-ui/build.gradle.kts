@@ -13,12 +13,13 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 // and the ViewModels themselves, group by group, with their Koin modules (`uiModules`); the screens
 // follow (Task 11), packages unchanged.
 //
-// Built like `:shared-data`: an `androidTarget()` on the `com.android.library` plugin and the two
-// iPhone targets. It depends on both other shared modules, and its framework is the one the iPhone
-// app links: `Shared`, static, exporting the domain and the data layer.
+// Built like `:shared-data`: AGP 9's Android KMP library target
+// (`com.android.kotlin.multiplatform.library`, `kotlin { android { } }`, MON-24 phase 2, Task 13)
+// and the two iPhone targets. It depends on both other shared modules, and its framework is the one
+// the iPhone app links: `Shared`, static, exporting the domain and the data layer.
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
-    id("com.android.library")
+    id("com.android.kotlin.multiplatform.library")
     id("org.jetbrains.compose")
     id("org.jetbrains.kotlin.plugin.compose")
     // kotlinx.serialization's compiler plugin, at the Kotlin version (the root build file): the
@@ -29,9 +30,29 @@ plugins {
 }
 
 kotlin {
-    androidTarget {
+    android {
+        namespace = "com.coparently.app.sharedui"
+        // API 37, as the app and the other shared modules (Ktor 3.6's OkHttp asks for it).
+        compileSdk = 37
+        // The app's minSdk. Nothing in this module may need a higher API level.
+        minSdk = 26
+        // Java and Kotlin bytecode alike, as `compileOptions` and `jvmTarget` set them before.
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_17)
+        }
+        // Compose Multiplatform's resources (`composeResources/`: the strings and the Onest fonts)
+        // reach the app's APK as this library's Android assets. The Android KMP library processes
+        // resources and assets only when asked, which `com.android.library` did by default; Compose
+        // Multiplatform's resources setup asks for exactly this. The module has no `res/` of its own.
+        androidResources {
+            enable = true
+        }
+        // The JVM tests: `androidHostTest`, with commonTest in the same compilation (the new plugin
+        // creates them only when asked). As in the app, where the theme's tests ran until slice 9b:
+        // an Android framework method is a stub in JVM tests, and answers its default rather than
+        // throwing "not mocked".
+        withHostTest {
+            isReturnDefaultValues = true
         }
     }
 
@@ -152,9 +173,9 @@ kotlin {
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
             implementation("app.cash.turbine:turbine:1.2.0")
         }
-        androidUnitTest.dependencies {
-            // The theme's tests (moved with it from the app, slice 9b) run here as the Android unit
-            // tests, on JUnit 4 like the app's.
+        getByName("androidHostTest").dependencies {
+            // The theme's tests (moved with it from the app, slice 9b) run here as the Android host
+            // (unit) tests, on JUnit 4 like the app's.
             implementation("junit:junit:4.13.2")
             // The moved ViewModel tests that mock their collaborators (Task 10). The app's version;
             // MockK runs on the JVM only, so a test that mocks lives here rather than in commonTest.
@@ -176,27 +197,6 @@ compose.resources {
     generateResClass = always
 }
 
-android {
-    namespace = "com.coparently.app.sharedui"
-    compileSdk = 36
-
-    defaultConfig {
-        // The app's minSdk. Nothing in this module may need a higher API level.
-        minSdk = 26
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    // As in the app, where the theme's tests ran until slice 9b: an Android framework method is a
-    // stub in JVM unit tests, and answers its default rather than throwing "not mocked".
-    testOptions {
-        unitTests.isReturnDefaultValues = true
-    }
-}
-
 // The app's detekt configuration and the app's one baseline file, as the other shared modules read
 // them (see shared/build.gradle.kts). The generated `Res` is under `build/` and is not checked.
 detekt {
@@ -208,7 +208,7 @@ detekt {
         "src/commonMain/kotlin",
         "src/commonTest/kotlin",
         "src/androidMain/kotlin",
-        "src/androidUnitTest/kotlin",
+        "src/androidHostTest/kotlin",
         "src/iosMain/kotlin",
         "src/iosTest/kotlin",
     )

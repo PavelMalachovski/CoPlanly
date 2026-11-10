@@ -2778,7 +2778,7 @@ bytes are identical on Android):
 - ~~**HTTP on Ktor**~~ **Done (phase 2, Task 5, November 2026)**: the `:shared-data` module holds
   the Bakaláři client and school directory and Google Calendar's `events.list` on Ktor 3.5.1
   (OkHttp engine on Android, which brings OkHttp 5.3.2; Darwin on iOS — Ktor 3.6's OkHttp 5.5 needs
-  compileSdk 37, so Ktor moves with AGP 9). OkHttp's own declaration,
+  compileSdk 37, so Ktor moved with AGP 9: 3.6.1 and OkHttp 5.5.1 since Task 13). OkHttp's own declaration,
   MockWebServer, google-api-client and google-api-services-calendar left the app, with the Calendar
   models' keep rules and their R8 probe case. Each request is pinned to the bytes the old clients
   sent (`BakalariRequestShapeTest`, `GoogleCalendarRequestShapeTest`), and school addresses to
@@ -2890,7 +2890,8 @@ bytes are identical on Android):
   through the same `Font.Builder` with the same weights, so the screenshot baselines should not
   move, which the `screenshots` job's verify is the check of. `Typography` is the scale without a
   typeface (the widget reads it), set in Onest in composition. The theme's six JVM tests moved with
-  it (`androidUnitTest`, run by the `shared` job). From `presentation/common/`, the primitives
+  it (`androidUnitTest`, `androidHostTest` since Task 13, run by the `shared` job). From
+  `presentation/common/`, the primitives
   CLAUDE.md's design refresh names and their helpers (`DesignSystem`, `StickyActionBar`,
   `InlineBanner`, `ErrorState`, `ConfirmationDialog`, `ExpandableDetails`, `ConnectivityBanner`, …,
   seventeen files) moved, their labels read with Compose Multiplatform's `stringResource`; what
@@ -2955,8 +2956,9 @@ bytes are identical on Android):
   November 2026; slices 10a–10f, each reviewed and built in CI)**. Slice 10a: the infrastructure (JetBrains' multiplatform `lifecycle-viewmodel` 2.9.6,
   which is androidx's 2.9.4 on Android and lifts the app's lifecycle artifacts there;
   `koin-core-viewmodel` 4.1.1 for `viewModelOf` in common code; coroutines-test and Turbine in
-  `commonTest`, MockK in `androidUnitTest`), `:shared-ui`'s `uiModules` and `platformUiModule`
-  (included in the app's `appModules`), and the shared state every ViewModel reads:
+  `commonTest`, MockK in `androidUnitTest`, `androidHostTest` since Task 13), `:shared-ui`'s
+  `uiModules` and `platformUiModule` (included in the app's `appModules`), and the shared state
+  every ViewModel reads:
   `ParentsSource`, `FamilyKindSource`, `FamilyMembersSource`, `CoParentOnScreen`, `Loadable`,
   `FormDraft`, `NamedParent`, `ParentNames`, `ParentLabels` and `PhotoOwner`, packages unchanged,
   with their tests (on `kotlin.test` in `commonTest` where nothing is mocked); then `common/`'s four
@@ -3201,12 +3203,15 @@ Xcode 27.2 (build 27B52), and on 1 November 2026 it ran the whole phase-1 check 
 `:shared:linkDebugFrameworkIosSimulatorArm64`. The only noise is eight linker warnings, `could not
 open …/klib/cache/ios_simulator_arm64-gSTATIC-system/…-cache.a`, from Kotlin/Native's prebuilt
 platform caches; they do not fail the link. So:
-1. **Now (💻):** the runner uses Xcode 27.2, the Mac's default. Xcode 26.0.1 beside it, through
+1. **Now (💻):** the runner uses Xcode 27.2, the Mac's default. Xcode 26.4 (26.0.1 while the project
+   was on Kotlin 2.3.21) beside it, through
    `DEVELOPER_DIR` in the runner's `.env` (`docs/IOS-RUNNER.md`, step 1), is the fallback for the
    day a Kotlin/Native build stops working on the newer Xcode, not a step to take now.
-2. **Before phase 3** (the iPhone shell, built in Xcode day to day): AGP 9, which Dagger 2.60 and
-   so Kotlin 2.4 wait for (CLAUDE.md, toolchain), then Kotlin 2.4 (Xcode up to 26.4). Ktor 3.6 and
-   later wait for it too: their OkHttp 5.5 needs compileSdk 37. And once the iPhone app's XCTest host
+2. **Before phase 3** (the iPhone shell, built in Xcode day to day): ~~AGP 9, then Kotlin 2.4
+   (Xcode up to 26.4)~~ **done in phase 2's Task 13 (November 2026)**: AGP 9.3.3 on Gradle 9.5.1,
+   Kotlin 2.4.21, KSP 2.3.13, kotlinx-serialization 1.12.0, and Ktor 3.6.1, whose OkHttp 5.5 needed
+   compileSdk 37 (CLAUDE.md, toolchain). The shared modules' Android target is AGP's Android KMP
+   library plugin, their JVM tests `androidHostTest`. And once the iPhone app's XCTest host
    exists: run `KeychainSecurePreferencesTest` app-hosted (un-`@Ignore` it), and check on a phone that
    the preference item survives a relaunch and is readable after the first unlock.
    On the same host, run `IosDatabaseTest` on a real iPhone, where its read-back of the
