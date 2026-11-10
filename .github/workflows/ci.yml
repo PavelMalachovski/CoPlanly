@@ -360,12 +360,8 @@ jobs:
 
       # The three shared modules hold nearly all the code, and their Android target is AGP 9's
       # KMP library, whose main code `lint` alone did not analyse (it ran only their host tests'
-      # analysis): NewApi, the per-pull-request guard for minSdk 26, saw none of it. Their main
-      # lint tasks are named here so the job fails if one stops existing.
-      # Temporary, until a run shows the shared modules' main code reached: what `lint` runs.
-      - name: Show what lint analyses
-        run: ./gradlew lint --dry-run --console=plain | grep -i lint || true
-
+      # analysis): NewApi, the per-pull-request guard for minSdk 26, saw none of it. The app's
+      # `lint {}` sets checkDependencies, so its report covers their main code too.
       - name: Android lint
         run: ./gradlew lint
 
