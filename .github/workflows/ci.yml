@@ -2248,10 +2248,11 @@ jobs:
           java-version: '17'
           distribution: temurin
 
+      # No `cache-encryption-key`, unlike the other Gradle jobs: this job builds third-party Swift
+      # packages, so it gets no secret. Its one Gradle call runs inside `xcodebuild`, where the
+      # configuration cache gains little across runs.
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
-        with:
-          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
       # As in `shared-ios`: the Kotlin/Native compiler and its dependencies.
       - name: Cache Kotlin/Native
@@ -2304,8 +2305,6 @@ jobs:
             -configuration Debug \
             -destination "platform=iOS Simulator,id=$UDID" \
             -derivedDataPath iosApp/build \
-            -skipPackagePluginValidation \
-            -skipMacroValidation \
             build 2>&1 | tee iosApp/build/xcodebuild.log
 
       - name: Launch it on the simulator
