@@ -19,6 +19,6 @@ class SwapDateListTest {
 
     @Test
     fun `no dates is no text`() {
-        assertEquals("", swapDateList(emptyList(), Locale.US))
+        assertEquals("", swapDateList(emptyList<LocalDate>(), Locale.US))
     }
 }

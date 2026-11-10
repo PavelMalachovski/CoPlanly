@@ -2,7 +2,7 @@
 # Installs the minified `r8Test` APK on the running emulator or device, runs the R8 runtime probe
 # inside it, and checks what it reported (REL-7). Used by the CI `r8-runtime` job; locally:
 #
-#   ./gradlew assembleR8Test && bash tools/run-r8-probe.sh
+#   ./gradlew :app:assembleR8Test && bash tools/run-r8-probe.sh
 #
 # The probe is a self-targeting <instrumentation> (app/src/r8Test/AndroidManifest.xml), so it runs
 # in the app's own minified process. `am instrument -w -r` prints each case; the output is kept in
@@ -25,7 +25,7 @@ run() {
   local apk
   apk=$(find app/build/outputs/apk/r8Test -name '*.apk' 2>/dev/null | head -n 1)
   if [ -z "$apk" ]; then
-    echo "::error::No r8Test APK under app/build/outputs/apk/r8Test — run ./gradlew assembleR8Test first."
+    echo "::error::No r8Test APK under app/build/outputs/apk/r8Test — run ./gradlew :app:assembleR8Test first."
     return 1
   fi
   echo "Installing $apk"

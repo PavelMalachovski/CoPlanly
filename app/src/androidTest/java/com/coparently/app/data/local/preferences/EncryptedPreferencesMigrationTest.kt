@@ -21,9 +21,10 @@ import java.util.UUID
  * library and the real Keystore, its contents land in the new sealed file, and the old file is
  * gone — the step every existing install takes on its first launch of this build.
  *
- * Runs under file and store names of its own, never the app's: `SignedInSession` and the Hilt UI
- * tests read the real store, and a test that rewrote it would change what they see. Not a Hilt
- * test, so it also runs on the 16 KB-page leg, where the Keystore path is a different image.
+ * Runs under file and store names of its own, never the app's: `SignedInSession` and the UI tests
+ * that start the Koin graph read the real store, and a test that rewrote it would change what they
+ * see. Not a `@UsesFakeFirebase` test, so it also runs on the 16 KB-page leg, where the Keystore
+ * path is a different image.
  *
  * What it cannot prove is a store an *older build* wrote on a phone's hardware-backed Keystore;
  * that is `docs/DEVICE-CHECKLIST.md`'s sign-in check after the update.

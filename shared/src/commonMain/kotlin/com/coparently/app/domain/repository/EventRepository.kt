@@ -1,0 +1,81 @@
+package com.coparently.app.domain.repository
+
+import com.coparently.app.domain.model.Event
+import kotlinx.coroutines.flow.Flow
+import kotlinx.datetime.LocalDateTime
+
+/**
+ * Repository interface for managing events.
+ * Part of the domain layer in Clean Architecture.
+ */
+interface EventRepository {
+    /**
+     * Gets all events as a Flow.
+     */
+    fun getAllEvents(): Flow<List<Event>>
+
+    /**
+     * Every event this phone holds, in every family, live or ended. Only for what must reach a
+     * family that is not on screen: the export (whose [com.coparently.app.domain.export.RecordScope]
+     * picks the family) and Family → Earlier families. Defaults to [getAllEvents] for a fake.
+     */
+    fun getAllEventsInEveryFamily(): Flow<List<Event>> = getAllEvents()
+
+    /**
+     * Gets events for a specific date range.
+     */
+    fun getEventsByDateRange(start: LocalDateTime, end: LocalDateTime): Flow<List<Event>>
+
+    /**
+     * Gets events for a specific date.
+     */
+    fun getEventsByDate(date: LocalDateTime): Flow<List<Event>>
+
+    /**
+     * Gets an event by ID.
+     */
+    suspend fun getEventById(id: String): Event?
+
+    /**
+     * Fetches one event straight from the server and stores it, for a caller that needs an
+     * event this device has not synced yet.
+     *
+     * The change-request inbox is that caller. A proposal arrives over the realtime
+     * `change_requests` listener within seconds, but the event it is about is downloaded only by
+     * the periodic sync — so "accept" could fail with "the event for this request no longer
+     * exists" for a quarter of an hour after the co-parent sent it.
+     *
+     * @param id Document id of the event.
+     * @return The event, now also in Room, or null when it is not readable — gone, tombstoned,
+     *   or not shared with this user.
+     */
+    suspend fun fetchRemoteEvent(id: String): Event?
+
+    /**
+     * Inserts a new event.
+     *
+     * @param announce Whether the co-parent's chat gets an activity card for it. False only for
+     *   a bulk import (MON-8's school import), where thirty cards in a row would bury the thread
+     *   and the family on screen need not be the family the events belong to.
+     */
+    suspend fun insertEvent(event: Event, announce: Boolean = true)
+
+    /**
+     * Updates an existing event.
+     *
+     * @param announce See [insertEvent].
+     */
+    suspend fun updateEvent(event: Event, announce: Boolean = true)
+
+    /**
+     * Deletes an event.
+     *
+     * @param announce See [insertEvent].
+     */
+    suspend fun deleteEvent(event: Event, announce: Boolean = true)
+
+    /**
+     * Deletes an event by ID.
+     */
+    suspend fun deleteEventById(id: String)
+}

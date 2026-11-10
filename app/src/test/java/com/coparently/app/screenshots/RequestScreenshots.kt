@@ -1,6 +1,5 @@
 package com.coparently.app.screenshots
 
-import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import com.coparently.app.domain.changerequests.HistoryEntry
@@ -21,13 +20,16 @@ import com.coparently.app.presentation.changerequests.ProfessionalRequestRow
 import com.coparently.app.presentation.changerequests.RequestHistoryGroup
 import com.coparently.app.presentation.changerequests.SupportRequestRow
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.testing.RobolectricTestApplication
+import kotlinx.datetime.YearMonth
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
+import kotlinx.datetime.toKotlinYearMonth
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import java.math.BigDecimal
-import java.time.YearMonth
 
 /**
  * What a parent answers a request with (phase 2): the mini month, the card of an event waiting
@@ -38,7 +40,7 @@ import java.time.YearMonth
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [SCREENSHOT_SDK], application = Application::class)
+@Config(sdk = [SCREENSHOT_SDK], application = RobolectricTestApplication::class)
 class RequestScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
 
     /** May 2026 with the fixtures' custody, their events' dots and a marked day eight days ahead. */
@@ -46,13 +48,15 @@ class RequestScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
     fun miniMonth() = snap("requests_mini_month") {
         MiniMonth(
             model = MiniMonthModel.build(
-                month = ScreenshotFixtures.MONTH,
-                custodyFor = ScreenshotFixtures::custodyFor,
+                month = ScreenshotFixtures.MONTH.toKotlinYearMonth(),
+                custodyFor = ScreenshotFixtures::custodyOn,
                 events = ScreenshotFixtures.monthEvents.values.flatten(),
-                marks = mapOf(ScreenshotFixtures.TODAY.plusDays(MARKED_DAY_OFFSET) to MiniMonthMark.NEW_EVENT)
+                marks = mapOf(
+                    ScreenshotFixtures.TODAY.plusDays(MARKED_DAY_OFFSET).toKotlinLocalDate() to MiniMonthMark.NEW_EVENT
+                )
             ),
             parentNames = ScreenshotFixtures.parentNames,
-            today = ScreenshotFixtures.TODAY
+            today = ScreenshotFixtures.TODAY.toKotlinLocalDate()
         )
     }
 
@@ -77,7 +81,7 @@ class RequestScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
         )
         AwaitingEventCard(
             event = event,
-            miniMonth = MiniMonthModel.forAwaitingEvent(event, monthEvents, ScreenshotFixtures::custodyFor),
+            miniMonth = MiniMonthModel.forAwaitingEvent(event, monthEvents, ScreenshotFixtures::custodyOn),
             parentNames = ScreenshotFixtures.parentNames,
             actions = AwaitingEventActions(onAccept = {}, onDecline = {})
         )
@@ -97,7 +101,7 @@ class RequestScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
         )
         AwaitingEventCard(
             event = event,
-            miniMonth = MiniMonthModel.forAwaitingEvent(event, monthEvents, ScreenshotFixtures::custodyFor),
+            miniMonth = MiniMonthModel.forAwaitingEvent(event, monthEvents, ScreenshotFixtures::custodyOn),
             parentNames = ScreenshotFixtures.parentNames,
             actions = null
         )
@@ -119,7 +123,7 @@ class RequestScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
      */
     @Test
     fun agreementRows() = snap("requests_agreements") {
-        val terms = SupportTerms(BigDecimal("3500"), "CZK", 15, ScreenshotFixtures.CO_PARENT_UID, YearMonth.of(2026, 6))
+        val terms = SupportTerms(350_000L, "CZK", 15, ScreenshotFixtures.CO_PARENT_UID, YearMonth(2026, 6))
         val parents = listOf(ScreenshotFixtures.MY_UID, ScreenshotFixtures.CO_PARENT_UID)
         fun grant(consentBy: String) = ProfessionalGrant(
             id = "family__pro",
@@ -155,7 +159,8 @@ class RequestScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
 
         private val monthEvents = ScreenshotFixtures.monthEvents.values.flatten()
 
-        private fun at(day: Int, hour: Int, minute: Int = 0) = ScreenshotFixtures.MONTH.atDay(day).atTime(hour, minute)
+        private fun at(day: Int, hour: Int, minute: Int = 0) =
+            ScreenshotFixtures.MONTH.atDay(day).atTime(hour, minute).toKotlinLocalDateTime()
 
         /** Newest first, as the inbox lists them. */
         private val historyEntries = listOf(
@@ -178,7 +183,7 @@ class RequestScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
             ),
             HistoryEntry(
                 key = "swap_g1",
-                subject = RequestSubject.DaySwap(ScreenshotFixtures.MONTH.atDay(8), 3),
+                subject = RequestSubject.DaySwap(ScreenshotFixtures.MONTH.atDay(8).toKotlinLocalDate(), 3),
                 outcome = RequestOutcome.DECLINED,
                 askedBy = ScreenshotFixtures.MY_UID,
                 decidedBy = ScreenshotFixtures.CO_PARENT_UID,

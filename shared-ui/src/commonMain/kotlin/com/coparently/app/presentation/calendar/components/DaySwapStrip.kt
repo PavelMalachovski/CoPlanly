@@ -1,0 +1,138 @@
+package com.coparently.app.presentation.calendar.components
+
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import com.coparently.app.domain.custody.DayOverride
+import com.coparently.app.presentation.common.BannerTone
+import com.coparently.app.presentation.common.InlineBanner
+import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.parentingplan.coParentLabel
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.change_request_withdraw
+import com.coparently.app.resources.day_swap_accept
+import com.coparently.app.resources.day_swap_decline
+import com.coparently.app.resources.day_swap_strip_agreed
+import com.coparently.app.resources.day_swap_strip_agreed_you
+import com.coparently.app.resources.day_swap_strip_asked_for
+import com.coparently.app.resources.day_swap_strip_offered_by_you
+import com.coparently.app.resources.day_swap_strip_offered_to_reader
+import com.coparently.app.resources.day_swap_strip_offered_to_you
+import com.coparently.app.resources.request_history_propose_change
+import kotlinx.datetime.LocalDate
+import org.jetbrains.compose.resources.stringResource
+
+/**
+ * Where a day's swap stands, as Day view's strip says it (21 October 2026, Zuzana's test: "show the
+ * swap in the day, and let me act on it there").
+ */
+internal sealed interface DaySwapStripState {
+
+    /** This parent offered the day to [toParent]'s slot; it waits, and may be withdrawn. */
+    data class OfferedByMe(val toParent: String) : DaySwapStripState
+
+    /** The co-parent [byUid] asks for the day to go to [toParent]'s slot; it waits on this parent. */
+    data class OfferedToMe(val byUid: String, val toParent: String) : DaySwapStripState
+
+    /** An agreed swap: the day is [withParent]'s, and a change may be proposed while it is ahead. */
+    data class Agreed(val withParent: String, val canChange: Boolean) : DaySwapStripState
+
+    companion object {
+        /**
+         * The strip for [date], or null when the day has no swap worth a line: none, or one
+         * declined or withdrawn with no agreement behind it.
+         */
+        fun of(override: DayOverride?, myUid: String?, date: LocalDate, today: LocalDate): DaySwapStripState? {
+            if (override == null || myUid.isNullOrBlank()) return null
+            if (override.isPending) {
+                return if (override.requestedBy == myUid) {
+                    OfferedByMe(override.toParent)
+                } else {
+                    OfferedToMe(override.requestedBy, override.toParent)
+                }
+            }
+            return override.agreedToParent?.let { Agreed(it, canChange = date >= today) }
+        }
+    }
+}
+
+/**
+ * What Day view's strip does: answer, withdraw, or propose a change to an agreed day.
+ *
+ * @property onAccept Takes the day the co-parent offered.
+ * @property onDecline Turns it down.
+ * @property onWithdraw Takes back this parent's own offer.
+ * @property onProposeChange Opens the swap sheet for the day, as "Swap this day" does.
+ */
+internal data class DaySwapStripActions(
+    val onAccept: () -> Unit,
+    val onDecline: () -> Unit,
+    val onWithdraw: () -> Unit,
+    val onProposeChange: () -> Unit
+)
+
+/** The strip over Day view's grid for a day with a swap; see [DaySwapStripState]. */
+@Composable
+internal fun DaySwapStrip(
+    state: DaySwapStripState,
+    parentNames: ParentNames,
+    actions: DaySwapStripActions,
+    modifier: Modifier = Modifier
+) {
+    val text = when (state) {
+        // Which way the day goes, said as the parent who sent it would (board SW-4): a day they
+        // asked for, or a day they offered.
+        is DaySwapStripState.OfferedByMe -> if (parentNames.isReader(state.toParent)) {
+            stringResource(Res.string.day_swap_strip_asked_for, parentNames.coParentLabel())
+        } else {
+            stringResource(Res.string.day_swap_strip_offered_by_you, parentNames.labelFor(state.toParent))
+        }
+        is DaySwapStripState.OfferedToMe -> if (parentNames.isReader(state.toParent)) {
+            stringResource(Res.string.day_swap_strip_offered_to_reader, parentNames.labelForUid(state.byUid))
+        } else {
+            stringResource(
+                Res.string.day_swap_strip_offered_to_you,
+                parentNames.labelForUid(state.byUid),
+                parentNames.labelFor(state.toParent)
+            )
+        }
+        is DaySwapStripState.Agreed -> if (parentNames.isReader(state.withParent)) {
+            stringResource(Res.string.day_swap_strip_agreed_you)
+        } else {
+            stringResource(Res.string.day_swap_strip_agreed, parentNames.labelFor(state.withParent))
+        }
+    }
+    InlineBanner(
+        text = text,
+        modifier = modifier,
+        icon = Icons.Default.SwapHoriz,
+        tone = if (state is DaySwapStripState.OfferedToMe) BannerTone.ATTENTION else BannerTone.INFO,
+        // Nothing to do on an agreed day already lived; everything else carries its buttons.
+        actions = if (state !is DaySwapStripState.Agreed || state.canChange) {
+            { DaySwapStripButtons(state, actions) }
+        } else {
+            null
+        }
+    )
+}
+
+/** The strip's buttons, in the banner's own row; see [DaySwapStrip]. */
+@Composable
+private fun DaySwapStripButtons(state: DaySwapStripState, actions: DaySwapStripActions) {
+    when (state) {
+        is DaySwapStripState.OfferedByMe ->
+            TextButton(onClick = actions.onWithdraw) { Text(stringResource(Res.string.change_request_withdraw)) }
+        // Decline before Accept, as every answer reads (UX audit M1).
+        is DaySwapStripState.OfferedToMe -> {
+            TextButton(onClick = actions.onDecline) { Text(stringResource(Res.string.day_swap_decline)) }
+            Button(onClick = actions.onAccept) { Text(stringResource(Res.string.day_swap_accept)) }
+        }
+        is DaySwapStripState.Agreed -> TextButton(onClick = actions.onProposeChange) {
+            Text(stringResource(Res.string.request_history_propose_change))
+        }
+    }
+}

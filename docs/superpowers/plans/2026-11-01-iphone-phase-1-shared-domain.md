@@ -60,8 +60,12 @@ corrects the spec's wording.
 - **No Android SDK in cloud sessions.** Gradle cannot run here. A verification step that says
   "CI" means: push the branch, open or update the PR, and read the "CI summary" comment. Run the
   same command locally first wherever an SDK exists.
-- **The Mac runner never runs fork code.** Every job on it carries
-  `if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository`.
+- **No fork's code runs on the Mac runner without the owner's approval.** The boundary is the
+  repository setting "Require approval for all external contributors", which a fork cannot edit:
+  a fork's pull request runs its own copy of the workflow, so a guard in it is not a lock.
+  Every job on the runner still carries
+  `if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository`,
+  as defence in depth (`docs/IOS-RUNNER.md`).
 
 ## Review Focus
 

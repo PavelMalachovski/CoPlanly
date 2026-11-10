@@ -1,0 +1,265 @@
+package com.coparently.app.presentation.childinfo.components
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import com.coparently.app.domain.model.Medication
+import com.coparently.app.presentation.common.AddItemButton
+import com.coparently.app.presentation.common.animations.sectionEnter
+import com.coparently.app.presentation.common.animations.sectionExit
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.childinfo_add_medication
+import com.coparently.app.resources.childinfo_cancel
+import com.coparently.app.resources.childinfo_delete
+import com.coparently.app.resources.childinfo_dosage_label
+import com.coparently.app.resources.childinfo_edit
+import com.coparently.app.resources.childinfo_edit_medication
+import com.coparently.app.resources.childinfo_frequency_label
+import com.coparently.app.resources.childinfo_medication_name_label
+import com.coparently.app.resources.childinfo_medication_summary
+import com.coparently.app.resources.childinfo_new_medication
+import com.coparently.app.resources.childinfo_notes_optional_label
+import com.coparently.app.resources.childinfo_save
+import org.jetbrains.compose.resources.stringResource
+
+/**
+ * Editor for managing a list of medications.
+ * Provides add, edit, and delete functionality for medications.
+ *
+ * @param medications Current list of medications
+ * @param onAdd Callback when medication is added
+ * @param onEdit Callback when medication is edited
+ * @param onRemove Callback when medication is removed
+ */
+@Composable
+fun MedicationEditor(
+    medications: List<Medication>,
+    onAdd: (Medication) -> Unit,
+    onEdit: (Int, Medication) -> Unit,
+    onRemove: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var isAddingNew by remember { mutableStateOf(false) }
+    var editingIndex by remember { mutableStateOf<Int?>(null) }
+
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(Spacing.S)
+    ) {
+        // List of existing medications
+        medications.forEachIndexed { index, medication ->
+            AnimatedVisibility(
+                visible = editingIndex != index,
+                enter = sectionEnter(),
+                exit = sectionExit()
+            ) {
+                MedicationCard(
+                    medication = medication,
+                    onEdit = { editingIndex = index },
+                    onDelete = { onRemove(index) }
+                )
+            }
+
+            // Edit form
+            if (editingIndex == index) {
+                MedicationForm(
+                    medication = medication,
+                    onSave = {
+                        onEdit(index, it)
+                        editingIndex = null
+                    },
+                    onCancel = { editingIndex = null }
+                )
+            }
+        }
+
+        // Add new medication form
+        AnimatedVisibility(
+            visible = isAddingNew,
+            enter = sectionEnter(),
+            exit = sectionExit()
+        ) {
+            MedicationForm(
+                onSave = {
+                    onAdd(it)
+                    isAddingNew = false
+                },
+                onCancel = { isAddingNew = false }
+            )
+        }
+
+        // Add button
+        if (!isAddingNew && editingIndex == null) {
+            AddItemButton(
+                label = stringResource(Res.string.childinfo_add_medication),
+                onClick = { isAddingNew = true },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+/**
+ * Card displaying medication information.
+ */
+@Composable
+private fun MedicationCard(
+    medication: Medication,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Spacing.M),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = medication.name,
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Text(
+                    text = stringResource(
+                        Res.string.childinfo_medication_summary,
+                        medication.dosage,
+                        medication.frequency
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                val notes = medication.notes
+                if (!notes.isNullOrBlank()) {
+                    Text(
+                        text = notes,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Row {
+                IconButton(onClick = onEdit) {
+                    Icon(Icons.Default.Edit, contentDescription = stringResource(Res.string.childinfo_edit))
+                }
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = stringResource(Res.string.childinfo_delete),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Form for adding or editing a medication.
+ */
+@Composable
+private fun MedicationForm(
+    medication: Medication? = null,
+    onSave: (Medication) -> Unit,
+    onCancel: () -> Unit
+) {
+    var name by remember { mutableStateOf(medication?.name ?: "") }
+    var dosage by remember { mutableStateOf(medication?.dosage ?: "") }
+    var frequency by remember { mutableStateOf(medication?.frequency ?: "") }
+    var notes by remember { mutableStateOf(medication?.notes ?: "") }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Spacing.M),
+            verticalArrangement = Arrangement.spacedBy(Spacing.S)
+        ) {
+            Text(
+                text = if (medication == null) {
+                    stringResource(Res.string.childinfo_new_medication)
+                } else {
+                    stringResource(Res.string.childinfo_edit_medication)
+                },
+                style = MaterialTheme.typography.titleSmall
+            )
+
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text(stringResource(Res.string.childinfo_medication_name_label)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            OutlinedTextField(
+                value = dosage,
+                onValueChange = { dosage = it },
+                label = { Text(stringResource(Res.string.childinfo_dosage_label)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            OutlinedTextField(
+                value = frequency,
+                onValueChange = { frequency = it },
+                label = { Text(stringResource(Res.string.childinfo_frequency_label)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            OutlinedTextField(
+                value = notes,
+                onValueChange = { notes = it },
+                label = { Text(stringResource(Res.string.childinfo_notes_optional_label)) },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 2,
+                maxLines = 3
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = onCancel) {
+                    Text(stringResource(Res.string.childinfo_cancel))
+                }
+                Spacer(modifier = Modifier.width(Spacing.S))
+                Button(
+                    onClick = {
+                        if (name.isNotBlank() && dosage.isNotBlank() && frequency.isNotBlank()) {
+                            onSave(
+                                Medication(
+                                    name = name,
+                                    dosage = dosage,
+                                    frequency = frequency,
+                                    notes = notes.ifBlank { null }
+                                )
+                            )
+                        }
+                    },
+                    enabled = name.isNotBlank() && dosage.isNotBlank() && frequency.isNotBlank()
+                ) {
+                    Text(stringResource(Res.string.childinfo_save))
+                }
+            }
+        }
+    }
+}

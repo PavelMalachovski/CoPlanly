@@ -1,27 +1,31 @@
 package com.coparently.app.data.remote.firebase
 
-import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.SecurePreferences
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.family.FamilyKey
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Service for managing Firebase Cloud Messaging tokens and notifications.
- * Handles token registration, updates, and notification payload creation.
+ * Handles token registration, updates, and the push queue.
+ *
+ * It is also the Android [PushQueue], through which the repositories in `:shared-data` queue a
+ * push (MON-24 phase 2, Task 8b), and the Android [PushDevice], through which the sync keeps this
+ * device's token on the profile (Task 8g). The sync's child-info payload is
+ * [RecordPushes]' since then. And it is the Android [PushRegistration], the Settings switch and the
+ * sign-out's detach that the shared ViewModels ask for (Task 10).
  */
-@Singleton
-class FcmService @Inject constructor(
+class FcmService(
     private val firebaseMessaging: FirebaseMessaging,
     private val firestore: FirebaseFirestore,
     private val firebaseAuthService: FirebaseAuthService,
-    private val encryptedPreferences: EncryptedPreferences
-) {
+    private val encryptedPreferences: SecurePreferences
+) : PushDevice, PushRegistration {
     /** Whether this person has left push notifications on. On unless they switched it off. */
-    fun isPushEnabled(): Boolean =
+    override fun isPushEnabled(): Boolean =
         encryptedPreferences.getString(PreferenceKeys.PUSH_ENABLED, null) != false.toString()
 
     /**
@@ -33,7 +37,7 @@ class FcmService @Inject constructor(
      * @return failure when turning it on could not register a token; turning it off is
      *   best-effort, like sign-out, and always succeeds locally.
      */
-    suspend fun setPushEnabled(enabled: Boolean): Result<Unit> {
+    override suspend fun setPushEnabled(enabled: Boolean): Result<Unit> {
         encryptedPreferences.putString(PreferenceKeys.PUSH_ENABLED, enabled.toString())
         if (!enabled) {
             unregisterToken()
@@ -49,7 +53,7 @@ class FcmService @Inject constructor(
      *
      * @return The FCM token or null if unavailable
      */
-    suspend fun getCurrentToken(): String? {
+    override suspend fun getCurrentToken(): String? {
         return try {
             firebaseMessaging.token.await()
         } catch (e: Exception) {
@@ -62,7 +66,7 @@ class FcmService @Inject constructor(
      *
      * @param token The FCM token to save
      */
-    suspend fun updateUserToken(token: String): Result<Unit> {
+    override suspend fun updateUserToken(token: String): Result<Unit> {
         // Switched off in Settings: nothing re-attaches this device behind the person's back.
         if (!isPushEnabled()) return Result.success(Unit)
         return try {
@@ -110,25 +114,6 @@ class FcmService @Inject constructor(
         }
     }
 
-    /**
-     * The payload for a child's information being updated. Facts, not sentences (SEC-3): the
-     * receiving phone writes the sentence from its own string resources, in its reader's language.
-     *
-     * @param childInfoId The record, for the deep link
-     * @param childName The child's name
-     * @param updatedBy Display name of the parent who made the change
-     */
-    fun createChildInfoNotificationPayload(
-        childInfoId: String,
-        childName: String,
-        updatedBy: String
-    ): Map<String, String> = mapOf(
-        PushPayload.TYPE to PushPayload.CHILD_INFO_UPDATED,
-        PushPayload.CHILD_INFO_ID to childInfoId,
-        PushPayload.SUBJECT to childName,
-        PushPayload.ACTOR to updatedBy
-    )
-
     // `createInvitationNotificationPayload` was deleted with SEC-3: it had no caller. An
     // invitation being accepted is announced by `acceptPairingInvitation` in
     // `functions/index.js`, which is where it has to be — the accepting device is not the one
@@ -148,7 +133,7 @@ class FcmService @Inject constructor(
      * @param targetUserId The Firebase UID of the user to notify
      * @param notificationData The notification payload
      */
-    suspend fun queueNotificationForUser(
+    override suspend fun queueNotificationForUser(
         targetUserId: String,
         notificationData: Map<String, String>
     ): Result<Unit> {
@@ -190,14 +175,14 @@ class FcmService @Inject constructor(
      * or not the network is there, and `CoPlanlyMessagingService` refuses a push addressed to
      * anybody but the signed-in uid regardless.
      */
-    suspend fun unregisterToken() {
+    override suspend fun unregisterToken() {
         val uid = firebaseAuthService.getCurrentUser()?.uid ?: return
         runCatching {
             firestore.collection("users").document(uid)
                 .update("fcmToken", com.google.firebase.firestore.FieldValue.delete())
                 .await()
-        }.onFailure { android.util.Log.w("FcmService", "Could not detach the FCM token", it) }
+        }.onFailure { logger.w("FcmService", "Could not detach the FCM token", it) }
         runCatching { firebaseMessaging.deleteToken().await() }
-            .onFailure { android.util.Log.w("FcmService", "Could not delete the FCM token", it) }
+            .onFailure { logger.w("FcmService", "Could not delete the FCM token", it) }
     }
 }

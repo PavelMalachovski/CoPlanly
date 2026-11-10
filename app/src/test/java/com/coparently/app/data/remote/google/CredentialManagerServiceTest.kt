@@ -1,6 +1,8 @@
 package com.coparently.app.data.remote.google
 
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.remote.firebase.CallableCode
+import com.coparently.app.data.remote.firebase.CallableException
 import com.coparently.app.data.remote.firebase.GoogleTokens
 import com.coparently.app.data.remote.google.GoogleCredentialsFixture.Companion.ACCESS
 import com.coparently.app.data.remote.google.GoogleCredentialsFixture.Companion.EMAIL
@@ -10,7 +12,6 @@ import com.coparently.app.data.remote.google.GoogleCredentialsFixture.Companion.
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.tasks.Tasks
-import com.google.firebase.functions.FirebaseFunctionsException
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -253,10 +254,13 @@ class CredentialManagerServiceTest {
     fun `an exchange the server failed says so, with the server's reason`() = runTest {
         // The tester's screenshot said only "Unable to sign in with Google": Google had signed
         // her in, and the function that redeems the code had failed.
-        val refusal = mockk<FirebaseFunctionsException>(relaxed = true) {
-            every { code } returns FirebaseFunctionsException.Code.FAILED_PRECONDITION
-            every { details } returns mapOf("reason" to "oauth-not-configured")
-        }
+        // What AndroidCallableFunctions hands on for the SDK's refusal (MON-24 phase 2).
+        val refusal = CallableException(
+            CallableCode.FAILED_PRECONDITION,
+            mapOf("reason" to "oauth-not-configured"),
+            "FAILED_PRECONDITION",
+            null
+        )
         coEvery { google.oauth.exchangeAuthCode("code-1") } returns
             Result.failure(GoogleAccessException(GoogleAccessFailure.UNAVAILABLE, refusal))
 

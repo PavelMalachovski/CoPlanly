@@ -10,8 +10,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The **only** place that turns analytics and crash reporting on or off (REL-5).
@@ -39,8 +37,7 @@ import javax.inject.Singleton
  * Collection requires **both** the build flag and the user's answer; see
  * [telemetryCollectionEnabled] for why neither may override the other.
  */
-@Singleton
-class TelemetryConsentApplier @Inject constructor(
+class TelemetryConsentApplier(
     private val preferencesRepository: PreferencesRepository,
     private val analytics: FirebaseAnalytics,
     private val crashlytics: FirebaseCrashlytics

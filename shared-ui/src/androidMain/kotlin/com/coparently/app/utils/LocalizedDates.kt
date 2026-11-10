@@ -1,0 +1,187 @@
+package com.coparently.app.utils
+
+import android.content.Context
+import android.text.format.DateFormat
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toJavaLocalTime
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.chrono.IsoChronology
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeFormatterBuilder
+import java.time.format.DateTimeParseException
+import java.time.format.FormatStyle
+import java.util.Locale
+
+/**
+ * A date formatter in [locale]'s own field order for [skeleton] (docs/AUDIT-2026-10-design.md
+ * D-18). "EEEd" is "Wed 23" in English and "St 23." in Czech; "MMMMEEEEd" is "Saturday,
+ * October 3" and "суббота, 3 октября".
+ *
+ * A skeleton names the fields, and the platform orders and punctuates them for the language. A
+ * fixed pattern such as "EEEE, MMM dd, yyyy" put English word order around Russian words
+ * ("четверг, окт. 01, 2026"). Built per call, never held in a top-level `val`, which would
+ * capture the locale once per process and keep the previous language after Settings →
+ * Language. Time is kept out of the skeleton on purpose: the platform's preferred-hour pattern
+ * can contain letters `java.time` on older Android cannot parse. Use [shortTime] for the time.
+ * Falls back to the medium date style if the platform pattern is refused anyway, or where there
+ * is no platform (a plain JVM test).
+ *
+ * The platform's pattern goes through [monthInFormatForm] first: it can name the month in its
+ * stand-alone form (`LLL`/`LLLL`) beside a day, which is the nominative in Russian and Ukrainian
+ * ("25 вересень" for "25 вересня").
+ */
+fun localizedDate(skeleton: String, locale: Locale = Locale.getDefault()): DateTimeFormatter =
+    runCatching {
+        DateTimeFormatter.ofPattern(monthInFormatForm(DateFormat.getBestDateTimePattern(locale, skeleton)), locale)
+    }.getOrElse { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale) }
+
+/**
+ * [this] kotlinx-datetime date formatted by [formatter] — one of [localizedDate]'s — exactly as the
+ * same `java.time` date would be (MON-24). The domain's custody dates are kotlinx-datetime; the
+ * platform's localized patterns stay `java.time` formatters, so this converts at the edge.
+ */
+fun kotlinx.datetime.LocalDate.format(formatter: DateTimeFormatter): String = toJavaLocalDate().format(formatter)
+
+/** [this] kotlinx-datetime time formatted by [formatter], as the `java.time` time would be (MON-24). */
+fun kotlinx.datetime.LocalTime.format(formatter: DateTimeFormatter): String = toJavaLocalTime().format(formatter)
+
+/**
+ * [this] kotlinx-datetime date and time formatted by [formatter], as the `java.time` value would be
+ * (MON-24): an event's times are kotlinx-datetime, the platform's localized patterns are not.
+ */
+fun kotlinx.datetime.LocalDateTime.format(formatter: DateTimeFormatter): String =
+    toJavaLocalDateTime().format(formatter)
+
+/**
+ * The time of day as the reader's clock shows it: "15:30" or "3:30 PM" (release audit R-9, owner
+ * decision — the reader's setting, not one format for everybody).
+ *
+ * The app used to print both on one screen: fixed "HH:mm" in twenty places and the locale's
+ * short style in the rest, so Home's week said "10:00 AM" over a today card saying "15:30". Every
+ * time the app shows goes through here now. Two fixed patterns rather than the platform's
+ * preferred-hour skeleton, whose letters `java.time` on older Android cannot always parse.
+ *
+ * @param locale The language, for the day-period marker of a 12-hour clock
+ * @param is24Hour Whether the reader's clock is 24-hour; [ClockFormat] by default
+ */
+fun shortTime(
+    locale: Locale = Locale.getDefault(),
+    is24Hour: Boolean = ClockFormat.is24Hour
+): DateTimeFormatter =
+    if (is24Hour) {
+        DateTimeFormatter.ofPattern(PATTERN_24_HOUR, locale)
+    } else {
+        DateTimeFormatter.ofPattern(PATTERN_12_HOUR, locale)
+    }
+
+/**
+ * The label of one hour row in the Day and Week views' gutter, on the reader's clock (L-7,
+ * September 2026).
+ *
+ * On a 24-hour clock it is the bare two-digit hour ("09", "13"), as it always was: on an hour
+ * gridline the ":00" is constant and costs gutter width without telling anybody anything. On a
+ * 12-hour clock it is the hour with its day-period marker in [locale]'s words ("9 AM", "1 PM",
+ * "1 odp."), because "13" is exactly what a reader on that clock does not use. The gutter is wider
+ * for that case (`Dimensions.hourGutterWidthFor`), and only for that case.
+ *
+ * @param hour The hour of the day, 0–23
+ * @param locale The language, for the marker of a 12-hour clock
+ * @param is24Hour Whether the reader's clock is 24-hour; [ClockFormat] by default
+ */
+fun hourLabel(
+    hour: Int,
+    locale: Locale = Locale.getDefault(),
+    is24Hour: Boolean = ClockFormat.is24Hour
+): String =
+    if (is24Hour) {
+        String.format(locale, "%02d", hour)
+    } else {
+        LocalTime.of(hour, 0).format(DateTimeFormatter.ofPattern(PATTERN_12_HOUR_GUTTER, locale))
+    }
+
+/**
+ * A date in [locale]'s own order for [skeleton], then [separator], then the time on the reader's
+ * clock ([shortTime]) — "Wed, Sep 2 · 3:30 PM", "st 2. 9. · 15:30".
+ */
+fun dateWithTime(
+    skeleton: String,
+    separator: String = " · ",
+    locale: Locale = Locale.getDefault()
+): DateTimeFormatter =
+    DateTimeFormatterBuilder()
+        .append(localizedDate(skeleton, locale))
+        .appendLiteral(separator)
+        .append(shortTime(locale))
+        .toFormatter(locale)
+
+/**
+ * A request's deadline as its reader says it: the weekday, day and month in [locale]'s own order,
+ * then the time on the reader's clock — "Tue, Oct 13, 10:00", "Tue, Oct 13, 10:00 AM" (phase 3a).
+ *
+ * [millis] is an instant, so [zone] decides which day and hour it falls on: the device's, because
+ * a deadline is a moment in the reader's own day and the other parent may live in another zone.
+ * The date and the time are formatted apart and joined with a comma, as [dateWithTime] joins them
+ * with a dot, for the reason [localizedDate] gives. One function for every place a deadline is
+ * said — the pushes, the notices and the cards — so it reads the same in each.
+ *
+ * @param millis The deadline, epoch milliseconds
+ * @param zone The zone the reader's day is counted in; the device's by default
+ * @param locale The language, for the order of the date and the names in it
+ * @param is24Hour Whether the reader's clock is 24-hour; [ClockFormat] by default
+ */
+fun answerByText(
+    millis: Long,
+    zone: ZoneId = ZoneId.systemDefault(),
+    locale: Locale = Locale.getDefault(),
+    is24Hour: Boolean = ClockFormat.is24Hour
+): String {
+    val moment = Instant.ofEpochMilli(millis).atZone(zone)
+    return moment.format(localizedDate(ANSWER_BY_DAY, locale)) + ", " + moment.format(shortTime(locale, is24Hour))
+}
+
+private const val PATTERN_24_HOUR = "HH:mm"
+private const val PATTERN_12_HOUR = "h:mm a"
+private const val PATTERN_12_HOUR_GUTTER = "h a"
+
+/** The skeleton for the day of a deadline: weekday, month and day, no year ("Tue, Oct 13"). */
+private const val ANSWER_BY_DAY = "EEEMMMd"
+
+/**
+ * Reads the device's "Use 24-hour format" setting into [ClockFormat]; `MainActivity` calls it
+ * whenever the app comes to the foreground.
+ */
+fun ClockFormat.follow(context: Context) {
+    follow(DateFormat.is24HourFormat(context))
+}
+
+/** Whether [locale]'s own short time style is 24-hour: `java.time`'s localized short pattern. */
+fun ClockFormat.localeUses24Hour(locale: Locale): Boolean =
+    runCatching {
+        DateTimeFormatterBuilder.getLocalizedDateTimePattern(
+            null,
+            FormatStyle.SHORT,
+            IsoChronology.INSTANCE,
+            locale
+        ).contains('H')
+    }.getOrDefault(true)
+
+/** The default [ClockFormat] answers until the setting was read: the language's own short style. */
+internal actual fun languageUses24Hour(): Boolean = ClockFormat.localeUses24Hour(Locale.getDefault())
+
+/**
+ * An ISO date (`2026-10-03`, the form dates travel in) written the way [locale] writes
+ * [skeleton], or [iso] unchanged when it is not a date — a payload from another build must still
+ * say something rather than nothing.
+ */
+fun isoDateText(iso: String?, skeleton: String, locale: Locale = Locale.getDefault()): String {
+    val text = iso.orEmpty()
+    return try {
+        LocalDate.parse(text).format(localizedDate(skeleton, locale))
+    } catch (e: DateTimeParseException) {
+        text
+    }
+}

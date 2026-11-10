@@ -22,6 +22,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -168,7 +169,7 @@ class TwoParentRecordPhotosTest : TwoParentTest() {
         carol.petRepository.upsertPet(pet.copy(photos = listOf(solo)))
         val photo = checkNotNull(RecordPhotoCodec.decode(solo))
         val kept = carol.sharedFileCache.cached(RecordPhotoPaths.objectNameOf(soloPath), photo.sha256)
-        val bytes = checkNotNull(kept) { "the uploader's own copy was not kept" }.readBytes()
+        val bytes = File(checkNotNull(kept) { "the uploader's own copy was not kept" }.toString()).readBytes()
         assertRefused { dan.storage.reference.child(soloPath).getBytes(MAX_PHOTO_BYTES).await() }
 
         pair(inviter = carol, accepter = dan)
@@ -197,7 +198,12 @@ class TwoParentRecordPhotosTest : TwoParentTest() {
         // Carol's Room row still names the solo path. Her next save of the pet writes it over the
         // server's rewritten reference — and widens the audience to Dan, which a save now does.
         carol.petRepository.upsertPet(
-            pet.copy(photos = listOf(solo), familyId = familyId, lastModifiedBy = carol.uid, updatedAt = now())
+            pet.copy(
+                photos = listOf(solo),
+                familyId = familyId,
+                lastModifiedBy = carol.uid,
+                updatedAt = now().toKotlinLocalDateTime()
+            )
         )
         assertEquals(listOf(solo), photosOnServer(carol, pet.id))
         dan.petRepository.pullOnce()
@@ -207,7 +213,7 @@ class TwoParentRecordPhotosTest : TwoParentTest() {
         ) { "Dan cannot see the photograph Carol took before they paired" }
         assertEquals(familyPath, viewable.paths.first())
         val opened = dan.sharedFileCache.localCopy(familyPath, RecordPhotoPaths.objectNameOf(familyPath), photo.sha256)
-        assertArrayEquals(bytes, opened.readBytes())
+        assertArrayEquals(bytes, File(opened.toString()).readBytes())
         assertEquals(carol.uid, dan.storage.reference.child(familyPath).metadata.await().getCustomMetadata("uploader"))
     }
 
@@ -248,7 +254,7 @@ class TwoParentRecordPhotosTest : TwoParentTest() {
             RecordPhotoPaths.objectNameOf(photo.storagePath),
             photo.sha256
         )
-        assertArrayEquals(stored, opened.readBytes())
+        assertArrayEquals(stored, File(opened.toString()).readBytes())
         assertEquals(photo.sizeBytes, stored.size.toLong())
 
         assertRefused { stranger.storage.reference.child(photo.storagePath).getBytes(MAX_PHOTO_BYTES).await() }
@@ -322,8 +328,8 @@ class TwoParentRecordPhotosTest : TwoParentTest() {
         id = UUID.randomUUID().toString(),
         childName = "Ella",
         dateOfBirth = null,
-        createdAt = now(),
-        updatedAt = now(),
+        createdAt = now().toKotlinLocalDateTime(),
+        updatedAt = now().toKotlinLocalDateTime(),
         createdByFirebaseUid = parent.uid,
         lastModifiedBy = parent.uid
     )
@@ -332,8 +338,8 @@ class TwoParentRecordPhotosTest : TwoParentTest() {
         id = UUID.randomUUID().toString(),
         name = "Luna",
         species = PetSpecies.DOG,
-        createdAt = now(),
-        updatedAt = now(),
+        createdAt = now().toKotlinLocalDateTime(),
+        updatedAt = now().toKotlinLocalDateTime(),
         createdByFirebaseUid = parent.uid,
         lastModifiedBy = parent.uid
     )
@@ -354,12 +360,12 @@ class TwoParentRecordPhotosTest : TwoParentTest() {
         return Event(
             id = UUID.randomUUID().toString(),
             title = "Class photo",
-            startDateTime = start,
-            endDateTime = start.plusHours(1),
+            startDateTime = start.toKotlinLocalDateTime(),
+            endDateTime = start.plusHours(1).toKotlinLocalDateTime(),
             eventType = "activity",
             parentOwner = alice.database.userDao().getUserById(alice.uid)?.role ?: "mom",
-            createdAt = now(),
-            updatedAt = now()
+            createdAt = now().toKotlinLocalDateTime(),
+            updatedAt = now().toKotlinLocalDateTime()
         )
     }
 

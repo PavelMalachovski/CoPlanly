@@ -6,6 +6,7 @@ import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.Event
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -95,13 +96,13 @@ class TwoParentEventsTest : TwoParentTest() {
         return Event(
             id = UUID.randomUUID().toString(),
             title = title,
-            startDateTime = start,
-            endDateTime = start.plusHours(1),
+            startDateTime = start.toKotlinLocalDateTime(),
+            endDateTime = start.plusHours(1).toKotlinLocalDateTime(),
             eventType = "appointment",
             // Alice's own slot, as the event form defaults it.
             parentOwner = alice.database.userDao().getUserById(alice.uid)?.role ?: "mom",
-            createdAt = LocalDateTime.now(),
-            updatedAt = LocalDateTime.now(),
+            createdAt = LocalDateTime.now().toKotlinLocalDateTime(),
+            updatedAt = LocalDateTime.now().toKotlinLocalDateTime(),
             isPrivate = isPrivate
         )
     }

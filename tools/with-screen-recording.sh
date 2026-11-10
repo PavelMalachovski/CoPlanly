@@ -3,7 +3,7 @@
 # recording into $VIDEO_DIR (default app/build/outputs/emulator-video). Used by the CI
 # `instrumented` job:
 #
-#   bash tools/with-screen-recording.sh ./gradlew connectedDebugAndroidTest
+#   bash tools/with-screen-recording.sh ./gradlew :app:connectedDebugAndroidTest
 #
 # The exit status is the command's, always, and is also written to $STATUS_FILE when that is set. Recording is a convenience for a person reading a
 # failure, so nothing in it may fail the job: every adb call here is allowed to fail, and a

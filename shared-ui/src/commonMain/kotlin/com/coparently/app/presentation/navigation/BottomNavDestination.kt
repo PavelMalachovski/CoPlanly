@@ -1,0 +1,275 @@
+package com.coparently.app.presentation.navigation
+
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.outlined.Chat
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.navigation.NavHostController
+import com.coparently.app.presentation.common.windowWidthDp
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.chat_unread_count_overflow
+import com.coparently.app.resources.chat_unread_messages_badge
+import com.coparently.app.resources.nav_calendar
+import com.coparently.app.resources.nav_chat
+import com.coparently.app.resources.nav_family
+import com.coparently.app.resources.nav_home
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
+
+/**
+ * Above this many unread messages the badge stops growing the digit count and shows
+ * `"$MAX_BADGE_DISPLAY_COUNT+"` instead — a three- or four-digit pill would overflow the
+ * small badge shape Material 3 draws for it. The screen-reader announcement is unaffected:
+ * it always speaks the real count via [pluralStringResource].
+ */
+private const val MAX_BADGE_DISPLAY_COUNT = 99
+
+/**
+ * Test tag on the bottom bar, so an instrumented test can tell "the bar is showing" from "some
+ * text that reads like a tab label is showing" — the labels also appear as titles and on Home.
+ */
+const val BOTTOM_BAR_TEST_TAG = "bottom_nav_bar"
+
+/**
+ * Top-level destinations reachable from the bottom navigation bar.
+ *
+ * @property route Route *pattern* of the destination, used to match the current entry
+ * @property navRoute Concrete route to navigate to. Differs from [route] where the pattern
+ *   carries optional arguments — navigating to a pattern would pass `{placeholder}` through as
+ *   a literal value.
+ * @property labelRes Label string resource
+ * @property selectedIcon Icon when the destination is selected
+ * @property unselectedIcon Icon when the destination is not selected
+ */
+enum class BottomNavDestination(
+    val route: String,
+    val labelRes: StringResource,
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector,
+    val navRoute: String = route
+) {
+    HOME(
+        route = Screen.Home.route,
+        labelRes = Res.string.nav_home,
+        selectedIcon = Icons.Filled.Home,
+        unselectedIcon = Icons.Outlined.Home
+    ),
+    CALENDAR(
+        route = Screen.Calendar.route,
+        labelRes = Res.string.nav_calendar,
+        selectedIcon = Icons.Filled.CalendarMonth,
+        unselectedIcon = Icons.Outlined.CalendarMonth
+    ),
+    CHAT(
+        route = Screen.Conversations.route,
+        labelRes = Res.string.nav_chat,
+        selectedIcon = Icons.AutoMirrored.Filled.Chat,
+        unselectedIcon = Icons.AutoMirrored.Outlined.Chat,
+        // The pattern carries an optional draft argument; the tab opens the plain list.
+        navRoute = Screen.Conversations.createRoute()
+    ),
+
+    /**
+     * The family's money, arrangements, records and people (new-user review, October 2026). It
+     * replaced the Expenses tab: the month's money is its first card, and Expenses opens from it.
+     */
+    FAMILY(
+        route = Screen.Family.route,
+        labelRes = Res.string.nav_family,
+        selectedIcon = Icons.Filled.Groups,
+        unselectedIcon = Icons.Outlined.Groups
+    );
+
+    // Settings is intentionally NOT a bottom-nav destination — it is reached via a
+    // gear action in the top bar of the top-level screens and opens as a detail
+    // screen (with a back arrow, bottom bar hidden).
+
+    companion object {
+        /** Routes on which the bottom bar is visible. */
+        val topLevelRoutes: Set<String> = entries.mapTo(mutableSetOf()) { it.route }
+    }
+}
+
+/**
+ * Switches to a top-level tab.
+ *
+ * Extracted from the bottom bar's own handler because the home dashboard's stat tiles are
+ * deep links into Expenses and Chat and must land the user in exactly the state tapping the
+ * tab would have: one instance per tab, each tab's own scroll position restored, and a back
+ * stack that unwinds to Home rather than accumulating tab entries.
+ *
+ * @param destination Tab to show
+ */
+internal fun NavHostController.navigateToTab(destination: BottomNavDestination) {
+    navigate(destination.navRoute) {
+        // Keep one instance per tab, preserve each tab's state
+        popUpTo(Screen.Home.route) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
+}
+
+/**
+ * Which navigation the window gets: the bottom bar on a phone held upright, and a rail down the
+ * start edge from Material's medium width, 600 dp — a tablet, an unfolded foldable, a phone on its
+ * side (docs/AUDIT-2026-10-design.md §4). A bar stretched across a tablet puts four targets a
+ * thumb's length apart at the bottom of a screen held with two hands, and a phone on its side has
+ * height to spare for nothing.
+ */
+enum class NavigationLayout {
+    /** The bottom bar ([CoPlanlyBottomBar]). */
+    BAR,
+
+    /** The rail ([CoPlanlyNavigationRail]). */
+    RAIL
+}
+
+/** The window width from which the rail replaces the bar: Material's medium width class. */
+private const val RAIL_FROM_WIDTH_DP = 600
+
+/**
+ * The [NavigationLayout] for the current window, which follows it through a rotation, a fold and
+ * a resized multi-window pane.
+ *
+ * @return [NavigationLayout.RAIL] from 600 dp wide, otherwise [NavigationLayout.BAR]
+ */
+@Composable
+fun rememberNavigationLayout(): NavigationLayout =
+    if (windowWidthDp() >= RAIL_FROM_WIDTH_DP) NavigationLayout.RAIL else NavigationLayout.BAR
+
+/** Test tag on the navigation rail, the rail's counterpart of [BOTTOM_BAR_TEST_TAG]. */
+const val NAVIGATION_RAIL_TEST_TAG = "navigation_rail"
+
+/**
+ * Material 3 bottom navigation bar with the four top-level destinations.
+ *
+ * Stateless by design: [chatUnreadCount] is a plain `Int` rather than this composable
+ * reaching for a ViewModel itself, so the caller decides how (and how widely) that count
+ * is scoped — see `NavGraph`, which reads it from a ViewModel shared across every tab so
+ * the badge is correct even while a different tab is showing.
+ *
+ * @param currentRoute Route of the currently displayed destination
+ * @param onNavigate Callback invoked with the destination the user tapped
+ * @param chatUnreadCount Number of messages from the co-parent not yet read. A badge is
+ *   shown on the Chat tab's icon while this is above zero, and hidden entirely at zero —
+ *   it is not decorative, so nothing is rendered when there is nothing to report.
+ */
+@Composable
+fun CoPlanlyBottomBar(
+    currentRoute: String?,
+    onNavigate: (BottomNavDestination) -> Unit,
+    chatUnreadCount: Int = 0
+) {
+    NavigationBar(modifier = Modifier.testTag(BOTTOM_BAR_TEST_TAG)) {
+        BottomNavDestination.entries.forEach { destination ->
+            val selected = currentRoute == destination.route
+            NavigationBarItem(
+                selected = selected,
+                onClick = { onTabClick(destination, selected, onNavigate) },
+                icon = { TabIcon(destination, selected, chatUnreadCount) },
+                label = { Text(stringResource(destination.labelRes)) }
+            )
+        }
+    }
+}
+
+/**
+ * The same four destinations as [CoPlanlyBottomBar], as a rail down the start edge for a wide
+ * window ([NavigationLayout.RAIL]). The caller has already applied the system bars, so the rail
+ * applies none of its own.
+ *
+ * @param currentRoute Route of the currently displayed destination
+ * @param onNavigate Callback invoked with the destination the user tapped
+ * @param chatUnreadCount Unread messages from the co-parent, badged as on the bar
+ */
+@Composable
+fun CoPlanlyNavigationRail(
+    currentRoute: String?,
+    onNavigate: (BottomNavDestination) -> Unit,
+    chatUnreadCount: Int = 0
+) {
+    NavigationRail(
+        modifier = Modifier.testTag(NAVIGATION_RAIL_TEST_TAG),
+        windowInsets = WindowInsets(0, 0, 0, 0)
+    ) {
+        BottomNavDestination.entries.forEach { destination ->
+            val selected = currentRoute == destination.route
+            NavigationRailItem(
+                selected = selected,
+                onClick = { onTabClick(destination, selected, onNavigate) },
+                icon = { TabIcon(destination, selected, chatUnreadCount) },
+                label = { Text(stringResource(destination.labelRes)) }
+            )
+        }
+    }
+}
+
+/**
+ * What a tap on a tab does: switches to it, unless it is the tab on screen, and counts a tap on
+ * the Calendar either way, so the calendar opens on the month ([CalendarTabTaps]).
+ */
+private fun onTabClick(
+    destination: BottomNavDestination,
+    selected: Boolean,
+    onNavigate: (BottomNavDestination) -> Unit
+) {
+    if (destination == BottomNavDestination.CALENDAR) CalendarTabTaps.tap()
+    if (!selected) onNavigate(destination)
+}
+
+/**
+ * A destination's icon, filled when selected, with the Chat tab's unread badge: the bar and the
+ * rail draw the same thing.
+ *
+ * @param destination The tab
+ * @param selected Whether it is the tab on screen
+ * @param chatUnreadCount Unread messages from the co-parent; badged on Chat above zero
+ */
+@Composable
+private fun TabIcon(destination: BottomNavDestination, selected: Boolean, chatUnreadCount: Int) {
+    val icon = if (selected) destination.selectedIcon else destination.unselectedIcon
+    if (destination == BottomNavDestination.CHAT && chatUnreadCount > 0) {
+        val unreadDescription = pluralStringResource(
+            Res.plurals.chat_unread_messages_badge,
+            chatUnreadCount,
+            chatUnreadCount
+        )
+        val badgeText = if (chatUnreadCount > MAX_BADGE_DISPLAY_COUNT) {
+            stringResource(Res.string.chat_unread_count_overflow, MAX_BADGE_DISPLAY_COUNT)
+        } else {
+            chatUnreadCount.toString()
+        }
+        BadgedBox(
+            badge = {
+                Badge(modifier = Modifier.semantics { contentDescription = unreadDescription }) {
+                    Text(badgeText)
+                }
+            }
+        ) {
+            Icon(imageVector = icon, contentDescription = null)
+        }
+    } else {
+        Icon(imageVector = icon, contentDescription = null)
+    }
+}

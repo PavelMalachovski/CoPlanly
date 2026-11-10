@@ -15,8 +15,8 @@ import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.model.PetSpecies
 import com.coparently.app.domain.parentingplan.ParentingPlanEntry
 import com.coparently.app.domain.professionals.ProfessionalRole
+import com.coparently.app.domain.serialization.StoredJson
 import com.google.firebase.firestore.FirebaseFirestoreException
-import com.google.gson.Gson
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -24,6 +24,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -142,7 +145,7 @@ class FamilyIsolationTest : TwoParentTest() {
                 updatedAtMillis = System.currentTimeMillis()
             )
         )
-        alice.custodyRepository.createWeekOnWeekOff(LocalDate.now())
+        alice.custodyRepository.createWeekOnWeekOff(LocalDate.now().toKotlinLocalDate())
         val request = requestChange(alice, bob, event, "$canaryA could we swap")
         val bobsEvent = insertEvent(bob, "$canaryA Bob's dentist")
         bob.expenseRepository.addExpense(newExpense(bob, "$canaryA Bob's shoes", listOf(alice.uid, bob.uid)))
@@ -177,18 +180,28 @@ class FamilyIsolationTest : TwoParentTest() {
             val stored = checkNotNull(alice.eventRepository.getEventById(event.id)) {
                 "${event.title} is not on Alice's phone"
             }
-            alice.eventRepository.updateEvent(stored.copy(title = "${stored.title} (moved)", updatedAt = now()))
+            alice.eventRepository.updateEvent(
+                stored.copy(title = "${stored.title} (moved)", updatedAt = now().toKotlinLocalDateTime())
+            )
         }
         inA.child?.let { child ->
             val stored = checkNotNull(alice.childInfoRepository.getChildInfoById(child.id))
             alice.childInfoRepository.upsertChildInfo(
-                stored.copy(medicalNotes = "$canaryA inhaler", syncedToFirestore = false, updatedAt = now())
+                stored.copy(
+                    medicalNotes = "$canaryA inhaler",
+                    syncedToFirestore = false,
+                    updatedAt = now().toKotlinLocalDateTime()
+                )
             )
         }
         inA.pet?.let { pet ->
             val stored = checkNotNull(alice.petRepository.getPetById(pet.id))
             alice.petRepository.upsertPet(
-                stored.copy(feedingNotes = "$canaryA once a day", syncedToFirestore = false, updatedAt = now())
+                stored.copy(
+                    feedingNotes = "$canaryA once a day",
+                    syncedToFirestore = false,
+                    updatedAt = now().toKotlinLocalDateTime()
+                )
             )
         }
         alice.syncService.performFullSync().getOrThrow()
@@ -207,7 +220,8 @@ class FamilyIsolationTest : TwoParentTest() {
         // `MultiFamilyRecordsTest`; keep the three in step.
         val remote = checkNotNull(alice.userRepository.getRemoteUserProfile(alice.uid))
         val local = checkNotNull(alice.database.userDao().getUserById(alice.uid))
-        alice.database.userDao().updateUser(local.copy(partnerIdsJson = Gson().toJson(remote.partnerIds)))
+        val partnerIdsJson = StoredJson.encode(StoredJson.strings, remote.partnerIds)
+        alice.database.userDao().updateUser(local.copy(partnerIdsJson = partnerIdsJson))
         alice.selectedFamilySource.reconcile()
         checkNotNull(alice.selectedFamilySource.select(FamilyKey.of(alice.uid, carol.uid)))
         assertEquals(carol.uid, alice.parentsSource.coParentUid())
@@ -369,8 +383,8 @@ class FamilyIsolationTest : TwoParentTest() {
 
     /** The positive control: each outsider of family B still reads what B gave them. */
     private suspend fun assertOutsidersStillReadFamilyB(outsiders: Outsiders, familyB: String, inB: FamilyRecords) {
-        val from = LocalDate.now().minusDays(1)
-        val to = LocalDate.now().plusDays(WINDOW_DAYS)
+        val from = LocalDate.now().minusDays(1).toKotlinLocalDate()
+        val to = LocalDate.now().plusDays(WINDOW_DAYS).toKotlinLocalDate()
         val bEventIds = inB.events.map { it.id }.toSet()
         withTimeout(EmulatorParent.WAIT_MS) {
             outsiders.friend.friendRepository.observeFamilyEvents(familyB, from, to).first { read ->
@@ -407,11 +421,11 @@ class FamilyIsolationTest : TwoParentTest() {
         val event = Event(
             id = UUID.randomUUID().toString(),
             title = title,
-            startDateTime = now().plusDays(2),
+            startDateTime = now().plusDays(2).toKotlinLocalDateTime(),
             eventType = "school",
             parentOwner = parent.database.userDao().getUserById(parent.uid)?.role ?: "mom",
-            createdAt = now(),
-            updatedAt = now()
+            createdAt = now().toKotlinLocalDateTime(),
+            updatedAt = now().toKotlinLocalDateTime()
         )
         parent.eventRepository.insertEvent(event)
         return event
@@ -433,8 +447,8 @@ class FamilyIsolationTest : TwoParentTest() {
         childName = name,
         dateOfBirth = null,
         medicalNotes = "$name's notes",
-        createdAt = now(),
-        updatedAt = now(),
+        createdAt = now().toKotlinLocalDateTime(),
+        updatedAt = now().toKotlinLocalDateTime(),
         createdByFirebaseUid = parent.uid,
         lastModifiedBy = parent.uid
     )
@@ -443,8 +457,8 @@ class FamilyIsolationTest : TwoParentTest() {
         id = UUID.randomUUID().toString(),
         name = name,
         species = PetSpecies.DOG,
-        createdAt = now(),
-        updatedAt = now(),
+        createdAt = now().toKotlinLocalDateTime(),
+        updatedAt = now().toKotlinLocalDateTime(),
         createdByFirebaseUid = parent.uid,
         lastModifiedBy = parent.uid
     )
@@ -475,9 +489,9 @@ class FamilyIsolationTest : TwoParentTest() {
             requestedBy = from.uid,
             requestedTo = to.uid,
             currentStartDateTime = event.startDateTime,
-            proposedStartDateTime = event.startDateTime.plusDays(1),
+            proposedStartDateTime = event.startDateTime.toJavaLocalDateTime().plusDays(1).toKotlinLocalDateTime(),
             note = note,
-            createdAt = now()
+            createdAt = now().toKotlinLocalDateTime()
         )
         from.changeRequestRepository.createChangeRequest(request, answerBy = null)
         awaitOnServer("change_requests/${request.id}")

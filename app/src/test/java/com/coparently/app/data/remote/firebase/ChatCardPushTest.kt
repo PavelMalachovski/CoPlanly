@@ -7,6 +7,10 @@ import com.coparently.app.R
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.activity.ActivityKind
+import com.coparently.app.domain.stickers.StickerKind
+import com.coparently.app.presentation.chat.ActivityCardText
+import com.coparently.app.presentation.chat.CardSubjectText
+import com.coparently.app.presentation.chat.androidStringId
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -15,6 +19,7 @@ import org.robolectric.annotation.Config
 import java.util.Locale
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 /**
  * A chat card's push is worded on the receiving phone, in its reader's language (notification
@@ -95,5 +100,27 @@ class ChatCardPushTest {
         // A later message in the same thread replaces the one before it.
         assertEquals(PushNotifier.chatNotificationId("a__b", null), ids.first())
         assertNotEquals(ids[0], ids[2])
+    }
+
+    @Test
+    fun `every sentence a card can be worded with is one of the app's own strings`() {
+        // The push reads `ActivityCardText`'s Compose Multiplatform resources as the app's `R.string`
+        // of the same key (MON-24 phase 2): a key the app did not hold would push the English preview.
+        val resources = ActivityKind.entries.flatMap { kind ->
+            listOf(
+                ActivityCardText.resourceFor(kind),
+                ActivityCardText.settleUpResource(kind, readerIsSender = false),
+                ActivityCardText.settleUpResource(kind, readerIsSender = true)
+            )
+        } + ActivityEntityType.entries.flatMap { type ->
+            (StickerKind.entries.map { it.wire } + "unknown").mapNotNull { title ->
+                val card = ActivityAnnouncement(ActivityKind.STICKER_SENT, type, "s", title)
+                (ActivityCardText.subjectOf(card) as? CardSubjectText.Res)?.id
+            }
+        }
+
+        for (resource in resources.toSet()) {
+            assertTrue(context.androidStringId(resource) != 0, "no R.string.${resource.key}")
+        }
     }
 }

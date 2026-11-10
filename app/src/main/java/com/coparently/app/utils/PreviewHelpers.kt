@@ -13,7 +13,9 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.NamedParent
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.Parents
+import com.coparently.app.presentation.platform.ProvideAndroidPlatform
 import com.coparently.app.presentation.theme.CoPlanlyTheme
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -39,14 +41,14 @@ class SampleEventsProvider : PreviewParameterProvider<List<Event>> {
                 id = UUID.randomUUID().toString(),
                 title = "Soccer Practice",
                 description = "Weekly soccer practice at the park",
-                startDateTime = LocalDateTime.now().plusDays(1).withHour(15).withMinute(0),
-                endDateTime = LocalDateTime.now().plusDays(1).withHour(17).withMinute(0),
+                startDateTime = LocalDateTime.now().plusDays(1).withHour(15).withMinute(0).toKotlinLocalDateTime(),
+                endDateTime = LocalDateTime.now().plusDays(1).withHour(17).withMinute(0).toKotlinLocalDateTime(),
                 eventType = "sports",
                 parentOwner = "dad",
                 isRecurring = true,
                 recurrencePattern = "weekly",
-                createdAt = LocalDateTime.now(),
-                updatedAt = LocalDateTime.now(),
+                createdAt = LocalDateTime.now().toKotlinLocalDateTime(),
+                updatedAt = LocalDateTime.now().toKotlinLocalDateTime(),
                 syncedToFirestore = true,
                 createdByFirebaseUid = "user123",
                 sharedWith = listOf("user456"),
@@ -61,14 +63,14 @@ class SampleEventsProvider : PreviewParameterProvider<List<Event>> {
                 id = UUID.randomUUID().toString(),
                 title = "Soccer Practice",
                 description = "Weekly soccer practice at the park",
-                startDateTime = LocalDateTime.now().plusDays(1).withHour(15).withMinute(0),
-                endDateTime = LocalDateTime.now().plusDays(1).withHour(17).withMinute(0),
+                startDateTime = LocalDateTime.now().plusDays(1).withHour(15).withMinute(0).toKotlinLocalDateTime(),
+                endDateTime = LocalDateTime.now().plusDays(1).withHour(17).withMinute(0).toKotlinLocalDateTime(),
                 eventType = "sports",
                 parentOwner = "dad",
                 isRecurring = true,
                 recurrencePattern = "weekly",
-                createdAt = LocalDateTime.now(),
-                updatedAt = LocalDateTime.now(),
+                createdAt = LocalDateTime.now().toKotlinLocalDateTime(),
+                updatedAt = LocalDateTime.now().toKotlinLocalDateTime(),
                 syncedToFirestore = true,
                 createdByFirebaseUid = "user123",
                 sharedWith = listOf("user456"),
@@ -79,14 +81,14 @@ class SampleEventsProvider : PreviewParameterProvider<List<Event>> {
                 id = UUID.randomUUID().toString(),
                 title = "Doctor Appointment",
                 description = "Annual checkup at pediatrician",
-                startDateTime = LocalDateTime.now().plusDays(3).withHour(10).withMinute(30),
-                endDateTime = LocalDateTime.now().plusDays(3).withHour(11).withMinute(30),
+                startDateTime = LocalDateTime.now().plusDays(3).withHour(10).withMinute(30).toKotlinLocalDateTime(),
+                endDateTime = LocalDateTime.now().plusDays(3).withHour(11).withMinute(30).toKotlinLocalDateTime(),
                 eventType = "medical",
                 parentOwner = "mom",
                 isRecurring = false,
                 recurrencePattern = null,
-                createdAt = LocalDateTime.now(),
-                updatedAt = LocalDateTime.now(),
+                createdAt = LocalDateTime.now().toKotlinLocalDateTime(),
+                updatedAt = LocalDateTime.now().toKotlinLocalDateTime(),
                 syncedToFirestore = true,
                 createdByFirebaseUid = "user456",
                 sharedWith = listOf("user123"),
@@ -97,14 +99,14 @@ class SampleEventsProvider : PreviewParameterProvider<List<Event>> {
                 id = UUID.randomUUID().toString(),
                 title = "School Pickup",
                 description = "Pick up from school at 3:30 PM",
-                startDateTime = LocalDateTime.now().withHour(15).withMinute(30),
-                endDateTime = LocalDateTime.now().withHour(16).withMinute(0),
+                startDateTime = LocalDateTime.now().withHour(15).withMinute(30).toKotlinLocalDateTime(),
+                endDateTime = LocalDateTime.now().withHour(16).withMinute(0).toKotlinLocalDateTime(),
                 eventType = "school",
                 parentOwner = "mom",
                 isRecurring = true,
                 recurrencePattern = "daily",
-                createdAt = LocalDateTime.now(),
-                updatedAt = LocalDateTime.now(),
+                createdAt = LocalDateTime.now().toKotlinLocalDateTime(),
+                updatedAt = LocalDateTime.now().toKotlinLocalDateTime(),
                 syncedToFirestore = false,
                 createdByFirebaseUid = "user456",
                 sharedWith = listOf("user123"),
@@ -115,14 +117,14 @@ class SampleEventsProvider : PreviewParameterProvider<List<Event>> {
                 id = UUID.randomUUID().toString(),
                 title = "Birthday Party",
                 description = "Emma's 8th birthday celebration",
-                startDateTime = LocalDateTime.now().plusDays(5).withHour(14).withMinute(0),
-                endDateTime = LocalDateTime.now().plusDays(5).withHour(17).withMinute(0),
+                startDateTime = LocalDateTime.now().plusDays(5).withHour(14).withMinute(0).toKotlinLocalDateTime(),
+                endDateTime = LocalDateTime.now().plusDays(5).withHour(17).withMinute(0).toKotlinLocalDateTime(),
                 eventType = "birthday",
                 parentOwner = "dad",
                 isRecurring = false,
                 recurrencePattern = null,
-                createdAt = LocalDateTime.now(),
-                updatedAt = LocalDateTime.now(),
+                createdAt = LocalDateTime.now().toKotlinLocalDateTime(),
+                updatedAt = LocalDateTime.now().toKotlinLocalDateTime(),
                 syncedToFirestore = true,
                 createdByFirebaseUid = "user123",
                 sharedWith = listOf("user456"),
@@ -143,40 +145,40 @@ class SampleEventProvider : PreviewParameterProvider<Event> {
             id = UUID.randomUUID().toString(),
             title = "Soccer Practice",
             description = "Weekly soccer practice at the park",
-            startDateTime = LocalDateTime.now().plusDays(1).withHour(15).withMinute(0),
-            endDateTime = LocalDateTime.now().plusDays(1).withHour(17).withMinute(0),
+            startDateTime = LocalDateTime.now().plusDays(1).withHour(15).withMinute(0).toKotlinLocalDateTime(),
+            endDateTime = LocalDateTime.now().plusDays(1).withHour(17).withMinute(0).toKotlinLocalDateTime(),
             eventType = "sports",
             parentOwner = "dad",
             isRecurring = true,
             recurrencePattern = "weekly",
-            createdAt = LocalDateTime.now(),
-            updatedAt = LocalDateTime.now()
+            createdAt = LocalDateTime.now().toKotlinLocalDateTime(),
+            updatedAt = LocalDateTime.now().toKotlinLocalDateTime()
         ),
         Event(
             id = UUID.randomUUID().toString(),
             title = "Doctor Appointment",
             description = "Annual checkup",
-            startDateTime = LocalDateTime.now().plusDays(3).withHour(10).withMinute(30),
-            endDateTime = LocalDateTime.now().plusDays(3).withHour(11).withMinute(30),
+            startDateTime = LocalDateTime.now().plusDays(3).withHour(10).withMinute(30).toKotlinLocalDateTime(),
+            endDateTime = LocalDateTime.now().plusDays(3).withHour(11).withMinute(30).toKotlinLocalDateTime(),
             eventType = "medical",
             parentOwner = "mom",
             isRecurring = false,
             recurrencePattern = null,
-            createdAt = LocalDateTime.now(),
-            updatedAt = LocalDateTime.now()
+            createdAt = LocalDateTime.now().toKotlinLocalDateTime(),
+            updatedAt = LocalDateTime.now().toKotlinLocalDateTime()
         ),
         Event(
             id = UUID.randomUUID().toString(),
             title = "Birthday Party",
             description = null,
-            startDateTime = LocalDateTime.now().plusDays(5).withHour(14).withMinute(0),
-            endDateTime = LocalDateTime.now().plusDays(5).withHour(17).withMinute(0),
+            startDateTime = LocalDateTime.now().plusDays(5).withHour(14).withMinute(0).toKotlinLocalDateTime(),
+            endDateTime = LocalDateTime.now().plusDays(5).withHour(17).withMinute(0).toKotlinLocalDateTime(),
             eventType = "birthday",
             parentOwner = "mom",
             isRecurring = false,
             recurrencePattern = null,
-            createdAt = LocalDateTime.now(),
-            updatedAt = LocalDateTime.now()
+            createdAt = LocalDateTime.now().toKotlinLocalDateTime(),
+            updatedAt = LocalDateTime.now().toKotlinLocalDateTime()
         )
     )
 }
@@ -208,12 +210,16 @@ fun PreviewWrapper(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    CoPlanlyTheme(darkTheme = darkTheme) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
-        ) {
-            content()
+    // The platform too, as the screenshot frame provides it: a moved screen that draws an image or
+    // asks for a permission reads a platform local, and a preview without them would throw.
+    ProvideAndroidPlatform {
+        CoPlanlyTheme(darkTheme = darkTheme) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                content()
+            }
         }
     }
 }
@@ -331,14 +337,14 @@ fun generateSampleEvents(
             id = UUID.randomUUID().toString(),
             title = titles[index % titles.size],
             description = "Sample event description for ${titles[index % titles.size]}",
-            startDateTime = startDate.plusDays(index.toLong()).withHour(9 + index % 12),
-            endDateTime = startDate.plusDays(index.toLong()).withHour(10 + index % 12),
+            startDateTime = startDate.plusDays(index.toLong()).withHour(9 + index % 12).toKotlinLocalDateTime(),
+            endDateTime = startDate.plusDays(index.toLong()).withHour(10 + index % 12).toKotlinLocalDateTime(),
             eventType = eventTypes[index % eventTypes.size],
             parentOwner = parentOwners[index % parentOwners.size],
             isRecurring = index % 2 == 0,
             recurrencePattern = if (index % 2 == 0) "weekly" else null,
-            createdAt = LocalDateTime.now(),
-            updatedAt = LocalDateTime.now(),
+            createdAt = LocalDateTime.now().toKotlinLocalDateTime(),
+            updatedAt = LocalDateTime.now().toKotlinLocalDateTime(),
             syncedToFirestore = index % 3 == 0,
             createdByFirebaseUid = "user${index % 2}",
             sharedWith = listOf("user${(index + 1) % 2}"),
@@ -365,14 +371,14 @@ fun createSampleEvent(
         id = UUID.randomUUID().toString(),
         title = title,
         description = "Sample event description",
-        startDateTime = LocalDateTime.now().plusDays(1),
-        endDateTime = LocalDateTime.now().plusDays(1).plusHours(1),
+        startDateTime = LocalDateTime.now().plusDays(1).toKotlinLocalDateTime(),
+        endDateTime = LocalDateTime.now().plusDays(1).plusHours(1).toKotlinLocalDateTime(),
         eventType = eventType,
         parentOwner = parentOwner,
         isRecurring = false,
         recurrencePattern = null,
-        createdAt = LocalDateTime.now(),
-        updatedAt = LocalDateTime.now()
+        createdAt = LocalDateTime.now().toKotlinLocalDateTime(),
+        updatedAt = LocalDateTime.now().toKotlinLocalDateTime()
     )
 }
 

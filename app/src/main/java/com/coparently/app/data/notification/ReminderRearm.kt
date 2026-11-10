@@ -1,9 +1,10 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.notification
 
 import com.coparently.app.data.local.dao.EventDao
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.notification.ReminderScheduler
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Arms again every reminder this phone had armed, from the events as Room holds them now.
@@ -17,8 +18,7 @@ import javax.inject.Singleton
  * Only events with queued work are moved, so an account that signed out (whose work was cancelled)
  * gets nothing back.
  */
-@Singleton
-class ReminderRearm @Inject constructor(
+class ReminderRearm(
     private val eventDao: EventDao,
     private val scheduler: ReminderScheduler,
     private val alarms: ReminderAlarms,

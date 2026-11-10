@@ -1,6 +1,5 @@
 package com.coparently.app.screenshots
 
-import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +20,10 @@ import com.coparently.app.presentation.calendar.components.SwapSheetActions
 import com.coparently.app.presentation.calendar.components.SwapSheetOffer
 import com.coparently.app.presentation.calendar.components.VacationBanner
 import com.coparently.app.presentation.calendar.swapMiniMonths
+import com.coparently.app.testing.RobolectricTestApplication
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinYearMonth
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
@@ -40,7 +43,7 @@ import org.robolectric.annotation.GraphicsMode
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [SCREENSHOT_SDK], application = Application::class)
+@Config(sdk = [SCREENSHOT_SDK], application = RobolectricTestApplication::class)
 class CalendarScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
 
     @Test
@@ -75,9 +78,9 @@ class CalendarScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant
         val month = ScreenshotFixtures.MONTH
         DaySwapSelectionBar(
             sides = SwapSides(
-                toOther = listOf(month.atDay(SWAP_GIVE_DAY), month.atDay(SWAP_GIVE_DAY + 1)),
-                toOfferer = listOf(month.atDay(SWAP_TAKE_DAY)),
-                unknown = listOf(month.atDay(SWAP_TAKE_DAY + 1))
+                toOther = listOf(SWAP_GIVE_DAY, SWAP_GIVE_DAY + 1).map { month.atDay(it).toKotlinLocalDate() },
+                toOfferer = listOf(month.atDay(SWAP_TAKE_DAY).toKotlinLocalDate()),
+                unknown = listOf(month.atDay(SWAP_TAKE_DAY + 1).toKotlinLocalDate())
             ),
             parentNames = ScreenshotFixtures.parentNames,
             onNext = {},
@@ -93,12 +96,16 @@ class CalendarScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant
         val take = listOf(month.atDay(SWAP_TAKE_DAY))
         DaySwapSheetContent(
             offer = SwapSheetOffer(
-                sides = SwapSides(toOther = give, toOfferer = take),
+                sides = SwapSides(
+                    toOther = give.map { it.toKotlinLocalDate() },
+                    toOfferer = take.map { it.toKotlinLocalDate() }
+                ),
                 coParentName = "Bob",
                 months = swapMiniMonths(
-                    days = give.associateWith { "dad" } + take.associateWith { "mom" },
+                    days = (give.associateWith { "dad" } + take.associateWith { "mom" })
+                        .mapKeys { (day, _) -> day.toKotlinLocalDate() },
                     familyEvents = emptyList(),
-                    custodyFor = ScreenshotFixtures::custodyFor
+                    custodyFor = ScreenshotFixtures::custodyOn
                 )
             ),
             parentNames = ScreenshotFixtures.parentNames,
@@ -133,20 +140,24 @@ private const val CHOSEN_SWAP_DAY = 20
 @Composable
 internal fun MonthGridFixture() {
     Box(modifier = Modifier.height(MONTH_GRID_HEIGHT)) {
+        // The fixtures' days are `java.time`; the grid's are kotlinx-datetime since it moved to
+        // `:shared-ui` (MON-24 phase 2, slice 11c), so they are converted here, at the call.
         MonthView(
-            selectedMonth = ScreenshotFixtures.MONTH,
-            eventsByDay = ScreenshotFixtures.monthEvents,
-            getCustody = ScreenshotFixtures::custodyFor,
-            getContactWindows = ScreenshotFixtures::contactWindowsFor,
+            selectedMonth = ScreenshotFixtures.MONTH.toKotlinYearMonth(),
+            eventsByDay = ScreenshotFixtures.monthEvents.mapKeys { (day, _) -> day.toKotlinLocalDate() },
+            getCustody = ScreenshotFixtures::custodyOn,
+            getContactWindows = { day -> ScreenshotFixtures.contactWindowsFor(day.toJavaLocalDate()) },
             parentNames = ScreenshotFixtures.parentNames,
             onDayClick = {},
             onMonthChange = {},
-            holidays = ScreenshotFixtures.holidays,
-            schoolVacationDays = ScreenshotFixtures.schoolVacationDays,
+            holidays = ScreenshotFixtures.holidays.mapKeys { (day, _) -> day.toKotlinLocalDate() },
+            schoolVacationDays = ScreenshotFixtures.schoolVacationDays.mapTo(mutableSetOf()) { it.toKotlinLocalDate() },
             // Both forms of a swap mark: a day waiting for an answer, and one being chosen.
             swapMarks = mapOf(
-                ScreenshotFixtures.MONTH.atDay(PENDING_SWAP_DAY) to SwapMark(toSlot = "dad", pending = true),
-                ScreenshotFixtures.MONTH.atDay(CHOSEN_SWAP_DAY) to SwapMark(toSlot = "mom", pending = false)
+                ScreenshotFixtures.MONTH.atDay(PENDING_SWAP_DAY).toKotlinLocalDate() to
+                    SwapMark(toSlot = "dad", pending = true),
+                ScreenshotFixtures.MONTH.atDay(CHOSEN_SWAP_DAY).toKotlinLocalDate() to
+                    SwapMark(toSlot = "mom", pending = false)
             )
         )
     }

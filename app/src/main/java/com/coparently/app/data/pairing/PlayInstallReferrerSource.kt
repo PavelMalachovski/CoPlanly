@@ -1,19 +1,16 @@
 package com.coparently.app.data.pairing
 
 import android.content.Context
-import android.util.Log
 import com.android.installreferrer.api.InstallReferrerClient
 import com.android.installreferrer.api.InstallReferrerClient.InstallReferrerResponse
 import com.android.installreferrer.api.InstallReferrerStateListener
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.pairing.InstallReferrer
 import com.coparently.app.domain.pairing.InstallReferrerSource
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.coroutines.resume
 
 /** What one of Play's answers means for asking again. */
@@ -45,9 +42,8 @@ internal fun referrerOutcome(responseCode: Int): ReferrerOutcome = when (respons
  * install from the plain listing, or a Play Store without the service — so an ordinary install
  * stops asking after its first launch.
  */
-@Singleton
-class PlayInstallReferrerSource @Inject constructor(
-    @ApplicationContext private val context: Context
+class PlayInstallReferrerSource(
+    private val context: Context
 ) : InstallReferrerSource {
 
     private val marks by lazy { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
@@ -78,7 +74,7 @@ class PlayInstallReferrerSource @Inject constructor(
                     val answer = when (referrerOutcome(responseCode)) {
                         ReferrerOutcome.ANSWERED ->
                             runCatching { Answer(client.installReferrer.installReferrer) }
-                                .onFailure { Log.w(TAG, "Install referrer could not be read", it) }
+                                .onFailure { logger.w(TAG, "Install referrer could not be read", it) }
                                 .getOrNull()
                         ReferrerOutcome.NEVER -> Answer(null)
                         ReferrerOutcome.RETRY -> null
@@ -94,7 +90,7 @@ class PlayInstallReferrerSource @Inject constructor(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            Log.w(TAG, "Install referrer service could not be reached", e)
+            logger.w(TAG, "Install referrer service could not be reached", e)
             if (continuation.isActive) continuation.resume(null)
         }
     }

@@ -71,7 +71,7 @@ adb install -t "$BASE_APK"
 adb install -t "$TEST_APK"
 echo "::endgroup::"
 
-# "instrumentation:app.coplanly.test/com.coparently.app.HiltTestRunner (target=app.coplanly)"
+# "instrumentation:app.coplanly.test/com.coparently.app.KoinTestRunner (target=app.coplanly)"
 instrumentation="$(adb shell pm list instrumentation | tr -d '\r' \
   | awk -v target="(target=$APP_ID)" 'index($0, target) && !found {
       sub(/^instrumentation:/, ""); sub(/ \(target=.*$/, ""); print; found = 1

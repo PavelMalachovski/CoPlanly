@@ -19,11 +19,12 @@ import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.model.PetSpecies
 import com.coparently.app.e2e.EmulatorEnvironment.step
 import com.coparently.app.presentation.navigation.BottomNavDestination
+import com.coparently.app.testing.UsesFakeFirebase
 import com.coparently.app.testing.settle
-import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -31,7 +32,6 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 import java.util.UUID
-import javax.inject.Inject
 
 /**
  * What Alice **sees** with her second family on screen: nothing of the first (isolation audit,
@@ -45,12 +45,11 @@ import javax.inject.Inject
  * so the screen has drawn family B's records, and then no node may show the canary in its text or
  * its content description.
  */
-@HiltAndroidTest
+@UsesFakeFirebase
 @RunWith(AndroidJUnit4::class)
 class OnScreenIsolationTest : AliceOnScreenTest() {
 
-    @Inject
-    lateinit var selectedFamilySource: SelectedFamilySource
+    val selectedFamilySource: SelectedFamilySource by lazy { koinRule.get() }
 
     @Test
     fun withTheSecondFamilyOnScreenNoScreenShowsTheFirstFamilysRecords() {
@@ -124,11 +123,11 @@ class OnScreenIsolationTest : AliceOnScreenTest() {
             Event(
                 id = UUID.randomUUID().toString(),
                 title = "$word dentist",
-                startDateTime = LocalDate.now().atTime(NOON, 0),
+                startDateTime = LocalDate.now().atTime(NOON, 0).toKotlinLocalDateTime(),
                 eventType = "medical",
                 parentOwner = parent.database.userDao().getUserById(parent.uid)?.role ?: "mom",
-                createdAt = now,
-                updatedAt = now
+                createdAt = now.toKotlinLocalDateTime(),
+                updatedAt = now.toKotlinLocalDateTime()
             )
         )
         parent.expenseRepository.addExpense(
@@ -148,8 +147,8 @@ class OnScreenIsolationTest : AliceOnScreenTest() {
                 id = UUID.randomUUID().toString(),
                 childName = "$word Mia",
                 dateOfBirth = null,
-                createdAt = now,
-                updatedAt = now,
+                createdAt = now.toKotlinLocalDateTime(),
+                updatedAt = now.toKotlinLocalDateTime(),
                 createdByFirebaseUid = parent.uid,
                 lastModifiedBy = parent.uid
             )
@@ -159,8 +158,8 @@ class OnScreenIsolationTest : AliceOnScreenTest() {
                 id = UUID.randomUUID().toString(),
                 name = "$word Rex",
                 species = PetSpecies.DOG,
-                createdAt = now,
-                updatedAt = now,
+                createdAt = now.toKotlinLocalDateTime(),
+                updatedAt = now.toKotlinLocalDateTime(),
                 createdByFirebaseUid = parent.uid,
                 lastModifiedBy = parent.uid
             )

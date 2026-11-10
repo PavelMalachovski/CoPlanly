@@ -17,10 +17,12 @@ import com.coparently.app.R
 import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.receipts.ReceiptScan
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.time.LocalDate
+import kotlin.time.Clock
 
 /** `SnackbarDuration.Short`'s timeout per `SnackbarHost.kt`'s `toMillis` (material3 1.4.0). */
 private const val SHORT_SNACKBAR_TIMEOUT_MILLIS = 4_000L
@@ -38,7 +40,7 @@ private const val SHORT_SNACKBAR_TIMEOUT_MILLIS = 4_000L
  * few `mainClock` frame advances after emitting `Applied` are enough to reproduce it.
  *
  * This test drives [ReceiptScanEffect] directly from a fake `MutableStateFlow`, the same way
- * `AddExpenseScreen` drives it from `ExpenseViewModel.scanState` — no Activity, Hilt or
+ * `AddExpenseScreen` drives it from `ExpenseViewModel.scanState` — no Activity, Koin or
  * ViewModel involved, per the reviewer's request.
  */
 @RunWith(AndroidJUnit4::class)
@@ -62,7 +64,7 @@ class ReceiptScanEffectTest {
                             title = "",
                             amount = "",
                             category = ExpenseCategory.OTHER,
-                            date = LocalDate.now(),
+                            date = Clock.System.todayIn(TimeZone.currentSystemDefault()),
                             currency = null
                         ),
                         callbacks = ReceiptScanCallbacks(

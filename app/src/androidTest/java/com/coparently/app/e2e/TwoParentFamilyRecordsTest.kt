@@ -13,13 +13,14 @@ import com.coparently.app.domain.model.SchoolInfo
 import com.coparently.app.domain.model.Vaccination
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 import java.util.UUID
@@ -177,13 +178,13 @@ class TwoParentFamilyRecordsTest : TwoParentTest() {
     private fun newChild(parent: EmulatorParent, name: String): ChildInfo = ChildInfo(
         id = UUID.randomUUID().toString(),
         childName = name,
-        dateOfBirth = LocalDateTime.of(BIRTH_YEAR, BIRTH_MONTH, BIRTH_DAY, 0, 0),
+        dateOfBirth = LocalDateTime.of(BIRTH_YEAR, BIRTH_MONTH, BIRTH_DAY, 0, 0).toKotlinLocalDateTime(),
         medications = listOf(Medication(name = "Salbutamol", dosage = "100 mcg", frequency = "as needed")),
         allergies = listOf("Peanuts"),
         medicalNotes = "Mild asthma",
         schoolInfo = SchoolInfo(name = "Elm Street Primary", teacherName = "Ms Novak", grade = "2"),
-        createdAt = now(),
-        updatedAt = now(),
+        createdAt = now().toKotlinLocalDateTime(),
+        updatedAt = now().toKotlinLocalDateTime(),
         createdByFirebaseUid = parent.uid,
         lastModifiedBy = parent.uid
     )
@@ -195,11 +196,11 @@ class TwoParentFamilyRecordsTest : TwoParentTest() {
         species = PetSpecies.DOG,
         breed = "Beagle",
         medications = listOf(Medication(name = "Heartworm tablet", dosage = "1", frequency = "monthly")),
-        vaccinations = listOf(Vaccination(name = "Rabies", date = LocalDate.of(BIRTH_YEAR, BIRTH_MONTH, BIRTH_DAY))),
+        vaccinations = listOf(Vaccination(name = "Rabies", date = LocalDate(BIRTH_YEAR, BIRTH_MONTH, BIRTH_DAY))),
         feedingNotes = "Twice a day, no chicken",
         vetPhone = "+420 555 000 111",
-        createdAt = now(),
-        updatedAt = now(),
+        createdAt = now().toKotlinLocalDateTime(),
+        updatedAt = now().toKotlinLocalDateTime(),
         createdByFirebaseUid = parent.uid,
         lastModifiedBy = parent.uid
     )
@@ -209,12 +210,12 @@ class TwoParentFamilyRecordsTest : TwoParentTest() {
         return Event(
             id = UUID.randomUUID().toString(),
             title = title,
-            startDateTime = start,
-            endDateTime = start.plusHours(1),
+            startDateTime = start.toKotlinLocalDateTime(),
+            endDateTime = start.plusHours(1).toKotlinLocalDateTime(),
             eventType = "activity",
             parentOwner = parent.database.userDao().getUserById(parent.uid)?.role ?: "mom",
-            createdAt = now(),
-            updatedAt = now()
+            createdAt = now().toKotlinLocalDateTime(),
+            updatedAt = now().toKotlinLocalDateTime()
         )
     }
 

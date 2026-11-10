@@ -15,21 +15,21 @@ import com.coparently.app.domain.model.PetSpecies
 import com.coparently.app.domain.model.SchoolInfo
 import com.coparently.app.domain.model.Vaccination
 import com.coparently.app.presentation.event.EventDraft
-import java.time.LocalDate
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 
 /**
  * The values the probe writes: every field set, so every key has to appear in the JSON.
  *
- * A field left at its default would be a field the probe cannot see renamed — Gson omits a null,
+ * A field left at its default would be a field the probe cannot see renamed — the JSON omits a null,
  * and an empty list proves nothing about the element type. Dates are fixed so a failure reads the
  * same on every run. ASCII only, so `am instrument`'s output survives any shell encoding.
  */
 @Suppress("MagicNumber")
 internal object ProbeFixtures {
 
-    private val created = LocalDateTime.of(2026, 5, 4, 9, 30)
-    private val updated = LocalDateTime.of(2026, 5, 4, 9, 45)
+    private val created = LocalDateTime(2026, 5, 4, 9, 30)
+    private val updated = LocalDateTime(2026, 5, 4, 9, 45)
 
     val medication = Medication(
         name = "Ibuprofen",
@@ -38,9 +38,9 @@ internal object ProbeFixtures {
         notes = "after food"
     )
 
-    val vaccination = Vaccination(name = "MMR", date = LocalDate.of(2019, 5, 1))
+    val vaccination = Vaccination(name = "MMR", date = LocalDate(2019, 5, 1))
 
-    /** What the probe expects [vaccination]'s date to be written as (`LocalDateJsonAdapter`). */
+    /** What the probe expects [vaccination]'s date to be written as (`StoredLocalDateSerializer`). */
     const val VACCINATION_DATE = "2019-05-01"
 
     val medicalProfile = MedicalProfile(
@@ -53,7 +53,7 @@ internal object ProbeFixtures {
     val child = ChildInfo(
         id = "r8-probe-child",
         childName = "Ema",
-        dateOfBirth = LocalDateTime.of(2018, 3, 14, 0, 0),
+        dateOfBirth = LocalDateTime(2018, 3, 14, 0, 0),
         medications = listOf(medication),
         activities = listOf(
             Activity(
@@ -93,7 +93,7 @@ internal object ProbeFixtures {
         species = PetSpecies.DOG,
         breed = "Beagle",
         medications = listOf(medication),
-        vaccinations = listOf(Vaccination(name = "Rabies", date = LocalDate.of(2025, 9, 1))),
+        vaccinations = listOf(Vaccination(name = "Rabies", date = LocalDate(2025, 9, 1))),
         createdAt = created,
         updatedAt = updated
     )
@@ -151,14 +151,4 @@ internal object ProbeFixtures {
         "sharedWith" to listOf("uid-a", "uid-b"),
         "isPrivate" to false
     )
-
-    /** A Google Calendar API page, as `Calendar.Events.list` returns it (the `@Key` models). */
-    val calendarPage = """
-        {"items":[{"id":"r8-probe-event","summary":"Swimming",
-        "start":{"dateTime":"2026-05-04T16:00:00.000+02:00"},
-        "end":{"dateTime":"2026-05-04T17:00:00.000+02:00"}}]}
-    """.trimIndent()
-
-    /** [calendarPage]'s start, as `DateTime.toStringRfc3339` prints it back. */
-    const val CALENDAR_START = "2026-05-04T16:00:00.000+02:00"
 }

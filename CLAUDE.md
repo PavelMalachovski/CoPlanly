@@ -5,7 +5,8 @@ Guidance for Claude Code (and other AI assistants) working in this repository.
 ## What this project is
 
 CoPlanly — an Android shared-calendar app for separated parents. Kotlin + Jetpack Compose
-(Material 3), Clean Architecture with Hilt, Room as the offline-first source of truth,
+(Material 3), Clean Architecture with Koin (Hilt until MON-24 phase 2, November 2026), Room as the
+offline-first source of truth,
 Firebase (Auth/Firestore/FCM) for sync between the two parents, Google Calendar integration.
 **No AI in the client:** the Gemini subsystem was deleted in August 2026 (MON-7) — ~3,200 lines
 reachable from no navigation graph, with the API key shipping in every APK. AI came back **only**
@@ -34,7 +35,9 @@ id, so REL-1's console half has to be finished before anything is uploaded.
 Second pass over the six main screens, from a Claude Design audit. It builds on (does not
 replace) the July 2026 overhaul below — those invariants still hold except where noted here.
 
-1. **Shared UI primitives** live in `presentation/common/DesignSystem.kt`: `SectionGroup`
+1. **Shared UI primitives** live in `presentation/common/DesignSystem.kt` (in `:shared-ui`'s
+   `commonMain` since MON-24 phase 2, with the theme and most of this item's components: see
+   "Where a `presentation/theme/…` … path lives"): `SectionGroup`
    (one tonal container per run of rows; call its scope's `Divider()` between rows — this line
    used to say they were inserted for you, and they are not), `SectionRow` (icon,
    title, status/value, **at most one** trailing control), `GroupLabel`, `PillChip`,
@@ -384,16 +387,25 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     cleared with them and refused for another uid). Never attach `ParentsSource` from a widget
     update, which would cost four Firestore listeners for a label. **Every redraw has a trigger**:
     a Room write to `events`, `custody_models` or `users` (the invalidation tracker, debounced; the
-    signed-in parent's row says which family's schedule is drawn), a change of names, a unique
+    signed-in parent's row says which family's schedule is drawn), a change of names, a change of
+    the language the app speaks (`TodayWidgetRefresher.followLanguage`: each widget's state records
+    the language `refreshAll` last asked its lines in, compared at every process start, every
+    configuration change and every `MainActivity.onCreate` — a per-app choice below 13 reaches no
+    other callback, and "System default" there restarts the process; the receiver also takes
+    `LOCALE_CHANGED`, which starts a process when the phone's language changes), a unique
     periodic work a minute past midnight, and hourly `updatePeriodMillis` as the backstop. A table the widget starts to read joins `WATCHED_TABLES`. **Nothing the schema does
     not hold**: a handover is a day and a person, never an hour, as on Home. It is home-screen
     only. It adds no XML layout: `initialLayout` is Glance's own, and the picker preview is a
     vector drawable. Its text takes the today card's type roles through `role()` (the role's size,
     and the nearest lighter of the three weights a widget's system font has), its corner is the
     launcher's own `system_app_widget_background_radius`, and its paddings are `Spacing` steps —
-    no size of its own. It follows the system's dark theme, because the launcher draws it, not the
-    app's own theme setting. It speaks the context's language: the per-app choice on Android 13 and
-    later, the device's before, as pushes do. `TodayWidgetTextTest` holds the wording (Robolectric,
+    no size of its own. It follows the system's dark theme, not the app's own theme setting (a
+    Compose state of `MainActivity`'s, which no other context carries): its colours are day-and-night
+    pairs, and the context Glance hands `provideGlance` — the app's own, in the app's process, not
+    the launcher's — has the system's night mode. It speaks the app's language, as pushes do:
+    `provideGlance` words its lines through `inAppLanguage()` (the owner's rule under
+    "Localization"), a configuration context that changes only the locale, and draws with the
+    context it was handed, unchanged. `TodayWidgetTextTest` holds the wording (Robolectric,
     English and Russian), and the UI tour draws the widget's own `RemoteViews` in every variant
     (`UiTourWidget`).
 19. **Every screen that is not a tab is one readable column** (October 2026 audit, week 6). A
@@ -530,15 +542,113 @@ When touching the UI, keep these invariants:
    server's sweeps and account deletion, because an older build may still write one. Don't bring
    a budget screen back without a product decision. Tab switches, including Home's stat-tile deep
    links, go through `NavHostController.navigateToTab` so they share one back-stack policy.)*
-2. **Toolchain**: compileSdk/targetSdk 36, Kotlin 2.1 (+ `kotlin.plugin.compose`),
+2. **Toolchain**: compileSdk 37 and targetSdk 36, **AGP 9.3.3** on **Gradle 9.5.1** (MON-24 phase 2,
+   Task 13: AGP 9 compiles Kotlin itself, so the app applies no `org.jetbrains.kotlin.android`, and
+   the three shared modules' Android target is AGP's `com.android.kotlin.multiplatform.library`,
+   `kotlin { android { … } }`, one variant with no build types, whose JVM tests are the
+   `androidHostTest` source set run by `testAndroidHostTest` and whose Room processor task is
+   `kspAndroidMain`; `shared-ui` enables its Android resources so Compose Multiplatform's reach the
+   APK; AGP 9.3 is the newest minor Kotlin 2.4.21 supports, and 9.3.2 fixed lint on JDK 17; AGP
+   9's new defaults are taken, none opted out of in `gradle.properties` — R8 repackages classes
+   into the default package and no longer keeps a kept class's constructor implicitly, which no
+   keep rule here relied on, resource shrinking considers code, and unit tests exist for `debug`
+   alone, the one CI runs),
+   **Kotlin 2.4.21** (+ `kotlin.plugin.compose` at the same version; MON-24, November 2026),
    Compose BOM 2025.10 (Material 3 1.4 — whose public API has none of M3 Expressive:
    `ButtonGroup`, `LoadingIndicator`, `MotionScheme` and the rest are still alpha, in 1.5; this line
-   used to say the BOM shipped them), Room 2.7.2 (2.6.x breaks on
-   Kotlin 2.x metadata), Hilt and Room on **KSP** (`2.1.0-1.0.29`; kapt is gone — move KSP with Kotlin), Navigation 2.9.3, Hilt 2.56.2, predictive back on. **Firebase BoM 34.4.0 with no `-ktx`
+   used to say the BOM shipped them), **Compose Multiplatform 1.9.3** in `:shared-ui` (MON-24 phase
+   2, Task 9: plugin `org.jetbrains.compose`, which supports AGP 9, the Compose compiler still
+   `org.jetbrains.kotlin.plugin.compose` at the Kotlin version; its Android artifacts ask for
+   androidx Compose runtime and foundation 1.9.4, so the app's Compose resolves one patch above the
+   BOM's 1.9.3, while material3 stays 1.4.0, which CMP material3 1.9.0 asks for; not 1.10, which
+   lifts Compose to 1.10 past the BOM, the reason Koin waits at 4.1.1 below; the theme and the
+   common components there since slice 9b add CMP animation, foundation, ui and material3, CMP's
+   `material3-window-size-class` 1.9.0 and `org.jetbrains.compose.material:material-icons-extended`
+   1.7.3, the last CMP release of the extended icons — on Android each is the androidx artifact the
+   BOM already names, material3 and window-size-class 1.4.0, icons 1.7.8; **kizitonwose's calendar
+   is `com.kizitonwose.calendar:compose-multiplatform` 2.9.1** there since slice 11c, the month grid's
+   `HorizontalCalendar` on kotlinx-datetime (it asks for CMP 1.9.0, kotlinx-datetime 0.7.1 and
+   serialization 1.9.0, all below what the graph resolves; 2.10 asks for CMP 1.10, past the BOM), in
+   place of the app's Android `compose:2.6.1`, whose packages it shares, so never both; no Coil 3
+   yet — it arrives with the task that first needs it in common code), Room 2.7.2 (2.6.x breaks on
+   Kotlin 2.x metadata), Room on **KSP2** (KSP `2.3.13`, built with Kotlin 2.4.0; kapt is gone) —
+   **Room for Kotlin Multiplatform in `:shared-data` since MON-24 phase 2**, its processor run there
+   for Android and both iPhone targets and the app running none, with androidx.sqlite 2.5.2's bundled driver
+   (`sqlite-bundled`, released with Room 2.7.2) on iOS only; the schema goes to `app/schemas/`
+   through the `room.schemaLocation` KSP argument, which the app already used, rather than the Room
+   Gradle plugin, which was not tried in this task (Google's Maven repository, where the plugin is
+   published, is unreachable from the cloud sessions this was built in) — **Navigation 2.9.7**
+   (MON-24 phase 2, Task 12: the navigation graph is in `:shared-ui`'s `commonMain` on JetBrains'
+   multiplatform `org.jetbrains.androidx.navigation:navigation-compose` 2.9.2, an `api` there, the
+   release that pairs with Compose Multiplatform 1.9.3, lifecycle 2.9.6 and savedstate 1.3.6, which
+   on Android is androidx's navigation-compose 2.9.7, a lift from the 2.9.3 the app declared; the
+   app declares none of its own now),
+   **lifecycle 2.9.4** (MON-24 phase 2, Task 10: `:shared-ui`'s ViewModels extend JetBrains'
+   multiplatform `org.jetbrains.androidx.lifecycle:lifecycle-viewmodel` 2.9.6, the release Compose
+   Multiplatform 1.9.3 pairs with, which on Android is androidx's 2.9.4, so the app's lifecycle
+   artifacts — 2.8.7 declared, 2.9.3 through Koin — resolve to 2.9.4; not 2.10, which lifts Compose
+   past the BOM, the reason Koin waits below; `viewModelOf` in common code is `koin-core-viewmodel`
+   4.1.1; `SavedStateHandle` in common code, since slice 10c, JetBrains'
+   `lifecycle-viewmodel-savedstate` 2.9.6, androidx's 2.9.4 on every target, with
+   `org.jetbrains.androidx.savedstate` 1.3.6, which is androidx.savedstate 1.3.3; and, for the
+   screens since Task 11, `koinViewModel()` in common code from `koin-compose-viewmodel` 4.1.1,
+   `collectAsStateWithLifecycle` from JetBrains' `lifecycle-runtime-compose` 2.9.6, androidx's 2.9.4,
+   and `BackHandler`/`PredictiveBackHandler` from Compose Multiplatform's `ui-backhandler` 1.9.3,
+   which on Android calls androidx.activity's own — each already in the app's graph at that version),
+   **Koin 4.1.1** (BOM; `koin-android`, `koin-androidx-compose`, `koin-androidx-workmanager`, and
+   `koin-test` for the JVM tests — MON-24 phase 2 replaced Hilt 2.58 with it; 4.2.x is newer but its
+   Compose artifacts pull Compose 1.10, activity 1.12 and lifecycle 2.10 past the BOM, so it waits
+   for a Compose BOM that has them), kotlinx-coroutines 1.11.0, **kotlinx-serialization-json 1.12.0**
+   with the `org.jetbrains.kotlin.plugin.serialization` plugin at the Kotlin version (MON-24, which
+   replaced Gson; 1.12.0 is built with Kotlin 2.4.10 and came with Kotlin 2.4 in Task 13, where
+   1.11.0 was built with 2.3.20, so it moves with Kotlin; applied
+   in the app, `:shared`, `:shared-data` and, since Task 10's slice 10b and the event form's
+   `EventDraft`, `:shared-ui`),
+   predictive back on. **Kotlin, KSP
+   and Roborazzi move together, and AGP holds them back**: KSP has been versioned apart from Kotlin
+   since 2.3.0 and is KSP2 only; 2.3.12 and later need AGP 8.12. A Kotlin release supports AGP only
+   up to a version (2.4.21: 8.5.2–9.3.1, and Gradle up to 9.7.0), so a newer AGP waits for the
+   Kotlin that names it, and Kotlin waited for AGP 9 alone once Dagger left with Hilt (plan Task 13
+   of the iPhone work's phase 2 took both). Roborazzi stays 1.76.0 (built with Kotlin 2.3, below the
+   project's) and detekt 1.23.7: both run on AGP 9 and Gradle 9 (detekt's per-variant Android
+   tasks, which look for AGP's old `BaseExtension`, are simply not created; CI runs the plain
+   `detekt`), and detekt 2 is a baseline-format change. detekt 1.23's default configuration exempts
+   tests by their source set names and knows `androidUnitTest`, not `androidHostTest`, so
+   `app/config/detekt/detekt.yml` spells the list out with the new names on each rule it exempts.
+   **Kotlin/Native pins Xcode too**: 2.4.21 supports Xcode up to 26.4 (2.3.21 supported 26.0;
+   Xcode 27 needs Kotlin 2.5). In practice 2.3.21 built, linked and ran commonTest on the owner's
+   Xcode 27.2 (November 2026; eight harmless linker warnings about its prebuilt caches), so the
+   runner uses that, with an Xcode 26 beside it through the runner's `DEVELOPER_DIR` as the fallback
+   (`docs/IOS-RUNNER.md`); a stable Kotlin 2.5 comes before the App Store (ROADMAP MON-24). The
+   `upgrade` job runs this branch's test APK on the base build's stdlib, so androidTest must not carry a kotlin-reflect newer than main's
+   Kotlin. Compiler options go through `kotlin { compilerOptions { … } }`;
+   `kotlinOptions` is an error since Kotlin 2.2. **Firebase BoM 34.18.0 with no `-ktx`
    artifacts** (audit L-2): 34.0.0 removed them, and the Kotlin extensions (`Firebase`, `logEvent`,
    `storageMetadata`, …) are imported from the product's own package
    (`com.google.firebase.analytics.logEvent`, never `…analytics.ktx…`). `Task.await()` comes from the
    explicitly declared `kotlinx-coroutines-play-services`, not from Firebase's transitive graph.
+   **GitLive's firebase-kotlin-sdk 2.7.0** (MON-24 phase 2, `shared-data/`; the spike chose it, ROADMAP
+   MON-24 "Firebase on two platforms") is how the data layer reaches Firestore from common code, and
+   Functions on the iPhone. It imports BoM 34.18.0, which is why the app's BoM is that one: Gradle
+   resolves one BoM for the graph, and the app and `shared-data` name the same version so their
+   artifacts are the ones that run. Move the two together, and only to a BoM a GitLive release
+   names. It is built with Kotlin 2.2.21; 3.0's alphas are built with Kotlin 2.4, which the project
+   now uses, and stay out while they are alphas. On the iPhone, `shared-data` links the **Firebase
+   iOS pods 11.8.0** (the version GitLive's bindings were generated against) through the Kotlin CocoaPods plugin with `linkOnly = true`:
+   GitLive publishes the bindings, and a second binding of the same headers would clash. A Linux
+   host never runs CocoaPods: the plugin reports the host as unsupported, and the iOS klibs need no
+   pods because GitLive's own klibs carry the bindings (the `shared` job's iOS compile holds that).
+   **Ktor 3.6.1** (MON-24 phase 2, `shared-data/`) for the two HTTP clients, the school import's and
+   Google Calendar's: built with Kotlin 2.3.21, on the OkHttp engine on Android
+   (which brings **OkHttp 5.5.1**; the app declares no OkHttp of its own any more, and Coil 2.7 runs
+   on that one) and Darwin on iOS, with kotlinx-io 0.9.1. google-api-client and
+   google-api-services-calendar left the build with it. Like kotlinx-serialization, it moves with
+   Kotlin: never take a Ktor built with a newer Kotlin than the project's. **And AGP held it back
+   too**: OkHttp 5.5 and later (so Ktor 3.6 and later) need compileSdk 37, which AGP 8.10 could not
+   compile against (`checkDebugAarMetadata` failed), so Ktor stayed at 3.5.1 until AGP 9.3 (Task
+   13), which is why the app and the shared modules compile against 37. Don't force an older
+   OkHttp under a newer Ktor: no test runs the real OkHttp engine, so a mismatch would show only on a
+   phone.
 3. **Calendar**: month view is a classic grid from the 1st with horizontal month paging
    (kizitonwose `HorizontalCalendar`); day/week use `HorizontalPager` with fling physics.
    Event chips are single-line (`softWrap = false` + ellipsis). School vacation is a thin
@@ -588,14 +698,15 @@ When touching the UI, keep these invariants:
    `EventListScreen` this line used to cite was deleted in September 2026.
    Danger actions (e.g. "Sign out of app") live at the bottom of their screen, not
    mid-list.
-9. **User-facing strings** live in tracked, feature-named `res/values/*_strings.xml`
-   files (`chat_strings.xml`, `expenses_strings.xml`, `settings_account_strings.xml`,
+9. **User-facing strings** live in tracked, feature-named `values/*_strings.xml`
+   files under `shared-ui/src/commonMain/composeResources/` since MON-24 phase 2 (the app's
+   `res/values/` copy is generated from them; see "Localization (i18n)") (`chat_strings.xml`, `expenses_strings.xml`, `settings_account_strings.xml`,
    `navigation.xml`, `event_preview.xml`, …). All `strings.xml` files are tracked too
    (secrets were moved to BuildConfig long ago); prefer the feature files for new keys.
    Never hardcode user-visible text in composables — see "Localization (i18n)" below.
 
 DB note: installs older than the migration chain (schema < v5) are wiped via
-`fallbackToDestructiveMigrationFrom(1,2,3,4)` in `DatabaseModule` — a v3 install used to
+`fallbackToDestructiveMigrationFrom(1,2,3,4)` in `buildCoPlanlyDatabase` (`di/DatabaseBuilder.kt`, in `shared-data`'s `androidMain` since MON-24 phase 2) — a v3 install used to
 crash with "migration from 3 to 9 required but not found".
 
 ## Build & verify
@@ -604,6 +715,13 @@ crash with "migration from 3 to 9 required but not found".
 ./gradlew assembleDebug          # main build — run after every code change
 ./gradlew testDebugUnitTest      # JVM unit tests (MockK + coroutines-test + Turbine)
 ./gradlew lint detekt            # static analysis (detekt config in app/config/detekt)
+```
+
+```bash
+./gradlew :shared:testAndroidHostTest              # the shared module's commonTest on the JVM
+./gradlew :shared:compileKotlinIosSimulatorArm64   # its iOS klib; any host, no Mac (Kotlin 2.2.20+)
+./gradlew :shared:iosSimulatorArm64Test            # commonTest on an iOS simulator: a Mac with Xcode
+./gradlew :shared-ui:linkDebugFrameworkIosSimulatorArm64  # Shared.framework for the iPhone app: the Mac too
 ```
 
 ```bash
@@ -625,29 +743,43 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   prove the ruleset *in this repository*; only a deploy settles what the live bucket enforces,
   which is exactly the gap the `pet_photos` entry below describes.
 - Windows dev machine; Gradle wrapper works from Git Bash and PowerShell.
-- **What only a phone can prove** (SEC-2's conversion of real data, REL-7's Gson-after-R8, the
+- **What only a phone can prove** (SEC-2's conversion of real data, REL-7's stored JSON after R8, the
   dark cold start, cross-time-zone chat, …) is one ordered script: `docs/DEVICE-CHECKLIST.md`.
   Add a check there when you ship something CI cannot see.
 - `google-services.json` is required for the Google Services plugin, but the build
   degrades gracefully if it is missing (see the conditional apply in `app/build.gradle.kts`).
 - **GitHub CI runs on every pull request, and on every push to `main`** — a push to a
   feature branch with no PR open is not built (`.github/workflows/ci.yml`, added
-  August 2026 — this line used to say there was none). Fourteen jobs that test (this line used to
-  say thirteen, before `web`; eleven before `upgrade` and `r8-runtime`; ten before detekt left the lint job; eight before `screenshots`
+  August 2026 — this line used to say there was none). Sixteen jobs that test (this line used to
+  say fourteen, before `shared` and `shared-ios`; thirteen, before `web`; eleven before `upgrade` and `r8-runtime`; ten before detekt left the lint job; eight before `screenshots`
   and `e2e`; seven before `instrumented`), plus `report`, which only reads them (below): `changes` (a cheap gate,
   below), four Android ones — `build-test` (`assembleDebug` + `testDebugUnitTest` in a
-  single invocation), `static` (`lint` alone — the id is kept), `detekt` (its own job since
+  single invocation), `static` (`lint`, which since the final review of phases 1–2 also analyses the three shared
+  modules as the app's dependencies, `checkDependencies = true` in the app's `lint {}`: AGP 9's KMP
+  library target has no lint task for its main source set, so `lint` alone analysed only their host
+  tests and NewApi saw none of the code that moved there — the id is kept), `detekt` (its own job since
   September 2026: the two ran in sequence, lint 5:15 then detekt 0:52), `release` (`assembleRelease`, where
   R8 runs, and where `node tools/check-r8-mapping.js` then reads R8's own `mapping.txt` and
-  fails if a field a keep rule names came out renamed) — plus Cloud Functions, `web` (below), the
+  fails if a field a keep rule names came out renamed — the Google Calendar models, which
+  google-http-client filled by reflection, until MON-24 phase 2 removed that client; since then no
+  rule names one, and the check says so and passes, holding the next reflective reader's rule; and
+  where `node tools/check-koin-aliases.js` reads the same mapping and fails when a class of a Koin
+  alias, `single<I> { get<Impl>() }`, has no entry of its own: were R8 to merge an interface into
+  its one implementer, the alias would replace the definition it asks for and the minified app would
+  overflow the stack at launch, and nothing else starts the graph in a minified build) —
+  plus the shared modules' two, `shared` and `shared-ios` (below), Cloud Functions, `web` (below), the
   Firestore rules suite against the emulator, and `invariants` (`node tools/check-invariants.js`, no
   dependencies and no Android SDK: locale completeness, format-argument agreement across the
-  five locales, the four-way push-type agreement item 15 states, and the rule that every type
-  Gson reflects over is covered by a `-keepclassmembers ... { <fields>; }` rule *and* has a case
-  in the R8 runtime probe). The last two
-  are one defect from two sides — the source says a rule exists, the mapping says it worked, and
-  a typo in a package name passes the first and fails the second. A third side, the minified app
-  actually *running*, is `r8-runtime` (below). They run **in parallel**; the Android three were one sequential job until the August 2026 CI
+  five locales, the four-way push-type agreement item 15 states, that no production code imports
+  Gson (check 4), and that every `@Serializable` model — a model whose JSON `StoredJson` writes —
+  has a case in the R8 runtime probe (check 5), the disclosed Google scope (check 6), and that every
+  string reads alike to aapt2 and to Compose Multiplatform (check 7, see "Localization")). Until
+  MON-24 check 4 was "every type Gson reflects
+  over is covered by a `-keepclassmembers ... { <fields>; }` rule", and it and the mapping check
+  were one defect from two sides — the source said a rule existed, the mapping said it worked, and
+  a typo in a package name passed the first and failed the second. `StoredJson`'s generated
+  serializers carry their keys as literals, so the app's models need no such rule any more; the
+  side that still matters, the minified app actually *running*, is `r8-runtime` (below). They run **in parallel**; the Android three were one sequential job until the August 2026 CI
   pass, which is why a run took 13:22 for about 7 minutes of critical path. Two caveats, both
   deliberate. **detekt gates again** as of CQ-12 — do not add `continue-on-error` back to turn a
   red build green; fix the finding, or regenerate the baseline through the Regenerate workflow so
@@ -660,25 +792,32 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   only throws on an old device, and it is a second ABI for SQLCipher's native library), **API 30**
   (where the job was first made green), and **API 35 on `google_apis_ps16k`** (16 KB memory pages,
   which Play requires; a misaligned `.so` fails `System.loadLibrary` there). **The 16 KB leg runs
-  no Hilt test** (`notAnnotation=…HiltAndroidTest` in the matrix's `test-args`): MockK's own
+  no test that loads the fake Firebase override** (`notAnnotation=com.coparently.app.testing.
+  UsesFakeFirebase` in the matrix's `test-args`, set in `tools/ci-changes.js`): MockK's own
   inline-mocking agent, `libmockkjvmtiagent.so`, does not dlopen on 16 KB pages even at 1.14.0
-  ("empty/missing DT_HASH/DT_GNU_HASH"), and every Hilt test mocks through it in
-  `FakeFirebaseModule` — a test-tool failure that says nothing about the app. What the leg exists
-  to prove is `NativeLibrariesTest`'s job, which is non-Hilt and mock-free: it loads SQLCipher and
+  ("empty/missing DT_HASH/DT_GNU_HASH"), and every test that starts the Koin graph through
+  `testing/KoinTestRule` mocks through it in `fakeFirebaseModule` — a test-tool failure that says
+  nothing about the app. **Every test class that uses `KoinTestRule` carries `@UsesFakeFirebase`**
+  (`testing/UsesFakeFirebase.kt`; the abstract bases too) — one without it fails that leg, which is
+  how a missing one is found. What the leg exists to prove is `NativeLibrariesTest`'s job, which
+  starts no graph and is mock-free: it loads SQLCipher and
   writes an encrypted database, and runs ML Kit OCR and barcode scanning on a blank image. Lift
   the filter only once a MockK release loads there. Every test check run sets `require_tests`, so
   a job that died before writing results cannot publish a green check. One caveat on 26:
-  mockk mocks *final* classes only on API 28+, so if a Firebase type `FakeFirebaseModule` mocks is
-  final, the Hilt UI tests fail on that leg alone — replace that mock with an open fake, do not
-  drop the leg. When the job ran at API 30 alone, its first attempt failed for two unrelated reasons, both older than the job and neither previously observed.
+  mockk mocks *final* classes only on API 28+, so if a Firebase type `fakeFirebaseModule` mocks is
+  final, the UI tests that load it fail on that leg alone — replace that mock with an open fake, do not
+  drop the leg The data layer's `FirestoreClient` is one since MON-24 phase 2: GitLive's wrapper over the
+  relaxed `FirebaseFirestore` handed out real `DocumentReference`s with no key there, and the first
+  listener threw; `fakeFirebaseModule` gives it `testing/SilentFirestore`, which never answers. When the job ran at API 30 alone, its first attempt failed for two unrelated reasons, both older than the job and neither previously observed.
   **(1) Firebase.** `AuthScreenTest` and `SettingsScreenTest` start the real `MainActivity`,
-  whose Hilt graph reaches `FirebaseModule.provideFirebaseMessaging` →
+  whose Hilt graph (Koin's since MON-24 phase 2) reaches the `FirebaseMessaging` definition →
   `FirebaseMessaging.getInstance()`, and CI has no `google-services.json` (it is gitignored), so
   the process died with "Default FirebaseApp is not initialized" and took the run with it at 15
-  of 34 tests. `HiltTestRunner` substituting `HiltTestApplication` does not help: it stops
-  `CoPlanlyApplication.onCreate` running, not the graph being built. Fixed by
-  `androidTest`'s `FakeFirebaseModule`, a `@TestInstallIn` replacing `FirebaseModule` with
-  relaxed mocks — except in a run that carries the emulator host (the `e2e` job, below), where it
+  of 34 tests. The runner substituting a test application (`KoinTestRunner` and
+  `KoinTestApplication` now, `HiltTestRunner` and `HiltTestApplication` then) does not help: it
+  stops `CoPlanlyApplication.onCreate` running, not the graph being resolved. Fixed by
+  `androidTest`'s `fakeFirebaseModule` (`di/FakeFirebaseModule.kt`), an override of
+  `firebaseModule` with relaxed mocks — except in a run that carries the emulator host (the `e2e` job, below), where it
   hands Auth, Firestore, Storage and Functions the real SDKs of `EmulatorEnvironment.appUnderTest`
   so the app's own screens talk to the emulators; Messaging, Analytics and Crashlytics stay mocks
   there too. **Do not "simplify" that by committing a fake `google-services.json`** — the
@@ -689,10 +828,15 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   further (September 2026): it builds every on-disk state `SqlCipherMigration` names — fresh
   install, plaintext upgrade with and without a stored passphrase, a stale export beside the
   original, an export whose rename never happened, a leftover beside an encrypted file, a lost
-  passphrase — and opens each through `buildCoPlanlyDatabase`, the builder `DatabaseModule`
+  passphrase — and opens each through `buildCoPlanlyDatabase`, the builder `databaseModule`
   itself calls, under a database name of its own. It snapshots and restores `DatabaseKey`'s
   preferences around each case, because that store has one fixed name the UI tests' real
   database also depends on; keep that if you add a case that forgets or mints a passphrase.
+  **`ConnectionMigrationOnSqlCipherTest`** (MON-24 phase 2) does the same for the path every
+  migration from 47 on takes: a `Migration` that overrides only `migrate(SQLiteConnection)`, run by
+  Room over SQLCipher's open helper through `coPlanlyDatabaseBuilder`. Room takes the version from
+  `@Database`, so it steps the encrypted file's `user_version` back one and lets that migration
+  replace the last step, which is the code a `Migration(46, 47)` goes through.
   **(2) Missing schemas.** `CoPlanlyDatabaseMigrationTest` held 14 test methods when the job
   was added, and only the six covering 11→12, 12→13 and 13→14 could run. The other eight name
   14→15 through 24→25 and need `15.json`–`24.json`, which do not exist and cannot be
@@ -713,8 +857,16 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   picker opens `presentation/common/PickerDates.kt`'s `LocalDatePickerDialog`; don't give a screen
   its own copy of the millis conversion again), the per-app locale switch, the export's files and
   share intent, and a signed-in walk of the main screens with a basic accessibility sweep;
-  `docs/DEVICE-CHECKLIST.md` marks what they cover **[CI]**. Two things to know before adding one.
-  A test that launches `MainActivity` signs in through `androidTest`'s `testing/SignedInSession` —
+  `docs/DEVICE-CHECKLIST.md` marks what they cover **[CI]**. Three things to know before adding one.
+  **A test that needs the app's graph starts it with `testing/KoinTestRule`** as its outermost rule
+  (`@get:Rule(order = 0)`, before the compose rule launches anything) and carries
+  `@UsesFakeFirebase`: the rule starts Koin with `appModules` and then `instrumentedTestOverrides`
+  (`androidTest/.../di/`: `fakeFirebaseModule`, `fakeInstallReferrerModule` and the test-only
+  classes), whose definitions replace the app's of the same type, and stops it after the test — one
+  graph per test, as Hilt built one component per test. The rule resolves what a field `@Inject`
+  used to (`koinRule.get()`), and it stays on koin-android alone: koin-test carries kotlin-reflect,
+  which the test APK must not (see the toolchain line). A test that launches `MainActivity` signs in
+  through `androidTest`'s `testing/SignedInSession` —
   a stubbed `currentUser` on the mocked `FirebaseAuth`, a real Room row with onboarding done, the
   telemetry question answered "no", all undone in `@After` because the emulator's files outlive the
   test — and **pauses the Compose clock** (`testing/PausedClock.kt`): the splash and the list
@@ -732,8 +884,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   two-phone round a runner *can* do. `app/src/androidTest/java/com/coparently/app/e2e/` runs two
   parents in one process — each an `EmulatorParent`: a **named** `FirebaseApp` built from
   `FirebaseOptions` for the credential-free `demo-coplanly` project, its own in-memory Room, and
-  the production data layer constructed by hand from the constructors Hilt calls (one process has
-  one `SingletonComponent`, and this needs two of everything). `tools/e2e/run-two-parent-tests.sh`
+  the production data layer constructed by hand from the constructors the Koin graph calls (one
+  process has one global Koin graph, and this needs two of everything). `tools/e2e/run-two-parent-tests.sh`
   wraps `firebase emulators:exec --only auth,firestore,functions,storage` around a Node smoke
   (`tools/e2e/pairing-smoke.js`, which pairs two accounts over REST in seconds and fails with a
   reason before an APK is installed) and `connectedDebugAndroidTest` filtered to that package with
@@ -759,12 +911,16 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   and a photo taken before pairing moved into the family by the real `onFamilyCreated`. Each
   `EmulatorParent` has `files`, `cache`, `no_backup` and preference names of its own
   (`PhoneDirectories`) — shared, Bob would "open" Alice's file from her leftover copy, and two
-  `EncryptedPreferences` over one file overwrite each other (SEC-5). And **one parent on screen**
+  `EncryptedPreferences` over one file overwrite each other (SEC-5). **A phone's named `FirebaseApp` is never
+  deleted** (`EmulatorParent.close` terminates its Firestore instead): Firebase Auth 24.2 keeps the
+  first app that called `useEmulator` in a static cache, so a deleted one failed every later test
+  with "FirebaseApp was deleted" (72 of 73 on the first run with BoM 34.18). And **one parent on screen**
   (`OneParentOnScreenTest`): `MainActivity` as Alice, signed up on the Auth emulator and paired
   with Bob through the callable — Bob's event is drawn on her Home after one
   `SyncService.performFullSync()` (the call `SyncWorker` makes), his message in her thread, and
   what she types into the real composer reaches his phone. It starts `ChatMirror` itself, because
-  `HiltTestApplication` never runs `CoPlanlyApplication.onCreate`. Its setup is the abstract
+  `KoinTestApplication` (`HiltTestApplication` before MON-24 phase 2) never runs
+  `CoPlanlyApplication.onCreate`. Its setup is the abstract
   `AliceOnScreenTest`, which two more classes share: `OnScreenAgreementsTest` (Bob's change request
   raising the calendar banner and accepted from the inbox; his custody proposal, day swaps and a
   seasonal layer popping up on Home and answered there, the layer then naming him in today's
@@ -776,7 +932,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   the Compose clock paused and every wait bounded. Five things not to undo.
   **No `google-services.json`** here either, for the reason given above. **The tests skip
   themselves without the host argument**, so the `instrumented` job runs them as skipped and
-  keeps `FakeFirebaseModule` for everything else — and the `e2e` job fails on any skip, so the
+  keeps `fakeFirebaseModule`'s mocks for everything else — and the `e2e` job fails on any skip, so the
   same switch cannot turn it green by running nothing. **Cleartext to `10.0.2.2` and `127.0.0.1`
   is allowed in `app/src/debug/res/xml/network_security_config.xml`, debug only**: Auth and
   Functions reach their emulators over plain HTTP through the platform stack, and an
@@ -830,6 +986,12 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   through a DAO: an entity's constructor changes with every added column, which is exactly the
   pull request this job is for. A PR that changes a listed signature fails the seed with
   `NoSuchMethodError` — adapt the fixture (reflection, or SQL) until the change is on the base.
+  `buildCoPlanlyDatabase` is one of them, which is why `di/DatabaseBuilder.kt` keeps the JVM class
+  name it had as `DatabaseModule.kt` (`@file:JvmName("DatabaseModuleKt")`) — in `shared-data`'s
+  `androidMain` since MON-24 phase 2, with the same package and signature, and with
+  `coPlanlyDatabaseBuilder` beside it for a test that adds to the production path — and why the test
+  application (`KoinTestApplication`) must not touch Koin: the seed runs it in a base build that may
+  have none.
   **Both classes skip themselves without `-e coplanlyUpgradePhase seed|verify`**, which is what
   keeps them — they write the real database and preference store — out of the `instrumented`
   job; the seed also refuses to run over an existing database. **A skip is a failure here**:
@@ -848,7 +1010,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   on a wire-format change — `app/src/test/resources/wire/current/` is one of the job's inputs.
 
   **A second workflow file exists and is not part of CI**: `.github/workflows/regenerate.yml` runs
-  `detektBaseline` and exports the Room schema, then commits both back to the branch it ran on
+  `detektBaseline` and exports the Room schema (`:shared-data:kspAndroidMain --rerun`, where
+  Room's processor runs since MON-24 phase 2), then commits both back to the branch it ran on
   (rebasing onto the branch head first, so a push made while it ran does not lose its work; the
   bot's commit starts no CI run, so the next human push is what verifies it).
   It exists because those are the two artefacts only a machine with an Android SDK can produce,
@@ -887,38 +1050,107 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   every Back the tour pressed waited on it (week 5's tour stopped at its third screen).
 
   Still run the build locally before pushing — CI is a backstop, not a substitute.
-  After switching branches, prefer `clean` — stale Hilt/KSP generated sources from another branch cause
-  errors like "Could not find class file for '…Application'".
+  After switching branches, prefer `clean` — stale KSP generated sources from another branch cause
+  errors (with Hilt, before MON-24 phase 2, "Could not find class file for '…Application'").
 - **The `r8-runtime` job runs the minified app** ("Android — minified build at runtime (R8)",
-  REL-7, September 2026). `release` and the mapping check prove R8 ran and kept the field names;
-  neither sees R8 full mode's runtime failures — a `TypeToken` whose generic signature was stripped
-  (Gson throws), a constructor or member removed, a class merged — nor that the JSON the app writes
-  reads back. The `r8Test` build type (`app/build.gradle.kts`) is `initWith(release)`: the same
+  REL-7, September 2026). `release` and the mapping check prove R8 ran and kept the field names a
+  rule names; neither sees R8 full mode's runtime failures — a generated serializer or a generic
+  signature stripped (under Gson, a `TypeToken` whose signature was stripped made Gson throw), a
+  constructor or member removed, a class merged — nor that the JSON the app writes reads back. The `r8Test` build type (`app/build.gradle.kts`) is `initWith(release)`: the same
   proguard files plus `app/proguard-r8test.pro`, which keeps **only** the probe's entry point;
   non-debuggable (AGP runs R8 in a weaker debug mode for a debuggable build), signed with the debug
   key, telemetry flags off, no `applicationIdSuffix` (so a local `google-services.json` still
   matches). Its own source set, `app/src/r8Test/`, adds `R8ProbeInstrumentation`, a
   **self-targeting `<instrumentation>`**: `am instrument` starts it inside the minified process, it
-  skips `Application.onCreate` (whose Hilt graph needs a default FirebaseApp, which CI has no
-  `google-services.json` for — and must not get one), and `R8GsonProbe` builds the production
+  skips `Application.onCreate` (whose Koin graph needs a default FirebaseApp, which CI has no
+  `google-services.json` for — and must not get one), and `R8JsonProbe` (`R8GsonProbe` until
+  MON-24, with the same cases) builds the production
   classes by hand the way the e2e parents do: a child and a pet through `ChildInfoRepositoryImpl`/
   `PetRepositoryImpl` into an in-memory Room, signed out on a named `demo-coplanly` FirebaseApp, then
-  the stored JSON columns and the repositories' own read-back; `DayOverrideJson`; the draft Gson from
-  `SerializationModule`; the chat and revision mappers' `TypeToken`s; `Converters`; the calendar's
-  `@Key` models. `tools/run-r8-probe.sh` installs and runs it on API 30; `tools/check-r8-probe.js`
+  the stored JSON columns and the repositories' own read-back; `DayOverrideJson`; the event draft
+  through `StoredJson` as `EventViewModel` saves it; the chat and revision mappers; `Converters`.
+  The calendar's `@Key` models had a case while google-http-client parsed them with its own Gson;
+  it left in MON-24 phase 2, and the import now reads Google's JSON by hand on Ktor; `HttpImportProbe`
+  runs both imports' clients and parsers (a recorded `events.list` page, a Bakaláři sign-in and
+  events) through the whole minified Ktor pipeline on an in-memory engine. `FirestoreWriteProbe`
+  (MON-24 phase 2, Task 8a) encodes a Firestore write through `GitLiveFirestoreClient` and GitLive's
+  own encoder, whose serializer lookup for its `FieldValue` and `Timestamp` is reflection R8 could
+  cut, and checks the map the SDK would receive, value by value ("Firestore write values through
+  GitLiveFirestoreClient and the GitLive encoder"); the `r8Test` build type alone puts GitLive's
+  `firebase-common-internal` on its compile path for it. `tools/check-r8-probe.js` requires those
+  three cases (the two imports' and the Firestore write's) as it requires every stored model.
+  `tools/run-r8-probe.sh` installs and runs it on API 30; `tools/check-r8-probe.js`
   fails, one `::error::` each, on a key that is not the source field name (`bloodType`, never `a`),
-  a value that does not read back equal, a probe that did not finish, and a Gson model
+  a value that does not read back equal, a probe that did not finish, and a stored model
   `check-invariants.js` discovers with no case — and `invariants` already refuses that last one
-  (check 5), so **a new Gson model arrives with a probe case**: name its fully-qualified type as a
-  string literal in `R8GsonProbe` (a literal, because R8 renames the classes the report is about).
+  (check 5), so **a new `@Serializable` model arrives with a probe case**: name its fully-qualified
+  type as a string literal in `R8JsonProbe` (a literal, because R8 renames the classes the report
+  is about).
   Four things to know. **Never add an app keep rule to `proguard-r8test.pro`** — the probe would
   pass on a class the shipped build still breaks. **It is not byte-identical to `release`**: the
   probe adds callers, so R8 may inline differently; what it decides by rule (names, signatures) is
   the same, and that is what is checked. **It never reaches Firestore** — the documents' keys and a
   second phone reading them stay `docs/DEVICE-CHECKLIST.md` §4.1, argued for by the probe only as
-  far as `toFirestoreMap()`'s medical profile is the same Gson call as the Room column it checks.
+  far as `toFirestoreMap()`'s medical profile is the same `StoredJson` text as the Room column it
+  checks.
   And it is gated on `changes`' `r8runtime` (Android changes outside screens, resources and tests,
   plus the build, rules, workflow and the probe); `main` always runs it.
+- **The shared modules have two jobs of their own** (MON-24, November 2026), both gated on
+  `changes`' `shared` output: `shared/**`, `shared-data/**` and `shared-ui/**`, the root and module
+  build files and the workflow — and a path in `shared/` or `shared-data/` is also an Android path
+  for every other output, treated as the build is (every Android job, every emulator leg), because
+  the app compiles both. A `shared-ui/` string (`composeResources/`), screen (`presentation/`) or
+  test is decided as the app path it stands for (`res/`, `presentation/`, the unit tests:
+  `asAppPath` in `tools/ci-changes.js`), so a string-only change still skips e2e, the upgrade job
+  and the R8 probe; the rest of `shared-ui/` is the build.
+  **`shared`** (Linux) runs, for `:shared` and `:shared-data` (phase 2's data layer) alike,
+  `testAndroidHostTest` (check run "Shared tests (JVM)"; the Android KMP library target's JVM
+  tests since AGP 9, MON-24 phase 2, Task 13: the `androidHostTest` source set with commonTest,
+  which were `androidUnitTest` and `testDebugUnitTest` under `com.android.library`),
+  `compileKotlinIosSimulatorArm64`,
+  the iOS klib, which Kotlin cross-compiles on Linux without a flag since 2.2.20 — so commonMain
+  that does not compile for iOS fails on every pull request, Mac or no Mac — and
+  `compileTestKotlinIosSimulatorArm64`, the same for commonTest; before them it deletes the
+  current version's schema, reruns Room's iOS processor alone
+  (`:shared-data:kspKotlinIosSimulatorArm64 --rerun`) and fails, as `build-test` now does for
+  Android (`:shared-data:kspAndroidMain --rerun`, after the same deletion), when the file
+  was not written again or differs from the committed one — a clean `git status` alone cannot tell
+  "identical" from "never written". **A backticked test name
+  in commonTest may not contain a comma or parentheses**: the JVM accepts them and Kotlin/Native
+  refuses them (`Name contains illegal characters`), so write "a - b", not "a, b". `build-test` runs the
+  same tests once more (`testAndroidHostTest` beside `testDebugUnitTest`, which now names the app's
+  alone), because Kover is meant to merge `:shared`, `:shared-data` and `:shared-ui` into the
+  app's coverage report (the `unit` variant; since AGP 9 it counts the app alone, below). `shared` also runs `:shared-ui:testAndroidHostTest` — the theme's JVM tests,
+  which moved with it to `shared-ui/src/androidHostTest/` (slice 9b), and the moved ViewModels' and
+  shared state's (Task 10, commonTest and `androidHostTest`) — and compiles
+  `:shared-ui:compileKotlinIosSimulatorArm64`, its iOS klib with `Res`, the theme, the common
+  components and the ViewModels, and `compileTestKotlinIosSimulatorArm64`, its commonTest (nothing
+  runs that on the simulator yet: the test executable would need `shared-data`'s Firebase pods); the strings' parity tests run in the app, in `build-test`. **`shared-ios`** runs `:shared:iosSimulatorArm64Test`,
+  `:shared-data:iosSimulatorArm64Test` and `:shared-ui:linkDebugFrameworkIosSimulatorArm64` (the
+  iPhone app's one framework, `Shared`, static, exporting `:shared` and `:shared-data`, which make
+  none of their own since Task 9)
+  (check run "Shared tests (iOS simulator)", `require_tests`) on a **GitHub-hosted** `macos-latest`
+  runner, gated on `shared` like the Linux job (owner decision, 1 November 2026). The repository is
+  public, so macOS runners are free, and a fork's code runs on GitHub's machine, never on anybody's
+  own. It replaced a self-hosted job on the owner's Mac before that job ever ran; don't bring a
+  self-hosted runner back for this without reading `docs/IOS-RUNNER.md`, which keeps the setup and
+  its security boundary as the fallback (a fork's pull request runs its own copy of `ci.yml`, so
+  only the repository's "Require approval for all external contributors" setting protects a
+  self-hosted machine). **It builds the Firebase iOS pods** (MON-24 phase 2, Task 8a):
+  `:shared-data` links Firebase iOS 11.8.0 through the Kotlin CocoaPods plugin with `linkOnly`
+  (GitLive's klibs carry the bindings), so the job installs CocoaPods when the image has none, and
+  its own step, "Build the Firebase pods and link the iOS test executable", is where `pod install`
+  and `xcodebuild` build them — about 20 minutes cold. Their cache (CocoaPods' caches, the plugin's
+  synthetic project under `shared-data/build/cocoapods` and Xcode's derived data) is keyed on the
+  Xcode version and on the three lines of `shared-data/build.gradle.kts` that decide the pods
+  (`firebaseIosVersion`, `ios.deploymentTarget`, the pod list), with prefix `restore-keys`, and is
+  saved only when that step succeeded, so a run that stopped before the pods never saves a cache
+  without them. `:shared:detekt`, `:shared-data:detekt` and `:shared-ui:detekt` run in the `detekt`
+  job against the app's config and the app's baseline file — one baseline for every module, which
+  `:app:detektBaseline` writes because it also reads `shared/src`, `shared-data/src` and
+  `shared-ui/src` (the other
+  modules' `detektBaseline` is disabled: detekt's baseline task replaces the file's findings with
+  its own run's, so a second writer would erase the first's).
 - **The `web` job tests what a court and an iPhone see** ("Web — verification page and calendar
   feed", September 2026; check run "Web — verify page and ICS", artefact `junit-web`). `web-tests/`
   is its own small package (Playwright and Mozilla's `ical.js`), deliberately **not** under `web/`,
@@ -989,28 +1221,63 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   Roborazzi task runs only the screenshot package and `testDebugUnitTest` excludes it**
   (`roborazziRequested` in `app/build.gradle.kts`), so `build-test` stays fast and a rendering
   failure cannot redden it. **Robolectric runs SDK 34, not 36** (`SCREENSHOT_SDK`): 4.16.1
-  supports 36 but only on JDK 21, and every job builds on 17. **Roborazzi stays at 1.60.0**, the
-  last release built with Kotlin 2.0; later ones are built with Kotlin 2.3, whose metadata this Kotlin 2.1 compiler is
-  not guaranteed to read — upgrade the two together. And **a private composable a test needs becomes
-  `internal`**, never public (`HandoverHero`, `StatTiles`, `TimelineRow`, `ChatThreadHeader`), and
-  a sheet's body is split out of the sheet (`EventPreviewContent`), because a `ModalBottomSheet`
-  opens its own window that a node capture does not see. Every fixture date is pinned (May 2026,
+  supports 36 but only on JDK 21, and every job builds on 17. **Roborazzi is at 1.76.0**, built
+  with Kotlin 2.3 (metadata 2.3.0) like every release since 1.61.0, so it needs this project's
+  Kotlin 2.3 or later. Never take a Roborazzi built with a newer Kotlin than the project's, because
+  the compiler reads metadata at most one minor version ahead. Upgrade the two together. And **a private composable a test needs becomes
+  `internal`**, never public, while it is in the app (`HandoverHero`, `StatTiles` and `TimelineRow` were,
+  until slice 11g),
+  and a sheet's body is split out of the sheet (`EventPreviewContent`), because a
+  `ModalBottomSheet` opens its own window that a node capture does not see. **Once it moves to
+  `:shared-ui` (Task 11), what the app calls across the module boundary becomes public** — its
+  tests and its own code alike — because `internal` stops at the module (slice 11a: `TwoPane`'s
+  `TWO_PANE_MAX_WIDTH`, `WIDE_COLUMN_MAX_WIDTH` and `WideColumn`; slice 11b: `ChatThreadHeader` and
+  `EventPreviewContent`, which the screenshots render, and `eventTimeLine`, which the app's main
+  code calls from `FriendEventDetails`; slice 11c: `SwapDaysButton`, `DaySwapSelectionBar`,
+  `DaySwapSheetContent` and its `SwapSheetOffer`/`SwapSheetActions`, `CustodyLegend`, which the
+  screenshots render, and `DaySwapSheet`, `SwapSideGroup`, `isConsecutive` and `SwapMonths`, which
+  the requests' screens call; slice 11d: `SchedulePreviewMonth`, which the screenshots render, and
+  `CustodyPatternForm`, `CustodyPatternActions`, `createTempModel` and `custodyPreviewText`, which
+  onboarding calls, then the inbox's `AwaitingEventCard`, `SupportRequestRow`,
+  `ProfessionalRequestRow`, `PlanRequestRow`, `RequestHistoryGroup`, `CardClockBanner`, `CardClockChip`
+  and `CardClockDetails`, which the screenshots and `RequestHistoryGroupTest` render, and
+  `SwapDayAnswers`, `SwapOfferSides`, `SwapNoteQuote`, `sidesAsked`, `swapOfferHeading`,
+  `swapAcceptLabel` and `swapDatesText`, which Home calls; slice 11e: `FamilyMoneyCard`, which the
+  screenshots render, `splitSharesText`, `formatMoney` and `balanceCaption`, which Home calls, and
+  the stickers' `roleOrNull` and `senderLine`, which `MyStickersScreen` calls, then the expenses'
+  `CollapsedMonthSummary`, which the screenshots render, and `ReceiptScanEffect` with its
+  `ReceiptScanFormState` and `ReceiptScanCallbacks`, which an androidTest drives; slice 11f:
+`ParentColorPicker` and `CUSTOM_COLOUR`, which the screenshots and `ParentColorPickerTest` render
+(`GridSwatch` is `internal` again, onboarding being in the module too), then `InvitationView`, which `InvitationViewTest` and the
+screenshots render; slice 11g: Home's `HandoverHero`, `StatTiles` and `TimelineRow`, then
+`FriendAgendaDay`, `FriendComparisonTable`, `FriendEventDetails` and `FriendInviteContent`, which the
+screenshots render). Those made public for an app caller ("which Home calls", "which onboarding
+calls", "which the requests' screens call", "which `MyStickersScreen` calls", `eventTimeLine` for
+`FriendEventDetails`) have had no app caller since their callers moved to `:shared-ui` too, by the
+end of Task 11; returning them to `internal` is carried to phase 3 (ROADMAP MON-24). A test that moves with its code to `:shared-ui` keeps `internal`
+  reachable, as the calendar's ten pure tests do. The screenshot frame
+  provides the platform capabilities as the app does (`ProvideAndroidPlatform`), so a moved screen
+  that reads one renders as it does on a phone. Every fixture date is pinned (May 2026,
   `ScreenshotFixtures`) so an image does not change with the calendar — keep it that way, or the
   suite can never move to verify.
 - **A pull request runs only the jobs its diff can affect** (September 2026). The `changes` job
-  pipes `git diff --name-only` into `tools/ci-changes.js`, which decides seven outputs and is tested
+  pipes `git diff --name-only` into `tools/ci-changes.js`, which decides eight outputs and is tested
   by `tools/test/ci-changes.test.js` in `invariants`: docs/functions/rules only → no Android job;
   a screen-only change (`presentation/` outside `common/`, `res/`, `app/src/test/`) → no e2e
   (`common/` stays in because the e2e parents construct `ParentsSource`); nothing the screenshots
   render → no screenshots; and the **emulator matrix is API 30 alone** unless the diff reaches
-  what API 26 and 16 KB exist for — `data/local/` (SQLCipher, Room), the manifest, `androidTest/`,
+  what API 26 and 16 KB exist for — `data/local/` (SQLCipher, Room; in the app or in any
+  `shared-data` source set, `DATABASE_SOURCES`), the manifest, `androidTest/`,
   `src/debug/`, the emulator script — or the build; and the `upgrade` job runs when the diff reaches
-  what stored data depends on (`data/local/`, `data/security/`, `di/DatabaseModule.kt`, the
+  what stored data depends on (`data/local/`, `data/security/`, `di/DatabaseBuilder.kt` and
+  `di/koin/DatabaseModule.kt`, the
   telemetry answer's form, `app/schemas/`, the manifest, its own tests and scripts, the
   `wire/current/` fixtures), the build, or
   any path the script does not know; and the `web` job runs on anything but docs and the Android
   app and its build — `web/`, `web-tests/`, `functions/`, `firebase.json`, `firestore-tests/`' lock
-  file, the workflow, or an unfamiliar path. A push to `main` always runs everything, which
+  file, the workflow, or an unfamiliar path; and the `shared` and `shared-ios` jobs run on
+  `shared/**`, `shared-data/**`, the build files and the workflow, where a path in either module
+  also counts as the build for every Android output (the app compiles both). A push to `main` always runs everything, which
   is the backstop for the legs a PR skipped; lint's NewApi check is the per-PR guard for a
   newer-API call. Three things not to get wrong. Every skip list is deliberately narrow — a path
   wrongly *on* one silently stops testing real changes, which is far worse than a path wrongly off
@@ -1019,6 +1286,29 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   build it describes to run. And a gated-out job reports as *skipped*, which branch protection
   counts as passing; nothing is a required check today, so this is safe, but marking one required
   later means a PR merges on a skip rather than a build.
+- **A draft pull request runs the emulator jobs only with the `full-ci` label** (1 November 2026,
+  owner decision). `instrumented`, `e2e`, `upgrade` and `r8-runtime` are the expensive jobs, so on
+  a draft they are skipped on every push unless the pull request carries the label `full-ci`. They
+  run as before once the pull request is ready for review, on a push to `main` and on a manual run.
+  The `changes` job decides it from the event (`node tools/ci-changes.js --event`, tested in
+  `tools/test/ci-changes.test.js`) and publishes it as its `emulators` output, which each of the four
+  jobs ANDs with its own path gate; every other job is gated as before. Four things to know.
+  **Labelling starts a run**: the `pull_request` trigger lists `opened`, `synchronize`, `reopened`,
+  `labeled` and `ready_for_review`, so adding `full-ci`, or marking a draft ready, runs the jobs the
+  last push skipped. **A label other than `full-ci` starts a run that does no work**: the run starts and
+  publishes its job entries, but every one is skipped except `changes`, which takes a few seconds. `changes` prints every output false (`--none`),
+  `invariants`, `functions` and `rules` (which do not depend on `changes`) carry `if: github.event.action
+  != 'labeled' || github.event.label.name == 'full-ci'`, and `report` does not post, so an empty summary
+  does not replace the real one. Those skipped entries can appear beside the real results in the
+  checks list. Such a run has a concurrency group of its own (by run id), because in the
+  pull request's group it would cancel the real run in progress; a `full-ci` or `ready_for_review`
+  run shares the pull request's group and supersedes the run before it, and a later push supersedes
+  it. Adding `full-ci` to a pull request that is already ready for review re-runs everything, which
+  is harmless. **A skipped job reads as skipped** in the summary, and the summary adds "Emulator jobs skipped
+  on a draft: add the `full-ci` label to run them" (`tools/ci-report.js`, fed by `changes`'
+  `emulators_skipped_on_draft`). And **a skip is not a pass for the draft's merge**: nothing is a
+  required check, but a pull request must not leave draft with the emulator legs never having run
+  once; marking it ready is what runs them.
 - **An emulator leg is decided by the tests' exit status, not by the emulator step** (September
   2026). The emulator repeatedly never exited after the action's `adb emu kill` with every test
   passed — on API 26 first, and on PR #102 on API 30 too, 9–11 minutes a leg, which made the legs
@@ -1029,7 +1319,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   emulator's `crashpad_handler`, which outlives it and holds the output pipe the action reads (on
   PR #103 the e2e job's emulator stopped at 09:27 and the action waited on that handler until the
   job's 50-minute limit). The `e2e` job has the same status file and backstop since. The step keeps
-  `continue-on-error` and a 15-minute limit as the backstop, and "The instrumented tests finished
+  `continue-on-error` and a 15-minute limit as the backstop (20 in `e2e`, whose APK build and 73 tests reached 15 on a slow runner in November 2026), and "The instrumented tests finished
   and passed" fails the job unless the status file exists and says 0. When the suite outgrows the
   limit that step says "did not finish" — raise the limit. **The APKs compile while the emulator
   boots** (`tools/ci-background-build.sh start` before the AVD restores, `wait` as the script's
@@ -1048,8 +1338,14 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   and "flake" is not a root cause — and the retry is a **cold** boot, because a second snapshot boot
   can die the same way. A cold boot can also leave a system dialog holding the window focus, and an
   Espresso Back then waits ten seconds for a focus that never returns (PR #138 lost two on-screen
-  tests to it), so `tools/e2e/run-two-parent-tests.sh` hides error dialogs and stops the launcher
-  before the tests, as the UI tour's script does.
+  tests to it, and an API 35 instrumented leg lost `LocalDatePickerDialogTest` on 2 November 2026),
+  so `tools/clear-system-dialogs.sh` hides error dialogs and stops the launcher before the tests —
+  in the e2e script and in every `instrumented` leg — as the UI tour's script does.
+  **Each emulator job frees disk space first** (`tools/ci-free-disk.sh`, the "Free disk space"
+  step before the background build and "Enable KVM", November 2026): two jobs died with "No space left on device" while the
+  SDK manager unpacked the emulator or a system image, before any test ran. It removes toolchains
+  no job uses (.NET, Haskell, Swift, Boost, PowerShell, CodeQL and a few hosted runtimes) and
+  never the Android SDK, a JDK, Node or the Gradle home.
 - **The app ships a hand-written baseline profile** (`app/src/main/baseline-prof.txt`, week 8):
   package wildcards over the start path, installed by `profileinstaller` on a sideloaded or
   closed-test install. Recording one needs a Macrobenchmark module and a device per release, which
@@ -1103,8 +1399,15 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   records** (`record` in `tools/ci-changes.js`): on the API 30 image screenrecord's software
   encoder aborted `media.codec` and surfaceflinger followed, which Gradle reports as "System has
   crashed" mid-suite — the recorder had become the failure it was meant to explain.
-  `coverage-report` — Kover (`org.jetbrains.kotlinx.kover` 0.9.9, `app/build.gradle.kts`, Hilt/Room/
-  Compose-generated classes filtered out). Coverage is **visibility, not a gate**: there is no
+  `coverage-report` — Kover (`org.jetbrains.kotlinx.kover` 0.9.9, `app/build.gradle.kts`, Room- and
+  Compose-generated classes filtered out), written by `:app:koverXmlReportUnit`, a custom variant
+  that joins the app's `debug` unit tests with each shared module's `jvm` one. **Since AGP 9 (MON-24
+  phase 2, Task 13) the figure counts the app alone**: Kover 0.9.9 and 0.9.11 recognise AGP's
+  Android KMP library by class names (`KotlinMultiplatformAndroidLibraryTargetImpl`, an
+  `AndroidUnitTest` task) that AGP 9.3's target no longer matches, so the shared modules' `jvm`
+  variants are empty (added with `optional = true`, so configuration never fails on it); before
+  Task 13 the app's `debug` report merged all four. The wiring stays for a Kover that knows the
+  target (ROADMAP MON-24's CI hygiene). Coverage is **visibility, not a gate**: there is no
   verification rule, and its step is the one place in `ci.yml` where `continue-on-error` is
   right, because failing to *report* a number must not turn a green build red. `screenshots` (the gallery:
   unzip, open `index.html`) and, on a failed verify, `screenshot-diffs`; the comment also carries a
@@ -1114,9 +1417,27 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
 ## Hard project rules
 
 - **Jetpack Compose only** — never add XML layouts.
+- **The Android app is a thin shell** (MON-24 phase 2, Task 12): a screen, a composable component
+  or a ViewModel goes in `:shared-ui`, never in `app/src/main/java/`, which keeps `MainActivity`
+  calling `CoPlanlyApp`, the platform's Android halves, the widget and the previews.
+  `ShellBoundaryTest` fails on anything else; its allow-list is short and says why for each file.
 - **Stateless composables** — state lives in ViewModels (`StateFlow`), UI receives values
   and callbacks. Follow the existing `UiState` sealed-class pattern.
-- **Hilt** for all DI. New modules go to `app/src/main/java/com/coparently/app/di/`.
+- **Koin** for all DI (Hilt until MON-24 phase 2). Modules live in
+  `app/src/main/java/com/coparently/app/di/koin/` and are listed in `appModules` (`AppModules.kt`),
+  which also includes `:shared-data`'s `dataModules` and `platformDataModule` and `:shared-ui`'s
+  `uiModules` and `platformUiModule` (`shared-ui/.../di/koin/UiModules.kt`, MON-24 phase 2, Task 10:
+  the shared state and every ViewModel — the last two, whose sign-ins run on an Android activity,
+  since Task 11's slice 11f, behind the shell's `GoogleCalendarSignIn` and `CredentialSignIn` — one
+  module per feature; a new ViewModel goes there);
+  a class the graph builds is a `singleOf`/`factoryOf`/`viewModelOf`/`workerOf` there (a `single`
+  for what is one per process, as a Hilt `@Singleton` was), an interface is bound with
+  `single<I> { get<Impl>() }` in the module named after its feature, and a qualifier is
+  `named("…")`. **Koin checks nothing at compile time**: `KoinGraphTest` runs `verify()` over every
+  module, so a constructor parameter no definition provides fails the unit tests rather than a
+  screen. A composable takes its ViewModel with `koinViewModel()` (`org.koin.compose.viewmodel`),
+  keeping the caller's `ViewModelStoreOwner` (`ViewModelScopeTest`); `MainActivity` with
+  `by viewModel()`, which resolves the same instance for the same owner.
 - **minSdk = 26** — beware of newer `java.time` additions
   (e.g. `LocalDate.ofInstant` is API 34+; use `Instant.atZone(...).toLocalDate()`).
 - **KDoc** on public classes/functions; code and comments in **English**.
@@ -1127,7 +1448,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   OFL 1.1 in `third_party/fonts/onest/` and Settings → Data sources and licences). It replaced
   Poppins, which has no Cyrillic, so Russian and Ukrainian fell back to Roboto mid-line. Any
   replacement must cover Czech and German Latin, Russian and Ukrainian Cyrillic (і ї є ґ ʼ), ₴
-  and №. Check that with fontTools against the file, not against a specimen page.
+  and №. Check that with fontTools against the file, not against a specimen page. The files are
+  Compose Multiplatform resources in `shared-ui/src/commonMain/composeResources/font/` since MON-24
+  phase 2 (they were `app/src/main/res/font/`), read with `Font(Res.font.…)`, so both apps draw
+  the same ones; see "Where a `presentation/theme/…` … path lives".
 - **Parent colours identify a person, not a role.** The app never shows the words "Mom" or
   "Dad": every parent label goes through `presentation/common/ParentLabels.kt` and renders
   that person's name. **One exception, by owner decision (October 2026): a sticker's own
@@ -1275,8 +1599,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   repeating the conversion (item 5 above).
 - **Telemetry has exactly one switch, and a provider may only ever close it** (REL-5, Aug 2026).
   `data/telemetry/TelemetryConsentApplier` is the sole caller of `setAnalyticsCollectionEnabled`
-  and `setCrashlyticsCollectionEnabled`; `FirebaseModule`'s providers pass `false` and nothing
-  else touches either. That is not tidiness — before it, `FirebaseModule` applied
+  and `setCrashlyticsCollectionEnabled`; `firebaseModule`'s definitions pass `false` and nothing
+  else touches either. That is not tidiness — before it, Hilt's `FirebaseModule` applied
   `BuildConfig.ENABLE_CRASHLYTICS` and `CoPlanlyApplication.onCreate` then called
   `setCrashlyticsCollectionEnabled(true)` unconditionally a moment later, so the debug flag was
   overruled on every launch and nothing failed. **A gate any other line may overrule is not a
@@ -1289,25 +1613,1235 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `firebase_analytics_collection_deactivated` is a **different** knob that must stay `false`,
   because `true` disables Analytics permanently and no runtime call can undo it. And
   `UNANSWERED` is a third state on purpose: "said no" and "was never asked" collect the same
-  nothing, but only one of them still owes the user a question.
+  nothing, but only one of them still owes the user a question. **The data layer reports through
+  `shared-data`'s `CrashReporter` and `Analytics`** (MON-24 phase 2, Task 6), which on Android are
+  `CrashlyticsManager` and `AnalyticsManager` themselves (`platformModule`) and on the iPhone no-ops
+  that collect nothing; neither interface has, or may grow, a way to turn collection on.
 - Conventional Commits (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`).
 
 ## Architecture map
 
 ```
-domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler
-data/      — Room (v46 + migrations), Firestore/Google clients, repository impls, sync
-presentation/ — Compose screens per feature + ViewModels + theme
-di/        — Hilt modules (Database, Firebase, Google, UseCase, Notification, …)
+shared/    — Kotlin Multiplatform module (MON-24 phase 1): the domain both apps run, moved out of
+             app/ with its packages unchanged (models, repository interfaces, holidays, the
+             export's record, the school import's plan, StoredJson, the time and text helpers);
+             commonMain/commonTest, Android and iOS targets. Depends on nothing of ours
+shared-data/ — Kotlin Multiplatform module (MON-24 phase 2, Tasks 5–8, done; Task 10 added the two
+             consent managers and RecordFileWriter): the data layer both apps run, packages
+             unchanged. commonMain holds the Room database on Room KMP
+             (data/local/: entities, DAOs, Converters, CoPlanlyDatabase), the Firestore data
+             sources and callables on GitLive's firebase-kotlin-sdk (data/remote/, behind
+             FirestoreClient and CallableFunctions), the HTTP clients on Ktor (data/http/, the
+             Bakaláři client, Google Calendar's events.list), every repository but the AI
+             assist's, the sync, the request clocks, the families, the chat mirror, the files and
+             the outbox, the school import, the export's sources and receipts, the session's
+             profile synchronizer, the event use cases with EventValidator and ErrorHandler
+             (domain/usecase/, domain/error/), ActivityAnnouncer (domain/activity/) and the
+             platform seams (data/platform/ and the narrow seams beside the classes that take
+             them: SignedInUser, PushQueue, StorageBucket, …). androidMain holds what only
+             Android has and the data layer itself needs: the 41 legacy migrations, SQLCipher,
+             EncryptionManager, CrashlyticsManager, the database builder (di/DatabaseBuilder.kt)
+             and the Android halves of a few seams. iosMain holds the iPhone's halves and, in
+             platformDataModule, a binding for every seam (stand-ins in di/koin/IosUnavailable.kt
+             where the iPhone has nothing yet). Its Koin modules are dataModules and
+             platformDataModule, which appModules includes. Depends on shared/; no iOS framework
+             of its own
+shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phase 2, Tasks 9–12,
+             done): the UI both apps run, packages unchanged. Every string, plural and string
+             array (composeResources/values*/, five locales; Res is generated from them, and the
+             app generates its R.string copy from the same files), the Onest fonts, the theme
+             (presentation/theme/), the design system and the rest of presentation/common/, every
+             ViewModel and every screen (presentation/<feature>/), the platform interfaces a
+             screen asks of the phone (presentation/platform/), the date and money seams
+             (utils/ReaderDateText, utils/ReaderMoneyText), the navigation graph
+             (presentation/navigation/) and the app's root, CoPlanlyApp with AppLaunch
+             (presentation/), the one composable a shell sets as its content. androidMain holds
+             the Android halves of its expects (the system bars, contrast, motion, the window,
+             LocalizedDates' java.time code, currencyFormat); iosMain the iPhone's, with
+             ProvideIosShell and the stand-ins. Its Koin modules are uiModules and
+             platformUiModule, which appModules includes. It makes the iPhone's one framework,
+             Shared (static, exporting shared/ and shared-data/)
+domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler, the export's
+             record and the school import's plan — in shared/, but for the event use cases with
+             EventValidator, ErrorHandler, ActivityAnnouncer and FamilyDocumentRepository
+             (shared-data/) and MessageTemplate (shared-ui/); none left in app/
+data/      — Room (v46 + migrations), Firestore/Google/HTTP clients, repository impls, sync — in
+             shared-data/ (above). In app/ only what stays on purpose, each for its reason: every
+             Worker and WorkManager scheduler (WorkManager); the notifications and the reminder
+             alarms (data/notification/, RequestNotices, PushNotifier: the notification manager,
+             AlarmManager, string resources); the messaging service and the classes that answer
+             the seams with an Android SDK (FcmService, FirebaseAuthService, the Credential
+             Manager classes, FirebaseStorageBucket, AndroidPickedFiles, AccountSwitchGuard,
+             AccountDeletionService, DeviceTraces); the string-resource wordings; Coil
+             (RecordPhotoFetcher), a Bitmap's re-encoding (FirebaseImageStorage), PdfDocument
+             (ExportFileWriter), ML Kit (data/mlkit/), dictation (data/dictation/);
+             TelemetryConsentApplier, AnalyticsManager, the theme preference, the install referrer,
+             MinorUnits and the AI assist's repository; and EncryptedPreferences, because the
+             upgrade seed builds it with the base build's constructors
+presentation/ — in shared-ui/ (above). The app is a thin shell since Task 12 (ShellBoundaryTest):
+             MainActivity (the splash, the launch intent, the two activity-bound sign-ins, then
+             CoPlanlyApp), QRScannerActivity, the Glance widget (widget/), the previews, and the
+             Android halves of the platform interfaces (platform/AndroidPlatform.kt and
+             AndroidQrCodes, the language picker's AndroidAppLanguages with
+             SystemDefaultRelaunch, Google's sign-in's AndroidGoogleCalendarSignIn, the credential
+             sheets' AndroidCredentialSignIn with AndroidAuthErrors, the QR scanner's screen, the
+             invitation QR's AndroidInviteQrCodes with BuildPairingLink, the export's
+             RecordShareIntent, the dictation language, the push's card wording, the file viewer,
+             clipboard and permission checks)
+di/        — Koin modules: dataModules and platformDataModule in shared-data/'s di/koin/, uiModules
+             and platformUiModule in shared-ui/'s, and the app's own in app/'s di/koin/ (database,
+             Firebase, Google, notifications, workers, …), all listed in appModules
+             (AppModules.kt); the database builder (DatabaseBuilder.kt) and the file name
+             (DatabaseName.kt) are in shared-data/
+utils/     — in shared-ui/ (the date and money seams, SwapDays, MonthTitle, …), but for AppLocale
+             (the owner's language rule on Android), NetworkMonitor, SwapDateList (the push's
+             locale overloads), Extensions and PreviewHelpers, which stay in app/
 ```
+
+**Where a `domain/…` path in this file lives** (MON-24 phase 1, November 2026). The domain moved
+to the shared module with every package unchanged, so a path this file writes as
+`domain/<package>/<File>.kt` is `shared/src/commonMain/kotlin/com/coparently/app/domain/<package>/<File>.kt`,
+and its test is under `shared/src/commonTest/` (or `shared/src/androidHostTest/` when it compares
+with a JVM API or mocks; each shared module's JVM-only test source set is `androidHostTest`, which
+was `androidUnitTest` until AGP 9's Android KMP library target, MON-24 phase 2, Task 13, and this
+file says `androidHostTest` throughout). The rules and items that name those paths were not
+reworded; only the root changed. `domain/activity/ActivityAnnouncer.kt` is the exception the other way: it is in
+`shared-data/src/commonMain/`, not `shared/` (MON-24 phase 2, Task 8c), because it posts through the
+data layer's `MessageRepository` and logger; and so, since Task 8f, are the event use cases and
+`EventValidator` in `domain/usecase/` and `domain/error/ErrorHandler.kt`, which report and log
+through the data layer's `Analytics`, `CrashReporter`, `logger` and `Connectivity` (their tests in
+`shared-data/src/androidHostTest/`), and, since Task 8j, `domain/repository/FamilyDocumentRepository.kt`,
+whose local copy is a kotlinx-io `Path` and which `shared/` (no kotlinx-io) cannot declare.
+**The phase-1 stay list is empty** (each file's reason is in `docs/ROADMAP.md` MON-24):
+- dependency injection, Android or the data layer — `model/MessageTemplate.kt` (`@StringRes`) left
+  for `:shared-ui`'s `commonMain`, same package, in MON-24 phase 2's Task 11 (slice 11b), its
+  resources Compose Multiplatform's `StringResource`s now (a `:shared-ui` type, which `shared/`
+  cannot name); `repository/FamilyDocumentRepository.kt` left for `shared-data`'s `commonMain` in
+  Task 8j (a local copy is a kotlinx-io `Path` there, where it was a `java.io.File`); `activity/ActivityAnnouncer.kt`
+  left the list for `shared-data`'s `commonMain`, same package, in MON-24 phase 2's Task 8c, and the
+  event use cases with `EventValidator` (`usecase/`, the new id from `kotlin.uuid.Uuid`) and
+  `error/ErrorHandler.kt` (the connection through `Connectivity.isOnline`, which `NetworkMonitor`
+  answers from the system as before; an I/O failure as `kotlinx.io.IOException`, which is
+  `java.io.IOException` on Android; a permission failure through `isPermissionFailure`, an
+  `expect`/`actual` that is `SecurityException` on Android) in Task 8f.
+
+No domain file waits on `java.time` any more. Task 8e converted and moved to `shared/`, packages
+unchanged: `payments/Payment.kt` and `support/` (`YearMonth` and `LocalDate` are kotlinx-datetime's,
+the month's text `IsoText.yearMonth`, which is `java.time.YearMonth`'s byte for byte),
+`changerequests/RequestInbox.kt` and `FamilyAgreements.kt`, which read them,
+`guests/GuestGrantPolicy.kt` with `GuestAccessDuration.kt` and `friends/FriendAccessDuration.kt` (on
+`kotlin.time`), and `repository/FriendRepository.kt` and `repository/ProfessionalRepository.kt`
+(kotlinx-datetime's `LocalDate`). Task 8f moved `journal/JournalEntry.kt` with
+`repository/JournalRepository.kt`, the entry's day a kotlinx-datetime `LocalDate` (the type its Room
+row already held). Task 8i moved the communication record's model, builder, CSV and layouts in
+`export/` (`LocalDate`, `LocalDateTime` and `TimeZone` are kotlinx-datetime's; the printed times were
+`RecordTimeText` already, an event document's times are read by `IsoText.parseDateTime`/`parseDate`,
+the message window is `RecordWindow`), the school import's `SchoolEvents`, `SchoolTimetable`,
+`SchoolImportPlanner` and `SchoolImportItems` (the event ids hash `Utf8.encode` and a fingerprint's
+times are `IsoText.dateTimeShortest`, the bytes they hashed before), `receipts/` (NFD through
+`canonicalDecomposition`), `chat/MessageReport.kt`, `ai/AiAssist.kt` and `review/MonthStatsWire.kt`
+(the month as `IsoText.yearMonth`).
+
+**Where a `data/…` path in this file lives** (MON-24 phase 2, November 2026; done). **In
+`shared-data/`, package unchanged**: a path this file writes as `data/<package>/<File>.kt` is
+`shared-data/src/commonMain/kotlin/com/coparently/app/data/<package>/<File>.kt`, and its test is
+under `shared-data/src/commonTest/` (or `shared-data/src/androidHostTest/` when it compares with a
+JVM API or mocks). The rules and items that name those paths were not reworded; only the root
+changed. Three exceptions, each by a file's reason:
+- **`shared-data/src/androidMain/`**, same package: what only Android has and the data layer itself
+  needs — `data/local/DatabaseMigrations.kt` (the 41 legacy migrations), `data/local/security/`
+  (SQLCipher), `data/security/EncryptionManager.kt`, `data/crashlytics/CrashlyticsManager.kt`,
+  `di/DatabaseBuilder.kt`, OkHttp's engine (`data/http/HttpClients.android.kt`), the Android halves
+  of `data/platform/` that need only the SDK (the logger, the directories, `PhoneLocales` with
+  `AndroidDeviceRegion`) and of GitLive (`AndroidCallableFunctions`, `FirestorePlatform.android.kt`).
+- **`shared-data/src/iosMain/`**: the iPhone's halves of the same (`data/local/IosDatabase.kt`, the
+  Keychain's `KeychainTextStore`, Darwin's engine, …) and `di/koin/PlatformDataModule.ios.kt` with
+  the stand-ins in `di/koin/IosUnavailable.kt`.
+- **`app/src/main/java/com/coparently/app/data/`**, on purpose: a `Worker` or WorkManager scheduler,
+  a notification or an alarm (`data/notification/`, `RequestNotices`, `PushNotifier`), a string
+  resource (`AndroidPairingWording`, `SchoolImportWordingSource`, `SwapPushWording`), a class that
+  answers a seam with an Android SDK (`FcmService`, `FirebaseAuthService`, the Credential Manager
+  classes, `FirebaseStorageBucket`, `AndroidPickedFiles`, `AccountSwitchGuard`,
+  `AccountDeletionService`, `DeviceTraces`), Coil (`RecordPhotoFetcher`), a `Bitmap`
+  (`FirebaseImageStorage`), `PdfDocument` (`ExportFileWriter`), ML Kit (`data/mlkit/`), dictation
+  (`data/dictation/`), the telemetry switch and `AnalyticsManager` (`data/telemetry/`,
+  `data/analytics/`), the theme preference, the install referrer (`data/pairing/`), `MinorUnits`,
+  the AI assist's repository (`data/ai/FunctionsAiAssistRepository.kt`), and `EncryptedPreferences`
+  with its `InMemorySharedPreferences` (the `upgrade` seed builds it with the base build's
+  constructors). `docs/ROADMAP.md` MON-24 lists them with their reasons.
+
+A new data-layer class goes in `shared-data/` and reaches the platform only through the seams the
+last paragraph of this note lists. How it got there, task by task (the history; every rule in it
+stands): **Task 8, the data layer, is complete with slice 8j**: what is still
+under `app/src/main/java/com/coparently/app/data/` stays on purpose (a `Worker`, a notification, a
+string resource, the Android SDK a seam's Android half calls, Coil, `PdfDocument`, ML Kit, dictation,
+or the `upgrade` seed's constructors), and `docs/ROADMAP.md` MON-24 lists it. One more class
+followed in Task 10a, with the chat ViewModels that read it: `data/ai/AiConsentManager`, bound in
+`shared-data`'s `aiDataModule`; and one in slice 10f, with the consent's ViewModel:
+`data/consent/HealthConsentManager` (with `HealthConsentWithdrawal`), bound in `consentDataModule`.
+Moved (Task 5, the HTTP clients on Ktor): `data/http/` (new:
+`httpClient(HttpTimeouts)`, OkHttp on Android and Darwin on iOS, and the address and form encodings,
+the timeouts and the redirect rules (`FollowUps.kt`) the old clients had); in `data/school/bakalari/`, `BakalariClient`, `BakalariSchoolDirectory` (with
+`BakalariUrls`), `BakalariException` and `BakalariJson` — the parsers, `BakalariAccount` and
+`BakalariAuthorizer` followed in Task 8i; and in `data/remote/google/`, `GoogleCalendarApi`,
+`CalendarPaging` and the new `GoogleCalendarEvents` — `GoogleCalendarAccess`, `CredentialProvider`
+and the rest stay. Task 6, the platform services: `data/platform/` (new: `Logger` and the ambient
+`logger`, `AppDirectories`, `SecurePreferences` with the iPhone's `SealedSecurePreferences` over a
+Keychain item, `CrashReporter`, `Analytics`, `Connectivity`; the Android implementations are in
+`shared-data/src/androidMain/` where they need only the Android SDK, and otherwise are the app's
+own classes bound in `di/koin/PlatformModule.kt`), and from `data/local/preferences/`,
+`PreferenceKeys` and `PreferenceBlobCodec` — `EncryptedPreferences`, the Android
+`SecurePreferences`, and `InMemorySharedPreferences` stay. Task 7, the Room database on Room for
+Kotlin Multiplatform: in `commonMain`, `data/local/CoPlanlyDatabase.kt` (with `@ConstructedBy` and
+the `expect object CoPlanlyDatabaseConstructor` whose `actual` Room's processor writes per target),
+`Converters.kt`, `dao/` and `entity/`, and `di/DatabaseName.kt` (`DATABASE_NAME`, same package as
+before); in `androidMain`, `data/local/DatabaseMigrations.kt`, `data/local/security/`
+(`EncryptedDatabase`, `DatabaseKey`, `SqlCipherMigration`), `data/security/EncryptionManager.kt`,
+`data/crashlytics/CrashlyticsManager.kt` (the two `EncryptedDatabase` and `DatabaseKey` take, whose
+constructors the `upgrade` seed calls) and `di/DatabaseBuilder.kt`; in `iosMain`,
+`data/local/IosDatabase.kt`. **The entities' date columns are `kotlinx.datetime`** since then, and
+`Converters` writes them through `IsoText`, the same text `java.time`'s ISO formatters wrote
+(`ConvertersParityTest`, `shared-data/src/androidHostTest/`); a mapper converts nothing between an
+entity and the domain (the journal's entry, the last to bridge `java.time` there, is kotlinx-datetime
+since Task 8f). Task 8a, Firebase on GitLive: in `commonMain`, `data/remote/firebase/`'s
+Firestore data sources (`Firestore*DataSource`), `PairingFunctions`, `GoogleOAuthFunctions` and
+`PushPayload.kt`, with the seam they call — `FirestoreClient` (plain values: a `StoredDocument` with
+its pending-writes flag, `ReadSource.SERVER`, `SetMerge`, `ServerValue.ServerTimestamp`/`Delete`,
+`FirestoreTimestamp`, a transaction and an integer increment) answered by `GitLiveFirestoreClient`,
+and `CallableFunctions`; `data/remote/google/`'s `CredentialProvider`, `GoogleAccess`,
+`GoogleCalendarAccess` and `GoogleSignInFailure`; `data/sync/Tombstone.kt`,
+`data/versions/EventVersionDocument.kt`, `data/requests/RequestDeadlineDocument.kt`, and
+`di/koin/FunctionsRegion.kt` (`FUNCTIONS_REGION`, same package as before) beside `DataModules.kt`.
+The platform halves are what GitLive's common API cannot say: reading a snapshot as the SDK's own
+map with its metadata, an integer increment (GitLive's Android `increment(Int)` is the SDK's double
+increment) and, on Android, callables through the SDK's region-bound `FirebaseFunctions`
+(`AndroidCallableFunctions`); `firestoreClientOf` wraps the app's own `FirebaseFirestore`, so its
+settings, an e2e parent's named app and a test's replacement still reach the data sources. No
+Firestore or Functions type appears in a data source's signature: a caller passes `ReadSource`, not
+`Source`, and `ServerValue`, not `FieldValue`. The rest of `data/remote/` — `FcmService`,
+`FirebaseAuthService`, `FirebaseImageStorage`, the messaging service, `PushNotifier`, `PushRouting`,
+`SwapPushWording`, `QRCodeService` and the Credential Manager classes — is still in the app. Task
+8b, the repositories, the sync and the revisions, as far as each could go: in `commonMain`, from
+`data/sync/`, `EventDocument`, `ConflictResolver`, `FamilyIdBackfill`, `ChildInfoAudience`,
+`ChildInfoGuests`, `ChildInfoPhotos`, `PetAudience`, `EventSyncWindow`, `StampedFamily` and the
+`SyncRequester` interface (its WorkManager implementation, `WorkManagerSyncRequester`, stays);
+`data/versions/EventVersionRecorder.kt`, which tells a refusal from an outage by
+`FirestoreEventVersionDataSource.errorCodeOf`; and from `data/repository/`, `MessageRepositoryImpl`,
+`ChatMappers`, `ChatSearchRepositoryImpl`, `ConversationMigrator`, `PostPairingConversationSetup`,
+`RequestDeadlineRepositoryImpl`, `ChangeRequestRepositoryImpl`, `ParentingPlanRepository`, the
+custody document's Room codecs (`ChildOverrideJson`, `ContactWindowJson`, `DayOverrideJson`,
+`SeasonalLayerJson`), `FriendMappers`, `ProfessionalMappers`, `ProfileDate.kt` and
+`MedicalProfileSanitizer.kt`. They are bound in `shared-data`'s `syncDataModule`,
+`versionsDataModule` and `repositoryDataModule`, interfaces included. Two narrow seams in
+`data/remote/firebase/` carry what they asked of the app: **`SignedInUser`** (the signed-in uid and
+display name; `FirebaseAuthService` implements it) and **`PushQueue`** (`queueNotificationForUser`;
+`FcmService` implements it), each bound in the app's `dataModule`. A moved repository takes those,
+never `FirebaseAuthService` or `FcmService`. `ChangeRequestRepositoryImpl` and
+`RequestDeadlineRepositoryImpl` kept their parameter names (`firebaseAuthService`, `fcmService`,
+`authService`), so the e2e parents' named arguments did not change; `MessageRepositoryImpl`'s became
+`signedInUser`, and the e2e parent passes it by position. Task 8c, the families, the chat mirror
+and the repositories they unblocked: in `commonMain`, `domain/activity/ActivityAnnouncer.kt`; from
+`data/family/`, `FamilyView.kt` (with `inFamilyOnScreen` and `placementFamilyId`),
+`FamilyViewSource`, `SelectedFamilySource` (with `FamilyOption`), `KnownFamilies` and
+`KnownFamilySlots`, which ask `SignedInUser` for the uid; from `data/chat/`, `ChatMirror`,
+`ChatPartnerSource` and `DepartedThreadSource`; from `data/requests/`, `RequestTelling` and
+`RecordLook.kt` (`RecordStatus`, `CardSubject` and `RecordLook`, split out of `RequestRecords.kt`
+unchanged); and from `data/repository/`, `CustodyModelRepository` with `ActiveCustodyRow`,
+`CustodyRows`, `SignedInFamilies` and `SwapPush`, `FamilySettingsRepository`, `EventRepositoryImpl`
+and `PetRepositoryImpl`. Their constructors kept their parameter names, so the e2e parents and the
+R8 probe build them unchanged. They are bound in `shared-data`'s `repositoryDataModule`,
+`familyDataModule` (which also binds `FamilySlotsSource`), `chatDataModule` and
+`requestsDataModule`. Task 8d, the readers that called the Android SDK directly: in `commonMain`,
+from `data/repository/`, `CalendarFeedRepositoryImpl` (on `CallableFunctions`; a refusal is a
+`CallableException`, the limit still `CalendarFeedLimitException`), `GuestRepositoryImpl`,
+`PartnerProfileFlow` (`FirestoreClient.partnerProfile`, which `PairingRepositoryImpl` calls) and `PetMappers.kt` (the pet
+document's four mappers, lifted out of `PetRepositoryImpl`, so `PetWireContract` runs in
+`shared-data` too); `data/stickers/` (`ParentRoles`, `StickerDocument`, `StickerStore`); and from
+`data/documents/`, `FamilyDocumentIndex`, `FamilyDocumentIndexCache` and `FamilyDocumentMapper`. They
+are bound in `repositoryDataModule`, `stickersDataModule` and `documentsDataModule`. The friend and
+professional repositories went onto `FirestoreClient` and `SignedInUser` then, and moved in Task 8e
+(below). `FamilyDocumentRepositoryImpl` stayed in the app (`java.io.File` and `data/files/`) until
+Task 8j (below), and so
+does `data/session/` but for `ProfileIdentity`, which moved in Task 8f (below), and the
+profile's synchronizer and the signed-in account's source, which moved in Task 8j
+(Auth's `FirebaseUser` and its state flow, a `Context`, the Functions SDK and `FcmService`'s token in
+account deletion). The seams grew for them:
+`SignedInUser` also answers the account's e-mail address and picture, `DocumentQuery.whereIn` is the
+SDK's `whereIn`, `StoredDocument.string` throws as `getString` did, `FirestoreClient.newDocumentId` is
+`collection.document().id`, and `FirestoreClient.observeWithMetadata` is a query listener with
+`MetadataChanges.INCLUDE` whose snapshots carry their own `hasPendingWrites` and `isFromCache`. Task
+8e, what the stay list's `java.time` held back, once `Payment`, `support/`, the guest and friend
+access and the friend and professional interfaces were converted (see the stay list): in
+`commonMain`, `data/payment/` (`PaymentDocument`, `PaymentStore`, `PaymentAccounts`,
+`SettleUpMessages`) and, from `data/support/`, `SupportAgreementDocument`, `SupportAgreementStore`
+(with `SupportRead`) and `SupportReminders`; from `data/requests/`, `FamilyAgreementsSource` and
+`AgreementWithdrawals`; from `data/family/`, `AgreementSignalSources`; and from `data/repository/`,
+`FriendRepositoryImpl`, `ProfessionalRepositoryImpl`, `ProfessionalEvents`, `ChildInfoRepositoryImpl`
+and `ChildInfoMappers.kt` (the child record's four mappers, lifted out of the repository as the
+pets' were). The stores run on `FirestoreClient` and `SignedInUser`, with the same queries, reads
+and writes the Android SDK calls made; a timestamp is read as a `FirestoreTimestamp`, and an amount
+through `DecimalText.parseHalfUp`, which reads it as the app's `MinorUnits.fromText` read it through
+`BigDecimal` (`MinorUnits.fromText` now delegates to it). Their constructors kept their parameter
+names, so the R8 probe builds them unchanged and the e2e parents changed only where a store now
+takes a `FirestoreClient` (`PaymentStore`, `SupportAgreementStore`; `ChildInfoRepositoryImpl`'s
+`firebaseAuthService` is a `SignedInUser` now). They are bound in `moneyDataModule`,
+`repositoryDataModule`, `requestsDataModule` and `familyDataModule`. The `child_info` wire contract
+stayed in `app/src/test/…/wire/` and the app's list alone until Task 8g: `SyncService`, then still
+in the app, writes `child_info` too. The child support reminder's `SupportReminderWorker` and
+`WorkManagerSupportReminderScheduler` stay in the app (WorkManager, the notification manager,
+`currencyFormat`); the `SupportReminderScheduler` interface they answer moved to `data/support/` in
+slice 10d, with the screen's ViewModel. The rest of `data/family/`,
+`data/chat/` and `data/requests/` stayed in the app then: `OtherFamiliesSignals` (`java.time` and the
+request clocks) and the request clocks' keeper, steps, records, `RequestClocks` and `RequestTime`
+(the Android notification manager, WorkManager and a `java.time.ZoneId`) until Task 8h (below);
+`UnassignedRecords` (records dated in `java.time` for its screen) until Task 8i, `ChatAttachmentOutbox`
+(`java.io.File` and `data/files/`) until Task 8j, and the clocks' notices and worker still. `data/money/`'s `MinorUnits` stays too (`BigDecimal` for
+the screens' `NumberFormat`; since slice 11e no screen calls it, and its one production caller is
+`SupportReminderWorker`'s `toDecimal`). Task 8f, the last repositories that waited on `BigDecimal`, Auth's `FirebaseUser`,
+the raw Firestore SDK or the stay list's `java.time`: in `commonMain`, from `data/repository/`,
+`ExpenseRepositoryImpl` with `ExpenseMappers.kt` (the expense's four mappers, lifted out as the
+pets' were, so `ExpenseWireContract` moved to `shared-data`'s `wire/` and its list), whose push
+writes `amount` and `share` through `DecimalText.halfUp` (`BigDecimal.valueOf(x).setScale(2,
+HALF_UP).toPlainString()`, held by `DecimalTextParityTest`) and whose chat card writes the amount
+through `JvmDoubleText` (`Double.toString` itself on Android, so unchanged by construction; on the
+iPhone the JVM's layout of Kotlin/Native's digits, JDK 19's, which for a few short values in
+[0.001, 0.01) writes "0.002" where ART's older `FloatingDecimal` writes "0.0020", and no stored or
+wire text depends on that); `UserRepositoryImpl`, with `data/session/ProfileIdentity.kt`, asking `SignedInUser`'s new
+`observeCurrentUid` and `getCurrentAccount` (`SignedInAccount`: the uid, name, address, picture,
+anonymity and linked providers `FirebaseUser` carried, read at one moment) for what it read of
+`FirebaseUser`; `PairingRepositoryImpl` on `FirestoreClient` (the same documents, queries, listeners,
+fields and fallbacks as the SDK calls, `StoredDocument.string` and a local `long` throwing as
+`getString` and `getLong` did), with `PairingWording` for its thread title (the app's
+`AndroidPairingWording`, the string resource) and `kotlin.concurrent.atomics` for its applied
+marker; and `JournalRepositoryImpl`. Their constructors kept their parameter names but for the
+pairing repository's, which no longer takes `firestore` or `context` but `wording`, so the e2e
+parent changed there alone; the R8 probe builds none of them. They are bound in
+`repositoryDataModule`, and the use cases and `ErrorHandler` in the new `useCaseDataModule`; the
+app's `firebaseRepositoryModule`, `journalModule`, `useCaseModule` and `domainModule` went with
+them. Task 8g, the sync and what it waited on: in `commonMain`, `data/sync/SyncService.kt` (with
+`SyncStatus`, whose `Success` time is now kotlinx-datetime's `wallClockNow()`, what
+`LocalDateTime.now()` read), whose constructor kept every parameter name (the e2e parents build it
+unchanged) and asks the platform through four narrow seams: `SignedInUser` for the uid, the new
+**`PushDevice`** (`data/remote/firebase/`: this device's push token, `getCurrentToken` and
+`updateUserToken`, beside the `PushQueue` it extends; `FcmService` implements it), the new
+**`AccountConsistency`** (`data/session/`: `ensureAccountConsistency`; `AccountSwitchGuard`
+implements it) and the new **`RequestClockSweep`** (`data/requests/`: `sweep`; `RequestClockKeeper`
+implements it). The event and child-info push payloads left `FcmService` for `RecordPushes`
+(`data/remote/firebase/`), unchanged (the event's was deleted since, with the sync's per-upload
+push: notification audit, 9 November 2026); `data/notification/ReminderEvents.kt` (`toReminderEvent`) moved
+with the sync. `data/repository/ParentSlotMigrator.kt` runs its two re-stamps in
+`EventDao.reslotOwnerAndPickup`, a Room `@Transaction` method like `KnownFamilyDao`'s, where it used
+Android's `RoomDatabase.withTransaction`, so it no longer takes the database
+(`EventDaoReslotTest`, androidTest, proves a refused second statement takes the first back with
+it); the e2e parent changed there alone. `data/repository/PreferencesRepositoryImpl.kt` with
+`data/money/CurrencyHints.kt` reads the device region through `DeviceRegion`
+(`data/platform/DeviceRegion.kt`, a seam since slice 9d's I1 fix, where it was an internal
+`expect`/`actual` over `Locale.getDefault().country`: on Android `AndroidDeviceRegion`, the region
+of the phone's first language as `PhoneLocales` lists it — the list `AppLocale.deviceFirst` reads,
+never the default locale, which the owner's rule makes `en-150` on an English fallback — and on the
+iPhone `IosDeviceRegion`, the current `NSLocale`'s country code). The onboarding's guess at the
+parent's country reads the same seam. `data/sync/CalendarSyncRepository.kt`
+runs on kotlinx-datetime with the same wall clocks and rows (`SyncResult.Success`'s window is
+kotlinx-datetime's `LocalDate`; `SyncViewModel` words it as before), and tells Android's
+`NetworkOnMainThreadException` apart through an internal `expect`/`actual`
+(`data/sync/NetworkOnMainThread.kt`); `data/sync/GoogleCalendarAutoImport.kt` reads the connection
+through the new `GoogleCalendarConnectionSource` (`data/remote/google/`;
+`CredentialManagerService` implements it). They are bound in `syncDataModule` (the sync and the
+Google import) and `repositoryDataModule` (the migrator, the preferences and the hints), and the
+app binds the four seams to its classes. Still in the app from `data/repository/` and `data/sync/`:
+`AndroidPairingWording` (a string resource), `SyncWorker` and `WorkManagerSyncRequester`
+(WorkManager). Task 8h, the request clocks (item 42) and what waited on them: in `commonMain`, from
+`data/requests/`, `RequestTime` (its zone kotlinx-datetime's `TimeZone.currentSystemDefault()`,
+which on Android is `ZoneId.systemDefault()` itself and is read on every call; `RequestClocksTest`
+holds the zone to `ZoneId.systemDefault()` on every call, as the system zone changes, and a test in
+another module builds a fixed clock through `RequestTime.of` — today `RequestsSourceTest`, in
+`:shared-ui` since slice 10c — the primary constructor staying `internal` for `KoinGraphTest`),
+`RequestClocks`, `RequestClockActions`, `RequestClockKeeper` (its in-flight set a compare-and-set
+over an immutable set where it took a JVM lock; the sweep's bound, its `NonCancellable` tail and
+everything else unchanged), `RequestClockSteps` and `RequestRecords`, and from `data/family/`,
+`OtherFamiliesSignals` (its "today" and "now" from `kotlin.time`'s system clock in the system zone,
+what `LocalDate.now()` and `System.currentTimeMillis()` read). The steps post through the new
+**`RequestClockNotices`** (`data/requests/`: `remind`, `deadlinePassed` and `noAnswer`; the app's
+`RequestNotices` implements it; `remind` answers whether it was shown since the notification audit
+of 9 November 2026, and the iPhone's stand-in answers false, so a reminder is counted only when
+shown) and keep their jobs through the domain's `RequestClockScheduler`, as
+before. Every constructor kept its parameter names, so the e2e parents build them unchanged. They
+are bound in `requestsDataModule` (with `RequestClockSweep`, which the app bound in Task 8g) and
+`familyDataModule`, and the app binds `RequestClockNotices`. Still in the app from `data/requests/`
+and `data/notification/`: `RequestNotices` (the notification manager, the strings and the
+`BigTextStyle` of item 15), `RequestClockWorker`, `RequestClockWork` and `WorkRequestClockScheduler`
+(WorkManager: the `KEEP` names and `needsNetwork`). Task 8i, the school import (item 35), the
+export's sources (item 26) and the records of no family (item 46), once their domain had left the
+stay list: in `commonMain`, from `data/school/`, `SchoolAccounts`,
+`SchoolConnectionStore` (its `@Synchronized` methods under the data layer's reentrant `Monitor`,
+`synchronized` on Android; the ledger's day `IsoText.date`/`parseDate`), `SchoolEventWriter` and
+`SchoolImporter` (on `kotlin.time`'s `Clock` in the zone it was built in, what
+`Clock.systemDefaultZone()` gave it; its tests build one through `SchoolImporter.on`), and from
+`data/school/bakalari/`, the three parsers and `BakalariWallClock` (the school's wall clock through
+`IsoText.parseOffsetWallClock` and `parseDateTime`, a lesson's time through the new `BakalariTime`,
+`H:mm` then `ISO_LOCAL_TIME` as `java.time` read them; `BakalariTimeParityTest`), `BakalariAccount`,
+`BakalariReads` and `BakalariAuthorizer` (`BakalariAuthorizer.on` for the tests); the connection id
+is the domain's `SchoolConnectionId`, the same SHA-256 over the JVM's UTF-8 bytes. They take two
+new seams in `data/school/`: **`SchoolImportWordings`** (the titles; the app's
+`SchoolImportWordingSource` implements it from string resources) and **`SchoolImportScheduler`**
+(moved out of the worker's file; `WorkManagerSchoolImportScheduler` implements it). From
+`data/export/`, `CommunicationRecordSource`, `ParentingPlanRecordSource` and `OptionalRecordSections`;
+from `data/family/`, `UnassignedRecords` (a record's day kotlinx-datetime's `LocalDate`, the screen
+formatting it at its edge). They are bound in `schoolDataModule`, `exportDataModule` and
+`familyDataModule`; the app binds `SchoolImportWordings`. Still in the app: `SchoolImportWorker`
+and `WorkManagerSchoolImportScheduler` (WorkManager), `SchoolImportWordingSource`, the Bakaláři
+client's Koin definitions (the app's named HTTP client), `ExportFileWriter` (`PdfDocument`) and,
+until Task 8j, `ExportReceipts` (`FirebaseFunctions` and `BuildConfig`). Task 8j, the files the parents share
+(MON-23, item 31 and Legal item 8): in `commonMain`, `data/files/`'s `SharedFileStorage`,
+`SharedFileCache`, `SharedFileStager` (with `StagedFile` and the two exceptions) and
+`StoredRecordFamilies`, on kotlinx-io paths under `AppDirectories` where they took `java.io.File`
+(the internal `LocalFiles` answers as `File.delete`, `renameTo` and `mkdirs` did, and a file is
+hashed a buffer at a time through the new `Sha256.digestOf`, `MessageDigest` on Android and
+CommonCrypto's `CC_SHA256_Init`/`Update`/`Final` on the iPhone); `data/chat/ChatAttachmentOutbox`,
+the gate before a message's Firestore write, and `data/documents/FamilyDocumentRepositoryImpl` with
+`domain/repository/FamilyDocumentRepository` (a local copy is a `Path`; the screens that hand one
+to Android open `File(path.toString())`), both asking `SignedInUser` for the uid. They take two new
+seams in `data/files/`: **`StorageBucket`** (an object's custom metadata, a file or bytes put with
+their metadata, a download into a file, a delete; nothing that answers a download URL), which the
+app's `FirebaseStorageBucket` answers with the calls `SharedFileStorage` made, and
+**`PickedFiles`** (a picked file's type, display name and bytes), which the app's
+`AndroidPickedFiles` answers from the `ContentResolver`. What the rules require of a create (the
+`uploader` and `sha256` metadata, in that order), the idempotence across a lost response, the
+digest checked before the rename, the cap abandoned mid-copy and the outbox's order are decided in
+`commonMain`. No constructor kept the SDK type it took: the e2e parent builds
+`SharedFileStorage(FirebaseStorageBucket(storage))` and `SharedFileStager(AndroidPickedFiles(context))`;
+the outbox's and the repository's parameter names did not change. They are bound in the new
+`filesDataModule` (with `AttachmentUploadGate`) and `documentsDataModule` (with
+`FamilyDocumentRepository`); the app binds the two seams, and its `sharedFilesModule` is gone. Still
+in the app from `data/files/`: `RecordPhotoFetcher` (Coil) and the two seams' Android halves; and
+`FirebaseImageStorage` (a `Bitmap`'s re-encoding). From `data/session/`, in `commonMain`,
+`SessionProfileSynchronizer` (the uid from `SignedInUser.observeCurrentUid`, distinct as before, and
+the wipe through `AccountConsistency`) and `SignedInAccountSource` (the account `getCurrentAccount`
+reads when the profile row arrives, as reading the `FirebaseUser` the state reported did), bound in
+the new `sessionDataModule`, their parameter names unchanged. Still in the app from `data/session/`:
+`AccountSwitchGuard` (a plain `SharedPreferences` file and `DeviceTraces`), `AccountDeletionService`
+(the Functions SDK, `FcmService.unregisterToken` and `DeviceTraces`) and `DeviceTraces` (a `Context`'s
+directories and the notification manager). And `data/export/ExportReceipts` (MON-16, item 26), on
+`CallableFunctions` where it called the Functions SDK, its period's dates kotlinx-datetime's written
+by `IsoText.date` (what `LocalDate.toString()` wrote), and the verification page's address from the
+new **`ExportVerifyAddress`** (`data/export/`, a `fun interface`; the app answers it with
+`BuildConfig.EXPORT_VERIFY_URL`); every failure is still an answer, never an exception, and the six
+receipt rules are unchanged. It is bound in `exportDataModule`; the e2e parent builds it on its
+`AndroidCallableFunctions`. **On the iPhone, `platformDataModule` binds every seam `dataModules`
+takes** (Task 8j; `di/koin/PlatformDataModule.ios.kt`): GitLive's default instances, the app's
+directories, the database on the bundled driver and its fifteen DAOs, the Keychain's store, the
+no-op telemetry, the network monitor and the two HTTP clients, and, for what the iPhone does not
+have yet, the stand-ins in `di/koin/IosUnavailable.kt` — nobody signed in, no push, no Google
+Calendar, no Cloud Storage (every bucket call an `IOException`), nothing picked, no background job or
+notice, no verification address, and no wording (a pairing's thread title and a school import's
+titles are stored data a co-parent reads, so no English stand-in is written; asking throws). A
+Koin `verify()` of `dataModules` with exactly those types resolves (run once on the JVM in this
+task; the iPhone has no `koin-test`). Phase 3's app replaces each stand-in. Every `data/…`
+path this history does not name as moved is under `app/src/main/java/com/coparently/app/` (the
+third exception at the top of this note).
+
+**The data layer reaches the platform only through those interfaces**: a new data-layer class takes `SecurePreferences`, `AppDirectories`, `CrashReporter`,
+`Analytics`, `DeviceRegion`, `SignedInUser`, `AuthSession`, `PushQueue`, `PushDevice`,
+`PushRegistration`, `AccountConsistency`, `AccountDeletion`, `AccountTraces`, `RequestClockNotices`,
+`RequestClockScheduler`, `GoogleCalendarConnectionSource`, `GoogleCalendarAccount`, `StorageBucket`, `PickedFiles`,
+`ExportVerifyAddress` or `RecordFileWriter` rather than `EncryptedPreferences`, a `Context`
+directory, `CrashlyticsManager`, `AnalyticsManager`, `FirebaseAuthService`, `FcmService`,
+`AccountSwitchGuard`, `AccountDeletionService`, `DeviceTraces`, `RequestNotices`,
+`WorkRequestClockScheduler`, `CredentialManagerService`, `FirebaseStorage`, a `ContentResolver`,
+`ExportFileWriter` or `BuildConfig`, and logs with `logger.e/w/i/d(TAG, …)`, never
+`android.util.Log`. A ViewModel in `:shared-ui` takes the same seams (`AuthSession`,
+`PushRegistration`, `AccountDeletion` and `AccountTraces` came with slice 10e, `RecordFileWriter`
+with slice 10f, `GoogleCalendarAccount` with slice 11f).
+
+**Where a `presentation/…` or `utils/…` path in this file lives** (MON-24 phase 2, Tasks 9–12,
+November 2026; done). **In `shared-ui/`, package unchanged**: a path this file writes as
+`presentation/<package>/<File>.kt` — the theme, `common/`, every screen and ViewModel, the platform
+interfaces (`platform/`), the navigation (`navigation/`) and `CoPlanlyApp.kt` — or as
+`utils/<File>.kt` is `shared-ui/src/commonMain/kotlin/com/coparently/app/presentation/<package>/<File>.kt`
+(or `…/app/utils/<File>.kt`). Its test is under `shared-ui/src/commonTest/` (on `kotlin.test`) or
+`shared-ui/src/androidHostTest/` (MockK, a `java.time` oracle); the screenshots and the Robolectric
+tests stay in `app/src/test/`. The rules and items that name those paths were not reworded; only the
+root changed. Three exceptions:
+- **`shared-ui/src/androidMain/`**, same package: the Android `actual`s — `theme/Theme.android.kt`,
+  `ContrastLevel.android.kt`, `Motion.android.kt` and `AdaptiveDimensions.android.kt`,
+  `common/HolidayNames.android.kt`, `ReaderDates.android.kt` and `TwoPane.android.kt`,
+  `utils/LocalizedDates.kt` (the `java.time` date and time rules) with the Android halves of
+  `utils/ReaderDateText.kt` and `utils/ReaderMoneyText.kt`, `expenses/CurrencyFormat.kt`, and
+  `di/koin/PlatformUiModule.android.kt`.
+- **`shared-ui/src/iosMain/`**: the iPhone's `actual`s, `platform/IosPlatform.kt`
+  (`iosPlatformServices`, `ProvideIosShell` and their stand-ins) and `di/koin/IosUiUnavailable.kt`.
+- **`app/src/main/java/com/coparently/app/presentation/`**: what the thin shell keeps
+  (`ShellBoundaryTest` refuses any other `@Composable` there, and any `ViewModel`) — `MainActivity.kt`, `widget/`, the previews (`*Previews.kt`),
+  and the Android halves of the platform interfaces: `platform/AndroidPlatform.kt` and
+  `AndroidQrCodes.kt`, `auth/AndroidCredentialSignIn.kt` and `AndroidAuthErrors.kt`,
+  `sync/AndroidGoogleCalendarSignIn.kt`, `settings/AndroidAppLanguages.kt` and
+  `SystemDefaultRelaunch.kt`, `pairing/QRScannerActivity.kt`, `QrScannerScreen.kt`,
+  `AndroidInviteQrCodes.kt` and `BuildPairingLink.kt`, `export/RecordShareIntent.kt`,
+  `chat/DictationLanguage.kt` and `CardPushText.kt` (a chat card's push wording, beside
+  `PushNotifier`), and `common/SharedFileViewer.kt`, `SensitiveClipboard.kt` and
+  `AndroidPermissionChecks.kt`. Of `utils/`, the app keeps `AppLocale.kt`, `NetworkMonitor.kt`,
+  `SwapDateList.kt`, `Extensions.kt` and `PreviewHelpers.kt`.
+
+A new screen, component or ViewModel goes in `shared-ui/` (the hard rule "The Android app is a thin
+shell"). How it got there, slice by slice (the history; every rule and every "don't undo" in it
+stands): in Task 9's slice 9b the theme moved whole to
+`shared-ui/src/commonMain/kotlin/com/coparently/app/presentation/theme/`, package unchanged, with
+its tests in `shared-ui/src/androidHostTest/` (JVM, as they were). What only Android can answer is
+an `expect` in the common file and the code it was in `androidMain`, beside an iPhone `actual` in
+`iosMain`: the system bars (`Theme.android.kt`; nothing on the iPhone until its view controller,
+phase 3), `rememberSystemContrastLevel` (`ContrastLevel.android.kt`; standard on the iPhone until
+phase 3 decides what "Increase Contrast" means), `rememberReducedMotion` (`Motion.android.kt`; Reduce
+Motion on the iPhone) and `adaptiveDimensions` (`AdaptiveDimensions.android.kt`; the window,
+VoiceOver and the density's font scale on the iPhone, both through the common `adaptedDimensions`).
+**The fonts are Compose Multiplatform resources**: the four Onest files are in
+`shared-ui/src/commonMain/composeResources/font/` (no `res/font` any more) and `Type.kt` reads them
+with `Font(Res.font.…)` in composition, which on Android opens the same file from the APK's assets
+through the same `Font.Builder`. So `Typography` is the type scale **without a typeface** (the
+widget reads its sizes and weights), and `CoPlanlyTheme` hands `MaterialTheme` that scale set in
+Onest (`rememberAppTypography`); don't put a `fontFamily` back on the plain value, and don't read
+`Typography` in composition instead of `MaterialTheme.typography`. `ParentColorChoice.label` is a
+`StringResource`, read with Compose Multiplatform's `stringResource`; `LightColorScheme` and
+`DarkColorScheme` are public for the widget. From `presentation/common/`, the design system's
+primitives and the helpers they draw with moved the same way: `DesignSystem.kt` (its two previews
+stay in the app, `DesignSystemPreviews.kt`), `AddItemButton`, `AnswerButtons`, `AppMessages`,
+`BannerTone`, `ConfirmationDialog`, `ConnectivityBanner`, `DashedBorder`, `DatePickerField`,
+`ErrorState`, `ExpandableDetails`, `FabScrollVisibility`, `InlineBanner`, `InviteCodeText`,
+`LargeFontLayout`, `StickyActionBar` and `animations/`. Their own labels are `Res.string`, and
+`GroupLabel` uppercases with Compose's `toUpperCase(Locale.current)`, which on Android is the
+`Locale.getDefault()` it used. Slice 11a (Task 11) moved the rest that its seams allow, packages
+unchanged: `AccountAvatar`, `PhotoStrip` (`PhotoStripStrings` holds `StringResource`s now),
+`ZoomableImage`, `SignedInAsRow` and `childinfo/components/MedicalPhotoStrip` (the image seam);
+`DiscardGuard` (Compose Multiplatform's `PredictiveBackHandler`, androidx.activity's on Android);
+`FamilySwitcher` (`koinViewModel` from koin-compose-viewmodel); `TwoPane` (the window's width through
+an `expect`, `screenWidthDp` on Android; `TWO_PANE_MAX_WIDTH`, `WIDE_COLUMN_MAX_WIDTH` and `WideColumn`
+public for the app's `TwoPaneTest` and Chat); `ListSkeleton` with `components/SkeletonLoading`;
+`RecordPlaceMark`; and the notification and microphone requesters (`PermissionRequesters.kt`, over
+`PermissionRequester`; `hasNotificationPermission(context)` and `hasMicrophonePermission(context)`
+stay in the app's `AndroidPermissionChecks.kt`). Still in the app, each for its reason:
+~~`AuthViewModel` and `SyncViewModel`, whose sign-ins run on an Android activity~~ (both moved in
+slice 11f, below); the Android halves of the platform interfaces (`SharedFileViewer`,
+`SensitiveClipboard`, which `AndroidPlatform.kt` calls; `PrivacyPolicyLink` and `TermsOfServiceLink`
+are gone since slice 11f, their screens reading `AppBuildValues` and `OpenUrl`); the `java.time` users whose signatures carry
+`java.time` to their callers (~~`MonthPaging`'s direction and transition, Expenses'~~, moved with
+Expenses in slice 11e onto kotlinx-datetime, and ~~`VaccinationListEditor`~~, moved with the child
+records in slice 11g), each moving with its screens onto kotlinx-datetime and the date seam; the
+`@StringRes` label helpers (~~`BloodTypeLabel`, `PetSpeciesLabel`~~, moved with the child and pet
+records in slice 11g, and ~~`CountryPicker`~~, moved with Settings in slice 11f, onto
+`StringResource`) and the component that reads them (~~`MedicalProfileEditor`~~, slice 11g), which
+move with the screens that pass them ids. **Slice
+11c moved the calendar's and the event form's helpers** onto kotlinx-datetime and `StringResource`,
+packages unchanged: `Today` (`rememberToday()` and `LocalFixedToday` are kotlinx-datetime days; the
+app's `JavaToday.kt` gave the screens that still held a `java.time.LocalDate` the same state
+converted, until the calendar's move left it no caller), `PickerDates` (the UTC rule in kotlinx-datetime; the app's
+`JavaPickerDates.kt`, a `java.time` overload of `LocalDatePickerDialog` and of
+`PickerDates.toPickerMillis` and `fromPickerMillisJava`, served the screens that held a
+`java.time.LocalDate` until slice 11g moved its last callers, and was deleted then; the two
+androidTest classes convert their fixtures at the call), `components/TimePicker`
+(`TimePickerDialog` on a kotlinx `LocalTime`, its dial's 12/24 hours `ClockFormat.is24Hour`, which
+`MainActivity` follows from `DateFormat.is24HourFormat` of the activity; the app's `java.time`
+overload went with its last caller, the change request form, in slice 11d, and the previews are the
+app's `components/TimePickerPreviews.kt`), `AnswerByField` (its clock `kotlin.time`, its times
+`ReaderDateText.answerBy`, its reminders line `pluralStringResource`), `HolidayNames` (the reader's
+language through an `expect`, `Locale.getDefault().language` on Android; `CzechSchoolBreak.nameRes()`
+a `StringResource`), `EventTypeLabel` (`eventTypeLabelRes` a `StringResource`), `FamilyMemberChips`
+(the label a `StringResource`), and `MONTH_PAGING_MS` with `monthPagingTween` (`MonthPagingTween.kt`,
+a file name of its own, because two modules' files of one name in one package make one JVM class).
+`TodayTest` runs in `:shared-ui`'s `commonTest`. **Then the event form** (`event/AddEditEventScreen.kt`
+and `EventFormRows.kt`), on kotlinx-datetime throughout: its saved fields hold kotlinx days and times
+saved as their ISO text (`common/DateTimeSavers.kt`: `LocalDateSaver`, `NullableLocalDateSaver`,
+`LocalTimeSaver`) — **never let `rememberSaveable` put a kotlinx-datetime value in the Bundle by Java
+serialization**: that goes through the library's private `writeReplace`/`readObject` proxy
+(`kotlinx.datetime.Ser`), which no R8 rule keeps, so a release build could fail to save or restore
+the form, where `java.time`'s platform classes were never R8's to touch (11c round 1 review, I1) — its
+lines and descriptions through `ReaderDateText`, a new event's id from `kotlin.uuid.Uuid`, its "now"
+`wallClockNow()`, `plusHour()` the clock-face hour `plusHours(1)` was, the photo through
+`FilePicker.rememberImagePicker` (its content URI kept as text, which Coil maps to the same `Uri`)
+and left out where the platform can neither pick nor draw one, its log line through `logger`, and
+the strings its lambdas used read in composition. `utils/ValidationUtils` moved with it, its one
+caller, without its email and URL checks (Android's `Patterns`; nothing called them). `NavGraph`
+parses the route's date with kotlinx-datetime. `EventFormEndTest` and `AddEditEventScreenTest` run
+in `commonTest`. **Then the calendar's screens** (slice 11c's second round): all of
+`presentation/calendar/` and `calendar/components/`, packages unchanged, on kotlinx-datetime throughout
+(the grid's days, the month pager, the day and week pages, the event blocks' times through
+`domain/time/WallClock.kt`'s wall-clock arithmetic, `durationUntil` for `Duration.between`), the
+month grid on kizitonwose's multiplatform `HorizontalCalendar` 2.9.1 (`MonthView`'s own settle and
+`calendarScrollPaged = false` unchanged, design item 5), every text through `ReaderDateText` (a
+weekday's or a month's name, `getDisplayName(TextStyle…)` before, is the pattern letters "EEE",
+"EEEEE" or "LLLL" over a date of that day or month, the same text provider), Week view's number
+`DateRangeHelper.isoWeekNumber` (`WeekFields.ISO`'s, held day by day over seventy years by
+`IsoWeekNumberTest`), Compose Multiplatform's `BackHandler`, the pull to refresh's sync through the
+data layer's `SyncRequester` (`koinInject`, `SyncWorker.syncNow` on Android, nothing on the iPhone)
+and the partial swap's snackbar through `rememberUiTextResolver`. What they read from other features
+moved with them: `navigation/CalendarTabTaps` (pure, ahead of Task 12; the bar counts the taps, in `:shared-ui` since Task 12),
+`changerequests/SwapMonths` (out of `SwapDayAnswers.kt`), `parentingplan/PlanStrings` (its wording a
+`StringResource` now) and `PlanCitationText.kt` (`planCitationLine`, `planCitationShortLine`,
+`coParentLabel`, out of the app's `PlanReferenceCard.kt`, which stays), `custody/CustodyModelTypeLabel`
+(`labelRes()` a `StringResource`), and `utils/SwapDays.kt` (`SWAP_DAY_SKELETON` and the screens'
+`swapDateList(dates)`; the app's `SwapDateList.kt` keeps the overloads that take a locale, for the
+push). The app's callers of those read them with Compose Multiplatform's `stringResource`. The
+previews are the app's `calendar/CalendarPreviews.kt`. The ten pure calendar tests run in
+`:shared-ui`'s `commonTest`; `CalendarScreenshots`, `HomeScreenshots` and `RequestScreenshots`
+convert their `java.time` fixtures at the call. Public for the app: `MonthView`, `SwapDaysButton`,
+`DaySwapSelectionBar`, `DaySwapSheet`, `DaySwapSheetContent`, `SwapSheetOffer`, `SwapSheetActions`,
+`SwapSideGroup`, `isConsecutive`, `CustodyLegend` and `SwapMonths` (the calendar's other helpers stay
+`internal`, their tests in the same module). **Then custody's screens** (slice 11d): all of
+`presentation/custody/` (the setup screen with its overview and its four parts, the pattern form,
+the contact windows, the seasonal layers and their dialog, the children's schedules, the holiday
+fairness card, the diff's wording and the preview month), `pairing/CustodyConflictScreen.kt` and
+`parentingplan/PlanReferenceCard.kt`, which the custody editors quote, packages unchanged. A day's
+name, `DayOfWeek.getDisplayName(TextStyle.SHORT, FULL or NARROW)` before, is `utils/WeekdayNames.kt`'s
+`readerName("EEE", "EEEE" or "EEEEE")`, the pattern letters over a date of that day (the same text
+provider; checked in nine locales); a date in a style is `readerMediumDate`, or the new
+`readerShortDate` and `readerFullDate` beside it (`FormatStyle.SHORT` and `FULL` on Android); a time
+`ReaderDateText.time`; the diff's day count Compose Multiplatform's `pluralStringResource`, where it
+was `getQuantityString` on the Activity's resources; today `Clock.System.todayIn` in the system zone;
+and Back Compose Multiplatform's `BackHandler`, opted in for the setup screen's file so the detekt
+baseline's key on its annotations still matches. Public for onboarding and the screenshots:
+`CustodyPatternForm`, `CustodyPatternActions`, `createTempModel`, `custodyPreviewText` and
+`SchedulePreviewMonth`. **Then the requests' screens** (slice 11d): `presentation/changerequests/`'s
+inbox (`ChangeRequestsScreen` with `InboxItems`, its one flat list), its cards (`DaySwapCard`,
+`AwaitingEventCard`, the split card, `AgreementRows`, `RequestHistoryGroup`, `FoldedMonth`,
+`ProposedSchedulePreview`, `SwapDayAnswers`, `SwapOfferContent`), the clocks' `CardClock` with
+`LocalCardClock` and `RequestClockText` (its zone a kotlinx-datetime `TimeZone`), `RequestText`, and
+`RequestChangeScreen`, whose saved proposal is a kotlinx-datetime date and times kept as ISO text
+(`LocalDateSaver`, `LocalTimeSaver`, the new `NullableLocalTimeSaver`), where it held `java.time`.
+Every deadline is `ReaderDateText.answerBy`, every date and time `ReaderDateText` or
+`readerMediumDate`, the swap's day list `swapDateList(dates)` (the reader's locale, which the app's
+rule keeps equal to the configuration's first). What the inbox reads from screens still in the app
+moved beside it: `support/SupportText.kt` (`supportAmount`, through the money seam over
+`DecimalText.plain`, and `supportMonth`, out of `SupportScreen.kt`) and
+`professionals/ProfessionalRoleLabel.kt` (`ProfessionalRole.labelRes()` a `StringResource`, out of
+`ProfessionalText.kt`; the Professionals screens read it with Compose Multiplatform's
+`stringResource`). ~~`SplitShares.kt` stays in the app~~: it followed in slice 11e, once its
+strings took the percent sign as an argument ("Localization"), and `ChangeRequestsScreen` lost the
+`splitSharesText` parameter 11d gave it.
+`CardClockTest` and `InboxItemsTest` run in `commonTest` (their names without commas),
+`RequestClockTextTest` in `androidHostTest` (it compares with `answerByText`);
+`RequestHistoryGroupTest` stays in the app (Robolectric). **Then the family's screens** (slice
+11e): `presentation/family/`'s `FamilyScreen` (the tab's hub, design refresh item 4),
+`EarlierFamiliesScreen`, `UnassignedRecordsScreen` and `UnassignedRecordsEntries` (the row and Home's
+question), with what they read from screens still in the app: `changerequests/SplitShares.kt`
+(`splitSharesText`, public, which the inbox, Expenses and Home's pop-up word a split with),
+`stickers/StickerViews.kt` (`HomeStickers`, `StickersRow`, `ParentRolePrompt`, `ParentRoleDialog`,
+`StickerBadge`, and `roleOrNull` and `senderLine`, public for `MyStickersScreen`), the new
+`settings/FamilyDialogs.kt` (`caresForSummary`, `FamilyKindDialog` and `SplitRatioDialog`, out of
+`SettingsScreen.kt`, which no longer called them; `internal`, the Family tab being their one caller), and Home's money text, `home/MoneyText.kt`
+(`formatMoney` and `balanceCaption`, out of `HomeScreen.kt`, which calls them from the app) with
+`home/SettleUpPosition.kt` (its test in `commonTest`). Every amount goes through the money seam's
+new `ReaderMoneyText.amount(value: Double, currency)`, which on Android is
+`currencyFormat(currency).format(value)`, the call each of them made, and every date through
+`ReaderDateText.date`; the unassigned records' snackbar is a `UiText` resolved through
+`rememberUiTextResolver()` where it read the Activity's `Context`; `@StringRes Int` labels are
+`StringResource`s. `FamilyMoneyCard` is public for the screenshots. **Then the money's screens**
+(slice 11e): every file of `presentation/expenses/` but the ViewModels Task 10 moved (`ExpenseScreen`
+with `ExpenseList` and its `SwipeToDeleteRow`, `ExpenseSummaryHeader`, `ExpenseAnalytics`,
+`AddExpenseScreen`, `SettleUpDialog`, `CurrencySelector`, `ExpenseCategoryLabel`, `CategoryPalette`,
+`MonthSwipe`), with `common/MonthPaging.kt` (the month's direction and transition, on a kotlinx-datetime
+`YearMonth`). Each `currencyFormat(currency)` the screens held is a `MoneyFormat(currency)` (new,
+`internal`, `expenses/MoneyFormat.kt`: the money seam's `Double` and plain-text amounts, which on Android are
+that `NumberFormat`), the analytics' shares `ReaderMoneyText.percent`, a payment's amount on the
+header's strip plain decimal text (`PaymentStrip.amount`, `DecimalText.plain`, where it was a
+`BigDecimal`), "I paid"'s minor units `DecimalText.parseHalfUp` of the double's text (what
+`MinorUnits.fromDouble` read through `BigDecimal.valueOf`), each "LLLL yyyy" month title the new
+`utils/MonthTitle.kt`'s `readerMonthTitle` (child support's `supportMonth` reads it too) or, in the
+settle-up question, `ReaderDateText.pattern`. The expense form's date is a kotlinx-datetime day saved
+as ISO text (`LocalDateSaver`), its receipt a content URI or reference saved as text where it was a
+`Uri`, its photo the shell's `FilePicker` and `CameraCapture` (`CaptureTarget.RECEIPT`, the same
+`cache/receipts/` file and permission flow the form had), its date picker the kotlinx
+`LocalDatePickerDialog`, its scan's snackbars read in composition. **The receipt is offered only where
+the picker and the image loader are** (`FilePicker.available` and `PlatformImages.available`), and a
+photo is **scanned only where the phone reads text** (`ReceiptTextRecognizer.available`, new, true
+by default; the iPhone's `NoReceiptText` says false; `ExpenseViewModel.receiptScanAvailable`), the
+carried note's hiding. Public for the app's tests: `CollapsedMonthSummary` (the screenshots) and
+`ReceiptScanEffect` with `ReceiptScanFormState` and `ReceiptScanCallbacks` (`ReceiptScanEffectTest`,
+androidTest, its form's date a kotlinx-datetime day now). The header's previews are the app's
+`expenses/ExpensePreviews.kt`. `BuildReceiptScanUpdateTest`, `CategoryPaletteTest`,
+`ExpenseSummaryChoiceTest`, `MonthSwipeTest` and `MonthPagingTest` run in `commonTest` (kotlinx-datetime
+fixtures, names without commas). **Then child support's screen** (slice 11e, `support/SupportScreen.kt`;
+`presentation/payments/` has no screen of its own, its strip and cards being the Expenses header's and
+chat's): its months through `Clock.System.todayIn`, a due day `ReaderDateText.pattern(…, "d MMMM")`,
+the dialog's amount `DecimalText.plain` (what `MinorUnits.toDecimal(…).toPlainString()` wrote), and
+**the payer's reminder offered only where this phone runs its job**
+(`SupportReminderScheduler.available`, new, true by default; the iPhone's `NoSupportReminderJob` says
+false; `SupportViewModel.remindersAvailable`), the carried note's hiding. **Then Settings' screens**
+(slice 11f): `presentation/settings/`'s `SettingsScreen` (its five groups, design refresh item 4),
+`ParentColorDialog` (the picker, `ParentColorPicker` and `CUSTOM_COLOUR` public for the screenshots and
+`ParentColorPickerTest`; `GridSwatch`, which onboarding also draws, `internal`), `CalendarFeedScreen`, `DataSourcesScreen` (its
+`DataSourcesTest` in `commonTest`, comparing the `StringResource`s' keys) and `RegionDialog`, with
+`common/CountryPicker.kt` (its labels `StringResource`s) and `consent/`'s `HealthConsentUi.kt` and
+`TelemetryConsentScreen.kt`, and **`SyncViewModel`** (`settingsUiModule`). The phone's half, each
+from the shell: links through `OpenUrl` and `AppBuildValues` (the privacy policy, the terms, the data
+sources, the version; a row drawn only while its address is set and the phone opens links), the
+notification permission through `PermissionRequester`, the calendar link's share and copy through
+`ShareSheet` and `SensitiveClipboard` (each offered only where available), its language the reader's
+(`readerLanguage()`: on Android `Locale.getDefault()`'s language, which `AppLocale.follow` keeps on
+the app's language; the configuration's first locale before 11f) and its days `readerMediumDate`, the
+consent's day `ReaderDateText.date(…, "yMMMd")`, the last sync's time `ReaderDateText.time`, and the
+language card through the new `AppLanguages` (above; the `AppLanguage` enum moved, its labels
+`StringResource`s). **The push switch is offered only where the phone registers for pushes**
+(`PushRegistration.available`, new, true by default; the iPhone's `NoPush` says false;
+`SettingsViewModel.pushAvailable`), the carried note's hiding. **Google Calendar's sign-in is the
+shell's**: `presentation/platform/GoogleCalendarSignIn` (`open()`: opened, unavailable or failed),
+provided by `MainActivity` alone through `LocalGoogleCalendarSignIn` (it replaced
+`LocalGoogleSignInCallback` and Settings' `onStartGoogleSignIn`), whose Android half,
+`AndroidGoogleCalendarSignIn`, builds the sign-in client's intent and launches it through the
+activity's result, as `SyncViewModel.createGoogleSignInIntent` and the screen did; the activity hands
+the answer to `SyncViewModel.handleSignInResult` as a `GoogleSignInAnswer`
+(`CredentialManagerService.signInAnswer(task)`), whose `complete()` is `handleSignInResult(task)`,
+redeemed after the ViewModel says "processing", as before. The ViewModel reads the connection, the
+token and the two sign-outs through the new `GoogleCalendarAccount` (`data/remote/google/`, in
+`:shared-data`; `CredentialManagerService` answers it, so `signOut` keeps its order, the local store
+cleared before the network revoke, item 23; the iPhone's `NoGoogleCalendar` connects nothing), and the
+store through `SecurePreferences`. Settings draws the Google Calendar row only where
+`GoogleCalendarSignIn.available`; on the iPhone the shell provides an unavailable stand-in,
+`NoGoogleCalendarSignIn`, through `ProvideIosShell` (`iosMain`, beside `iosPlatformServices`; the 11f
+review's I1, since `LocalGoogleCalendarSignIn` throws outside a provider). `SyncViewModelTest` and `SyncStateTextTest`
+stay in the app (the first runs over the device's real credential store), so `toSyncState` and
+`toUiText` are public. `AppLanguage`'s Android half (`current`, `apply`) is the app's
+`AndroidAppLanguages`; `SystemDefaultRelaunch` stays with it. **Then pairing's and onboarding's
+screens** (slice 11f): `presentation/pairing/`'s `PairingScreen`, `InvitationView` (public for
+`InvitationViewTest` and the screenshots), `PairingLink.kt` and `components/` (`InviteCodeCard`,
+`IncomingInviteCard`, `PairedPartnerCard`, `CodeEntryField`), and `onboarding/OnboardingScreen.kt`.
+`pairingLinkFor(code, web)` takes the build's choice as an argument now (the screen reads it from
+`AppBuildValues.pairingWebLink`), and the app's `pairing/BuildPairingLink.kt` keeps the one-argument
+`pairingLinkFor(code)` over `BuildConfig.PAIRING_WEB_LINK` for `AndroidInviteQrCodes` and the tests,
+so the QR and the share text still carry one link (item 37); `PLAY_STORE_URL` and `playStoreUrlFor`
+were made public for the friend and professional invitations, which moved to `:shared-ui` in slice
+11g, and stay public for the app's `PairingLinkTest`. The invitation's share
+sheet and copy go through `ShareSheet` and `SensitiveClipboard` (its text worded through
+`rememberUiTextResolver` in a coroutine at the tap, where it read the Activity's `getString`), the
+scan through `QrScanner` (`QRScannerActivity` on Android, unchanged), Back through Compose
+Multiplatform's `BackHandler`, the paired-since day through `readerMediumDate`, the code's countdown
+through `kotlin.time` (whole hours and minutes, as `TimeUnit` truncated them), and the onboarding's
+notification question through `PermissionRequester`. **The carried notes**: where the phone draws no
+QR (`InviteQrCodes.available`, new, true by default; the iPhone's `NoInviteQrCodes` says false;
+`PairingViewModel.qrAvailable`) the card draws no QR frame; where there is no share sheet, clipboard
+or scanner (the iPhone for now) the card offers no Share, no copy (the code stays, the line under
+it says only how long it lasts) and the form no scan button; and the onboarding's notification step
+offers its button only where the phone asks for the permission. `QRScannerActivity`,
+`QrScannerScreen` and `AndroidInviteQrCodes` stay in the app. **Then the sign-in's and the profile's screens, with
+`AuthViewModel`** (slice 11f): `presentation/auth/`'s `AuthScreen`, `AuthLegalNotice`, `AuthError` (the
+type alone, with an empty companion), `AuthErrorText` (`messageRes()` a `StringResource`) and
+`AuthViewModel` (`authUiModule`), and `profile/ProfileScreen.kt`. **The ordering rules are the
+ViewModel's own, unchanged**: the save prompt before `onSuccess`, the `finally` that clears
+`isLoading`, cancellations rethrown. What it asked of Android goes through three seams. The
+credential sheets are the shell's **`CredentialSignIn`** (`presentation/platform/`: Google's id token,
+a saved password as a `SavedCredential` whose `toString` hides it, the offer to save), which
+`MainActivity` alone provides through `LocalCredentialSignIn` (`AndroidCredentialSignIn` over
+`CredentialAuthenticator` on the activity, so the Activity stays on Android's side and the ViewModel
+is handed this on each call where it was handed the Activity); the account's calls are the data
+layer's new **`AccountSignIn`** (`data/remote/firebase/`, in `:shared-data`; `FirebaseAuthService`
+answers it, its four methods `override`s returning `Result<FirebaseUser>` for `Result<Any>`; the
+iPhone's `NoAccountSignIn` fails every call); and which `AuthError` an exception is goes through
+**`AuthErrors`** (`presentation/auth/`, bound by the app to `AndroidAuthErrors`, whose mappings are the
+companion's old ones as `AuthError.Companion` extensions, so `AuthErrorTest` reads them as before; the
+iPhone's `NoAuthErrors` calls every failure `Unknown`) — a Koin seam rather than a member of
+`CredentialSignIn`, because the password reset has no sheet to be handed. The events are
+`data/platform/AnalyticsEvents.kt`'s new `logLogin` and `logSignUp` (Firebase's `login` and `sign_up`
+with `method`, as `AnalyticsManager`'s functions of those names logged them; they left it), the reports
+`CrashReporter.recordWithContext`. The screen offers Google and a saved password only where
+`CredentialSignIn.available` (on the iPhone the shell's `ProvideIosShell` provides the unavailable
+`NoCredentialSignIn`; `IosSignInStandInsTest`, in `iosTest`, states both stand-ins unavailable and is
+compiled by the `shared` job, but no job runs `:shared-ui:iosSimulatorArm64Test` yet); the legal notice draws the terms clause and the two
+links only while their address is set and the phone opens links (`AppBuildValues`, `OpenUrl`), so the
+app's `PrivacyPolicyLink` and `TermsOfServiceLink` are gone. The profile's dates are
+`readerMediumDate` and its picker the kotlinx `LocalDatePickerDialog` with the child records' labels
+(where it opened the child records' `java.time` `DatePickerDialog`). `AuthViewModelTest` and
+`AuthErrorTest` stay in the app (MockK, androidx.credentials, Firebase): the first hands the ViewModel
+`AndroidCredentialSignIn` over the mocked authenticator and `AndroidAuthErrors`, so every case still
+drives the Android halves. The app's `viewModelModule` is gone with its last ViewModel.
+**Then Home's screens, the month in review's and the stickers' shelf** (slice 11g):
+`presentation/home/`'s `HomeScreen` (`HandoverHero`, `StatTiles` and `TimelineRow` public for the
+screenshots), `AwaitingDialogs`, `ChildrenTodayLines` and `HomeAskQueue` (its test in `commonTest`,
+two names without commas), `review/MonthReviewScreen.kt` and `stickers/MyStickersScreen.kt`, packages
+unchanged. Their dates go through `ReaderDateText` (`date`, `month` and `dateWithTime`, what
+`localizedDate` and `shortTime` wrote over the same days), the review's amounts through
+`ReaderMoneyText.amount(value, currency)` (`currencyFormat(currency).format(value)` on Android), the
+summary's language through Compose's `Locale.current.toLanguageTag()` (the configuration's first
+locale before; the owner's rule makes them one), and the review's month title is capitalised with
+`Char.uppercase()`, as the calendar header's is (the five languages' month names capitalise alike
+with and without a locale). An activity's feed label is a `StringResource`. The previews are the
+app's `home/HomePreviews.kt`.
+**Then the family's records** (slice 11g): `presentation/childinfo/` (`ChildInfoScreen`,
+`ChildDetailScreen`, `AddEditChildInfoScreen` and `components/`), `pets/` (`PetsScreen`,
+`AddEditPetScreen`), `contacts/ContactsScreen.kt` and `guests/GuestAcceptScreen.kt`, with
+`common/`'s `MedicalProfileEditor`, `VaccinationListEditor`, `BloodTypeLabel` and `PetSpeciesLabel`
+(`labelRes()` a `StringResource`; `BloodTypeLabelTest` in `commonTest`). The child and pet forms'
+`DatePickerDialog` (`childinfo/components/`) takes and gives a kotlinx-datetime `LocalDateTime`,
+today in the system zone where none is set, so the forms no longer convert; its `androidTest`
+(`LocalDatePickerDialogTest`) converts its `java.time` fixtures at the call, as `PickerDatesTest`
+does. The photo pickers go through `FilePicker.rememberImagePicker` (the same `PickVisualMedia`,
+images only), the strip's add button only where `FilePicker.available`; a new child's or pet's id is a
+`Uuid`; the medium dates `readerMediumDate`, the form's date of birth `ReaderDateText.date(…,
+"yMMMd")`, and a grant's end the new `readerLongDateAt(millis)` (`readerLongDate`, `FormatStyle.LONG`
+on Android, of the instant's day in the system zone). The contacts dial through `OpenUrl.dial`
+(`ACTION_DIAL`, as before, and the same snackbar when there is no dialler). A guest link is shared
+through `ShareSheet` (its message worded through `rememberUiTextResolver` at the tap), and the guest
+sheet offers no Share button where there is none (`GuestInviteSheet`'s `onShare` is null then); the
+app's `guestShareIntent` is gone.
+**Then the vault, the export and the journal** (slice 11g): `presentation/documents/`
+(`FamilyDocumentsScreen`, `FamilyDocumentsContent`), `export/ExportScreen.kt` and `journal/`
+(`JournalListScreen`, `JournalEditorScreen`). The vault's document picker and camera go through
+`FilePicker.rememberDocumentPicker` (`SharedFilePolicy.CONTENT_TYPES`) and
+`CameraCapture.rememberCapture(CaptureTarget.SHARED_FILE)` (the same `OpenDocument`, `TakePicture`
+into `cache/shared_files/capture/` and CAMERA permission the screen built), each button drawn only
+where its capability is available (the bar not at all when neither is), a missing camera app the
+same "camera unavailable" message; a document opens through `OpenUrl.openFile`, its size through
+`FileDetails.formatSize`, its day through `readerMediumDate`, and a category's label is a
+`StringResource`. The export's range is kotlinx-datetime throughout (no conversion at the pickers),
+and a finished file goes to `ShareSheet.shareFile`, whose Android half builds the intent the screen
+built (`fileShareIntent` in `AndroidPlatform.kt`; the app keeps `recordShareIntent(file)` over it in
+`presentation/export/RecordShareIntent.kt` for `ExportFileWriterTest`). **The export offers its
+formats only where the phone draws and shares the file** (`RecordFileWriter.available`, new, true
+by default; the iPhone's `NoRecordFiles` says false; `ExportViewModel.exportAvailable`, and
+`ShareSheet.available`), the carried note's hiding. The contacts screen's call button and tappable
+rows likewise appear only where `OpenUrl.available` (slice 11g review, I1). **Since 11e/11g a camera
+button (the receipt's, the vault's) is drawn only where `CameraCapture.available`**, which on Android
+asks whether the phone has a camera: every CI and UI-tour emulator boots with `-camera-back none`,
+so the tour's images show neither, and `docs/DEVICE-CHECKLIST.md` §3.34 asks for them on a phone.
+**Then the people outside the pair, and the plan** (slice 11g): `presentation/friends/` (the
+Friends screen, a friend's card and profile, the friend's calendar, the comparison table, the event
+details, the invite sheet and `GuestDurationText`, whose `GuestDurationTextTest` is in `commonTest`),
+`professionals/` (the Professionals screen, their calendar and plan, the grant dialog, the invite
+sheet and `ProfessionalText`) and `parentingplan/` (`ParentingPlanScreen`, `PlanQuestionSheet`).
+`FriendAgendaDay`, `FriendComparisonTable`, `FriendEventDetails` and `FriendInviteContent` are public
+for the screenshots; every label helper is a `StringResource`. An agenda day's date is
+`readerFullDate`, an event's time `ReaderDateText.time`, an access end the new `readerMediumDateAt`
+(`FormatStyle.MEDIUM` of the instant's day in the system zone, beside `readerLongDateAt` in
+`utils/ReaderInstantDates.kt`, a file of its own: a top-level function in `ReaderDateText.kt` would
+clash with the Android actuals' `ReaderDateTextKt` class), a grant's
+"now" `Clock.System.now().toEpochMilliseconds()`. A friend's and a professional's code are shared
+through `ShareSheet` (worded through `rememberUiTextResolver` at the tap), and neither sheet offers
+Share where there is none (`FriendInviteContent`'s `onShare` is null then); `FriendsScreenTest`
+(Robolectric, in the app) composes the screen with the sheet closed, so it reads no platform local.
+**Then the school import** (slice 11g): `presentation/school/`'s `ConnectSchoolScreen` and
+`SchoolImportScreen`. Back goes through Compose Multiplatform's `BackHandler` (opted in as the
+onboarding's is), and the last import's time through `ReaderDateText.dateWithTime` of the instant in
+the system zone. **Task 11 is done with it**: what is left under `app/.../presentation/` is
+`MainActivity`, `widget/`, ~~`navigation/` (Task 12)~~ (moved, below), the previews and the Android
+halves of the platform interfaces.
+**Then the navigation, and the thin shell** (Task 12). `presentation/navigation/` moved whole to
+`:shared-ui`'s `commonMain` (`NavGraph.kt`, `BottomNavDestination.kt` with `NavigationLayout` and
+`navigateToTab`, `ReadablePane.kt`, and `Screen`, split out of `NavGraph.kt` into `Screen.kt`), packages
+unchanged, on JetBrains' multiplatform navigation-compose 2.9.2 (the toolchain line). Design items 5,
+11, 14 and 19 and the UX overhaul's item 1 are the same code, moved: the `NavHost`'s inset line, its
+default push, the tabs' fade-through, `pane()`, the bar from 600 dp to the rail, `topLevelRoutes` and
+`navigateToTab`'s back-stack policy. The tabs' labels are `Res.string` (`labelRes` a
+`StringResource`; the androidTest walks read it as the app's `R.string` of the same key), the bar or
+rail is decided from the common `windowWidthDp()`, and a route argument is read from the
+multiplatform `SavedState` through `NavGraph.kt`'s `stringArgument`, `intArgument` and
+`booleanArgument`, which answer what `Bundle` did. **An id or a text in a route is encoded by
+`domain/text/UriComponent`** (`:shared`), which writes what `android.net.Uri.encode` writes, because
+a route a pending deep link carries across a process death is written by one build and read by the
+next: `UriComponentParityTest` (the app's Robolectric tests) holds it to `Uri.encode`.
+`PushDestination` moved to `:shared-data`'s `data/remote/firebase/` (package unchanged), because the
+graph opens it; `PushChannel` and `PushRouting` stay in the app. **The shell's one call is
+`CoPlanlyApp(launch: AppLaunch, darkTheme: Boolean?)`** (`presentation/CoPlanlyApp.kt`): the theme,
+the navigation controller, the app-wide locals (the palette, the family view, the app messages, the
+photo viewer's uid from `SignedInUser`) and `NavGraph`. It is composed inside the shell's providers —
+`ProvideAndroidPlatform` with `LocalCredentialSignIn` and `LocalGoogleCalendarSignIn` on Android,
+`ProvideIosShell` on the iPhone — and the launch state (`AppLaunch`: the invite codes, the chat link
+and the push's screen, no defaults) travels beside `PlatformServices`, not inside it, since the
+screenshot frame and `QRScannerActivity` build the platform and launch nothing. `MainActivity`
+keeps the AppCompat requirement, the splash (`startDestinationFor`, public for it), `readLaunchIntent`
+— which still switches the family **before** it arms any link (item 15) — the Google sign-in
+launcher and the credential sheets, and the theme preference it passes in. The ViewModels both read
+(`SyncViewModel`, the splash's two) are one instance: `by viewModel()` and `koinViewModel()` resolve
+the same key in the activity's store (`ViewModelScopeTest` holds it, both ways round, for the palette's
+and the family view's; `SyncViewModel` resolves the same way, untested by name). **`ShellBoundaryTest`** (the app's unit
+tests) fails when a file under `app/src/main/java/` declares a `@Composable` outside its short
+allow-list (the platform's Android halves, the dictation language, the QR scanner's own screen, the
+widget's Glance content and the previews, each with its reason) or a `ViewModel` subclass at all:
+a screen or a ViewModel written in the app is one the iPhone will never have.
+**A Robolectric test runs `RobolectricTestApplication`**
+(`app/src/test/.../testing/`, `@Config(application = …)`): Robolectric installs no content
+provider from the manifest, so it hands Compose Multiplatform's resource reader the context its
+`AndroidContextProvider` hands it on a device; without it every `stringResource(Res.string.…)` a
+test composes throws "Android context is not initialized".
+**`UiText` followed in slice 9c** (`UiText.kt`, `ErrorText.kt` and `UiState.kt`, the last on
+`kotlinx.io.IOException`, which is `java.io.IOException` on Android): its cases hold Compose
+Multiplatform's `StringResource` and `PluralStringResource` (`UiText.Res(Res.string.x, args)`,
+`UiText.Plural(Res.plurals.x, count, args)`), `Date` a kotlinx-datetime `LocalDate` and `Weekday`
+its `DayOfWeek`, worded by `rememberReaderDates` (an `expect`: `java.time` in the configuration's
+first locale on Android, as before; Foundation on the iPhone). `asString()` reads through Compose
+Multiplatform, and a snackbar or a Toast resolves through `rememberUiTextResolver()` (see CQ-14 in
+Known issues). Every ViewModel, state class and screen that builds a `UiText` names `Res`, with the
+same keys and arguments; `sharedFileError` takes a `StringResource` fallback (in `:shared-ui`'s
+`SharedFileErrors.kt` since Task 10).
+`UiTextParityTest` (`app/src/test/.../resources/`) holds both resolutions to what Android's resources
+made of the same samples, in the five languages.
+**The shared state and the ViewModels follow in Task 10**, slice by slice (10a: the shared state,
+`common/`'s ViewModels and chat; then calendar and event, custody and requests, family and expenses,
+settings to sync, the rest), each moved with `git mv` to `shared-ui/src/commonMain/`, package
+unchanged, so a screen still in the app imports nothing new. Its test moves with it: to
+`shared-ui/src/commonTest/` (on `kotlin.test`) when it uses no JVM-only library, else to
+`shared-ui/src/androidHostTest/` (MockK, a `java.time` fixture). Its `viewModelOf` leaves the app's
+`viewModelModule` for `:shared-ui`'s `uiModules` (`di/koin/UiModules.kt`, one module per feature,
+like `dataModules`), with `platformUiModule` beside it (an `expect`: nothing on Android, where the
+app's modules bind what the ViewModels take from the platform; on the iPhone, stand-ins that answer
+"not on this phone yet"). Slice 10a moved **the shared state** first, because nearly every ViewModel
+reads it: `ParentsSource` (its one log line through the data layer's `logger`), `FamilyKindSource`,
+`FamilyMembersSource`, `CoParentOnScreen`, `Loadable`, `FormDraft`, `NamedParent`, `ParentNames`
+(`rememberParentNames` reads its three fallbacks through Compose Multiplatform's `stringResource`),
+`ParentLabels` and `PhotoOwner` (with `LocalPhotoViewerUid`), whose three sources are `single`s in
+`uiModules`' `commonUiModule` now. Then **`common/`'s ViewModels**, the four the whole tree shares
+from the activity's level: `ConnectivityViewModel` (on the data layer's `Connectivity`, whose
+`online` is `NetworkMonitor`'s `networkStatus` held as a state, in place of `NetworkMonitor`
+itself), `FamilySwitcherViewModel`, `FamilyViewViewModel` and `ParentPaletteViewModel`, in
+`commonUiModule` too. A moved test that builds a `ParentsSource` uses `androidHostTest`'s copy of
+`testParentsSource`; the app keeps its own for the tests still there. Then **chat**: `ChatViewModel`
+(its drafts in the data layer's `SecurePreferences`, its "now" from `wallClockNow()` and
+`Clock.System`, a message's id from `kotlin.uuid.Uuid`), `SendHold`, `ChatAttachmentViewModel` (the
+uid from `SignedInUser`, its thumbnails and `OpenedFile` a kotlinx-io `Path`, which `ChatAttachments`
+and `FamilyDocumentsScreen` open as `File(path.toString())`), `ChatEventCardViewModel`,
+`ChatSearchViewModel`, `DictationViewModel`, `ReplySuggestionViewModel` with `presentation/ai/`'s
+`AiAssistSession`, and `SettleUpPaymentViewModel` (out of `SettleUpPayment.kt`, whose ZXing and share
+code stays with the screen), in `chatUiModule`; `sharedFileError` left `SharedFileViewer.kt` for
+`SharedFileErrors.kt`, and `data/ai/AiConsentManager` moved to `:shared-data` (`aiDataModule`).
+On the iPhone `platformUiModule` binds the chat's two platform seams the data layer does not: no
+dictation (`NoSpeechDictation`, unavailable) and no AI assist (`AiAssistAvailability(false)`,
+`NoAiAssist` answering `Disabled`), in `di/koin/IosUiUnavailable.kt`. `coParentOnScreen`,
+`observeSignedInUser` and `projectedCoParentUid` were public behind `@InternalSharedApi` while
+ViewModels in the app called them, and are `internal` again since slice 10f moved the last
+(`ParentingPlanViewModel`). Slice 10b moved **the calendar**: `CalendarViewModel` (its
+filters and the dismissed custody change in `SecurePreferences`,
+under the same keys; its displayed month, query anchor, selection and custody lookup kotlinx-datetime
+`YearMonth`s and `LocalDate`s, today from `Clock.System.todayIn` in the system zone, a swap's group id
+from `Uuid` and its time `IsoText.dateTimeShortest(wallClockNow())`, the text
+`LocalDateTime.now().toString()` wrote) with the pure helpers it reads — `CalendarViewMode.kt`
+(`CalendarViewMode`, `ParentFilter`), `CalendarSelection` and `CustodyHelper`, on kotlinx-datetime too
+— in `calendarUiModule`. `CalendarScreen` converts at its edge: it reads the month and the selected
+day through `collectAsJavaMonth`/`collectAsJavaDate` (a `derivedStateOf` over `collectAsState`, so a
+click handler reads the value the ViewModel holds now, as the delegated `collectAsState` did), calls
+back with `toKotlinYearMonth()`/`toKotlinLocalDate()`, and `MonthView` and `DayWeekView` hand
+`CustodyHelper` their `java.time` day as `toKotlinLocalDate()` (`MiniMonth` did too, until 10c gave
+it the model's kotlinx days). The grid's other helpers
+(`queryRangeFor`, `DayCellFills`, `OpeningHour`, `SwapSelection`, …) stay with the screens, because
+no ViewModel reads them (`MiniMonthModel` moved with the requests in 10c, because
+`ChangeRequestViewModel` builds the inbox's mini months, and `eventsByDay` with it, because
+`MiniMonthModel` reads it). `CalendarSelectionTest` runs in `commonTest`; the two
+ViewModel tests (MockK) in `androidHostTest`, where they keep `java.time` as their oracle. Then **the
+events**: `EventViewModel` (the new-event draft and the custom event types in `SecurePreferences`,
+under the same keys; the draft written on `Dispatchers.IO`, the common `kotlinx.coroutines.IO`;
+every date and time was kotlinx-datetime already) with `EventDraft`, `EventUiState` and
+`EventOperation` in its file, and `EventOwnerViewModel` (`custodyParentOn` takes a kotlinx-datetime
+day, which `AddEditEventScreen` converts with `toKotlinLocalDate()`), in `eventUiModule`. `EventDraft`
+is a stored model, so `:shared-ui` applies the serialization plugin and `check-invariants.js`' checks
+4 and 5 read `shared-ui/` too; the R8 probe names it as before. Its photo goes through the domain's
+`RecordPhotoStorage`, which the iPhone's `platformDataModule` stands in for with
+`NoRecordPhotoStorage` (a data seam, beside `NoStorageBucket`) (every upload and delete an `IOException`: nothing stored, nothing dropped).
+`EventViewModelTest` keeps Gson as the oracle for a draft an older build wrote (Gson 2.11.0 in
+`:shared-ui`'s `androidHostTest`), and `EventOwnerViewModelTest`'s check of the form's
+`autoEventOwner` moved to the app's `AddEditEventScreenTest`, where that function is.
+Slice 10c moved **custody**: `CustodySetupViewModel`, which onboarding's schedule step shares (a new
+schedule's Monday from `Clock.System.todayIn` in the system zone, the first schedule's id from
+`Uuid`, its log lines through `logger`), with the form helpers it reads — `ChildScheduleForm.kt`
+(`toPatternModel` public, because `CustodySetupScreen`'s preview calls it; the rest `internal`),
+`ChildScope` and `ContactWindowDraft`; `SeasonalScheduleViewModel` (today from `Clock.System.todayIn`,
+a new layer's id from `Uuid`) with `SeasonalLayerDraft`; `CustodyConflictViewModel` from `pairing/`,
+with `PendingCustodyConflict` and `CustodyConflictResolver`, which `PairingViewModel` still calls
+from the app; and `parentingplan/PlanReferenceSource`, which both editors and the requests inbox
+read. They are in `custodyUiModule`, the pending conflict and the plan's source `single`s as they were
+in `presentationModule`. The two editors take the plan question they were opened with through
+`SavedStateHandle`, so `:shared-ui` declares JetBrains' `lifecycle-viewmodel-savedstate` (`api`). Their
+public API was kotlinx-datetime already, so no screen converts anything. `CandidateModelTest`,
+`ChildScheduleFormTest`, `ContactWindowDraftTest` and `CustodyConflictResolverTest` run in
+`commonTest` (seven names lost a comma for Kotlin/Native); the three ViewModel tests (MockK) in
+`androidHostTest`, where `java.time` stays their oracle for today.
+Then **the requests**: `ChangeRequestViewModel` (the inbox; a swap answer's and withdrawal's time
+`IsoText.dateTimeShortest(wallClockNow())`, the text `LocalDateTime.now().toString()` wrote, a
+re-offer's group id from `Uuid`, a proposal's diff anchored on `Clock.System.todayIn`, a
+professional grant's status read at `Clock.System.now()`), `RequestChangeViewModel` (a request's id
+from `Uuid`) and `RequestsSource` with `RequestsState` (today from `Clock.System.todayIn`, the
+agreements placed at `Clock.System.now()`, both read per emission as before), in `requestsUiModule`,
+`RequestsSource` a `factory` as it was in `presentationModule`. The inbox builds the mini months, so
+`calendar/MiniMonthModel.kt` (`MiniMonthModel`, `MiniMonthDot`, `MiniMonthMark`, `MiniMonthGrid`,
+`swapMiniMonths`) moved with it on kotlinx-datetime (`YearMonth`, `LocalDate`; `firstDay`/`lastDay`
+for `atDay(1)`/`atEndOfMonth()`), and with it `calendar/EventsByDay.kt` (`eventsByDay`, public
+because `CalendarScreen` builds the grid's index with it, and `eventsOn`), whose days are kotlinx's
+too. The screens convert at their edge: `MiniMonth` draws the kotlinx grid (`date.day`,
+`date.yearMonth`, `toJavaYearMonth()`/`toJavaLocalDate()` to format, today compared through
+`toKotlinLocalDate()`), `ProposedSchedulePreview` and `SchedulePreviewMonth` hand it
+`YearMonth.from(from).toKotlinYearMonth()` and the model's own kotlinx lookup, `CalendarScreen`'s
+swap sheet keys its days by the kotlinx days `SwapSides` holds and looks custody up through
+`toJavaLocalDate()`, and `CalendarScreen` re-keys `eventsByDay`'s index to `java.time` once per
+event list, so `MonthView` and the agenda card read the map they did. The screenshot fixtures gained
+`ScreenshotFixtures.custodyOn` (a kotlinx day). `MiniMonthModelTest` and `SwapMiniMonthsTest` run in
+`commonTest` on kotlinx-datetime literals; `EventsByDayTest` and the four request tests (MockK) in
+`androidHostTest`, converting at the edge where `java.time` stays their oracle.
+Slice 10d moved **the family**: `FamilyViewModel` (the Family tab's hub), `EarlierFamiliesViewModel`
+with the pure `EarlierFamilies.kt` (`EarlierFamily.lastDay` a kotlinx-datetime `LocalDate`, which
+`EarlierFamiliesScreen` formats through `utils/LocalizedDates.kt`'s kotlinx `format` overload, unchanged)
+and `UnassignedRecordsViewModel` (its log line through `logger`), with what the hub reads of Home:
+`home/MonthMoney.kt`, and `CurrencyAmount`, `MonthSpend` and `MonthSpendDependencies`, split out of
+`HomeViewModel.kt` into `home/MonthSpend.kt` (Home's ViewModel reads them from
+there). They are in `familyUiModule`, `MonthSpendDependencies` a `factory` as it was in
+`presentationModule`. `EarlierFamiliesTest` and `MonthMoneyTest` run in `commonTest` (kotlinx-datetime
+literals; four names lost a comma), `FamilyViewModelTest` and `UnassignedRecordsViewModelTest` (MockK)
+in `androidHostTest`, beside a copy of the app's `testFamilyViewSource`.
+Then **expenses**: `ExpenseViewModel` (a new expense's id from `Uuid`, its log lines — the
+`CoPlanlyUpload` and `CoPlanlyReceiptScan` tags included — through `logger`; `selectedMonth` and
+`MonthOfExpenses.month` kotlinx-datetime `YearMonth`s, this month from `Clock.System.todayIn` in the
+system zone, what `YearMonth.now()` read, and an expense's month `date.yearMonth`; every amount, share,
+`splitBasisPoints` snapshot and `splitBetween` decided as before) and `SettleUpViewModel` with
+`SettleUpAsk`, `PendingSettleUp` (its month a kotlinx `YearMonth` too) and `SettleUpSend`, split out of
+`SettleUpDialog.kt`, whose dialog stays with the screens, in `expensesUiModule`; the member filter's
+`toggling` left `FamilyMemberChips.kt` for `common/MemberToggling.kt`. The screens convert at their
+edge: `ExpenseScreen` hands `monthPagingTransition` and its month label `toJavaYearMonth()`, and
+the payments' calls and `PendingSettleUp` take the month as it is (they converted it with
+`toKotlinYearMonth()` before); `SettleUpDialog` formats `pending.month.toJavaYearMonth()`. The
+receipt's on-device text goes through the domain's `ReceiptTextRecognizer`, which the iPhone's
+`platformDataModule` stands in for with `NoReceiptText` (every scan an `IOException`, so the form
+shows its failed-scan message, "Couldn't read the receipt" (`ReceiptScanState.Failed`), and keeps
+the photo; nothing is sent anywhere, item 10). The four `ExpenseViewModel` tests (MockK) run in
+`androidHostTest`, unchanged but for their location.
+Then **payments and child support**: `PaymentsViewModel` and `SupportViewModel`, in `paymentsUiModule`
+and `supportUiModule`, on `SignedInUser` for the uid where they took `FirebaseAuthService`
+(`getCurrentUid()`, what `getCurrentUser()?.uid` read). The support screen's reminder job goes through
+`data/support/SupportReminderScheduler`, which moved to `:shared-data` out of the app's
+`SupportReminderWorker.kt` (the app's WorkManager scheduler answers it; the iPhone's
+`platformDataModule` binds `NoSupportReminderJob`, which schedules nothing, while the choice is kept in
+the sealed store). `SupportViewModel.parseAmount` reads a typed amount through
+`DecimalText.parsePositiveAmount` (`domain/money/`, new), which answers what `toBigDecimalOrNull()`
+with `signum() > 0 && scale() <= 2` and the app's `MinorUnits.fromDecimal` answered —
+`DecimalTextParityTest` holds it to `BigDecimal` over a corpus and 10 000 random texts; the grammar
+`DecimalText`'s readers share is the file-private `DecimalGrammar`, so the object stays within
+detekt's function count. `SupportAmountTest` runs in `commonTest`.
+Slice 10e moved **settings**: `SettingsViewModel` and `CalendarFeedViewModel`, in
+`settingsUiModule`. Settings' push switch goes through `data/remote/firebase/PushRegistration` (new
+in `:shared-data`: `isPushEnabled`, `setPushEnabled` and the sign-out's `unregisterToken`, which the
+app's `FcmService` answers beside `PushDevice`), the account's erasure through
+`data/session/AccountDeletion` (new, a `fun interface` the app's `AccountDeletionService` answers,
+so the server-first, wipe-after order is the service's own, unchanged), and its two product events
+through `Analytics`, as `data/platform/AnalyticsEvents.kt`'s `logNotificationsToggled` and
+`logThemeChanged`, the event names and parameters `AnalyticsManager`'s functions of those names
+wrote (they left it). The iPhone's `platformDataModule` binds `NoPush` (one object for `PushDevice`
+and `PushRegistration`, as `FcmService` is on Android, so phase 3 replaces them together: the switch
+reads off, turning it on fails, nothing to detach) and `NoAccountDeletion` (it fails and wipes
+nothing).
+Both ViewModel tests (MockK) run in `androidHostTest`, the push mock now a `PushRegistration`. Then
+**pairing and onboarding**: `PairingViewModel` (in `pairingUiModule`; its log lines through
+`logger`, the accepted invitation's event through `Analytics` as `logInvitationAccepted`, which left
+`AnalyticsManager` too) with `PairingErrorText.kt`, whose `pairingMessageRes` now answers a Compose
+Multiplatform `StringResource`, so `PairingFormState`'s three messages are `StringResource`s and so
+are the friend and professional ViewModels' `errorRes` and `FriendViewModel.saveError`, which read
+it from the app (their screens read them through Compose Multiplatform's `stringResource`;
+`PairingScreen`'s snackbar through `rememberUiTextResolver`). The invitation's QR code comes from
+`presentation/pairing/InviteQrCodes` (new in `:shared-ui`, a `fun interface` taking the code and
+answering a Compose `ImageBitmap`), which the app's `AndroidInviteQrCodes` answers with
+`QRCodeService` over `pairingLinkFor` — the share sheet's link, with `BuildConfig.PAIRING_WEB_LINK`
+staying in the app (item 37) — so `PairingFormState.qrBitmap` is an `ImageBitmap` and
+`InviteCodeCard` draws it as it is; `AndroidInviteQrCodesTest` holds the link. `OnboardingViewModel`
+(in `onboardingUiModule`) with `OnboardingStep`: its log lines through `logger`, and the finish mark
+`IsoText.dateTimeShortest(wallClockNow())`, the text `LocalDateTime.now().toString()` wrote. On the
+iPhone `platformUiModule` binds `NoInviteQrCodes` (no QR drawn). `OnboardingStepTest` runs in
+`commonTest` (one name lost its commas); `PairingViewModelTest` and `OnboardingViewModelTest`
+(MockK) in `androidHostTest`, the first verifying `InviteQrCodes.forInvite` and `Analytics.log`
+where it verified `QRCodeService` and `AnalyticsManager`, and without its dead `ValidationUtils`
+mock. Then **the session and the profile**: `AuthStateViewModel` (in `sessionUiModule`; the start
+destination's one source and sign-out) on three seams — `data/remote/firebase/AuthSession` (new:
+`awaitSignedInUid`, `waitForAuthReady()?.uid` with its five-second wait, and `signOutCompletely`;
+the app's `FirebaseAuthService` answers it beside `SignedInUser`), `PushRegistration`'s
+`unregisterToken` and `data/session/AccountTraces` (new, a `fun interface`, `clearAfterSignOut`; the
+app's `DeviceTraces` answers it) — each one call of the sign-out, so its order (the token, the
+school tokens, the event reminders, the request clocks' steps, the files, then the session's end) is
+still the ViewModel's own, unchanged; and `ProfileViewModel` (in `profileUiModule`; its log line
+through `logger`, a save's time `Clock.System.now().toEpochMilliseconds()`, what
+`System.currentTimeMillis()` read). The iPhone's `platformDataModule` binds `NoAuthSession` (nobody
+signed in; ending a session is nothing to do) and `NoAccountTraces` (nothing kept outside the
+database yet). Both tests (MockK) run in `androidHostTest`, the session's mock answering a uid where
+it answered a `FirebaseUser`. **Two of the slice's ViewModels stay in the app, on purpose**, until
+Task 11 gives the screens their platform interfaces: `AuthViewModel` hands Credential Manager the
+`Activity` that hosts its sheets on every sign-in call, and maps `androidx.credentials` and Firebase
+Auth exception types into `AuthError`; `SyncViewModel` builds Google Sign-In's `Intent` and reads
+its `Task<GoogleSignInAccount>` result, an activity-result flow, through `CredentialManagerService`.
+Each moves once its sign-in is behind a platform interface the screen provides (plan, Task 11's
+carried notes; both did in slice 11f: `SyncViewModel` behind `GoogleCalendarSignIn` and
+`GoogleCalendarAccount`, `AuthViewModel` behind `CredentialSignIn`, `AccountSignIn` and
+`AuthErrors`, below).
+Slice 10f moves **the rest**. Its first group is **Home, the month in review, stickers and the
+consents**. `HomeViewModel` (with `HomeIdentityDependencies`, a `factory`) and
+`PutOffAsksViewModel` are in `homeUiModule`, with what Home's ViewModel reads and nothing Android
+holds: `HomeFeed.kt`, `ChildrenToday.kt` and `RequestsRow.kt` (`RequestsRowText.parts` and
+`relativeDay` take a kotlinx-datetime day, which `HomeScreen` converts from `rememberToday()` with
+`toKotlinLocalDate()`; the days between are `daysUntil`, what `ChronoUnit.DAYS.between` counted).
+Home's today is `Clock.System.todayIn` in the system zone and its now `wallClockNow()`, the week's
+end `plus(HomeWeek.DAYS, DateTimeUnit.DAY)` (`domain/time/WallClock.kt`, java.time's `plusDays`);
+its log line goes through `logger`, and "Later" is kept in `SecurePreferences` under the same key.
+`HomeAskQueue`, `SettleUpPosition` and the composables stay with the screen (`SettleUpPosition` moved
+in slice 11e). `MonthReviewViewModel`
+(with `MonthReviewSources` and `MonthReviewAssist`, `factory`s) is in `reviewUiModule`;
+`StickersViewModel` in `stickersUiModule`; `HealthConsentViewModel` (its log lines through
+`logger`) and `TelemetryConsentViewModel` in `consentUiModule`; `AiConsentViewModel` in
+`aiUiModule`. `data/consent/HealthConsentManager` moved to `:shared-data` with the consent's
+ViewModel (`consentDataModule`; a consent's time `Clock.System.now().toEpochMilliseconds()`), its
+test to `shared-data`'s `androidHostTest`. No new seam. `HomeFeedTest` and `ChildrenTodayTest` run
+in `commonTest` (six names lost a comma); the ViewModels' tests and `RequestsRowTextTest` (its
+`java.time` fixture converted at the call) in `androidHostTest`. The second group is **the family's
+records**: `ChildInfoViewModel` (with `ChildFields`) in `childInfoUiModule`, `PetsViewModel` (with
+`PetFields`) in `petsUiModule`, `ContactsViewModel`, `FamilyDocumentsViewModel` and the journal's two
+ViewModels, each in its module. The child's and pet's ViewModels take `SignedInUser`, `Analytics`
+and `CrashReporter` where they took `FirebaseAuthService`, `AnalyticsManager` and
+`CrashlyticsManager` (parameter names kept): the six record events are
+`data/platform/AnalyticsEvents.kt`'s `logChildInfoAdded` and its siblings, with the names
+`AnalyticsManager`'s functions logged (they left it), and a failure with its identifiers goes through
+`CrashReporter.recordWithContext` (new, by default `record`; `CrashlyticsManager` answers it with
+`recordExceptionWithContext`, so the custom keys are set as before). `GuestInviteState.errorRes`
+is a `StringResource` (`GuestInviteSheet` reads it through Compose Multiplatform's
+`stringResource`), and `ChildFields`, `PetFields`, `childForm` and `petForm` were made public for
+the editors then still in the app (they moved in slice 11g; narrowing these back is carried to
+phase 3, ROADMAP MON-24). `FamilyDocumentsViewModel` asks `SignedInUser` for the uid. The
+journal editor's day (`JournalEditorState.entryDate`, `seededDate`, `setDate`) is a kotlinx-datetime
+`LocalDate`, which `JournalEditorScreen` converted for the date picker until it opened the kotlinx
+`LocalDatePickerDialog` directly; a new entry's id is a `Uuid`
+and its times `Clock.System`. The six tests (MockK) run in `androidHostTest`, the pet test verifying
+`Analytics.log("pet_updated", …)` where it verified `logPetUpdated()`. The third group is **the
+people outside the pair, and the plan**: `FriendViewModel` and `FriendCalendarViewModel`
+(`friendsUiModule`), `GuestAcceptViewModel` (`guestsUiModule`), `ProfessionalsViewModel`,
+`ProfessionalCalendarViewModel` and `ProfessionalPlanViewModel` (`professionalsUiModule`) with
+`professionals/ProfessionalAgenda.kt`, and `ParentingPlanViewModel` (`parentingPlanUiModule`).
+`ProfessionalDay.date`, the two calendars' window and `ProfessionalCalendarViewModel.start` are
+kotlinx-datetime days (today `Clock.System.todayIn`, the window moved with `plus`/`minus` in
+`DateTimeUnit.DAY`), which the two calendar screens convert to format (`toJavaLocalDate()`); a
+grant's "now" is `Clock.System.now().toEpochMilliseconds()`. `GuestAcceptUiState.errorRes` and
+`ProfessionalsViewModel.actionError` are `StringResource`s (`GuestAcceptScreen` reads the first
+through Compose Multiplatform's `stringResource`, `ProfessionalsScreen`'s snackbar the second through
+`rememberUiTextResolver`). `ParentingPlanViewModel` reports through `CrashReporter` (`record`) and
+logs through `logger`. It was the last ViewModel in the app to call `coParentOnScreen`,
+`observeSignedInUser` and `projectedCoParentUid`, so they are `internal` again and the seven files
+in `:shared-ui` that opted in to `@InternalSharedApi` for them no longer do. The seven tests (MockK)
+run in `androidHostTest`; the app's copies of `testFamilyViewSource` and `testFamilyMembersSource`
+are gone with their last users (the app keeps `testParentsSource` for `FriendsScreenTest`). The
+fourth group is **the export and the school import**: `ExportViewModel` (`exportUiModule`) and
+`ConnectSchoolViewModel` with `SchoolImportViewModel` (`schoolUiModule`). The export's file is
+rendered and saved through `data/export/RecordFileWriter` (new in `:shared-data`: `render` and
+`save`, the split MON-16 needs), which the app's `ExportFileWriter` answers with `PdfDocument` and its
+`FileProvider`, as before; `ExportedFile` moved with the interface and holds the `content://` URI as
+text, which the share sheet and `ExportFileWriterTest` read back through the app's
+`ExportedFile.contentUri` (`Uri.parse`, the same `Uri`). The export's range (`ExportUiState.from`,
+`to`, `setFrom`, `setTo`) is kotlinx-datetime, which `ExportScreen` converted for its pickers until
+slice 11g (no conversion since); the
+zone `TimeZone.currentSystemDefault()`, today `Clock.System.todayIn`, the default start three months
+back with `minus(3, DateTimeUnit.MONTH)` (java.time's `minusMonths`, the day clamped the same way).
+`ConnectSchoolViewModel`'s town filter folds case with `lowercase()`, what `lowercase(Locale.ROOT)`
+did. The iPhone's `platformDataModule` binds `NoRecordFiles` (it says `available` false, so the
+screen offers no format since slice 11g; rendering would fail and save nothing; the Family tab's,
+Earlier families' and the chat's ways into the export are still drawn there, carried to phase 3 in
+ROADMAP MON-24) and the school directory over its own client, as it binds the
+Bakaláři client. The three tests (MockK) run in `androidHostTest`. **Task 10 is done but for
+`AuthViewModel` and `SyncViewModel`**, which stay in the app until Task 11 (above); the app's
+`viewModelModule` holds those two alone (both moved in slice 11f, and `viewModelModule` with them).
+
+**What a moved screen asks of the phone goes through `presentation/platform/`** (MON-24 phase 2,
+Task 11, slice 11a). One interface per capability in `:shared-ui`'s `commonMain` — `ShareSheet`,
+`FilePicker`, `CameraCapture`, `QrScanner`, `Dictation`, `PermissionRequester`, `OpenUrl` (links,
+a shared file in a viewer, the dialler, a mail draft, the app's settings), `SensitiveClipboard`,
+`AppBuildValues` (what screens read from `BuildConfig`), `FileDetails` (a picked file's name and
+size, a size in the reader's words; slice 11b), `QrCodes` (a QR matrix from text, and the code
+shared as a picture: ZXing and a PNG through the file provider on Android, the settle-up card's
+payment code; slice 11b) and `AppLanguages` (the language picker's choice and its applying:
+AppCompat's per-app locale on Android, `AndroidAppLanguages`, with `SystemDefaultRelaunch` below 13;
+none on the iPhone, whose own Settings app sets it; slice 11f) — each with `available`, so a screen draws
+no affordance the phone cannot keep (design item 8). They reach the screens through one
+`staticCompositionLocalOf` each, provided together by `ProvidePlatform(PlatformServices(…))`, whose
+constructor has no defaults, so a shell cannot leave one out. The app's `ProvideAndroidPlatform`
+(`app/…/presentation/platform/AndroidPlatform.kt`) builds them from the Activity with the Android code
+the screens called (`Intent.createChooser`, the activity-result contracts, `QRScannerActivity`,
+`OnDeviceSpeechDictation`'s rule, `copySensitive`, `openSharedFile`, `BuildConfig`); `MainActivity`,
+`QRScannerActivity` and the screenshot frame (`ScreenshotFrame`) wrap their content in it. The
+iPhone's `iosPlatformServices(buildValues)` (`iosMain`) answers with stand-ins that are not available
+until phase 3 and 4, and its `ProvideIosShell(buildValues, content)` provides those with the two locals
+`MainActivity` provides on its own (`LocalCredentialSignIn`, `LocalGoogleCalendarSignIn`), as the
+unavailable `NoCredentialSignIn` and `NoGoogleCalendarSignIn`: with `CoPlanlyApp` inside it (Task
+12), the one call the phase-3 view controller makes. Three things not to undo. **A local read outside the provider throws** — no
+"unavailable" default, which would hide a feature in production with no test noticing; a test that
+composes a screen provides the platform as the app does. **`AndroidPlatformTest`** (the app's,
+Robolectric) reads every local of `PlatformLocals.all` through `ProvideAndroidPlatform`, and
+`PlatformServicesTest` (commonTest) holds `PlatformServices.providedValues()` to that list, so a new
+capability goes in all three places. And **a capability's Android half is today's code**, moved, not
+rewritten: a screen that moves to it keeps its behaviour, so check its old call against the
+interface's Android half when it moves (the vault's camera button, which never asked whether the
+phone has a camera, now has `CameraCapture.available` to ask).
+**Every image a screen loads goes through `AppImage`** (`PlatformImages`, the image seam, slice 11a),
+never Coil itself: on Android `CoilImages` in `AndroidPlatform.kt` is the Coil 2 call each screen made
+(`AsyncImage`; `SubcomposeAsyncImage` when a placeholder is given, the account picture's initial;
+`Size.ORIGINAL` with a crossfade for `fullResolution`, the zoomable viewer's), with the app's
+`ImageLoaderFactory` and `RecordPhotoFetcher` unchanged; a placeholder and `fullResolution` may be
+asked for together. Coil 3 is not part of MON-24 phase 2. `PlatformImages` says whether it is
+`available`: the iPhone's stand-in says no, so a screen whose point is the image (the photo strips,
+an attachment's thumbnail) leaves it out, and an image drawn anyway keeps its place and draws its
+placeholder. `PreviewWrapper` provides the platform too, so a moved screen's preview does not throw.
+**Chat's screens followed in slice 11b**, each with `git mv` to `:shared-ui`'s `commonMain`, package
+unchanged, so `NavGraph` calls `ConversationsScreen` and `ChatScreen` as before: every file of
+`presentation/chat/` (the thread, the list, the bubbles and their hosts, the composer and its menu,
+dictation's controls, the report and the overflow, search, the templates sheet, the reply row, the
+settle-up block and the card texts), with what they draw from other features —
+`event/EventPreviewSheet.kt` (a chat card opens the event's preview), `ai/AiConsentUi.kt`,
+`stickers/StickerText.kt` (its resources `StringResource`s; the app's sticker screens read them
+through Compose Multiplatform's `stringResource`) and `domain/model/MessageTemplate.kt`. What they
+asked of Android goes through the platform: the attachment picker through `FilePicker` (its entry
+left out where there is none), the picked file's name and the chip's size through `FileDetails`, a
+file in a viewer and a report's mail draft through `OpenUrl` (the report offered only where
+`OpenUrl.available`; the support address from `AppBuildValues`), the IBAN through
+`SensitiveClipboard`, the payment code through `QrCodes`, dictation's language and availability
+through `Dictation`, the app's settings through `OpenUrl.openAppSettings`; dates through
+`ReaderDateText` and `readerMediumDate`, amounts through `ReaderMoneyText`, the thumbnail as its
+kotlinx-io `Path` through `AppImage` (left out where `PlatformImages.available` says no); Back while
+searching through Compose Multiplatform's `BackHandler`; the reply's language through Compose's
+`Locale.current`, which `AppLocale.follow` makes the app's; a template's body read in composition
+and a report's subject and body through `rememberUiTextResolver`. Still in the app: the previews
+(`presentation/chat/ChatPreviews.kt`) and `rememberDictationLanguageTag`
+(`presentation/chat/DictationLanguage.kt`, AppCompat's per-app choice and the phone's locales).
+
+A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
+nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller
+still in the app carries `@InternalSharedApi` (`domain/InternalSharedApi.kt`, an error-level
+opt-in) until that caller moves; today none in `shared/` (`UnansweredRows` is `internal` again
+since `RequestInbox` moved, Task 8e, and `ClocksAt.governing` lost its marker when
+`OtherFamiliesSignals` moved to `shared-data`, Task 8h — public, since that is another module), and
+in `shared-data/` `EventDocument`
+(the events and revisions wire contracts, in `shared-data`'s `wire/` since Task 8j and so compiled
+by the app's tests too, and `:shared-ui`'s `ChatEventCardViewModelTest`, since Task 10;
+`StampedFamily` is `internal` again since `SyncService` moved, Task 8g), `toReminderEvent`
+(`DueReminders` and `ReminderRearm`), `RequestTime.of` (its one caller `RequestsSourceTest`, in
+`:shared-ui` since slice 10c; `minuteTicks` beside it is public without the marker, because its caller,
+`AnswerByField`, is presentation code that stays in another module and so it never becomes
+`internal` again, as `governing`), and
+`ChatMappers`' entity and document mappers (the R8 probe and the messages wire contract; the mark
+mappers are `internal` again since the other families' signals moved, Task 8h, and the export's
+reader moved in Task 8i), `SchoolConnectionCodec` (the app's `GsonParityTest` and
+`SchoolConnectionStoreTest`), `BakalariAuthorizer.on` and `SchoolImporter.on` (the school tests, in
+the app, over the app's `EncryptedPreferences`),
+the four pet mappers in `PetMappers.kt` (the pets wire contract, which sits in `wire/` and so is
+compiled by the app's tests too), the four child mappers in `ChildInfoMappers.kt` (the `child_info`
+wire contract, in `wire/` like the pets' since Task 8g, and `ChildInfoRepositoryImplTest`, in the
+app), the four expense mappers in
+`ExpenseMappers.kt` (the expenses wire contract, in `wire/` like the pets'),
+`ChatMirror.mirror` (the on-screen
+e2e tests, which start the mirror themselves), and the engine overload of `httpClient` and
+`GitLiveFirestoreClient`'s `plainToGitLive` (the R8 probe); and none in `shared-ui/`
+(`CoParentOnScreen.kt`'s `coParentOnScreen`, `UserRepository.observeSignedInUser` and
+`User.projectedCoParentUid` carried the marker through Task 10 while ViewModels in the app called
+them, and are `internal` again since slice 10f moved the last, `ParentingPlanViewModel`). This list
+is the one place they are recorded; `InternalSharedApi`'s KDoc points here.
 
 Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth) → Firestore sync.
 
 ### Things that are easy to get wrong
 
 1. **Room schema changes** require: entity change → version bump in `CoPlanlyDatabase` →
-   migration in `DatabaseMigrations` (it is auto-registered via `ALL_MIGRATIONS`).
-   Exported schemas live in `app/schemas/`.
+   a migration → the Regenerate workflow for the schema. Exported schemas live in `app/schemas/`,
+   written there by Room's processor in `shared-data` (`room.schemaLocation`). **Where it all
+   lives since MON-24 phase 2** (Room for Kotlin Multiplatform): the entities, DAOs, `Converters`
+   and `CoPlanlyDatabase` in `shared-data/src/commonMain/`, the same on Android and the iPhone; the
+   41 legacy migrations up to 46 in `DatabaseMigrations` in `shared-data/src/androidMain/`,
+   unchanged and Android's alone (an iPhone database is always created at the current version, so
+   it never runs them; `ALL_MIGRATIONS` registers them). **A migration from 47 on is written in
+   `commonMain` against `SQLiteConnection`** (`connection.execSQL(…)`, never
+   `SupportSQLiteDatabase`) and added by both platforms' builders: Android runs it through
+   SQLCipher's open helper, in Room's compatibility mode, which `ConnectionMigrationOnSqlCipherTest`
+   proves on the emulators. A column's stored text is fixed: a date column goes through
+   `Converters` (`IsoText`), never `kotlinx.datetime`'s own `toString()`.
 2. **Event editing must preserve fields.** `AddEditEventScreen` keeps a snapshot of the
    loaded event and uses `copy()`. Never rebuild an `Event` from scratch on save —
    that wipes `sharedWith`/`permissions`/`createdByFirebaseUid` (this was a real bug).
@@ -1336,12 +2870,34 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    (`SyncService`'s `set()` of a queued row — which dropped `reminderMinutes` until the wire contracts
    below caught it) and `toEntity`, the reader. `SyncService`'s conflict-branch `update()` map must stay
    in sync with them.
+   **Every JSON text the app stores goes through `StoredJson`** (`domain/serialization/`, MON-24) —
+   the Room columns that hold lists, maps and models, the event draft, the revision outbox, the
+   school connection and the medical profile's map in `toFirestoreMap()`. It replaced Gson and
+   writes **byte for byte** what Gson wrote on a phone (HTML escaping, nulls left out, defaults
+   written, the JVM's `Double.toString` layout on every platform, and a class's keys **sorted by
+   field name** — `GsonFieldOrder`: ART returns a class's fields in dex order, which is by name, so
+   that is the order Gson wrote on every phone, while a JVM's declaration order never reached one),
+   and reads what Gson read: unknown keys, a
+   quoted number, and a field Gson left at the JVM's default — a missing or null required property
+   reads as 0, false or an empty text, list or map instead of a null in a non-null type. Two
+   things not to undo. **The text is not kotlinx's own**: `GsonShapedText` prints it, because rows
+   already on phones are compared whole (`mirrorIntoRoom`) and read by older builds. **Gson stays
+   the oracle in the tests**: `GsonDeviceParityTest` (androidTest, every emulator leg) compares each
+   model with Gson 2.11 on ART itself; `GsonParityTest` (the app's and the shared module's JVM tests)
+   compares every model, and every wire-fixture value that went through Gson, with Gson configured
+   as each call site was, its class keys re-sorted by name (`ArtFieldOrder`, because HotSpot's
+   order is not a phone's); and `StoredJsonVectorsTest` pins that output as literals so the iPhone's
+   simulator is held to it too. A new stored model is `@Serializable`, gets a case in both and one
+   in the R8 probe (`R8JsonProbe`), and its JSON never goes through anything but `StoredJson`.
    **A wire-format change arrives with its fixture diff** (September 2026) — how "a co-parent on the
    previous build" is checked without a second phone. `app/src/test/resources/wire/` is the contract
    between builds: `wire/<collection>/` holds documents *other* builds write, by hand — older shapes
    with keys missing, newer ones with unknown keys, `FamilyMemberRef`s and codec versions (`C2;…`,
    `L2;…`, `p2|…`) — and `wire/current/<collection>/` holds what *this* build writes, generated.
-   `WireContractTest` (`app/src/test/java/com/coparently/app/wire/`) runs every fixture through the
+   `WireContractTest` (`shared-data/src/commonTest/kotlin/com/coparently/app/wire/` since MON-24
+   phase 2, Task 8a, with the harness, on kotlinx-io; the fixtures stay where they were, and Gradle
+   hands `shared-data`'s tests their absolute path in a generated `WireFixtureLocation`) runs every
+   fixture through the
    production reader and writer of its collection (one `WireContract` each: `events`,
    `custody_models`, `messages`, `child_info`, `pets`, `expenses`, `event_versions`; `budgets` lost
    its contract with its client, September 2026) and
@@ -1350,8 +2906,22 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    unreadable codec entry, an unknown member or a proposal's citation that stops surviving turns it
    red, and so does a loss that was fixed but is still declared. `CurrentWireFixturesTest` fails when a
    writer's output no longer matches `wire/current/`: regenerate with
-   `UPDATE_WIRE_FIXTURES=1 ./gradlew testDebugUnitTest --tests '*CurrentWireFixturesTest*' --rerun`
-   and review the diff like a screenshot baseline. **The other direction runs in the `upgrade` job**:
+   `UPDATE_WIRE_FIXTURES=1 ./gradlew :app:testDebugUnitTest --tests '*CurrentWireFixturesTest*' --rerun`
+   and review the diff like a screenshot baseline. **Two modules run the harness**: a contract moves
+   to `shared-data`'s `wirecontracts/WireContracts` when its writer does (custody, request clocks,
+   pets, expenses, children, events and revisions — `PetWireContract` joined in Task 8d, once the pet mappers
+   became top-level functions, and makes its one wall clock from a UTC instant so it reads in any
+   zone, `ExpenseWireContract` in Task 8f, the same way, reading no wall clock at all, and
+   `ChildInfoWireContract` in Task 8g, once `SyncService`, the second writer of `child_info`, moved,
+   with its wall clock made as the pets' is, and the events and revisions contracts in Task 8j, once
+   they read through kotlinx-datetime and `StoredJson` rather than Gson and `java.time`, with their
+   `updatedAt` wall clocks made as the pets' are; so every contract but the messages' runs in both;
+   `MessageWireContract` moved beside the harness with its writer in Task 8b but is listed
+   in the app's suite alone, because a legacy chat timestamp reads in the reader's zone and only the
+   JVM suite sets that zone to UTC), and the app's unit tests compile the same harness files and run every contract through
+   the app's own `WireContracts` — which is what the command above regenerates and what the
+   `upgrade` job's `:app:testDebugUnitTest --tests '*WireContractTest*'` runs. Every contract stays in the
+   app's list, moved writers included: that list is `complete = true` and is the one the `upgrade` job runs. **The other direction runs in the `upgrade` job**:
    it copies this branch's `wire/current/` into the base checkout and runs the *base's own*
    `WireContractTest` over it, so the previous build's code reads what this one writes and writes it
    back; a key an older build may lose that way must be declared in `CurrentWrite.olderBuildsMayDrop`.
@@ -1439,8 +3009,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    the next, so a weekly event reminds every week. `cancelAll()` runs at sign-out, account switch
    and deletion, because the reminder reads the title from Room and Room survives sign-out; `null`
    `reminderMinutes` is "no reminder". **A new event opens with a one-hour reminder** (owner
-   decision, 9 November 2026; `DEFAULT_REMINDER_MINUTES` in `AddEditEventScreen`), which the parent
-   can set to None; an edit keeps what the event holds, and imports set none.
+   decision, 9 November 2026; `DEFAULT_REMINDER_MINUTES` in `AddEditEventScreen`, in `:shared-ui`),
+   which the parent can set to None; an edit keeps what the event holds, and imports set none.
    **A reminder is an alarm, on the minute** (owner decision, 9 November 2026: a 30-minute reminder
    arrived 25 minutes before the event). `EventReminderScheduler` arms one `AlarmManager` alarm per
    event through `data/notification/ReminderAlarms.kt` (`setExactAndAllowWhileIdle`, which fires in
@@ -1452,7 +3022,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
      (Play allows it to a calendar that shows event notifications; it is declared in the Play
      Console), `SCHEDULE_EXACT_ALARM` on 31–32 (`maxSdkVersion="32"`), nothing below. Without it
      the alarm is armed inexact (`setAndAllowWhileIdle`), never dropped.
-   - **The wall clock becomes an instant at arming, for the reminder's own date** (`atZone`), so a
+   - **The wall clock becomes an instant at arming, for the reminder's own date**
+     (kotlinx-datetime's `toInstant(zone)`, which resolves the offset as `atZone` did), so a
      daylight-saving change between arming and firing does not move it; the old `Duration` between
      two wall clocks was an hour off across one. A clock or zone change re-arms.
    - **`ArmedReminders` remembers which events have an alarm.** Alarms do not survive a reboot and
@@ -1462,11 +3033,16 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
      after the update moves an older build's queued work onto alarms, once.
    - **One alarm per event, told apart by the intent's data** (`coplanly-reminder:<id>`), never by
      a hashed request code, which collides.
-   - **A receiver never throws for want of the app's graph** (`reminderEntryPoint`). Installing the
-     test APK delivers `MY_PACKAGE_REPLACED` into an instrumentation process whose
-     `HiltTestApplication` has no component yet; the exception out of `onReceive` crashed it and
-     the 16 KB leg ran no test (`ReminderReceiversTest`).
-   A reminder's tap opens the calendar on the event's own family.
+   - **A receiver never throws for want of the app's graph** (`hasReminderGraph`). Installing the
+     test APK delivers `MY_PACKAGE_REPLACED` into an instrumentation process whose test application
+     starts no Koin graph (`KoinTestApplication`; `HiltTestApplication` had no component yet, which
+     is how it was found); the exception out of `onReceive` crashed it and the 16 KB leg ran no test
+     (`ReminderReceiversTest`). The two receivers are `KoinComponent`s, check
+     `GlobalContext.getOrNull()` before anything else, and resolve `DueReminders` or
+     `ReminderRearm` inside the async work, where a failure is logged.
+   A reminder's tap opens the calendar on the event's own family. These classes are the app's
+   (`data/notification/`, Koin's `notificationModule`), on kotlinx-datetime like the planner they
+   call; the reminder and its channel are worded through `inAppLanguage()`, as before.
 10. **Receipt OCR is on-device only** (`ReceiptTextRecognizer`/ML Kit, parsed by
     `ReceiptParser`, wired up in `AddExpenseScreen`/`ExpenseViewModel.scanReceipt`) — no
     receipt text or photo may be sent to a model or any other remote service without an
@@ -1548,7 +3124,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     document outright and has exactly one legitimate caller — an event turned private has to
     leave Firestore with no trace.
 15. **A push carries a type, never a sentence** (SEC-3). `data/remote/firebase/PushPayload.kt`
-    is the vocabulary; `PushNotifier`, which `CoPlanlyMessagingService` hands every message to,
+    (in `shared-data`'s `commonMain` since MON-24 phase 2, Task 8a) is the vocabulary; `PushNotifier`, which `CoPlanlyMessagingService` hands every message to,
     writes the text from *its own* string resources and **drops a type it has no wording for**. Never reintroduce a `title`/`body`
     fallback for an unrecognised type — that fallback is the forgery, not a nicety, and
     `firestore.rules` refuses both keys from a client precisely so nothing legitimate needs
@@ -1577,8 +3153,10 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     `MainActivity` accepts only through `fromKey` — the activity is exported) and to one of four
     `PushChannel`s — chat, schedule, money, family — so money can be muted without muting a
     handover. A new type gets both, and `PushRoutingTest` fails until it does. It words
-    through a configuration context because the service does: on API 32 and below AppCompat's
-    per-app language reaches activities only, so a push follows the *device* language there.
+    through the configuration context the service hands it, `inAppLanguage()` (`utils/AppLocale.kt`,
+    made afresh for each message), so a push speaks the language the app does — the owner's rule
+    under "Localization": the per-app choice, on every API level, else the phone's first language
+    when the app ships it, else English.
     **Two client types carry more than names** (21 October 2026): `expense_added` carries the
     expense's `amount`, `currency` and, when it is split with the reader, their `share` (plain
     two-decimal strings the rules bound, worded on the receiving phone), and `event_important` tells
@@ -1592,9 +3170,13 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     - **A chat card is worded on the receiving phone.** `notifyOfChatMessage` sends the card's
       facts beside its preview (`activityKind`, `activityEntityType`, `activityEntityId`,
       `activityTitle`, `activityWhenIso`, `activityAmount`, `activityCurrency` — fields, not types)
-      and `PushNotifier` words them through `presentation/chat/cardPushText`, the thread's sentence
-      without Compose. The preview is the card's base-English fallback, which an older build shows;
-      every reader used to get it.
+      and `PushNotifier` words them through `cardPushText` (`presentation/chat/CardPushText.kt`), the thread's sentence
+      without Compose. It stays in the app beside its one caller, and reads `ActivityCardText`'s
+      decisions (in `:shared-ui`, Compose Multiplatform `StringResource`s) as the app's `R.string` of
+      the same key, so the push speaks the language of the context it is worded in;
+      `res/raw/card_push_keep.xml` keeps those keys from the release build's resource shrinker, and
+      `ChatCardPushTest` checks every one resolves. The preview is the card's base-English
+      fallback, which an older build shows; every reader used to get it.
     - **A card whose news has a push type of its own pushes nobody** (`SILENT_CARD_KINDS`: a
       change request, a day swap offered or answered, a custody proposal and its answer, a new
       expense, a split proposal and its answer; an important event's card through
@@ -1603,7 +3185,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     - **Each chat push has its own tray id** (`PushNotifier.chatNotificationId`): one per
       conversation for messages, one per card. A single fixed id let a card replace a message and
       one family's thread replace the other's.
-    - **The sync queues no push for an upload it carries up** (`SyncService.syncEvents`): the save's
+    - **The sync queues no push for an upload it carries up** (`SyncService.syncEvents`, in
+      `shared-data` since MON-24 phase 2; `RecordPushes.event` went with it): the save's
       card announces the event. `event_created` is produced by nothing now.
     And a request reminder or a child support reminder counts as given only when it was shown
     (`notificationsAllowed`: the permission, the app's notifications and the channel).
@@ -1750,7 +3333,14 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     job opens a database the *previous build* wrote (encrypted → encrypted, one release step; see
     the CI section). What neither can prove is an upgrade from an older build, or under a phone's
     hardware-backed Keystore, so the first launch on a device holding real data is still an
-    acceptance step (`docs/DEVICE-CHECKLIST.md` §2.1).
+    acceptance step (`docs/DEVICE-CHECKLIST.md` §2.1). **These files live in `shared-data`'s
+    `androidMain` since MON-24 phase 2** (`data/local/security/`, `data/security/EncryptionManager.kt`,
+    `data/crashlytics/CrashlyticsManager.kt`, `di/DatabaseBuilder.kt`), packages, names and
+    constructors unchanged. **The iPhone has no SQLCipher** (owner decision, iPhone design §9.1):
+    `IosDatabase.kt` opens the same database on Room's bundled driver in `no_backup/databases/`,
+    the file and its `-wal` and `-shm` siblings under `NSFileProtectionComplete`, so iOS encrypts
+    them while the phone is locked (`IosDatabaseTest`). Don't add a key the app holds there without
+    an owner decision: a simulator test process has no Keychain.
     **The preference store follows the same idea since SEC-5** (September 2026):
     `EncryptedPreferences` is no longer `security-crypto`'s alpha `EncryptedSharedPreferences` but
     one file, `no_backup/secure_prefs.bin` — the whole map (`PreferenceBlobCodec`, never Gson)
@@ -1760,7 +3350,17 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     that build; the old file is deleted only after the new one is written. Don't write through the
     library again, and don't make a second `EncryptedPreferences` over the same file — each keeps
     its own map and they overwrite each other (the e2e phones get their own directories for that
-    reason).
+    reason). **It is the Android `SecurePreferences`** (MON-24 phase 2, Task 6), which the data
+    layer depends on; it stays in the app with its package, name and constructors because the
+    `upgrade` seed builds it. The iPhone's is one Keychain item (`SealedSecurePreferences` over
+    `KeychainTextStore`, readable after first unlock, this device only), the same blob and the same
+    rules but one: a Keychain item that could not be *read* (any status but "not found", such as
+    the lock before the first unlock) is never deleted or written — the store runs in memory for
+    that process — and only text that was read and cannot be decoded is replaced, as Android's
+    unopenable file is. `SecurePreferencesContractTest` (and its Android copy, `EncryptedPreferencesContractTest`)
+    hold the two to one contract — change a behaviour in both. On the iOS simulator the contract
+    runs over an in-memory store: a test binary with no app host has no Keychain (`errSecNotAvailable`),
+    so `KeychainSecurePreferencesTest` is `@Ignore`d until the iPhone app's XCTest host runs it.
 21. **A parenting plan is two halves and a derived agreement, and neither half may write the
     other** (MON-5, Aug 2026, schema 34). `parenting_plans/{familyId}` holds `answers`,
     `agreedTo`, `catalogueVersions` and `updatedAt` as maps keyed by uid, and `firestore.rules`
@@ -2053,7 +3653,10 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     never stored, logged or sent, and never calls itself "AI" — a tone model is MON-12.
     **Voice dictation is on-device only, and free** (September 2026, owner decision: the audio must
     not leave the phone). The composer's microphone (`ChatDictation.kt`, the pill's trailing icon,
-    so the send button keeps its place) goes through `domain/dictation/SpeechDictation`, bound to
+    so the send button keeps its place; in `:shared-ui` since MON-24 phase 2, slice 11b, drawn only
+    where the platform's `Dictation.available` agrees too, with its language from
+    `Dictation.rememberLanguageTag`, the app's `presentation/chat/DictationLanguage.kt` on Android)
+    goes through `domain/dictation/SpeechDictation`, bound to
     `data/dictation/OnDeviceSpeechDictation`: `SpeechRecognizer.createOnDeviceSpeechRecognizer`,
     shown only on API 33+ where `isOnDeviceRecognitionAvailable` says so — below that, or without
     one, there is **no button**, because `createSpeechRecognizer` binds whatever service the phone
@@ -2279,8 +3882,21 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     removed before the first release (owner decision, September 2026); EduPage returns as a row
     only when its import exists). `data/school/bakalari/` is the client (`/api/login`
     with `client_id=ANDR`, `/api/3/timetable/actual`, `/api/3/events`, the school directory at
-    `sluzby.bakalari.cz`), parsed by hand over Gson's tree — no reflected DTO, so R8 has nothing to
-    rename. `SchoolImportPlanner` is the pure decision. Six things not to undo.
+    `sluzby.bakalari.cz`), parsed by hand over a JSON tree (kotlinx.serialization's `JsonElement`
+    since MON-24, read as leniently as Gson's tree was) — no reflected DTO, so R8 has nothing to
+    rename. `SchoolImportPlanner` is the pure decision. **The client and the directory are on
+    Ktor in `shared-data/` since MON-24 phase 2** (OkHttp before; the parsers, the authorizer,
+    the store and the importer followed in Task 8i — see "Where a `data/…` path lives"), and send what OkHttp 4.12 sent, form
+    encoding and address included: `BakalariRequestShapeTest` and `WebAddressVectorsTest` hold the
+    bytes, because the event ids below hash the address `BakalariUrls.normalize` writes. It also
+    waits and follows redirects as OkHttp did (`HttpTimeouts.SCHOOL`, `Redirects.OKHTTP_4`: a sign-in
+    answered 307 or 308 is posted again; `BakalariRedirectsTest`), because Ktor's own redirect plugin
+    follows GET only. And it names itself as OkHttp did, `User-Agent: okhttp/4.12.0`
+    (`Redirects.userAgent`): Ktor's engines say `ktor-client` when a request sets none, and a
+    school's proxy may let through only the agents it knows. Ktor also adds `Accept: */*` where the
+    client asks for no type (the sign-in and the `/api` check), which OkHttp did not send. Don't hand
+    an address or a form to Ktor's own encoders, and don't let a logging plugin near the client (the
+    form carries the password). Six things not to undo.
     - **The password is used once and dropped.** A connection is one `EncryptedPreferences` key,
       `school_connection_<16 hex of sha256(uid|baseUrl|username)>`, holding the tokens, the child,
       the family and a ledger of imported ids, and naming its owner uid — the store refuses it to
@@ -2735,7 +4351,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     (`ActivityKind.readerPays`, `ActivityCardText.settleUpResource`), and a message cannot be
     edited. Each parent may add the IBAN they are paid on, `users/{uid}.paymentIban` (`PaymentAccounts`,
     Firestore only, mod-97 checked; the rules bound its shape), and under the card, on the payer's
-    phone only, `SettleUpPayment.kt` draws `PaymentQr`: Czech QR Platba for a CZ account, Slovak PAY
+    phone only, `SettleUpPayment.kt` (`:shared-ui` since slice 11b; the matrix and the shared PNG from
+    the platform's `QrCodes`, ZXing in the app's `AndroidQrCodes`) draws `PaymentQr`: Czech QR Platba for a CZ account, Slovak PAY
     by square (raw LZMA1 through `org.tukaani:xz`) for an SK one, the EPC code for another euro
     account, and nothing for another currency — the IBAN to copy and **Share QR code** either way,
     because a bank's app cannot scan the screen it runs on. Three things not to undo. **The codes
@@ -2925,7 +4542,8 @@ below hold what it fixed in place.
    code does is the defect L-1 was.
 2. **Every Cloud Function runs in `europe-west3`.** Declare each one through `regional` in
    `functions/index.js`, never `functions.` directly.
-   - Five places name the region: `FUNCTIONS_REGION` there, `FirebaseModule.FUNCTIONS_REGION`,
+   - Five places name the region: `FUNCTIONS_REGION` there, `FUNCTIONS_REGION` in
+     `shared-data`'s `di/koin/FunctionsRegion.kt`,
      `web/verify/`'s `PRODUCTION_FUNCTIONS_BASE`, `tools/e2e/pairing-smoke.js` and
      `web-tests/support/emulators.js`. Change them together.
    - `tools/check-e2e-coverage.js` finds callables declared either way.
@@ -2966,8 +4584,9 @@ below hold what it fixed in place.
      sweep.
 7. **What signing in agrees to is on the sign-in screen** (`AuthLegalNotice`).
    - The age line is always shown. The terms clause and its link appear only while
-     `BuildConfig.TERMS_URL` is set (`TermsOfServiceLink`, like `PrivacyPolicyLink`), and Settings
-     links both.
+     `BuildConfig.TERMS_URL` is set (`AppBuildValues.termsUrl`, like `privacyPolicyUrl`, read through
+     the platform since MON-24 phase 2, slice 11f) and the phone can open a link (`OpenUrl.available`),
+     and Settings links both.
    - Telemetry is never described as "anonymous". It carries a pseudonymous installation
      identifier (L-13).
 8. **A record's photo is stored under its family's path, read only by the family's two parents,
@@ -2983,8 +4602,9 @@ below hold what it fixed in place.
      pinned by `RecordPhotoTest`). The flat layouts from before L-4 match no block.
    - **No download URL, ever.** The record's existing field (`imageUrl`, `receiptUrl`, the entries
      of `medicalPhotos`/`photos` — names kept, no schema bump) holds a `RecordPhotoCodec` string,
-     `ph1|path|contentType|size|sha256`, never Gson. A screen draws it through Coil's
-     `RecordPhotoFetcher` (registered by `CoPlanlyApplication` as `ImageLoaderFactory`), which
+     `ph1|path|contentType|size|sha256`, never Gson. A screen draws it through `AppImage` (the image
+     seam, `presentation/platform/PlatformImages.kt`, MON-24 phase 2), whose Android half is Coil 2
+     with `RecordPhotoFetcher` (registered by `CoPlanlyApplication` as `ImageLoaderFactory`), which
      downloads as the signed-in user into `SharedFileCache` and keeps a copy only when the digest
      matches.
    - **Only the two parents see a photo** (owner decision). `RecordPhotoAccess.viewable` answers null
@@ -3028,8 +4648,14 @@ below hold what it fixed in place.
     ahead of Google's verification of the OAuth consent screen). `GoogleCalendarAccess.SCOPE` is
     `calendar.events.owned.readonly`: the events of calendars the parent owns, which the primary
     calendar, the only one imported, always is. `GoogleCalendarApi` has one call, `listEvents`.
-    Its create, update and delete had no caller and went with the full `calendar` scope.
-    `CalendarSyncRepository` stores every import as a private event (item 3 of "Things that are
+    Its create, update and delete had no caller and went with the full `calendar` scope. Since
+    MON-24 phase 2 it is a Ktor call to Calendar API v3 `events.list` in `shared-data/` (it was
+    google-api-client's), sending the request that library sent (`GoogleCalendarRequestShapeTest`)
+    with the access token alone (`GoogleCredential`), with its timeouts and redirects, and reading
+    the page by hand as strictly as its parser did: a page or a time it could not read still fails
+    the import (`GoogleCalendarApiTest`, `GoogleDateTimeTest`).
+    `CalendarSyncRepository` (in `shared-data` with `GoogleCalendarAutoImport` since MON-24 phase 2,
+    Task 8g) stores every import as a private event (item 3 of "Things that are
     easy to get wrong"), so nothing read from Google reaches our servers unless the parent makes
     an event shared. **The import runs on its own while the switch is on** (owner request, 28 October
     2026): `SyncWorker` calls `GoogleCalendarAutoImport.importIfDue` after every sync — app start,
@@ -3294,11 +4920,18 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   reintroduce a model key in the client either. Server secrets belong in `functions/.env`,
   never in a tracked file.
 - **Text a ViewModel or a service produces is a `UiText`, resolved in composition** (CQ-14,
-  September 2026). `presentation/common/UiText.kt` holds *which* string — `Res` with arguments,
-  `Plural`, `Date` (formatted in the reader's locale at resolution), or `Raw` for what is already
-  the user's own words — and the screen calls `asString()`, or `asString(context)` with the
-  **Activity's** `Context` inside a snackbar/Toast lambda. Still don't inject `Context` into a
-  ViewModel: the application's configuration can lag AppCompat's per-app locale on older APIs,
+  September 2026). `presentation/common/UiText.kt` (in `:shared-ui`'s `commonMain` since MON-24
+  phase 2, slice 9c) holds *which* string — `Res` with a Compose Multiplatform `StringResource` and
+  arguments (`UiText.Res(Res.string.x, listOf(…))`), `Plural` with a `PluralStringResource`, `Date`
+  (a kotlinx-datetime date, formatted in the reader's locale at resolution), `Weekday`, or `Raw`
+  for what is already the user's own words — and the screen calls `asString()`, or, inside a
+  snackbar/Toast lambda, `asString(resolver)` with the `rememberUiTextResolver()` it took in
+  composition, which carries the composition's language and date locale (it replaced
+  `asString(context)` with the Activity's `Context`; never resolve with the application's). An
+  argument that is not a `UiText` is printed with `toString()`, all Compose Multiplatform's
+  `%<n>$s` and `%<n>$d` do, so pass a `%<n>$d` an `Int` or a `Long`, never a formatted number; and a
+  literal percent sign beside arguments goes in as an argument, never as `%%` ("Localization"). Still don't inject `Context` into
+  a ViewModel: the application's configuration can lag AppCompat's per-app locale on older APIs,
   while composition follows the Activity. Three rules. **A screen that branches on an outcome
   gets a typed code, not text** — `CalendarScreen` used to compare the literal
   `"Event rescheduled"` to decide whether to offer Undo (UX-12); it now reads
@@ -3340,38 +4973,183 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
 The app ships in 5 languages: **English (base `values/`), Czech, German, Russian,
 Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
 
-- **Language selection**: device locale by default, plus a manual per-app override — the
-  "Language" card in Settings (`presentation/settings/AppLanguage.kt`,
-  `AppCompatDelegate.setApplicationLocales`). The choice is persisted by the
+- **The strings live in `shared-ui/src/commonMain/composeResources/values*/`** (MON-24 phase 2,
+  Task 9): the 63 feature files of each locale that were `app/src/main/res/values*/`, same names,
+  moved with `git mv`. Compose Multiplatform 1.9.3's resource plugin generates `Res` from them
+  (`com.coparently.app.resources`, public), and the app's `stringsToAndroidRes` task
+  (`app/build.gradle.kts`) copies them **byte for byte** into a generated resource directory of
+  every variant (`app/build/generated/res/stringsToAndroidRes/`, through AGP's
+  `addGeneratedSourceDirectory`), so `R.string`/`R.plurals` keep Android's own reading for the
+  app, its unit and screenshot tests, the widget, pushes and notices. `app/src/main/res/values/`
+  keeps only `colors.xml` and `themes.xml`; `values-night/` and `xml/` stay too. Don't add a
+  string under `app/src/main/res/` again, and don't edit the generated copy. The task lives in the
+  app's build file, not in a `tools/` script plugin, because a script applied with
+  `apply(from = …)` cannot see AGP's classes.
+- **One text, two readers, read alike.** aapt2 (with `String.format`) and Compose
+  Multiplatform's plugin (with its own formatter) unescape and format differently: CMP 1.9.3
+  unescapes only `\n`, `\t`, `\uXXXX` and `\\`, keeps whitespace and an unescaped `"` as written,
+  and replaces only `%<n>$s` and `%<n>$d`. So an apostrophe is written **`\u0027`** and a straight
+  quote **`\u0022`** (never `\'`, `\"`), a line break `\n`, no whitespace run or edge, no `%s`,
+  `%d` or `%.1f`, and no markup. Check 7 of `node tools/check-invariants.js` refuses each of those
+  offline, and `StringsParityTest`/`PluralsParityTest` (`app/src/test/.../resources/`, Robolectric)
+  compare both readings of every string, array and plural (counts 0–200) in the five languages.
+  Where they differ, the **source text** changes so both read it alike, never one consumer. **A
+  literal percent sign beside arguments is an argument too**: `String.format` prints `%%` as `%`
+  and CMP leaves it doubled, and no spelling of the sign reads as one in both (a bare `%` beside
+  arguments is refused by `String.format`), so check 7 refuses `%%` beside arguments in every key.
+  The expense split's shares (`expenses_split_shares_*`, "You pay 70 %, Bob pays 30 %") were the
+  one exception until slice 11e of MON-24, read through `R.string` alone; they take the sign as
+  their last argument now, `expenses_percent_sign` (`%`, not translated), and read the same text in
+  both readers, held by `StringsParityTest` like every other key.
+- **Which reader a composable uses follows where it lives.** Code in `:shared-ui` (the theme's
+  colour names, the common components' own labels, since slice 9b, and every `UiText`, since
+  slice 9c) reads
+  `org.jetbrains.compose.resources.stringResource(Res.string.…)`; code still in the app reads
+  `androidx.compose.ui.res.stringResource(R.string.…)`, and one file may import both (the overloads
+  differ by type). They pick the language differently: `R.string` from the Activity's
+  configuration, which AppCompat's per-app choice sets; Compose Multiplatform from Compose's
+  `Locale.current`, the process's default locale. `PerAppLocaleTest` holds the two to the same
+  language on the API 26 and 30 legs (the 16 KB leg skips it with every `@UsesFakeFirebase` test),
+  and `DEVICE-CHECKLIST.md` §3.6 asks for it on Android 12 or older; don't make a moved composable
+  take a `Context` to read `R.string` instead. **Both readers speak one language, the one the
+  owner's rule names** (owner decision, 4 November 2026, slice 9d): **the phone's first language
+  when the app ships it (en, cs, de, ru, uk), otherwise English — and a per-app choice still
+  wins.** The phone's second and later languages are never used. Android on its own does
+  otherwise: it matches the device's *whole list* against everything the APK translates,
+  libraries included (AppCompat ships `values-sk`, `-pl`, `-be`, `-sr` …), so a phone in Irish
+  then Czech read Czech and one in Slovak then Czech read English only by accident, and it leaves
+  Compose's `Locale.current` on the raw first locale. The rule is `domain/language/AppLanguageRule`
+  (pure, in `shared/`, so the iPhone can apply it; `AppLanguageRuleTest` runs on the JVM and iOS),
+  and its English fallback is **European English, `en-150`** (`AppLanguageRule.FALLBACK_LOCALE`,
+  owner decision of the same day): English words on a 24-hour clock with the day before the month
+  ("4 Nov 2026", "18:00", "04/11/2026"), Monday first, and an amount with the symbol after it —
+  "1.234,50 €" on Android 8–10 and "1,234.50 €" from Android 11, whose CLDR 36 dropped en_150's own
+  decimal comma (checked against the CLDR and ICU data of every Android ICU from 58 to 76). Don't go
+  back to English with the phone's region: CLDR had no `en_SK`, `en_PL`, `en_ES` or `en_HU` before
+  release 47, so on every Android the app runs on those fell to US English, a 12-hour clock and the
+  month first. **The phone's region is read from the phone** (`DeviceRegion`: `AndroidDeviceRegion`,
+  the first system locale's, on Android; `IosDeviceRegion` on the iPhone) for the currency hint and
+  the onboarding's country guess — never from `Locale.getDefault()`, whose country is "150" on a
+  fallback. **And every 12/24-hour decision is made in the context the text is worded in**
+  (`DateFormat.is24HourFormat` of the activity, of `inAppLanguage()` in pushes, request notices,
+  event reminders and the widget; `ClockFormat` follows the activity), so a Slovak phone whose clock
+  is on "use locale default" reads 24 hours on every surface, and a parent who chose a 12-hour clock
+  in system settings keeps it. Android's half is `utils/AppLocale.kt`. Six things not to undo.
+  - **An activity gets its base context in that locale** (`attachBaseContext` →
+    `newBase.inAppLanguage()`, before `super`, in `MainActivity` and `QRScannerActivity`). AppCompat
+    1.7's `attachBaseContext2` finds the locale as a difference from the canonical configuration and
+    keeps it in its overlay beside night mode; below Android 13 it puts a per-app choice on top. A
+    new activity does the same, and stays an `AppCompatActivity`.
+  - **Every reader outside an activity words through `Context.inAppLanguage()`**, a configuration
+    context made afresh for each use (only the locale and its layout direction overridden, so night
+    mode and font scale stay the base's): `CoPlanlyMessagingService`'s `PushNotifier` and its
+    channels, `RequestNotices`, `DueReminders` and `EventReminderScheduler` (an event reminder, its
+    channel and its start time), `SupportReminderWorker`, the Today widget's lines
+    (`TodayWidget.provideGlance`), `SchoolImportWordingSource` and `AndroidPairingWording`. Never
+    wrap the application context once and keep it — it would miss a change of language — and never
+    read `R.string` from a bare application or service context: that is Android's resolution, not
+    the rule's. (The credential classes read only the untranslated `default_web_client_id`.)
+  - **The process's defaults follow it** (`AppLocale.follow`: `LocaleList.setDefault` with that
+    locale first, which sets `java.util.Locale`'s too, and the phone's other languages after it —
+    only the first decides the language, and the rest is what text drawing reads for a Han glyph
+    or a hyphenation, so don't cut the list to one) in `CoPlanlyApplication.onCreate` and
+    `onConfigurationChanged`, and in each activity's `onCreate` after `super` and `MainActivity.
+    onResume`: the framework resets them to its own resolution on every configuration change, before
+    the application hears of it, and a change it counts as none reaches no callback. So Compose
+    Multiplatform's strings, `java.time` and number formats speak what `R.string` does.
+  - **The per-app choice** is `LocaleManager.getApplicationLocales()` on Android 13 and later;
+    below that AppCompat's, which only an activity loads, so `AppLocale.rememberChoice` (in
+    `MainActivity.onCreate`) mirrors it in the plain preference file `app_language` for a push or a
+    worker in a process no activity has started, and `AndroidAppLanguages.apply` mirrors a new choice the
+    moment it is made, so the mirror never lags it. A push below 13 therefore follows the choice
+    too, which it never did before. **Below 13, "System default" over a choice restarts the app**
+    (`presentation/settings/SystemDefaultRelaunch`): AppCompat would otherwise hold an empty request
+    for the rest of the process and give every activity Android's own resolution, under
+    `follow`'s locale — two languages and two directions on one screen. No AppCompat API takes the
+    request back to none, so the app deletes AppCompat's stored choice itself, opens `MainActivity`
+    on a fresh task and ends the process; the next one holds no request and speaks the rule. It
+    never restarts on 13 and later, nor when nothing changed ("System default" again changes
+    nothing below 13, since AppCompat would take the empty list as a request too), and a restarted
+    process has nothing to restart for. Don't replace it with an override on top of AppCompat's:
+    `updateAppConfiguration` would then see a locale difference on every `onCreate` and recreate
+    in a loop.
+  - **The phone's first language** is `LocaleManager.getSystemLocales()` on 13 and later (the
+    order the person set) and `Resources.getSystem()`'s below (the framework's display order: a first
+    language the system itself cannot show reads as the one it shows). Never `LocaleList.getDefault()`,
+    which `follow` sets.
+  - **Tests**: `AppLocaleTest` (Robolectric: the contexts read English on a phone in Irish, Czech in
+    Czech, German under a per-app German, the mirror below 13; a Slovak phone reads `en-150` on a
+    24-hour clock unless its own setting says 12, and its region is still SK),
+    `PreferencesRepositoryCurrencyTest` and `OnboardingViewModelTest` (the guesses read the phone's
+    region with the default locale set to `en-150`), `ShippedLanguagesTest` (the rule's
+    list is the picker's, `locales_config.xml`'s and the string folders'),
+    `SystemDefaultRelaunchTest` (when "System default" restarts, and that the restart leaves
+    AppCompat's storage with no choice, read through the library's own helper), and `PerAppLocaleTest`
+    on the emulators. `docs/DEVICE-CHECKLIST.md` §3.6 asks for Slovak then Czech (English), Czech
+    first (Czech) and a per-app choice on a phone. Consequences the rule brings, not defects: on a
+    Slovak phone the holidays' local names and the dates are English too; what the system draws
+    itself (the launcher's label, the permission dialogs, Credential Manager's sheet, the widget
+    picker's description) stays in the system's own language. **Dictation is the exception**: the
+    words are the parent's, so `rememberDictationLanguageTag` dictates in the per-app choice, else
+    the phone's first language (`AppLocale.deviceFirst`), never the English fallback — a Slovak
+    phone dictates Slovak, as it did before the rule.
+
+- **Language selection**: the owner's rule above by default (the phone's first language when
+  shipped, else English), plus a manual per-app override — the
+  "Language" card in Settings (the `AppLanguage` enum in `:shared-ui`'s
+  `presentation/settings/AppLanguage.kt`; the choice and `AppCompatDelegate.setApplicationLocales`
+  in the app's `AndroidAppLanguages`, the `AppLanguages` platform interface's Android half since
+  MON-24 phase 2, slice 11f). The choice is persisted by the
   `autoStoreLocales` manifest service and mirrored to the Android 13+ system per-app
   language setting. There is no DataStore/ViewModel state for it — AppCompat is the
-  source of truth.
+  source of truth (the `app_language` preference below 13 is only `AppLocale`'s mirror of it).
 - **Infra invariants**: `MainActivity`/`QRScannerActivity` must stay `AppCompatActivity`
   (not `ComponentActivity`) and `Theme.CoPlanly` must stay an AppCompat theme — per-app
   locales silently stop working otherwise. (It is `Theme.AppCompat.DayNight.NoActionBar` since
   UX-13, with a per-theme `@color/window_background` so a dark cold start does not flash white;
   `values-night/` is a night qualifier holding that colour, not a locale, and holds no strings.)
-  `res/xml/locales_config.xml`, the `AppLanguage` enum, and the `values-<language>` folders must
-  list the same locale set.
-- **Adding a string** = add the key to the feature's base `values/<feature>_strings.xml`
-  AND to all four locale variants of that file. Missing translations fall back to English
+  `res/xml/locales_config.xml`, the `AppLanguage` enum, `AppLanguageRule.SHIPPED` and the
+  `values-<language>` folders under `shared-ui/src/commonMain/composeResources/` must list the same
+  locale set (`ShippedLanguagesTest`).
+- **Adding a string** = add the key to the feature's base
+  `shared-ui/src/commonMain/composeResources/values/<feature>_strings.xml` AND to all four locale
+  variants of that file; `R.string.<key>` and `Res.string.<key>` are both generated from it. Missing translations fall back to English
   at runtime. **Lint will not catch a missing one**: `MissingTranslation` is switched off
   outright in `app/build.gradle.kts` (`disable += "MissingTranslation"`), not demoted to a
   warning — a disabled check does not run, so it reports nothing under any severity. Verify
-  locale completeness by grep instead, e.g. `git grep -c 'name="your_key"' -- app/src/main/res/values*/*.xml`,
+  locale completeness by grep instead, e.g.
+  `git grep -c 'name="your_key"' -- 'shared-ui/src/commonMain/composeResources/values*/*.xml'`,
   which should return five files and also catches a duplicate the lint check never would.
   `node tools/check-invariants.js` does that sweep over every key at once — and compares each
   translation's format arguments, since a dropped `%1$s` throws `IllegalFormatException` only on
   the device of whoever reads that language. CI runs it as the `invariants` job.
 - In composables use `stringResource(...)`; for text consumed inside non-composable
   lambdas (snackbars, coroutines) capture the string in composable scope first. Text that comes
-  from a ViewModel or a service is a `UiText` (`presentation/common/UiText.kt`, CQ-14) — never a
-  `String` built there. Language
+  from a ViewModel or a service is a `UiText` (`presentation/common/UiText.kt`, in `:shared-ui`,
+  CQ-14) — never a `String` built there — built from `Res.string`/`Res.plurals` and resolved in a
+  lambda through `rememberUiTextResolver()`. Language
   endonyms in the picker ("Čeština", "Русский", …) are `translatable="false"`.
 - Dates/day/month names come from `java.time` formatters with the default locale —
   never from string arrays.
 - **A time of day goes through `utils/LocalizedDates.kt`'s `shortTime()`** (or `dateWithTime`),
-  never a literal `"HH:mm"` (release audit R-9, owner decision: the reader's clock). It follows
+  never a literal `"HH:mm"` (release audit R-9, owner decision: the reader's clock). Since MON-24
+  phase 2 (Task 11, slice 11a) that file is in `:shared-ui`'s `androidMain`, package and names
+  unchanged, and a shared screen reaches the same rules through `utils/ReaderDateText` (an `expect`
+  over kotlinx-datetime values: `date`, `month`, `pattern`, `time`, `dateWithTime`, `hour`,
+  `answerBy`, `isoDate`), whose Android `actual` calls those `java.time` functions, so the text is
+  byte for byte the same by construction (a direct delegate; `ReaderDateTextTest` holds the
+  delegation — under Gradle's plain JVM `getBestDateTimePattern` has no ICU, so its skeleton cases
+  fall back to the medium style on both sides and say nothing of a device's patterns), and whose
+  iPhone `actual` is Foundation's; `readerMediumDate` beside it is a date in the language's medium
+  style (a chat thread's day separator, slice 11b). **Money is the same kind of seam** (slice 11b):
+  `utils/ReaderMoneyText.amount(text, currency)` writes an amount the app carries as plain decimal
+  text in the reader's conventions, whose Android `actual` is `BigDecimal` and `currencyFormat` (in
+  `:shared-ui`'s `androidMain` since then, `presentation/expenses/CurrencyFormat.kt`, package and
+  signature unchanged, so the app's callers compile as they were) and whose iPhone `actual` is
+  `NSNumberFormatter`'s currency style.
+  `ClockFormat`, `monthInFormatForm`, `unbreakableDate` and the skeleton constants are common
+  (`utils/ClockFormat.kt`); `ClockFormat.follow(context)` and `localeUses24Hour(locale)` are
+  Android extensions beside the `java.time` code. It follows
   the device's 12/24-hour setting, which `MainActivity` reads into `ClockFormat` on create and on
   every resume; code that can run without the activity — the widget, a reminder — passes
   `DateFormat.is24HourFormat(context)` itself. The one `"HH:mm"` left is a wire format
@@ -3379,7 +5157,8 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
   on purpose. The Day and Week views' hour gutter follows the same clock through `hourLabel`
   (L-7: "09" on 24 hours, "9 AM" on 12), and only a 12-hour clock widens it
   (`Dimensions.hourGutterWidthFor`), so the 24-hour layout never moves.
-- There is no `values-en/` — base `values/` IS English; don't recreate it.
+- There is no `values-en/` — base `values/` IS English; don't recreate it (in
+  `composeResources/`, where Compose Multiplatform falls back to it the way Android does).
 - **English is written in sentence case** (October 2026 audit, D-21): "Event title", "Week on /
   week off", "Save changes" — only the first word and proper names (Google Calendar, CoPlanly)
   are capitalised, as Material 3 and the rest of the app do. Title Case crept into 101 labels

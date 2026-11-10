@@ -1,0 +1,495 @@
+package com.coparently.app.presentation.auth
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChildCare
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import com.coparently.app.presentation.common.animations.sectionEnter
+import com.coparently.app.presentation.common.animations.sectionExit
+import com.coparently.app.presentation.platform.LocalCredentialSignIn
+import com.coparently.app.presentation.theme.CoPlanlyColors
+import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.presentation.theme.headlineSmallEmphasized
+import com.coparently.app.presentation.theme.labelLargeEmphasized
+import com.coparently.app.presentation.theme.rememberReducedMotion
+import com.coparently.app.presentation.theme.titleMediumEmphasized
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.app_name
+import com.coparently.app.resources.auth_action_create_account
+import com.coparently.app.resources.auth_action_sign_in
+import com.coparently.app.resources.auth_action_sign_up
+import com.coparently.app.resources.auth_cd_logo
+import com.coparently.app.resources.auth_create_your_account
+import com.coparently.app.resources.auth_divider_or
+import com.coparently.app.resources.auth_email_label
+import com.coparently.app.resources.auth_email_placeholder
+import com.coparently.app.resources.auth_forgot_password_link
+import com.coparently.app.resources.auth_google_sign_in
+import com.coparently.app.resources.auth_have_account_question
+import com.coparently.app.resources.auth_hide_password
+import com.coparently.app.resources.auth_no_account_question
+import com.coparently.app.resources.auth_password_label
+import com.coparently.app.resources.auth_password_placeholder
+import com.coparently.app.resources.auth_reset_email_sent
+import com.coparently.app.resources.auth_saved_password_sign_in
+import com.coparently.app.resources.auth_show_password
+import com.coparently.app.resources.auth_sign_in_subtitle
+import com.coparently.app.resources.auth_sign_up_subtitle
+import com.coparently.app.resources.auth_tagline
+import com.coparently.app.resources.auth_welcome_back
+import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.viewmodel.koinViewModel
+
+/**
+ * Authentication screen for login and registration.
+ * Enhanced with modern Material 3 design and animations.
+ */
+@Composable
+fun AuthScreen(
+    onAuthSuccess: () -> Unit,
+    onViewModelReady: ((AuthViewModel) -> Unit)? = null,
+    viewModel: AuthViewModel = koinViewModel()
+) {
+    // Call the callback when viewModel is ready
+    viewModel.onAuthSuccess = onAuthSuccess
+    onViewModelReady?.invoke(viewModel)
+    val uiState by viewModel.uiState.collectAsState()
+    val dims = dimensions()
+    val coroutineScope = rememberCoroutineScope()
+    // Credential Manager hosts its UI on an Activity and refuses an application context, so the
+    // shell holds the Activity and hands the screen its sheets (`CredentialSignIn`, MON-24 phase 2).
+    val credentials = LocalCredentialSignIn.current
+
+    // Gradient background
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        CoPlanlyColors.BrandPrimary.copy(alpha = 0.1f),
+                        Color.Transparent,
+                        CoPlanlyColors.BrandSecondary.copy(alpha = 0.05f)
+                    )
+                )
+            )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(dims.paddingLarge)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(40.dp))
+
+            // Logo & Branding Section
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(bottom = 40.dp)
+            ) {
+                // Animated logo with pulse effect
+                val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+                val pulsing by infiniteTransition.animateFloat(
+                    initialValue = 0.95f,
+                    targetValue = 1.05f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(2000, easing = FastOutSlowInEasing),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "pulse"
+                )
+                // Decoration that loops forever stands still when animations are switched off.
+                val pulse = if (rememberReducedMotion()) 1f else pulsing
+
+                Icon(
+                    imageVector = Icons.Default.ChildCare,
+                    contentDescription = stringResource(Res.string.auth_cd_logo),
+                    modifier = Modifier
+                        .size(AUTH_LOGO_SIZE)
+                        .graphicsLayer {
+                            scaleX = pulse
+                            scaleY = pulse
+                        },
+                    tint = CoPlanlyColors.BrandPrimary
+                )
+
+                Spacer(modifier = Modifier.height(Spacing.L))
+
+                Text(
+                    text = stringResource(Res.string.app_name),
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+
+                Text(
+                    text = stringResource(Res.string.auth_tagline),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            // Auth Card with elevated design
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = 8.dp
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(Spacing.XL),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.L)
+                ) {
+                    // Title
+                    Text(
+                        text = if (uiState.isSignInMode) {
+                            stringResource(Res.string.auth_welcome_back)
+                        } else {
+                            stringResource(Res.string.auth_create_your_account)
+                        },
+                        style = MaterialTheme.typography.headlineSmallEmphasized
+                    )
+
+                    Text(
+                        text = if (uiState.isSignInMode) {
+                            stringResource(Res.string.auth_sign_in_subtitle)
+                        } else {
+                            stringResource(Res.string.auth_sign_up_subtitle)
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(Spacing.S))
+
+                    // Email Field
+                    OutlinedTextField(
+                        value = uiState.email,
+                        onValueChange = viewModel::updateEmail,
+                        label = { Text(stringResource(Res.string.auth_email_label)) },
+                        placeholder = { Text(stringResource(Res.string.auth_email_placeholder)) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Email,
+                                contentDescription = null
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !uiState.isLoading,
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Email,
+                            imeAction = ImeAction.Next
+                        ),
+                        shape = MaterialTheme.shapes.small
+                    )
+
+                    // Password Field
+                    var passwordVisible by remember { mutableStateOf(false) }
+
+                    OutlinedTextField(
+                        value = uiState.password,
+                        onValueChange = viewModel::updatePassword,
+                        label = { Text(stringResource(Res.string.auth_password_label)) },
+                        placeholder = { Text(stringResource(Res.string.auth_password_placeholder)) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = null
+                            )
+                        },
+                        trailingIcon = {
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(
+                                    imageVector = if (passwordVisible) {
+                                        Icons.Default.VisibilityOff
+                                    } else {
+                                        Icons.Default.Visibility
+                                    },
+                                    contentDescription = if (passwordVisible) {
+                                        stringResource(Res.string.auth_hide_password)
+                                    } else {
+                                        stringResource(Res.string.auth_show_password)
+                                    }
+                                )
+                            }
+                        },
+                        visualTransformation = if (passwordVisible) {
+                            VisualTransformation.None
+                        } else {
+                            PasswordVisualTransformation()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !uiState.isLoading,
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction = ImeAction.Done
+                        ),
+                        shape = MaterialTheme.shapes.small
+                    )
+
+                    // Sign-in only: a fresh account has no password to have forgotten. Needs only
+                    // the email field — the reset link goes to the inbox, not through the form.
+                    if (uiState.isSignInMode) {
+                        TextButton(
+                            onClick = { viewModel.sendPasswordReset() },
+                            modifier = Modifier.align(Alignment.End),
+                            enabled = !uiState.isLoading
+                        ) {
+                            Text(
+                                text = stringResource(Res.string.auth_forgot_password_link),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+
+                    // Reset-link confirmation. Resolved outside the block for the same reason as
+                    // the error card below: the exit animation runs after the value is null.
+                    val resetSentTo = uiState.resetEmailSentTo
+                    AnimatedVisibility(
+                        visible = resetSentTo != null,
+                        enter = sectionEnter(),
+                        exit = sectionExit()
+                    ) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer
+                            ),
+                            shape = MaterialTheme.shapes.extraSmall
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(dims.paddingSmall * 1.5f),
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Email,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.size(IconSizes.Small)
+                                )
+                                Text(
+                                    text = resetSentTo
+                                        ?.let { stringResource(Res.string.auth_reset_email_sent, it) }
+                                        .orEmpty(),
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+
+                    // Error Message
+                    // Resolved outside the block: AnimatedVisibility still runs its content
+                    // while the card animates out, when the error is already null.
+                    val errorRes = uiState.error?.messageRes()
+                    AnimatedVisibility(
+                        visible = errorRes != null,
+                        enter = sectionEnter(),
+                        exit = sectionExit()
+                    ) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer
+                            ),
+                            shape = MaterialTheme.shapes.extraSmall
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(dims.paddingSmall * 1.5f),
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Error,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(IconSizes.Small)
+                                )
+                                Text(
+                                    text = errorRes?.let { stringResource(it) }.orEmpty(),
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(Spacing.S))
+
+                    // Google Sign-In Button — only where the phone has the credential sheets (the
+                    // iPhone has no sign-in yet), as a button that could do nothing is design item 8.
+                    if (credentials.available) {
+                        OutlinedButton(
+                            onClick = {
+                                coroutineScope.launch { viewModel.signInWithGoogle(credentials) }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(dims.buttonHeight),
+                            enabled = !uiState.isLoading,
+                            shape = MaterialTheme.shapes.medium,
+                            border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
+                                width = 2.dp
+                            )
+                        ) {
+                            Text(
+                                text = stringResource(Res.string.auth_google_sign_in),
+                                // A button's own role, not a lightened title.
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
+                    }
+
+                    // Sign-in only: offering a stored password while creating an account is
+                    // nonsense. Deliberately a button rather than a sheet that opens with the
+                    // screen - the system UI stays behind an explicit request, which matters
+                    // most right after a deliberate sign-out.
+                    if (uiState.isSignInMode && credentials.available) {
+                        TextButton(
+                            onClick = {
+                                coroutineScope.launch { viewModel.signInWithSavedPassword(credentials) }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !uiState.isLoading
+                        ) {
+                            Text(
+                                text = stringResource(Res.string.auth_saved_password_sign_in),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+
+                    // Divider with "or"
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = Spacing.L),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        HorizontalDivider(modifier = Modifier.weight(1f))
+                        Text(
+                            text = stringResource(Res.string.auth_divider_or),
+                            modifier = Modifier.padding(horizontal = Spacing.L),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        HorizontalDivider(modifier = Modifier.weight(1f))
+                    }
+
+                    // Primary Action Button
+                    Button(
+                        onClick = {
+                            if (uiState.isSignInMode) {
+                                viewModel.signIn(credentials, onAuthSuccess)
+                            } else {
+                                viewModel.signUp(credentials, onAuthSuccess)
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(dims.buttonHeight),
+                        enabled = !uiState.isLoading &&
+                            uiState.email.isNotBlank() &&
+                            uiState.password.isNotBlank(),
+                        // Theme primary, not BrandPrimary: the brand indigo is light-theme-only
+                        // (2.73:1 on the dark surface) and under onPrimary's dark text in dark theme.
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        if (uiState.isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(
+                                text = if (uiState.isSignInMode) {
+                                    stringResource(Res.string.auth_action_sign_in)
+                                } else {
+                                    stringResource(Res.string.auth_action_create_account)
+                                },
+                                style = MaterialTheme.typography.titleMediumEmphasized
+                            )
+                        }
+                    }
+
+                    AuthLegalNotice()
+                }
+            }
+
+            Spacer(modifier = Modifier.height(Spacing.XL))
+
+            // Toggle Sign In/Sign Up
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (uiState.isSignInMode) {
+                        stringResource(Res.string.auth_no_account_question)
+                    } else {
+                        stringResource(Res.string.auth_have_account_question)
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                TextButton(onClick = { viewModel.toggleSignInMode() }) {
+                    Text(
+                        text = if (uiState.isSignInMode) {
+                            stringResource(Res.string.auth_action_sign_up)
+                        } else {
+                            stringResource(Res.string.auth_action_sign_in)
+                        },
+                        style = MaterialTheme.typography.labelLargeEmphasized,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** The logo the sign-in screen opens with: a brand mark, sized on its own rather than as an icon. */
+private val AUTH_LOGO_SIZE = 80.dp

@@ -37,9 +37,36 @@ const CHECKLIST = 'docs/DEVICE-CHECKLIST.md';
 const K = 'app/src/main/java/com/coparently/app/';
 
 /**
+ * Where the strings live since MON-24 phase 2 (Task 9), abbreviated `S/` in the patterns below:
+ * `:shared-ui`'s Compose Multiplatform resources, the files that were the app's `res/values…`
+ * directories (all five), with the same names. The app's Android copy is generated from them.
+ */
+const S = 'shared-ui/src/commonMain/composeResources/';
+
+/**
+ * The shared Kotlin Multiplatform modules' production source roots (MON-24): `commonMain`,
+ * `androidMain`, `iosMain` and the like, never a `…Test` set, in `shared/` (the domain) and
+ * `shared-data/` (the data layer, from phase 2: the school import's Bakaláři client and Google
+ * Calendar's `events.list` first, with the HTTP plumbing under `data/http/`) and `shared-ui/` (the
+ * screens, from phase 2's Task 9; its strings are `S/`, below). Code moves there from
+ * `K/` with its package unchanged, so a file under one of them is planned as the `K/` file it was —
+ * the rules below keep naming the app's paths, and a move changes no check a phone needs.
+ */
+const SHARED_MAIN = /^shared(-data|-ui)?\/src\/(?![A-Za-z]*Test\/)[A-Za-z]+\/kotlin\/com\/coparently\/app\//;
+
+/**
+ * @param {string} file a changed path
+ * @return {string} the path the rules are matched against: a shared production source as the
+ *   app source it stands for, anything else unchanged
+ */
+function asAppSource(file) {
+  return SHARED_MAIN.test(file) ? file.replace(SHARED_MAIN, K) : file;
+}
+
+/**
  * The mapping. `sections` are checklist section numbers ("2.1", or "7" for a top-level
  * section); `paths` are globs (`**` any depth, `*` within one segment), where a leading `K/`
- * stands for the app's Kotlin source root. Order is the order the checklist runs in.
+ * stands for the app's Kotlin source root and a leading `S/` for the strings' directory. Order is the order the checklist runs in.
  */
 const RULES = [
   {
@@ -51,36 +78,39 @@ const RULES = [
   {
     sections: ['2.1'],
     why: 'database, encryption or schema',
-    paths: ['K/data/local/**', 'K/data/security/**', 'K/di/DatabaseModule.kt', 'app/schemas/**',
-      'app/src/androidTest/**/data/local/**'],
+    paths: ['K/data/local/**', 'K/data/security/**', 'K/di/DatabaseBuilder.kt', 'K/di/DatabaseName.kt',
+      'K/di/koin/DatabaseModule.kt', 'app/schemas/**', 'app/src/androidTest/**/data/local/**'],
   },
   {
     sections: ['2.2'],
     why: 'first run: splash, sign-in, consent, onboarding, theme or manifest',
     paths: ['K/presentation/splash/**', 'K/presentation/auth/**', 'K/presentation/consent/**',
       'K/presentation/onboarding/**', 'K/domain/onboarding/**', 'K/presentation/MainActivity.kt',
-      'K/presentation/common/NotificationPermission.kt',
-      'K/presentation/common/PrivacyPolicyLink.kt', 'K/data/telemetry/**',
+      'K/presentation/CoPlanlyApp.kt', 'K/presentation/AppLaunch.kt',
+      'K/presentation/common/PermissionRequesters.kt', 'K/presentation/common/AndroidPermissionChecks.kt',
+      'K/presentation/platform/**',
+      'K/data/telemetry/**', 'K/data/platform/AnalyticsEvents.kt',
       'app/src/main/AndroidManifest.xml', 'app/src/main/res/values/themes.xml',
       'app/src/main/res/values-night/**'],
   },
   {
     sections: ['2.3'],
     why: 'what signing in agrees to: the age line, the terms and the policy links (L-12)',
-    paths: ['K/presentation/auth/AuthLegalNotice.kt', 'K/presentation/common/TermsOfServiceLink.kt',
-      'K/presentation/common/PrivacyPolicyLink.kt', 'app/src/main/res/values*/legal_strings.xml'],
+    paths: ['K/presentation/auth/AuthLegalNotice.kt', 'K/presentation/consent/TelemetryConsentScreen.kt',
+      'K/presentation/settings/SettingsScreen.kt', 'S/values*/legal_strings.xml'],
   },
   {
     sections: ['3.1'],
     why: 'a date picker or the dates it saves',
-    paths: ['**/*DatePicker*', 'K/presentation/event/**', 'K/presentation/changerequests/**',
+    paths: ['**/*DatePicker*', 'K/presentation/common/*PickerDates.kt', 'K/presentation/components/*TimePicker.kt',
+      'K/presentation/event/**', 'K/presentation/changerequests/**',
       'K/presentation/childinfo/**', 'K/presentation/pets/**', 'K/presentation/profile/**'],
   },
   {
     sections: ['3.2'],
     why: 'motion or navigation',
-    paths: ['K/presentation/theme/Motion.kt', 'K/presentation/navigation/**',
-      'K/presentation/calendar/MonthView.kt'],
+    paths: ['K/presentation/theme/Motion*.kt', 'K/presentation/navigation/**',
+      'K/presentation/calendar/MonthView.kt', 'K/presentation/common/MonthPaging*.kt'],
   },
   {
     sections: ['3.2'],
@@ -92,32 +122,36 @@ const RULES = [
   {
     sections: ['3.14'],
     why: 'the colour schemes or the contrast level',
-    paths: ['K/presentation/theme/Theme.kt', 'K/presentation/theme/Contrast*',
+    paths: ['K/presentation/theme/Theme*.kt', 'K/presentation/theme/Contrast*',
       'tools/generate-contrast-schemes.py'],
   },
   {
     sections: ['3.17'],
     why: 'the tabs\' wide layouts or the QR scanner',
-    paths: ['K/presentation/common/TwoPane.kt', 'K/presentation/home/HomeScreen.kt',
+    // `TwoPane*`: its window width is an `expect` since MON-24 (`TwoPane.android.kt`, `.ios.kt`).
+    paths: ['K/presentation/common/TwoPane*', 'K/presentation/home/HomeScreen.kt',
       'K/presentation/chat/ConversationsScreen.kt', 'K/presentation/pairing/**'],
   },
   {
     sections: ['3.18'],
     why: 'the Bakaláři school import',
-    paths: ['K/data/school/**', 'K/domain/school/**', 'K/presentation/school/**'],
+    // `K/data/http/**`: the Ktor client both imports call out through (MON-24, `shared-data/`).
+    paths: ['K/data/school/**', 'K/domain/school/**', 'K/presentation/school/**', 'K/data/http/**'],
   },
   {
     sections: ['3.16'],
     why: 'the Add button, "Later", the default currency or the reader\'s clock',
     paths: ['K/presentation/common/FabScrollVisibility.kt', 'K/presentation/expenses/ExpenseScreen.kt',
       'K/presentation/home/AwaitingDialogs.kt', 'K/presentation/home/PutOffAsksViewModel.kt',
-      'K/data/money/**', 'K/data/repository/PreferencesRepositoryImpl.kt', 'K/utils/LocalizedDates.kt'],
+      'K/data/money/**', 'K/data/repository/PreferencesRepositoryImpl.kt', 'K/utils/LocalizedDates.kt',
+      // The common half of the reader's clock since MON-24 (`ClockFormat.is24Hour`, the date seam).
+      'K/utils/ClockFormat.kt', 'K/utils/ReaderDateText*'],
   },
   {
     sections: ['3.15'],
     why: 'the Today widget, or the functions it computes the day with',
     paths: ['K/presentation/widget/**', 'app/src/main/res/xml/today_widget_info.xml',
-      'app/src/main/res/values*/widget_strings.xml',
+      'S/values*/widget_strings.xml',
       'app/src/main/res/drawable/widget_today_preview.xml', 'K/domain/home/HomeWeek.kt',
       'K/domain/custody/HandoverCalculator.kt'],
   },
@@ -165,29 +199,32 @@ const RULES = [
     why: 'the child-health consent or what withdrawing it clears (L-2)',
     paths: ['K/domain/consent/HealthConsent*', 'K/data/consent/**', 'K/presentation/consent/HealthConsent*',
       'K/presentation/childinfo/AddEditChildInfoScreen.kt',
-      'app/src/main/res/values*/health_consent_strings.xml'],
+      'S/values*/health_consent_strings.xml'],
   },
   {
     sections: ['3.20'],
     why: 'the calendar feed as an iPhone subscribes to it (MON-17)',
     paths: ['K/presentation/settings/CalendarFeed*', 'K/data/repository/CalendarFeedRepositoryImpl.kt',
       'K/domain/feed/**', 'K/domain/repository/CalendarFeedRepository.kt',
-      'app/src/main/res/values*/calendar_feed_strings.xml'],
+      'S/values*/calendar_feed_strings.xml'],
   },
   {
     sections: ['3.21'],
     why: 'voice dictation in the chat composer (on-device only)',
     paths: ['K/presentation/chat/ChatDictation.kt', 'K/presentation/chat/DictationViewModel.kt',
       'K/presentation/chat/MessageInput.kt', 'K/domain/dictation/**', 'K/data/dictation/**',
-      'K/presentation/common/MicrophonePermission.kt', 'app/src/main/res/values*/voice_strings.xml'],
+      'K/presentation/common/PermissionRequesters.kt', 'K/presentation/common/AndroidPermissionChecks.kt',
+      // The language's Android half since MON-24 (`Dictation.rememberLanguageTag`).
+      'K/presentation/chat/DictationLanguage.kt', 'K/presentation/platform/Dictation.kt',
+      'S/values*/voice_strings.xml'],
   },
   {
     sections: ['3.22'],
     why: 'the AI assist (reply suggestions, month summary, its consent) or the month in review',
-    paths: ['K/domain/ai/**', 'K/data/ai/**', 'K/presentation/ai/**', 'K/di/AiModule.kt',
+    paths: ['K/domain/ai/**', 'K/data/ai/**', 'K/presentation/ai/**', 'K/di/koin/AiModule.kt',
       'K/presentation/chat/ReplySuggestion*', 'K/presentation/chat/MessageTemplatesBottomSheet.kt',
       'K/domain/review/**', 'K/presentation/review/**',
-      'app/src/main/res/values*/ai_strings.xml', 'app/src/main/res/values*/month_review_strings.xml'],
+      'S/values*/ai_strings.xml', 'S/values*/month_review_strings.xml'],
   },
   {
     sections: ['3.23'],
@@ -202,7 +239,8 @@ const RULES = [
   {
     sections: ['3.24'],
     why: 'the hour gutter\'s clock, holiday names, an event\'s colour on Home, or a chip\'s member initial',
-    paths: ['K/utils/LocalizedDates.kt', 'K/presentation/theme/WindowSize.kt',
+    paths: ['K/utils/LocalizedDates.kt', 'K/utils/ClockFormat.kt', 'K/utils/ReaderDateText*',
+      'K/presentation/theme/WindowSize.kt',
       'K/presentation/common/HolidayNames.kt', 'K/domain/holidays/CzechSchoolBreak.kt',
       'K/presentation/calendar/EventMemberMark.kt', 'K/presentation/calendar/DayWeekView.kt',
       'K/presentation/home/HomeScreen.kt'],
@@ -211,7 +249,12 @@ const RULES = [
     sections: ['3.25'],
     why: 'settle up: the card, the IBAN, or the payment QR code a bank reads',
     paths: ['K/domain/payment/**', 'K/data/payment/**', 'K/presentation/chat/SettleUpPayment.kt',
-      'K/presentation/expenses/SettleUpDialog.kt', 'K/presentation/expenses/ExpenseSummaryHeader.kt'],
+      'K/presentation/expenses/SettleUpDialog.kt', 'K/presentation/expenses/SettleUpViewModel.kt',
+      'K/presentation/expenses/ExpenseSummaryHeader.kt',
+      // Since MON-24: the code's matrix and shared PNG (`QrCodes`, ZXing in `AndroidQrCodes`), and
+      // the amounts in the reader's conventions.
+      'K/presentation/platform/*QrCodes.kt', 'K/utils/ReaderMoneyText*',
+      'K/presentation/expenses/CurrencyFormat.kt'],
   },
   {
     sections: ['3.26'],
@@ -237,7 +280,7 @@ const RULES = [
     sections: ['3.29'],
     why: 'a new user\'s first week: the Family tab, Home leading with today, Expenses as a detail screen, the requests pop-up, the legend',
     paths: ['K/presentation/family/**', 'K/presentation/home/HomeScreen.kt', 'K/presentation/home/HomeAskQueue.kt',
-      'K/presentation/home/MonthMoney.kt', 'K/presentation/navigation/NavGraph.kt',
+      'K/presentation/home/MonthMoney.kt', 'K/presentation/home/MonthSpend.kt', 'K/presentation/navigation/NavGraph.kt',
       'K/presentation/navigation/BottomNavDestination.kt', 'K/presentation/calendar/components/CustodyLegend.kt',
       'K/presentation/chat/MessagesList.kt', 'K/presentation/settings/SettingsScreen.kt',
       'K/presentation/expenses/ExpenseScreen.kt'],
@@ -249,7 +292,8 @@ const RULES = [
       'K/presentation/custody/CustodySetupScreen.kt', 'K/presentation/custody/CustodySetupViewModel.kt',
       'K/presentation/calendar/OpeningHour.kt', 'K/presentation/calendar/DayWeekView.kt',
       'K/presentation/expenses/AddExpenseScreen.kt', 'K/presentation/expenses/ExpenseScreen.kt',
-      'K/presentation/changerequests/FoldedMonth.kt', 'K/data/remote/firebase/PushRouting.kt'],
+      'K/presentation/changerequests/FoldedMonth.kt', 'K/data/remote/firebase/PushRouting.kt',
+      'K/data/remote/firebase/PushDestination.kt'],
   },
   {
     sections: ['3.31'],
@@ -278,16 +322,18 @@ const RULES = [
   },
   {
     sections: ['3.6', '4.2'],
-    why: 'strings, locales or the language picker',
-    paths: ['app/src/main/res/values*/**', 'app/src/main/res/xml/locales_config.xml',
-      'K/presentation/settings/AppLanguage.kt'],
+    why: 'strings, locales, the language picker or the rule that picks the app\'s language',
+    paths: ['S/values*/**', 'app/src/main/res/xml/locales_config.xml',
+      'K/presentation/settings/AppLanguage.kt', 'K/presentation/settings/SystemDefaultRelaunch.kt',
+      'K/utils/AppLocale.kt', 'K/domain/language/**'],
   },
   {
     sections: ['3.7'],
     why: 'push notifications',
-    paths: ['K/data/remote/firebase/FcmService.kt', 'K/data/remote/firebase/PushPayload.kt',
+    paths: ['K/data/remote/firebase/FcmService.kt', 'K/data/remote/firebase/PushRegistration.kt',
+      'K/data/remote/firebase/PushPayload.kt',
       'K/data/remote/firebase/PushNotifier.kt', 'K/data/notification/**', 'K/domain/notification/**', '**/*MessagingService*',
-      'app/src/main/res/values*/push_strings.xml'],
+      'S/values*/push_strings.xml'],
   },
   {
     sections: ['3.8'],
@@ -303,18 +349,22 @@ const RULES = [
   {
     sections: ['3.9'],
     why: 'the Google Calendar connection, its consent and its import',
-    paths: ['K/data/remote/google/**', 'K/data/sync/CalendarSyncRepository.kt'],
+    paths: ['K/data/remote/google/**', 'K/data/sync/CalendarSyncRepository.kt', 'K/data/http/**'],
   },
   {
     sections: ['3.10'],
     why: 'record photos (L-4), photo upload or Storage rules',
     paths: ['storage.rules', 'K/presentation/pets/**', 'K/presentation/childinfo/**',
       '**/*Upload*', 'K/**/*Photo*', 'K/domain/files/**', 'K/data/files/**',
+      // The image seam since MON-24: every record photo is drawn through `AppImage`, whose Android
+      // half (`CoilImages`) is the one Coil call that fetches it, and the viewer and avatar above it.
+      'K/presentation/platform/PlatformImages.kt', 'K/presentation/platform/AndroidPlatform.kt',
+      'K/presentation/common/AccountAvatar.kt', 'K/presentation/common/ZoomableImage.kt',
       'functions/record-photos.js'],
   },
   {
     sections: ['4.1'],
-    why: 'R8, Gson models or the build itself',
+    why: 'R8, stored JSON models or the build itself',
     paths: ['app/proguard-rules.pro', 'app/build.gradle.kts', 'build.gradle.kts',
       'gradle.properties', 'gradle/**', 'settings.gradle.kts', 'K/data/sync/**',
       'tools/check-r8-mapping.js', 'app/proguard-r8test.pro', 'app/src/r8Test/**', 'tools/check-r8-probe.js',
@@ -348,15 +398,16 @@ const RULES = [
     sections: ['5.7'],
     why: 'the pairing link, its web page, or the name a code shows before linking',
     paths: ['K/domain/pairing/**', 'K/presentation/pairing/**', 'K/presentation/MainActivity.kt',
+      'K/presentation/AppLaunch.kt',
       'K/data/remote/firebase/PairingFunctions.kt', 'web/pair/**',
-      'app/src/main/res/values*/pairing_strings.xml'],
+      'S/values*/pairing_strings.xml'],
   },
   {
     sections: ['5.8'],
     why: 'requests: Home\'s Requests row, the co-parent\'s answers in its feed, or the inbox and its history',
     paths: ['K/presentation/changerequests/**', 'K/domain/changerequests/**',
       'K/presentation/home/Requests*', 'K/presentation/home/HomeFeed*',
-      'app/src/main/res/values*/change_requests_strings.xml'],
+      'S/values*/change_requests_strings.xml'],
   },
   {
     sections: ['5.9'],
@@ -367,20 +418,22 @@ const RULES = [
       'K/domain/changerequests/RequestCap*',
       'K/presentation/common/AnswerByField*',
       'K/presentation/changerequests/CardClock*',
-      'app/src/main/res/values*/request_deadline_strings.xml'],
+      'S/values*/request_deadline_strings.xml'],
   },
   {
     sections: ['5.6'],
     why: 'a calendar friend, whose grants are one per family',
     paths: ['K/presentation/friends/**', 'K/domain/friends/**', 'K/data/repository/Friend*',
-      'app/src/main/res/values*/friend_strings.xml'],
+      'S/values*/friend_strings.xml'],
   },
   {
     sections: ['5.5'],
     why: 'the document vault or chat attachments',
     paths: ['K/presentation/documents/**', 'K/domain/documents/**', 'K/data/documents/**',
       'K/domain/files/**', 'K/data/files/**', 'K/**/*Attachment*', 'storage.rules',
-      'app/src/main/res/values*/shared_files_strings.xml'],
+      // A picked file's name and size since MON-24 (the chat's confirmation and chip).
+      'K/presentation/platform/FileDetails.kt',
+      'S/values*/shared_files_strings.xml'],
   },
   {
     sections: ['6'],
@@ -388,7 +441,7 @@ const RULES = [
     paths: ['K/presentation/export/**', 'K/domain/export/**', 'K/data/export/**',
       'K/data/versions/**', 'app/src/main/res/xml/file_paths.xml',
       'K/presentation/journal/**', 'K/domain/journal/**',
-      'app/src/main/res/values*/journal_strings.xml', 'web/verify/**'],
+      'S/values*/journal_strings.xml', 'web/verify/**'],
   },
   {
     sections: ['7'],
@@ -407,14 +460,14 @@ const RULES = [
  * Paths whose change needs no phone at all. They are neither mapped nor reported as unmapped.
  */
 const NO_DEVICE = ['docs/**', '**/*.md', '.github/**', 'tools/**', 'firestore-tests/**', 'web-tests/**',
-  'app/src/test/**', 'app/config/detekt/**', '.cursor/**', '.gitignore', 'LICENSE'];
+  'app/src/test/**', 'shared/src/*Test/**', 'shared-data/src/*Test/**', 'app/config/detekt/**', '.cursor/**', '.gitignore', 'LICENSE'];
 
 /**
  * @param {string} glob a pattern from RULES or NO_DEVICE
  * @return {RegExp} the anchored regular expression it stands for
  */
 function globToRegExp(glob) {
-  const expanded = glob.startsWith('K/') ? K + glob.slice(2) : glob;
+  const expanded = glob.startsWith('K/') ? K + glob.slice(2) : glob.startsWith('S/') ? S + glob.slice(2) : glob;
   let re = '';
   for (let i = 0; i < expanded.length; i++) {
     const c = expanded[i];
@@ -482,9 +535,10 @@ function planFor(files, checklist, e2eBySection = new Map()) {
   for (const file of files) {
     // Documentation needs no phone, wherever it lives (functions/README.md is not server code).
     if (/\.md$/.test(file)) continue;
+    const subject = asAppSource(file);
     let claimed = false;
     for (const rule of compiled) {
-      if (!rule.res.some((re) => re.test(file))) continue;
+      if (!rule.res.some((re) => re.test(subject))) continue;
       claimed = true;
       for (const s of rule.sections) {
         if (!sections.has(s)) {
@@ -498,7 +552,7 @@ function planFor(files, checklist, e2eBySection = new Map()) {
         bySection.set(s, item);
       }
     }
-    if (!claimed && !noDevice.some((re) => re.test(file)) && file.startsWith('app/src/main/')) {
+    if (!claimed && !noDevice.some((re) => re.test(file)) && subject.startsWith('app/src/main/')) {
       unmapped.push(file);
     }
   }
@@ -611,4 +665,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = {RULES, NO_DEVICE, K, globToRegExp, parseSections, anchorFor, planFor, toMarkdown, e2eBySection};
+module.exports = {RULES, NO_DEVICE, K, S, asAppSource, globToRegExp, parseSections, anchorFor, planFor, toMarkdown, e2eBySection};

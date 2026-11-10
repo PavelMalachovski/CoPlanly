@@ -5,12 +5,14 @@ import android.text.format.DateFormat
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.notification.ReminderPlanner
 import com.coparently.app.domain.notification.ReminderScheduler
+import com.coparently.app.utils.format
+import com.coparently.app.utils.inAppLanguage
 import com.coparently.app.utils.shortTime
-import dagger.hilt.android.qualifiers.ApplicationContext
-import java.time.LocalDateTime
-import java.time.ZoneId
-import javax.inject.Inject
-import javax.inject.Singleton
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Clock
 
 /**
  * [ReminderScheduler] on alarms ([ReminderAlarms]; exact where the phone allows it).
@@ -19,7 +21,7 @@ import javax.inject.Singleton
  * ([ReminderPlanner]); arming again replaces it, and [DueReminders] arms the one after when it
  * fires. Three things not to undo.
  * - **The wall clock becomes an instant here, in the system zone, for the reminder's own date**:
- *   `remindAt.atZone(zone)` resolves the offset in force *at* the reminder, so a reminder armed
+ *   `remindAt.toInstant(zone)` resolves the offset in force *at* the reminder, so a reminder armed
  *   before a daylight-saving change fires at its wall-clock time after it. The WorkManager version
  *   waited `Duration.between` two wall clocks, and was an hour off across the change. A clock or
  *   zone change re-arms everything ([ReminderRearm]), because an event's time is a naive local time.
@@ -27,23 +29,26 @@ import javax.inject.Singleton
  *   [cancelAll] has no tag to cancel by.
  * - **[cancelAll] forgets them all**, so nothing re-arms a signed-out account's reminders.
  */
-@Singleton
-class EventReminderScheduler @Inject constructor(
-    @ApplicationContext private val context: Context,
+class EventReminderScheduler(
+    private val context: Context,
     private val alarms: ReminderAlarms,
     private val armed: ArmedReminders
 ) : ReminderScheduler {
 
     override fun schedule(event: Event) {
-        val plan = ReminderPlanner.nextReminder(event, LocalDateTime.now()) ?: return cancel(event.id)
+        val zone = TimeZone.currentSystemDefault()
+        val plan = ReminderPlanner.nextReminder(event, Clock.System.now().toLocalDateTime(zone))
+            ?: return cancel(event.id)
         val due = DueReminder(
             eventId = event.id,
             occurrenceStart = plan.occurrenceStart,
             // The reader's clock (release audit R-9), read here: no activity need have run in the
-            // process that arms or delivers a reminder.
-            startTime = plan.occurrenceStart.format(shortTime(is24Hour = DateFormat.is24HourFormat(context)))
+            // process that arms or delivers a reminder. In the language the app speaks
+            // (inAppLanguage), as the notice's words and every push are, so "use locale default"
+            // means that language's clock.
+            startTime = startTimeText(plan.occurrenceStart)
         )
-        alarms.set(due, triggerAtMillis = plan.remindAt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
+        alarms.set(due, triggerAtMillis = plan.remindAt.toInstant(zone).toEpochMilliseconds())
         armed.add(event.id)
     }
 
@@ -60,5 +65,11 @@ class EventReminderScheduler @Inject constructor(
     override fun cancelAll() {
         armed.takeAll().forEach(alarms::cancel)
         alarms.cancelLegacyWork()
+    }
+
+    /** [start]'s time on the reader's clock, in the language the app speaks now. */
+    private fun startTimeText(start: LocalDateTime): String {
+        val words = context.inAppLanguage()
+        return start.format(shortTime(words.resources.configuration.locales[0], DateFormat.is24HourFormat(words)))
     }
 }

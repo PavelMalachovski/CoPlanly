@@ -18,46 +18,45 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.coparently.app.R
 import com.coparently.app.presentation.MainActivity
+import com.coparently.app.testing.KoinTestRule
 import com.coparently.app.testing.SignedInSession
+import com.coparently.app.testing.UsesFakeFirebase
 import com.coparently.app.testing.assertIconOnlyControlsAreAccessible
 import com.coparently.app.testing.exists
 import com.coparently.app.testing.pumpUntil
 import com.coparently.app.testing.settle
-import dagger.hilt.android.testing.HiltAndroidRule
-import dagger.hilt.android.testing.HiltAndroidTest
+import org.jetbrains.compose.resources.StringResource
 import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import javax.inject.Inject
 
 /**
  * Opens the real app as a signed-in parent and walks every top-level screen: the four tabs, the
  * calendar's three views, and Settings.
  *
- * It proves what no JVM test can: that the whole Hilt graph, the navigation graph and each main
+ * It proves what no JVM test can: that the whole Koin graph, the navigation graph and each main
  * screen's first composition hold together on a device without crashing — with Firebase mocked
- * (`FakeFirebaseModule`), so every screen is drawn from Room alone, the way a parent offline sees
+ * (`fakeFirebaseModule`), so every screen is drawn from Room alone, the way a parent offline sees
  * it — and that the bottom bar obeys UX item 1: shown on the four tabs, hidden on Settings, which
  * is a detail screen.
  *
  * The second test runs a basic accessibility sweep on the same screens; see
  * [assertIconOnlyControlsAreAccessible] for what it checks and why not the full ATF suite.
  */
-@HiltAndroidTest
+@UsesFakeFirebase
 @RunWith(AndroidJUnit4::class)
 class MainNavigationSmokeTest {
 
     @get:Rule(order = 0)
-    val hiltRule = HiltAndroidRule(this)
+    val koinRule = KoinTestRule()
 
     @get:Rule(order = 1)
     val composeTestRule = createEmptyComposeRule()
 
-    @Inject
-    lateinit var session: SignedInSession
+    val session: SignedInSession by lazy { koinRule.get() }
 
     private lateinit var scenario: ActivityScenario<MainActivity>
 
@@ -68,7 +67,6 @@ class MainNavigationSmokeTest {
 
     @Before
     fun launchSignedIn() {
-        hiltRule.inject()
         session.signIn()
         composeTestRule.mainClock.autoAdvance = false
         scenario = ActivityScenario.launch(MainActivity::class.java)
@@ -190,4 +188,8 @@ class MainNavigationSmokeTest {
     private fun isMenuItem(): SemanticsMatcher = !hasAnyAncestor(bottomBar)
 
     private fun string(@StringRes id: Int): String = context.getString(id)
+
+    /** A tab's label (`Res`, since the bar moved to `:shared-ui`), read as the app's `R.string` of its key. */
+    private fun string(resource: StringResource): String =
+        string(context.resources.getIdentifier(resource.key, "string", context.packageName))
 }

@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home dashboard strings. -->
+<resources>
+    <!-- Matches the bottom-nav label; the screen used to be titled "Overview" while the tab
+         said "Home", which is the naming drift the August 2026 design review flagged. -->
+    <string name="home_title">Home</string>
+
+    <!-- Pairing call-to-action, shown while the account is not yet paired. -->
+    <string name="home_pairing_title">Share this with your co-parent</string>
+    <string name="home_pairing_prompt">Once your co-parent joins, you both see the same days, agree changes before they happen and split costs in one place.</string>
+    <string name="home_pairing_cta">Pair with your co-parent</string>
+
+    <!-- Custody handover hero. %1$s = parent taking over, %2$d = whole days until then. -->
+    <string name="home_handover_current">Today with %1$s</string>
+    <string name="home_handover_current_you">Today with you</string>
+    <string name="home_handover_hero_today">Handover to %1$s today</string>
+    <string name="home_handover_hero_tomorrow">Handover to %1$s tomorrow</string>
+    <plurals name="home_handover_hero_in_days">
+        <item quantity="one">Handover to %1$s in %2$d day</item>
+        <item quantity="other">Handover to %1$s in %2$d days</item>
+    </plurals>
+    <!-- The same headline when the handover is to the reader (owner request, 28 October 2026). -->
+    <string name="home_handover_hero_today_you">Handover to you today</string>
+    <string name="home_handover_hero_tomorrow_you">Handover to you tomorrow</string>
+    <plurals name="home_handover_hero_in_days_you">
+        <item quantity="one">Handover to you in %1$d day</item>
+        <item quantity="other">Handover to you in %1$d days</item>
+    </plurals>
+
+    <!-- Stat tiles. Both are deep links, so each carries an action caption. -->
+    <plurals name="home_stat_unread_count">
+        <item quantity="one">%1$d unread</item>
+        <item quantity="other">%1$d unread</item>
+    </plurals>
+    <string name="home_stat_open_chat">Open chat →</string>
+    <!-- %1$s = amount, already formatted with its currency symbol. -->
+    <string name="home_stat_owed_to_you">You are owed %1$s\u00A0→</string>
+    <string name="home_stat_you_owe">You owe %1$s\u00A0→</string>
+    <string name="home_stat_settled">All settled →</string>
+
+    <!-- Section headers. %1$s = the co-parent's name. -->
+    <string name="home_section_this_week">This week</string>
+    <string name="home_week_empty">Nothing in the next seven days.</string>
+    <string name="home_section_recent_changes">Recent changes</string>
+    <string name="home_section_partner_changed">%1$s changed</string>
+
+    <!-- Timeline row. %1$s = day and time, %2$s = the parent whose day it is. -->
+    <string name="home_timeline_meta">%1$s · %2$s\u0027s day</string>
+    <string name="home_week_days_you">Your days</string>
+    <string name="home_week_days_of">%1$s’s days</string>
+    <string name="home_timeline_meta_you">%1$s · your day</string>
+
+    <!-- Recent-changes empty state. Only the paired one survives: the unpaired page now
+         renders the invitation alone, so there is no feed there to be empty. -->
+    <string name="home_recent_empty_paired">Nothing new from your co-parent yet. Changes they make will show up here.</string>
+
+    <!-- Contacts: item 16's one button, between the changes feed and the spend tile. -->
+    <string name="home_contacts">Contacts</string>
+    <string name="home_contacts_supporting">Grandparents, doctors, a friend\u0027s parents</string>
+
+    <!-- Activity feed. %1$s = event title; the section header already names who made the
+         change, so the row states the action rather than repeating "Co-parent". -->
+    <string name="home_activity_event_created">Added %1$s</string>
+    <string name="home_activity_event_updated">Updated %1$s</string>
+    <string name="home_activity_pickup_confirmed">Confirmed pickup for %1$s</string>
+    <string name="home_activity_change_requested">Asked to change %1$s</string>
+    <string name="home_activity_review">Review</string>
+    <string name="home_activity_you_accepted">You accepted</string>
+    <string name="home_activity_you_declined">You declined</string>
+    <string name="home_activity_withdrawn">Withdrawn</string>
+
+    <!-- Parent identity labels. -->
+    <string name="home_dialog_swap_title">Day swap</string>
+    <string name="home_dialog_requests_title">Requests</string>
+    <string name="home_dialog_requests_message">Your co-parent has requests waiting for your answer.</string>
+    <string name="home_dialog_requests_message_named">%1$s is waiting for your answer on some requests.</string>
+    <string name="home_dialog_later">Later</string>
+    <string name="home_dialog_review">Review</string>
+
+    <!-- The empty seven-day card's action. -->
+    <string name="home_week_empty_action">Add event</string>
+    <!-- The Requests row (phase 2): always there while paired. Its line is parts joined by " · ";
+         an answer's day leads, as a label, so no language needs a preposition before it. -->
+    <string name="home_requests_title">Requests</string>
+    <plurals name="home_requests_waiting_on_you">
+        <item quantity="one">%1$d waiting for your answer</item>
+        <item quantity="other">%1$d waiting for your answer</item>
+    </plurals>
+    <plurals name="home_requests_waiting_on_them">
+        <item quantity="one">%1$d waiting for %2$s</item>
+        <item quantity="other">%1$d waiting for %2$s</item>
+    </plurals>
+    <string name="home_requests_answer_accepted">%1$s: %2$s accepted your request</string>
+    <string name="home_requests_answer_declined">%1$s: %2$s declined your request</string>
+    <string name="home_requests_day_today">Today</string>
+    <string name="home_requests_day_yesterday">Yesterday</string>
+    <string name="home_requests_none">No requests yet</string>
+    <string name="home_requests_all">All requests and answers</string>
+    <!-- The co-parent's answers to this parent's requests, in the feed headed by their name. -->
+    <string name="home_activity_accepted_new_time">Accepted your new time for %1$s</string>
+    <string name="home_activity_declined_new_time">Declined your new time for %1$s</string>
+    <string name="home_activity_accepted_swap">Accepted your day swap: %1$s</string>
+    <string name="home_activity_declined_swap">Declined your day swap: %1$s</string>
+    <string name="home_activity_accepted_event">Accepted %1$s</string>
+    <string name="home_activity_declined_event">Declined %1$s</string>
+</resources>

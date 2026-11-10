@@ -11,7 +11,7 @@ import kotlin.test.assertTrue
  * `app/schemas/` stopped at `14.json` while the database climbed to 33, and nothing noticed for
  * nineteen versions. The cost was not theoretical: `MigrationTestHelper` builds a database at a
  * past version *from these files*, so every migration since v14 shipped with no fixture to test
- * it against — and `DatabaseModule` deliberately refuses destructive migration above v4, which
+ * it against — and `buildCoPlanlyDatabase` deliberately refuses destructive migration above v4, which
  * makes a broken one a crash on launch for somebody with real data rather than a wipe.
  *
  * **What this test does and does not catch, corrected.** It reads `app/schemas/` off disk, and
@@ -45,7 +45,7 @@ class DatabaseSchemaExportTest {
         assertTrue(
             exported.isNotEmpty(),
             "No exported schemas at all under $SCHEMA_DIR. Room writes them during KSP from " +
-                "the room.schemaLocation argument in app/build.gradle.kts."
+                "the room.schemaLocation argument in shared-data/build.gradle.kts."
         )
         assertEquals(
             version,
@@ -97,8 +97,10 @@ class DatabaseSchemaExportTest {
 
     private companion object {
         const val SCHEMA_DIR = "schemas/com.coparently.app.data.local.CoPlanlyDatabase"
+
+        // In `:shared-data` since MON-24 phase 2; relative to this module, which [resolve] keeps.
         const val DATABASE_SOURCE =
-            "src/main/java/com/coparently/app/data/local/CoPlanlyDatabase.kt"
+            "../shared-data/src/commonMain/kotlin/com/coparently/app/data/local/CoPlanlyDatabase.kt"
         val VERSION_IN_SOURCE = Regex("""version\s*=\s*(\d+)""")
         val VERSION_IN_JSON = Regex(""""version"\s*:\s*(\d+)""")
     }

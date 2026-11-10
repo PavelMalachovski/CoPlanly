@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.friends
 
-import android.app.Application
 import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -10,6 +9,7 @@ import com.coparently.app.domain.friends.CalendarFriendGrant
 import com.coparently.app.domain.repository.FriendRepository
 import com.coparently.app.presentation.common.testParentsSource
 import com.coparently.app.presentation.theme.CoPlanlyTheme
+import com.coparently.app.testing.RobolectricTestApplication
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
@@ -29,7 +29,7 @@ import org.robolectric.annotation.Config
  * families — which the grants support since L-5 — could not be admitted to the second in the app.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = Application::class, qualifiers = "w393dp-h851dp")
+@Config(sdk = [34], application = RobolectricTestApplication::class, qualifiers = "w393dp-h851dp")
 class FriendsScreenTest {
 
     @get:Rule

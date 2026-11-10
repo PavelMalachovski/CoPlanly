@@ -12,50 +12,26 @@
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
 
-# ---- Gson reflects over these classes ------------------------------------
-# `ChildInfoRepositoryImpl` stores a child's medications, activities, emergency
-# contacts, school details and medical profile as Gson JSON in Room, and
-# `ChildInfoRepositoryImpl.toFirestoreMap()` puts the medical profile on the wire as a
-# map produced by `gson.fromJson(gson.toJson(profile), Map::class.java)`. Gson derives
-# every one of those keys from the Kotlin *field names* by reflection.
+# ---- Stored JSON: no field-name rules since MON-24 ---------------------------
+# Until MON-24 the app wrote a child's medications, contacts, school details and medical profile,
+# the day swaps (`DayOverride`) and the event draft as Gson JSON, and Gson derived every key from
+# the Kotlin *field name* by reflection. R8 renames fields it cannot see being read, so this file
+# kept the fields of `com.coparently.app.domain.model.**`, `EventDraft`, `DayOverride` and
+# `DayOverrideStatus` by name: left unkept, a release build once wrote `{"a":"penicillin"}`, the
+# co-parent's phone read an empty medical profile, and a row written by one version did not parse
+# in the next.
 #
-# R8 renames fields it cannot see being read. Left unkept, a release build writes
-# `{"a":"penicillin"}` where the model says `{"allergies":"penicillin"}` — and that is
-# not a cosmetic difference:
-#   * the co-parent's device reads the Firestore map by real key names and finds none,
-#     so a child's medical profile arrives empty on the other parent's phone;
-#   * the obfuscated names are not stable across builds, so a row written by version N
-#     no longer parses after the user updates to version N+1 — data already on the
-#     device silently reads back as blank.
-# Field names, not just the classes, therefore have to survive.
--keepclassmembers class com.coparently.app.domain.model.** {
-    <fields>;
-}
--keepclassmembers class com.coparently.app.presentation.event.EventDraft {
-    <fields>;
-}
-
-# `DayOverride` lives in `domain.custody`, not `domain.model`, so the wildcard above never
-# covered it — and `DayOverrideJson` stores a `Map<String, DayOverride>` as Gson JSON in
-# `custody_models.dayOverridesJson`. Its Firestore form is safe (`FirestoreCustodyDataSource`
-# maps it by hand with string literals, so the shared document is unaffected), which bounds the
-# damage but does not remove it: within one build encode and decode agree, so the swaps survive;
-# across an *update* the obfuscated names differ, the stored JSON no longer parses, and
-# `DayOverrideJson.decode` degrades to "no swaps" by design rather than throwing. The day swaps
-# then vanish from the calendar until the next mirror pass restores them from the document —
-# and until then, on a device that is offline, they are simply gone. Debug never reproduces it.
+# `StoredJson` (`:shared`) replaced Gson. Its serializers are generated at compile time and carry
+# each key as a string literal, so R8 renaming a field changes nothing that is written, and no
+# rule for the models is needed; the library's own consumer rules cover the generated serializers.
+# The R8 runtime probe (`app/src/r8Test/`, `R8JsonProbe`) still writes every stored model through
+# the minified app and checks its keys, which is what would catch a regression.
 #
-# The enum is kept for the same reason one step down: Gson writes a `DayOverrideStatus` as
-# `status.name`, which is the constant's field name.
--keepclassmembers class com.coparently.app.domain.custody.DayOverride {
-    <fields>;
-}
--keepclassmembers class com.coparently.app.domain.custody.DayOverrideStatus {
-    <fields>;
-}
-
-# Gson's own requirements for reflective (de)serialization: generic signatures for
-# `Array<T>`/`Map` targets, and the annotations it reads off members.
+# Kept from the Gson section: generic signatures and runtime annotations, which libraries read
+# reflectively (Google's calendar client read both, and brought its own Gson, until it left in
+# MON-24 phase 2), and the warning about `sun.misc`, which Gson's `UnsafeAllocator` references.
+# Removing them is a change of its own, made only with an `r8-runtime` run to show nothing else
+# relied on them.
 -keepattributes Signature
 -keepattributes *Annotation*
 -dontwarn sun.misc.**
@@ -102,21 +78,17 @@
 }
 -dontwarn net.zetetic.database.**
 
-# ---- Google Calendar API models (REL-7) ------------------------------------
-# `GoogleCalendarApi` parses a page of events with `GsonFactory` into
-# `com.google.api.services.calendar.model.*`. google-http-client builds those models by
-# reflection: it instantiates each class through its no-argument constructor and fills the
-# fields annotated `@Key`, reading the fields' generic types for lists and nested models.
-# Nothing in the app calls those constructors, so R8 made the classes abstract and dropped
-# the constructors, and the release build failed the first page with "unable to create new
-# instance of class … because it is abstract". The `r8-runtime` CI job found it; its probe
-# case for `Events` is the regression test.
--keepattributes Signature,RuntimeVisibleAnnotations,AnnotationDefault
--keepclassmembers class * {
-    @com.google.api.client.util.Key <fields>;
-}
--keep class * extends com.google.api.client.json.GenericJson {
-    <init>();
-    <fields>;
-}
--keep class com.google.api.services.calendar.model.** { *; }
+# ---- Ktor (MON-24 phase 2) -------------------------------------------------
+# The school import and the Google Calendar import call out through Ktor (`:shared-data`), whose
+# own consumer rules keep what it needs. Its JVM utilities reference `java.lang.management`, which
+# Android does not have, to ask whether a debugger is attached; R8 would fail the build on the
+# missing classes. Nothing on Android reaches that code.
+-dontwarn java.lang.management.ManagementFactory
+-dontwarn java.lang.management.RuntimeMXBean
+
+# The Google Calendar API models' rules (REL-7) left with google-api-client in MON-24 phase 2:
+# `-keepattributes Signature,RuntimeVisibleAnnotations,AnnotationDefault`, a
+# `-keepclassmembers` rule for `@com.google.api.client.util.Key` fields, a `-keep` of every
+# `GenericJson` subclass's constructor and fields, and `-keep class
+# com.google.api.services.calendar.model.** { *; }`. The import now reads a page by hand over a
+# JSON tree (`GoogleCalendarJson`), which reflects over nothing.

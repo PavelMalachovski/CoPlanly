@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generates the medium- and high-contrast colour schemes from the standard ones.
 
-    python3 tools/generate-contrast-schemes.py > app/src/main/java/com/coparently/app/presentation/theme/ContrastSchemes.kt
+    python3 tools/generate-contrast-schemes.py > shared-ui/src/commonMain/kotlin/com/coparently/app/presentation/theme/ContrastSchemes.kt
 
 Android 14 lets a person ask every app for more contrast (Settings > Accessibility > Colour and
 motion > Contrast), and Material defines what that means for each colour role as a contrast
@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-THEME = ROOT / 'app/src/main/java/com/coparently/app/presentation/theme'
+THEME = ROOT / 'shared-ui/src/commonMain/kotlin/com/coparently/app/presentation/theme'
 
 SURFACES = ['background', 'surface', 'surfaceVariant', 'surfaceDim', 'surfaceBright',
             'surfaceContainerLowest', 'surfaceContainerLow', 'surfaceContainer',

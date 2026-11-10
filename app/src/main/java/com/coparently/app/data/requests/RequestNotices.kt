@@ -14,12 +14,10 @@ import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.utils.answerByText
-import dagger.hilt.android.qualifiers.ApplicationContext
+import com.coparently.app.utils.inAppLanguage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The local notifications a request's clock posts on this phone (phase 3a, spec §4.3–§4.4, §5.3):
@@ -34,12 +32,15 @@ import javax.inject.Singleton
  * They post on the schedule channel, so a parent who muted money still hears about a handover, and
  * a tap opens the Requests inbox in the clock's family, like the request's own push (CLAUDE.md
  * item 15). Nothing is posted while notifications are not allowed.
+ *
+ * Android's [RequestClockNotices]: the steps that decide a notice is due are in `:shared-data` since
+ * MON-24 phase 2 (Task 8h); the wording and the posting stay here. Each notice is worded through a
+ * context in the language the app speaks at that moment ([inAppLanguage]), made for that notice.
  */
-@Singleton
-class RequestNotices @Inject constructor(
-    @ApplicationContext private val context: Context,
+class RequestNotices(
+    private val context: Context,
     private val pairingRepository: PairingRepository
-) {
+) : RequestClockNotices {
 
     /**
      * Reminds the answering parent that the proposer waits for an answer until the deadline.
@@ -47,48 +48,58 @@ class RequestNotices @Inject constructor(
      * @return Whether the reminder was shown — false while notifications are not allowed or the
      *   channel is muted, when the proposer's card must not count it.
      */
-    suspend fun remind(clock: RequestDeadline): Boolean {
-        val name = nameOf(clock.proposerUid)
+    override suspend fun remind(clock: RequestDeadline): Boolean {
+        val words = context.inAppLanguage()
+        val name = nameOf(clock.proposerUid, words)
         val until = answerByText(
             clock.answerByMillis,
-            locale = context.resources.configuration.locales[0],
-            is24Hour = DateFormat.is24HourFormat(context)
+            locale = words.resources.configuration.locales[0],
+            // The clock of the language it is worded in, as a push's deadline is (PushNotifier):
+            // the device's setting, else what that language expects — never Android's own
+            // resolution of the bare context.
+            is24Hour = DateFormat.is24HourFormat(words)
         )
         return post(
             clock,
             STEP_REMINDER,
-            context.getString(R.string.request_notice_reminder_title),
-            context.getString(R.string.request_notice_reminder_body, name, until)
+            words,
+            words.getString(R.string.request_notice_reminder_title),
+            words.getString(R.string.request_notice_reminder_body, name, until)
         )
     }
 
     /** Tells the proposer that the answering parent did not answer by the deadline. */
-    suspend fun deadlinePassed(clock: RequestDeadline) {
-        val name = nameOf(clock.responderUid)
+    override suspend fun deadlinePassed(clock: RequestDeadline) {
+        val words = context.inAppLanguage()
+        val name = nameOf(clock.responderUid, words)
         post(
             clock,
             STEP_DEADLINE,
-            context.getString(R.string.request_notice_deadline_title, name),
-            context.getString(R.string.request_notice_deadline_body)
+            words,
+            words.getString(R.string.request_notice_deadline_title, name),
+            words.getString(R.string.request_notice_deadline_body)
         )
     }
 
     /** Tells the proposer that the request is closed with no answer. */
-    suspend fun noAnswer(clock: RequestDeadline) {
-        val name = nameOf(clock.responderUid)
+    override suspend fun noAnswer(clock: RequestDeadline) {
+        val words = context.inAppLanguage()
+        val name = nameOf(clock.responderUid, words)
         post(
             clock,
             STEP_NO_ANSWER,
-            context.getString(R.string.request_notice_no_answer_title, name),
-            context.getString(R.string.request_notice_no_answer_body)
+            words,
+            words.getString(R.string.request_notice_no_answer_title, name),
+            words.getString(R.string.request_notice_no_answer_body)
         )
     }
 
     /**
      * The co-parent's first name as their own profile states it, waited for at most
-     * [NAME_WAIT_MILLIS]; "Your co-parent" when it is blank, unreadable or late.
+     * [NAME_WAIT_MILLIS]; "Your co-parent", in [words]' language, when it is blank, unreadable or
+     * late.
      */
-    private suspend fun nameOf(uid: String): String {
+    private suspend fun nameOf(uid: String, words: Context): String {
         val name = try {
             withTimeoutOrNull(NAME_WAIT_MILLIS) { pairingRepository.observeCoParentProfile(uid).first().name }
         } catch (e: CancellationException) {
@@ -97,16 +108,23 @@ class RequestNotices @Inject constructor(
             // Any failure to read the profile words the notice with the fallback.
             null
         }
-        return name?.takeIf { it.isNotBlank() } ?: context.getString(R.string.push_actor_fallback)
+        return name?.takeIf { it.isNotBlank() } ?: words.getString(R.string.push_actor_fallback)
     }
 
     /**
      * Posts one notice, and says whether it is shown ([notificationsAllowed]). Its id and its tap's
      * request code are derived from the clock and the step, so the same notice posted twice
-     * replaces itself and two clocks never replace each other.
+     * replaces itself and two clocks never replace each other. The channels are named in [words]'
+     * language, the notice's own.
      */
-    private fun post(clock: RequestDeadline, step: String, title: String, body: String): Boolean {
-        PushNotifier(context).createChannels()
+    private fun post(
+        clock: RequestDeadline,
+        step: String,
+        words: Context,
+        title: String,
+        body: String
+    ): Boolean {
+        PushNotifier(words).createChannels()
         if (!notificationsAllowed(context, PushChannel.SCHEDULE.id)) return false
         val key = listOf(clock.id, step).hashCode()
         val tap = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {

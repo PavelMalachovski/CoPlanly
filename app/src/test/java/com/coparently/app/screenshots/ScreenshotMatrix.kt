@@ -16,10 +16,12 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.common.LocalFixedToday
+import com.coparently.app.presentation.platform.ProvideAndroidPlatform
 import com.coparently.app.presentation.theme.CoPlanlyTheme
 import com.coparently.app.presentation.theme.LocalParentPalette
 import com.github.takahirom.roborazzi.RoborazziOptions
 import com.github.takahirom.roborazzi.captureRoboImage
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Rule
 import org.junit.rules.ExternalResource
 import org.junit.rules.RuleChain
@@ -58,9 +60,12 @@ private val FRAME_PADDING = 16.dp
  * `testDebugUnitTest` excludes the package, see `roborazziRequested` in `app/build.gradle.kts`.
  *
  * Subclasses carry their own `@RunWith(ParameterizedRobolectricTestRunner::class)`,
- * `@GraphicsMode(NATIVE)` and `@Config(sdk = [SCREENSHOT_SDK], application = Application::class)`.
- * The plain `Application` matters: the manifest names `CoPlanlyApplication`, whose Hilt graph
- * reaches Firebase, and nothing rendered here needs it.
+ * `@GraphicsMode(NATIVE)` and
+ * `@Config(sdk = [SCREENSHOT_SDK], application = RobolectricTestApplication::class)`.
+ * The plain test application matters: the manifest names `CoPlanlyApplication`, whose Koin graph
+ * reaches Firebase, and nothing rendered here needs it; it only hands Compose Multiplatform's
+ * resource reader its context, which the theme's colour names and the common components' strings
+ * are read through.
  *
  * @param variant Language, theme, font scale and palette for this run
  */
@@ -133,17 +138,21 @@ private fun ScreenshotFrame(
         LocalDensity provides Density(density.density, variant.fontScale),
         LocalParentPalette provides variant.palette.palette,
         // The fixtures' date, not the clock: the month grid's weekday header marks today.
-        LocalFixedToday provides ScreenshotFixtures.TODAY
+        LocalFixedToday provides ScreenshotFixtures.TODAY.toKotlinLocalDate()
     ) {
-        CoPlanlyTheme(darkTheme = variant.dark, contrastLevel = variant.contrast) {
-            Surface(color = MaterialTheme.colorScheme.background) {
-                val size = if (fullScreen) Modifier.fillMaxSize() else Modifier.fillMaxWidth()
-                Box(
-                    modifier = size
-                        .testTag(SCREENSHOT_TAG)
-                        .padding(if (fullScreen) 0.dp else FRAME_PADDING)
-                ) {
-                    content()
+        // The platform capabilities the app's shell provides (MON-24 phase 2, Task 11), so a
+        // component reads the values it reads in the app.
+        ProvideAndroidPlatform {
+            CoPlanlyTheme(darkTheme = variant.dark, contrastLevel = variant.contrast) {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    val size = if (fullScreen) Modifier.fillMaxSize() else Modifier.fillMaxWidth()
+                    Box(
+                        modifier = size
+                            .testTag(SCREENSHOT_TAG)
+                            .padding(if (fullScreen) 0.dp else FRAME_PADDING)
+                    ) {
+                        content()
+                    }
                 }
             }
         }

@@ -6,21 +6,17 @@ import com.coparently.app.domain.receipts.ReceiptTextRecognizer
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * On-device receipt OCR backed by ML Kit's bundled Latin text recognizer.
  *
  * The photo never leaves the device.
  */
-@Singleton
-class MlKitReceiptTextRecognizer @Inject constructor(
-    @ApplicationContext private val context: Context
+class MlKitReceiptTextRecognizer(
+    private val context: Context
 ) : ReceiptTextRecognizer {
 
     private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)

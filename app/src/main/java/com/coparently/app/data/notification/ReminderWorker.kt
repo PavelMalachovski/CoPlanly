@@ -1,11 +1,8 @@
 package com.coparently.app.data.notification
 
 import android.content.Context
-import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import dagger.assisted.Assisted
-import dagger.assisted.AssistedInject
 
 /**
  * The reminder work an older build queued, before reminders moved onto alarms (9 November 2026).
@@ -17,10 +14,9 @@ import dagger.assisted.AssistedInject
  * occurrence twice — and otherwise delivers the reminder as an alarm would, which arms the next one
  * on an alarm.
  */
-@HiltWorker
-class ReminderWorker @AssistedInject constructor(
-    @Assisted context: Context,
-    @Assisted params: WorkerParameters,
+class ReminderWorker(
+    context: Context,
+    params: WorkerParameters,
     private val dueReminders: DueReminders,
     private val armed: ArmedReminders
 ) : CoroutineWorker(context, params) {

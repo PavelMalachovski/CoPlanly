@@ -4,28 +4,17 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
-import dagger.hilt.EntryPoint
-import dagger.hilt.InstallIn
-import dagger.hilt.android.EntryPointAccessors
-import dagger.hilt.components.SingletonComponent
+import com.coparently.app.data.platform.logger
+import com.coparently.app.domain.time.IsoText
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-
-/** What the reminder receivers need from the app's graph; a receiver cannot be injected directly. */
-@EntryPoint
-@InstallIn(SingletonComponent::class)
-interface ReminderReceiverEntryPoint {
-    /** Delivers a due reminder. */
-    fun dueReminders(): DueReminders
-
-    /** Arms every remembered reminder again. */
-    fun reminderRearm(): ReminderRearm
-}
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
+import org.koin.core.context.GlobalContext
 
 /**
  * Receives a reminder's alarm ([SystemReminderAlarms]) and delivers it ([DueReminders]).
@@ -33,15 +22,15 @@ interface ReminderReceiverEntryPoint {
  * Not exported: only the app's own `PendingIntent`, which `AlarmManager` sends as the app, reaches
  * it. The event id is the intent's data, which is also what tells two events' alarms apart.
  */
-class ReminderAlarmReceiver : BroadcastReceiver() {
+class ReminderAlarmReceiver : BroadcastReceiver(), KoinComponent {
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != ACTION_REMINDER_DUE) return
         val eventId = intent.data?.schemeSpecificPart ?: return
         val startAt = intent.getStringExtra(EXTRA_START_AT)
         val startTime = intent.getStringExtra(EXTRA_START_TIME)
-        val entryPoint = reminderEntryPoint(context, TAG) ?: return
-        runAsync(TAG) { entryPoint.dueReminders().deliver(eventId, startAt, startTime) }
+        if (!hasReminderGraph(TAG)) return
+        runAsync(TAG) { get<DueReminders>().deliver(eventId, startAt, startTime) }
     }
 
     /** The intents the alarms carry, built in one place so arming and cancelling agree. */
@@ -64,7 +53,8 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
         /** The intent that arms [due]'s alarm. */
         fun intentFor(context: Context, due: DueReminder): Intent =
             intentFor(context, due.eventId)
-                .putExtra(EXTRA_START_AT, due.occurrenceStart.toString())
+                // The text `java.time`'s `LocalDateTime.toString()` wrote, which `DueReminders` reads.
+                .putExtra(EXTRA_START_AT, IsoText.dateTimeShortest(due.occurrenceStart))
                 .putExtra(EXTRA_START_TIME, due.startTime)
     }
 }
@@ -76,12 +66,12 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
  * Not exported, like WorkManager's own reschedule receiver: the system still delivers these
  * broadcasts to it, and no other app can make it re-arm.
  */
-class ReminderRearmReceiver : BroadcastReceiver() {
+class ReminderRearmReceiver : BroadcastReceiver(), KoinComponent {
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action !in REARM_ACTIONS) return
-        val entryPoint = reminderEntryPoint(context, TAG) ?: return
-        runAsync(TAG) { entryPoint.reminderRearm().rearm() }
+        if (!hasReminderGraph(TAG)) return
+        runAsync(TAG) { get<ReminderRearm>().rearm() }
     }
 
     private companion object {
@@ -100,20 +90,21 @@ class ReminderRearmReceiver : BroadcastReceiver() {
 }
 
 /**
- * The app's graph for a reminder receiver, or null when the process has none to give.
+ * Whether the process has the app's Koin graph for a reminder receiver to resolve from.
  *
- * In the app it always has one: `CoPlanlyApplication` builds it before any receiver runs. An
+ * In the app it always has one: `CoPlanlyApplication` starts Koin before any receiver runs. An
  * instrumentation run is the exception, and it is what took CI down on 9 November 2026: installing
  * the test APK over the app delivers `MY_PACKAGE_REPLACED` into the test process, whose
- * `HiltTestApplication` has no component until a test's `HiltAndroidRule` creates one — never, on a
- * leg that runs no Hilt test — and the exception thrown out of `onReceive` crashed the process
- * before the first test. A broadcast with nothing to act on is logged and dropped, never thrown.
+ * `KoinTestApplication` starts no graph — a test's `KoinTestRule` starts one for that test alone
+ * (`HiltTestApplication` before MON-24 phase 2, which had no component until a `HiltAndroidRule`
+ * created one) — and an exception thrown out of `onReceive` crashed the process before the first
+ * test. A broadcast with nothing to act on is logged and dropped, never thrown. What the graph is
+ * asked for is resolved inside [runAsync], so a definition it lacks is logged there too.
  */
-private fun reminderEntryPoint(context: Context, tag: String): ReminderReceiverEntryPoint? = try {
-    EntryPointAccessors.fromApplication(context.applicationContext, ReminderReceiverEntryPoint::class.java)
-} catch (e: IllegalStateException) {
-    Log.w(tag, "No application component; the broadcast is dropped", e)
-    null
+private fun hasReminderGraph(tag: String): Boolean {
+    if (GlobalContext.getOrNull() != null) return true
+    logger.w(tag, "No Koin graph; the broadcast is dropped")
+    return false
 }
 
 /** How long a receiver may keep its broadcast open: well inside the system's ten seconds. */
@@ -126,11 +117,11 @@ private const val RECEIVE_BUDGET_MILLIS = 9_000L
  */
 private fun BroadcastReceiver.runAsync(tag: String, work: suspend () -> Unit) {
     val pending = goAsync()
-    val onFailure = CoroutineExceptionHandler { _, e -> Log.e(tag, "Reminder work failed", e) }
+    val onFailure = CoroutineExceptionHandler { _, e -> logger.e(tag, "Reminder work failed", e) }
     CoroutineScope(SupervisorJob() + Dispatchers.IO + onFailure).launch {
         try {
             if (withTimeoutOrNull(RECEIVE_BUDGET_MILLIS) { work() } == null) {
-                Log.w(tag, "Reminder work ran out of time")
+                logger.w(tag, "Reminder work ran out of time")
             }
         } finally {
             pending.finish()

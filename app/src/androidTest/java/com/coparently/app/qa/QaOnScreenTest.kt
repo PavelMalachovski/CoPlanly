@@ -11,6 +11,7 @@ import com.coparently.app.e2e.EmulatorEnvironment
 import com.coparently.app.e2e.EmulatorParent
 import com.coparently.app.e2e.UiTourDriver
 import com.coparently.app.e2e.UiTourVariant
+import com.coparently.app.testing.UsesFakeFirebase
 import com.coparently.app.testing.exists
 import com.coparently.app.testing.pumpUntil
 import kotlinx.coroutines.runBlocking
@@ -41,6 +42,7 @@ import org.junit.rules.TestName
  * (`tools/virtual-tester/run-virtual-tester.sh`); the theme and language follow
  * `-e coplanlyUiTourVariant`, as in the UI tour.
  */
+@UsesFakeFirebase
 abstract class QaOnScreenTest : AliceOnScreenTest() {
 
     @get:Rule

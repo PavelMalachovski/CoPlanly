@@ -10,10 +10,13 @@ import com.coparently.app.presentation.common.NamedParent
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.rememberParentNames
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.LocalTime
 import java.time.YearMonth
 import java.time.temporal.IsoFields
 
@@ -62,6 +65,9 @@ object ScreenshotFixtures {
     fun custodyFor(date: LocalDate): String =
         if (date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR) % 2 == 0) SLOT_ONE else SLOT_TWO
 
+    /** [custodyFor] for a kotlinx-datetime day, the one `MiniMonthModel` asks about (MON-24). */
+    fun custodyOn(date: kotlinx.datetime.LocalDate): String = custodyFor(date.toJavaLocalDate())
+
     /** A Wednesday-afternoon contact window for whichever parent does not have the week. */
     fun contactWindowsFor(date: LocalDate): List<ContactWindow> =
         if (date.dayOfWeek == DayOfWeek.WEDNESDAY) {
@@ -69,8 +75,8 @@ object ScreenshotFixtures {
             listOf(
                 ContactWindow(
                     dayIndex = 2,
-                    start = LocalTime.of(15, 0),
-                    end = LocalTime.of(19, 0),
+                    start = LocalTime(15, 0),
+                    end = LocalTime(19, 0),
                     parent = other
                 )
             )
@@ -80,9 +86,9 @@ object ScreenshotFixtures {
 
     /** May's two Czech public holidays, as `CzechHolidays` would produce them. */
     val holidays: Map<LocalDate, Holiday> = listOf(
-        Holiday(MONTH.atDay(1), "Labour Day", "Svátek práce", "cs"),
-        Holiday(MONTH.atDay(8), "Liberation Day", "Den vítězství", "cs")
-    ).associateBy { it.date }
+        Holiday(MONTH.atDay(1).toKotlinLocalDate(), "Labour Day", "Svátek práce", "cs"),
+        Holiday(MONTH.atDay(8).toKotlinLocalDate(), "Liberation Day", "Den vítězství", "cs")
+    ).associateBy { it.date.toJavaLocalDate() }
 
     /**
      * A school vacation that runs off the end of the month: Baden-Württemberg's Whitsun break,
@@ -110,12 +116,12 @@ object ScreenshotFixtures {
     ) = Event(
         id = id,
         title = title,
-        startDateTime = start,
-        endDateTime = start.plusMinutes(durationMinutes),
+        startDateTime = start.toKotlinLocalDateTime(),
+        endDateTime = start.plusMinutes(durationMinutes).toKotlinLocalDateTime(),
         eventType = "other",
         parentOwner = owner,
-        createdAt = stamp,
-        updatedAt = stamp
+        createdAt = stamp.toKotlinLocalDateTime(),
+        updatedAt = stamp.toKotlinLocalDateTime()
     )
 
     /** Today's three events, one of them long enough to wrap at 1.5× text. */
@@ -132,7 +138,7 @@ object ScreenshotFixtures {
         event("m3", "Football", MONTH.atDay(19).atTime(16, 0), SLOT_TWO),
         event("m4", "Birthday party", MONTH.atDay(23).atTime(14, 0), SLOT_ONE),
         event("m5", "Vet", MONTH.atDay(23).atTime(10, 0), SLOT_TWO)
-    ).plus(todayEvents).groupBy { it.startDateTime.toLocalDate() }
+    ).plus(todayEvents).groupBy { it.startDateTime.date.toJavaLocalDate() }
 
     /** The child and the pet an event can be about. */
     val members: List<FamilyMember> = listOf(

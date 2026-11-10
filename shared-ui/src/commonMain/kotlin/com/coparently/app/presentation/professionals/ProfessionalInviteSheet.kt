@@ -1,0 +1,194 @@
+package com.coparently.app.presentation.professionals
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.coparently.app.domain.professionals.ProfessionalAccessDuration
+import com.coparently.app.domain.professionals.ProfessionalRole
+import com.coparently.app.presentation.common.GroupLabel
+import com.coparently.app.presentation.common.InviteCodeText
+import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.common.UiText
+import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.rememberUiTextResolver
+import com.coparently.app.presentation.pairing.PLAY_STORE_URL
+import com.coparently.app.presentation.platform.LocalShareSheet
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.professional_invite_action
+import com.coparently.app.resources.professional_invite_code_label
+import com.coparently.app.resources.professional_invite_create
+import com.coparently.app.resources.professional_invite_duration_label
+import com.coparently.app.resources.professional_invite_explainer
+import com.coparently.app.resources.professional_invite_role_label
+import com.coparently.app.resources.professional_invite_share
+import com.coparently.app.resources.professional_share_message
+import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
+
+/**
+ * Inviting a professional (MON-18): who, for how long, then a code.
+ *
+ * The sheet says outright what the professional will and will not read, and that the access only
+ * starts once the co-parent consents too — an access grant must not be quieter about its scope,
+ * or about who still has to agree, than the people involved would expect.
+ *
+ * @param state What to show.
+ * @param onChooseRole Picks the profession; ignored once a code exists.
+ * @param onChooseDuration Picks the length; ignored once a code exists.
+ * @param onCreate Mints the invitation.
+ * @param onDismiss Closes the sheet.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProfessionalInviteSheet(
+    state: ProfessionalInviteState,
+    onChooseRole: (ProfessionalRole) -> Unit,
+    onChooseDuration: (ProfessionalAccessDuration) -> Unit,
+    onCreate: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = Spacing.XL)
+                .padding(bottom = Spacing.XL),
+            verticalArrangement = Arrangement.spacedBy(Spacing.M)
+        ) {
+            Text(
+                text = stringResource(Res.string.professional_invite_action),
+                style = MaterialTheme.typography.titleLarge
+            )
+            Text(
+                text = stringResource(Res.string.professional_invite_explainer),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            val code = state.invite?.code
+            if (code == null) {
+                InviteChoices(state, onChooseRole, onChooseDuration, onCreate)
+            } else {
+                InviteCode(code)
+            }
+            state.errorRes?.let { res ->
+                Text(
+                    text = stringResource(res),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun InviteChoices(
+    state: ProfessionalInviteState,
+    onChooseRole: (ProfessionalRole) -> Unit,
+    onChooseDuration: (ProfessionalAccessDuration) -> Unit,
+    onCreate: () -> Unit
+) {
+    GroupLabel(stringResource(Res.string.professional_invite_role_label))
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+        verticalArrangement = Arrangement.spacedBy(Spacing.S)
+    ) {
+        ProfessionalRole.entries.forEach { role ->
+            ChoiceChip(stringResource(role.labelRes()), role == state.role) { onChooseRole(role) }
+        }
+    }
+    GroupLabel(stringResource(Res.string.professional_invite_duration_label))
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
+        ProfessionalAccessDuration.entries.forEach { duration ->
+            ChoiceChip(stringResource(duration.labelRes()), duration == state.duration) {
+                onChooseDuration(duration)
+            }
+        }
+    }
+    Button(onClick = onCreate, enabled = !state.isBusy, modifier = Modifier.fillMaxWidth()) {
+        if (state.isBusy) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+        } else {
+            Text(stringResource(Res.string.professional_invite_create))
+        }
+    }
+}
+
+/** One selectable chip, in the neutral selected style `FriendInviteSheet` uses. */
+@Composable
+private fun ChoiceChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    PillChip(
+        label = label,
+        container = if (selected) MaterialTheme.colorScheme.secondaryContainer else null,
+        contentColor = if (selected) {
+            MaterialTheme.colorScheme.onSecondaryContainer
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        onClick = onClick,
+        selected = selected
+    )
+}
+
+/**
+ * The minted code, large enough to read out, and the share sheet for sending it — where the phone
+ * has one (design item 8): the message is worded at the tap, through Compose Multiplatform's reader,
+ * which reads a string outside composition in a coroutine.
+ */
+@Composable
+private fun InviteCode(code: String) {
+    val shareSheet = LocalShareSheet.current
+    val textResolver = rememberUiTextResolver()
+    val scope = rememberCoroutineScope()
+    Text(
+        text = stringResource(Res.string.professional_invite_code_label),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    InviteCodeText(code = code)
+    if (!shareSheet.available) return
+    OutlinedButton(
+        onClick = {
+            scope.launch {
+                shareSheet.shareText(
+                    text = UiText.Res(Res.string.professional_share_message, listOf(code, PLAY_STORE_URL))
+                        .asString(textResolver),
+                    chooserTitle = UiText.Res(Res.string.professional_invite_share).asString(textResolver)
+                )
+            }
+        },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(stringResource(Res.string.professional_invite_share))
+    }
+}

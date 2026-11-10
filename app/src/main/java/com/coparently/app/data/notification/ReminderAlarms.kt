@@ -4,15 +4,12 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.os.Build
-import android.util.Log
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
-import dagger.hilt.android.qualifiers.ApplicationContext
+import com.coparently.app.data.platform.logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.time.LocalDateTime
-import javax.inject.Inject
-import javax.inject.Singleton
+import kotlinx.datetime.LocalDateTime
 
 /**
  * One reminder as its alarm carries it: which event, which occurrence, and the start time already
@@ -71,9 +68,8 @@ interface ReminderAlarms {
  * `eventId.hashCode()` request code collides, and two events sharing a `PendingIntent` would cancel
  * each other's reminder.
  */
-@Singleton
-class SystemReminderAlarms @Inject constructor(
-    @ApplicationContext private val context: Context
+class SystemReminderAlarms(
+    private val context: Context
 ) : ReminderAlarms {
 
     private val alarmManager: AlarmManager
@@ -92,7 +88,7 @@ class SystemReminderAlarms @Inject constructor(
                 return
             } catch (e: SecurityException) {
                 // Revoked between the check and the call; the inexact alarm below still fires.
-                Log.w(TAG, "Exact alarms refused; arming an inexact reminder", e)
+                logger.w(TAG, "Exact alarms refused; arming an inexact reminder", e)
             }
         }
         alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, operation)

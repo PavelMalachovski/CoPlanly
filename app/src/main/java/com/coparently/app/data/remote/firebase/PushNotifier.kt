@@ -8,10 +8,10 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.text.format.DateFormat
-import android.util.Log
 import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import com.coparently.app.R
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.chat.ChatUri
 import com.coparently.app.domain.pairing.PairingUri
@@ -39,7 +39,8 @@ import java.util.Locale
  * default `FirebaseApp`, which a test build does not have.
  *
  * Every string is resolved through [context], so the notification is worded in *its*
- * configuration's language. The service passes itself, whose configuration is the process's.
+ * configuration's language. The service and the workers pass a context in the language the app
+ * speaks (`inAppLanguage()`, the owner's rule); a test passes one in the language it checks.
  *
  * @param context The context whose resources word the notification and which posts it.
  */
@@ -72,7 +73,7 @@ class PushNotifier(private val context: Context) {
     fun receive(data: Map<String, String>, signedInUid: String?, onAccepted: () -> Unit = {}): Int? {
         val addressee = data[PushPayload.TARGET_USER_ID]?.takeIf { it.isNotBlank() }
         if (signedInUid == null || (addressee != null && addressee != signedInUid)) {
-            Log.i(TAG, "Dropping a push addressed to an account that is not signed in here")
+            logger.i(TAG, "Dropping a push addressed to an account that is not signed in here")
             return null
         }
 

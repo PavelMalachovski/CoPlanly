@@ -9,6 +9,7 @@ import com.coparently.app.domain.model.Event
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -68,7 +69,7 @@ class EventReminderSchedulerTest {
 
         val due = alarms.armed.getValue("e1")
         assertEquals(start.minusMinutes(30).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(), due.second)
-        assertEquals(start, due.first.occurrenceStart)
+        assertEquals(start.toKotlinLocalDateTime(), due.first.occurrenceStart)
         assertTrue(armed.contains("e1"))
     }
 
@@ -131,7 +132,7 @@ class EventReminderSchedulerTest {
 
         ReminderRearm(eventDao, scheduler, alarms, armed).rearm()
 
-        assertEquals(moved, alarms.armed.getValue("kept").first.occurrenceStart)
+        assertEquals(moved.toKotlinLocalDateTime(), alarms.armed.getValue("kept").first.occurrenceStart)
         assertNull(alarms.armed["gone"])
         assertEquals(setOf("kept"), armed.ids())
     }
@@ -160,26 +161,26 @@ class EventReminderSchedulerTest {
     private fun event(id: String = "e1", start: LocalDateTime, reminderMinutes: Int?) = Event(
         id = id,
         title = "Dentist",
-        startDateTime = start,
-        endDateTime = start.plusHours(1),
+        startDateTime = start.toKotlinLocalDateTime(),
+        endDateTime = start.plusHours(1).toKotlinLocalDateTime(),
         eventType = "medical",
         parentOwner = "mom",
-        createdAt = start.minusDays(3),
-        updatedAt = start.minusDays(3),
+        createdAt = start.minusDays(3).toKotlinLocalDateTime(),
+        updatedAt = start.minusDays(3).toKotlinLocalDateTime(),
         reminderMinutes = reminderMinutes
     )
 
     private fun entity(id: String, start: LocalDateTime) = EventEntity(
         id = id,
         title = "Dentist",
-        startDateTime = start,
-        endDateTime = start.plusHours(1),
+        startDateTime = start.toKotlinLocalDateTime(),
+        endDateTime = start.plusHours(1).toKotlinLocalDateTime(),
         eventType = "medical",
         parentOwner = "mom",
         reminderMinutes = 30,
-        createdAt = start.minusDays(3),
-        updatedAt = start.minusDays(3),
-        updatedAtMillis = EventTimestamp.ofWallClock(start.minusDays(3))
+        createdAt = start.minusDays(3).toKotlinLocalDateTime(),
+        updatedAt = start.minusDays(3).toKotlinLocalDateTime(),
+        updatedAtMillis = EventTimestamp.ofWallClock(start.minusDays(3).toKotlinLocalDateTime())
     )
 
     /** Records what would be armed, by event id. */

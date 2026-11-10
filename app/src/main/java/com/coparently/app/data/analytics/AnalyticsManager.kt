@@ -1,20 +1,43 @@
 package com.coparently.app.data.analytics
 
+import com.coparently.app.data.platform.Analytics
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.logEvent
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Manager for logging analytics events to Firebase Analytics.
  * Provides centralized analytics tracking for app events.
  *
+ * It is the Android [Analytics] (MON-24 phase 2). It never turns collection on or off:
+ * `TelemetryConsentApplier` is the one switch (REL-5). The events the shared ViewModels log are
+ * `:shared-data`'s `AnalyticsEvents.kt`, through [log], with the names and parameters the functions
+ * they replaced here wrote (Task 10).
+ *
  * @property analytics Firebase Analytics instance
  */
-@Singleton
-class AnalyticsManager @Inject constructor(
+class AnalyticsManager(
     private val analytics: FirebaseAnalytics
-) {
+) : Analytics {
+
+    /**
+     * Logs [event] with [params] as Firebase parameters: a text as a string, a whole number as a
+     * long, a decimal as a double — what the `log…` functions below write — and anything else as
+     * its text.
+     */
+    override fun log(event: String, params: Map<String, Any>) {
+        analytics.logEvent(event) {
+            params.forEach { (key, value) ->
+                when (value) {
+                    is String -> param(key, value)
+                    is Long -> param(key, value)
+                    is Int -> param(key, value.toLong())
+                    is Double -> param(key, value)
+                    is Float -> param(key, value.toDouble())
+                    else -> param(key, value.toString())
+                }
+            }
+        }
+    }
 
     /**
      * Log screen view event.
@@ -30,28 +53,6 @@ class AnalyticsManager @Inject constructor(
     }
 
     /**
-     * Log user login event.
-     *
-     * @param method Authentication method used (e.g., "google", "email")
-     */
-    fun logLogin(method: String) {
-        analytics.logEvent(FirebaseAnalytics.Event.LOGIN) {
-            param(FirebaseAnalytics.Param.METHOD, method)
-        }
-    }
-
-    /**
-     * Log user signup event.
-     *
-     * @param method Registration method used (e.g., "google", "email")
-     */
-    fun logSignUp(method: String) {
-        analytics.logEvent(FirebaseAnalytics.Event.SIGN_UP) {
-            param(FirebaseAnalytics.Param.METHOD, method)
-        }
-    }
-
-    /**
      * Log pairing invitation sent event.
      *
      * @param method Method used to send invitation (e.g., "email")
@@ -63,88 +64,6 @@ class AnalyticsManager @Inject constructor(
     }
 
     /**
-     * Log pairing invitation accepted event.
-     */
-    fun logInvitationAccepted() {
-        analytics.logEvent("invitation_accepted", null)
-    }
-
-    /**
-     * Log child info added event.
-     */
-    fun logChildInfoAdded() {
-        analytics.logEvent("child_info_added", null)
-    }
-
-    /**
-     * Log child info updated event.
-     */
-    fun logChildInfoUpdated() {
-        analytics.logEvent("child_info_updated", null)
-    }
-
-    /**
-     * Log child info deleted event.
-     */
-    fun logChildInfoDeleted() {
-        analytics.logEvent("child_info_deleted", null)
-    }
-
-    /**
-     * Log pet added event.
-     */
-    fun logPetAdded() {
-        analytics.logEvent("pet_added", null)
-    }
-
-    /**
-     * Log pet updated event.
-     */
-    fun logPetUpdated() {
-        analytics.logEvent("pet_updated", null)
-    }
-
-    /**
-     * Log pet deleted event.
-     */
-    fun logPetDeleted() {
-        analytics.logEvent("pet_deleted", null)
-    }
-
-    /**
-     * Log event created.
-     *
-     * @param eventType Type of event created (e.g., "pickup", "appointment", "other")
-     */
-    fun logEventCreated(eventType: String) {
-        analytics.logEvent("event_created") {
-            param("event_type", eventType)
-        }
-    }
-
-    /**
-     * Log event updated.
-     *
-     * @param eventType Type of event updated
-     */
-    fun logEventUpdated(eventType: String) {
-        analytics.logEvent("event_updated") {
-            param("event_type", eventType)
-        }
-    }
-
-    /**
-     * Log event deleted.
-     *
-     * @param eventType Type of event deleted
-     */
-    fun logEventDeleted(eventType: String) {
-        analytics.logEvent("event_deleted") {
-            param("event_type", eventType)
-        }
-    }
-
-    /**
      * Log Google Calendar sync event.
      *
      * @param success Whether sync was successful
@@ -152,28 +71,6 @@ class AnalyticsManager @Inject constructor(
     fun logCalendarSync(success: Boolean) {
         analytics.logEvent("calendar_sync") {
             param("success", success.toString())
-        }
-    }
-
-    /**
-     * Log push notifications enabled/disabled.
-     *
-     * @param enabled Whether notifications are enabled
-     */
-    fun logNotificationsToggled(enabled: Boolean) {
-        analytics.logEvent("notifications_toggled") {
-            param("enabled", enabled.toString())
-        }
-    }
-
-    /**
-     * Log theme changed event.
-     *
-     * @param isDark Whether dark theme is enabled
-     */
-    fun logThemeChanged(isDark: Boolean) {
-        analytics.logEvent("theme_changed") {
-            param("dark_mode", isDark.toString())
         }
     }
 

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.SharedPreferences
 import androidx.room.Room
+import com.coparently.app.BuildConfig
 import com.coparently.app.data.chat.ChatAttachmentOutbox
 import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.documents.FamilyDocumentIndex
@@ -12,6 +13,8 @@ import com.coparently.app.data.documents.FamilyDocumentRepositoryImpl
 import com.coparently.app.data.export.ExportReceipts
 import com.coparently.app.data.family.KnownFamilies
 import com.coparently.app.data.family.SelectedFamilySource
+import com.coparently.app.data.files.AndroidPickedFiles
+import com.coparently.app.data.files.FirebaseStorageBucket
 import com.coparently.app.data.files.SharedFileCache
 import com.coparently.app.data.files.SharedFileStager
 import com.coparently.app.data.files.SharedFileStorage
@@ -19,11 +22,16 @@ import com.coparently.app.data.files.StoredRecordFamilies
 import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.payment.PaymentStore
+import com.coparently.app.data.platform.AndroidAppDirectories
+import com.coparently.app.data.platform.AppDirectories
+import com.coparently.app.data.remote.firebase.AndroidCallableFunctions
+import com.coparently.app.data.remote.firebase.CallableFunctions
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirebaseImageStorage
 import com.coparently.app.data.remote.firebase.FirestoreChangeRequestDataSource
 import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
+import com.coparently.app.data.remote.firebase.FirestoreClient
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
 import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
 import com.coparently.app.data.remote.firebase.FirestoreEventVersionDataSource
@@ -36,6 +44,8 @@ import com.coparently.app.data.remote.firebase.FirestorePetDataSource
 import com.coparently.app.data.remote.firebase.FirestoreRequestDeadlineDataSource
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
 import com.coparently.app.data.remote.firebase.PairingFunctions
+import com.coparently.app.data.remote.firebase.firestoreClientOf
+import com.coparently.app.data.repository.AndroidPairingWording
 import com.coparently.app.data.repository.CalendarFeedRepositoryImpl
 import com.coparently.app.data.repository.ChangeRequestRepositoryImpl
 import com.coparently.app.data.repository.ChildInfoRepositoryImpl
@@ -73,7 +83,7 @@ import com.coparently.app.data.sync.FamilyIdBackfill
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.data.sync.SyncService
 import com.coparently.app.data.versions.EventVersionRecorder
-import com.coparently.app.di.FirebaseModule
+import com.coparently.app.di.koin.FUNCTIONS_REGION
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.chat.AttachmentUploadGate
 import com.coparently.app.domain.family.FamilyKey
@@ -83,14 +93,13 @@ import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.testing.NoFcm
 import com.coparently.app.testing.NoReminders
+import com.google.android.gms.tasks.Tasks
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.storage.FirebaseStorage
-import com.google.gson.GsonBuilder
-import com.google.gson.Strictness
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -106,18 +115,19 @@ import java.io.Closeable
 import java.io.File
 import java.io.IOException
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 /**
  * One parent's phone, in one process: a Firebase app of its own, a Room database of its own, and
  * the production data layer wired over both.
  *
- * **Why not Hilt.** A process has one `SingletonComponent`, and the scenario needs two of
+ * **Why not the Koin graph.** A process has one global Koin graph, and the scenario needs two of
  * everything — two signed-in accounts, two Firestore clients with separate caches, two Room
  * files. So each parent is a *named* [FirebaseApp] (`FirebaseApp.initializeApp(context, options,
- * name)`), and the repositories are built by hand from the same constructors Hilt calls. That
- * leaves the ordinary instrumented job exactly as it was: nothing here is a Hilt module, so
- * `FakeFirebaseModule` still replaces `FirebaseModule` for every `@HiltAndroidTest`, and no
- * `google-services.json` is involved on either side.
+ * name)`), and the repositories are built by hand from the same constructors the graph calls. That
+ * leaves the ordinary instrumented job exactly as it was: nothing here is a Koin module, so
+ * `fakeFirebaseModule` still overrides `firebaseModule` for every test `KoinTestRule` starts, and
+ * no `google-services.json` is involved on either side.
  *
  * **What is real and what is not.** Every class that reads or writes Firestore, Auth, Functions or
  * Room is the production class: the data sources, `EventRepositoryImpl`, `ExpenseRepositoryImpl`,
@@ -148,8 +158,17 @@ class EmulatorParent private constructor(
 
     val auth: FirebaseAuth = FirebaseAuth.getInstance(app)
     val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(app)
-    private val functions: FirebaseFunctions = FirebaseFunctions.getInstance(app, FirebaseModule.FUNCTIONS_REGION)
+    private val functions: FirebaseFunctions = FirebaseFunctions.getInstance(app, FUNCTIONS_REGION)
     val storage: FirebaseStorage = FirebaseStorage.getInstance(app)
+
+    /**
+     * [firestore] as `shared-data`'s data sources call it: GitLive's Firestore over this phone's own
+     * named instance, exactly as the app's `platformDataModule` wraps its default one.
+     */
+    val documents: FirestoreClient = firestoreClientOf(firestore)
+
+    /** [functions] as the callables' wrappers call it, on the Android SDK as in the app. */
+    private val callables: CallableFunctions = AndroidCallableFunctions(functions)
 
     /**
      * This phone's own `files` and `cache` directories. Both parents run in one app process, and
@@ -159,18 +178,21 @@ class EmulatorParent private constructor(
      */
     private val fileContext: Context = PhoneDirectories(context, name)
 
+    /** [fileContext]'s directories, as `shared-data`'s classes ask for them. */
+    private val directories: AppDirectories = AndroidAppDirectories(fileContext)
+
     /** This phone's Room database. In memory: each test starts from an empty install. */
     val database: CoPlanlyDatabase =
         Room.inMemoryDatabaseBuilder(context, CoPlanlyDatabase::class.java).build()
 
     val authService = FirebaseAuthService(auth)
-    val eventDataSource = FirestoreEventDataSource(firestore)
-    private val userDataSource = FirestoreUserDataSource(firestore)
-    private val messageDataSource = FirestoreMessageDataSource(firestore)
+    val eventDataSource = FirestoreEventDataSource(documents)
+    private val userDataSource = FirestoreUserDataSource(documents)
+    private val messageDataSource = FirestoreMessageDataSource(documents)
 
-    val sharedFileStorage = SharedFileStorage(storage)
-    val sharedFileCache = SharedFileCache(fileContext, sharedFileStorage)
-    private val stager = SharedFileStager(fileContext)
+    val sharedFileStorage = SharedFileStorage(FirebaseStorageBucket(storage))
+    val sharedFileCache = SharedFileCache(directories, sharedFileStorage)
+    private val stager = SharedFileStager(AndroidPickedFiles(fileContext))
 
     /** The production record-photo storage (L-4): medical, pet, receipt and event photos. */
     val photoStorage = FirebaseImageStorage(
@@ -183,7 +205,7 @@ class EmulatorParent private constructor(
     )
 
     /** The production chat outbox: stages a file, uploads it, then lets the message be written. */
-    val attachmentOutbox = ChatAttachmentOutbox(fileContext, stager, sharedFileStorage, sharedFileCache, authService)
+    val attachmentOutbox = ChatAttachmentOutbox(directories, stager, sharedFileStorage, sharedFileCache, authService)
 
     /** This phone's plaintext files and notifications, as account deletion clears them. */
     val deviceTraces = DeviceTraces(fileContext)
@@ -195,8 +217,8 @@ class EmulatorParent private constructor(
 
     /** The production vault: Firestore index, Storage bytes, Room cache of the index. */
     val documentRepository = FamilyDocumentRepositoryImpl(
-        context = fileContext,
-        index = FamilyDocumentIndex(firestore, FamilyDocumentIndexCache(database.familyDocumentCacheDao())),
+        directories = directories,
+        index = FamilyDocumentIndex(documents, FamilyDocumentIndexCache(database.familyDocumentCacheDao())),
         authService = authService,
         stager = stager,
         storage = sharedFileStorage,
@@ -223,7 +245,7 @@ class EmulatorParent private constructor(
         userDao = database.userDao(),
         firebaseAuthService = authService,
         firestoreUserDataSource = userDataSource,
-        firestoreFamilyDataSource = FirestoreFamilyDataSource(firestore),
+        firestoreFamilyDataSource = FirestoreFamilyDataSource(documents),
         fcmService = fcmService
     )
 
@@ -232,7 +254,7 @@ class EmulatorParent private constructor(
     val eventVersionRecorder = EventVersionRecorder(
         outboxDao = database.eventVersionOutboxDao(),
         userDao = database.userDao(),
-        remote = FirestoreEventVersionDataSource(firestore)
+        remote = FirestoreEventVersionDataSource(documents)
     )
 
     val eventRepository = EventRepositoryImpl(
@@ -249,7 +271,7 @@ class EmulatorParent private constructor(
         expenseDao = database.expenseDao(),
         userDao = database.userDao(),
         firebaseAuthService = authService,
-        firestoreExpenseDataSource = FirestoreExpenseDataSource(firestore),
+        firestoreExpenseDataSource = FirestoreExpenseDataSource(documents),
         activityAnnouncer = announcer,
         fcmService = fcmService
     )
@@ -262,9 +284,9 @@ class EmulatorParent private constructor(
     )
 
     val pairingRepository = PairingRepositoryImpl(
-        firestore = firestore,
+        firestoreClient = documents,
         authService = authService,
-        pairingFunctions = PairingFunctions(functions),
+        pairingFunctions = PairingFunctions(callables),
         postPairingConversationSetup = PostPairingConversationSetup(
             messageRepository,
             ConversationMigrator(database.messageDao(), messageDataSource)
@@ -272,14 +294,14 @@ class EmulatorParent private constructor(
         userDao = database.userDao(),
         selectedFamilySource = selectedFamilySource,
         syncRequester = NoSyncRequester,
-        context = context
+        wording = AndroidPairingWording(context)
     )
 
     val parentsSource = ParentsSource(userRepository, pairingRepository)
 
-    private val custodyDataSource = FirestoreCustodyDataSource(firestore)
-    private val planDataSource = FirestoreParentingPlanDataSource(firestore)
-    private val pairingFunctions = PairingFunctions(functions)
+    private val custodyDataSource = FirestoreCustodyDataSource(documents)
+    private val planDataSource = FirestoreParentingPlanDataSource(documents)
+    private val pairingFunctions = PairingFunctions(callables)
 
     /** Where a repository's background work runs; cancelled in [close]. */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -288,14 +310,14 @@ class EmulatorParent private constructor(
         childInfoDao = database.childInfoDao(),
         userDao = database.userDao(),
         firebaseAuthService = authService,
-        firestoreChildInfoDataSource = FirestoreChildInfoDataSource(firestore)
+        firestoreChildInfoDataSource = FirestoreChildInfoDataSource(documents)
     )
 
     val petRepository = PetRepositoryImpl(
         petDao = database.petDao(),
         userDao = database.userDao(),
         firebaseAuthService = authService,
-        firestorePetDataSource = FirestorePetDataSource(firestore)
+        firestorePetDataSource = FirestorePetDataSource(documents)
     )
 
     /**
@@ -306,14 +328,14 @@ class EmulatorParent private constructor(
 
     /** The production request clocks (phase 3a), over this phone's Firestore and [requestScheduler]. */
     val requestDeadlineRepository: RequestDeadlineRepository = RequestDeadlineRepositoryImpl(
-        dataSource = FirestoreRequestDeadlineDataSource(firestore),
+        dataSource = FirestoreRequestDeadlineDataSource(documents),
         authService = authService,
         scheduler = requestScheduler
     )
 
     val changeRequestRepository = ChangeRequestRepositoryImpl(
         changeRequestDao = database.changeRequestDao(),
-        firestoreDataSource = FirestoreChangeRequestDataSource(firestore),
+        firestoreDataSource = FirestoreChangeRequestDataSource(documents),
         firebaseAuthService = authService,
         fcmService = fcmService,
         requestDeadlines = requestDeadlineRepository
@@ -329,7 +351,7 @@ class EmulatorParent private constructor(
         scope = scope
     )
 
-    private val familySettingsDataSource = FirestoreFamilySettingsDataSource(firestore)
+    private val familySettingsDataSource = FirestoreFamilySettingsDataSource(documents)
 
     /**
      * The money agreement, built before [requestRecords], which withdraws an expense split nobody
@@ -383,19 +405,19 @@ class EmulatorParent private constructor(
     )
 
     /** Stickers between the parents (October 2026), over this phone's Firestore and push writer. */
-    val stickerStore = StickerStore(firestore, authService, userRepository, fcmService, announcer)
+    val stickerStore = StickerStore(documents, authService, userRepository, fcmService, announcer)
 
     /** How this parent's stickers address them: `users/{uid}.parentRole`. */
-    val parentRoles = ParentRoles(firestore, authService)
+    val parentRoles = ParentRoles(documents, authService)
 
     /** Payments between the parents: "I paid" and "Money arrived" (25 October 2026). */
-    val paymentStore = PaymentStore(firestore, authService, userRepository, announcer)
+    val paymentStore = PaymentStore(documents, authService, userRepository, announcer)
 
     /** The family's child support agreement (25 October 2026). */
-    val supportStore = SupportAgreementStore(firestore, authService, userRepository, announcer)
+    val supportStore = SupportAgreementStore(documents, authService, userRepository, announcer)
 
     /** What this phone remembers of each family: the co-parent's name and the slots (schema 46). */
-    val knownFamilies = KnownFamilies(database.knownFamilyDao(), userDataSource, FirestoreFamilyDataSource(firestore))
+    val knownFamilies = KnownFamilies(database.knownFamilyDao(), userDataSource, FirestoreFamilyDataSource(documents))
 
     /** What each full sync does with this phone's open clocks (phase 3a). */
     val requestClockKeeper = RequestClockKeeper(
@@ -408,19 +430,18 @@ class EmulatorParent private constructor(
     val parentingPlanRepository = ParentingPlanRepository(
         dao = database.parentingPlanDao(),
         remote = planDataSource,
-        gson = GsonBuilder().setStrictness(Strictness.LENIENT).create(),
-        crashlyticsManager = mockk<CrashlyticsManager>(relaxed = true)
+        crashReporter = mockk<CrashlyticsManager>(relaxed = true)
     )
 
     val friendRepository = FriendRepositoryImpl(
-        firestore = firestore,
+        firestore = documents,
         authService = authService,
         pairingFunctions = pairingFunctions,
         selectedFamilySource = selectedFamilySource
     )
 
     val professionalRepository = ProfessionalRepositoryImpl(
-        firestore = firestore,
+        firestore = documents,
         authService = authService,
         pairingFunctions = pairingFunctions,
         selectedFamilySource = selectedFamilySource,
@@ -428,7 +449,7 @@ class EmulatorParent private constructor(
         planDataSource = planDataSource
     )
 
-    val guestRepository = GuestRepositoryImpl(firestore, authService, pairingFunctions)
+    val guestRepository = GuestRepositoryImpl(documents, authService, pairingFunctions)
 
     /**
      * The sync `SyncWorker` runs, over this phone's repositories — `performFullSync()` is the one
@@ -441,13 +462,12 @@ class EmulatorParent private constructor(
         childInfoDao = database.childInfoDao(),
         userDao = database.userDao(),
         firestoreEventDataSource = eventDataSource,
-        firestoreChildInfoDataSource = FirestoreChildInfoDataSource(firestore),
+        firestoreChildInfoDataSource = FirestoreChildInfoDataSource(documents),
         firestoreUserDataSource = userDataSource,
         firebaseAuthService = authService,
         fcmService = fcmService,
         conflictResolver = ConflictResolver(),
         parentSlotMigrator = ParentSlotMigrator(
-            database = database,
             eventDao = database.eventDao(),
             custodyModelRepository = custodyRepository,
             encryptedPreferences = encryptedPreferences
@@ -483,9 +503,9 @@ class EmulatorParent private constructor(
         knownFamilies = knownFamilies
     )
 
-    val calendarFeedRepository = CalendarFeedRepositoryImpl(functions)
+    val calendarFeedRepository = CalendarFeedRepositoryImpl(callables)
 
-    val exportReceipts = ExportReceipts(functions)
+    val exportReceipts = ExportReceipts(callables) { BuildConfig.EXPORT_VERIFY_URL }
 
     /**
      * The pushes queued for [targetUid] from this phone, as their payload maps — read as the
@@ -539,12 +559,22 @@ class EmulatorParent private constructor(
         }
     }
 
-    /** Signs out, closes Room, deletes the named Firebase app and this phone's directories. */
+    /**
+     * Signs out, closes Room, ends this phone's Firestore and deletes its directories.
+     *
+     * The named Firebase app is **not** deleted. Firebase Auth 24.2 (BoM 34.18) keeps the first
+     * app that called `useEmulator` in a static cache and checks it on every later call, so once
+     * the first test deleted its apps, every test after it failed in
+     * [EmulatorEnvironment.startFirebaseApp] with "FirebaseApp was deleted" — the e2e job lost 72
+     * of 73 tests that way. Terminating Firestore releases what the app held that matters (its
+     * listeners, threads and memory cache); the rest is a few objects per phone for the life of
+     * the test process.
+     */
     override fun close() {
         scope.cancel()
         runCatching { auth.signOut() }
         runCatching { database.close() }
-        runCatching { app.delete() }
+        runCatching { Tasks.await(firestore.terminate(), TERMINATE_SECONDS, TimeUnit.SECONDS) }
         runCatching { fileContext.filesDir.parentFile?.deleteRecursively() }
     }
 
@@ -591,6 +621,9 @@ class EmulatorParent private constructor(
 
         /** How long any single cross-device wait may take before the test fails. */
         const val WAIT_MS = 30_000L
+
+        /** How long [close] waits for this phone's Firestore to shut down. */
+        private const val TERMINATE_SECONDS = 10L
 
         private const val PASSWORD = "e2e-password-1"
 

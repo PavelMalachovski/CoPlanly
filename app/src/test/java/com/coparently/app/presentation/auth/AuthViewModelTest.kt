@@ -51,6 +51,13 @@ class AuthViewModelTest {
     private lateinit var crashlyticsManager: CrashlyticsManager
     private lateinit var viewModel: AuthViewModel
 
+    /**
+     * The shell's credential sheets, as `MainActivity` provides them: [credentialAuthenticator] on
+     * [activity], so each case still drives Credential Manager's calls with the Activity (MON-24
+     * phase 2, slice 11f: the ViewModel takes this where it took the Activity).
+     */
+    private val credentials get() = AndroidCredentialSignIn(activity, credentialAuthenticator)
+
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
@@ -59,7 +66,7 @@ class AuthViewModelTest {
         crashlyticsManager = mockk(relaxed = true)
         viewModel = AuthViewModel(
             firebaseAuthService = firebaseAuthService,
-            credentialAuthenticator = credentialAuthenticator,
+            authErrors = AndroidAuthErrors,
             analyticsManager = mockk(relaxed = true),
             crashlyticsManager = crashlyticsManager
         )
@@ -79,7 +86,7 @@ class AuthViewModelTest {
         coEvery { credentialAuthenticator.savePassword(any(), any(), any()) } returns Unit
 
         var signedIn = false
-        viewModel.signIn(activity) { signedIn = true }
+        viewModel.signIn(credentials) { signedIn = true }
         advanceUntilIdle()
 
         assertTrue(signedIn, "sign-in must complete regardless of the save prompt")
@@ -97,7 +104,7 @@ class AuthViewModelTest {
         coEvery { credentialAuthenticator.savePassword(activity, "parent@example.com", "hunter2") }
             .answers { order += "save" }
 
-        viewModel.signIn(activity) { order += "navigate" }
+        viewModel.signIn(credentials) { order += "navigate" }
         advanceUntilIdle()
 
         assertEquals(listOf("save", "navigate"), order)
@@ -107,7 +114,7 @@ class AuthViewModelTest {
     fun `blank fields are rejected without troubling Firebase`() = runTest(dispatcher) {
         viewModel.updatePassword("")
 
-        viewModel.signIn(activity) { error("must not navigate") }
+        viewModel.signIn(credentials) { error("must not navigate") }
         advanceUntilIdle()
 
         assertEquals(AuthError.EmptyFields, viewModel.uiState.value.error)
@@ -120,7 +127,7 @@ class AuthViewModelTest {
             coEvery { firebaseAuthService.signInWithEmail(any(), any()) } returns
                 Result.failure(FirebaseAuthException("ERROR_WRONG_PASSWORD", "nope"))
 
-            viewModel.signIn(activity) { error("must not navigate") }
+            viewModel.signIn(credentials) { error("must not navigate") }
             advanceUntilIdle()
 
             assertEquals(AuthError.InvalidCredentials, viewModel.uiState.value.error)
@@ -132,13 +139,13 @@ class AuthViewModelTest {
         coEvery { credentialAuthenticator.signInWithGoogle(any()) } returns
             Result.failure(GetCredentialCancellationException())
 
-        viewModel.signInWithGoogle(activity)
+        viewModel.signInWithGoogle(credentials)
         advanceUntilIdle()
 
         assertNull(viewModel.uiState.value.error, "a deliberate cancel is not an error")
         assertFalse(viewModel.uiState.value.isLoading)
         // Nor is it a fault worth reporting: a stream of cancellations would bury real ones.
-        verify(exactly = 0) { crashlyticsManager.recordExceptionWithContext(any(), any()) }
+        verify(exactly = 0) { crashlyticsManager.recordWithContext(any(), any()) }
     }
 
     @Test
@@ -148,7 +155,7 @@ class AuthViewModelTest {
         coEvery { firebaseAuthService.signInWithEmail(any(), any()) } returns
             Result.success(mockk<FirebaseUser>())
 
-        viewModel.signInWithSavedPassword(activity)
+        viewModel.signInWithSavedPassword(credentials)
         advanceUntilIdle()
 
         coVerify { firebaseAuthService.signInWithEmail("saved@example.com", "s3cret") }
@@ -160,7 +167,7 @@ class AuthViewModelTest {
         coEvery { credentialAuthenticator.getSavedPassword(any()) } returns
             Result.failure(NoCredentialException())
 
-        viewModel.signInWithSavedPassword(activity)
+        viewModel.signInWithSavedPassword(credentials)
         advanceUntilIdle()
 
         assertEquals(AuthError.NoSavedPassword, viewModel.uiState.value.error)
@@ -173,7 +180,7 @@ class AuthViewModelTest {
         coEvery { firebaseAuthService.signInWithEmail(any(), any()) } returns
             Result.success(mockk<FirebaseUser>())
 
-        viewModel.signInWithSavedPassword(activity)
+        viewModel.signInWithSavedPassword(credentials)
         advanceUntilIdle()
 
         coVerify(exactly = 0) { credentialAuthenticator.savePassword(any(), any(), any()) }
@@ -190,7 +197,7 @@ class AuthViewModelTest {
     fun `cancelling signInWithGoogle mid-flight leaves isLoading false`() = runTest(dispatcher) {
         coEvery { credentialAuthenticator.signInWithGoogle(any()) } coAnswers { awaitCancellation() }
 
-        val job = launch { viewModel.signInWithGoogle(activity) }
+        val job = launch { viewModel.signInWithGoogle(credentials) }
         advanceUntilIdle()
         assertTrue(viewModel.uiState.value.isLoading, "should be loading while getCredential is suspended")
 
@@ -206,7 +213,7 @@ class AuthViewModelTest {
     fun `cancelling signInWithSavedPassword mid-flight leaves isLoading false`() = runTest(dispatcher) {
         coEvery { credentialAuthenticator.getSavedPassword(any()) } coAnswers { awaitCancellation() }
 
-        val job = launch { viewModel.signInWithSavedPassword(activity) }
+        val job = launch { viewModel.signInWithSavedPassword(credentials) }
         advanceUntilIdle()
         assertTrue(viewModel.uiState.value.isLoading, "should be loading while getCredential is suspended")
 
@@ -228,13 +235,13 @@ class AuthViewModelTest {
             coEvery { firebaseAuthService.signInWithEmail(any(), any()) } returns
                 Result.failure(CancellationException("scope cancelled"))
 
-            val job = launch { viewModel.signInWithSavedPassword(activity) }
+            val job = launch { viewModel.signInWithSavedPassword(credentials) }
             advanceUntilIdle()
 
             assertTrue(job.isCancelled, "rethrowing must cancel this coroutine rather than crash it")
             assertNull(viewModel.uiState.value.error, "a cancellation must never surface as an AuthError")
             assertFalse(viewModel.uiState.value.isLoading)
-            verify(exactly = 0) { crashlyticsManager.recordExceptionWithContext(any(), any()) }
+            verify(exactly = 0) { crashlyticsManager.recordWithContext(any(), any()) }
         }
 
     @Test
@@ -246,13 +253,13 @@ class AuthViewModelTest {
             Result.failure(CancellationException("view model cleared"))
 
         var navigated = false
-        viewModel.signIn(activity) { navigated = true }
+        viewModel.signIn(credentials) { navigated = true }
         advanceUntilIdle()
 
         assertFalse(navigated, "must not navigate on a cancellation")
         assertNull(viewModel.uiState.value.error, "a cancellation must never surface as an AuthError")
         assertFalse(viewModel.uiState.value.isLoading)
-        verify(exactly = 0) { crashlyticsManager.recordExceptionWithContext(any(), any()) }
+        verify(exactly = 0) { crashlyticsManager.recordWithContext(any(), any()) }
     }
 
     @Test
@@ -260,11 +267,11 @@ class AuthViewModelTest {
         val failure = GetCredentialUnknownException()
         coEvery { credentialAuthenticator.getSavedPassword(any()) } returns Result.failure(failure)
 
-        viewModel.signInWithSavedPassword(activity)
+        viewModel.signInWithSavedPassword(credentials)
         advanceUntilIdle()
 
         verify {
-            crashlyticsManager.recordExceptionWithContext(
+            crashlyticsManager.recordWithContext(
                 failure,
                 mapOf("action" to "saved_password_credential")
             )

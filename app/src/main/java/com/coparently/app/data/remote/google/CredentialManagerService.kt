@@ -1,10 +1,10 @@
 package com.coparently.app.data.remote.google
 
 import android.content.Context
-import android.util.Log
 import androidx.credentials.CredentialManager
 import com.coparently.app.R
-import com.coparently.app.data.local.preferences.EncryptedPreferences
+import com.coparently.app.data.platform.SecurePreferences
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.GoogleOAuthFunctions
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
@@ -14,11 +14,8 @@ import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.Scope
 import com.google.android.gms.tasks.Task
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Сервис для аутентификации Google с использованием Google Sign-In API и OAuth2.
@@ -26,16 +23,15 @@ import javax.inject.Singleton
  *
  * @see <a href="https://developers.google.com/identity/sign-in/android/start">Google Sign-In for Android</a>
  */
-@Singleton
-class CredentialManagerService @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val encryptedPreferences: EncryptedPreferences,
+class CredentialManagerService(
+    private val context: Context,
+    private val encryptedPreferences: SecurePreferences,
     private val googleOAuthFunctions: GoogleOAuthFunctions
-) {
+) : GoogleCalendarAccount {
     private val credentialManager: CredentialManager? = try {
         CredentialManager.create(context)
     } catch (e: Exception) {
-        Log.e(TAG, "Failed to create CredentialManager", e)
+        logger.e(TAG, "Failed to create CredentialManager", e)
         null
     }
     private val _googleSignInClient: GoogleSignInClient? by lazy {
@@ -61,7 +57,7 @@ class CredentialManagerService @Inject constructor(
                 .build()
             GoogleSignIn.getClient(context, gso)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to create GoogleSignInClient", e)
+            logger.e(TAG, "Failed to create GoogleSignInClient", e)
             null
         }
     }
@@ -76,7 +72,7 @@ class CredentialManagerService @Inject constructor(
                 .build()
             GoogleSignIn.getClient(context, gso)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to create auth GoogleSignInClient", e)
+            logger.e(TAG, "Failed to create auth GoogleSignInClient", e)
             null
         }
     }
@@ -132,7 +128,7 @@ class CredentialManagerService @Inject constructor(
                 Pair(null, "Sign-in intent should be handled by Activity")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error starting sign-in: ${e.message}", e)
+            logger.e(TAG, "Error starting sign-in: ${e.message}", e)
             Pair(null, "Failed to start sign-in: ${e.message}")
         }
     }
@@ -149,13 +145,13 @@ class CredentialManagerService @Inject constructor(
     ): Pair<GoogleSignInAccount?, GoogleSignInFailure?> {
         return try {
             val account = completedTask.await()
-            Log.d(TAG, "Sign-in successful for: ${account.email}")
+            logger.d(TAG, "Sign-in successful for: ${account.email}")
             val authCode = account.serverAuthCode ?: return Pair(null, GoogleSignInFailure.NoAuthCode)
             // Обмениваем authorization code на access и refresh токены
             exchangeAuthCodeForTokens(authCode, account.email ?: "")
             Pair(account, null)
         } catch (e: ApiException) {
-            Log.e(TAG, "Sign-in failed with code: ${e.statusCode}", e)
+            logger.e(TAG, "Sign-in failed with code: ${e.statusCode}", e)
             val failure = if (e.statusCode == GoogleSignInStatusCodes.SIGN_IN_CANCELLED) {
                 GoogleSignInFailure.Cancelled
             } else {
@@ -167,7 +163,7 @@ class CredentialManagerService @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.e(TAG, "Unexpected error during sign-in: ${e.message}", e)
+            logger.e(TAG, "Unexpected error during sign-in: ${e.message}", e)
             Pair(null, GoogleSignInFailure.Unexpected)
         }
     }
@@ -183,7 +179,7 @@ class CredentialManagerService @Inject constructor(
         // client secret for this grant, and that secret used to be compiled into the APK —
         // where it was available to anybody who installed the app.
         val tokens = googleOAuthFunctions.exchangeAuthCode(authCode).getOrElse { e ->
-            Log.e(TAG, "Error exchanging auth code for tokens: ${GoogleOAuthFunctions.diagnosisOf(e)}", e)
+            logger.e(TAG, "Error exchanging auth code for tokens: ${GoogleOAuthFunctions.diagnosisOf(e)}", e)
             throw e
         }
 
@@ -204,7 +200,7 @@ class CredentialManagerService @Inject constructor(
         encryptedPreferences.putTokenExpiry(expiryFrom(tokens.expiresInSeconds))
         encryptedPreferences.putUserEmail(email)
 
-        Log.d(TAG, "Tokens obtained and stored successfully")
+        logger.d(TAG, "Tokens obtained and stored successfully")
     }
 
     /** When a token that lives [expiresInSeconds] from now runs out, as epoch millis. */
@@ -220,8 +216,11 @@ class CredentialManagerService @Inject constructor(
      * the access token is [accessToken]'s job. This used to be `isSignedIn()`, "the access token is
      * good for five more minutes", which every connection stopped being about 55 minutes after it
      * was made — Settings then said "not signed in", and the import refused to start.
+     *
+     * The automatic import, in `:shared-data` since MON-24 phase 2 (Task 8g), reads it as its
+     * [GoogleCalendarConnectionSource].
      */
-    fun connection(): GoogleCalendarConnection {
+    override fun connection(): GoogleCalendarConnection {
         val accessToken = encryptedPreferences.getAccessToken()
         val expiresAt = encryptedPreferences.getTokenExpiry() ?: 0L
         return when {
@@ -245,7 +244,7 @@ class CredentialManagerService @Inject constructor(
      * @param forceRefresh Renew even though the stored expiry says the token is still good — what a
      *   caller does once after the Calendar API refused it (401).
      */
-    suspend fun accessToken(forceRefresh: Boolean = false): GoogleAccess {
+    override suspend fun accessToken(forceRefresh: Boolean): GoogleAccess {
         val stored = encryptedPreferences.getAccessToken()
         val expiresAt = encryptedPreferences.getTokenExpiry() ?: 0L
         val now = System.currentTimeMillis()
@@ -268,7 +267,7 @@ class CredentialManagerService @Inject constructor(
         }
         encryptedPreferences.putAccessToken(tokens.accessToken)
         encryptedPreferences.putTokenExpiry(expiryFrom(tokens.expiresInSeconds))
-        Log.d(TAG, "Access token refreshed successfully")
+        logger.d(TAG, "Access token refreshed successfully")
         return GoogleAccess.Granted(tokens.accessToken)
     }
 
@@ -280,7 +279,7 @@ class CredentialManagerService @Inject constructor(
      */
     private fun renewalFailed(e: Throwable): GoogleAccess {
         val failure = (e as? GoogleAccessException)?.failure ?: GoogleAccessFailure.UNAVAILABLE
-        Log.w(TAG, "Could not renew the Google access token: $failure", e)
+        logger.w(TAG, "Could not renew the Google access token: $failure", e)
         if (failure == GoogleAccessFailure.NEEDS_RECONNECT) {
             markNeedsReconnect()
         }
@@ -315,7 +314,7 @@ class CredentialManagerService @Inject constructor(
      * ([EncryptedPreferences.clear], with its exemptions) and ends the Google sign-in. What "Sign
      * out of app" runs; disconnecting Google Calendar alone is [disconnect].
      */
-    suspend fun signOut(): Pair<Boolean, String?> {
+    override suspend fun signOut(): Pair<Boolean, String?> {
         // The local credential goes first, unconditionally. `revokeAccess()` is a network call,
         // and while it sat *before* the clear, an offline sign-out threw past it and left the
         // refresh token, the access token and the calendar id on disk — for the next account to
@@ -335,7 +334,7 @@ class CredentialManagerService @Inject constructor(
      * the family on screen, the sync cursors and the calendar filters with it — and the "Enable
      * sync" switch, which now stays to be found as it was on a reconnect.
      */
-    suspend fun disconnect() {
+    override suspend fun disconnect() {
         // Local first, for the reason [signOut] gives.
         encryptedPreferences.removeGoogleCalendarAccount()
         endGoogleSignIn()
@@ -349,9 +348,9 @@ class CredentialManagerService @Inject constructor(
         try {
             _googleSignInClient?.signOut()?.await()
             _googleSignInClient?.revokeAccess()?.await()
-            Log.d(TAG, "User signed out successfully")
+            logger.d(TAG, "User signed out successfully")
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            Log.e(TAG, "Google revoke failed after the local credential was cleared", e)
+            logger.e(TAG, "Google revoke failed after the local credential was cleared", e)
         }
     }
 
@@ -379,7 +378,7 @@ class CredentialManagerService @Inject constructor(
             }
             clientId
         } catch (e: Exception) {
-            Log.e(TAG, "Web Client ID not configured: ${e.message}")
+            logger.e(TAG, "Web Client ID not configured: ${e.message}")
             throw IllegalStateException(
                 "Google OAuth not configured. Please:\n1. Go to Google Cloud Console\n" +
                     "2. Create OAuth 2.0 Client ID for Web application\n" +

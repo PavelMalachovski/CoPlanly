@@ -26,12 +26,13 @@ import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.e2e.EmulatorEnvironment
 import com.coparently.app.e2e.EmulatorParent
 import com.coparently.app.presentation.navigation.BottomNavDestination
+import com.coparently.app.testing.UsesFakeFirebase
 import com.coparently.app.utils.swapDateList
-import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.time.LocalDate
@@ -39,7 +40,6 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.Locale
 import java.util.UUID
-import javax.inject.Inject
 
 /**
  * Day swaps between the two parents, with a deadline — Zuzana's "a month without an answer".
@@ -52,18 +52,15 @@ import javax.inject.Inject
  * them (`TwoParentRequestDeadlinesTest` does the same). No step waits for a reminder: reminders are
  * kept out of the night on the runner's clock, and the run may be at night.
  */
-@HiltAndroidTest
+@UsesFakeFirebase
 @RunWith(AndroidJUnit4::class)
 class SwapScenarioTest : QaOnScreenTest() {
 
-    @Inject
-    lateinit var custodyRepository: CustodyModelRepository
+    val custodyRepository: CustodyModelRepository by lazy { koinRule.get() }
 
-    @Inject
-    lateinit var requestDeadlineRepository: RequestDeadlineRepository
+    val requestDeadlineRepository: RequestDeadlineRepository by lazy { koinRule.get() }
 
-    @Inject
-    lateinit var requestClockSteps: RequestClockSteps
+    val requestClockSteps: RequestClockSteps by lazy { koinRule.get() }
 
     @Test
     fun answerOnScreenAsIgor() {
@@ -218,7 +215,7 @@ class SwapScenarioTest : QaOnScreenTest() {
     /** The co-parent's first pattern, week on, week off from this week, the first week on screen's. */
     private suspend fun coParentSetsFirstPattern(): CustodyModel {
         val (mine, _) = slots()
-        val submission = bob.custodyRepository.createWeekOnWeekOff(LocalDate.now(), momFirst = mine == ContactWindow.SLOT_ONE)
+        val submission = bob.custodyRepository.createWeekOnWeekOff(LocalDate.now().toKotlinLocalDate(), momFirst = mine == ContactWindow.SLOT_ONE)
         check(submission == PatternSubmission.ACTIVATED) { "the first pattern was $submission" }
         val model = checkNotNull(bob.custodyRepository.getActiveModelSync())
         withTimeout(EmulatorParent.WAIT_MS) {
@@ -229,7 +226,7 @@ class SwapScenarioTest : QaOnScreenTest() {
 
     private suspend fun coParentOffers(agreed: CustodyModel, date: LocalDate, answerBy: AnswerByPick?) {
         val iso = date.toString()
-        val toSlot = if (agreed.getCustodyFor(date) == ContactWindow.SLOT_ONE) ContactWindow.SLOT_TWO else ContactWindow.SLOT_ONE
+        val toSlot = if (agreed.getCustodyFor(date.toKotlinLocalDate()) == ContactWindow.SLOT_ONE) ContactWindow.SLOT_TWO else ContactWindow.SLOT_ONE
         val groupId = UUID.randomUUID().toString()
         val at = LocalDateTime.now().toString()
         bob.custodyRepository.applyDayOverrides(
@@ -243,7 +240,7 @@ class SwapScenarioTest : QaOnScreenTest() {
     private suspend fun offerWithShortClock(day: LocalDate): String {
         val agreed = coParentSetsFirstPattern()
         val iso = day.toString()
-        val toSlot = if (agreed.getCustodyFor(day) == ContactWindow.SLOT_ONE) ContactWindow.SLOT_TWO else ContactWindow.SLOT_ONE
+        val toSlot = if (agreed.getCustodyFor(day.toKotlinLocalDate()) == ContactWindow.SLOT_ONE) ContactWindow.SLOT_TWO else ContactWindow.SLOT_ONE
         val groupId = UUID.randomUUID().toString()
         val at = LocalDateTime.now().toString()
         custodyRepository.applyDayOverrides(
@@ -259,7 +256,7 @@ class SwapScenarioTest : QaOnScreenTest() {
                 responderUid = bob.uid,
                 answerByMillis = System.currentTimeMillis() + SHORT_DEADLINE_MS,
                 capMillis = day.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(),
-                firstDate = day,
+                firstDate = day.toKotlinLocalDate(),
                 dayCount = 1
             )
         ) ?: error("the rules refused the clock")

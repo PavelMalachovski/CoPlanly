@@ -11,7 +11,7 @@ import io.mockk.mockk
  *
  * Not a plain relaxed mock: a relaxed mock's `Task` never completes, so every `await()` on one
  * waits for ever — PR #103's on-screen e2e test hung for its whole time limit in
- * `SyncService.syncUserData`, on `FcmService.getCurrentToken()`. Shared by `FakeFirebaseModule`
+ * `SyncService.syncUserData`, on `FcmService.getCurrentToken()`. Shared by `fakeFirebaseModule`
  * and the e2e phones, which build a real `FcmService` over it so that what a repository *queues*
  * in `notification_queue` is the production write, and only the delivery (which has no emulator)
  * is missing.

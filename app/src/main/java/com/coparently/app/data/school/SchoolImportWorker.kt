@@ -1,8 +1,6 @@
 package com.coparently.app.data.school
 
 import android.content.Context
-import android.util.Log
-import androidx.hilt.work.HiltWorker
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -10,13 +8,9 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import dagger.assisted.Assisted
-import dagger.assisted.AssistedInject
-import dagger.hilt.android.qualifiers.ApplicationContext
+import com.coparently.app.data.platform.logger
 import kotlinx.coroutines.CancellationException
 import java.util.concurrent.TimeUnit
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Runs the daily school import (MON-8) for every connection of the signed-in account.
@@ -26,10 +20,9 @@ import javax.inject.Singleton
  * connection left, the job cancels itself, so a phone that disconnected its last school is not
  * woken daily for nothing.
  */
-@HiltWorker
-class SchoolImportWorker @AssistedInject constructor(
-    @Assisted context: Context,
-    @Assisted workerParams: WorkerParameters,
+class SchoolImportWorker(
+    context: Context,
+    workerParams: WorkerParameters,
     private val importer: SchoolImporter,
     private val scheduler: SchoolImportScheduler
 ) : CoroutineWorker(context, workerParams) {
@@ -43,7 +36,7 @@ class SchoolImportWorker @AssistedInject constructor(
             throw e
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             // Each connection's outcome is already on the connection; this is the unexpected rest.
-            Log.e(TAG, "The school import failed unexpectedly", e)
+            logger.e(TAG, "The school import failed unexpectedly", e)
             Result.success()
         }
     }
@@ -53,23 +46,13 @@ class SchoolImportWorker @AssistedInject constructor(
     }
 }
 
-/** Starts and stops the daily school import. An interface so the connect flow can be tested. */
-interface SchoolImportScheduler {
-    /** Makes sure the daily import runs; a no-op when it is already scheduled. */
-    fun schedule()
-
-    /** Stops the daily import. */
-    fun cancel()
-}
-
 /**
  * [SchoolImportScheduler] over WorkManager: unique periodic work named [WORK_NAME], once a day,
  * only with a network, kept rather than replaced so connecting a second school does not move the
  * first one's clock.
  */
-@Singleton
-class WorkManagerSchoolImportScheduler @Inject constructor(
-    @ApplicationContext private val context: Context
+class WorkManagerSchoolImportScheduler(
+    private val context: Context
 ) : SchoolImportScheduler {
 
     override fun schedule() {

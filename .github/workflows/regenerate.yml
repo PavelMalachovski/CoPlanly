@@ -80,15 +80,17 @@ jobs:
         run: ./gradlew detektBaseline
 
       # Room writes `app/schemas/<version>.json` during KSP, from the `room.schemaLocation`
-      # argument in app/build.gradle.kts. This exports the *current* version only; the versions
-      # between 14 and now were never committed and cannot be recovered from a build of today's
-      # code — see CQ-1 in docs/ROADMAP.md for the decision to accept that gap rather than
-      # rebuild each historical commit.
+      # argument in shared-data/build.gradle.kts (the database moved there in MON-24 phase 2, and
+      # Room's processor with it; the Android processor's task is `kspAndroidMain`, the Android KMP
+      # library target's since AGP 9, MON-24 phase 2, Task 13). This
+      # exports the *current* version only; the versions between 14 and now were never committed
+      # and cannot be recovered from a build of today's code — see CQ-1 in docs/ROADMAP.md for the
+      # decision to accept that gap rather than rebuild each historical commit.
       #
       # `--rerun`: the schema directory is not a declared output of the KSP task, so a result
       # restored from the build cache would write no file at all — the one thing this step is for.
       - name: Export the current Room schema
-        run: ./gradlew kspDebugKotlin --rerun
+        run: ./gradlew :shared-data:kspAndroidMain --rerun
 
       # `roborazzi { outputDir }` in app/build.gradle.kts is `src/test/screenshots`, the directory
       # `verifyRoborazziDebug` reads, so this writes the baselines in place. The directory is

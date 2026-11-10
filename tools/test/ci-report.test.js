@@ -71,6 +71,8 @@ test('suite labels', () => {
       'Instrumented, API 35 (google_apis_ps16k)');
   assert.equal(report.suiteLabel('junit-upgrade'), 'Upgrade over the base build');
   assert.equal(report.suiteLabel('junit-web'), 'Web (verify page, calendar feed)');
+  assert.equal(report.suiteLabel('junit-shared'), 'Shared module (JVM)');
+  assert.equal(report.suiteLabel('junit-shared-ios'), 'Shared module (iOS simulator)');
 });
 
 test('collect reads junit-* and coverage-report directories', () => {
@@ -185,4 +187,17 @@ test('Playwright\'s JUnit (the web job) is counted like the others', () => {
   assert.equal(r.failed, 1);
   assert.equal(r.skipped, 1);
   assert.equal(r.failures[0].name, 'verify-page.spec.js > against the Functions emulator › one changed byte is no match');
+});
+
+test('render says so when the emulator jobs were skipped on a draft, and shows them as skipped', () => {
+  const jobs = [
+    {name: 'Android — build & unit tests', status: 'completed', conclusion: 'success'},
+    {name: 'Android — two parents on the Firebase emulators', status: 'completed', conclusion: 'skipped'},
+  ];
+  const md = report.render({jobs, emulatorsSkippedOnDraft: true});
+  assert.match(md, /\| Android — two parents on the Firebase emulators \| skipped \|/);
+  assert.match(md, /Emulator jobs skipped on a draft: add the `full-ci` label to run them/);
+  assert.equal(JSON.parse(/<!-- ci-report-json (.*) -->/.exec(md)[1]).emulatorsSkippedOnDraft, true);
+  // Absent when they ran (or were skipped for their paths): no stray note.
+  assert.doesNotMatch(report.render({jobs}), /Emulator jobs skipped on a draft/);
 });

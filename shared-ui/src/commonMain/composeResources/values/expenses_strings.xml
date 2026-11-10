@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Expenses feature strings. Kept out of strings.xml because
+     strings.xml is gitignored in this project (it holds local OAuth values). -->
+<resources>
+    <string name="expenses_back">Back</string>
+    <string name="expenses_add">Add expense</string>
+    <string name="expenses_summary_this_month">Summary (this month)</string>
+    <string name="expenses_summary_total">Total</string>
+    <string name="expenses_receipt_photo">Receipt photo</string>
+    <string name="expense_add_title">Add expense</string>
+    <string name="expense_edit_title">Edit expense</string>
+    <string name="expense_field_title">Title</string>
+    <string name="expense_field_amount">Amount</string>
+    <string name="expense_field_category">Category</string>
+    <string name="expense_field_notes">Notes (optional)</string>
+    <string name="expense_save">Save expense</string>
+    <string name="expense_remove_receipt">Remove receipt photo</string>
+    <string name="expenses_empty_title">No expenses yet</string>
+    <string name="expenses_empty_description">Log a shared cost — daycare, clothes, a doctor visit — and split it with your co-parent.</string>
+    <!-- Month summary header: total, who-paid split and settle-up -->
+    <!-- Replaces expenses_mom_paid/expenses_dad_paid. The call site (ExpenseSummaryHeader's
+         who-paid row) needs both the payer's name and the amount in one Text; the name serves
+         as its own label, so nothing has to agree with it. %1$s is the payer's name, %2$s is
+         the formatted amount. -->
+    <string name="expenses_paid_by">%1$s: %2$s</string>
+    <string name="expenses_balance_owed_to_you">Your co-parent owes you %1$s</string>
+    <string name="expenses_balance_you_owe">You owe your co-parent %1$s</string>
+    <!-- The same lines naming the co-parent; the plain ones above are kept for when no name is known. -->
+    <string name="expenses_balance_owed_to_you_named">%1$s owes you %2$s</string>
+    <string name="expenses_balance_you_owe_named">You owe %1$s %2$s</string>
+    <string name="expenses_balance_settled">You are all square</string>
+    <string name="expenses_settle_up">Settle up</string>
+    <!-- Drafted into the chat composer; the user reviews and sends it themselves -->
+
+    <!-- Expense list rows -->
+    <string name="expenses_this_month">This month</string>
+    <plurals name="expenses_count">
+        <item quantity="one">%1$d\u00A0expense</item>
+        <item quantity="other">%1$d\u00A0expenses</item>
+    </plurals>
+    <string name="expenses_row_subtitle">%1$s · %2$s paid · %3$s</string>
+    <string name="expenses_row_subtitle_you">%1$s · you paid · %2$s</string>
+    <string name="expenses_row_subtitle_unknown_payer">%1$s · %2$s</string>
+    <string name="expenses_split_even">split 50/50</string>
+    <string name="expenses_split_n_ways">split 1/%1$d</string>
+    <string name="expenses_split_none">not split</string>
+    <string name="expenses_delete">Delete expense</string>
+    <string name="expenses_deleted">Expense deleted</string>
+    <string name="expenses_deleted_undo">Undo</string>
+    <string name="expense_field_date">Date</string>
+    <string name="expense_date_confirm">OK</string>
+    <string name="expense_date_cancel">Cancel</string>
+
+    <!-- Month navigator on the expense list -->
+    <string name="expenses_prev_month">Previous month</string>
+    <string name="expenses_next_month">Next month</string>
+    <string name="expenses_month_empty">No expenses in this month.</string>
+
+    <!-- Warning shown when saving an expense dated outside the current month -->
+    <string name="expense_date_other_month_title">Not in the current month</string>
+    <!-- %1$s = the expense's month, e.g. "October 2024" -->
+    <string name="expense_date_other_month_message">This expense is dated %1$s, so it won\u0027t show under the current month. Switch months on the Expenses screen to find it.</string>
+    <string name="expense_date_other_month_confirm">Save anyway</string>
+
+    <!-- Expense categories (labels for the ExpenseCategory enum) -->
+    <string name="expenses_category_education">Education</string>
+    <string name="expenses_category_medical">Medical</string>
+    <string name="expenses_category_clothing">Clothing</string>
+    <string name="expenses_category_food">Food</string>
+    <string name="expenses_category_activities">Activities</string>
+    <string name="expenses_category_transportation">Transportation</string>
+    <string name="expenses_category_toys">Toys</string>
+    <string name="expenses_category_household">Household</string>
+    <string name="expenses_category_other">Other</string>
+
+
+    <!-- Summary card: month switcher and total. -->
+    <string name="expenses_shared_spend">shared spend</string>
+    <string name="expenses_month_and_count">%1$s · %2$s</string>
+    <!-- The month summary folded into one pinned line; %1$s is each currency's total, joined. -->
+    <string name="expenses_collapsed_totals">Shared spend: %1$s</string>
+    <string name="expenses_row_meta">%1$s · %2$s</string>
+    <string name="expenses_row_meta_with_receipt">%1$s · %2$s · receipt</string>
+    <string name="expenses_split_proposal_title">New expense split proposed</string>
+    <string name="expenses_split_proposal_body_named">%1$s proposes a new split for shared expenses from now on: %2$s. Already recorded expenses keep their split.</string>
+    <!-- A share of the split, "70 %": the sign is an argument (%5$s / %4$s, expenses_percent_sign)
+         rather than a literal percent beside arguments, which Compose Multiplatform would print as
+         written (CLAUDE.md "Localization"). -->
+    <string name="expenses_percent_sign" translatable="false">%</string>
+    <string name="expenses_split_shares_named">%1$s pays %2$d %5$s, %3$s pays %4$d %5$s</string>
+    <string name="expenses_split_shares_you_first">You pay %1$d %4$s, %2$s pays %3$d %4$s</string>
+    <string name="expenses_split_shares_you_second">%1$s pays %2$d %4$s, you pay %3$d %4$s</string>
+    <string name="expenses_split_proposal_confirm">Confirm</string>
+    <string name="expenses_split_proposal_decline">Decline</string>
+    <string name="expenses_split_proposal_later">Later</string>
+    <string name="expenses_split_answer_failed">Could not answer the split. Check your connection and try again.</string>
+    <!-- A new shared expense can be one the co-parent paid (second audit). -->
+    <string name="expense_paid_by_title">Who paid?</string>
+    <string name="expense_paid_by_you">You</string>
+    <string name="expense_split_shared">Share with your co-parent</string>
+    <string name="expense_split_not_shared_hint">Counts towards your spending, but neither of you owes the other for it.</string>
+    <string name="expense_split_ratio">Split %1$d / %2$d</string>
+    <string name="expense_split_override_hint">Different split for this expense only. The family\u0027s agreed split does not change.</string>
+    <string name="expense_for_members">Who is this for?</string>
+    <string name="expenses_filter_members">Show for</string>
+    <!-- UX-17: the proposer's side of the same conversation. -->
+    <string name="expenses_split_proposal_waiting_title">Waiting for an answer</string>
+    <string name="expenses_split_proposal_waiting_body_named">You proposed: %1$s. %2$s has not answered yet.</string>
+    <string name="expenses_split_proposal_withdraw">Withdraw</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="expense_error_signed_out">You must be signed in to add an expense.</string>
+    <string name="expense_warning_receipt_upload_failed">Receipt upload failed — expense saved without receipt</string>
+    <string name="expense_warning_new_receipt_upload_failed">Receipt upload failed — expense saved without the new receipt</string>
+    <string name="settle_up_dialog_title">Settle up for %1$s</string>
+    <string name="settle_up_dialog_owed">%1$s will see in the chat that they owe you %2$s.</string>
+    <string name="settle_up_dialog_owing">%1$s will see in the chat that you owe them %2$s. If they have added a bank account, you will get a QR code to pay with.</string>
+    <string name="settle_up_iban_label">Your IBAN, for a QR payment (optional)</string>
+    <string name="settle_up_iban_invalid">This IBAN doesn\u0027t look right. Check it, or leave the field empty.</string>
+    <string name="settle_up_send">Send</string>
+    <string name="settle_up_cancel">Cancel</string>
+    <string name="settle_up_iban_save_failed">Your IBAN could not be saved. The settle-up was not sent.</string>
+    <!-- Questioning the co-parent's expense (second audit): a card in the chat, never an edit. -->
+    <string name="expense_question_title">Question this expense?</string>
+    <string name="expense_question_body">%1$s recorded “%2$s”. A card in your chat says you question it, and it stays in the record. Only %1$s can change or delete the expense — say why in the chat.</string>
+    <string name="expense_question_confirm">Question it</string>
+    <string name="expense_question_sent">Sent to the chat. Say why there.</string>
+    <string name="expense_question_failed">The question could not be sent.</string>
+    <string name="expense_question_cancel">Cancel</string>
+</resources>

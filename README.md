@@ -57,9 +57,9 @@ Firebase sync between the two households.
 | Language | Kotlin 1.9+ |
 | UI | Jetpack Compose, Material 3 (expressive theme, Poppins) |
 | Architecture | Clean Architecture (domain / data / presentation), MVVM |
-| DI | Hilt |
+| DI | Koin |
 | Local DB | Room (schema v9, exported schemas in `app/schemas`) |
-| Background work | WorkManager (+ HiltWorkerFactory) |
+| Background work | WorkManager (+ KoinWorkerFactory) |
 | Backend | Firebase: Auth, Firestore, Cloud Messaging, Crashlytics, Analytics, Storage, Functions |
 | Cloud Functions | `functions/` (Node.js) — notification fan-out |
 | APIs | Google Calendar API |
@@ -86,7 +86,7 @@ app/src/main/java/com/coparently/app/
 │   ├── event/            # Event list + add/edit screens
 │   ├── chat/ expenses/ childinfo/ custody/ pairing/ settings/ auth/ sync/
 │   └── theme/            # Material 3 theme: colors, typography, shapes, dimensions
-└── di/                   # Hilt modules
+└── di/                   # Koin modules (di/koin/, listed in appModules)
 ```
 
 ---
@@ -190,7 +190,7 @@ actually resolved to in the code.
 
 1. Fork and create a feature branch (`feature/amazing-feature`)
 2. Follow the project rules (see [CLAUDE.md](CLAUDE.md) / [.cursorrules](.cursorrules)):
-   Compose-only UI, stateless components, Hilt DI, KDoc comments, tests for repositories
+   Compose-only UI, stateless components, Koin DI, KDoc comments, tests for repositories
 3. Use [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, …)
 4. Open a Pull Request
 

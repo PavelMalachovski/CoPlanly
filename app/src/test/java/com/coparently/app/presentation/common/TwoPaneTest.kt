@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.common
 
-import android.app.Application
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
@@ -11,6 +10,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.testing.RobolectricTestApplication
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -24,7 +24,7 @@ import org.robolectric.annotation.Config
  * Measured, as `ReadablePaneTest` is: the panes' widths and where they sit are numbers.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = Application::class)
+@Config(sdk = [34], application = RobolectricTestApplication::class)
 class TwoPaneTest {
 
     @get:Rule

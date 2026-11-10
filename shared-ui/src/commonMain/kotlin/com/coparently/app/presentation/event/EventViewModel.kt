@@ -1,0 +1,623 @@
+package com.coparently.app.presentation.event
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.SecurePreferences
+import com.coparently.app.domain.changerequests.AnswerByPick
+import com.coparently.app.domain.error.AppError
+import com.coparently.app.domain.files.RecordPhotoKind
+import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.repository.RecordPhotoStorage
+import com.coparently.app.domain.serialization.StoredJson
+import com.coparently.app.domain.time.durationUntil
+import com.coparently.app.domain.time.plus
+import com.coparently.app.presentation.common.FamilyMember
+import com.coparently.app.presentation.common.FamilyMembersSource
+import com.coparently.app.presentation.common.Parents
+import com.coparently.app.presentation.common.ParentsSource
+import com.coparently.app.presentation.common.UiText
+import com.coparently.app.presentation.common.toUiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_error_generic
+import com.coparently.app.resources.event_error_title_invalid
+import com.coparently.app.resources.event_form_end_before_start
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atTime
+import kotlinx.datetime.toLocalDateTime
+import kotlinx.serialization.Serializable
+import kotlin.coroutines.EmptyCoroutineContext
+import kotlin.time.Clock
+
+/** Keeps the parents flow warm across brief unsubscriptions (config changes). */
+private const val PARENTS_STOP_TIMEOUT_MS = 5_000L
+
+/**
+ * Data class for event draft.
+ * Issue 1.3: Draft saving functionality.
+ *
+ * [endDaySpan] (days from the start date to the end date) and [allDay] came with the form's end
+ * date and "All day" switch (October 2026). A draft saved before them has neither key, and the
+ * missing ones read as 0 and false: a one-day timed event, which is what it was.
+ *
+ * Stored as [StoredJson] text, the same bytes Gson wrote for it before MON-24, so a draft saved by
+ * an older build still opens.
+ */
+@Serializable
+data class EventDraft(
+    val title: String,
+    val description: String,
+    val parentOwner: String,
+    val eventType: String,
+    val startDate: String, // ISO format
+    val startTime: String, // ISO format
+    val endTime: String, // ISO format
+    val endDaySpan: Int = 0,
+    val allDay: Boolean = false
+)
+
+/**
+ * What the events list is currently showing.
+ *
+ * Modelling this as state rather than as a call is what guarantees a single live collection:
+ * `flatMapLatest` cancels the previous one. Before August 2026 each load launched its own
+ * coroutine and cancelled nothing, so the Calendar tab accumulated one permanent collector per
+ * month swipe for the life of the process.
+ */
+internal sealed interface EventQuery {
+    data object All : EventQuery
+    data class Range(val start: LocalDateTime, val end: LocalDateTime) : EventQuery
+}
+
+/**
+ * ViewModel for managing events.
+ * Handles UI state and business logic for event operations using Use Cases.
+ *
+ * In `:shared-ui` since MON-24 phase 2 (Task 10): the draft and the custom event types are read
+ * from the sealed preference store ([SecurePreferences], the app's `EncryptedPreferences` on
+ * Android), under the same keys; every date and time was kotlinx-datetime already.
+ */
+class EventViewModel(
+    private val eventUseCases: com.coparently.app.domain.usecase.EventUseCases,
+    private val errorHandler: com.coparently.app.domain.error.ErrorHandler,
+    private val encryptedPreferences: SecurePreferences,
+    private val photoStorage: RecordPhotoStorage,
+    private val parentsSource: ParentsSource,
+    familyMembersSource: FamilyMembersSource
+) : ViewModel() {
+
+    /**
+     * Signed-in parent and paired co-parent, for resolving a slot to a name — the event list,
+     * the preview sheet and the editor all show who an event belongs to.
+     */
+    val parents: StateFlow<Parents> = parentsSource.observe()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(PARENTS_STOP_TIMEOUT_MS), Parents())
+
+    /**
+     * The children and pets this family cares for.
+     *
+     * Serves both the editor's "who is this for" picker and the calendar's filter strip, so the
+     * two cannot disagree about who exists. Rendered, never read by a save path — what a parent
+     * picked comes down from the form as an explicit list.
+     */
+    val familyMembers: StateFlow<List<FamilyMember>> = familyMembersSource.observe()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(PARENTS_STOP_TIMEOUT_MS), emptyList())
+
+    private val _uiState = MutableStateFlow<EventUiState>(EventUiState.Loading)
+    val uiState: StateFlow<EventUiState> = _uiState.asStateFlow()
+
+    /**
+     * The family the new-event draft belongs to: the family on screen as the form opened, read once.
+     *
+     * Each family keeps its own draft (isolation audit, October 2026), and a switch while a form is
+     * open must not file what was typed for one family under the other's draft. Read eagerly, one
+     * Room row, so the draft calls never wait on it once the form is up — clearing after a save
+     * runs before the form is left.
+     */
+    private val draftFamily: Deferred<String?> = viewModelScope.async {
+        try {
+            parentsSource.familyOnScreen()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Not read: the draft stays under the device-wide key every draft used to be kept under.
+            null
+        }
+    }
+
+    // Re-requesting the range already loaded costs nothing: MutableStateFlow conflates equal
+    // values, and EventQuery.Range is a data class, so setting it again emits nothing at all.
+    private val query = MutableStateFlow<EventQuery>(EventQuery.All)
+
+    // A separate tick, not a field on EventQuery.Range: folding it into Range would make every
+    // instance of the same range compare unequal, and the conflation above (the whole reason
+    // ordinary paging is free) would stop working. combine() re-emits whenever either source
+    // does, so bumping this alone is what forces flatMapLatest to re-subscribe to the current
+    // query without changing what that query is.
+    private val refreshTicks = MutableStateFlow(0)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val events: StateFlow<List<Event>> = combine(query, refreshTicks) { current, _ -> current }
+        .flatMapLatest { current ->
+            // This when() sits upstream of the .catch below, inside the flatMapLatest lambda.
+            // It happens not to throw today (GetEventsUseCase only delegates, and
+            // EventRepositoryImpl.getEventsByDateRange returns a combine() whose body runs
+            // inside the flow, not here) but nothing enforces that: if a future repository
+            // change makes either branch throw synchronously, that throw escapes onto the
+            // outer chain, uncaught, and permanently kills the pipeline - the exact failure
+            // this whole design exists to prevent. Keep the source selection lazy (a flow, not
+            // a value) so any failure surfaces inside the flow below, where .catch can see it.
+            val source = when (current) {
+                is EventQuery.All -> eventUseCases.getEvents()
+                is EventQuery.Range -> eventUseCases.getEvents.getByDateRange(current.start, current.end)
+            }
+            source
+                .onStart { _uiState.value = EventUiState.Loading }
+                .onEach { _uiState.value = EventUiState.Success(it) }
+                // Caught per query, not on the outer chain: a failure of one range must not
+                // end the flatMapLatest and leave every later query silently unserved.
+                //
+                // The handler itself is wrapped: handleError reaches CrashlyticsManager and
+                // NetworkMonitor, and a throw from either would escape the .catch onto the outer
+                // chain, fail the stateIn coroutine and take the process with it - the same
+                // unguarded-suspend-work failure the comment above guards the when() against.
+                // Losing the wording of one error message is the cheaper outcome by far.
+                .catch { e ->
+                    // Falls back to the generic wording, never to the raw exception text: that
+                    // is English, and often a stack-trace fragment no parent should read.
+                    val message = runCatching { errorHandler.handleError(e).toEventText() }
+                        .getOrNull()
+                        ?: UiText.Res(Res.string.common_error_generic)
+                    _uiState.value = EventUiState.Error(message)
+                }
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /**
+     * Shows every event. `query`'s initial value, so this is what the view model shows before
+     * anything else is requested - no screen currently calls it.
+     */
+    fun loadEvents() {
+        query.value = EventQuery.All
+    }
+
+    /**
+     * Shows the events between [start] and [end]. Re-requesting the range currently loaded is a
+     * no-op, which is why the calendar can call this freely as the user pages.
+     */
+    fun loadEventsForDateRange(start: LocalDateTime, end: LocalDateTime) {
+        query.value = EventQuery.Range(start, end)
+    }
+
+    /**
+     * Re-collects the current query from scratch. `catch` completes the inner flow on error, so
+     * a failed query stays failed - the equal-value conflation on [query] means re-requesting
+     * the same range is a no-op and cannot restart it. This is the only way back: pull-to-refresh
+     * calls it instead of re-requesting the range it already has.
+     */
+    fun refresh() {
+        refreshTicks.value += 1
+    }
+
+    /**
+     * Uploads a picked image as a photo of [eventId] and returns the reference to store on it
+     * (L-4). Callers upload before saving the event so the reference can be stored on it.
+     *
+     * @param familyId The event's stored `familyId`, or null for a new event.
+     */
+    suspend fun uploadEventImage(eventId: String, familyId: String?, localUri: String): String =
+        photoStorage.upload(RecordPhotoKind.EVENT, eventId, familyId, localUri)
+
+    /**
+     * Best-effort deletion of an event's remote photo; failures are swallowed so an
+     * orphaned image never blocks the event save/delete.
+     *
+     * @param reference The reference the event stored.
+     * @param familyId The event's stored `familyId`, or null.
+     */
+    suspend fun deleteEventImage(reference: String, familyId: String?) {
+        runCatching { photoStorage.delete(reference, familyId) }
+    }
+
+    /**
+     * Creates a new event.
+     *
+     * @param answerBy The deadline the parent chose for the co-parent's answer (phase 3a), or null
+     *   for none. The use case starts a clock only if the event waits for the co-parent, so the form
+     *   may pass the pick for any new event. A create with a deadline survives the screen's exit.
+     */
+    fun createEvent(event: Event, answerBy: AnswerByPick? = null) {
+        viewModelScope.launch {
+            _uiState.value = EventUiState.Loading
+            // The form leaves the screen at once and this scope goes with it. The use case starts a
+            // deadline's clock as its last step, after the event has waited for the server, so a create
+            // that carries a deadline is not cancelled in the middle: offline, the event would be
+            // stored and queued but never get its clock (phase 3a).
+            val result = withContext(if (answerBy != null) NonCancellable else EmptyCoroutineContext) {
+                eventUseCases.createEvent(event, answerBy = answerBy)
+            }
+            result.onSuccess {
+                _uiState.value = EventUiState.OperationSuccess(EventOperation.CREATED)
+                kotlinx.coroutines.delay(2000)
+                _uiState.value = EventUiState.Success(events.value)
+            }.onFailure { error ->
+                val appError = errorHandler.handleError(error)
+                _uiState.value = EventUiState.Error(appError.toEventText())
+            }
+        }
+    }
+
+    /**
+     * Updates an existing event.
+     */
+    fun updateEvent(event: Event) {
+        viewModelScope.launch {
+            val result = eventUseCases.updateEvent(event)
+            result.onSuccess {
+                _uiState.value = EventUiState.OperationSuccess(EventOperation.UPDATED)
+                kotlinx.coroutines.delay(2000)
+                _uiState.value = EventUiState.Success(events.value)
+            }.onFailure { error ->
+                val appError = errorHandler.handleError(error)
+                _uiState.value = EventUiState.Error(appError.toEventText())
+            }
+        }
+    }
+
+    /**
+     * Deletes an event.
+     */
+    fun deleteEvent(event: Event) {
+        viewModelScope.launch {
+            val result = eventUseCases.deleteEvent(event)
+            result.onSuccess {
+                event.imageUrl?.let { reference -> deleteEventImage(reference, event.familyId) }
+                _uiState.value = EventUiState.OperationSuccess(EventOperation.DELETED)
+                kotlinx.coroutines.delay(2000)
+                _uiState.value = EventUiState.Success(events.value)
+            }.onFailure { error ->
+                val appError = errorHandler.handleError(error)
+                _uiState.value = EventUiState.Error(appError.toEventText())
+            }
+        }
+    }
+
+    /**
+     * Deletes an event by ID.
+     */
+    fun deleteEventById(id: String) {
+        viewModelScope.launch {
+            val result = eventUseCases.deleteEvent.deleteById(id)
+            result.onSuccess {
+                _uiState.value = EventUiState.OperationSuccess(EventOperation.DELETED)
+                kotlinx.coroutines.delay(2000)
+                _uiState.value = EventUiState.Success(events.value)
+            }.onFailure { error ->
+                val appError = errorHandler.handleError(error)
+                _uiState.value = EventUiState.Error(appError.toEventText())
+            }
+        }
+    }
+
+    /**
+     * The times an event had before the last move, restored exactly by [undoLastMove].
+     *
+     * Only the hour used to be kept, so undoing a move of a 9:30 event put it back at the
+     * minute it had been dragged to.
+     */
+    data class PreviousEventPosition(
+        val eventId: String,
+        val previousStart: LocalDateTime,
+        val previousEnd: LocalDateTime?
+    )
+
+    private var lastMoveUndoInfo: PreviousEventPosition? = null
+
+    /**
+     * Moves event to a new date/time (drag & drop support).
+     * @param targetStartMinuteOfDay New start time as minute-of-day (0..1439), already
+     *   snapped to 15 minutes by the caller; null keeps the original time of day
+     *   (used by the month view, which only changes the date).
+     * Stores previous position for undo functionality.
+     */
+    fun moveEvent(eventId: String, targetDate: LocalDate, targetStartMinuteOfDay: Int? = null) {
+        viewModelScope.launch {
+            try {
+                val event = eventUseCases.getEvents.getById(eventId) ?: return@launch
+                // A recurring event is stored once: moving one drawn occurrence would write its
+                // times onto the whole series. The views do not offer the drag; this is the guard.
+                if (event.isRecurring) return@launch
+
+                // Store previous position for undo
+                lastMoveUndoInfo = PreviousEventPosition(eventId, event.startDateTime, event.endDateTime)
+
+                // An event with no end time keeps none, and an all-day Google import is exactly
+                // such an event.
+                val duration = event.endDateTime?.let { event.startDateTime.durationUntil(it) }
+                val newTime = targetStartMinuteOfDay
+                    ?.coerceIn(0, 24 * 60 - 1)
+                    ?.let { LocalTime(it / 60, it % 60) }
+                    ?: event.startDateTime.time
+                val newStart = targetDate.atTime(newTime)
+                val newEnd = duration?.let { newStart + it }
+                val updatedEvent = event.copy(
+                    startDateTime = newStart,
+                    endDateTime = newEnd
+                )
+                val result = eventUseCases.updateEvent(updatedEvent)
+                result.onSuccess {
+                    _uiState.value = EventUiState.OperationSuccess(EventOperation.RESCHEDULED)
+                    kotlinx.coroutines.delay(1500)
+                    _uiState.value = EventUiState.Success(events.value)
+                }.onFailure { error ->
+                    val appError = errorHandler.handleError(error)
+                    _uiState.value = EventUiState.Error(appError.toEventText())
+                    lastMoveUndoInfo = null // Clear undo info on error
+                }
+            } catch (e: Exception) {
+                val appError = errorHandler.handleError(e)
+                _uiState.value = EventUiState.Error(appError.toEventText())
+                lastMoveUndoInfo = null // Clear undo info on error
+            }
+        }
+    }
+
+    /**
+     * Undoes the last event move operation.
+     * Restores event to its previous position.
+     */
+    fun undoLastMove() {
+        val undoInfo = lastMoveUndoInfo ?: return
+        viewModelScope.launch {
+            try {
+                val event = eventUseCases.getEvents.getById(undoInfo.eventId) ?: return@launch
+                val restoredEvent = event.copy(
+                    startDateTime = undoInfo.previousStart,
+                    endDateTime = undoInfo.previousEnd
+                )
+                val result = eventUseCases.updateEvent(restoredEvent)
+                result.onSuccess {
+                    lastMoveUndoInfo = null // Clear undo info after successful undo
+                    _uiState.value = EventUiState.OperationSuccess(EventOperation.MOVE_UNDONE)
+                    kotlinx.coroutines.delay(1500)
+                    _uiState.value = EventUiState.Success(events.value)
+                }.onFailure { error ->
+                    val appError = errorHandler.handleError(error)
+                    _uiState.value = EventUiState.Error(appError.toEventText())
+                }
+            } catch (e: Exception) {
+                val appError = errorHandler.handleError(e)
+                _uiState.value = EventUiState.Error(appError.toEventText())
+            }
+        }
+    }
+
+    /**
+     * Checks if there's an undo action available.
+     */
+    fun hasUndoAction(): Boolean = lastMoveUndoInfo != null
+
+    /**
+     * Resizes event by changing start or end time.
+     * @param eventId The ID of the event to resize
+     * @param newStartTime New start time (null if not changing)
+     * @param newEndTime New end time (null if not changing)
+     */
+    fun resizeEvent(eventId: String, newStartTime: LocalDateTime? = null, newEndTime: LocalDateTime? = null) {
+        viewModelScope.launch {
+            try {
+                val event = eventUseCases.getEvents.getById(eventId) ?: return@launch
+                // As in moveEvent: resizing one occurrence must not rewrite the whole series.
+                if (event.isRecurring) return@launch
+
+                val updatedStart = newStartTime ?: event.startDateTime
+                val updatedEnd = newEndTime ?: (event.endDateTime ?: event.startDateTime.plus(1, DateTimeUnit.HOUR))
+
+                // Validate that end is after start
+                if (updatedEnd <= updatedStart) {
+                    _uiState.value = EventUiState.Error(UiText.Res(Res.string.event_form_end_before_start))
+                    return@launch
+                }
+
+                val updatedEvent = event.copy(
+                    startDateTime = updatedStart,
+                    endDateTime = updatedEnd
+                )
+                val result = eventUseCases.updateEvent(updatedEvent)
+                result.onSuccess {
+                    _uiState.value = EventUiState.OperationSuccess(EventOperation.RESIZED)
+                    kotlinx.coroutines.delay(1500)
+                    _uiState.value = EventUiState.Success(events.value)
+                }.onFailure { error ->
+                    val appError = errorHandler.handleError(error)
+                    _uiState.value = EventUiState.Error(appError.toEventText())
+                }
+            } catch (e: Exception) {
+                val appError = errorHandler.handleError(e)
+                _uiState.value = EventUiState.Error(appError.toEventText())
+            }
+        }
+    }
+
+    /**
+     * Gets an event by ID.
+     */
+    suspend fun getEventById(id: String): Event? {
+        return eventUseCases.getEvents.getById(id)
+    }
+
+    /**
+     * Confirms the pickup for an event on behalf of the current user.
+     * The other parent sees the confirmation through the regular event sync.
+     */
+    fun confirmPickup(eventId: String) {
+        viewModelScope.launch {
+            try {
+                val event = eventUseCases.getEvents.getById(eventId) ?: return@launch
+                // Only this device's own slot is needed, so ask for exactly that: signedInSlot
+                // reads the uid and one Room row. Collecting `parents` here would stand up a
+                // pairing subscription and a partner-document fetch to answer a local question.
+                // Falls back to the event's own slot when the profile cannot be resolved,
+                // exactly as the previous getCurrentUser() did.
+                val role = parentsSource.signedInSlot() ?: event.parentOwner
+                val updated = event.copy(
+                    pickupConfirmedBy = role,
+                    pickupConfirmedAt = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+                )
+                val result = eventUseCases.updateEvent(updated)
+                result.onSuccess {
+                    _uiState.value = EventUiState.OperationSuccess(EventOperation.PICKUP_CONFIRMED)
+                    kotlinx.coroutines.delay(1500)
+                    _uiState.value = EventUiState.Success(events.value)
+                }.onFailure { error ->
+                    val appError = errorHandler.handleError(error)
+                    _uiState.value = EventUiState.Error(appError.toEventText())
+                }
+            } catch (e: Exception) {
+                val appError = errorHandler.handleError(e)
+                _uiState.value = EventUiState.Error(appError.toEventText())
+            }
+        }
+    }
+
+    /**
+     * Removes an existing pickup confirmation from an event.
+     */
+    fun undoPickupConfirmation(eventId: String) {
+        viewModelScope.launch {
+            try {
+                val event = eventUseCases.getEvents.getById(eventId) ?: return@launch
+                val updated = event.copy(
+                    pickupConfirmedBy = null,
+                    pickupConfirmedAt = null
+                )
+                eventUseCases.updateEvent(updated)
+            } catch (e: Exception) {
+                val appError = errorHandler.handleError(e)
+                _uiState.value = EventUiState.Error(appError.toEventText())
+            }
+        }
+    }
+
+    /**
+     * Saves [draft] to local storage, under the family on screen.
+     * Issue 1.3: Draft saving functionality.
+     */
+    fun saveEventDraft(draft: EventDraft) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val draftJson = StoredJson.encode(EventDraft.serializer(), draft)
+                // The preference store seals and writes on the calling thread; keep it off Main.
+                encryptedPreferences.putEventDraft(draftFamily.await(), draftJson)
+            } catch (e: Exception) {
+                // Silently fail - draft saving is not critical
+            }
+        }
+    }
+
+    /**
+     * Loads the draft of the family on screen from local storage — never another family's.
+     * Issue 1.3: Draft saving functionality.
+     */
+    suspend fun loadEventDraft(): EventDraft? {
+        return try {
+            val draftJson = encryptedPreferences.getEventDraft(draftFamily.await()) ?: return null
+            StoredJson.decodeOrNull(EventDraft.serializer(), draftJson)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Clears the draft of the family on screen from local storage.
+     * Issue 1.3: Draft saving functionality.
+     */
+    fun clearEventDraft() {
+        viewModelScope.launch { encryptedPreferences.clearEventDraft(draftFamily.await()) }
+    }
+
+    /**
+     * User-defined event types created via the calendar filter sheet.
+     */
+    fun customEventTypes(): List<String> {
+        return encryptedPreferences
+            .getString(PreferenceKeys.CUSTOM_EVENT_TYPES)
+            ?.split(PreferenceKeys.LIST_SEPARATOR)
+            ?.filter { it.isNotBlank() }
+            ?: emptyList()
+    }
+}
+
+/**
+ * UI state for events.
+ */
+sealed class EventUiState {
+    /**
+     * Loading state - показываем Skeleton Loading
+     */
+    data object Loading : EventUiState()
+
+    /**
+     * Success state - данные загружены успешно
+     */
+    data class Success(val events: List<Event>) : EventUiState()
+
+    /**
+     * An operation (create, update, delete, move, …) completed.
+     *
+     * Carries *which* operation, not a sentence. Nothing renders one, and the only reader
+     * branches on it — `CalendarScreen` offers Undo after [EventOperation.RESCHEDULED]. It used
+     * to carry English literals and that screen compared against `"Event rescheduled"`, so
+     * localising the string would have silently removed the Undo (UX-12).
+     */
+    data class OperationSuccess(val operation: EventOperation) : EventUiState()
+
+    /** An operation or a query failed. [message] is resolved in composition (CQ-14). */
+    data class Error(val message: UiText) : EventUiState()
+}
+
+/** Which event operation an [EventUiState.OperationSuccess] reports. */
+enum class EventOperation {
+    CREATED,
+    UPDATED,
+    DELETED,
+    RESCHEDULED,
+    MOVE_UNDONE,
+    RESIZED,
+    PICKUP_CONFIRMED
+}
+
+/**
+ * The text a failed event operation shows. A validation failure names the event field the
+ * validator reported, where the generic [toUiText] can only say "check the details".
+ */
+private fun AppError.toEventText(): UiText = when {
+    this is AppError.ValidationError && field == "title" -> UiText.Res(Res.string.event_error_title_invalid)
+    this is AppError.ValidationError && field == "endDateTime" -> UiText.Res(Res.string.event_form_end_before_start)
+    else -> toUiText()
+}

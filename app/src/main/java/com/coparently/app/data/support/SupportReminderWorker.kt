@@ -3,9 +3,7 @@ package com.coparently.app.data.support
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
-import android.util.Log
 import androidx.core.app.NotificationCompat
-import androidx.hilt.work.HiltWorker
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -14,8 +12,10 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.coparently.app.R
+import com.coparently.app.data.money.MinorUnits
 import com.coparently.app.data.notification.notificationsAllowed
 import com.coparently.app.data.payment.PaymentStore
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.PushChannel
 import com.coparently.app.data.remote.firebase.PushDestination
@@ -28,20 +28,20 @@ import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.support.SupportReminderRule
 import com.coparently.app.domain.support.SupportTerms
 import com.coparently.app.presentation.expenses.currencyFormat
-import dagger.assisted.Assisted
-import dagger.assisted.AssistedInject
-import dagger.hilt.android.qualifiers.ApplicationContext
+import com.coparently.app.utils.inAppLanguage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
-import java.time.LocalDate
-import java.time.YearMonth
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.YearMonth
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinTimeZone
+import kotlinx.datetime.yearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.concurrent.TimeUnit
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Reminds the payer of this month's child support (25 October 2026): every few hours, for each
@@ -52,11 +52,10 @@ import javax.inject.Singleton
  * nothing when either read fails: a reminder that is not sure keeps quiet. With no reminder left
  * on, the job cancels itself.
  */
-@HiltWorker
 @Suppress("LongParameterList") // WorkManager's two, and one per thing a reminder reads
-class SupportReminderWorker @AssistedInject constructor(
-    @Assisted context: Context,
-    @Assisted workerParams: WorkerParameters,
+class SupportReminderWorker(
+    context: Context,
+    workerParams: WorkerParameters,
     private val auth: FirebaseAuthService,
     private val reminders: SupportReminders,
     private val agreements: SupportAgreementStore,
@@ -74,15 +73,15 @@ class SupportReminderWorker @AssistedInject constructor(
             return Result.success()
         }
         val zone = ZoneId.systemDefault()
-        if (ReminderPlan.isQuietAt(System.currentTimeMillis(), zone)) return Result.success()
-        val today = LocalDate.now(zone)
+        if (ReminderPlan.isQuietAt(System.currentTimeMillis(), zone.toKotlinTimeZone())) return Result.success()
+        val today = java.time.LocalDate.now(zone).toKotlinLocalDate()
         families.forEach { family ->
             try {
                 remindIfDue(uid, family, today)
             } catch (e: CancellationException) {
                 throw e
             } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-                Log.w(TAG, "A child support reminder could not be checked", e)
+                logger.w(TAG, "A child support reminder could not be checked", e)
             }
         }
         return Result.success()
@@ -93,7 +92,7 @@ class SupportReminderWorker @AssistedInject constructor(
         val days = reminders.daysBefore(uid, familyId) ?: return
         val read = agreements.readFromServer(familyId) as? SupportRead.Known ?: return
         val terms = read.agreement.agreement?.takeIf { it.payerUid == uid } ?: return
-        val month = YearMonth.from(today)
+        val month = today.yearMonth
         val payment = payments.readFromServer(PaymentId.of(familyId, PaymentKind.SUPPORT, month, terms.currency))
             .getOrElse { return }
         val lastReminded = reminders.lastReminded(uid, familyId)
@@ -113,18 +112,27 @@ class SupportReminderWorker @AssistedInject constructor(
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             null
         }
-        return name?.takeIf { it.isNotBlank() } ?: applicationContext.getString(R.string.push_actor_fallback)
+        return name?.takeIf { it.isNotBlank() } ?: applicationContext.inAppLanguage()
+            .getString(R.string.push_actor_fallback)
     }
 
-    /** Posts the reminder, and says whether it is shown ([notificationsAllowed]). */
+    /**
+     * Posts the reminder, worded, dated and priced in the language the app speaks now
+     * ([inAppLanguage]), and says whether it is shown ([notificationsAllowed]).
+     */
     private fun post(familyId: String, terms: SupportTerms, month: YearMonth, payeeName: String): Boolean {
         val context = applicationContext
-        PushNotifier(context).createChannels()
+        val words = context.inAppLanguage()
+        PushNotifier(words).createChannels()
         if (!notificationsAllowed(context, PushChannel.MONEY.id)) return false
-        val due = terms.dueDate(month).format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
-        val amount = currencyFormat(terms.currency).format(terms.amount)
-        val title = context.getString(R.string.support_reminder_title, due)
-        val body = context.getString(R.string.support_reminder_body, amount, payeeName)
+        // The date and the amount in the notice's own locale, the one its words are in.
+        val locale = words.resources.configuration.locales[0]
+        val due = terms.dueDate(month).toJavaLocalDate().format(
+            DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale)
+        )
+        val amount = currencyFormat(terms.currency, locale).format(MinorUnits.toDecimal(terms.amountMinor))
+        val title = words.getString(R.string.support_reminder_title, due)
+        val body = words.getString(R.string.support_reminder_body, amount, payeeName)
         val key = listOf("support", familyId).hashCode()
         val tap = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
             putExtra(PushDestination.EXTRA, PushDestination.SUPPORT.key)
@@ -160,22 +168,12 @@ class SupportReminderWorker @AssistedInject constructor(
     }
 }
 
-/** Starts and stops the child support reminder job. An interface so the screen can be tested. */
-interface SupportReminderScheduler {
-    /** Makes sure the job runs; a no-op when it already does. */
-    fun schedule()
-
-    /** Stops the job. */
-    fun cancel()
-}
-
 /**
  * [SupportReminderScheduler] over WorkManager: unique periodic work [WORK_NAME], every
  * [INTERVAL_HOURS] hours with a network, kept rather than replaced.
  */
-@Singleton
-class WorkManagerSupportReminderScheduler @Inject constructor(
-    @ApplicationContext private val context: Context
+class WorkManagerSupportReminderScheduler(
+    private val context: Context
 ) : SupportReminderScheduler {
 
     override fun schedule() {

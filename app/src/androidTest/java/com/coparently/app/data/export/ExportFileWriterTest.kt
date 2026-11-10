@@ -9,7 +9,6 @@ import androidx.core.content.IntentCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.coparently.app.R
-import com.coparently.app.data.versions.EventVersionKind
 import com.coparently.app.domain.export.CommunicationRecord
 import com.coparently.app.domain.export.CommunicationRecordBuilder
 import com.coparently.app.domain.export.CommunicationRecordCsv
@@ -28,8 +27,13 @@ import com.coparently.app.domain.export.RecordSources
 import com.coparently.app.domain.export.VerificationLabels
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
+import com.coparently.app.domain.versions.EventVersionKind
 import com.coparently.app.presentation.export.recordShareIntent
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -38,10 +42,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.ZonedDateTime
 
 /**
  * Writes a communication record through the real [ExportFileWriter] on the device (MON-3) and
@@ -87,7 +87,7 @@ class ExportFileWriterTest {
         assertTrue("the column header is a record of its own", rows.any { it == labels.columns.all() })
 
         assertEquals(exported.mimeType, "text/csv")
-        assertEquals(text, readThroughProvider(exported.uri))
+        assertEquals(text, readThroughProvider(exported.contentUri))
     }
 
     @Test
@@ -122,7 +122,7 @@ class ExportFileWriterTest {
 
         assertTrue(File(context.cacheDir, "exports/coplanly-record-$FROM-$TO.pdf").exists())
         assertEquals("application/pdf", exported.mimeType)
-        val descriptor = requireNotNull(context.contentResolver.openFileDescriptor(exported.uri, "r"))
+        val descriptor = requireNotNull(context.contentResolver.openFileDescriptor(exported.contentUri, "r"))
         PdfRenderer(descriptor).use { renderer ->
             assertTrue("page count", renderer.pageCount >= 1)
             renderer.openPage(0).use { page ->
@@ -141,12 +141,12 @@ class ExportFileWriterTest {
         assertEquals(Intent.ACTION_SEND, intent.action)
         assertEquals("text/csv", intent.type)
         val stream = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
-        assertEquals(exported.uri, stream)
-        assertEquals("content", exported.uri.scheme)
-        assertEquals("${context.packageName}.fileprovider", exported.uri.authority)
+        assertEquals(exported.contentUri, stream)
+        assertEquals("content", exported.contentUri.scheme)
+        assertEquals("${context.packageName}.fileprovider", exported.contentUri.authority)
         assertTrue((intent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION) != 0)
         assertFalse((intent.flags and Intent.FLAG_GRANT_WRITE_URI_PERMISSION) != 0)
-        assertEquals(exported.uri, requireNotNull(intent.clipData).getItemAt(0).uri)
+        assertEquals(exported.contentUri, requireNotNull(intent.clipData).getItemAt(0).uri)
     }
 
     private fun readThroughProvider(uri: Uri): String =
@@ -156,18 +156,19 @@ class ExportFileWriterTest {
         val facts = EventFacts(
             title = "School play",
             description = "Bring the costume",
-            start = LocalDateTime.of(2026, 3, 12, 17, 0),
-            end = LocalDateTime.of(2026, 3, 12, 18, 0),
+            start = LocalDateTime(2026, 3, 12, 17, 0),
+            end = LocalDateTime(2026, 3, 12, 18, 0),
             parentSlot = "mom",
             recurrence = "",
             recurrenceEnd = null
         )
+        val moved = facts.copy(start = LocalDateTime(2026, 3, 12, 18, 0))
         val created = at(2026, 3, 5, 9)
         val updated = at(2026, 3, 6, 20)
         val sources = RecordSources(
             revisions = listOf(
                 revision("v1", EventVersionKind.CREATED, ALICE, created, facts),
-                revision("v2", EventVersionKind.UPDATED, BOB, updated, facts.copy(start = facts.start?.plusHours(1)))
+                revision("v2", EventVersionKind.UPDATED, BOB, updated, moved)
             ),
             currentEvents = listOf(
                 CurrentEventInput(
@@ -190,7 +191,7 @@ class ExportFileWriterTest {
                     currency = "CZK",
                     category = ExpenseCategory.FOOD,
                     paidBy = ALICE,
-                    date = LocalDate.of(2026, 3, 14),
+                    date = LocalDate(2026, 3, 14),
                     createdByFirebaseUid = ALICE,
                     familyId = FAMILY
                 )
@@ -228,7 +229,7 @@ class ExportFileWriterTest {
     )
 
     private fun at(year: Int, month: Int, day: Int, hour: Int): Long =
-        ZonedDateTime.of(year, month, day, hour, 0, 0, 0, ZONE).toInstant().toEpochMilli()
+        LocalDateTime(year, month, day, hour, 0).toInstant(ZONE).toEpochMilliseconds()
 
     /**
      * A strict RFC 4180 reader: records end in CRLF, a quoted field may hold commas, CR, LF and
@@ -293,9 +294,9 @@ class ExportFileWriterTest {
         const val COL_TEXT = 7
         const val COL_AMOUNT = 12
 
-        val ZONE: ZoneId = ZoneId.of("Europe/Prague")
-        val FROM: LocalDate = LocalDate.of(2026, 3, 1)
-        val TO: LocalDate = LocalDate.of(2026, 3, 31)
+        val ZONE: TimeZone = TimeZone.of("Europe/Prague")
+        val FROM: LocalDate = LocalDate(2026, 3, 1)
+        val TO: LocalDate = LocalDate(2026, 3, 31)
 
         /** Every word the record prints, from the app's own resources, as `ExportScreen` builds it. */
         fun recordLabels(context: Context) = RecordLabels(

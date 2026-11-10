@@ -11,24 +11,23 @@ import com.google.firebase.auth.FirebaseUser
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
-import javax.inject.Inject
 
 /**
  * Puts the app into the state a returning parent opens it in — signed in, through onboarding, the
  * telemetry question answered — so a test that launches `MainActivity` lands on Home rather than
  * on the consent or sign-in screen, and undoes it afterwards.
  *
- * Everything here goes through the test's own Hilt graph: [FirebaseAuth] is the relaxed mock
- * `FakeFirebaseModule` installs, so "signed in" is a stubbed `currentUser`, and the Room database
+ * Everything here goes through the test's own Koin graph: [FirebaseAuth] is the relaxed mock
+ * `fakeFirebaseModule` defines, so "signed in" is a stubbed `currentUser`, and the Room database
  * is the real (SQLCipher) one, holding a real `users` row for that uid. Nothing reaches a server.
  * The start-destination decision in `NavGraph` reads exactly these three things: the consent, the
  * Firebase user, and whether that user's Room row says onboarding is done.
  *
- * Call [signIn] after `hiltRule.inject()` and before launching the activity, and [signOut] in
+ * Call [signIn] once `KoinTestRule` has started the graph and before launching the activity, and [signOut] in
  * `@After`: the database and the encrypted preferences are files on the emulator, and a test that
  * left a signed-in row or an answered consent behind would change what every later test sees.
  */
-class SignedInSession @Inject constructor(
+class SignedInSession(
     private val firebaseAuth: FirebaseAuth,
     private val userDao: UserDao,
     private val encryptedPreferences: EncryptedPreferences,

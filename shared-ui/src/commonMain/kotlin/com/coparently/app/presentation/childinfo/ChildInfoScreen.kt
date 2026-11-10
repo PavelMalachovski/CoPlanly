@@ -1,0 +1,588 @@
+package com.coparently.app.presentation.childinfo
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import com.coparently.app.data.family.RecordPlace
+import com.coparently.app.domain.files.RecordPhotoKind
+import com.coparently.app.domain.guests.GuestGrant
+import com.coparently.app.domain.guests.GuestGrantPolicy
+import com.coparently.app.domain.model.Activity
+import com.coparently.app.domain.model.ChildInfo
+import com.coparently.app.domain.model.EmergencyContact
+import com.coparently.app.domain.model.MedicalProfile
+import com.coparently.app.domain.model.Medication
+import com.coparently.app.domain.model.SchoolInfo
+import com.coparently.app.domain.model.Vaccination
+import com.coparently.app.presentation.childinfo.components.MedicalPhotoStrip
+import com.coparently.app.presentation.common.ConfirmationDialog
+import com.coparently.app.presentation.common.EmptyState
+import com.coparently.app.presentation.common.ErrorState
+import com.coparently.app.presentation.common.GroupLabel
+import com.coparently.app.presentation.common.ListSkeleton
+import com.coparently.app.presentation.common.PhotoOwner
+import com.coparently.app.presentation.common.RecordPlaceMark
+import com.coparently.app.presentation.common.SectionGroup
+import com.coparently.app.presentation.common.SectionGroupScope
+import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.labelRes
+import com.coparently.app.presentation.common.placeOf
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.childinfo_add_child_button
+import com.coparently.app.resources.childinfo_back
+import com.coparently.app.resources.childinfo_children_group_label
+import com.coparently.app.resources.childinfo_contact_phone_marker
+import com.coparently.app.resources.childinfo_detail_grade
+import com.coparently.app.resources.childinfo_dob_value
+import com.coparently.app.resources.childinfo_empty_state
+import com.coparently.app.resources.childinfo_medication_summary
+import com.coparently.app.resources.childinfo_school_summary
+import com.coparently.app.resources.childinfo_screen_title
+import com.coparently.app.resources.childinfo_section_activities
+import com.coparently.app.resources.childinfo_section_allergies
+import com.coparently.app.resources.childinfo_section_basic
+import com.coparently.app.resources.childinfo_section_emergency_contacts
+import com.coparently.app.resources.childinfo_section_medical_notes
+import com.coparently.app.resources.childinfo_section_medications
+import com.coparently.app.resources.childinfo_section_school
+import com.coparently.app.resources.childinfo_title_add
+import com.coparently.app.resources.guest_access_until
+import com.coparently.app.resources.guest_invite_row_supporting
+import com.coparently.app.resources.guest_invite_row_title
+import com.coparently.app.resources.guest_revoke_cancel
+import com.coparently.app.resources.guest_revoke_confirm
+import com.coparently.app.resources.guest_revoke_message
+import com.coparently.app.resources.guest_revoke_title
+import com.coparently.app.resources.guest_section_label
+import com.coparently.app.resources.medical_blood_type_label
+import com.coparently.app.resources.medical_blood_type_not_set
+import com.coparently.app.resources.medical_section_title
+import com.coparently.app.resources.medical_vaccination_no_date
+import com.coparently.app.utils.readerLongDateAt
+import com.coparently.app.utils.readerMediumDate
+import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.viewmodel.koinViewModel
+import kotlin.time.Clock
+
+/**
+ * The family's children, one row each.
+ *
+ * A list, where this screen used to be a detail view of `childInfoList.first()`. Everything
+ * beneath the UI has always been per-record — the entity, the DAO, the repository, the Firestore
+ * documents, the sync and the rules — and the whole single-child ceiling was that one
+ * `firstOrNull()` plus an "Add child" button that only existed inside the empty state. A second
+ * child could be created (by pairing, or by the co-parent) and was simply never shown.
+ *
+ * Three levels rather than the two Pets uses, and deliberately: a pet has no read-only summary,
+ * while a child's does real work — medications, allergies, the medical photo strip, emergency
+ * contacts, school, and the guest-access group. Folding it into the form would lose it.
+ *
+ * @param onNavigateBack Up-arrow.
+ * @param onOpenChild Opens one child's summary, by id.
+ * @param onAddChild Opens the editor on a new child.
+ * @param viewModel ViewModel for the children list.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ChildInfoScreen(
+    onNavigateBack: () -> Unit,
+    onOpenChild: (String) -> Unit,
+    onAddChild: () -> Unit,
+    viewModel: ChildInfoViewModel = koinViewModel()
+) {
+    val haptic = LocalHapticFeedback.current
+    val uiState by viewModel.uiState.collectAsState()
+    val children = (uiState as? ChildInfoUiState.Success)?.childInfoList.orEmpty()
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(Res.string.childinfo_screen_title)) },
+                navigationIcon = {
+                    IconButton(onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onNavigateBack()
+                    }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(Res.string.childinfo_back)
+                        )
+                    }
+                }
+            )
+        },
+        floatingActionButton = {
+            // Only once there is a list. With none, the empty state carries the call to action,
+            // so a FAB would be a second button saying the same thing — the shape `PetsScreen`
+            // already settled on.
+            if (children.isNotEmpty()) {
+                ExtendedFloatingActionButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onAddChild()
+                    },
+                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                    text = { Text(stringResource(Res.string.childinfo_add_child_button)) }
+                )
+            }
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            when (val state = uiState) {
+                is ChildInfoUiState.Loading -> {
+                    // A skeleton rather than a spinner, matching every other list in the app: a
+                    // centred spinner says "something is happening", a skeleton says what is
+                    // about to be there, and consistency across the tabs is worth more here than
+                    // either on its own.
+                    ListSkeleton(rows = 3)
+                }
+                is ChildInfoUiState.Error -> {
+                    ErrorState(
+                        message = state.message.asString(),
+                        onRetry = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            viewModel.loadChildInfo()
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+                is ChildInfoUiState.Success -> {
+                    if (state.childInfoList.isEmpty()) {
+                        EmptyState(
+                            icon = Icons.Default.ChildCare,
+                            title = stringResource(Res.string.childinfo_empty_state),
+                            actionLabel = stringResource(Res.string.childinfo_title_add),
+                            onAction = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onAddChild()
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        ChildrenList(children = state.childInfoList, onOpenChild = onOpenChild)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * One row per child, through the shared design-system primitives.
+ *
+ * Reads `state.childInfoList`, never `currentChildInfo`: that state belongs to the editor and is
+ * set by the child it was opened on. Feeding a list from it — or an editor from the head of a
+ * list — is exactly the defect CLAUDE.md records, where an edit of one child was saved over
+ * another.
+ */
+@Composable
+private fun ChildrenList(children: List<ChildInfo>, onOpenChild: (String) -> Unit) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(Spacing.L),
+        verticalArrangement = Arrangement.spacedBy(Spacing.L)
+    ) {
+        item {
+            GroupLabel(stringResource(Res.string.childinfo_children_group_label))
+            SectionGroup {
+                children.forEach { child ->
+                    // A child that is only mine or from an earlier family says so, in the one
+                    // trailing slot a row has (October 2026, owner decision).
+                    val place = placeOf(child.familyId, child.createdByFirebaseUid)
+                    SectionRow(
+                        icon = Icons.Default.ChildCare,
+                        title = child.childName,
+                        supporting = child.dateOfBirth?.let { dob ->
+                            stringResource(
+                                Res.string.childinfo_dob_value,
+                                readerMediumDate(dob.date)
+                            )
+                        },
+                        onClick = { onOpenChild(child.id) },
+                        trailing = if (place == RecordPlace.ON_SCREEN) {
+                            null
+                        } else {
+                            { RecordPlaceMark(place) }
+                        },
+                        stackTrailingAtLargeFont = true
+                    )
+                    if (child != children.last()) Divider()
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Content displaying detailed child information as tappable, grouped sections.
+ *
+ * Every row opens the single editor for [childInfo] via [onEditClick] — this screen is a
+ * read-only summary, the pencil that used to hide editing in the top bar is gone. Each group
+ * mirrors one of the old `Card` + `SectionHeader` pairs, rebuilt on [GroupLabel] and
+ * [SectionGroup]/[SectionRow] from the shared design system.
+ */
+@Composable
+internal fun ChildInfoContent(
+    childInfo: ChildInfo,
+    onEditClick: (String) -> Unit,
+    onInviteGuest: () -> Unit,
+    onRevokeGuest: (String) -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+    val onRowClick: () -> Unit = {
+        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        onEditClick(childInfo.id)
+    }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(Spacing.L),
+        verticalArrangement = Arrangement.spacedBy(Spacing.L)
+    ) {
+        item { BasicInfoGroup(childInfo = childInfo, onClick = onRowClick) }
+
+        if (childInfo.medications.isNotEmpty()) {
+            item { MedicationsGroup(medications = childInfo.medications, onClick = onRowClick) }
+        }
+        if (childInfo.activities.isNotEmpty()) {
+            item { ActivitiesGroup(activities = childInfo.activities, onClick = onRowClick) }
+        }
+        if (childInfo.allergies.isNotEmpty()) {
+            item { AllergiesGroup(allergies = childInfo.allergies, onClick = onRowClick) }
+        }
+        childInfo.medicalNotes?.let { notes ->
+            item { MedicalNotesGroup(notes = notes, onClick = onRowClick) }
+        }
+        if (childInfo.medicalPhotos.isNotEmpty()) {
+            // Beside the notes, because that is what they are: what the doctor said, in the form
+            // a parent could actually capture it in. Read-only here — the strip becomes an editor
+            // only when the same composable is given add and remove callbacks. A guest reads the
+            // record without them (L-4): the strip renders nothing for a viewer who is not one of
+            // the family's two parents.
+            item {
+                MedicalPhotoStrip(
+                    photos = childInfo.medicalPhotos,
+                    owner = PhotoOwner(RecordPhotoKind.MEDICAL, childInfo.id, childInfo.familyId)
+                )
+            }
+        }
+        if (childInfo.emergencyContacts.isNotEmpty()) {
+            item {
+                EmergencyContactsGroup(contacts = childInfo.emergencyContacts, onClick = onRowClick)
+            }
+        }
+        childInfo.schoolInfo?.let { school ->
+            item { SchoolGroup(schoolInfo = school, onClick = onRowClick) }
+        }
+        item { MedicalDetailsGroup(profile = childInfo.medicalProfile, onClick = onRowClick) }
+        item {
+            GuestAccessGroup(
+                guests = childInfo.guests,
+                onInviteGuest = onInviteGuest,
+                onRevokeGuest = onRevokeGuest
+            )
+        }
+    }
+}
+
+/**
+ * Letting somebody outside the pair read this record.
+ *
+ * Last, below the medical details, because it is about the record rather than part of it —
+ * and because the parent should have seen what they are about to share before they are
+ * offered the button that shares it.
+ */
+@Composable
+private fun GuestAccessGroup(
+    guests: Map<String, GuestGrant>,
+    onInviteGuest: () -> Unit,
+    onRevokeGuest: (String) -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+    // Only the grants that are still good. An expired one is not somebody to revoke — the
+    // rule already refuses them and the sweep removes them — and offering a destructive
+    // action that does nothing is worse than not listing them at all.
+    val active = remember(guests) {
+        GuestGrantPolicy.active(guests.values.toList(), Clock.System.now())
+    }
+    var pendingRevoke by remember { mutableStateOf<GuestGrant?>(null) }
+
+    Column {
+        GroupLabel(stringResource(Res.string.guest_section_label))
+        SectionGroup {
+            active.forEach { grant ->
+                // Red, and it confirms: the sign-out anatomy, because the row's whole action
+                // is destructive and a row is easier to hit by accident than a button.
+                SectionRow(
+                    icon = Icons.Default.PersonRemove,
+                    iconTint = MaterialTheme.colorScheme.error,
+                    title = grant.name,
+                    titleColor = MaterialTheme.colorScheme.error,
+                    supporting = stringResource(
+                        Res.string.guest_access_until,
+                        readerLongDateAt(grant.expiresAtMillis)
+                    ),
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        pendingRevoke = grant
+                    }
+                )
+                Divider()
+            }
+            SectionRow(
+                icon = Icons.Default.PersonAdd,
+                title = stringResource(Res.string.guest_invite_row_title),
+                supporting = stringResource(Res.string.guest_invite_row_supporting),
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onInviteGuest()
+                }
+            )
+        }
+    }
+
+    pendingRevoke?.let { grant ->
+        ConfirmationDialog(
+            title = stringResource(Res.string.guest_revoke_title, grant.name),
+            message = stringResource(Res.string.guest_revoke_message),
+            confirmText = stringResource(Res.string.guest_revoke_confirm),
+            dismissText = stringResource(Res.string.guest_revoke_cancel),
+            isDestructive = true,
+            onDismiss = { pendingRevoke = null },
+            onConfirm = {
+                pendingRevoke = null
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onRevokeGuest(grant.uid)
+            }
+        )
+    }
+}
+
+/** The child's identity: name, and date of birth when recorded. */
+@Composable
+private fun BasicInfoGroup(childInfo: ChildInfo, onClick: () -> Unit) {
+    Column {
+        GroupLabel(stringResource(Res.string.childinfo_section_basic))
+        SectionGroup {
+            SectionRow(
+                icon = Icons.Default.ChildCare,
+                title = childInfo.childName,
+                // The reader's date, as the list above prints it — not ISO (release audit R-6).
+                supporting = childInfo.dateOfBirth?.let { dob ->
+                    stringResource(
+                        Res.string.childinfo_dob_value,
+                        readerMediumDate(dob.date)
+                    )
+                },
+                onClick = onClick
+            )
+        }
+    }
+}
+
+/** One row per medication: its name as the title, dosage and frequency as the summary line. */
+@Composable
+private fun MedicationsGroup(medications: List<Medication>, onClick: () -> Unit) {
+    Column {
+        GroupLabel(stringResource(Res.string.childinfo_section_medications))
+        SectionGroup {
+            medications.forEachIndexed { index, medication ->
+                SectionRow(
+                    icon = Icons.Default.Favorite,
+                    title = medication.name,
+                    supporting = stringResource(
+                        Res.string.childinfo_medication_summary,
+                        medication.dosage,
+                        medication.frequency
+                    ),
+                    onClick = onClick
+                )
+                if (index != medications.lastIndex) Divider()
+            }
+        }
+    }
+}
+
+/** One row per activity: its name as the title, its schedule as the summary line. */
+@Composable
+private fun ActivitiesGroup(activities: List<Activity>, onClick: () -> Unit) {
+    Column {
+        GroupLabel(stringResource(Res.string.childinfo_section_activities))
+        SectionGroup {
+            activities.forEachIndexed { index, activity ->
+                SectionRow(
+                    icon = Icons.Default.Star,
+                    title = activity.name,
+                    supporting = activity.schedule,
+                    onClick = onClick
+                )
+                if (index != activities.lastIndex) Divider()
+            }
+        }
+    }
+}
+
+/** One row per known allergy. */
+@Composable
+private fun AllergiesGroup(allergies: List<String>, onClick: () -> Unit) {
+    Column {
+        GroupLabel(stringResource(Res.string.childinfo_section_allergies))
+        SectionGroup {
+            allergies.forEachIndexed { index, allergy ->
+                SectionRow(icon = Icons.Default.Warning, title = allergy, onClick = onClick)
+                if (index != allergies.lastIndex) Divider()
+            }
+        }
+    }
+}
+
+/** The free-text medical notes field, as a single row. */
+@Composable
+private fun MedicalNotesGroup(notes: String, onClick: () -> Unit) {
+    Column {
+        GroupLabel(stringResource(Res.string.childinfo_section_medical_notes))
+        SectionGroup {
+            SectionRow(icon = Icons.Default.Info, title = notes, onClick = onClick)
+        }
+    }
+}
+
+/** One row per emergency contact: their name as the title, phone number as the summary line. */
+@Composable
+private fun EmergencyContactsGroup(contacts: List<EmergencyContact>, onClick: () -> Unit) {
+    Column {
+        GroupLabel(stringResource(Res.string.childinfo_section_emergency_contacts))
+        SectionGroup {
+            contacts.forEachIndexed { index, contact ->
+                SectionRow(
+                    icon = Icons.Default.Phone,
+                    title = contact.name,
+                    supporting = stringResource(Res.string.childinfo_contact_phone_marker, contact.phone),
+                    onClick = onClick
+                )
+                if (index != contacts.lastIndex) Divider()
+            }
+        }
+    }
+}
+
+/**
+ * The school: its name as the title, then the child's class ("Grade: 4") and the address on
+ * the summary line, whichever of the two were recorded. The class is free text a parent typed,
+ * often a bare number, so it always carries its label — "4" alone under a school name said
+ * nothing.
+ */
+@Composable
+private fun SchoolGroup(schoolInfo: SchoolInfo, onClick: () -> Unit) {
+    val grade = schoolInfo.grade?.takeIf { it.isNotBlank() }
+        ?.let { stringResource(Res.string.childinfo_detail_grade, it) }
+    val address = schoolInfo.address?.takeIf { it.isNotBlank() }
+    val summary = if (grade != null && address != null) {
+        stringResource(Res.string.childinfo_school_summary, grade, address)
+    } else {
+        grade ?: address
+    }
+    Column {
+        GroupLabel(stringResource(Res.string.childinfo_section_school))
+        SectionGroup {
+            SectionRow(
+                icon = Icons.Default.School,
+                title = schoolInfo.name,
+                supporting = summary,
+                onClick = onClick
+            )
+        }
+    }
+}
+
+/**
+ * The medical profile: blood type (always shown, falling back to "not recorded") plus
+ * intolerances, hereditary conditions and vaccinations, each skipped entirely when its list is
+ * empty. Never renders `BloodType.name` — the notation is locale-dependent, which is why the
+ * blood type goes through [labelRes] instead.
+ */
+@Composable
+private fun MedicalDetailsGroup(profile: MedicalProfile, onClick: () -> Unit) {
+    val bloodTypeText = profile.bloodType?.let { stringResource(it.labelRes()) }
+        ?: stringResource(Res.string.medical_blood_type_not_set)
+
+    Column {
+        GroupLabel(stringResource(Res.string.medical_section_title))
+        SectionGroup {
+            SectionRow(
+                icon = Icons.Default.Bloodtype,
+                title = stringResource(Res.string.medical_blood_type_label),
+                onClick = onClick,
+                trailing = {
+                    Text(
+                        text = bloodTypeText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            )
+
+            if (profile.intolerances.isNotEmpty()) {
+                Divider()
+                StringListRows(items = profile.intolerances, icon = Icons.Default.NoFood, onClick = onClick)
+            }
+            if (profile.hereditaryConditions.isNotEmpty()) {
+                Divider()
+                StringListRows(
+                    items = profile.hereditaryConditions,
+                    icon = Icons.Default.FamilyRestroom,
+                    onClick = onClick
+                )
+            }
+            if (profile.vaccinations.isNotEmpty()) {
+                Divider()
+                VaccinationRows(vaccinations = profile.vaccinations, onClick = onClick)
+            }
+        }
+    }
+}
+
+/**
+ * One row per plain string entry (intolerances, hereditary conditions), split out of
+ * [MedicalDetailsGroup] to keep it under the project's method-length limit.
+ */
+@Composable
+private fun SectionGroupScope.StringListRows(items: List<String>, icon: ImageVector, onClick: () -> Unit) {
+    items.forEachIndexed { index, item ->
+        SectionRow(icon = icon, title = item, onClick = onClick)
+        if (index != items.lastIndex) Divider()
+    }
+}
+
+/** One row per vaccination: its name as the title, its date (or "not recorded") as the summary line. */
+@Composable
+private fun SectionGroupScope.VaccinationRows(
+    vaccinations: List<Vaccination>,
+    onClick: () -> Unit
+) {
+    vaccinations.forEachIndexed { index, vaccination ->
+        SectionRow(
+            icon = Icons.Default.Vaccines,
+            title = vaccination.name,
+            supporting = vaccination.date?.let(::readerMediumDate)
+                ?: stringResource(Res.string.medical_vaccination_no_date),
+            onClick = onClick
+        )
+        if (index != vaccinations.lastIndex) Divider()
+    }
+}

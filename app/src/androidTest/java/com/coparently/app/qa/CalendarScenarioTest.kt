@@ -17,19 +17,19 @@ import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.e2e.EmulatorEnvironment
 import com.coparently.app.e2e.EmulatorParent
 import com.coparently.app.presentation.navigation.BottomNavDestination
+import com.coparently.app.testing.UsesFakeFirebase
 import com.coparently.app.testing.exists
 import com.coparently.app.testing.settle
-import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.atTime
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.time.LocalDate
 import java.time.LocalDateTime
-import javax.inject.Inject
 
 /**
  * The calendar as a parent uses it: events created through the real form and found again in the
@@ -39,12 +39,11 @@ import javax.inject.Inject
  * Titles are Czech, as the testers' family writes them, and carry a short id so a title already
  * on screen from an earlier step can never satisfy a later one.
  */
-@HiltAndroidTest
+@UsesFakeFirebase
 @RunWith(AndroidJUnit4::class)
 class CalendarScenarioTest : QaOnScreenTest() {
 
-    @Inject
-    lateinit var eventRepository: EventRepository
+    val eventRepository: EventRepository by lazy { koinRule.get() }
 
     @Test
     fun createKinds() {
@@ -87,8 +86,8 @@ class CalendarScenarioTest : QaOnScreenTest() {
         report.step("all_day", "Create an all-day event", "Saved over the whole day, and all day on Igor's phone") {
             createEvent(wholeDay) { tap(hasContentDescription(string(R.string.event_all_day)) and hasClickAction()) }
             val saved = mine(wholeDay)
-            val day = saved.startDateTime.toLocalDate()
-            check(saved.startDateTime == day.atStartOfDay() && saved.endDateTime == day.atTime(AllDayEvent.LAST_MINUTE)) {
+            val day = saved.startDateTime.date
+            check(saved.startDateTime == day.atTime(0, 0) && saved.endDateTime == day.atTime(AllDayEvent.LAST_MINUTE)) {
                 "the saved event runs ${saved.startDateTime}–${saved.endDateTime}, not the whole of $day"
             }
             val row = expectOnIgorsPhone(wholeDay)

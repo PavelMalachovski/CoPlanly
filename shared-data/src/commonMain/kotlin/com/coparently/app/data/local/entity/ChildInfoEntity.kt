@@ -1,0 +1,84 @@
+package com.coparently.app.data.local.entity
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+import kotlinx.datetime.LocalDateTime
+
+/**
+ * Entity representing child information in the local Room database.
+ *
+ * @property id Unique identifier for the child info
+ * @property childName Name of the child
+ * @property dateOfBirth Child's date of birth
+ * @property medicationsJson JSON string of medications list
+ * @property activitiesJson JSON string of activities list
+ * @property allergiesJson JSON string of allergies list
+ * @property medicalNotes Additional medical notes
+ * @property emergencyContactsJson JSON string of emergency contacts list
+ * @property schoolInfoJson JSON string of school information
+ * @property medicalProfileJson JSON object of [com.coparently.app.domain.model.MedicalProfile];
+ * `{}` when never filled
+ * @property medicalPhotosJson JSON array of `RecordPhotoCodec` references; `[]` when none
+ * @property guestsJson JSON object of guest grants keyed by uid; `{}` when none
+ * @property createdAt Timestamp when the info was created
+ * @property updatedAt Wall-clock time, for display, when the info was last updated
+ * @property createdByFirebaseUid Firebase UID of the user who created this info
+ * @property lastModifiedBy Firebase UID of the user who last modified this info
+ * @property syncedToFirestore Whether the info has been synced to Firestore
+ */
+@Entity(tableName = "child_info")
+data class ChildInfoEntity(
+    @PrimaryKey
+    val id: String,
+    val childName: String,
+    val dateOfBirth: LocalDateTime?,
+    val medicationsJson: String, // JSON array
+    val activitiesJson: String, // JSON array
+    val allergiesJson: String, // JSON array
+    val medicalNotes: String?,
+    val emergencyContactsJson: String, // JSON array
+    val schoolInfoJson: String?, // JSON object or null
+    /** JSON object of [com.coparently.app.domain.model.MedicalProfile]; `{}` when never filled. */
+    val medicalProfileJson: String = "{}",
+    /**
+     * JSON array of `RecordPhotoCodec` references (L-4; a legacy download URL is never shown);
+     * `[]` when none. Stored as JSON like every other
+     * list on this record rather than as a relation — the app never queries by photograph.
+     */
+    val medicalPhotosJson: String = "[]",
+    /**
+     * JSON object of [com.coparently.app.domain.guests.GuestGrant] keyed by uid; `{}` when none.
+     *
+     * Room's copy is for display while offline. The document's copy is the one that decides
+     * access, because `firestore.rules` reads that one — so a stale row here shows a parent a
+     * guest who can no longer read, never a guest who can.
+     */
+    val guestsJson: String = "{}",
+    val createdAt: LocalDateTime,
+    val updatedAt: LocalDateTime,
+    /**
+     * When the child record was last saved, epoch millis — the instant two phones compare (schema 40).
+     *
+     * [updatedAt] stays as the wall clock the app displays. No default, for the reason
+     * [EventEntity.updatedAtMillis] gives: a forgotten value would upload as 1970 and lose every
+     * conflict. See [com.coparently.app.domain.events.EventTimestamp].
+     */
+    val updatedAtMillis: Long,
+    val createdByFirebaseUid: String?,
+    val lastModifiedBy: String?,
+    val syncedToFirestore: Boolean,
+    /**
+     * When the record was deleted (epoch millis), or null while it is alive.
+     *
+     * A **pending-tombstone outbox**, not a soft-delete flag: every read query hides the row at
+     * once, and it survives only until the deletion has been written to Firestore, after which
+     * it is removed for real. Epoch millis for the reason `data/sync/Tombstone.kt` gives — the
+     * value crosses between two phones that may be in different time zones.
+     */
+    val deletedAtMillis: Long? = null,
+    /**
+     * The co-parenting relationship this record belongs to, or null while it belongs to nobody
+     * but its creator. See [com.coparently.app.data.local.entity.EventEntity.familyId].
+     */
+    val familyId: String? = null
+)

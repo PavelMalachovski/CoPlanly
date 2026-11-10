@@ -44,26 +44,30 @@ import com.coparently.app.domain.repository.ExpenseRepository
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.domain.repository.RequestDeadlineRepository
+import com.coparently.app.domain.time.plus
+import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.e2e.EmulatorEnvironment.step
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.io.File
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.LocalTime
 import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
 import java.util.UUID
-import javax.inject.Inject
 
 /**
  * The family the UI tour photographs: Alice and Bob, their children Emma and Leo, the dog Max —
  * and everything a parent would have after a few weeks of using the app, written through the same
  * repositories the screens save through.
  *
- * Alice's records go through **her app's own** repositories (this class is built by Hilt, from the
+ * Alice's records go through **her app's own** repositories (this class is built by Koin, from the
  * graph `MainActivity` runs on), so they are in her Room the moment they are saved. Bob's go through
  * his `EmulatorParent` and reach Alice the way they would reach a phone: the custody document through
  * her mirror, his events through `SyncService.performFullSync()`, his messages through `ChatMirror`,
@@ -73,7 +77,7 @@ import javax.inject.Inject
  * the rest still seed, because a tour with one card missing is worth far more than no tour.
  */
 @Suppress("LongParameterList") // one repository per kind of record the tour shows
-class UiTourSeed @Inject constructor(
+class UiTourSeed(
     private val events: EventRepository,
     private val expenses: ExpenseRepository,
     private val children: ChildInfoRepository,
@@ -134,7 +138,7 @@ class UiTourSeed @Inject constructor(
         attempt("swap") {
             val agreed = checkNotNull(bob.custodyRepository.getActiveModelSync()) { "Bob has no pattern" }
             val date = family.today.plusDays(SWAP_OFFSET).toString()
-            val toSlot = if (agreed.getCustodyFor(LocalDate.parse(date)) == family.aliceSlot) {
+            val toSlot = if (agreed.getCustodyFor(LocalDate.parse(date).toKotlinLocalDate()) == family.aliceSlot) {
                 family.bobSlot
             } else {
                 family.aliceSlot
@@ -161,7 +165,7 @@ class UiTourSeed @Inject constructor(
                         responderUid = aliceUid,
                         answerByMillis = now + CLOCK_DAYS * DAY_MILLIS,
                         capMillis = LocalDate.parse(date).atStartOfDay(zone).toInstant().toEpochMilli(),
-                        firstDate = LocalDate.parse(date),
+                        firstDate = LocalDate.parse(date).toKotlinLocalDate(),
                         dayCount = 1
                     )
                 )
@@ -178,10 +182,10 @@ class UiTourSeed @Inject constructor(
                     requestedTo = aliceUid,
                     currentStartDateTime = dentist.startDateTime,
                     currentEndDateTime = dentist.endDateTime,
-                    proposedStartDateTime = dentist.startDateTime.plusDays(1),
-                    proposedEndDateTime = dentist.endDateTime?.plusDays(1),
+                    proposedStartDateTime = dentist.startDateTime.plus(1, DateTimeUnit.DAY),
+                    proposedEndDateTime = dentist.endDateTime?.plus(1, DateTimeUnit.DAY),
                     note = content.changeRequestNote,
-                    createdAt = LocalDateTime.now(),
+                    createdAt = wallClockNow(),
                     familyId = family.id
                 )
             )
@@ -208,10 +212,10 @@ class UiTourSeed @Inject constructor(
             requestedTo = family.bob.uid,
             currentStartDateTime = meeting.startDateTime,
             currentEndDateTime = meeting.endDateTime,
-            proposedStartDateTime = meeting.startDateTime.plusHours(1),
-            proposedEndDateTime = meeting.endDateTime?.plusHours(1),
+            proposedStartDateTime = meeting.startDateTime.plus(1, DateTimeUnit.HOUR),
+            proposedEndDateTime = meeting.endDateTime?.plus(1, DateTimeUnit.HOUR),
             note = family.content.changeRequestNote,
-            createdAt = LocalDateTime.now(),
+            createdAt = wallClockNow(),
             familyId = family.id
         )
         changeRequests.createChangeRequest(request, AnswerByPick.DEFAULT)
@@ -235,12 +239,12 @@ class UiTourSeed @Inject constructor(
         val event = Event(
             id = UUID.randomUUID().toString(),
             title = title,
-            startDateTime = start,
-            endDateTime = start.plusHours(2),
+            startDateTime = start.toKotlinLocalDateTime(),
+            endDateTime = start.plusHours(2).toKotlinLocalDateTime(),
             eventType = "other",
             parentOwner = dave.database.userDao().getUserById(dave.uid)?.role ?: ContactWindow.SLOT_ONE,
-            createdAt = now,
-            updatedAt = now,
+            createdAt = now.toKotlinLocalDateTime(),
+            updatedAt = now.toKotlinLocalDateTime(),
             friendParticipates = friendUid
         )
         dave.eventRepository.insertEvent(event)
@@ -260,27 +264,27 @@ class UiTourSeed @Inject constructor(
         val monday = family.today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
         val base = CustodyModel.weekOnWeekOff(
             id = UUID.randomUUID().toString(),
-            startDate = monday,
+            startDate = monday.toKotlinLocalDate(),
             momFirst = family.aliceSlot == ContactWindow.SLOT_ONE
         )
         val autumn = family.today.plusDays(LAYER_START_OFFSET)
         val model = base.copy(
             contactWindows = listOf(
-                ContactWindow(WEDNESDAY, LocalTime.of(15, 0), LocalTime.of(19, 0), family.bobSlot),
-                ContactWindow(WEDNESDAY + WEEK, LocalTime.of(16, 0), LocalTime.of(18, 30), family.aliceSlot)
+                ContactWindow(WEDNESDAY, LocalTime(15, 0), LocalTime(19, 0), family.bobSlot),
+                ContactWindow(WEDNESDAY + WEEK, LocalTime(16, 0), LocalTime(18, 30), family.aliceSlot)
             ),
             seasonalLayers = listOf(
                 SeasonalLayer.allWith(
                     LAYER_ID,
                     family.content.layerName,
-                    autumn..autumn.plusDays(LAYER_DAYS),
+                    autumn.toKotlinLocalDate()..autumn.plusDays(LAYER_DAYS).toKotlinLocalDate(),
                     family.bobSlot
                 )
             )
         )
         family.bob.custodyRepository.submitPattern(model)
         withTimeout(WAIT_MS) {
-            custody.getActiveModel().first { it != null && it.startDate == monday }
+            custody.getActiveModel().first { it != null && it.startDate == monday.toKotlinLocalDate() }
         }
     }
 
@@ -300,7 +304,7 @@ class UiTourSeed @Inject constructor(
                 medicalProfile = MedicalProfile(
                     bloodType = BloodType.A_POSITIVE,
                     intolerances = listOf(emma.intolerance),
-                    vaccinations = listOf(Vaccination("MMR", LocalDate.of(2017, 5, 3)))
+                    vaccinations = listOf(Vaccination("MMR", kotlinx.datetime.LocalDate(2017, 5, 3)))
                 ),
                 emergencyContacts = listOf(EmergencyContact("Jana Svobodová", emma.grandmother, "+420 602 123 456"))
             )
@@ -320,12 +324,14 @@ class UiTourSeed @Inject constructor(
                 name = MAX,
                 species = PetSpecies.DOG,
                 breed = pet.breed,
-                vaccinations = listOf(Vaccination(pet.vaccination, family.today.minusMonths(PET_VACCINE_MONTHS))),
+                vaccinations = listOf(
+                    Vaccination(pet.vaccination, family.today.minusMonths(PET_VACCINE_MONTHS).toKotlinLocalDate())
+                ),
                 feedingNotes = pet.feedingNotes,
                 vetName = "Veterinární klinika Vinohrady",
                 vetPhone = "+420 222 555 111",
-                createdAt = now,
-                updatedAt = now,
+                createdAt = now.toKotlinLocalDateTime(),
+                updatedAt = now.toKotlinLocalDateTime(),
                 createdByFirebaseUid = family.alice,
                 lastModifiedBy = family.alice,
                 familyId = family.id
@@ -338,9 +344,9 @@ class UiTourSeed @Inject constructor(
         return ChildInfo(
             id = UUID.randomUUID().toString(),
             childName = name,
-            dateOfBirth = born,
-            createdAt = now,
-            updatedAt = now,
+            dateOfBirth = born.toKotlinLocalDateTime(),
+            createdAt = now.toKotlinLocalDateTime(),
+            updatedAt = now.toKotlinLocalDateTime(),
             createdByFirebaseUid = family.alice,
             lastModifiedBy = family.alice,
             familyId = family.id
@@ -361,7 +367,7 @@ class UiTourSeed @Inject constructor(
             event(family, titles.swimming, day(2, 17), minutes = 60, type = "sports", members = emma).copy(
                 isRecurring = true,
                 recurrencePattern = "weekly",
-                recurrenceEndDate = family.today.plusDays(RECURRENCE_DAYS)
+                recurrenceEndDate = family.today.plusDays(RECURRENCE_DAYS).toKotlinLocalDate()
             ),
             event(family, titles.therapy, day(4, 19), minutes = 50, type = "general").copy(isPrivate = true),
             event(family, titles.grandmaBirthday, day(5, 0), minutes = ALL_DAY_MINUTES, type = "birthday"),
@@ -395,12 +401,12 @@ class UiTourSeed @Inject constructor(
         return Event(
             id = UUID.randomUUID().toString(),
             title = title,
-            startDateTime = start,
-            endDateTime = start.plusMinutes(minutes),
+            startDateTime = start.toKotlinLocalDateTime(),
+            endDateTime = start.plusMinutes(minutes).toKotlinLocalDateTime(),
             eventType = type,
             parentOwner = if (byBob) family.bobSlot else family.aliceSlot,
-            createdAt = now,
-            updatedAt = now,
+            createdAt = now.toKotlinLocalDateTime(),
+            updatedAt = now.toKotlinLocalDateTime(),
             createdByFirebaseUid = if (byBob) family.bob.uid else family.alice,
             forMembers = members,
             familyId = family.id
@@ -429,7 +435,7 @@ class UiTourSeed @Inject constructor(
                 category = category,
                 paidBy = family.alice,
                 splitBetween = both,
-                date = maxOf(family.today.minusDays(daysAgo), family.today.withDayOfMonth(1)),
+                date = maxOf(family.today.minusDays(daysAgo), family.today.withDayOfMonth(1)).toKotlinLocalDate(),
                 createdByFirebaseUid = family.alice,
                 splitBasisPoints = SPLIT_BASIS_POINTS,
                 familyId = family.id

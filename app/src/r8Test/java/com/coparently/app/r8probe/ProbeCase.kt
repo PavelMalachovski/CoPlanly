@@ -8,8 +8,8 @@ import org.json.JSONObject
  *
  * [type] is a **string literal** naming the source type, never `X::class.java.name`: in this build
  * R8 has renamed most classes, and the report has to say which model failed in the words the
- * source uses. `tools/check-invariants.js` greps these literals to prove every Gson-reflected type
- * has a case, and the CI check requires each of them to pass.
+ * source uses. `tools/check-invariants.js` greps these literals to prove every stored
+ * (`@Serializable`) model has a case, and the CI check requires each of them to pass.
  *
  * @property type The fully-qualified source name of the type checked, or a label for a call site
  * @property via The production path the value went through
@@ -45,7 +45,7 @@ internal class Cases(private val via: String) {
      *
      * A renamed field shows up twice: its real name missing, and an `a` or `b` unexpected. A field
      * added to the model with a value in the fixture fails here as unexpected, which is the prompt
-     * to name it; one left null is omitted by Gson and cannot be seen at all, which is why the
+     * to name it; one left null is omitted from the JSON and cannot be seen at all, which is why the
      * fixtures set every field.
      */
     fun keys(type: String, json: String, expectedKeys: Set<String>, readBackEqual: Boolean) {

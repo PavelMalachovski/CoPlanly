@@ -1,0 +1,55 @@
+package com.coparently.app.domain.usecase
+
+import com.coparently.app.data.platform.Analytics
+import com.coparently.app.data.platform.CrashReporter
+import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.model.ValidationResult
+import com.coparently.app.domain.repository.EventRepository
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Clock
+
+/**
+ * Use case for updating an existing event.
+ */
+class UpdateEventUseCase(
+    private val eventRepository: EventRepository,
+    private val eventValidator: EventValidator,
+    private val analytics: Analytics,
+    private val crashReporter: CrashReporter,
+    private val reminderScheduler: com.coparently.app.domain.notification.ReminderScheduler
+) {
+    /**
+     * Updates an existing event.
+     * @param announce Whether the co-parent's chat is told; see `EventRepository.insertEvent`.
+     * @return Result with updated event or exception
+     */
+    suspend operator fun invoke(event: Event, announce: Boolean = true): Result<Event> {
+        return try {
+            // Validate event
+            val validationResult = eventValidator.validate(event)
+            if (validationResult is ValidationResult.Error) {
+                return Result.failure(ValidationException(validationResult.message, validationResult.field))
+            }
+
+            // Update timestamp
+            val updatedEvent = event.copy(
+                updatedAt = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+            )
+
+            // Update event
+            eventRepository.updateEvent(updatedEvent, announce)
+
+            // Reschedule (or cancel) the reminder to match the new state
+            reminderScheduler.schedule(updatedEvent)
+
+            // Log analytics
+            analytics.log("event_updated", mapOf("event_type" to updatedEvent.eventType))
+
+            Result.success(updatedEvent)
+        } catch (e: Exception) {
+            crashReporter.record(e)
+            Result.failure(e)
+        }
+    }
+}

@@ -1,0 +1,379 @@
+package com.coparently.app.presentation.custody
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.coparently.app.domain.custody.ContactWindow
+import com.coparently.app.presentation.common.AddItemButton
+import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.components.TimePickerDialog
+import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.presentation.theme.titleMediumEmphasized
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.custody_cancel
+import com.coparently.app.resources.custody_window_add_confirm
+import com.coparently.app.resources.custody_window_day_label
+import com.coparently.app.resources.custody_window_dialog_title
+import com.coparently.app.resources.custody_window_every_week
+import com.coparently.app.resources.custody_window_from
+import com.coparently.app.resources.custody_window_invalid
+import com.coparently.app.resources.custody_window_remove
+import com.coparently.app.resources.custody_window_summary
+import com.coparently.app.resources.custody_window_to
+import com.coparently.app.resources.custody_window_week
+import com.coparently.app.resources.custody_window_week_n
+import com.coparently.app.resources.custody_window_weekday
+import com.coparently.app.resources.custody_window_with
+import com.coparently.app.resources.custody_windows_add
+import com.coparently.app.resources.custody_windows_empty
+import com.coparently.app.resources.custody_windows_hint
+import com.coparently.app.resources.custody_windows_title
+import com.coparently.app.utils.ReaderDateText
+import com.coparently.app.utils.readerName
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.plus
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
+
+/** Where a new window's times start, before the parent picks: the classic after-school afternoon. */
+private val DEFAULT_WINDOW_START: LocalTime = LocalTime(15, 0)
+
+/** See [DEFAULT_WINDOW_START]. */
+private val DEFAULT_WINDOW_END: LocalTime = LocalTime(19, 0)
+
+/**
+ * Saves a time of day as its second of the day. kotlinx-datetime's [LocalTime] is not a platform
+ * class, and Java-serialising it into the saved-state Bundle would depend on R8 keeping its
+ * serialisation proxy in a release build.
+ */
+private val TimeOfDaySaver: Saver<LocalTime, Int> = Saver(
+    save = { it.toSecondOfDay() },
+    restore = { LocalTime.fromSecondOfDay(it) }
+)
+
+/** How a window's times are written on screen: 24-hour, as the time picker uses. */
+
+/**
+ * The contact windows of the pattern being set up (MON-6b), under every pattern type.
+ *
+ * A window is part of a day with the parent who does not have that day — "every Wednesday
+ * 15:00–19:00". It sits on top of the whole-day pattern and changes no day's owner, which is why
+ * the section says so in its hint: a parent reading "add a window" must not think they are
+ * moving the overnight. The MON-6 midweek day above it (for every-other-weekend) is the
+ * whole-day shape and stays exactly as it was; its warning now points here for the
+ * afternoon-only case instead of to `CUSTOM`, which could never express one.
+ *
+ * Each window is listed by the week of the cycle and weekday it falls on, computed from the
+ * pattern's start date — so moving the start date re-labels the windows rather than silently
+ * moving them to other weekdays behind the parent's back.
+ *
+ * @param uiState The form: its windows, its start date (day 0) and its cycle length.
+ * @param parentNames Resolves a slot to that parent's name.
+ * @param onAdd Adds the windows a confirmed draft describes.
+ * @param onRemove Removes one window.
+ */
+@Composable
+fun ContactWindowsSection(
+    uiState: CustodySetupUiState,
+    parentNames: ParentNames,
+    onAdd: (ContactWindowDraft) -> Unit,
+    onRemove: (ContactWindow) -> Unit
+) {
+    val dims = dimensions()
+    val windows = uiState.contactWindows
+    var showEditor by rememberSaveable { mutableStateOf(false) }
+
+    Column {
+        Text(
+            text = stringResource(Res.string.custody_windows_title),
+            style = MaterialTheme.typography.titleMediumEmphasized,
+            modifier = Modifier.padding(vertical = dims.paddingSmall)
+        )
+        Text(
+            text = stringResource(Res.string.custody_windows_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(dims.paddingSmall))
+
+        if (windows.isEmpty()) {
+            Text(
+                text = stringResource(Res.string.custody_windows_empty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        windows.forEach { window ->
+            ContactWindowRow(
+                window = window,
+                dayLabel = cycleDayLabel(uiState.startDate, window.dayIndex),
+                parentName = parentNames.labelFor(window.parent),
+                onRemove = { onRemove(window) }
+            )
+        }
+
+        AddItemButton(
+            label = stringResource(Res.string.custody_windows_add),
+            onClick = { showEditor = true },
+            modifier = Modifier.padding(vertical = dims.paddingSmall)
+        )
+        Spacer(modifier = Modifier.height(dims.paddingMedium))
+    }
+
+    if (showEditor) {
+        ContactWindowDialog(
+            startDate = uiState.startDate,
+            cycleDays = uiState.cycleDays,
+            parentNames = parentNames,
+            onConfirm = { draft ->
+                onAdd(draft)
+                showEditor = false
+            },
+            onDismiss = { showEditor = false }
+        )
+    }
+}
+
+/** One window: a dot in its parent's colour, what and when, and a remove action. */
+@Composable
+private fun ContactWindowRow(
+    window: ContactWindow,
+    dayLabel: String,
+    parentName: String,
+    onRemove: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .background(ParentColors.fill(window.parent), CircleShape)
+        )
+        Spacer(modifier = Modifier.width(Spacing.S))
+        Text(
+            text = stringResource(
+                Res.string.custody_window_summary,
+                dayLabel,
+                ReaderDateText.time(window.start),
+                ReaderDateText.time(window.end),
+                parentName
+            ),
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f)
+        )
+        IconButton(onClick = onRemove) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = stringResource(Res.string.custody_window_remove)
+            )
+        }
+    }
+}
+
+/** "Week 2, Wed" for a cycle day, from the pattern's start date. */
+@Composable
+private fun cycleDayLabel(startDate: LocalDate, dayIndex: Int): String = stringResource(
+    Res.string.custody_window_day_label,
+    dayIndex / ContactWindowDraft.DAYS_PER_WEEK + 1,
+    startDate.plus(dayIndex, DateTimeUnit.DAY).dayOfWeek.readerName("EEE")
+)
+
+/**
+ * The editor for a new window: weekday, which week of the cycle (or every week), from and to,
+ * and which parent. Refuses to confirm a window that does not end after it starts — the rule
+ * `ContactWindow` enforces — and says why rather than greying the button out in silence.
+ */
+@Composable
+private fun ContactWindowDialog(
+    startDate: LocalDate,
+    cycleDays: Int,
+    parentNames: ParentNames,
+    onConfirm: (ContactWindowDraft) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var weekday by rememberSaveable { mutableStateOf(DayOfWeek.WEDNESDAY) }
+    var week by rememberSaveable { mutableStateOf<Int?>(null) }
+    var start by rememberSaveable(stateSaver = TimeOfDaySaver) { mutableStateOf(DEFAULT_WINDOW_START) }
+    var end by rememberSaveable(stateSaver = TimeOfDaySaver) { mutableStateOf(DEFAULT_WINDOW_END) }
+    var parent by rememberSaveable { mutableStateOf(ContactWindow.SLOT_TWO) }
+    var picking by remember { mutableStateOf<TimeField?>(null) }
+    val draft = ContactWindowDraft(weekday, week, start, end, parent)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.custody_window_dialog_title)) },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                WeekdayChips(selected = weekday, onSelect = { weekday = it })
+                WeekChips(weeks = ContactWindowDraft.weeksIn(cycleDays), selected = week, onSelect = { week = it })
+                TimeButtons(draft = draft, onPick = { picking = it })
+                ParentChips(selected = parent, parentNames = parentNames, onSelect = { parent = it })
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(draft) },
+                enabled = draft.toWindows(startDate, cycleDays).isNotEmpty()
+            ) {
+                Text(stringResource(Res.string.custody_window_add_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(Res.string.custody_cancel))
+            }
+        }
+    )
+
+    when (picking) {
+        TimeField.START -> TimePickerDialog(
+            initialTime = start,
+            onTimeSelected = { start = it },
+            onDismiss = { picking = null }
+        )
+        TimeField.END -> TimePickerDialog(
+            initialTime = end,
+            onTimeSelected = { end = it },
+            onDismiss = { picking = null }
+        )
+        null -> Unit
+    }
+}
+
+/** Monday to Sunday, named in the reader's language. */
+@Composable
+private fun WeekdayChips(selected: DayOfWeek, onSelect: (DayOfWeek) -> Unit) {
+    DialogLabel(Res.string.custody_window_weekday)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
+        DayOfWeek.entries.forEach { day ->
+            FilterChip(
+                selected = selected == day,
+                onClick = { onSelect(day) },
+                label = { Text(day.readerName("EEE")) }
+            )
+        }
+    }
+}
+
+/**
+ * "Every week" and one chip per week of the cycle; absent for a one-week cycle, where the
+ * choice would be a set of one (the FAM-1 rule: an affordance appears at two).
+ */
+@Composable
+private fun WeekChips(weeks: Int, selected: Int?, onSelect: (Int?) -> Unit) {
+    if (weeks <= 1) return
+    DialogLabel(Res.string.custody_window_week)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
+        FilterChip(
+            selected = selected == null,
+            onClick = { onSelect(null) },
+            label = { Text(stringResource(Res.string.custody_window_every_week)) }
+        )
+        for (index in 0 until weeks) {
+            FilterChip(
+                selected = selected == index,
+                onClick = { onSelect(index) },
+                label = { Text(stringResource(Res.string.custody_window_week_n, index + 1)) }
+            )
+        }
+    }
+}
+
+/** From and To, each opening the time picker; says why an inverted pair cannot be added. */
+@Composable
+private fun TimeButtons(draft: ContactWindowDraft, onPick: (TimeField) -> Unit) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+        modifier = Modifier.padding(top = Spacing.M)
+    ) {
+        OutlinedButton(onClick = { onPick(TimeField.START) }) {
+            Text(stringResource(Res.string.custody_window_from, ReaderDateText.time(draft.start)))
+        }
+        OutlinedButton(onClick = { onPick(TimeField.END) }) {
+            Text(stringResource(Res.string.custody_window_to, ReaderDateText.time(draft.end)))
+        }
+    }
+    if (!draft.isValid) {
+        Text(
+            text = stringResource(Res.string.custody_window_invalid),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(top = Spacing.XS)
+        )
+    }
+}
+
+/** The two parents, by name and colour; a window may name either. */
+@Composable
+private fun ParentChips(selected: String, parentNames: ParentNames, onSelect: (String) -> Unit) {
+    DialogLabel(Res.string.custody_window_with)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
+        listOf(ContactWindow.SLOT_ONE, ContactWindow.SLOT_TWO).forEach { slot ->
+            FilterChip(
+                selected = selected == slot,
+                onClick = { onSelect(slot) },
+                label = { Text(parentNames.labelFor(slot)) },
+                leadingIcon = {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .background(ParentColors.fill(slot), CircleShape)
+                    )
+                }
+            )
+        }
+    }
+}
+
+/** Which of the two times the picker is open for. */
+private enum class TimeField { START, END }
+
+/** A small label over one of the dialog's chip rows. */
+@Composable
+private fun DialogLabel(res: StringResource) {
+    Text(
+        text = stringResource(res),
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = Spacing.M, bottom = Spacing.XS)
+    )
+}

@@ -1,0 +1,53 @@
+package com.coparently.app.domain.error
+
+import com.coparently.app.data.platform.Connectivity
+import com.coparently.app.data.platform.CrashReporter
+import com.coparently.app.domain.usecase.ValidationException
+import kotlinx.io.IOException
+
+/**
+ * Classifies a failure that reaches a ViewModel as an arbitrary [Throwable] (CQ-11).
+ *
+ * Its caller is `EventViewModel`, whose use cases return `Result` failures of every shape — a
+ * validator's refusal, an I/O error, a rules denial — and whose screen shows one sentence per
+ * *kind*. That is the only place in the app where the kind is all a ViewModel knows; everywhere
+ * else the ViewModel knows which operation failed and says so with its own resource
+ * (`UiText.Res(Res.string.change_request_error_apply_failed)` and the like), which is more useful to
+ * a parent than a sentence chosen by exception type. Do not route those through here.
+ *
+ * In `:shared-data` since MON-24 phase 2 (Task 8f), with the device's connection read through
+ * [Connectivity] (`NetworkMonitor` on Android), an I/O failure as `kotlinx.io.IOException` (on
+ * Android the same `java.io.IOException`) and a permission failure as the platform names it
+ * ([isPermissionFailure]).
+ */
+class ErrorHandler(
+    private val crashReporter: CrashReporter,
+    private val networkMonitor: Connectivity
+) {
+    /**
+     * Records [error] to Crashlytics and classifies it.
+     *
+     * @return The [AppError] the presentation layer words by type.
+     */
+    fun handleError(error: Throwable): AppError {
+        crashReporter.record(error)
+
+        return when {
+            error is ValidationException -> AppError.ValidationError(
+                field = error.field,
+                validationMessage = error.message ?: "Validation failed"
+            )
+
+            error.isPermissionFailure() -> AppError.PermissionError(originalException = error)
+
+            error is IOException -> AppError.NetworkError(
+                originalException = error,
+                offline = !networkMonitor.isOnline()
+            )
+
+            error is AppError -> error
+
+            else -> AppError.UnknownError(originalException = error)
+        }
+    }
+}

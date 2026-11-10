@@ -13,6 +13,7 @@ import com.google.firebase.storage.StorageException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.io.files.Path
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -83,7 +84,7 @@ class TwoParentAttachmentsTest : TwoParentTest() {
         assertEquals(null, bob.sharedFileCache.cached(reference.fileName, reference.sha256))
 
         val opened = bob.sharedFileCache.localCopy(reference.storagePath, reference.fileName, reference.sha256)
-        assertArrayEquals(bytes, opened.readBytes())
+        assertArrayEquals(bytes, File(opened.toString()).readBytes())
     }
 
     @Test
@@ -104,7 +105,7 @@ class TwoParentAttachmentsTest : TwoParentTest() {
 
         val carol = newParent("Carol")
         val target = File.createTempFile("stranger", ".pdf")
-        assertRefused { carol.sharedFileStorage.download(attachment.storagePath, target) }
+        assertRefused { carol.sharedFileStorage.download(attachment.storagePath, Path(target.path)) }
     }
 
     @Test
@@ -119,7 +120,8 @@ class TwoParentAttachmentsTest : TwoParentTest() {
             .single { it.id == filed.id }
         assertEquals(filed.sha256, seen.sha256)
         assertEquals(alice.uid, seen.createdByFirebaseUid)
-        assertArrayEquals(bytes, bob.documentRepository.localCopy(seen).getOrThrow().readBytes())
+        val copy = bob.documentRepository.localCopy(seen).getOrThrow()
+        assertArrayEquals(bytes, File(copy.toString()).readBytes())
 
         assertTrue("Bob deleted a document Alice filed", bob.documentRepository.delete(seen).isFailure)
         assertTrue(EmulatorEnvironment.documentExists("family_documents/${filed.id}"))
@@ -145,7 +147,8 @@ class TwoParentAttachmentsTest : TwoParentTest() {
         alice.pairingRepository.unpair().getOrThrow()
         val kept = awaitListing(bob, familyId) { docs -> docs.any { it.id == filed.id } }
             .single { it.id == filed.id }
-        assertArrayEquals(bytes, bob.documentRepository.localCopy(kept).getOrThrow().readBytes())
+        val copy = bob.documentRepository.localCopy(kept).getOrThrow()
+        assertArrayEquals(bytes, File(copy.toString()).readBytes())
 
         EmulatorEnvironment.step("vault: nothing new is filed into the ended family")
         assertTrue(

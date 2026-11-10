@@ -1,9 +1,6 @@
 package com.coparently.app.data.notification
 
 import android.content.Context
-import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The events this phone has a reminder alarm armed for, remembered across process deaths.
@@ -18,10 +15,11 @@ import javax.inject.Singleton
  *
  * Plain [android.content.SharedPreferences]: an event id is a random UUID or a hash, not something
  * about the family, and the app's backup is off, so the list never reaches another phone.
+ *
+ * One per process (`notificationModule`'s `single`): its lock is what keeps two edits apart.
  */
-@Singleton
-class ArmedReminders @Inject constructor(
-    @ApplicationContext context: Context
+class ArmedReminders(
+    context: Context
 ) {
     private val prefs by lazy { context.getSharedPreferences(FILE_NAME, Context.MODE_PRIVATE) }
     private val lock = Any()

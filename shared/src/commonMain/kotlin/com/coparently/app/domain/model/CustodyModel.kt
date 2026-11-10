@@ -1,0 +1,506 @@
+package com.coparently.app.domain.model
+
+import com.coparently.app.domain.custody.ChildOverrideCodec
+import com.coparently.app.domain.custody.ChildScheduleOverride
+import com.coparently.app.domain.custody.ContactWindow
+import com.coparently.app.domain.custody.SeasonalLayer
+import com.coparently.app.domain.custody.SeasonalLayerCodec
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
+
+/**
+ * Domain model for custody configuration.
+ * Represents the custody pattern that determines which parent has custody on any given date.
+ *
+ * @property id Unique identifier
+ * @property modelType Type of custody pattern
+ * @property patternDays Total days in the pattern cycle
+ * @property momDayIndices Set of day indices (0-based) within the pattern when mom has custody
+ * @property startDate Anchor date for calculating pattern position
+ * @property isActive Whether this model is currently in use
+ * @property contactWindows Parts of a cycle day spent with the parent who does not have that day
+ *   (MON-6b) — "every Wednesday 15:00–19:00 with the other parent". Overlaid on the whole-day
+ *   pattern, never folded into it: [getCustodyFor] ignores them, and [contactWindowsOn] is the
+ *   one question they answer. See [ContactWindow].
+ * @property seasonalLayers Date ranges on which another pattern replaces this one (MON-14) —
+ *   the summer, Christmas. [getCustodyFor] and [contactWindowsOn] resolve the highest-priority
+ *   layer covering a date first and this pattern second. See [SeasonalLayer].
+ * @property unreadableLayers Stored layer entries this build cannot read, verbatim. They decide
+ *   nothing here and are written back unchanged, so an older build never erases a layer a newer
+ *   one wrote (see `DecodedLayers.unreadable`).
+ * @property childOverrides Children who follow a schedule of their own instead of this one (FAM-4).
+ *   Nothing on this model reads them: [getCustodyFor] stays the family's answer, and a caller that
+ *   has to name a child apart asks `ChildCustody`. See [ChildScheduleOverride].
+ * @property unreadableChildOverrides Stored override entries this build cannot read, verbatim,
+ *   written back unchanged for the reason [unreadableLayers] is.
+ */
+data class CustodyModel(
+    val id: String,
+    val modelType: CustodyModelType,
+    val patternDays: Int,
+    val momDayIndices: Set<Int>,
+    val startDate: LocalDate,
+    val isActive: Boolean = true,
+    val contactWindows: List<ContactWindow> = emptyList(),
+    val seasonalLayers: List<SeasonalLayer> = emptyList(),
+    val unreadableLayers: List<String> = emptyList(),
+    val childOverrides: List<ChildScheduleOverride> = emptyList(),
+    val unreadableChildOverrides: List<String> = emptyList()
+) {
+    /**
+     * Determines which parent has custody on the given date.
+     *
+     * A seasonal layer covering [date] answers first (MON-14); the base pattern answers every
+     * other date. One-off swaps sit above both, in `CustodyResolver` — this is the pattern, and a
+     * swap is a fact about the shared document.
+     *
+     * @param date The date to check
+     * @return "mom" or "dad"
+     */
+    fun getCustodyFor(date: LocalDate): String {
+        layerOn(date)?.let { return it.custodyFor(date) }
+        return baseCustodyFor(date)
+    }
+
+    /**
+     * The seasonal layer that decides [date], or null when the base pattern does — the highest
+     * priority among the layers covering it, by [SeasonalLayer.PRECEDENCE].
+     */
+    fun layerOn(date: LocalDate): SeasonalLayer? {
+        if (seasonalLayers.isEmpty()) return null
+        return seasonalLayers.filter { date in it }.minWithOrNull(SeasonalLayer.PRECEDENCE)
+    }
+
+    /** The base pattern's answer for [date], ignoring every layer. */
+    fun baseCustodyFor(date: LocalDate): String {
+        val daysSinceStart = (date.toEpochDays() - startDate.toEpochDays()).toInt()
+        // Handle negative days (dates before start)
+        val adjustedDays = ((daysSinceStart % patternDays) + patternDays) % patternDays
+        return if (momDayIndices.contains(adjustedDays)) "mom" else "dad"
+    }
+
+    /** The layers as their canonical wire list, unreadable entries included (see [SeasonalLayerCodec]). */
+    fun seasonalLayersWire(): List<String> = SeasonalLayerCodec.encodeAll(seasonalLayers, unreadableLayers)
+
+    /** The per-child overrides as their canonical wire list, unreadable entries included (FAM-4). */
+    fun childOverridesWire(): List<String> =
+        ChildOverrideCodec.encodeAll(childOverrides, unreadableChildOverrides)
+
+    /** [childId]'s own schedule, or null when that child follows this one (FAM-4). */
+    fun childOverrideFor(childId: String): ChildScheduleOverride? =
+        childOverrides.firstOrNull { it.childId == childId }
+
+    /**
+     * The contact windows that fall on [date], earliest first (MON-6b).
+     *
+     * A separate question from [getCustodyFor], which stays whole-day: whose *day* it is does not
+     * change because the other parent has the child for an afternoon, and every caller that asks
+     * "whose day" — the grid's colour, the handover walk, a swap — keeps its answer.
+     *
+     * Returns every window defined for the date's position in the cycle, including one naming
+     * the parent who already has the day; a caller that draws them decides whether such a window
+     * says anything (the calendar skips it, and it skips a window on a day an accepted swap
+     * handed to the window's own parent for the same reason). Empty for a pattern with no cycle
+     * to reduce into, rather than the division by zero [getCustodyFor] would raise.
+     *
+     * Inside a seasonal layer the layer's own windows are the answer and the base pattern's are
+     * not: the layer replaces the whole pattern for its dates, afternoons included.
+     */
+    fun contactWindowsOn(date: LocalDate): List<ContactWindow> {
+        layerOn(date)?.let { return it.contactWindowsOn(date) }
+        if (patternDays <= 0 || contactWindows.isEmpty()) return emptyList()
+        val daysSinceStart = date.toEpochDays() - startDate.toEpochDays()
+        val index = daysSinceStart.mod(patternDays.toLong()).toInt()
+        return contactWindows.filter { it.dayIndex == index }.sortedBy { it.start }
+    }
+
+    /**
+     * This pattern with the two slots swapped.
+     *
+     * [momDayIndices] means "the days slot 1 has custody". When pairing moves this device to
+     * the other slot, the same set would silently start describing the co-parent's days, so
+     * the set is complemented to keep meaning "my days".
+     *
+     * Getting this wrong is not a cosmetic bug: the pairing conflict screen would offer a
+     * parent their own schedule inverted, they would reject it, and hand over exactly the days
+     * they meant to keep.
+     *
+     * A non-positive [patternDays] has no cycle to complement: `(0 until patternDays).toSet() -
+     * momDayIndices` would be `emptySet()` regardless of what [momDayIndices] held, silently
+     * discarding it. This returns the model unchanged instead, the same way [isEquivalentTo]
+     * refuses rather than guesses when it cannot make sense of a cycle length.
+     *
+     * An index in [momDayIndices] outside `0 until patternDays` is dropped, not preserved: it
+     * can never match in [getCustodyFor], which reduces every offset into that range before
+     * testing membership, so a model with or without it produces identical custody outcomes.
+     */
+    fun complemented(): CustodyModel {
+        if (patternDays <= 0) return this
+        // Contact windows name a slot too, so they flip with the days: the afternoon that was
+        // the co-parent's must still be the co-parent's after this device changes slot.
+        // Layers flip too, and so does each child's own schedule (FAM-4). Unreadable entries
+        // cannot be re-expressed and are kept as they are.
+        return copy(
+            momDayIndices = (0 until patternDays).toSet() - momDayIndices,
+            contactWindows = contactWindows.map { it.withOtherParent() },
+            seasonalLayers = seasonalLayers.map { it.withOtherParent() },
+            childOverrides = childOverrides.map { it.withOtherParent() }
+        )
+    }
+
+    /**
+     * Whether [other] assigns custody the same way this model does, on every day.
+     *
+     * Compared by outcome rather than by field: two models with start dates a whole number of
+     * cycles apart describe the same schedule, and two different [modelType]s can produce
+     * identical assignments. The window is the least common multiple of the two cycle lengths,
+     * because a shorter window can make a 14-day and a 21-day pattern look identical.
+     *
+     * A [patternDays] outside `1..MAX_SANE_PATTERN_DAYS` on either side is refused rather than
+     * compared: no real custody arrangement repeats on a cycle longer than a year, and the only
+     * path that can produce one is an unvalidated Firestore document synced from the other
+     * device, since [patternDays] never reaches this class un-clamped from the app's own UI.
+     * Without the bound, two large-enough cycle lengths push their least common multiple past
+     * [Int.MAX_VALUE]; unguarded `Int` arithmetic wraps that to a negative number, and
+     * `(0 until window)` on a negative window is an empty range, so `.all { }` returns `true`
+     * for two schedules that were never actually compared. The same bound keeps this a
+     * bounded, synchronous scan, since it can run on whatever thread calls it, including the
+     * pairing conflict screen.
+     */
+    fun isEquivalentTo(other: CustodyModel): Boolean {
+        if (patternDays !in 1..MAX_SANE_PATTERN_DAYS || other.patternDays !in 1..MAX_SANE_PATTERN_DAYS) {
+            return false
+        }
+        val window = lcm(patternDays, other.patternDays)
+        val from = minOf(startDate, other.startDate)
+        val basesAgree = (0 until window).all { offset ->
+            val date = from.plus(offset, DateTimeUnit.DAY)
+            baseCustodyFor(date) == other.baseCustodyFor(date) &&
+                sameContactWindows(baseWindowsOn(date), other.baseWindowsOn(date))
+        }
+        // Per-child schedules (FAM-4) compare by their canonical wire form: two overrides that
+        // happen to agree by outcome but differ in anchor count as different, which surfaces a
+        // pairing conflict for a person to settle rather than silently keeping one side's.
+        return basesAgree && layersAgree(other) && childOverridesWire() == other.childOverridesWire()
+    }
+
+    /**
+     * Whether the two models' seasonal layers produce the same days on every date either of them
+     * covers (MON-14). By outcome, like the base comparison; unreadable entries must match
+     * verbatim, since nothing here can say what they mean. Bounded: a model decodes at most
+     * `SeasonalLayerCodec.MAX_LAYERS` layers of at most a year each.
+     */
+    private fun layersAgree(other: CustodyModel): Boolean {
+        if (unreadableLayers.toSet() != other.unreadableLayers.toSet()) return false
+        val dates = (seasonalLayers + other.seasonalLayers).flatMap { layer ->
+            (0 until layer.spanDays).map { layer.fromDate.plus(it, DateTimeUnit.DAY) }
+        }.toSet()
+        return dates.all { date ->
+            getCustodyFor(date) == other.getCustodyFor(date) &&
+                sameContactWindows(contactWindowsOn(date), other.contactWindowsOn(date))
+        }
+    }
+
+    /** The base pattern's windows on [date], ignoring every layer. */
+    private fun baseWindowsOn(date: LocalDate): List<ContactWindow> =
+        copy(seasonalLayers = emptyList()).contactWindowsOn(date)
+
+    companion object {
+        /**
+         * Whether two days' windows describe the same hours with the same parents.
+         *
+         * By content, not by `dayIndex`: two patterns with different start dates or cycle
+         * lengths number the same Wednesday differently, and [isEquivalentTo] is asking about
+         * outcomes on dates. Part of equivalence because a pairing conflict that differed only
+         * in the contact afternoons would otherwise be settled silently, discarding one side's.
+         */
+        fun sameContactWindows(first: List<ContactWindow>, second: List<ContactWindow>): Boolean =
+            first.map { Triple(it.start, it.end, it.parent) }.toSet() ==
+                second.map { Triple(it.start, it.end, it.parent) }.toSet()
+
+        /**
+         * Creates a week-on-week-off pattern.
+         * Mom has first week (days 0-6), Dad has second week (days 7-13).
+         *
+         * @param startDate The date when the first parent (mom) starts their week
+         * @param momFirst If true, mom has the first week; if false, dad has the first week
+         */
+        fun weekOnWeekOff(
+            id: String,
+            startDate: LocalDate,
+            momFirst: Boolean = true
+        ): CustodyModel {
+            val momDays = if (momFirst) {
+                (0..6).toSet()
+            } else {
+                (7..13).toSet()
+            }
+            return CustodyModel(
+                id = id,
+                modelType = CustodyModelType.WEEK_ON_WEEK_OFF,
+                patternDays = 14,
+                momDayIndices = momDays,
+                startDate = startDate
+            )
+        }
+
+        /**
+         * Creates an every-other-weekend pattern — one parent's home, the other's alternate
+         * weekends.
+         *
+         * This is **výhradní péče se stykem**, the arrangement a large share of Czech families
+         * actually have, and until now the only preset list it appeared in was `CUSTOM`. The
+         * three patterns beside it split the time roughly in half; this one does not, and a
+         * parent whose court order says every second weekend had to build fourteen days by hand
+         * on the first screen they meet.
+         *
+         * Fourteen days, anchored the same way [weekOnWeekOff] is: [startDate] is day 0 and is
+         * expected to be the **Monday** the cycle opens on, which makes days 5 and 6 the first
+         * Saturday and Sunday. The resident parent holds everything else. There is no separate
+         * anchor validation here because there is none for the other patterns either — the
+         * preview card is what shows a parent they picked the wrong day.
+         *
+         * **A midweek day is a whole day here, and the screen has to say so.** Many such orders
+         * give the other parent a midweek *afternoon*, and this model assigns a day to exactly
+         * one parent — there is no half-day to give, so [midweek] hands over the overnight too.
+         * That was the reason the preset shipped without it; it is offered now because the
+         * arrangement is what Czech orders overwhelmingly say, and a parent who needs the
+         * afternoon-only shape can still describe the fortnight in `CUSTOM`. What must not
+         * happen is the app quietly assuming an overnight nobody agreed to, so the option is
+         * off by default and the setup screen names the consequence.
+         *
+         * @param momIsResident True when slot 1 is the parent the child lives with; false when
+         *   slot 1 is the parent with the alternate weekends.
+         * @param midweek The midweek contact day, or null for weekends only.
+         */
+        fun everyOtherWeekend(
+            id: String,
+            startDate: LocalDate,
+            momIsResident: Boolean = true,
+            midweek: MidweekContact? = null
+        ): CustodyModel {
+            val contactDays = setOf(CONTACT_SATURDAY, CONTACT_SUNDAY) + midweekIndices(midweek)
+            val momDays = if (momIsResident) {
+                (0 until FORTNIGHT).toSet() - contactDays
+            } else {
+                contactDays
+            }
+            return CustodyModel(
+                id = id,
+                modelType = CustodyModelType.EVERY_OTHER_WEEKEND,
+                patternDays = FORTNIGHT,
+                momDayIndices = momDays,
+                startDate = startDate
+            )
+        }
+
+        /**
+         * The fortnight indices [midweek] occupies.
+         *
+         * Day 0 of the fortnight is the Monday the cycle opens on, so a weekday's index inside
+         * week 1 is its `DayOfWeek` ordinal and inside week 2 that plus seven. The contact
+         * weekend is in week 1, so "only the week without the weekend" means week 2 alone —
+         * which is the shape a court order takes when it spaces contact out evenly rather than
+         * stacking a midweek day onto the weekend the child is already away.
+         *
+         * A midweek day that lands on the contact weekend itself is not excluded here: the
+         * caller unions the sets, so Saturday or Sunday named as "midweek" simply changes
+         * nothing. [MidweekContact] refuses those at construction so the picker cannot offer a
+         * choice that does nothing.
+         */
+        private fun midweekIndices(midweek: MidweekContact?): Set<Int> {
+            if (midweek == null) return emptySet()
+            val inSecondWeek = DAYS_IN_WEEK + midweek.dayOfWeek.ordinal
+            return if (midweek.everyWeek) {
+                setOf(midweek.dayOfWeek.ordinal, inSecondWeek)
+            } else {
+                setOf(inSecondWeek)
+            }
+        }
+
+        /**
+         * Creates a 2-2-3 pattern.
+         * Pattern over 2 weeks:
+         * Week 1: Mom Mon-Tue, Dad Wed-Thu, Mom Fri-Sun
+         * Week 2: Dad Mon-Tue, Mom Wed-Thu, Dad Fri-Sun
+         */
+        fun twoTwoThree(
+            id: String,
+            startDate: LocalDate,
+            momStartsFirst: Boolean = true
+        ): CustodyModel {
+            // 2-2-3 pattern repeats every 14 days
+            val momDays = if (momStartsFirst) {
+                setOf(0, 1, 4, 5, 6, 9, 10) // Mon-Tue, Fri-Sun in week 1; Wed-Thu in week 2
+            } else {
+                setOf(2, 3, 7, 8, 11, 12, 13) // Wed-Thu, Mon-Tue in week 2, Fri-Sun in week 2
+            }
+            return CustodyModel(
+                id = id,
+                modelType = CustodyModelType.TWO_TWO_THREE,
+                patternDays = 14,
+                momDayIndices = momDays,
+                startDate = startDate
+            )
+        }
+
+        /**
+         * Creates a 3-4-4-3 pattern (alternating 3 and 4 day blocks).
+         * Week 1: Mom Mon-Wed (3), Dad Thu-Sun (4)
+         * Week 2: Dad Mon-Thu (4), Mom Fri-Sun (3)
+         */
+        fun threeFourFourThree(
+            id: String,
+            startDate: LocalDate,
+            momStartsFirst: Boolean = true
+        ): CustodyModel {
+            val momDays = if (momStartsFirst) {
+                setOf(0, 1, 2, 11, 12, 13) // Mon-Wed in week 1, Fri-Sun in week 2
+            } else {
+                setOf(3, 4, 5, 6, 7, 8, 9, 10) // Thu-Sun in week 1, Mon-Thu in week 2
+            }
+            return CustodyModel(
+                id = id,
+                modelType = CustodyModelType.THREE_FOUR_FOUR_THREE,
+                patternDays = 14,
+                momDayIndices = momDays,
+                startDate = startDate
+            )
+        }
+
+        /**
+         * Creates a custom pattern.
+         *
+         * @param patternDays Total days in the pattern cycle
+         * @param momDayIndices Indices (0-based) within the pattern when mom has custody
+         */
+        fun custom(
+            id: String,
+            startDate: LocalDate,
+            patternDays: Int,
+            momDayIndices: Set<Int>
+        ): CustodyModel {
+            return CustodyModel(
+                id = id,
+                modelType = CustodyModelType.CUSTOM,
+                patternDays = patternDays,
+                momDayIndices = momDayIndices,
+                startDate = startDate
+            )
+        }
+    }
+}
+
+/**
+ * Enum representing different types of custody models.
+ */
+enum class CustodyModelType(val displayName: String) {
+    WEEK_ON_WEEK_OFF("Week On / Week Off"),
+
+    /**
+     * Sole custody with contact every second weekend — `výhradní péče se stykem`.
+     *
+     * Listed second, immediately after week-on-week-off, because those two are the arrangements
+     * Czech families actually have; the two below them are US family-law vocabulary. The order
+     * of this enum *is* the order of the picker (`CustodyModelType.entries.forEach`), so this is
+     * the whole of the placement decision. Whether the two American patterns still earn a place
+     * in a Czech-first launch is an owner's call and is deliberately not made here — removing
+     * one would leave existing users' saved `modelType` unparseable.
+     */
+    EVERY_OTHER_WEEKEND("Every Other Weekend"),
+    TWO_TWO_THREE("2-2-3 Split"),
+    THREE_FOUR_FOUR_THREE("3-4-4-3 Split"),
+    CUSTOM("Custom Schedule");
+
+    companion object {
+        fun fromString(value: String): CustodyModelType {
+            return when (value.lowercase()) {
+                "week_on_week_off" -> WEEK_ON_WEEK_OFF
+                "every_other_weekend" -> EVERY_OTHER_WEEKEND
+                "2_2_3" -> TWO_TWO_THREE
+                "3_4_4_3" -> THREE_FOUR_FOUR_THREE
+                "custom" -> CUSTOM
+                else -> CUSTOM
+            }
+        }
+
+        fun toString(type: CustodyModelType): String {
+            return when (type) {
+                WEEK_ON_WEEK_OFF -> "week_on_week_off"
+                EVERY_OTHER_WEEKEND -> "every_other_weekend"
+                TWO_TWO_THREE -> "2_2_3"
+                THREE_FOUR_FOUR_THREE -> "3_4_4_3"
+                CUSTOM -> "custom"
+            }
+        }
+    }
+}
+
+/**
+ * Upper bound on a single custody cycle length, in days, accepted by [CustodyModel.isEquivalentTo].
+ * No real custody arrangement repeats on a cycle longer than a year; [CustodySetupViewModel]'s
+ * own custom-pattern input is clamped to 7..28, so a [CustodyModel.patternDays] past this bound
+ * can only have arrived unvalidated, from a Firestore document synced from the other device.
+ */
+private const val MAX_SANE_PATTERN_DAYS = 366
+
+/** Days in the fortnight every preset here is built on. */
+private const val FORTNIGHT = 14
+
+/** Days in a week, for turning a `DayOfWeek` ordinal into a fortnight index. */
+private const val DAYS_IN_WEEK = 7
+
+/** Index of the contact Saturday: day 0 is Monday, so Saturday is 5. */
+private const val CONTACT_SATURDAY = 5
+
+/** Index of the contact Sunday. */
+private const val CONTACT_SUNDAY = 6
+
+/**
+ * A midweek contact day inside `výhradní péče se stykem`.
+ *
+ * A value type rather than two parameters so a caller cannot pass the flag for the day, and so
+ * the "not a weekend" rule has one home. Whole days: see [CustodyModel.Companion.everyOtherWeekend].
+ *
+ * @property dayOfWeek Which weekday the contact falls on. Monday to Friday only.
+ * @property everyWeek True for a midweek day in both weeks of the fortnight; false for one only
+ *   in the week that has no contact weekend.
+ */
+data class MidweekContact(
+    val dayOfWeek: DayOfWeek,
+    val everyWeek: Boolean = true
+) {
+    init {
+        require(dayOfWeek != DayOfWeek.SATURDAY && dayOfWeek != DayOfWeek.SUNDAY) {
+            "A midweek contact day is Monday to Friday; $dayOfWeek is already a contact weekend"
+        }
+    }
+}
+
+/**
+ * Least common multiple, for sizing the comparison window in [CustodyModel.isEquivalentTo].
+ *
+ * Computed in [Long]: [isEquivalentTo] bounds both cycle lengths to [MAX_SANE_PATTERN_DAYS]
+ * before calling this, which already keeps the result far under [Int.MAX_VALUE], but the [Long]
+ * arithmetic is the actual guard against overflow - the bound is what keeps the scan fast, not
+ * what keeps this calculation correct.
+ */
+private fun lcm(a: Int, b: Int): Long {
+    val x = a.toLong()
+    val y = b.toLong()
+    return x / gcd(x, y) * y
+}
+
+/** Greatest common divisor, via the Euclidean algorithm, for [lcm]. */
+private fun gcd(a: Long, b: Long): Long {
+    var x = a
+    var y = b
+    while (y != 0L) {
+        val t = y
+        y = x % y
+        x = t
+    }
+    return x
+}

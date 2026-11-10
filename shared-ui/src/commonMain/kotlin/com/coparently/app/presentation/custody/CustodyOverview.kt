@@ -1,0 +1,135 @@
+package com.coparently.app.presentation.custody
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.ChildCare
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.EventRepeat
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import com.coparently.app.domain.custody.SeasonalLayer
+import com.coparently.app.presentation.common.BannerTone
+import com.coparently.app.presentation.common.InlineBanner
+import com.coparently.app.presentation.common.SectionGroup
+import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.custody_child_schedules_title
+import com.coparently.app.resources.custody_overview_children_own
+import com.coparently.app.resources.custody_overview_children_same
+import com.coparently.app.resources.custody_overview_none
+import com.coparently.app.resources.custody_overview_pattern
+import com.coparently.app.resources.custody_overview_pattern_summary
+import com.coparently.app.resources.custody_overview_sent_separately
+import com.coparently.app.resources.custody_overview_windows
+import com.coparently.app.resources.custody_windows_title
+import com.coparently.app.resources.seasonal_title
+import com.coparently.app.utils.ReaderDateText
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
+
+/**
+ * What the custody screen opens on: one row per [CustodySection], each saying what it holds now.
+ *
+ * @param uiState The form's state, for the pattern's and the windows' summaries
+ * @param layers The family's seasonal schedules, history layers left out
+ * @param childCount How many children the family has; the children's row appears at two
+ * @param childrenWithOwnSchedule How many of them follow a schedule of their own
+ * @param coParentName Who a change is sent to, or null when nobody is: then nothing is sent
+ * @param onOpen Opens a part
+ */
+@Composable
+@Suppress("LongParameterList") // one summary per row, and where each row goes
+internal fun CustodyOverview(
+    uiState: CustodySetupUiState,
+    layers: List<SeasonalLayer>,
+    childCount: Int,
+    childrenWithOwnSchedule: Int,
+    coParentName: String?,
+    onOpen: (CustodySection) -> Unit
+) {
+    val none = stringResource(Res.string.custody_overview_none)
+    Column(
+        modifier = Modifier.padding(vertical = Spacing.M),
+        verticalArrangement = Arrangement.spacedBy(Spacing.L)
+    ) {
+        SectionGroup {
+            SectionRow(
+                title = stringResource(Res.string.custody_overview_pattern),
+                icon = Icons.Default.Schedule,
+                supporting = stringResource(
+                    Res.string.custody_overview_pattern_summary,
+                    stringResource(uiState.selectedModelType.labelRes()),
+                    ReaderDateText.date(uiState.startDate, "MMMEd")
+                ),
+                onClick = { onOpen(CustodySection.PATTERN) },
+                trailing = { Chevron() }
+            )
+            Divider()
+            SectionRow(
+                title = stringResource(Res.string.custody_windows_title),
+                icon = Icons.Default.DateRange,
+                supporting = uiState.contactWindows.size.takeIf { it > 0 }?.let {
+                    pluralStringResource(Res.plurals.custody_overview_windows, it, it)
+                } ?: none,
+                onClick = { onOpen(CustodySection.WINDOWS) },
+                trailing = { Chevron() }
+            )
+            Divider()
+            SectionRow(
+                title = stringResource(Res.string.seasonal_title),
+                icon = Icons.Default.EventRepeat,
+                supporting = layers.map { it.name }.filter { it.isNotBlank() }.joinToString(", ").ifEmpty { none },
+                onClick = { onOpen(CustodySection.SEASONAL) },
+                trailing = { Chevron() }
+            )
+            // At two children, never at one (FAM-1): a picker for a set of one is no choice.
+            if (childCount >= 2) {
+                Divider()
+                ChildrenRow(childrenWithOwnSchedule) { onOpen(CustodySection.CHILDREN) }
+            }
+        }
+        coParentName?.let { name ->
+            InlineBanner(
+                text = stringResource(Res.string.custody_overview_sent_separately, name),
+                tone = BannerTone.INFO
+            )
+        }
+    }
+}
+
+/** The children's row: how many follow a schedule of their own, or that all follow the family's. */
+@Composable
+private fun ChildrenRow(childrenWithOwnSchedule: Int, onClick: () -> Unit) {
+    SectionRow(
+        title = stringResource(Res.string.custody_child_schedules_title),
+        icon = Icons.Default.ChildCare,
+        supporting = if (childrenWithOwnSchedule > 0) {
+            pluralStringResource(
+                Res.plurals.custody_overview_children_own,
+                childrenWithOwnSchedule,
+                childrenWithOwnSchedule
+            )
+        } else {
+            stringResource(Res.string.custody_overview_children_same)
+        },
+        onClick = onClick,
+        trailing = { Chevron() }
+    )
+}
+
+/** The row's "opens a screen" mark. */
+@Composable
+private fun Chevron() {
+    Icon(
+        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+}

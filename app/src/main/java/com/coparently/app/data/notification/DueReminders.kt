@@ -1,3 +1,5 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.notification
 
 import android.app.NotificationChannel
@@ -11,12 +13,11 @@ import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.data.remote.firebase.PushDestination
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.notification.ReminderPlanner
 import com.coparently.app.domain.notification.ReminderScheduler
-import dagger.hilt.android.qualifiers.ApplicationContext
-import java.time.LocalDateTime
-import javax.inject.Inject
-import javax.inject.Singleton
+import com.coparently.app.domain.time.IsoText
+import com.coparently.app.utils.inAppLanguage
 
 /**
  * What a due reminder does, whichever clock woke it: [ReminderAlarmReceiver]'s alarm, or
@@ -29,18 +30,21 @@ import javax.inject.Singleton
  * A reminder is for one occurrence. Once it has fired — or been skipped because that occurrence
  * no longer exists — a recurring event is armed for its next one, which is how a weekly event keeps
  * reminding every week; a single event that has fired is forgotten.
+ *
+ * The notification and its channel are worded in the language the app speaks when it fires
+ * ([inAppLanguage]).
  */
-@Singleton
-class DueReminders @Inject constructor(
-    @ApplicationContext private val context: Context,
+class DueReminders(
+    private val context: Context,
     private val eventDao: EventDao,
     private val reminderScheduler: ReminderScheduler
 ) {
 
     /**
      * Delivers the reminder armed for [eventId]'s occurrence at [scheduledStartAt]
-     * (`LocalDateTime.toString()`; null on an older build's work, which then checks existence
-     * only), worded with [startTime], the start on the reader's clock.
+     * (`IsoText.dateTimeShortest`, the text `java.time`'s `LocalDateTime.toString()` wrote; null on
+     * an older build's work, which then checks existence only), worded with [startTime], the start
+     * on the reader's clock.
      */
     suspend fun deliver(eventId: String, scheduledStartAt: String?, startTime: String?) {
         val stored = eventDao.getEventById(eventId)
@@ -63,7 +67,8 @@ class DueReminders @Inject constructor(
 
     /** Posts the reminder for [stored], unless notifications are not allowed. */
     private fun post(stored: EventEntity, startTime: String) {
-        ensureChannel()
+        val words = context.inAppLanguage()
+        ensureChannel(words)
         // Permission revoked, notifications or the channel turned off since it was armed.
         if (!notificationsAllowed(context, CHANNEL_ID)) return
         val notificationManager = context.getSystemService(NotificationManager::class.java)
@@ -71,7 +76,7 @@ class DueReminders @Inject constructor(
             .setSmallIcon(R.drawable.ic_notification)
             // The title as it stands now, not as it stood when the reminder was armed.
             .setContentTitle(stored.title)
-            .setContentText(context.getString(R.string.reminder_notification_text, startTime))
+            .setContentText(words.getString(R.string.reminder_notification_text, startTime))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
@@ -99,14 +104,15 @@ class DueReminders @Inject constructor(
         )
     }
 
-    private fun ensureChannel() {
+    /** Creates the reminder channel, or renames it into [words]' language when it exists. */
+    private fun ensureChannel(words: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                context.getString(R.string.reminder_channel_name),
+                words.getString(R.string.reminder_channel_name),
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = context.getString(R.string.reminder_channel_description)
+                description = words.getString(R.string.reminder_channel_description)
             }
             context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
@@ -126,7 +132,9 @@ class DueReminders @Inject constructor(
          */
         internal fun shouldFire(stored: EventEntity?, scheduledStartAt: String?): Boolean {
             if (stored == null || stored.deletedAtMillis != null || stored.reminderMinutes == null) return false
-            val scheduled = scheduledStartAt?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() }
+            // `IsoText.parseDateTime` reads what `LocalDateTime.parse` read, so work an older build
+            // enqueued (its `toString()`) is read as before.
+            val scheduled = scheduledStartAt?.let { runCatching { IsoText.parseDateTime(it) }.getOrNull() }
                 ?: return true
             return ReminderPlanner.isOccurrence(stored.toReminderEvent(), scheduled)
         }

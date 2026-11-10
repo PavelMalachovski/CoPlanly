@@ -46,7 +46,7 @@ Options:
   of a language with another language's screenshots. Don't commit or upload those images.
 
 The words live in `tools/play-promo/captions.js`, and the layout in `tools/play-promo/render.js`.
-Each image is an HTML page rendered in Chromium, set in Onest (`app/src/main/res/font/`) on the
+Each image is an HTML page rendered in Chromium, set in Onest (`shared-ui/src/commonMain/composeResources/font/`) on the
 brand indigo (`CoPlanlyColors.BrandPrimary`, `#4F46E5`). The two parent colours appear only as
 soft glows in the background and as the two dots on the feature graphic. The screenshot is scaled,
 never stretched. The status bar is painted over in the app bar's own colour, and the system

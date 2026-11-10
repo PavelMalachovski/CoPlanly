@@ -3,7 +3,7 @@
 # Expenses, receipts, two isolated families, a random-tap pass — every step asserted and
 # photographed. Run by .github/workflows/virtual-tester.yml; not part of CI.
 #
-#   tools/virtual-tester/run-virtual-tester.sh    # after ./gradlew assembleDebug assembleDebugAndroidTest
+#   tools/virtual-tester/run-virtual-tester.sh    # after ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
 #
 # Needs what tools/ui-tour/run-ui-tour.sh needs: an Android emulator on adb, `npm ci` done in
 # `firestore-tests/` (the Firebase CLI) and `functions/`, and a JDK 21+ for the emulators
@@ -80,7 +80,7 @@ if [ "${1:-}" != "--inside-emulators" ]; then
   [ -x "$firebase" ] || fail "Firebase CLI not found at $firebase — run 'npm ci' in firestore-tests/ first."
   [ -d functions/node_modules ] || fail "functions/node_modules is missing — run 'npm ci' in functions/ first."
   for apk in "$APP_APK" "$TEST_APK"; do
-    [ -f "$apk" ] || fail "Missing $apk — run ./gradlew assembleDebug assembleDebugAndroidTest first."
+    [ -f "$apk" ] || fail "Missing $apk — run ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest first."
   done
   if [ -n "${FIREBASE_JAVA_HOME:-}" ]; then
     export PATH="$FIREBASE_JAVA_HOME/bin:$PATH"

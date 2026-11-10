@@ -1,0 +1,898 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
+package com.coparently.app.presentation.expenses
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.family.FamilyView
+import com.coparently.app.data.family.FamilyViewSource
+import com.coparently.app.data.family.RecordPlace
+import com.coparently.app.data.platform.logger
+import com.coparently.app.data.repository.FamilySettingsRepository
+import com.coparently.app.data.repository.FamilySplit
+import com.coparently.app.domain.expenses.CurrencyBalance
+import com.coparently.app.domain.expenses.CurrencyBreakdown
+import com.coparently.app.domain.expenses.SplitRatio
+import com.coparently.app.domain.expenses.SplitRatioProposal
+import com.coparently.app.domain.expenses.breakdownByCurrency
+import com.coparently.app.domain.expenses.calculateExpenseBalancesByCurrency
+import com.coparently.app.domain.family.FamilyKey
+import com.coparently.app.domain.family.FamilyMemberRef
+import com.coparently.app.domain.files.RecordPhotoKind
+import com.coparently.app.domain.model.Expense
+import com.coparently.app.domain.model.ExpenseCategory
+import com.coparently.app.domain.money.SupportedCurrency
+import com.coparently.app.domain.receipts.ReceiptParser
+import com.coparently.app.domain.receipts.ReceiptScan
+import com.coparently.app.domain.receipts.ReceiptTextRecognizer
+import com.coparently.app.domain.repository.ExpenseRepository
+import com.coparently.app.domain.repository.PreferencesRepository
+import com.coparently.app.domain.repository.RecordPhotoStorage
+import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.domain.time.wallClockNow
+import com.coparently.app.presentation.common.FamilyMember
+import com.coparently.app.presentation.common.FamilyMembersSource
+import com.coparently.app.presentation.common.Loadable
+import com.coparently.app.presentation.common.Parents
+import com.coparently.app.presentation.common.ParentsSource
+import com.coparently.app.presentation.common.UiText
+import com.coparently.app.presentation.common.stateInLoadable
+import com.coparently.app.presentation.common.toggling
+import com.coparently.app.presentation.common.valueOrNull
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.expense_error_signed_out
+import com.coparently.app.resources.expense_warning_new_receipt_upload_failed
+import com.coparently.app.resources.expense_warning_receipt_upload_failed
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.YearMonth
+import kotlinx.datetime.minusMonth
+import kotlinx.datetime.plusMonth
+import kotlinx.datetime.todayIn
+import kotlinx.datetime.yearMonth
+import kotlin.time.Clock
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
+
+/** Keeps derived flows warm across brief unsubscriptions (config changes). */
+private const val STOP_TIMEOUT_MS = 5_000L
+
+/**
+ * State of the "save expense" operation, driving the Add Expense screen.
+ */
+sealed interface ExpenseSaveState {
+    data object Idle : ExpenseSaveState
+    data object Saving : ExpenseSaveState
+
+    /**
+     * Expense stored locally (and synced when online).
+     * [warning] is non-null when the receipt photo upload failed —
+     * the expense itself was still saved, just without the receipt.
+     */
+    data class Saved(val warning: UiText? = null) : ExpenseSaveState
+
+    /**
+     * Save could not proceed (e.g. no signed-in user); [message] is resolved by the screen
+     * (CQ-14).
+     */
+    data class Error(val message: UiText) : ExpenseSaveState
+}
+
+/**
+ * State of the on-device receipt scan that pre-fills the Add Expense form.
+ */
+sealed interface ReceiptScanState {
+    data object Idle : ReceiptScanState
+    data object Scanning : ReceiptScanState
+
+    /** OCR produced usable fields; the form applies the ones the user has not filled in. */
+    data class Applied(val scan: ReceiptScan) : ReceiptScanState
+
+    /** Recognition failed, or produced nothing usable. The photo stays attached regardless. */
+    data object Failed : ReceiptScanState
+}
+
+/**
+ * The Expenses tab and the Add Expense form: the family on screen's expenses, totals, split and
+ * proposals.
+ *
+ * **It lives across a family switch** (M-8): the switcher chip sits in the Expenses top bar, so
+ * everything here follows the family on screen rather than reading it once — the download, the
+ * split, and what the totals count ([FamilyViewSource]).
+ *
+ * One constructor dependency per thing the money screen reads. It was already past detekt's
+ * parameter limit (baselined) before the family view joined, and splitting it would scatter one
+ * screen's state across holders that exist only to satisfy the count. The same goes for its
+ * functions: each is one thing the money screen does.
+ */
+@Suppress("LongParameterList", "TooManyFunctions") // see the class KDoc
+class ExpenseViewModel(
+    private val expenseRepository: ExpenseRepository,
+    private val userRepository: UserRepository,
+    private val receiptStorage: RecordPhotoStorage,
+    private val preferencesRepository: PreferencesRepository,
+    private val receiptTextRecognizer: ReceiptTextRecognizer,
+    private val familySettingsRepository: FamilySettingsRepository,
+    private val parentsSource: ParentsSource,
+    familyMembersSource: FamilyMembersSource,
+    private val familyViewSource: FamilyViewSource
+) : ViewModel() {
+
+    /**
+     * The family on screen's split — its agreement, its open proposal, and which family it is.
+     *
+     * One subscription for [agreedRatio] and both proposals, and it follows the switcher: the
+     * Expenses tab carries the switcher chip in its own top bar, so this ViewModel outlives a
+     * switch, and a split read once at start went on showing the previous family's agreement.
+     */
+    private val split: StateFlow<FamilySplit> = familySettingsRepository.observeSplit()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), FamilySplit.UNKNOWN)
+
+    /**
+     * The agreed split of the family on screen, as this device last saw it — never another
+     * family's.
+     *
+     * Kept warm so the screen can label the ratio and offer a per-expense override without a
+     * read on the save path; a new expense is stamped with its own family's cached agreement.
+     */
+    val agreedRatio: StateFlow<SplitRatio> = split
+        .map { it.ratio }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
+            SplitRatio.EVEN
+        )
+
+    /**
+     * The agreement the list compares each row with (UX audit M7), or null until this family's
+     * answer is known: a row hides its split only when it divides exactly so, and "even" read
+     * before the real agreement arrives would hide the very rows that differ from it.
+     */
+    val listAgreement: StateFlow<SplitRatio?> = split
+        .map { current -> current.ratio.takeIf { current.answered } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+
+    /**
+     * The family a new expense is recorded in, and its co-parent — read **once**, at the start of
+     * the save, and used for everything the save decides: the receipt's folder, who the expense is
+     * split between, the agreement it is priced at, its `familyId` and the write.
+     *
+     * Each of those used to read the family on screen for itself, and a receipt upload is slow: a
+     * switch from a push tap in the middle of it could save an expense stamped with the family with
+     * Carol, split with Igor, priced at Igor's agreement and with its receipt in Igor's folder
+     * (October 2026 isolation audit).
+     *
+     * Resolved through [ParentsSource.coParentUid], **not** through `parents.value`. That
+     * StateFlow is `WhileSubscribed` and the Add Expense screen — a route with its own
+     * `koinViewModel()` instance — collects `agreedRatio` but never `parents`, so it had never
+     * emitted and answered `null` for every save. The result was a `splitBetween` naming only
+     * the payer: the payer's own month looked right, and the co-parent's showed nothing owed.
+     */
+    private suspend fun familyOfNewExpense(userId: String): NewExpenseFamily {
+        val coParent = parentsSource.coParentUid()?.takeIf { it != userId }
+        return NewExpenseFamily(familyId = FamilyKey.orNull(userId, coParent), coParent = coParent)
+    }
+
+    /**
+     * Signed-in parent and paired co-parent, for naming a payer and for [roleByUid].
+     */
+    val parents: StateFlow<Parents> = parentsSource.observe()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), Parents())
+
+    private val _currentUserId = MutableStateFlow<String>("")
+    val currentUserId: StateFlow<String> = _currentUserId.asStateFlow()
+
+    /**
+     * A split the co-parent has put forward and this parent has not answered.
+     *
+     * Only the co-parent's — a parent never decides their own, which the transition and
+     * `firestore.rules` both refuse. The proposer sees theirs as a "waiting" state instead.
+     *
+     * It carries its family, so the answer goes to the family whose proposal was on screen.
+     */
+    val pendingRatioProposal: StateFlow<FamilyRatioProposal?> = combine(split, _currentUserId) { shown, uid ->
+        shown.proposalFor(uid, mine = false)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+
+    /**
+     * This parent's **own** pending proposal, which they are waiting on an answer to (UX-17).
+     *
+     * The mirror of [pendingRatioProposal], and the state its doc has always promised — "the
+     * proposer sees theirs as a waiting state instead" — without it existing. A parent who
+     * proposed 70/30 by mistake had no sign anything was pending and no way to take it back.
+     */
+    val myPendingRatioProposal: StateFlow<FamilyRatioProposal?> = combine(split, _currentUserId) { shown, uid ->
+        shown.proposalFor(uid, mine = true)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+
+    /**
+     * The family's open proposal when it is [uid]'s own ([mine]) or the co-parent's (not [mine]),
+     * or null — also for a family whose document has not answered, and while nobody is signed in.
+     */
+    private fun FamilySplit.proposalFor(uid: String, mine: Boolean): FamilyRatioProposal? {
+        val family = familyId ?: return null
+        return settings?.proposal
+            ?.takeIf { uid.isNotEmpty() && (it.proposedBy == uid) == mine }
+            ?.let { FamilyRatioProposal(family, it) }
+    }
+
+    /**
+     * Raised when answering the co-parent's proposal was refused.
+     *
+     * A one-shot signal rather than state: the screen turns it into a snackbar, and a value that
+     * stayed set would re-raise it on the next recomposition.
+     *
+     * A **conflated `Channel`**, not a `MutableSharedFlow`. A shared flow with `replay = 0`
+     * discards a `tryEmit` outright when nothing is collecting, and returns `true` while doing
+     * it — `extraBufferCapacity` does not save it. The collector here lives only as long as the
+     * screen is composed, so a refusal that landed a moment after the parent navigated away was
+     * dropped silently, which is the failure this signal exists to remove. A conflated channel
+     * holds the last signal until somebody attaches, and collapses a burst into one snackbar
+     * rather than queueing them behind a suspended `showSnackbar`.
+     */
+    private val _ratioAnswerFailed = Channel<Unit>(Channel.CONFLATED)
+    val ratioAnswerFailed: Flow<Unit> = _ratioAnswerFailed.receiveAsFlow()
+
+    /**
+     * Answers the co-parent's proposed split.
+     *
+     * **Later is not a third answer.** Dismissing the banner leaves the proposal pending, so it
+     * is still in the inbox and still on the co-parent's side of the conversation — an answer
+     * that quietly meant "no" would be exactly the silent outcome this feature exists to remove.
+     *
+     * @param shown The proposal the banner showed; the answer goes to its family, whichever family
+     *   the switcher shows by the time the write runs.
+     * @param accept True to agree, false to turn it down.
+     */
+    fun decideRatioProposal(shown: FamilyRatioProposal, accept: Boolean) {
+        viewModelScope.launch {
+            val result = if (accept) {
+                familySettingsRepository.acceptProposal(shown.familyId)
+            } else {
+                familySettingsRepository.declineProposal(shown.familyId)
+            }
+            result.onFailure { e ->
+                // Emitted, not written into `saveState`: nothing on the Expenses screen reads
+                // that — it belongs to the Add Expense form — so a refused answer left the
+                // banner sitting there as if the tap had done nothing. A silent refusal is the
+                // exact outcome this whole family of features exists to remove.
+                logger.w(TAG, "The split proposal could not be answered", e)
+                _ratioAnswerFailed.trySend(Unit)
+            }
+        }
+    }
+
+    /**
+     * Takes this parent's own proposal back.
+     *
+     * Shares [ratioAnswerFailed] with [decideRatioProposal] rather than adding a second signal:
+     * both are "the thing you just tapped did not happen", the screen renders one snackbar, and
+     * a refusal that left the banner sitting there is the silent outcome this whole family of
+     * features exists to remove.
+     *
+     * @param shown This parent's proposal as the banner showed it; withdrawn from its own family.
+     */
+    fun withdrawRatioProposal(shown: FamilyRatioProposal) {
+        viewModelScope.launch {
+            familySettingsRepository.withdrawProposal(shown.familyId).onFailure { e ->
+                logger.w(TAG, "The split proposal could not be withdrawn", e)
+                _ratioAnswerFailed.trySend(Unit)
+            }
+        }
+    }
+
+    /** App-wide default currency, used to pre-fill the expense form. */
+    val defaultCurrency: StateFlow<SupportedCurrency> =
+        preferencesRepository.getDefaultCurrencyFlow()
+            .stateIn(viewModelScope, SharingStarted.Eagerly, SupportedCurrency.DEFAULT)
+
+    init {
+        viewModelScope.launch {
+            // Use the auth uid, which is available immediately after sign-in — the local
+            // profile row (getCurrentUser) only exists after pairing, so relying on it
+            // here left unpaired accounts with an empty id and a silently-failing Save.
+            userRepository.getCurrentUserId()?.let { uid ->
+                _currentUserId.value = uid
+                // The download follows the family on screen. It used to start once, for the family
+                // shown when the tab opened, and this ViewModel outlives a switch: the other
+                // family's expenses then reached this phone only on the next sync. `collectLatest`
+                // ends the old family's listener before the new one starts, and
+                // `observeRemote` reads the family from the row this view just re-read.
+                familyViewSource.observe()
+                    .map { it.onScreen }
+                    .distinctUntilChanged()
+                    .collectLatest { expenseRepository.observeRemote() }
+            }
+        }
+    }
+
+    val expenses: StateFlow<Loadable<List<Expense>>> = expenseRepository.getAllExpenses()
+        .stateInLoadable(viewModelScope)
+
+    /**
+     * The same expenses, flattened to a plain list for everything derived from them.
+     *
+     * The derivations below — the month's slice, the per-currency balances, the category breakdown — are
+     * all "given these expenses, compute that", and none of them has anything different to say
+     * while the list is still loading. Only the screen does, which is why [expenses] carries the
+     * distinction and this does not.
+     */
+    private val loadedExpenses: StateFlow<List<Expense>> = expenses
+        .map { it.valueOrNull.orEmpty() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
+    /**
+     * The loaded expenses beside the view that says where each stands for the family on screen
+     * ([FamilyView.placeOf]), joined before [monthOfExpenses] so the month's figures and the marks
+     * on its rows always come from one view.
+     */
+    private val expensesInView: Flow<Pair<List<Expense>, FamilyView>> =
+        combine(loadedExpenses, familyViewSource.observe()) { all, view -> all to view }
+
+    /**
+     * uid -> slot, so a payer can be named and coloured. Empty until the profiles load.
+     *
+     * Built from the two parents rather than from `userRepository.getAllUsers()`, which is what
+     * this used to read. Room only ever stores a `users` row for the signed-in user — nothing
+     * anywhere writes one for the co-parent — so that map could never hold more than one uid,
+     * and `ExpenseBalance.splitKnown` (which requires both slots to be present) was therefore
+     * false on every device, hiding the entire split block in `ExpenseSummaryHeader` from
+     * everyone who has ever used the app. Reading the co-parent's slot from their own profile
+     * document is what makes the second entry real.
+     *
+     * A pair whose two parents still share a slot yields two entries with the same value, which
+     * keeps `splitKnown` false. That is correct and deliberate: the two people cannot be told
+     * apart yet, and a split bar attributing one parent's spending to the other would be worse
+     * than no split bar.
+     */
+    val roleByUid: StateFlow<Map<String, String>> = parents
+        .map { it.roleByUid }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyMap())
+
+    /**
+     * The month the list and balance are showing. Starts on the current month; the Expenses
+     * screen pages it back and forth so expenses dated in other months (e.g. an older receipt)
+     * are reachable instead of silently missing from the current-month-only view.
+     */
+    private val _selectedMonth = MutableStateFlow(currentMonth())
+    val selectedMonth: StateFlow<YearMonth> = _selectedMonth.asStateFlow()
+
+    /** Shows the month before the one currently selected. */
+    fun showPreviousMonth() {
+        _selectedMonth.value = _selectedMonth.value.minusMonth()
+    }
+
+    /** Shows the month after the one currently selected. */
+    fun showNextMonth() {
+        _selectedMonth.value = _selectedMonth.value.plusMonth()
+    }
+
+    /** The children and pets this family cares for, for the filter strip. */
+    val familyMembers: StateFlow<List<FamilyMember>> = familyMembersSource.observe()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
+    private val _memberFilter = MutableStateFlow<List<FamilyMemberRef>>(emptyList())
+
+    /**
+     * Who the list is narrowed to. Empty is the whole month, which is what it is until a chip is
+     * tapped.
+     *
+     * Narrowed to members that still exist, and that is the point of deriving it rather than
+     * exposing `_memberFilter` directly: a child removed while their chip was selected would
+     * otherwise leave the screen filtered to somebody with no chip left to tap, and no way back
+     * to the full month.
+     *
+     * Chaining this one off another flow is safe where chaining `_selectedMonth` is not — see
+     * [monthOfExpenses]. The hazard there is two flows derived from the *same* month re-emitting
+     * out of step; this derives from the member list, which no other flow here reads.
+     */
+    val memberFilter: StateFlow<List<FamilyMemberRef>> =
+        combine(_memberFilter, familyMembers) { selected, members ->
+            val known = members.map { it.ref }.toSet()
+            selected.filter { it in known }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
+    /** Adds or removes [ref] from the filter. Deselecting the last chip restores the month. */
+    fun toggleMemberFilter(ref: FamilyMemberRef) {
+        _memberFilter.update { it.toggling(ref) }
+    }
+
+    /**
+     * The selected month and the figures that belong to **that** month, as one value.
+     *
+     * Computed in a single `combine` from the raw sources rather than chained one off another,
+     * so the month can never be observed alongside another month's expenses. Two separate flows
+     * derived from `_selectedMonth` do allow exactly that: `combine` re-emits per upstream
+     * change, so paging emitted the new month beside the old list for an instant.
+     *
+     * Invisible while the swap is instant. Not invisible once the screen animates between
+     * months — the outgoing half of a slide renders the state it is leaving, so a bundle is what
+     * lets it show the month it is actually leaving rather than the one arriving.
+     *
+     * **The figures count the family's own expenses only** (owner decision, October 2026). An
+     * expense that is "only mine" (this parent's own, naming no family) stays in the list, marked,
+     * and is added into no balance, total, settle-up or chart: the two parents of this family
+     * settle this family's money. One from an earlier family is not listed while the parent is in
+     * a live family (owner decision, 25 October 2026) — its slot would now name the wrong person,
+     * and it is read under Family → Earlier families.
+     */
+    val monthOfExpenses: StateFlow<MonthOfExpenses> = combine(
+        expensesInView,
+        _selectedMonth,
+        _currentUserId,
+        roleByUid,
+        memberFilter
+    ) { (all, view), month, userId, roles, members ->
+        val ofMonth = all.filter { it.date.yearMonth == month }
+            .filter { view.shows(it.familyId, it.createdByFirebaseUid) }
+            // An untagged expense appears only in the unfiltered month. Reading "names nobody"
+            // as "names everybody" would put the family's whole grocery bill under every child's
+            // chip, and every chip would then show the same list — see `FamilyMemberRef.names`.
+            .filter { expense -> members.isEmpty() || expense.forMembers.any { it in members } }
+            .sortedByDescending { it.date }
+        val places = ofMonth.associate { it.id to view.placeOf(it.familyId, it.createdByFirebaseUid) }
+            .filterValues { it != RecordPlace.ON_SCREEN }
+        val counted = ofMonth.filter { it.id !in places }
+        MonthOfExpenses(
+            month = month,
+            expenses = ofMonth,
+            balances = calculateExpenseBalancesByCurrency(counted, userId, roles),
+            counted = counted,
+            places = places,
+            familyId = view.onScreen
+        )
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
+        MonthOfExpenses(currentMonth(), emptyList(), emptyList())
+    )
+
+    /** Expenses dated within [selectedMonth], newest first. */
+    val monthExpenses: StateFlow<List<Expense>> = monthOfExpenses
+        .map { it.expenses }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
+    /**
+     * The selected month's who-paid-what split and settle-up figure, one entry per currency.
+     *
+     * Derived rather than stored: [calculateExpenseBalancesByCurrency] is pure, so the split bars
+     * cannot drift out of sync with the list they summarise. Split by currency because the app
+     * does no FX conversion — a month mixing currencies must not be added into one wrong total.
+     */
+    val balancesByCurrency: StateFlow<List<CurrencyBalance>> = monthOfExpenses
+        .map { it.balances }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
+    /**
+     * Whose spending the analytics view is showing: a Firebase uid, or null for everyone.
+     *
+     * A uid rather than a slot, because [Expense.paidBy] is a uid and going via a slot would
+     * attribute both parents' spending to one of them on a pair whose slots have not been
+     * separated yet — the same trap [com.coparently.app.presentation.common.ParentNames.labelForUid]
+     * exists to keep callers out of.
+     */
+    private val _analyticsPayer = MutableStateFlow<String?>(null)
+    val analyticsPayer: StateFlow<String?> = _analyticsPayer.asStateFlow()
+
+    /** The currency the user picked from the chip row, or null while they have picked none. */
+    private val _pickedCurrency = MutableStateFlow<String?>(null)
+
+    /**
+     * The selected month's spending by category, one entry per currency.
+     *
+     * Derived from [monthOfExpenses] rather than from a second repository read, so the chart and
+     * the list below it can never be looking at different months — and from the expenses the
+     * month counts, so the chart adds up what the balance adds up.
+     */
+    val breakdowns: StateFlow<List<CurrencyBreakdown>> = combine(
+        monthOfExpenses,
+        _analyticsPayer
+    ) { month, payer ->
+        breakdownByCurrency(month.counted, payer)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
+    /**
+     * The one breakdown the chart and the table draw, or null when the month has nothing in it.
+     *
+     * **One currency at a time, always.** The app does no FX conversion, and a pie is a single
+     * total cut into slices — so there is no honest way to draw two currencies in one chart, and
+     * this deliberately hands out exactly one.
+     *
+     * The user's pick wins, but only while it is still on offer. Changing the payer filter, or
+     * the month, can remove the currency they had selected; falling back then is what stops the
+     * screen going blank while a chip row sits above it showing something else. The fallback is
+     * the app's default currency when the month contains it, and otherwise the currency with the
+     * largest total — [breakdownByCurrency] already orders them that way.
+     */
+    val selectedBreakdown: StateFlow<CurrencyBreakdown?> = combine(
+        breakdowns,
+        _pickedCurrency,
+        defaultCurrency
+    ) { available, picked, fallbackCurrency ->
+        available.firstOrNull { it.currency == picked }
+            ?: available.firstOrNull { it.currency == fallbackCurrency.code }
+            ?: available.firstOrNull()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+
+    /**
+     * The two uids the payer filter offers, or empty when it must not be shown at all.
+     *
+     * Empty while unpaired, before the two profiles resolve, and on a pair whose parents still
+     * share a slot — the same condition [com.coparently.app.domain.expenses.ExpenseBalance.splitKnown]
+     * models, and for the same reason. A filter offering "Parent" and "Parent" is worse than no
+     * filter: it invites a choice the app cannot honour.
+     */
+    val analyticsPayers: StateFlow<List<String>> = parents
+        .map { known ->
+            listOfNotNull(known.me?.uid, known.coParent?.uid)
+                .filter { it.isNotBlank() }
+                .distinct()
+                .takeIf { it.size == 2 }
+                .orEmpty()
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
+    /**
+     * Shows only [uid]'s spending, or everyone's when null.
+     *
+     * The currency selection is deliberately left alone: [selectedBreakdown] already falls back
+     * when the picked currency stops being available, and clearing it here would also throw away
+     * a still-valid choice every time the filter moved.
+     */
+    fun selectAnalyticsPayer(uid: String?) {
+        _analyticsPayer.value = uid
+    }
+
+    /** Draws [currency] instead of the default. */
+    fun selectAnalyticsCurrency(currency: String) {
+        _pickedCurrency.value = currency
+    }
+
+    private val _saveState = MutableStateFlow<ExpenseSaveState>(ExpenseSaveState.Idle)
+    val saveState: StateFlow<ExpenseSaveState> = _saveState.asStateFlow()
+
+    /**
+     * Saves a new expense. When [receiptImageUri] is provided, the photo is uploaded
+     * to remote storage first and its reference stored on the expense (L-4), so the
+     * other parent sees the receipt too — and nobody else can. An upload failure does not lose
+     * the expense — it is saved without the receipt and a warning is surfaced via [saveState].
+     */
+    @Suppress("LongParameterList") // mirrors the Expense domain model fields
+    fun addExpense(
+        title: String,
+        amount: Double,
+        category: ExpenseCategory,
+        currency: String,
+        forMembers: List<FamilyMemberRef> = emptyList(),
+        date: LocalDate = wallClockNow().date,
+        notes: String? = null,
+        receiptImageUri: String? = null,
+        shared: Boolean = true,
+        splitOverride: SplitRatio? = null,
+        paidByCoParent: Boolean = false
+    ) {
+        if (_saveState.value is ExpenseSaveState.Saving) return
+
+        viewModelScope.launch {
+            _saveState.value = ExpenseSaveState.Saving
+
+            // Resolve the payer id now: init may not have completed yet, and there may
+            // be no local profile row, so fall back to the auth uid directly.
+            val userId = _currentUserId.value.ifEmpty { userRepository.getCurrentUserId() ?: "" }
+            if (userId.isEmpty()) {
+                _saveState.value = ExpenseSaveState.Error(UiText.Res(Res.string.expense_error_signed_out))
+                return@launch
+            }
+            _currentUserId.value = userId
+            // One answer for the whole save, read before the slow part — see [familyOfNewExpense].
+            val family = familyOfNewExpense(userId)
+
+            val expenseId = Uuid.random().toString()
+            val (receiptUrl, warning) = receiptImageUri
+                ?.let { uploadNewReceipt(expenseId, family.familyId, it) }
+                ?: (null to null)
+
+            // `splitBetween` was never populated by any production path, so the guard in
+            // `calculateExpenseBalance` could not fire, `currentUserOwes` stayed zero, and both
+            // parents were told at once that the other owed them everything they had spent that
+            // month. Every shared expense now names the two parents — or just the payer while
+            // unpaired: an expense recorded before there is a co-parent has nobody to owe a share
+            // of it, and naming one would invent a debt.
+            val splitBetween = if (shared) listOfNotNull(userId, family.coParent) else emptyList()
+            val expense = Expense(
+                id = expenseId,
+                forMembers = forMembers,
+                title = title,
+                amount = amount,
+                category = category,
+                currency = currency,
+                // The co-parent, when the parent logs what the other one paid (second audit); never
+                // while unpaired or unshared, where there is no one else to name.
+                paidBy = family.coParent?.takeIf { paidByCoParent && shared } ?: userId,
+                splitBetween = splitBetween,
+                date = date,
+                receiptUrl = receiptUrl,
+                notes = notes,
+                createdAt = wallClockNow(),
+                // Snapshotted, never looked up when the balance is read: a renegotiated split
+                // must not re-price a month the two parents have already settled. The agreement
+                // of this expense's own family, never another family's.
+                splitBasisPoints = splitBetween.takeIf { it.isNotEmpty() }?.let {
+                    (splitOverride ?: familySettingsRepository.agreedRatioOrDefault(family.familyId))
+                        .momShareBasisPoints
+                },
+                // Stamped here rather than left to the repository, which would read the family on
+                // screen again after the upload.
+                familyId = family.familyId
+            )
+            expenseRepository.addExpense(expense)
+            _saveState.value = ExpenseSaveState.Saved(warning)
+        }
+    }
+
+    /**
+     * Uploads a new expense's receipt into [familyId]'s folder (L-4) and returns its reference, or
+     * no reference and the warning to show when the upload failed — which must not lose the
+     * expense, so it is saved without the receipt.
+     */
+    private suspend fun uploadNewReceipt(
+        expenseId: String,
+        familyId: String?,
+        localUri: String
+    ): Pair<String?, UiText?> = try {
+        receiptStorage.upload(RecordPhotoKind.RECEIPT, expenseId, familyId, localUri) to null
+    } catch (
+        // Any upload failure (IO, storage, decode) must not lose the expense
+        @Suppress("TooGenericExceptionCaught") e: Exception
+    ) {
+        logger.e("CoPlanlyUpload", "Receipt upload failed", e)
+        null to UiText.Res(Res.string.expense_warning_receipt_upload_failed)
+    }
+
+    /** Loads a single expense for the edit form, or null when it no longer exists. */
+    suspend fun getExpense(expenseId: String): Expense? = expenseRepository.getExpenseById(expenseId)
+
+    /**
+     * Saves edits to an existing expense.
+     *
+     * Follows the same field-preserving rule as event editing: the loaded [original] is kept and
+     * `copy()`-ed, so id, payer, createdAt, split and sync flags survive — rebuilding the expense
+     * from scratch would wipe them.
+     *
+     * [receiptImageUri] may be the expense's existing reference (kept as-is), a new local photo
+     * URI (uploaded, replacing the old one), or null (receipt removed). An upload failure keeps
+     * the previous receipt and surfaces a warning rather than losing the edit. A replaced or
+     * removed receipt's object is deleted once the edit is saved (best effort): every upload is a
+     * new object since L-4, so nothing overwrites it.
+     */
+    @Suppress("LongParameterList") // mirrors the Expense domain model fields
+    fun updateExpense(
+        original: Expense,
+        title: String,
+        amount: Double,
+        category: ExpenseCategory,
+        currency: String,
+        date: LocalDate = original.date,
+        notes: String? = null,
+        receiptImageUri: String? = null,
+        forMembers: List<FamilyMemberRef> = original.forMembers
+    ) {
+        if (_saveState.value is ExpenseSaveState.Saving) return
+
+        viewModelScope.launch {
+            _saveState.value = ExpenseSaveState.Saving
+
+            var warning: UiText? = null
+            val receiptUrl = when (receiptImageUri) {
+                null -> null
+                original.receiptUrl -> original.receiptUrl // unchanged remote photo, no re-upload
+                else -> try {
+                    receiptStorage.upload(RecordPhotoKind.RECEIPT, original.id, original.familyId, receiptImageUri)
+                } catch (
+                    @Suppress("TooGenericExceptionCaught") e: Exception
+                ) {
+                    logger.e("CoPlanlyUpload", "Receipt upload failed", e)
+                    warning = UiText.Res(Res.string.expense_warning_new_receipt_upload_failed)
+                    original.receiptUrl
+                }
+            }
+
+            val updated = original.copy(
+                forMembers = forMembers,
+                title = title,
+                amount = amount,
+                category = category,
+                currency = currency,
+                date = date,
+                receiptUrl = receiptUrl,
+                notes = notes
+            )
+            expenseRepository.updateExpense(updated)
+            val replaced = original.receiptUrl
+            if (replaced != null && replaced != receiptUrl) {
+                runCatching { receiptStorage.delete(replaced, original.familyId) }
+            }
+
+            _saveState.value = ExpenseSaveState.Saved(warning)
+        }
+    }
+
+    /** Resets [saveState] back to [ExpenseSaveState.Idle] after the UI consumed a result. */
+    fun resetSaveState() {
+        _saveState.value = ExpenseSaveState.Idle
+    }
+
+    private val _scanState = MutableStateFlow<ReceiptScanState>(ReceiptScanState.Idle)
+    val scanState: StateFlow<ReceiptScanState> = _scanState.asStateFlow()
+
+    /**
+     * Whether this phone reads a receipt's text ([ReceiptTextRecognizer.available]); the form scans
+     * a photo only when it does (MON-24 phase 2, slice 11e: the iPhone's stand-in does not).
+     */
+    val receiptScanAvailable: Boolean
+        get() = receiptTextRecognizer.available
+
+    /**
+     * Runs on-device OCR over a receipt photo and parses it into form fields.
+     *
+     * Failures are not fatal: the photo is still a valid receipt, so the expense can be saved
+     * with it either way.
+     *
+     * @param imageUri Content or file URI string of the receipt photo
+     */
+    fun scanReceipt(imageUri: String) {
+        if (_scanState.value is ReceiptScanState.Scanning) return
+
+        viewModelScope.launch {
+            _scanState.value = ReceiptScanState.Scanning
+            _scanState.value = try {
+                val scan = ReceiptParser.parse(receiptTextRecognizer.recognize(imageUri))
+                if (scan.isEmpty) ReceiptScanState.Failed else ReceiptScanState.Applied(scan)
+            } catch (
+                // Any recognition failure (IO, decode, model load) must not break the form
+                @Suppress("TooGenericExceptionCaught") e: Exception
+            ) {
+                logger.e("CoPlanlyReceiptScan", "Receipt OCR failed", e)
+                ReceiptScanState.Failed
+            }
+        }
+    }
+
+    /** Resets [scanState] after the UI consumed a result. */
+    fun resetScanState() {
+        _scanState.value = ReceiptScanState.Idle
+    }
+
+    /**
+     * Removes the expense row so it leaves the list immediately.
+     *
+     * The receipt photo is deliberately left in storage: an Undo has to be able to bring the
+     * expense back intact, and a deleted photo cannot be un-deleted. Call [purgeReceipt] once
+     * the undo window has closed.
+     *
+     * @param expenseId Expense to remove
+     */
+    fun deleteExpense(expenseId: String) {
+        viewModelScope.launch {
+            expenseRepository.deleteExpense(expenseId)
+        }
+    }
+
+    /**
+     * Questions an expense the co-parent recorded: a card in their family's thread (second audit).
+     *
+     * @param onDone Told whether the card was sent.
+     */
+    fun questionExpense(expense: Expense, onDone: (Boolean) -> Unit) {
+        viewModelScope.launch { onDone(expenseRepository.questionExpense(expense)) }
+    }
+
+    /**
+     * Puts back an expense removed by [deleteExpense], keeping its original id so the receipt
+     * it points at is still the right one.
+     *
+     * **An expense that named no family comes back naming none.** `addExpense` stamps a
+     * family-less expense with the family on screen, which is right for a new one and wrong here:
+     * an Undo of an expense that was "only mine" would put it into that co-parent's ledger
+     * (October 2026 isolation audit). It is written back as it was instead, through the update
+     * path, which keeps every field; its card follows `FamilyAudience`'s rule for a record of no
+     * family.
+     *
+     * @param expense The captured expense to restore
+     */
+    fun restoreExpense(expense: Expense) {
+        viewModelScope.launch {
+            if (expense.familyId.isNullOrBlank()) {
+                expenseRepository.updateExpense(expense)
+            } else {
+                expenseRepository.addExpense(expense)
+            }
+        }
+    }
+
+    /**
+     * Deletes the stored receipt photo for an expense the user did not undo.
+     *
+     * Best effort: an orphaned photo is a smaller problem than a failed delete, and the row is
+     * already gone either way.
+     *
+     * @param expense Expense whose receipt should be removed
+     */
+    fun purgeReceipt(expense: Expense) {
+        val reference = expense.receiptUrl ?: return
+        viewModelScope.launch {
+            runCatching { receiptStorage.delete(reference, expense.familyId) }
+        }
+    }
+
+    private companion object {
+        const val TAG = "ExpenseViewModel"
+
+        /** This month in the phone's zone, what `java.time.YearMonth.now()` answered. */
+        fun currentMonth(): YearMonth = Clock.System.todayIn(TimeZone.currentSystemDefault()).yearMonth
+    }
+}
+
+/**
+ * A split proposal as the Expenses screen shows it, with the family it was made in.
+ *
+ * The family travels with the proposal so that Confirm, Decline and Withdraw act on that family's
+ * agreement even when the switcher has moved on by the time the tap lands (October 2026 isolation
+ * audit: an answer read the family again and could accept a proposal the parent never saw).
+ *
+ * @property familyId The family whose `family_settings` document holds the proposal.
+ * @property proposal The proposal itself.
+ */
+data class FamilyRatioProposal(val familyId: String, val proposal: SplitRatioProposal)
+
+/**
+ * The family a new expense is recorded in, read once for its whole save.
+ *
+ * @property familyId The family on screen when the save began, or null while unpaired.
+ * @property coParent That family's other parent, or null while unpaired.
+ */
+private data class NewExpenseFamily(val familyId: String?, val coParent: String?)
+
+/**
+ * One month of expenses, carried together with the month they belong to.
+ *
+ * The month is part of the value rather than a separate flow beside it, so nothing can render
+ * September's heading over August's rows — not for a frame, and not for the 500 ms a slide
+ * between months lasts.
+ *
+ * @property month The month these figures describe.
+ * @property expenses Expenses dated within [month], newest first — every one the family on screen
+ *   shows, including those it does not count.
+ * @property balances Who-paid-what and the settle-up figure, one entry per currency present in
+ *   [counted].
+ * @property counted The expenses the figures add up: the family on screen's own (owner decision,
+ *   October 2026). An expense that is "only mine" or from an earlier family is in [expenses] and
+ *   not here.
+ * @property places Where each expense that is **not** counted stands ([RecordPlace.ONLY_ME] or
+ *   [RecordPlace.EARLIER_FAMILY]), by expense id, for the mark on its row. An expense absent from
+ *   it is the family's own.
+ * @property familyId The family on screen the figures belong to, or null while there is none — so a
+ *   settle-up tapped on them goes to that family's thread.
+ */
+data class MonthOfExpenses(
+    val month: YearMonth,
+    val expenses: List<Expense>,
+    val balances: List<CurrencyBalance>,
+    val counted: List<Expense> = expenses,
+    val places: Map<String, RecordPlace> = emptyMap(),
+    val familyId: String? = null
+)

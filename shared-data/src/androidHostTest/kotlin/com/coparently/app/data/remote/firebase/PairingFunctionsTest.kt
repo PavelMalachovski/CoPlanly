@@ -1,0 +1,246 @@
+package com.coparently.app.data.remote.firebase
+
+import com.coparently.app.domain.model.InvitePreview
+import com.coparently.app.domain.model.PairingError
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+
+/**
+ * Unit tests for [PairingFunctions.toPairingError], over a recording [CallableFunctions].
+ *
+ * This mapping is the literal wire contract with the deployed `acceptPairingInvitation`
+ * and `unpairCoParent` callables: each `reason` string in `functions/index.js` must land on
+ * its own [PairingError], because that is what decides which of the six actionable messages
+ * the pairing screen shows. A rename on either side collapses all six into
+ * "something went wrong" with nothing failing, so the strings are pinned here verbatim.
+ */
+class PairingFunctionsTest {
+
+    private lateinit var functions: RecordingCallableFunctions
+    private lateinit var pairingFunctions: PairingFunctions
+
+    @Before
+    fun setUp() {
+        functions = RecordingCallableFunctions()
+        pairingFunctions = PairingFunctions(functions)
+    }
+
+    // ---- acceptInvitation response parsing ---------------------------------
+
+    @Test
+    fun `acceptInvitation carries the role through when the callable reports one`() = runTest {
+        stubResponse(mapOf("partnerId" to "user-b", "role" to "dad"))
+
+        val outcome = pairingFunctions.acceptInvitation(invitationId = "invite-1")
+
+        assertEquals(AcceptInvitationResult(partnerId = "user-b", role = "dad"), outcome.getOrNull())
+    }
+
+    @Test
+    fun `acceptInvitation succeeds with a null role when the callable does not report one`() = runTest {
+        // A staged rollout can pair a client against a backend (or the reverse) that predates
+        // the role field. Pairing already succeeded server-side by the time this is parsed;
+        // only the local migration hint is missing, so this must not fail the whole accept —
+        // that would report a successful pairing as failed, with no way to retry it (the
+        // invitation is no longer pending once accepted).
+        stubResponse(mapOf("partnerId" to "user-b"))
+
+        val outcome = pairingFunctions.acceptInvitation(invitationId = "invite-1")
+
+        assertEquals(AcceptInvitationResult(partnerId = "user-b", role = null), outcome.getOrNull())
+    }
+
+    @Test
+    fun `acceptInvitation still fails when partnerId is missing`() = runTest {
+        // Unlike role, partnerId is required: a response without it is a genuine contract
+        // violation with the callable, not a version-skew case to tolerate.
+        stubResponse(mapOf("role" to "dad"))
+
+        val outcome = pairingFunctions.acceptInvitation(invitationId = "invite-1")
+
+        assertTrue(outcome.isFailure)
+    }
+
+    // ---- previewInvitation -------------------------------------------------
+
+    @Test
+    fun `previewInvitation reads the inviter's first name`() = runTest {
+        stubPreview { mapOf("inviterName" to " Alice ") }
+
+        val outcome = pairingFunctions.previewInvitation("4F7K2M")
+
+        assertEquals(InvitePreview(inviterName = "Alice"), outcome.getOrNull())
+    }
+
+    @Test
+    fun `previewInvitation reads an empty name as no name`() = runTest {
+        stubPreview { mapOf("inviterName" to "") }
+
+        assertEquals(InvitePreview(inviterName = null), pairingFunctions.previewInvitation("4F7K2M").getOrNull())
+    }
+
+    @Test
+    fun `previewInvitation keeps the accept's reasons`() = runTest {
+        stubPreview { throw functionsException(CallableCode.NOT_FOUND, "not-found") }
+        assertEquals(PairingError.NotFound, previewError())
+
+        stubPreview { throw functionsException(CallableCode.FAILED_PRECONDITION, "invitation-expired") }
+        assertEquals(PairingError.Expired, previewError())
+    }
+
+    @Test
+    fun `a missing preview callable is not a missing invitation`() = runTest {
+        // A backend not yet redeployed answers 404 with no reason. Reading that as "no such code"
+        // would refuse every code until the deploy; it comes back as Unknown instead, and the
+        // screen asks without a name.
+        stubPreview { throw functionsException(CallableCode.NOT_FOUND) }
+
+        assertTrue(previewError() is PairingError.Unknown)
+    }
+
+    // ---- unpair ------------------------------------------------------------
+
+    @Test
+    fun `unpair names the co-parent to the callable, and nobody when told nobody`() = runTest {
+        functions.answer = { _, _ -> mapOf("unpairedFrom" to "user-c") }
+
+        assertEquals("user-c", pairingFunctions.unpair("user-c").getOrNull())
+        pairingFunctions.unpair()
+
+        // `partnerId` is the name `unpairCoParent` reads; an empty payload means "the only one".
+        assertEquals(
+            listOf("unpairCoParent" to mapOf("partnerId" to "user-c"), "unpairCoParent" to emptyMap<String, Any>()),
+            functions.calls
+        )
+    }
+
+    private fun stubPreview(answer: () -> Any?) {
+        functions.answer = { name, _ ->
+            check(name == "previewPairingInvitation") { "called $name" }
+            answer()
+        }
+    }
+
+    private suspend fun previewError(): PairingError? =
+        (pairingFunctions.previewInvitation("4F7K2M").exceptionOrNull() as? PairingException)?.error
+
+    private fun stubResponse(data: Map<String, Any?>) {
+        functions.answer = { name, _ ->
+            check(name == "acceptPairingInvitation") { "called $name" }
+            data
+        }
+    }
+
+    @Test
+    fun `not-found maps to NotFound`() {
+        assertEquals(PairingError.NotFound, mapReason("not-found"))
+    }
+
+    @Test
+    fun `invitation-expired maps to Expired`() {
+        assertEquals(PairingError.Expired, mapReason("invitation-expired"))
+    }
+
+    @Test
+    fun `invitation-not-pending maps to NotPending`() {
+        assertEquals(PairingError.NotPending, mapReason("invitation-not-pending"))
+    }
+
+    @Test
+    fun `self-pairing maps to SelfPairing`() {
+        assertEquals(PairingError.SelfPairing, mapReason("self-pairing"))
+    }
+
+    @Test
+    fun `already-paired maps to AlreadyPaired`() {
+        assertEquals(PairingError.AlreadyPaired, mapReason("already-paired"))
+    }
+
+    @Test
+    fun `wrong-recipient maps to WrongRecipient`() {
+        assertEquals(PairingError.WrongRecipient, mapReason("wrong-recipient"))
+    }
+
+    @Test
+    fun `a pairing that would move a paired accepter's slot says which way round works`() {
+        assertEquals(PairingError.EnterTheirCode, mapReason("enter-their-code"))
+        assertEquals(PairingError.SlotConflict, mapReason("slot-conflict"))
+    }
+
+    @Test
+    fun `the pairing reason strings map to distinct errors`() {
+        val reasons = listOf(
+            "not-found",
+            "invitation-expired",
+            "invitation-not-pending",
+            "self-pairing",
+            "already-paired",
+            "wrong-recipient",
+            "enter-their-code",
+            "slot-conflict"
+        )
+
+        assertEquals(reasons.size, reasons.map { mapReason(it) }.toSet().size)
+    }
+
+    @Test
+    fun `UNAVAILABLE maps to Network`() {
+        assertEquals(
+            PairingError.Network,
+            PairingFunctions.toPairingError(
+                functionsException(code = CallableCode.UNAVAILABLE)
+            )
+        )
+    }
+
+    @Test
+    fun `DEADLINE_EXCEEDED maps to Network`() {
+        assertEquals(
+            PairingError.Network,
+            PairingFunctions.toPairingError(
+                functionsException(code = CallableCode.DEADLINE_EXCEEDED)
+            )
+        )
+    }
+
+    @Test
+    fun `a bare NOT_FOUND code without a reason still maps to NotFound`() {
+        assertEquals(
+            PairingError.NotFound,
+            PairingFunctions.toPairingError(
+                functionsException(code = CallableCode.NOT_FOUND)
+            )
+        )
+    }
+
+    @Test
+    fun `an unrecognized reason falls through to the code mapping`() {
+        // Guards the rename hazard from the other direction: a reason string the client
+        // does not know must not be silently treated as one it does.
+        assertEquals(
+            PairingError.Network,
+            PairingFunctions.toPairingError(
+                functionsException(
+                    code = CallableCode.UNAVAILABLE,
+                    reason = "some-new-server-reason"
+                )
+            )
+        )
+    }
+
+    @Test
+    fun `a non-Firebase throwable maps to Unknown`() {
+        assertTrue(PairingFunctions.toPairingError(IllegalStateException("boom")) is PairingError.Unknown)
+    }
+
+    private fun mapReason(reason: String): PairingError =
+        PairingFunctions.toPairingError(
+            functionsException(code = CallableCode.INTERNAL, reason = reason)
+        )
+
+    private fun functionsException(code: CallableCode, reason: String? = null): CallableException =
+        RecordingCallableFunctions.refusal(code, reason)
+}

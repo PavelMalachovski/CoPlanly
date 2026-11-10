@@ -1,6 +1,6 @@
 package com.coparently.app.screenshots
 
-import android.app.Application
+import com.coparently.app.testing.RobolectricTestApplication
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
@@ -20,7 +20,7 @@ import org.robolectric.annotation.GraphicsMode
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [SCREENSHOT_SDK], application = Application::class)
+@Config(sdk = [SCREENSHOT_SDK], application = RobolectricTestApplication::class)
 class ContrastScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
 
     @Test

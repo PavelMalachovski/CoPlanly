@@ -4,27 +4,9 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import androidx.annotation.StringRes
 import androidx.core.content.FileProvider
-import com.coparently.app.R
-import com.coparently.app.data.files.SharedFileIntegrityException
-import com.coparently.app.data.files.SharedFileRejectedException
-import com.coparently.app.domain.files.SharedFilePolicy
 import java.io.File
 import java.util.UUID
-
-/**
- * The sentence for a shared-file failure: the policy's reason when the file was refused before
- * upload, the integrity sentence when a download did not match its digest, [fallback] otherwise.
- * Never `e.message` (CQ-14).
- */
-fun sharedFileError(error: Throwable, @StringRes fallback: Int): UiText = when {
-    error is SharedFileRejectedException && error.rejection == SharedFilePolicy.Rejection.TYPE ->
-        UiText.Res(R.string.shared_file_error_type)
-    error is SharedFileRejectedException -> UiText.Res(R.string.shared_file_error_size)
-    error is SharedFileIntegrityException -> UiText.Res(R.string.shared_file_error_integrity)
-    else -> UiText.Res(fallback)
-}
 
 /**
  * Opens a shared file (MON-23) in whatever viewer the phone has, through this app's

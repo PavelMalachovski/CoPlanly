@@ -1,0 +1,473 @@
+package com.coparently.app.presentation.expenses
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.coparently.app.data.family.RecordPlace
+import com.coparently.app.domain.expenses.SplitRatio
+import com.coparently.app.domain.expenses.bothSlotsKnown
+import com.coparently.app.domain.expenses.isTwoWaySplit
+import com.coparently.app.domain.files.RecordPhotoKind
+import com.coparently.app.domain.files.ViewablePhoto
+import com.coparently.app.domain.model.Expense
+import com.coparently.app.presentation.changerequests.splitSharesText
+import com.coparently.app.presentation.common.FullScreenImageDialog
+import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.RecordPlaceMark
+import com.coparently.app.presentation.common.rememberRecordPhoto
+import com.coparently.app.presentation.common.stacksAtLargeFont
+import com.coparently.app.presentation.platform.AppImage
+import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.bodyMediumEmphasized
+import com.coparently.app.presentation.theme.titleSmallEmphasized
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.expenses_delete
+import com.coparently.app.resources.expenses_receipt_photo
+import com.coparently.app.resources.expenses_row_meta
+import com.coparently.app.resources.expenses_row_meta_with_receipt
+import com.coparently.app.resources.expenses_row_subtitle
+import com.coparently.app.resources.expenses_row_subtitle_unknown_payer
+import com.coparently.app.resources.expenses_row_subtitle_you
+import com.coparently.app.resources.expenses_split_even
+import com.coparently.app.resources.expenses_split_n_ways
+import com.coparently.app.resources.expenses_split_none
+import com.coparently.app.utils.ReaderDateText
+import org.jetbrains.compose.resources.stringResource
+
+/** Alpha of the payer-tinted circle behind a row's leading icon. */
+private const val PAYER_TINT_ALPHA = 0.18f
+
+/**
+ * Leading tile / receipt thumbnail size. 40dp is the *drawn* size; the tappable receipt
+ * thumbnail is padded out to the 48dp minimum with `minimumInteractiveComponentSize`.
+ */
+private val TILE_SIZE = 40.dp
+
+/**
+ * List of expenses for the period. Each row swipes left to delete ([SwipeToDeleteRow]).
+ *
+ * @param expenses Expenses to show, already ordered
+ * @param roleByUid Map of payer uid to slot; a missing entry just omits the payer
+ * @param parentNames Resolves a slot to that parent's name
+ * @param onDelete Invoked with the swiped expense; null hides the affordance
+ * @param onExpenseClick Invoked when a row is tapped (opens the editor); null makes rows inert
+ * @param onQuestion Invoked when a row this user may not change is tapped: questions the
+ *   co-parent's expense (second audit); null leaves such rows inert
+ * @param canModify Whether this user may edit or delete a given row. A co-parent's expense
+ *   renders with no swipe and no tap-to-edit — only its creator changes an expense (owner
+ *   decision, Aug 2026 walkthrough), and `firestore.rules` enforces the same server-side, so an
+ *   affordance here would only promise a write the server rejects. The receipt viewer stays: it
+ *   is a read.
+ * @param state Scroll state of the list, hoisted so the screen can tell when the month's summary
+ *   has scrolled away and pin its collapsed form
+ * @param agreed The family's agreed split, or null while it is not known: a row divided exactly so
+ *   says nothing about it (UX audit M7), because the summary above already states the agreement and
+ *   twenty rows each repeating "Alice 60 % · Bob 40 %" hid the one row that differed.
+ * @param places Where each expense the family does not count stands, by id
+ *   (`MonthOfExpenses.places`); those rows carry a [RecordPlaceMark]. An id absent from it is the
+ *   family's own.
+ * @param modifier Modifier for the list
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+@Suppress("LongParameterList") // list-level composable: its callbacks are its API surface
+fun ExpenseList(
+    expenses: List<Expense>,
+    roleByUid: Map<String, String>,
+    parentNames: ParentNames,
+    onDelete: ((Expense) -> Unit)? = null,
+    onExpenseClick: ((Expense) -> Unit)? = null,
+    onQuestion: ((Expense) -> Unit)? = null,
+    canModify: (Expense) -> Boolean = { true },
+    header: (LazyListScope.() -> Unit)? = null,
+    state: LazyListState = rememberLazyListState(),
+    places: Map<String, RecordPlace> = emptyMap(),
+    agreed: SplitRatio? = null,
+    modifier: Modifier = Modifier
+) {
+    // Receipt being viewed full-screen; transient UI state, deliberately local.
+    var viewedReceipt by remember { mutableStateOf<ViewablePhoto?>(null) }
+
+    // Whether the two parents can be told apart, which is what decides whether a row may print a
+    // ratio at all — the same fact `calculateExpenseBalance` keys the share it charges on. While
+    // both parents still read one slot the balance divides evenly, so a row claiming 70/30 would
+    // contradict the summary directly above it.
+    val splitKnown = remember(roleByUid) { bothSlotsKnown(roleByUid) }
+
+    // No clearance for the Add button here: the screen keeps a band clear under it while it is
+    // shown (`ExpenseScreen`'s `FAB_CLEARANCE`), so no row is ever drawn beneath it — at rest,
+    // while scrolling back, or at the end.
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        state = state,
+        contentPadding = PaddingValues(
+            start = Spacing.L,
+            end = Spacing.L,
+            top = Spacing.XS,
+            bottom = Spacing.XS
+        ),
+        verticalArrangement = Arrangement.spacedBy(7.dp)
+    ) {
+        // The month's summary, the List/Analytics switcher and the member filter are items of
+        // this list rather than composables stacked above it. Stacked, they were pinned: the
+        // list took `weight(1f)` of what they left, which on a phone was a few rows, and the
+        // screen read as "the list will not scroll". The analytics view never had the problem
+        // because it scrolls as a page and its header simply moves off the top — this gives the
+        // list the same behaviour without nesting one scroll inside another.
+        header?.invoke(this)
+
+        items(expenses, key = { it.id }) { expense ->
+            val modifiable = canModify(expense)
+            val place = places[expense.id] ?: RecordPlace.ON_SCREEN
+            // The creator's row opens its editor; the co-parent's, in the family on screen, asks
+            // whether to question it.
+            val tap = if (modifiable) {
+                onExpenseClick?.let { { it(expense) } }
+            } else {
+                onQuestion?.takeIf { place == RecordPlace.ON_SCREEN }?.let { { it(expense) } }
+            }
+            val row: @Composable () -> Unit = {
+                ExpenseItem(
+                    expense = expense,
+                    payerRole = roleByUid[expense.paidBy],
+                    parentNames = parentNames,
+                    splitKnown = splitKnown,
+                    agreed = agreed,
+                    onClick = tap,
+                    onReceiptClick = { photo -> viewedReceipt = photo },
+                    place = place
+                )
+            }
+            if (onDelete == null || !modifiable) {
+                row()
+            } else {
+                SwipeToDeleteRow(onDelete = { onDelete(expense) }, content = row)
+            }
+        }
+    }
+
+    viewedReceipt?.let { photo ->
+        // A receipt is a document, not a snapshot: it is read, not glanced at. The shared
+        // viewer pinches, pans and double-taps, and — unlike the fit-to-width dialog it
+        // replaces — does not close on the first exploratory tap.
+        FullScreenImageDialog(
+            model = photo,
+            contentDescription = stringResource(Res.string.expenses_receipt_photo),
+            onDismiss = { viewedReceipt = null }
+        )
+    }
+}
+
+/**
+ * A single expense row: who paid, what for, and how it splits.
+ *
+ * The whole row opens the editor via [onClick] when one is provided; the receipt thumbnail keeps
+ * its own tap target for the full-screen viewer, so tapping the photo never leaks through to the
+ * editor.
+ *
+ * The amount alone cannot answer "is this settled?", which is the question co-parents actually
+ * have, so the row states the payer and the split explicitly.
+ *
+ * @param expense Expense to render
+ * @param parentNames Resolves a slot to that parent's name
+ * @param payerRole The payer's slot, or null when the payer is not a known parent
+ * @param splitKnown Whether both parent slots are known. Required rather than defaulted: false is
+ *   not silence, it makes the row assert "split 50/50", and a caller that has not worked the
+ *   answer out would be publishing a claim about money by omission.
+ * @param agreed The family's agreed split; a row divided exactly so leaves its split unsaid
+ * @param onClick Opens the expense editor; null leaves the row inert
+ * @param onReceiptClick Opens the full-screen receipt viewer. Only the family's two parents see a
+ *   receipt (L-4); for anybody else, and for a legacy download URL, the row has no thumbnail.
+ * @param place Where the expense stands for the family on screen. One the family does not count —
+ *   "only mine" or from an earlier family — is drawn neutral, says nothing about how it divides
+ *   (it is priced in no balance here), and carries a [RecordPlaceMark].
+ */
+// Each argument is a distinct input of the row; the body was already this long before L-4.
+@Suppress("LongParameterList", "LongMethod")
+@Composable
+fun ExpenseItem(
+    expense: Expense,
+    parentNames: ParentNames,
+    payerRole: String? = null,
+    splitKnown: Boolean,
+    agreed: SplitRatio? = null,
+    onClick: (() -> Unit)? = null,
+    onReceiptClick: (ViewablePhoto) -> Unit = {},
+    place: RecordPlace = RecordPlace.ON_SCREEN
+) {
+    val receipt = rememberRecordPhoto(expense.receiptUrl, RecordPhotoKind.RECEIPT, expense.id, expense.familyId)
+    val format = remember(expense.currency) { MoneyFormat(expense.currency) }
+    val counted = place == RecordPlace.ON_SCREEN
+
+    // Neutral for a row the family does not count: a parent colour names a person, and an earlier
+    // family's slot colour would now name somebody else (design refresh item 12).
+    val payerColor = if (payerRole != null && counted) {
+        ParentColors.fill(payerRole)
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val subtitle = rowSubtitle(
+        category = stringResource(expense.category.labelRes),
+        date = ReaderDateText.date(expense.date, "MMMd"),
+        payerRole = payerRole,
+        parentNames = parentNames
+    )
+
+    // The split moved from its own right-hand column into the subtitle: it is a property of
+    // the expense, not a second figure competing with the amount. A row the family does not count
+    // leaves it out: it is priced in no balance here, and its ratio's first figure would name this
+    // family's slot 1 — somebody who may never have been in the family it belongs to.
+    val splitLabel = if (counted && !dividesAsAgreed(expense, splitKnown, agreed)) {
+        splitLabelOf(expense, splitKnown, parentNames)
+    } else {
+        null
+    }
+    val meta = when {
+        splitLabel == null -> subtitle
+        receipt != null -> stringResource(Res.string.expenses_row_meta_with_receipt, subtitle, splitLabel)
+        else -> stringResource(Res.string.expenses_row_meta, subtitle, splitLabel)
+    }
+
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        // Was surfaceContainerLow, a 1.2:1 separation from the background in dark — the rows
+        // barely read as cards at all.
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
+    ) {
+        Row(
+            modifier = Modifier.padding(Spacing.M),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.M)
+        ) {
+            // A receipt photo, when present, keeps its own tappable thumbnail here: the viewer
+            // is a working feature and losing its entry point to match a mockup would be a
+            // regression. Without a photo the slot shows a payer-tinted category mark instead.
+            // Drawn at 40dp, up from 30dp, and tappable across 48dp.
+            if (receipt != null) {
+                AppImage(
+                    model = receipt,
+                    contentDescription = stringResource(Res.string.expenses_receipt_photo),
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .minimumInteractiveComponentSize()
+                        .size(TILE_SIZE)
+                        .clip(MaterialTheme.shapes.small)
+                        .clickable(role = Role.Button) { onReceiptClick(receipt) }
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(TILE_SIZE)
+                        .clip(MaterialTheme.shapes.small)
+                        .background(payerTint(payerColor)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        // Per-category, so a list of ten expenses says what the money went on.
+                        imageVector = expense.category.iconVector,
+                        contentDescription = null,
+                        tint = payerColor,
+                        modifier = Modifier.size(IconSizes.Standard)
+                    )
+                }
+            }
+
+            // From 130 % the amount moves under the title: beside it, it took the width and cut
+            // the title to "Winter jack…" at 150 % in German. Under it, it still never ends in
+            // an ellipsis (design refresh item 15), and the title gets the whole column.
+            val amountBelowTitle = stacksAtLargeFont()
+            val amount: @Composable () -> Unit = {
+                Text(
+                    text = format.format(expense.amount),
+                    style = MaterialTheme.typography.titleSmallEmphasized
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = expense.title,
+                    style = MaterialTheme.typography.bodyMediumEmphasized,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (amountBelowTitle) amount()
+                // Two lines, not one: the meta line says who paid and how the expense divides,
+                // and in Russian at 130 % one line ended at "заплатил(а)…", before the name
+                // (docs/AUDIT-2026-10-design.md, week 3). The title above may still end in an
+                // ellipsis; the amount beside both never does (design refresh item 15).
+                Text(
+                    text = meta,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                // Under the meta line, never beside the amount, so the amount keeps its column
+                // (design refresh item 15).
+                if (!counted) RecordPlaceMark(place, modifier = Modifier.padding(top = Spacing.XS))
+            }
+
+            if (!amountBelowTitle) amount()
+        }
+    }
+}
+
+/**
+ * The row's second line: the category, who paid and the date. The reader's own payment reads
+ * "you paid" rather than their own name (UX audit H4).
+ */
+@Composable
+private fun rowSubtitle(category: String, date: String, payerRole: String?, parentNames: ParentNames): String =
+    when {
+        parentNames.isReader(payerRole) -> stringResource(Res.string.expenses_row_subtitle_you, category, date)
+        payerRole != null ->
+            stringResource(Res.string.expenses_row_subtitle, category, parentNames.labelFor(payerRole), date)
+        else -> stringResource(Res.string.expenses_row_subtitle_unknown_payer, category, date)
+    }
+
+/**
+ * Whether [expense] divides between the two parents exactly as the family agreed, so its row need
+ * not say how it divides. Only while the two parents can be told apart: otherwise the balance
+ * divides evenly whatever was agreed, and the row says so. A row recorded before any agreement
+ * (no stored ratio) divided evenly.
+ */
+internal fun dividesAsAgreed(expense: Expense, splitKnown: Boolean, agreed: SplitRatio?): Boolean =
+    agreed != null && splitKnown && expense.isTwoWaySplit() &&
+        (SplitRatio.fromStored(expense.splitBasisPoints) ?: SplitRatio.EVEN) == agreed
+
+/**
+ * How [expense] divides, as its row's meta line says it.
+ *
+ * The ratio the expense was recorded under, not the family's current agreement: an expense is
+ * priced once and a later renegotiation must not re-label a settled month. Null — a row from
+ * before the agreement existed — divides evenly, which is what it was.
+ *
+ * @param splitKnown Whether both parent slots are known; see [ExpenseItem].
+ */
+@Composable
+private fun splitLabelOf(expense: Expense, splitKnown: Boolean, parentNames: ParentNames): String {
+    val ratio = remember(expense.splitBasisPoints, splitKnown, expense.splitBetween) {
+        SplitRatio.fromStored(expense.splitBasisPoints)
+            ?.takeIf { splitKnown && expense.isTwoWaySplit() }
+    }
+    return when {
+        // Named, not two bare numbers. The subtitle immediately before this already names one
+        // parent — the payer — so "split 70/30" beside it reads as *their* share, and the first
+        // figure is always slot 1's whoever paid. Naming the half the first number belongs to is
+        // the difference between a label and a wrong claim about money.
+        // Each name with its own share (second audit: "split Alice 60/40" left the 40 to guess).
+        ratio != null -> splitSharesText(ratio, parentNames)
+        expense.isTwoWaySplit() ->
+            stringResource(Res.string.expenses_split_even)
+        expense.splitBetween.size > 2 ->
+            stringResource(Res.string.expenses_split_n_ways, expense.splitBetween.size)
+        else -> stringResource(Res.string.expenses_split_none)
+    }
+}
+
+/** Payer colour at the tint alpha used behind row icons. */
+private fun payerTint(color: Color): Color = color.copy(alpha = PAYER_TINT_ALPHA)
+
+/**
+ * Wraps a row in a left-swipe delete gesture — the app's one swipe-to-delete (CLAUDE.md UX
+ * item 8); the removed events list used the same shape.
+ *
+ * Until now there was no way to remove an expense at all — `ExpenseViewModel.deleteExpense`
+ * existed but nothing called it — so a mistyped amount was permanent.
+ *
+ * @param onDelete Invoked once the row is swiped past the threshold
+ * @param content The row itself
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SwipeToDeleteRow(
+    onDelete: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    val dismissState = rememberSwipeToDismissBoxState()
+    // The delete runs once the row has settled off-screen. `onDismiss` below captures only this
+    // State, so Compose memoizes it and a recomposition cannot re-run the delete on a settled row.
+    val currentOnDelete by rememberUpdatedState(onDelete)
+
+    // A swipe is invisible to TalkBack and Switch Access, so the same delete is offered as a
+    // custom accessibility action — otherwise those users could not remove an expense at all.
+    val deleteLabel = stringResource(Res.string.expenses_delete)
+    SwipeToDismissBox(
+        state = dismissState,
+        modifier = Modifier.semantics {
+            customActions = listOf(
+                CustomAccessibilityAction(deleteLabel) {
+                    onDelete()
+                    true
+                }
+            )
+        },
+        enableDismissFromStartToEnd = false,
+        onDismiss = { value -> if (value == SwipeToDismissBoxValue.EndToStart) currentOnDelete() },
+        backgroundContent = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        color = MaterialTheme.colorScheme.error,
+                        shape = MaterialTheme.shapes.small
+                    )
+                    .padding(horizontal = Spacing.XL),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = stringResource(Res.string.expenses_delete),
+                    tint = MaterialTheme.colorScheme.onError
+                )
+            }
+        }
+    ) {
+        content()
+    }
+}

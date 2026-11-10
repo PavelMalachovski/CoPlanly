@@ -1,0 +1,144 @@
+package com.coparently.app.di.koin
+
+import android.content.Context
+import com.coparently.app.BuildConfig
+import com.coparently.app.data.ai.FunctionsAiAssistRepository
+import com.coparently.app.data.analytics.AnalyticsManager
+import com.coparently.app.data.crashlytics.CrashlyticsManager
+import com.coparently.app.data.dictation.OnDeviceSpeechDictation
+import com.coparently.app.data.export.ExportFileWriter
+import com.coparently.app.data.export.ExportVerifyAddress
+import com.coparently.app.data.export.RecordFileWriter
+import com.coparently.app.data.files.AndroidPickedFiles
+import com.coparently.app.data.files.FirebaseStorageBucket
+import com.coparently.app.data.files.PickedFiles
+import com.coparently.app.data.files.RecordPhotoImageLoader
+import com.coparently.app.data.files.StorageBucket
+import com.coparently.app.data.local.preferences.EncryptedPreferences
+import com.coparently.app.data.local.security.DatabaseKey
+import com.coparently.app.data.local.security.EncryptedDatabase
+import com.coparently.app.data.mlkit.MlKitReceiptTextRecognizer
+import com.coparently.app.data.notification.EventReminderScheduler
+import com.coparently.app.data.notification.NotificationManager
+import com.coparently.app.data.notification.WorkRequestClockScheduler
+import com.coparently.app.data.pairing.PlayInstallReferrerSource
+import com.coparently.app.data.remote.firebase.AccountSignIn
+import com.coparently.app.data.remote.firebase.AuthSession
+import com.coparently.app.data.remote.firebase.FcmService
+import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.FirebaseImageStorage
+import com.coparently.app.data.remote.firebase.PushDevice
+import com.coparently.app.data.remote.firebase.PushQueue
+import com.coparently.app.data.remote.firebase.PushRegistration
+import com.coparently.app.data.remote.firebase.SignedInUser
+import com.coparently.app.data.remote.google.CredentialAuthenticator
+import com.coparently.app.data.remote.google.CredentialManagerService
+import com.coparently.app.data.remote.google.CredentialProviderImpl
+import com.coparently.app.data.remote.google.GoogleCalendarAccount
+import com.coparently.app.data.remote.google.GoogleCalendarApi
+import com.coparently.app.data.remote.google.GoogleCalendarConnectionSource
+import com.coparently.app.data.repository.AndroidPairingWording
+import com.coparently.app.data.repository.PairingWording
+import com.coparently.app.data.requests.RequestClockNotices
+import com.coparently.app.data.requests.RequestNotices
+import com.coparently.app.data.school.SchoolImportWordingSource
+import com.coparently.app.data.school.SchoolImportWordings
+import com.coparently.app.data.school.WorkManagerSchoolImportScheduler
+import com.coparently.app.data.school.bakalari.BakalariClient
+import com.coparently.app.data.school.bakalari.BakalariSchoolDirectory
+import com.coparently.app.data.security.EncryptionManager
+import com.coparently.app.data.session.AccountConsistency
+import com.coparently.app.data.session.AccountDeletion
+import com.coparently.app.data.session.AccountDeletionService
+import com.coparently.app.data.session.AccountSwitchGuard
+import com.coparently.app.data.session.AccountTraces
+import com.coparently.app.data.session.DeviceTraces
+import com.coparently.app.data.support.WorkManagerSupportReminderScheduler
+import com.coparently.app.data.sync.WorkManagerSyncRequester
+import com.coparently.app.data.telemetry.TelemetryConsentApplier
+import io.ktor.client.HttpClient
+import org.koin.core.module.dsl.singleOf
+import org.koin.dsl.module
+
+/**
+ * Every class of the data layer the graph builds from its constructor: what Hilt found through
+ * `@Inject` constructors before MON-24 phase 2. A class that was a Hilt `@Singleton` is a
+ * `single`, an unscoped one a `factory`. The interfaces they implement are bound in the module
+ * named after the Hilt module that bound them (`repositoryModule`, `syncModule`, ...).
+ *
+ * A class with a secondary constructor for the graph, a default argument, a qualified or a lazy
+ * dependency is built in a lambda that names its arguments, because a constructor reference would
+ * be ambiguous there or would skip the default the way Hilt never did.
+ */
+val dataModule = module {
+    singleOf(::FunctionsAiAssistRepository)
+    singleOf(::AnalyticsManager)
+    singleOf(::CrashlyticsManager)
+    singleOf(::OnDeviceSpeechDictation)
+    singleOf(::ExportFileWriter)
+    // The export's file, rendered and saved for the share sheet, which its ViewModel in `:shared-ui` asks for.
+    single<RecordFileWriter> { get<ExportFileWriter>() }
+    // Where the export receipts in `:shared-data` say a file can be checked (MON-16).
+    single<ExportVerifyAddress> { ExportVerifyAddress { BuildConfig.EXPORT_VERIFY_URL } }
+    singleOf(::RecordPhotoImageLoader)
+    singleOf(::FirebaseStorageBucket)
+    // The Storage SDK and the picker's `ContentResolver`, which the shared files in `:shared-data`
+    // (MON-23, L-4) upload, download and stage through.
+    single<StorageBucket> { get<FirebaseStorageBucket>() }
+    singleOf(::AndroidPickedFiles)
+    single<PickedFiles> { get<AndroidPickedFiles>() }
+    single { EncryptedPreferences(get<Context>(), get<EncryptionManager>()) }
+    singleOf(::DatabaseKey)
+    singleOf(::EncryptedDatabase)
+    singleOf(::MlKitReceiptTextRecognizer)
+    singleOf(::EventReminderScheduler)
+    singleOf(::NotificationManager)
+    singleOf(::WorkRequestClockScheduler)
+    singleOf(::PlayInstallReferrerSource)
+    singleOf(::FcmService)
+    // Where the repositories in `:shared-data` queue a push.
+    single<PushQueue> { get<FcmService>() }
+    // This device's push token, which the sync in `:shared-data` keeps on the profile.
+    single<PushDevice> { get<FcmService>() }
+    // The Settings switch and sign-out's detach, which the ViewModels in `:shared-ui` ask for.
+    single<PushRegistration> { get<FcmService>() }
+    singleOf(::FirebaseAuthService)
+    // The one question the repositories in `:shared-data` ask of the signed-in account.
+    single<SignedInUser> { get<FirebaseAuthService>() }
+    // The start's wait and sign-out's end, which the session's ViewModel in `:shared-ui` asks for.
+    single<AuthSession> { get<FirebaseAuthService>() }
+    // The sign-in screen's account calls, which AuthViewModel in `:shared-ui` asks for.
+    single<AccountSignIn> { get<FirebaseAuthService>() }
+    singleOf(::FirebaseImageStorage)
+    singleOf(::CredentialAuthenticator)
+    singleOf(::CredentialManagerService)
+    // The Google Calendar connection the automatic import in `:shared-data` reads.
+    single<GoogleCalendarConnectionSource> { get<CredentialManagerService>() }
+    // The same connection as Settings manages it, through SyncViewModel in `:shared-ui`.
+    single<GoogleCalendarAccount> { get<CredentialManagerService>() }
+    singleOf(::CredentialProviderImpl)
+    single { GoogleCalendarApi(get<HttpClient>(GOOGLE_CALENDAR_HTTP_CLIENT)) }
+    // The thread title PairingRepositoryImpl (in `:shared-data`) falls back to, from resources.
+    single<PairingWording> { AndroidPairingWording(get()) }
+    singleOf(::RequestNotices)
+    // The notices the request clocks' steps (in `:shared-data`) post on this phone.
+    single<RequestClockNotices> { get<RequestNotices>() }
+    singleOf(::SchoolImportWordingSource)
+    // The titles the school import (in `:shared-data`) writes, from resources.
+    single<SchoolImportWordings> { get<SchoolImportWordingSource>() }
+    singleOf(::WorkManagerSchoolImportScheduler)
+    single { BakalariClient(get<HttpClient>(SCHOOL_HTTP_CLIENT)) }
+    single { BakalariSchoolDirectory(get<HttpClient>(SCHOOL_HTTP_CLIENT)) }
+    singleOf(::AccountDeletionService)
+    // The account's erasure, which Settings' ViewModel in `:shared-ui` asks for.
+    single<AccountDeletion> { get<AccountDeletionService>() }
+    singleOf(::AccountSwitchGuard)
+    // The check the sync in `:shared-data` runs before its first upload.
+    single<AccountConsistency> { get<AccountSwitchGuard>() }
+    singleOf(::DeviceTraces)
+    // The files and notifications sign-out removes, for the session's ViewModel in `:shared-ui`.
+    single<AccountTraces> { get<DeviceTraces>() }
+    singleOf(::WorkManagerSupportReminderScheduler)
+    singleOf(::WorkManagerSyncRequester)
+    singleOf(::TelemetryConsentApplier)
+}

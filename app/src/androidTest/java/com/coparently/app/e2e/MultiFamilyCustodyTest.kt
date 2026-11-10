@@ -9,6 +9,7 @@ import com.coparently.app.domain.model.CustodyModelType
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -16,7 +17,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.time.LocalDate
 
 /**
  * One parent in two families (M-8): each family keeps its own custody schedule on Alice's phone,
@@ -111,6 +111,6 @@ class MultiFamilyCustodyTest : TwoParentTest() {
 
     private companion object {
         /** A Monday; both patterns' anchor. */
-        val START: LocalDate = LocalDate.of(2026, 10, 5)
+        val START: LocalDate = LocalDate(2026, 10, 5)
     }
 }

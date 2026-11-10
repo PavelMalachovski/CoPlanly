@@ -7,12 +7,13 @@ import androidx.compose.ui.test.isEnabled
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.coparently.app.R
 import com.coparently.app.domain.model.ChildInfo
+import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.e2e.EmulatorEnvironment.step
-import dagger.hilt.android.testing.HiltAndroidTest
+import com.coparently.app.testing.UsesFakeFirebase
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.LocalDateTime
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.time.LocalDateTime
 import java.util.UUID
 
 /**
@@ -24,7 +25,7 @@ import java.util.UUID
  * The walk presses Next while it is enabled and stops at the first step that needs an answer the
  * tour does not give, or at the last one — it never presses Finish, so nothing is saved.
  */
-@HiltAndroidTest
+@UsesFakeFirebase
 @RunWith(AndroidJUnit4::class)
 class UiTourOnboardingTest : AliceOnScreenTest() {
 
@@ -74,10 +75,10 @@ class UiTourOnboardingTest : AliceOnScreenTest() {
     private fun bobsChild() = ChildInfo(
         id = UUID.randomUUID().toString(),
         childName = UiTourSeed.EMMA,
-        dateOfBirth = LocalDateTime.of(BORN_YEAR, BORN_MONTH, BORN_DAY, 0, 0),
+        dateOfBirth = LocalDateTime(BORN_YEAR, BORN_MONTH, BORN_DAY, 0, 0),
         allergies = UiTourContent.forLanguage(variant.language).emma.allergies.take(1),
-        createdAt = LocalDateTime.now(),
-        updatedAt = LocalDateTime.now(),
+        createdAt = wallClockNow(),
+        updatedAt = wallClockNow(),
         createdByFirebaseUid = bob.uid,
         lastModifiedBy = bob.uid
     )

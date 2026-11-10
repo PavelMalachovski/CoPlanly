@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Authentication screen strings. Key names are deliberately distinct from the
+     auth_* keys already present in strings.xml to avoid duplicate resources. -->
+<resources>
+    <string name="auth_cd_logo">CoPlanly logo</string>
+    <string name="auth_tagline">One calendar for children with two homes</string>
+    <string name="auth_welcome_back">Welcome back!</string>
+    <string name="auth_create_your_account">Create your account</string>
+    <string name="auth_sign_in_subtitle">Sign in to continue managing your co-parenting schedule</string>
+    <string name="auth_sign_up_subtitle">Whose day it is, what changed, who paid — the same for both parents</string>
+    <string name="auth_email_label">Email address</string>
+    <string name="auth_email_placeholder">your@email.com</string>
+    <string name="auth_password_label">Password</string>
+    <string name="auth_password_placeholder">Enter your password</string>
+    <string name="auth_hide_password">Hide password</string>
+    <string name="auth_show_password">Show password</string>
+    <string name="auth_google_sign_in">Sign in with Google</string>
+    <string name="auth_google_sign_in_failed">Google Sign-In failed</string>
+    <string name="auth_divider_or">or</string>
+    <string name="auth_action_sign_in">Sign In</string>
+    <string name="auth_action_create_account">Create account</string>
+    <string name="auth_action_sign_up">Sign up</string>
+    <string name="auth_no_account_question">Don\u0027t have an account?</string>
+    <string name="auth_have_account_question">Already have an account?</string>
+    <string name="auth_forgot_password_link">Forgot password?</string>
+    <string name="auth_saved_password_sign_in">Sign in with saved password</string>
+    <string name="auth_error_empty_fields">Please fill in both fields</string>
+    <string name="auth_error_invalid_credentials">Wrong email or password</string>
+    <string name="auth_error_email_already_in_use">This email already has an account</string>
+    <string name="auth_error_weak_password">Password is too weak — use at least 6 characters</string>
+    <string name="auth_error_invalid_email">That is not a valid email address</string>
+    <string name="auth_error_user_disabled">This account has been disabled</string>
+    <string name="auth_error_network">No connection. Check your network and try again.</string>
+    <string name="auth_error_too_many_requests">Too many attempts. Try again in a few minutes.</string>
+    <string name="auth_error_interrupted">Sign-in was interrupted. Please try again.</string>
+    <string name="auth_error_no_google_account">No Google account was chosen</string>
+    <string name="auth_error_no_saved_password">No saved password for CoPlanly yet</string>
+    <string name="auth_error_unknown">Something went wrong. Please try again.</string>
+    <string name="auth_error_empty_email">Enter your email to reset the password</string>
+    <string name="auth_reset_email_sent">We sent a password-reset link to %1$s. Check your inbox.</string>
+</resources>

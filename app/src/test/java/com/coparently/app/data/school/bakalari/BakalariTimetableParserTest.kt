@@ -2,9 +2,11 @@ package com.coparently.app.data.school.bakalari
 
 import com.coparently.app.data.school.SchoolTestSupport.fixture
 import com.coparently.app.domain.school.SchoolDayType
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.plus
 import org.junit.Test
-import java.time.LocalDate
-import java.time.LocalTime
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -23,16 +25,16 @@ import kotlin.test.assertTrue
  */
 class BakalariTimetableParserTest {
 
-    private val normalWeek = LocalDate.of(2020, 3, 2)
-    private val changesWeek = LocalDate.of(2020, 2, 24)
+    private val normalWeek = LocalDate(2020, 3, 2)
+    private val changesWeek = LocalDate(2020, 2, 24)
 
     @Test
     fun `a removed lesson in the middle of the day changes neither arrival nor pickup`() {
         val week = BakalariTimetableParser.parse(fixture("bezny.json"), normalWeek)
 
-        val friday = week.days.single { it.date == LocalDate.of(2020, 3, 6) }
-        assertEquals(LocalTime.of(8, 0), friday.firstLessonStart)
-        assertEquals(LocalTime.of(14, 20), friday.lastLessonEnd)
+        val friday = week.days.single { it.date == LocalDate(2020, 3, 6) }
+        assertEquals(LocalTime(8, 0), friday.firstLessonStart)
+        assertEquals(LocalTime(14, 20), friday.lastLessonEnd)
         assertEquals(SchoolDayType.WORK_DAY, friday.type)
     }
 
@@ -41,31 +43,31 @@ class BakalariTimetableParserTest {
         val week = BakalariTimetableParser.parse(fixture("bezny.json"), normalWeek)
 
         assertEquals(normalWeek, week.monday)
-        assertEquals((2..6).map { LocalDate.of(2020, 3, it) }, week.days.map { it.date })
+        assertEquals((2..6).map { LocalDate(2020, 3, it) }, week.days.map { it.date })
         assertTrue(week.days.all { it.hasLessons })
         // Tuesday runs to hour 11, 15:20-16:05.
-        assertEquals(LocalTime.of(16, 5), week.days[1].lastLessonEnd)
+        assertEquals(LocalTime(16, 5), week.days[1].lastLessonEnd)
     }
 
     @Test
     fun `a string HourId joins the hours table, and an added lesson counts`() {
         val monday = parseChanges().days.single { it.date == changesWeek }
 
-        assertEquals(LocalTime.of(8, 0), monday.firstLessonStart)
-        assertEquals(LocalTime.of(11, 40), monday.lastLessonEnd)
+        assertEquals(LocalTime(8, 0), monday.firstLessonStart)
+        assertEquals(LocalTime(11, 40), monday.lastLessonEnd)
     }
 
     @Test
     fun `cancelled lessons are not school hours`() {
-        val tuesday = parseChanges().days.single { it.date == changesWeek.plusDays(1) }
+        val tuesday = parseChanges().days.single { it.date == changesWeek.plus(1, DateTimeUnit.DAY) }
 
-        assertEquals(LocalTime.of(10, 55), tuesday.firstLessonStart)
-        assertEquals(LocalTime.of(12, 35), tuesday.lastLessonEnd)
+        assertEquals(LocalTime(10, 55), tuesday.firstLessonStart)
+        assertEquals(LocalTime(12, 35), tuesday.lastLessonEnd)
     }
 
     @Test
     fun `a day whose every lesson is cancelled or removed has no school, but is not a day without cells`() {
-        val wednesday = parseChanges().days.single { it.date == changesWeek.plusDays(2) }
+        val wednesday = parseChanges().days.single { it.date == changesWeek.plus(2, DateTimeUnit.DAY) }
 
         assertFalse(wednesday.hasLessons)
         assertTrue(wednesday.hasAtoms)
@@ -73,20 +75,20 @@ class BakalariTimetableParserTest {
 
     @Test
     fun `lessons win over a DayType that says holiday`() {
-        val thursday = parseChanges().days.single { it.date == changesWeek.plusDays(3) }
+        val thursday = parseChanges().days.single { it.date == changesWeek.plus(3, DateTimeUnit.DAY) }
 
         assertEquals(SchoolDayType.HOLIDAY, thursday.type)
-        assertEquals(LocalTime.of(8, 0), thursday.firstLessonStart)
-        assertEquals(LocalTime.of(9, 40), thursday.lastLessonEnd)
+        assertEquals(LocalTime(8, 0), thursday.firstLessonStart)
+        assertEquals(LocalTime(9, 40), thursday.lastLessonEnd)
     }
 
     @Test
     fun `Hours is the source of truth for times, not Change Time`() {
         // The substitution's Change says "7:45 - 8:30"; hour 3 is 8:00-8:45.
-        val friday = parseChanges().days.single { it.date == changesWeek.plusDays(4) }
+        val friday = parseChanges().days.single { it.date == changesWeek.plus(4, DateTimeUnit.DAY) }
 
-        assertEquals(LocalTime.of(8, 0), friday.firstLessonStart)
-        assertEquals(LocalTime.of(14, 20), friday.lastLessonEnd)
+        assertEquals(LocalTime(8, 0), friday.firstLessonStart)
+        assertEquals(LocalTime(14, 20), friday.lastLessonEnd)
     }
 
     @Test
@@ -94,21 +96,21 @@ class BakalariTimetableParserTest {
         val week = parseChanges()
 
         assertEquals(5, week.days.size)
-        assertTrue(week.days.none { it.date == LocalDate.of(2020, 3, 2) })
+        assertTrue(week.days.none { it.date == LocalDate(2020, 3, 2) })
     }
 
     @Test
     fun `a week the server clamped to another one yields no days at all`() {
         // Asked for a week in September, the server answered with March's.
-        val week = BakalariTimetableParser.parse(fixture("bezny.json"), LocalDate.of(2020, 9, 9))
+        val week = BakalariTimetableParser.parse(fixture("bezny.json"), LocalDate(2020, 9, 9))
 
-        assertEquals(LocalDate.of(2020, 9, 7), week.monday)
+        assertEquals(LocalDate(2020, 9, 7), week.monday)
         assertTrue(week.days.isEmpty())
     }
 
     @Test
     fun `a holiday week has no lessons and names its days`() {
-        val week = BakalariTimetableParser.parse(fixture("prazdniny.json"), LocalDate.of(2020, 7, 8))
+        val week = BakalariTimetableParser.parse(fixture("prazdniny.json"), LocalDate(2020, 7, 8))
 
         assertEquals(5, week.days.size)
         assertTrue(week.days.none { it.hasAtoms || it.hasLessons })
@@ -136,5 +138,6 @@ class BakalariTimetableParserTest {
         }
     }
 
-    private fun parseChanges() = BakalariTimetableParser.parse(fixture("zmeny.json"), changesWeek.plusDays(2))
+    private fun parseChanges() =
+        BakalariTimetableParser.parse(fixture("zmeny.json"), changesWeek.plus(2, DateTimeUnit.DAY))
 }

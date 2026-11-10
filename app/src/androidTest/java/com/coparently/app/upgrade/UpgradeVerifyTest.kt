@@ -11,6 +11,8 @@ import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.domain.telemetry.TelemetryConsent
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -149,13 +151,13 @@ class UpgradeVerifyTest {
     private fun assertDaosReadTheRows(database: CoPlanlyDatabase) = runBlocking {
         val event = database.eventDao().getEventById(UpgradeRows.EVENT_ID)
         assertEquals(UpgradeRows.EVENT_TITLE, event?.title)
-        assertEquals(LocalDateTime.parse(UpgradeRows.EVENT_START), event?.startDateTime)
+        assertEquals(LocalDateTime.parse(UpgradeRows.EVENT_START).toKotlinLocalDateTime(), event?.startDateTime)
         val privateEvent = database.eventDao().getEventById(UpgradeRows.PRIVATE_EVENT_ID)
         assertEquals("The private event lost its flag", true, privateEvent?.isPrivate)
 
         val expense = database.expenseDao().getExpenseById(UpgradeRows.EXPENSE_ID)
         assertEquals(UpgradeRows.EXPENSE_AMOUNT, expense?.amount ?: Double.NaN, 0.0)
-        assertEquals(LocalDate.parse(UpgradeRows.EXPENSE_DATE), expense?.date)
+        assertEquals(LocalDate.parse(UpgradeRows.EXPENSE_DATE).toKotlinLocalDate(), expense?.date)
 
         assertEquals(
             UpgradeRows.CHILD_NAME,

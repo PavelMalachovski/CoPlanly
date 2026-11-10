@@ -1,0 +1,1244 @@
+// One file for the dashboard: its sections are private composables, and their light/dark previews
+// (UX-13) must sit beside them to reach them, which is what takes the count past the threshold.
+@file:Suppress("TooManyFunctions")
+
+package com.coparently.app.presentation.home
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.EventAvailable
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.PriorityHigh
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.coparently.app.data.family.RecordPlace
+import com.coparently.app.data.family.placementFamilyId
+import com.coparently.app.domain.changerequests.HistoryEntry
+import com.coparently.app.domain.changerequests.RequestDeadlineId
+import com.coparently.app.domain.changerequests.RequestOutcome
+import com.coparently.app.domain.changerequests.RequestSubject
+import com.coparently.app.domain.custody.HandoverInfo
+import com.coparently.app.domain.events.AllDayEvent
+import com.coparently.app.domain.expenses.CurrencyBalance
+import com.coparently.app.domain.home.WeekEntry
+import com.coparently.app.domain.model.ChangeRequestStatus
+import com.coparently.app.presentation.calendar.components.DayAgendaCard
+import com.coparently.app.presentation.changerequests.ChangeRequestViewModel
+import com.coparently.app.presentation.changerequests.swapDatesText
+import com.coparently.app.presentation.common.EmptyState
+import com.coparently.app.presentation.common.FamilySwitcherChip
+import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.common.SectionGroup
+import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.TwoPanes
+import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.placeOf
+import com.coparently.app.presentation.common.rememberParentNames
+import com.coparently.app.presentation.common.rememberToday
+import com.coparently.app.presentation.common.rememberTwoPane
+import com.coparently.app.presentation.common.rememberUiTextResolver
+import com.coparently.app.presentation.components.SkeletonBox
+import com.coparently.app.presentation.family.UnassignedRecordsPrompt
+import com.coparently.app.presentation.stickers.ParentRolePrompt
+import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.bodyMediumEmphasized
+import com.coparently.app.presentation.theme.headlineSmallEmphasized
+import com.coparently.app.presentation.theme.titleMediumEmphasized
+import com.coparently.app.presentation.theme.titleSmallEmphasized
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.event_all_day
+import com.coparently.app.resources.event_important_mark_description
+import com.coparently.app.resources.family_money_this_month
+import com.coparently.app.resources.home_activity_accepted_event
+import com.coparently.app.resources.home_activity_accepted_new_time
+import com.coparently.app.resources.home_activity_accepted_swap
+import com.coparently.app.resources.home_activity_change_requested
+import com.coparently.app.resources.home_activity_declined_event
+import com.coparently.app.resources.home_activity_declined_new_time
+import com.coparently.app.resources.home_activity_declined_swap
+import com.coparently.app.resources.home_activity_event_created
+import com.coparently.app.resources.home_activity_event_updated
+import com.coparently.app.resources.home_activity_pickup_confirmed
+import com.coparently.app.resources.home_activity_review
+import com.coparently.app.resources.home_activity_withdrawn
+import com.coparently.app.resources.home_activity_you_accepted
+import com.coparently.app.resources.home_activity_you_declined
+import com.coparently.app.resources.home_handover_current
+import com.coparently.app.resources.home_handover_current_you
+import com.coparently.app.resources.home_handover_hero_in_days
+import com.coparently.app.resources.home_handover_hero_in_days_you
+import com.coparently.app.resources.home_handover_hero_today
+import com.coparently.app.resources.home_handover_hero_today_you
+import com.coparently.app.resources.home_handover_hero_tomorrow
+import com.coparently.app.resources.home_handover_hero_tomorrow_you
+import com.coparently.app.resources.home_pairing_cta
+import com.coparently.app.resources.home_pairing_prompt
+import com.coparently.app.resources.home_pairing_title
+import com.coparently.app.resources.home_recent_empty_paired
+import com.coparently.app.resources.home_requests_all
+import com.coparently.app.resources.home_requests_title
+import com.coparently.app.resources.home_section_partner_changed
+import com.coparently.app.resources.home_section_recent_changes
+import com.coparently.app.resources.home_section_this_week
+import com.coparently.app.resources.home_stat_open_chat
+import com.coparently.app.resources.home_stat_unread_count
+import com.coparently.app.resources.home_timeline_meta
+import com.coparently.app.resources.home_timeline_meta_you
+import com.coparently.app.resources.home_title
+import com.coparently.app.resources.home_week_days_of
+import com.coparently.app.resources.home_week_days_you
+import com.coparently.app.resources.home_week_empty
+import com.coparently.app.resources.home_week_empty_action
+import com.coparently.app.resources.nav_settings
+import com.coparently.app.resources.request_history_custody
+import com.coparently.app.resources.request_history_split
+import com.coparently.app.utils.ReaderDateText
+import kotlinx.datetime.LocalDateTime
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.viewmodel.koinViewModel
+
+/** A date in the locale's order for [skeleton], then the locale's short time (D-18). */
+private fun LocalDateTime.dateAndTime(skeleton: String): String = ReaderDateText.dateWithTime(this, skeleton)
+
+/** Strength of the parent-hue wash behind the handover hero. */
+private const val HERO_TINT_ALPHA = 0.16f
+
+/**
+ * From this font scale the two stat tiles stack instead of sharing a row. Side by side each has
+ * about 128 dp for its text on a 411 dp phone, which "CZK3,540.00" in the tile's bold title
+ * style fills at 130 %.
+ */
+private const val STACK_TILES_FONT_SCALE = 1.3f
+
+/**
+ * Home dashboard — the first screen. At-a-glance co-parenting state: the next
+ * custody handover, this month's spend and unread messages, this week's events,
+ * and the recent changes the co-parent made.
+ *
+ * Layout follows the August 2026 design refresh: the handover is a hero card carrying its own
+ * next action, the two stat tiles are deep links rather than dead-end numbers, and the feeds
+ * below drop the card-per-row chrome in favour of a timeline rail and one grouped list.
+ *
+ * @param onOpenEvent Opens an event by id
+ * @param onOpenChangeRequests Opens the requests inbox
+ * @param onOpenRequestHistory Opens the requests inbox at its History
+ * @param onOpenSettings Opens settings
+ * @param onNavigateToPairing Opens the pairing screen
+ * @param onOpenExpenses Opens Expenses — the spend tile's deep link
+ * @param onOpenChat Switches to the Chat tab — the unread tile's deep link
+ * @param onAddEvent Opens the new-event form — the empty week's way forward
+ * @param onOpenUnassignedRecords Opens "Records without a family" from the one-time question about
+ *   them; null asks nothing
+ * @param viewModel Screen state
+ * @param putOffAsks Which pop-up asks this parent already dealt with; the Requests row records them too
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+// One callback per navigation target this dashboard links to; the body is one linear column of
+// sections, so splitting it would only move the length into a second file.
+@Suppress("LongParameterList", "LongMethod")
+fun HomeScreen(
+    onOpenEvent: (String) -> Unit,
+    onOpenChangeRequests: () -> Unit,
+    onOpenRequestHistory: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onNavigateToPairing: () -> Unit,
+    onOpenExpenses: () -> Unit,
+    onOpenChat: () -> Unit,
+    onAddEvent: () -> Unit,
+    onOpenUnassignedRecords: (() -> Unit)? = null,
+    viewModel: HomeViewModel = koinViewModel(),
+    changeRequestViewModel: ChangeRequestViewModel = koinViewModel(),
+    putOffAsks: PutOffAsksViewModel = koinViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val today by rememberToday()
+    val parentNames = rememberParentNames(viewModel.parents.collectAsState().value)
+    val pendingProposal by changeRequestViewModel.pendingProposal.collectAsState()
+    val pendingProposalDiff by changeRequestViewModel.pendingProposalDiff.collectAsState()
+    val pendingProposalCitation by changeRequestViewModel.pendingProposalCitation.collectAsState()
+    val pendingSplit by changeRequestViewModel.pendingSplit.collectAsState()
+    val agreedSplit by changeRequestViewModel.agreedSplit.collectAsState()
+    val swapMonths by changeRequestViewModel.swapMonths.collectAsState()
+
+    // The swap and proposal dialogs live here, and until this existed their refusals did not:
+    // `ChangeRequestViewModel` wrote every failure into `errorMessage`, and only the inbox
+    // screen read it. Answering from Home therefore looked like it had worked — the dialog
+    // closed either way — while the co-parent went on waiting.
+    val snackbarHostState = remember { SnackbarHostState() }
+    val changeRequestError by changeRequestViewModel.errorMessage.collectAsState()
+    val textResolver = rememberUiTextResolver()
+    LaunchedEffect(changeRequestError) {
+        changeRequestError?.let { message ->
+            snackbarHostState.showSnackbar(message.asString(textResolver))
+            changeRequestViewModel.clearError()
+        }
+    }
+
+    // An event tapped anywhere on the dashboard opens its preview first, like the calendar.
+    // The tapped occurrence's start travels with the id (audit L-6): every occurrence of a
+    // recurring event shares its series' id, so the id alone previewed the first one on screen.
+    // Edit still opens the series by id, as the calendar's preview does.
+    val openEvent: (String, LocalDateTime?) -> Unit = { eventId, occurrenceStart ->
+        viewModel.openPreview(eventId, occurrenceStart, onMissing = { onOpenEvent(eventId) })
+    }
+    val previewEvent by viewModel.previewEvent.collectAsState()
+    previewEvent?.let { event ->
+        com.coparently.app.presentation.event.EventPreviewSheet(
+            event = event,
+            parentNames = parentNames,
+            onEdit = {
+                viewModel.closePreview()
+                onOpenEvent(event.id)
+            },
+            // No delete here: Home has no delete-with-undo, and the editor one tap away does.
+            onDelete = null,
+            onDismiss = viewModel::closePreview
+        )
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(
+                            text = stringResource(Res.string.home_title),
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        Text(
+                            text = ReaderDateText.date(today, "EEEEMMMMd"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
+                actions = {
+                    // Only with two families or more (M-8); nothing at all with one.
+                    FamilySwitcherChip()
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = stringResource(Res.string.nav_settings))
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        when (val state = uiState) {
+            HomeUiState.Loading -> HomeSkeleton(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            )
+
+            HomeUiState.AskForCoParent -> PairingInvitation(
+                onNavigateToPairing = onNavigateToPairing,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            )
+
+            is HomeUiState.Dashboard -> {
+                val homeAsks = HomeAsks(
+                    proposal = pendingProposal?.let {
+                        ProposalAsk(it, pendingProposalDiff, pendingProposalCitation)
+                    },
+                    split = pendingSplit?.let { SplitAsk(it, agreedSplit) },
+                    swapMonths = swapMonths
+                )
+                // Opening the inbox from the Requests row deals with the requests as the pop-up's
+                // Review does: they count as seen, and only a new one asks again (new-user review).
+                val openInboxFromRow = {
+                    val queue = HomeAskQueue.of(homeAsks, state.awaitingSwaps, state.awaitingRequestIds)
+                    queue.filterIsInstance<HomeAsk.Requests>().firstOrNull()?.let { requestsAsk ->
+                        putOffAsks.putOff(requestsAsk.keys, queue.flatMapTo(mutableSetOf()) { it.keys })
+                    }
+                    onOpenChangeRequests()
+                }
+                Dashboard(
+                    state = state,
+                    parentNames = parentNames,
+                    contentPadding = padding,
+                    onOpenEvent = openEvent,
+                    onOpenChangeRequests = openInboxFromRow,
+                    onOpenRequestHistory = onOpenRequestHistory,
+                    onOpenExpenses = onOpenExpenses,
+                    onOpenChat = onOpenChat,
+                    onAddEvent = onAddEvent
+                )
+                // Asked once per co-parent set (owner decision, October 2026). Composed before the
+                // asks below, so a waiting swap or proposal sits on top of it.
+                onOpenUnassignedRecords?.let { UnassignedRecordsPrompt(onChoose = it) }
+                // How stickers address this parent: asked once, and only an answer closes it.
+                ParentRolePrompt()
+                AwaitingDialogs(
+                    state = state,
+                    parentNames = parentNames,
+                    asks = homeAsks,
+                    putOffAsks = putOffAsks,
+                    actions = AwaitingActions(
+                        onAcceptSwap = { group ->
+                            changeRequestViewModel.decideSwapGroup(group, accept = true)
+                        },
+                        onDeclineSwap = { group ->
+                            changeRequestViewModel.decideSwapGroup(group, accept = false)
+                        },
+                        onAcceptProposal = changeRequestViewModel::acceptProposal,
+                        onDeclineProposal = changeRequestViewModel::declineProposal,
+                        onOpenChangeRequests = onOpenChangeRequests,
+                        onSwapSeen = { group -> changeRequestViewModel.markSeen(RequestDeadlineId.forSwap(group)) },
+                        onProposalSeen = changeRequestViewModel::markProposalSeen,
+                        onAcceptSplit = changeRequestViewModel::acceptSplit,
+                        onDeclineSplit = changeRequestViewModel::declineSplit,
+                        onSplitSeen = changeRequestViewModel::markSplitSeen,
+                        onAnswerSwapDays = changeRequestViewModel::decideSwapDays
+                    )
+                )
+            }
+        }
+    }
+}
+
+/**
+ * What the page draws before it knows whether there is a co-parent.
+ *
+ * The shapes match the dashboard it is about to become — a handover hero, two stat tiles, a run
+ * of week rows — so the layout does not jump when the answer arrives. It deliberately contains
+ * no text and no numbers: the defect it replaces is a screen that **asserted facts** it did not
+ * have, and a skeleton that guessed at content would be the same mistake with rounded corners.
+ *
+ * @param modifier Modifier applied to the page
+ */
+@Composable
+private fun HomeSkeleton(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.padding(horizontal = Spacing.L),
+        verticalArrangement = Arrangement.spacedBy(Spacing.L)
+    ) {
+        Spacer(modifier = Modifier.height(Spacing.S))
+
+        // The handover hero.
+        SkeletonBox(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(120.dp)
+                .clip(MaterialTheme.shapes.medium)
+        )
+
+        // The two stat tiles, side by side as they render.
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
+            repeat(2) {
+                SkeletonBox(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(72.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                )
+            }
+        }
+
+        // The week.
+        repeat(4) {
+            SkeletonBox(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .clip(MaterialTheme.shapes.small)
+            )
+        }
+    }
+}
+
+/**
+ * The whole unpaired page: a short explanation and one button.
+ *
+ * Everything else the dashboard shows depends on there being a second parent — there is no
+ * handover without one, no balance to settle, and no changes for them to have made — so the
+ * page says the one thing that would fill the rest instead of arranging hollow shells around it.
+ *
+ * @param onNavigateToPairing Opens the pairing screen
+ * @param modifier Modifier applied to the page
+ */
+@Composable
+private fun PairingInvitation(
+    onNavigateToPairing: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.padding(Spacing.XL),
+        verticalArrangement = Arrangement.spacedBy(Spacing.L, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = stringResource(Res.string.home_pairing_title),
+            style = MaterialTheme.typography.headlineSmallEmphasized,
+            textAlign = TextAlign.Center
+        )
+        Text(
+            text = stringResource(Res.string.home_pairing_prompt),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        Button(onClick = onNavigateToPairing, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(Res.string.home_pairing_cta))
+        }
+    }
+}
+
+/**
+ * The paired dashboard, in spec §3's order.
+ *
+ * @param state Everything the page draws
+ * @param parentNames Resolves a slot to that parent's name
+ * @param contentPadding The scaffold's own insets
+ * @param onOpenEvent Opens an event by id, with the tapped occurrence's start when there is one
+ * @param onOpenChangeRequests Opens the requests inbox
+ * @param onOpenRequestHistory Opens the requests inbox at its History
+ * @param onOpenExpenses Opens Expenses
+ * @param onOpenChat Switches to the Chat tab
+ * @param onAddEvent Opens the new-event form
+ */
+@Composable
+// One callback per navigation target; the body is one linear column of sections, so splitting
+// it would only move the length into a second file.
+@Suppress("LongParameterList", "LongMethod")
+private fun Dashboard(
+    state: HomeUiState.Dashboard,
+    parentNames: ParentNames,
+    contentPadding: PaddingValues,
+    onOpenEvent: (String, LocalDateTime?) -> Unit,
+    onOpenChangeRequests: () -> Unit,
+    onOpenRequestHistory: () -> Unit,
+    onOpenExpenses: () -> Unit,
+    onOpenChat: () -> Unit,
+    onAddEvent: () -> Unit
+) {
+    // What the parent acts on now — who to call, what waits on them, the handover, today — and
+    // what they read after: the week, the co-parent's changes, the month's figures. One column
+    // on a phone, in that order; two side by side from 840 dp (release audit R-8), where one
+    // column of cards ran 1200 dp wide beside the rail.
+    val actNow: LazyListScope.() -> Unit = {
+        // Today first (new-user review, October 2026, owner decision): whose day it is and when
+        // the next handover is, then today's events, then what waits on this parent's answer.
+        // It supersedes the August 2026 "emergency surface first" order, whose contacts, child and
+        // pet rows now live one tap away on the Family tab; the sticker row went there too.
+        state.nextHandover?.let { handover ->
+            item {
+                HandoverHero(
+                    info = handover,
+                    parentNames = parentNames,
+                    childrenToday = state.childrenToday
+                )
+            }
+        }
+
+        // Today's agenda — the day card that used to sit under the calendar's month grid,
+        // moved here so the grid fills its screen. Same composable, so the two surfaces can
+        // never drift into different ideas of what a day looks like: date, whose custody day
+        // it is, and the whole day's events (a 9:00 appointment is still part of today at
+        // 9:05, which is why this is not just the week's first rows repeated).
+        item {
+            DayAgendaCard(
+                date = state.today.date,
+                events = state.today.events,
+                custody = state.today.dayParent,
+                parentNames = parentNames,
+                onEventClick = { event -> onOpenEvent(event.id, event.startDateTime) },
+                contactWindows = state.today.contactWindows
+            )
+        }
+
+        // Items 4/13 (Aug 2026 walkthrough): whatever waits on this parent's answer — a day
+        // swap, an event change, a pending event — must be visible on the main page, with one
+        // tap into the inbox that answers it. Since phase 2 (spec §6.1) the row is always there
+        // while paired, and says what waits on each parent and the co-parent's latest answer, so
+        // a parent who answered everything still has a way to what they answered.
+        item {
+            SectionGroup {
+                RequestsRow(
+                    state = state.requests,
+                    coParentName = parentNames.labelForUid(state.partner?.id),
+                    onClick = onOpenChangeRequests
+                )
+            }
+        }
+    }
+    val readAfter: LazyListScope.() -> Unit = {
+        // The week follows today and the requests.
+        item { SectionHeader(stringResource(Res.string.home_section_this_week)) }
+        if (state.week.isEmpty()) {
+            // The shared empty state (UX-9), not the `Card { Text }` the refresh outlawed — and
+            // with the one thing an empty week asks for.
+            item {
+                EmptyState(
+                    icon = Icons.Default.EventAvailable,
+                    title = stringResource(Res.string.home_week_empty),
+                    actionLabel = stringResource(Res.string.home_week_empty_action),
+                    onAction = onAddEvent,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        } else {
+            itemsIndexed(
+                items = state.week,
+                // Recurring occurrences share the master event's id, so `HomeWeek` builds a key
+                // that carries the occurrence's own start time; the id alone collides.
+                key = { _, entry -> entry.key }
+            ) { index, entry ->
+                // Whose days these are, once over each run of them rather than on every row (UX audit
+                // M4): beside each row's own dot — whose event it is — it read as a second colour.
+                val dayParent = entry.dayParent
+                if (dayParent != null && dayParent != state.week.getOrNull(index - 1)?.dayParent) {
+                    WeekDaysLabel(dayParent, parentNames)
+                }
+                TimelineRow(
+                    entry = entry,
+                    parentNames = parentNames,
+                    isLast = index == state.week.lastIndex,
+                    onClick = { onOpenEvent(entry.event.id, entry.event.startDateTime) },
+                    showDayParent = false
+                )
+            }
+        }
+
+        item {
+            // Deliberately `partner?.name` and not `parentNames`, which is what the hero and
+            // the timeline above use. The two answer different questions. This header names
+            // a *person* - the account this one is paired with - and that identity is known
+            // as soon as pairing resolves. The hero names whoever holds a *slot*, and on a
+            // pair whose two parents still share slot 1 nobody holds the other one, so it
+            // says "Parent" until the backfill separates them.
+            //
+            // So a legacy pair reads "Olya changed" here and "Today with Parent" above, and
+            // that is correct rather than an inconsistency to iron out: degrading this to
+            // "Parent" would throw away a fact we hold, and resolving the hero from the
+            // partner's name would assert a slot nobody has stored - the guess this whole
+            // branch exists to remove.
+            SectionHeader(
+                state.partner?.name?.takeIf { it.isNotBlank() }
+                    ?.let { stringResource(Res.string.home_section_partner_changed, it) }
+                    ?: stringResource(Res.string.home_section_recent_changes)
+            )
+        }
+
+        if (state.recentChanges.isEmpty()) {
+            item {
+                EmptyState(
+                    icon = Icons.Default.History,
+                    title = stringResource(Res.string.home_recent_empty_paired),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        } else {
+            item {
+                ActivityGroup(
+                    items = state.recentChanges,
+                    onOpenChangeRequests = onOpenChangeRequests,
+                    onOpenRequestHistory = onOpenRequestHistory,
+                    // A change names the event, not one occurrence of it.
+                    onOpenEvent = { eventId -> onOpenEvent(eventId, null) }
+                )
+            }
+        }
+
+        item {
+            // Last, as spec §3 asks. The unread tile travels with it rather than being
+            // stranded alone at the top: the two are one row, and the Chat tab already
+            // carries its own unread badge, so nothing is lost by it sitting here.
+            Spacer(modifier = Modifier.size(4.dp))
+            StatTiles(
+                spend = state.monthSpend,
+                balances = state.monthBalances,
+                unreadCount = state.unreadCount,
+                onOpenExpenses = onOpenExpenses,
+                onOpenChat = onOpenChat
+            )
+        }
+    }
+
+    val listModifier = Modifier
+        .fillMaxSize()
+        .padding(contentPadding)
+    if (rememberTwoPane()) {
+        TwoPanes(
+            start = { HomeColumn(listModifier, actNow) },
+            end = { HomeColumn(listModifier, readAfter) }
+        )
+    } else {
+        HomeColumn(listModifier) {
+            actNow()
+            readAfter()
+        }
+    }
+}
+
+/** One of Home's scrolling columns, with the page's padding and rhythm. */
+@Composable
+private fun HomeColumn(modifier: Modifier, content: LazyListScope.() -> Unit) {
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(Spacing.L),
+        verticalArrangement = Arrangement.spacedBy(Spacing.M),
+        content = content
+    )
+}
+
+/**
+ * Home's Requests row (phase 2, spec §6.1): always there while paired. Its line names what waits
+ * on each parent and the co-parent's latest answer, or says there are no requests yet; the count
+ * beside it is what waits on this parent alone, and a chevron stands in for zero.
+ *
+ * @param state What the row says
+ * @param coParentName The co-parent of the family on screen, by name
+ * @param onClick Opens the inbox
+ */
+@Composable
+private fun RequestsRow(state: RequestsRowState, coParentName: String, onClick: () -> Unit) {
+    val today by rememberToday()
+    // `asString` is composable, so each part is resolved here rather than inside joinToString.
+    val line = RequestsRowText.parts(state, coParentName, today)
+        .map { it.asString() }
+        .joinToString(" · ")
+    SectionRow(
+        title = stringResource(Res.string.home_requests_title),
+        icon = Icons.Default.SwapHoriz,
+        supporting = line,
+        onClick = onClick,
+        trailing = {
+            if (state.waitingOnMe > 0) {
+                Text(
+                    text = state.waitingOnMe.toString(),
+                    style = MaterialTheme.typography.titleSmallEmphasized,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            } else {
+                HomeChevron()
+            }
+        }
+    )
+}
+
+/** The trailing chevron every navigation row in the top group carries. */
+@Composable
+private fun HomeChevron() {
+    Icon(
+        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+}
+
+@Composable
+private fun SectionHeader(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleSmallEmphasized,
+        // A heading, so TalkBack can jump between Home's sections (D-17).
+        modifier = Modifier.semantics { heading() }
+    )
+}
+
+/**
+ * The handover hero: who has the child now, when it changes hands, and the one action that
+ * belongs to that fact.
+ *
+ * The wash runs from the current parent's hue into the next parent's, so the card itself shows
+ * the direction of the handover before a word is read.
+ *
+ * Internal rather than private so the JVM screenshot tests (`ScreenshotMatrix` and its
+ * subclasses under `app/src/test`) can render it on its own.
+ *
+ * The card used to end in a "Review" chip that opened the Requests inbox — a word that did not say
+ * what it reviewed, one row above the Requests row that opens the same inbox (UX audit M3). The
+ * date chip stays: it carries the next parent's colour.
+ *
+ * @param info Next handover
+ */
+@Composable
+@Suppress("LongMethod") // one card: gradient, headline, chips and action read as a single block
+fun HandoverHero(
+    info: HandoverInfo,
+    parentNames: ParentNames,
+    childrenToday: List<ChildWithParent> = emptyList()
+) {
+    val fromColor = ParentColors.fill(info.fromParent)
+    val toColor = ParentColors.fill(info.toParent)
+    val headline = handoverHeadline(info, parentNames)
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        color = Color.Transparent,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            modifier = Modifier
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            fromColor.copy(alpha = HERO_TINT_ALPHA),
+                            toColor.copy(alpha = HERO_TINT_ALPHA)
+                        )
+                    )
+                )
+                .padding(Spacing.XL),
+            verticalArrangement = Arrangement.spacedBy(Spacing.S)
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(fromColor)
+                )
+                Text(
+                    text = if (parentNames.isReader(info.fromParent)) {
+                        stringResource(Res.string.home_handover_current_you)
+                    } else {
+                        stringResource(Res.string.home_handover_current, parentNames.labelFor(info.fromParent))
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Text(
+                text = headline,
+                style = MaterialTheme.typography.headlineSmallEmphasized.copy(
+                    fontSize = 26.sp,
+                    lineHeight = 32.sp
+                )
+            )
+            PillChip(
+                label = ReaderDateText.date(info.date, "EEEMMMd"),
+                container = ParentColors.container(info.toParent, alpha = 0.2f),
+                contentColor = ParentColors.text(info.toParent)
+            )
+            ChildrenTodayLines(childrenToday, parentNames)
+        }
+    }
+}
+
+/**
+ * The hero's headline: when the next handover is and to whom — "you" when it is to the reader
+ * (owner request, 28 October 2026: "on Home, call me you, it is more personal").
+ */
+@Composable
+private fun handoverHeadline(info: HandoverInfo, parentNames: ParentNames): String {
+    val days = info.daysUntil.toInt()
+    return if (parentNames.isReader(info.toParent)) {
+        when (info.daysUntil) {
+            0L -> stringResource(Res.string.home_handover_hero_today_you)
+            1L -> stringResource(Res.string.home_handover_hero_tomorrow_you)
+            else -> pluralStringResource(Res.plurals.home_handover_hero_in_days_you, days, days)
+        }
+    } else {
+        val to = parentNames.labelFor(info.toParent)
+        when (info.daysUntil) {
+            0L -> stringResource(Res.string.home_handover_hero_today, to)
+            1L -> stringResource(Res.string.home_handover_hero_tomorrow, to)
+            else -> pluralStringResource(Res.plurals.home_handover_hero_in_days, days, to, days)
+        }
+    }
+}
+
+/**
+ * The two dashboard tiles. Both are deep links — tapping the money opens Expenses, tapping the
+ * unread count opens Chat.
+ *
+ * The unread tile disappears at zero rather than sitting there saying "0", which is what it
+ * says most of the time; the spend tile then takes the full width.
+ *
+ * Money is never ellipsised (docs/AUDIT-2026-10-design.md D-1): each currency's total gets a
+ * line of its own, a caption that does not fit wraps, and from [STACK_TILES_FONT_SCALE] the
+ * tiles stack so each has the full width. They used to share one line per text, which cut
+ * "CZK3,540.00 · €145.00" and "You are owed CZK1,770.00" off in English at the default size.
+ *
+ * Internal rather than private so the JVM screenshot tests (`ScreenshotMatrix` and its
+ * subclasses under `app/src/test`) can render it on its own.
+ *
+ * @param spend This month's total, per currency
+ * @param balances This month's settle-up position, per currency
+ * @param unreadCount Unread messages across all conversations
+ * @param onOpenExpenses Deep link for the spend tile
+ * @param onOpenChat Deep link for the unread tile
+ */
+@Composable
+fun StatTiles(
+    spend: MonthSpend,
+    balances: List<CurrencyBalance>,
+    unreadCount: Int,
+    onOpenExpenses: () -> Unit,
+    onOpenChat: () -> Unit
+) {
+    val spendTile: @Composable (Modifier) -> Unit = { modifier ->
+        StatTile(
+            modifier = modifier,
+            icon = Icons.Default.Payments,
+            // Named, as the Family tab's money card is: two bare totals said nothing about which
+            // period they were (UX audit M3).
+            label = stringResource(Res.string.family_money_this_month),
+            value = spend.byCurrency.joinToString("\n") { formatMoney(it.amount, it.currency) },
+            caption = balanceCaption(balances),
+            onClick = onOpenExpenses
+        )
+    }
+    val chatTile: @Composable (Modifier) -> Unit = { modifier ->
+        StatTile(
+            modifier = modifier,
+            icon = Icons.AutoMirrored.Filled.Chat,
+            badge = unreadCount,
+            value = pluralStringResource(Res.plurals.home_stat_unread_count, unreadCount, unreadCount),
+            caption = stringResource(Res.string.home_stat_open_chat),
+            onClick = onOpenChat
+        )
+    }
+    if (LocalDensity.current.fontScale >= STACK_TILES_FONT_SCALE) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
+            spendTile(Modifier.fillMaxWidth())
+            if (unreadCount > 0) chatTile(Modifier.fillMaxWidth())
+        }
+    } else {
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
+            spendTile(Modifier.weight(1f))
+            if (unreadCount > 0) chatTile(Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+@Suppress("LongParameterList") // one tile anatomy, expressed as one parameter list
+private fun StatTile(
+    modifier: Modifier = Modifier,
+    icon: ImageVector,
+    value: String,
+    caption: String,
+    onClick: () -> Unit,
+    badge: Int? = null,
+    label: String? = null
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier,
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = Spacing.L, vertical = Spacing.M),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (badge != null) {
+                BadgedBox(badge = { Badge { Text(badge.toString()) } }) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(IconSizes.Standard)
+                    )
+                }
+            } else {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(IconSizes.Standard)
+                )
+            }
+            // Neither line is capped: the value is money or a count and the caption says who
+            // owes whom, and a cut-off figure is a wrong figure.
+            Column(modifier = Modifier.weight(1f)) {
+                label?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.titleMediumEmphasized
+                )
+                Text(
+                    text = caption,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+/**
+ * One row of the child's week: a parent-coloured node on a vertical rail, with the event beside
+ * it and an exclamation mark when the co-parent is expected.
+ *
+ * **The node's colour is whose event it is** (`Event.parentOwner`), as on every calendar chip and
+ * the today card's bar (UX-8, owner decision 2026-09-30: colour = whose event). Whose custody day
+ * the event falls on is a separate fact, and the row keeps it as words in the meta line
+ * ("… · Alex's day"); it is dropped when no arrangement answers for that date, because that is
+ * the part that would be a guess. The row used to colour from the day's parent, falling back to
+ * the owner, so one visual channel meant two things on adjacent cards.
+ *
+ * Internal rather than private so the JVM screenshot tests (`ScreenshotMatrix` and its
+ * subclasses under `app/src/test`) can render it on its own.
+ *
+ * @param entry The row
+ * @param parentNames Resolves a slot to that parent's name
+ * @param isLast Whether this is the final row, which drops the trailing connector
+ * @param onClick Opens the event
+ */
+@Composable
+@Suppress("LongMethod") // rail, node, title, time and custody words: one row
+fun TimelineRow(
+    entry: WeekEntry,
+    parentNames: ParentNames,
+    isLast: Boolean,
+    onClick: () -> Unit,
+    showDayParent: Boolean = true
+) {
+    val event = entry.event
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.M)
+    ) {
+        Column(
+            modifier = Modifier.width(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .padding(top = Spacing.XS)
+                    .size(12.dp)
+                    .clip(CircleShape)
+                    .background(
+                        // An earlier family's event is drawn neutral: its slot colour would now
+                        // name the wrong person.
+                        if (
+                            placeOf(event.placementFamilyId, event.createdByFirebaseUid) ==
+                            RecordPlace.EARLIER_FAMILY
+                        ) {
+                            MaterialTheme.colorScheme.tertiary
+                        } else {
+                            ParentColors.fill(event.parentOwner)
+                        }
+                    )
+            )
+            if (!isLast) {
+                Box(
+                    modifier = Modifier
+                        .padding(top = Spacing.XS)
+                        .width(2.dp)
+                        .height(28.dp)
+                        .background(MaterialTheme.colorScheme.outlineVariant)
+                )
+            }
+        }
+        Column(modifier = Modifier.padding(bottom = Spacing.S)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // The mark carries its own description rather than none: an unexplained glyph
+                // is worse than no glyph for anyone not reading the screen, and what it means —
+                // that the co-parent is expected — is not guessable from an exclamation mark.
+                if (event.isImportant) {
+                    Icon(
+                        imageVector = Icons.Default.PriorityHigh,
+                        contentDescription = stringResource(Res.string.event_important_mark_description),
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(IconSizes.Inline)
+                    )
+                }
+                Text(
+                    text = event.title,
+                    style = MaterialTheme.typography.bodyMediumEmphasized,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            // An all-day event says so rather than "12:00 AM" (D-18; `AllDayEvent`).
+            val timeLabel = if (AllDayEvent.isAllDay(event)) {
+                val day = ReaderDateText.date(event.startDateTime.date, "EEEd")
+                "$day · ${stringResource(Res.string.event_all_day)}"
+            } else {
+                event.startDateTime.dateAndTime("EEEd")
+            }
+            Text(
+                text = entry.dayParent
+                    ?.takeIf { showDayParent }
+                    ?.let {
+                        if (parentNames.isReader(it)) {
+                            stringResource(Res.string.home_timeline_meta_you, timeLabel)
+                        } else {
+                            stringResource(Res.string.home_timeline_meta, timeLabel, parentNames.labelFor(it))
+                        }
+                    }
+                    ?: timeLabel,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/**
+ * The co-parent's recent changes as one grouped list. A change *request* carries an inline
+ * "Review" action, because it is the only entry in this feed that is waiting on the reader. An
+ * answer to one of the reader's requests carries its outcome on a neutral disc and opens the
+ * inbox's History, and the group ends with the way to every request and answer.
+ *
+ * @param items Activity entries, newest first
+ * @param onOpenChangeRequests Opens the requests inbox
+ * @param onOpenRequestHistory Opens the requests inbox at its History
+ * @param onOpenEvent Opens an event by id
+ */
+@Composable
+private fun ActivityGroup(
+    items: List<ActivityItem>,
+    onOpenChangeRequests: () -> Unit,
+    onOpenRequestHistory: () -> Unit,
+    onOpenEvent: (String) -> Unit
+) {
+    SectionGroup {
+        items.forEach { item ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        when {
+                            item.answer != null -> onOpenRequestHistory()
+                            item.isChangeRequest -> onOpenChangeRequests()
+                            else -> onOpenEvent(item.eventId)
+                        }
+                    }
+                    .padding(horizontal = Spacing.L, vertical = Spacing.M),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.M),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ActivityMarker(item)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = activityLabel(item),
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = item.timestamp.dateAndTime("dMMM"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                // "Review" only while the request still waits on this parent; once answered or
+                // withdrawn the row says how it ended instead (UX audit M2: it kept "Review" after
+                // the History already said "Accepted").
+                when (item.requestStatus) {
+                    ChangeRequestStatus.PENDING -> PillChip(
+                        label = stringResource(Res.string.home_activity_review),
+                        container = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        onClick = onOpenChangeRequests
+                    )
+                    ChangeRequestStatus.ACCEPTED -> OutcomeChip(Res.string.home_activity_you_accepted)
+                    ChangeRequestStatus.DECLINED -> OutcomeChip(Res.string.home_activity_you_declined)
+                    ChangeRequestStatus.CANCELLED -> OutcomeChip(Res.string.home_activity_withdrawn)
+                    null -> Unit
+                }
+            }
+            Divider()
+        }
+        SectionRow(
+            title = stringResource(Res.string.home_requests_all),
+            onClick = onOpenRequestHistory,
+            trailing = { HomeChevron() }
+        )
+    }
+}
+
+/** Whose days the week's next run of rows falls on: "Your days" or "Bob's days", with their colour. */
+@Composable
+private fun WeekDaysLabel(slot: String, parentNames: ParentNames) {
+    Row(
+        modifier = Modifier.padding(top = Spacing.S, bottom = Spacing.XS),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(width = 16.dp, height = 4.dp)
+                .clip(CircleShape)
+                .background(ParentColors.fill(slot))
+        )
+        Text(
+            text = if (parentNames.isReader(slot)) {
+                stringResource(Res.string.home_week_days_you)
+            } else {
+                stringResource(Res.string.home_week_days_of, parentNames.labelFor(slot))
+            },
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+/** How a change request in the feed ended, in a neutral chip: a fact, not an action. */
+@Composable
+private fun OutcomeChip(label: StringResource) {
+    PillChip(label = stringResource(label), contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+/**
+ * The mark at a feed row's start, in a slot a standard icon wide so every row's text lines up: the
+ * kind's icon, or for an answer a check or a cross on a neutral disc — never a parent's colour, and
+ * not green and red either, which the theme reserves for holidays and errors (spec §6.1).
+ */
+@Composable
+private fun ActivityMarker(item: ActivityItem) {
+    val answer = item.answer
+    Box(
+        modifier = Modifier
+            .size(IconSizes.Standard)
+            .then(
+                if (answer != null) {
+                    Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                } else {
+                    Modifier
+                }
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = when {
+                answer == null -> item.kind.icon()
+                answer.outcome == RequestOutcome.ACCEPTED -> Icons.Default.Check
+                else -> Icons.Default.Close
+            },
+            contentDescription = null,
+            tint = if (answer != null) {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            } else {
+                MaterialTheme.colorScheme.primary
+            },
+            modifier = Modifier.size(IconSizes.Small)
+        )
+    }
+}
+
+/** What a feed row says: the kind's sentence, or for an answer, what was answered and how. */
+@Composable
+private fun activityLabel(item: ActivityItem): String {
+    val answer = item.answer
+    return if (answer == null) stringResource(item.kind.labelRes(), item.title) else answerLabel(answer)
+}
+
+@Composable
+private fun answerLabel(answer: HistoryEntry): String {
+    val accepted = answer.outcome == RequestOutcome.ACCEPTED
+    return when (val subject = answer.subject) {
+        is RequestSubject.NewTime -> stringResource(
+            if (accepted) Res.string.home_activity_accepted_new_time else Res.string.home_activity_declined_new_time,
+            subject.eventTitle
+        )
+        is RequestSubject.DaySwap -> stringResource(
+            if (accepted) Res.string.home_activity_accepted_swap else Res.string.home_activity_declined_swap,
+            swapDatesText(subject.firstDate, subject.dayCount)
+        )
+        is RequestSubject.NewEvent -> stringResource(
+            if (accepted) Res.string.home_activity_accepted_event else Res.string.home_activity_declined_event,
+            subject.eventTitle
+        )
+        // Never in the feed: a custody or split decision has its own card and banner (HomeFeed).
+        RequestSubject.CustodySchedule -> stringResource(Res.string.request_history_custody)
+        RequestSubject.SplitRatio -> stringResource(Res.string.request_history_split)
+    }
+}
+
+private fun ActivityKind.icon(): ImageVector = when (this) {
+    ActivityKind.EVENT_CREATED -> Icons.Default.Add
+    ActivityKind.EVENT_UPDATED -> Icons.Default.Edit
+    ActivityKind.PICKUP_CONFIRMED -> Icons.Default.CheckCircle
+    ActivityKind.CHANGE_REQUESTED -> Icons.Default.SwapHoriz
+    // An answer draws its outcome instead (ActivityMarker); this is only the kind's own mark.
+    ActivityKind.ANSWER -> Icons.Default.Check
+}
+
+private fun ActivityKind.labelRes(): StringResource = when (this) {
+    ActivityKind.EVENT_CREATED -> Res.string.home_activity_event_created
+    ActivityKind.EVENT_UPDATED -> Res.string.home_activity_event_updated
+    ActivityKind.PICKUP_CONFIRMED -> Res.string.home_activity_pickup_confirmed
+    ActivityKind.CHANGE_REQUESTED -> Res.string.home_activity_change_requested
+    // An answer is worded from its subject (answerLabel); this is only the kind's own sentence.
+    ActivityKind.ANSWER -> Res.string.home_activity_accepted_event
+}

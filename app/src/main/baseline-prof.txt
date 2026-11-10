@@ -13,6 +13,7 @@
 
 HSPLcom/coparently/app/CoPlanlyApplication;->**(**)**
 HSPLcom/coparently/app/presentation/MainActivity;->**(**)**
+HSPLcom/coparently/app/presentation/CoPlanlyAppKt;->**(**)**
 HSPLcom/coparently/app/presentation/navigation/**;->**(**)**
 HSPLcom/coparently/app/presentation/theme/**;->**(**)**
 HSPLcom/coparently/app/presentation/common/**;->**(**)**

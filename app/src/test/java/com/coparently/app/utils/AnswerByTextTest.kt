@@ -1,6 +1,6 @@
 package com.coparently.app.utils
 
-import android.app.Application
+import com.coparently.app.testing.RobolectricTestApplication
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -21,7 +21,7 @@ import java.util.Locale
  * where the time sits — so a platform difference cannot redden them.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = Application::class)
+@Config(sdk = [34], application = RobolectricTestApplication::class)
 class AnswerByTextTest {
 
     private val prague = ZoneId.of("Europe/Prague")

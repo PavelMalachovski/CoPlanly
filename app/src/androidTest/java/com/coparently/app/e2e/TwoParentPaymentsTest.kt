@@ -14,13 +14,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.YearMonth
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.math.BigDecimal
-import java.time.YearMonth
 
 /**
  * Payments and child support between two phones (25 October 2026, owner decisions), through the
@@ -41,7 +40,7 @@ import java.time.YearMonth
 class TwoParentPaymentsTest : TwoParentTest() {
 
     private val familyId get() = FamilyKey.of(alice.uid, bob.uid)
-    private val october = YearMonth.of(2026, 10)
+    private val october = YearMonth(2026, 10)
 
     @Test
     fun aSettleUpIsPaidByOneParentAndConfirmedByTheOther() = runBlocking<Unit> {
@@ -68,10 +67,10 @@ class TwoParentPaymentsTest : TwoParentTest() {
         )
 
         EmulatorEnvironment.step("payments: Bob says he paid October's settle-up")
-        assertTrue(bob.paymentStore.markPaid(familyId, PaymentKind.EXPENSES, october, "CZK", BigDecimal("450")))
+        assertTrue(bob.paymentStore.markPaid(familyId, PaymentKind.EXPENSES, october, "CZK", 45_000L))
         val onAlice = awaitPayment(alice) { it.kind == PaymentKind.EXPENSES && !it.confirmed }
         assertEquals(bob.uid, onAlice.payerUid)
-        assertEquals(BigDecimal("450.00"), onAlice.amount)
+        assertEquals(45_000L, onAlice.amountMinor)
         awaitCard(alice, ActivityKind.SETTLE_UP_PAID)
 
         EmulatorEnvironment.step("payments: Bob cannot confirm his own payment; Alice can")
@@ -83,7 +82,7 @@ class TwoParentPaymentsTest : TwoParentTest() {
 
     @Test
     fun childSupportIsProposedAcceptedAndPaidMonthByMonth() = runBlocking<Unit> {
-        val terms = SupportTerms(BigDecimal("5000"), "CZK", 5, bob.uid, october)
+        val terms = SupportTerms(500_000L, "CZK", 5, bob.uid, october)
 
         EmulatorEnvironment.step("support: Alice proposes, Bob accepts it as it stands")
         assertTrue(alice.supportStore.propose(familyId, terms, existing = null))
@@ -95,12 +94,12 @@ class TwoParentPaymentsTest : TwoParentTest() {
         val agreed = withTimeout(WAIT_MS) {
             alice.supportStore.observe(familyId).first { it is SupportRead.Known && it.agreement.agreement != null }
         } as SupportRead.Known
-        assertEquals(BigDecimal("5000.00"), agreed.agreement.agreement?.amount)
+        assertEquals(500_000L, agreed.agreement.agreement?.amountMinor)
         assertEquals(bob.uid, agreed.agreement.agreement?.payerUid)
         awaitCard(alice, ActivityKind.SUPPORT_ACCEPTED)
 
         EmulatorEnvironment.step("support: Bob pays October, Alice confirms it arrived")
-        assertTrue(bob.paymentStore.markPaid(familyId, PaymentKind.SUPPORT, october, "CZK", BigDecimal("5000")))
+        assertTrue(bob.paymentStore.markPaid(familyId, PaymentKind.SUPPORT, october, "CZK", 500_000L))
         val paid = awaitPayment(alice) { it.kind == PaymentKind.SUPPORT }
         assertTrue(alice.paymentStore.confirm(paid))
         awaitPayment(bob) { it.kind == PaymentKind.SUPPORT && it.confirmed }
@@ -108,8 +107,8 @@ class TwoParentPaymentsTest : TwoParentTest() {
 
     @Test
     fun aStrangerReadsNeitherPaymentsNorChildSupport() = runBlocking<Unit> {
-        assertTrue(bob.paymentStore.markPaid(familyId, PaymentKind.EXPENSES, october, "CZK", BigDecimal("1")))
-        val terms = SupportTerms(BigDecimal("1"), "CZK", 1, bob.uid, october)
+        assertTrue(bob.paymentStore.markPaid(familyId, PaymentKind.EXPENSES, october, "CZK", 100L))
+        val terms = SupportTerms(100L, "CZK", 1, bob.uid, october)
         assertTrue(alice.supportStore.propose(familyId, terms, null))
         val carol = newParent("Carol")
 

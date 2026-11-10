@@ -4,12 +4,12 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.coparently.app.data.remote.firebase.FirestoreEventVersionDataSource
 import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.data.versions.EventVersionDocument
-import com.coparently.app.data.versions.EventVersionKind
 import com.coparently.app.domain.events.EventAcceptance
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.versions.EventVersionKind
 import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -18,6 +18,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -154,7 +156,10 @@ class TwoParentRequestsAndEventPushesTest : TwoParentTest() {
         val event = insertSharedEvent("Doctor")
         val stored = checkNotNull(alice.eventRepository.getEventById(event.id))
         alice.eventRepository.updateEvent(
-            stored.copy(title = "Doctor (moved)", updatedAt = LocalDateTime.now().plusSeconds(1))
+            stored.copy(
+                title = "Doctor (moved)",
+                updatedAt = LocalDateTime.now().plusSeconds(1).toKotlinLocalDateTime()
+            )
         )
         alice.eventVersionRecorder.flush(alice.uid)
         assertTrue(
@@ -162,7 +167,7 @@ class TwoParentRequestsAndEventPushesTest : TwoParentTest() {
             alice.eventVersionRecorder.undelivered(alice.uid).none { it.eventId == event.id }
         )
 
-        val bobsVersions = FirestoreEventVersionDataSource(bob.firestore)
+        val bobsVersions = FirestoreEventVersionDataSource(bob.documents)
         val revisions = withTimeout(EmulatorParent.WAIT_MS) {
             var found = phoneRevisions(bobsVersions, event.id)
             while (found.map { it.kind }.toSet() != setOf(EventVersionKind.CREATED, EventVersionKind.UPDATED)) {
@@ -192,7 +197,9 @@ class TwoParentRequestsAndEventPushesTest : TwoParentTest() {
         val event = newEvent("Therapy", isPrivate = true)
         alice.eventRepository.insertEvent(event)
         val stored = checkNotNull(alice.eventRepository.getEventById(event.id))
-        alice.eventRepository.updateEvent(stored.copy(title = "Therapy (moved)", updatedAt = LocalDateTime.now()))
+        alice.eventRepository.updateEvent(
+            stored.copy(title = "Therapy (moved)", updatedAt = LocalDateTime.now().toKotlinLocalDateTime())
+        )
         alice.eventVersionRecorder.flush(alice.uid)
 
         assertTrue(alice.eventVersionRecorder.undelivered(alice.uid).none { it.eventId == event.id })
@@ -223,10 +230,10 @@ class TwoParentRequestsAndEventPushesTest : TwoParentTest() {
             requestedTo = partnerId,
             currentStartDateTime = event.startDateTime,
             currentEndDateTime = event.endDateTime,
-            proposedStartDateTime = event.startDateTime.plusHours(2),
-            proposedEndDateTime = event.endDateTime?.plusHours(2),
+            proposedStartDateTime = event.startDateTime.toJavaLocalDateTime().plusHours(2).toKotlinLocalDateTime(),
+            proposedEndDateTime = event.endDateTime?.toJavaLocalDateTime()?.plusHours(2)?.toKotlinLocalDateTime(),
             note = "Could we move it?",
-            createdAt = LocalDateTime.now()
+            createdAt = LocalDateTime.now().toKotlinLocalDateTime()
         )
         alice.changeRequestRepository.createChangeRequest(request)
         return request
@@ -288,13 +295,13 @@ class TwoParentRequestsAndEventPushesTest : TwoParentTest() {
         return Event(
             id = UUID.randomUUID().toString(),
             title = title,
-            startDateTime = start,
-            endDateTime = start.plusHours(1),
+            startDateTime = start.toKotlinLocalDateTime(),
+            endDateTime = start.plusHours(1).toKotlinLocalDateTime(),
             eventType = "appointment",
             // Alice's own slot, as the event form defaults it.
             parentOwner = alice.database.userDao().getUserById(alice.uid)?.role ?: "mom",
-            createdAt = LocalDateTime.now(),
-            updatedAt = LocalDateTime.now(),
+            createdAt = LocalDateTime.now().toKotlinLocalDateTime(),
+            updatedAt = LocalDateTime.now().toKotlinLocalDateTime(),
             isPrivate = isPrivate
         )
     }

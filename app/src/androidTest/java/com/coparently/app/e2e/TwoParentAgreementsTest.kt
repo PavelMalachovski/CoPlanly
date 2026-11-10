@@ -203,7 +203,7 @@ class TwoParentAgreementsTest : TwoParentTest() {
             answers = mapOf(QUESTION to FORGED_ANSWER),
             updatedAtMillis = System.currentTimeMillis()
         )
-        val alicesWriter = FirestoreParentingPlanDataSource(alice.firestore)
+        val alicesWriter = FirestoreParentingPlanDataSource(alice.documents)
         assertDenied(runCatching { alicesWriter.uploadHalf(familyId, bob.uid, forged) })
 
         // A crafted merge that writes Alice's own half and slips Bob's in beside it.
@@ -220,7 +220,7 @@ class TwoParentAgreementsTest : TwoParentTest() {
             }
         )
 
-        val server = FirestoreParentingPlanDataSource(bob.firestore).fetchFromServer(familyId)
+        val server = FirestoreParentingPlanDataSource(bob.documents).fetchFromServer(familyId)
         assertEquals(BOB_ANSWER, server[bob.uid]?.answerTo(QUESTION))
         assertEquals(ALICE_ANSWER, server[alice.uid]?.answerTo(QUESTION))
     }

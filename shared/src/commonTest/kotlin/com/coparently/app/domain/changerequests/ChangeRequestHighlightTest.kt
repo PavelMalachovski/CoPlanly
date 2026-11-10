@@ -1,0 +1,72 @@
+package com.coparently.app.domain.changerequests
+
+import com.coparently.app.domain.model.ChangeRequest
+import com.coparently.app.domain.model.ChangeRequestStatus
+import kotlinx.datetime.LocalDateTime
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+
+class ChangeRequestHighlightTest {
+
+    private fun request(
+        id: String,
+        eventId: String,
+        status: ChangeRequestStatus,
+        createdAt: LocalDateTime
+    ) = ChangeRequest(
+        id = id,
+        eventId = eventId,
+        eventTitle = "Football",
+        requestedBy = "me",
+        requestedTo = "them",
+        currentStartDateTime = LocalDateTime(2026, 8, 21, 10, 0),
+        proposedStartDateTime = LocalDateTime(2026, 8, 21, 12, 0),
+        status = status,
+        createdAt = createdAt
+    )
+
+    @Test
+    fun `no request for the event is not a match`() {
+        val requests = listOf(
+            request("r1", "other-event", ChangeRequestStatus.PENDING, LocalDateTime(2026, 8, 1, 9, 0))
+        )
+
+        assertNull(ChangeRequestHighlight.forEvent(requests, eventId = "e1"))
+    }
+
+    @Test
+    fun `the pending request for the event wins`() {
+        val requests = listOf(
+            request("old", "e1", ChangeRequestStatus.DECLINED, LocalDateTime(2026, 8, 2, 9, 0)),
+            request("live", "e1", ChangeRequestStatus.PENDING, LocalDateTime(2026, 8, 1, 9, 0))
+        )
+
+        assertEquals("live", ChangeRequestHighlight.forEvent(requests, eventId = "e1")?.id)
+    }
+
+    @Test
+    fun `the newest pending request wins when the event collected several`() {
+        val requests = listOf(
+            request("first", "e1", ChangeRequestStatus.PENDING, LocalDateTime(2026, 8, 1, 9, 0)),
+            request("second", "e1", ChangeRequestStatus.PENDING, LocalDateTime(2026, 8, 3, 9, 0))
+        )
+
+        assertEquals("second", ChangeRequestHighlight.forEvent(requests, eventId = "e1")?.id)
+    }
+
+    @Test
+    fun `an answered request is still worth showing when nothing is pending`() {
+        val requests = listOf(
+            request("older", "e1", ChangeRequestStatus.DECLINED, LocalDateTime(2026, 8, 1, 9, 0)),
+            request("newer", "e1", ChangeRequestStatus.ACCEPTED, LocalDateTime(2026, 8, 4, 9, 0))
+        )
+
+        assertEquals("newer", ChangeRequestHighlight.forEvent(requests, eventId = "e1")?.id)
+    }
+
+    @Test
+    fun `an empty inbox is not a match`() {
+        assertNull(ChangeRequestHighlight.forEvent(emptyList(), eventId = "e1"))
+    }
+}

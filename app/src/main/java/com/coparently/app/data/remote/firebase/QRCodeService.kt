@@ -1,20 +1,18 @@
 package com.coparently.app.data.remote.firebase
 
 import android.graphics.Bitmap
+import com.coparently.app.data.platform.logger
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.WriterException
 import com.google.zxing.qrcode.QRCodeWriter
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Service for generating QR codes using ZXing library.
  * Creates QR codes that can be shared for co-parent pairing invitations.
  */
-@Singleton
-class QRCodeService @Inject constructor() {
+class QRCodeService {
 
     /**
      * Generates a QR code bitmap from the provided text content.
@@ -53,11 +51,11 @@ class QRCodeService @Inject constructor() {
             bitmap
         } catch (e: WriterException) {
             // Log error and return null if QR code generation fails
-            android.util.Log.e("QRCodeService", "Failed to generate QR code", e)
+            logger.e("QRCodeService", "Failed to generate QR code", e)
             null
         } catch (e: Exception) {
             // Catch any other unexpected exceptions
-            android.util.Log.e("QRCodeService", "Unexpected error generating QR code", e)
+            logger.e("QRCodeService", "Unexpected error generating QR code", e)
             null
         }
     }
