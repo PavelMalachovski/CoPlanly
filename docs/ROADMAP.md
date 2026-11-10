@@ -97,8 +97,8 @@ invocation is yours.
 | **MON-20** | **Built** (read-only card in custody settings, pure calculator); left: a look on a phone | P2 | — |
 | **MON-21** | **Built** (a proposal from an agreed plan answer, citing it; rules and rules tests); left: the rules deploy and a look on two phones — see the 👁 table | P2 | — |
 | **MON-22** | **Built** (schema 41, PR #101): a local-only journal and an opt-in export section; left: the device check (DEVICE-CHECKLIST §6) | P2 | — |
-| **MON-24** | The iPhone app: one Kotlin codebase (Compose Multiplatform), iOS-adapted on the iPhone, full parity. **Phase 1 built** (the domain in the `:shared` module, wire unchanged; on its branch, merged after the Android release); left for phase 1: the Mac runner's first green run. Design: `docs/superpowers/specs/2026-10-27-iphone-app-design.md` | P1 | L |
-| **MON-25** | Request clocks' on-time steps (deadline notice, end) move to a scheduled Cloud Function, for both platforms; needed by MON-24 before its phase 2. Needs its own design pass | P1 | L |
+| **MON-24** | The iPhone app: one Kotlin codebase (Compose Multiplatform), iOS-adapted on the iPhone, full parity. **Phases 1 and 2 built** (the domain in `:shared`; the data layer in `:shared-data`, the UI in `:shared-ui` and a thin Android shell; wire and stored bytes unchanged; on one branch, merged after the Android release); next: phase 3, the iPhone shell. Design: `docs/superpowers/specs/2026-10-27-iphone-app-design.md` | P1 | L |
+| **MON-25** | Request clocks' on-time steps (deadline notice, end) move to a scheduled Cloud Function, for both platforms; needed by MON-24 before an iPhone build reaches a user (planned before phase 2, which went ahead without it by owner decision, 1 November 2026). Needs its own design pass | P1 | L |
 | **REL-4 (drafting)** | Done as far as the code can answer: every placeholder left is a fact only the owner has, listed at the top of each document. The deletion page and the privacy link in the app are written | P0 | S |
 | **L-4 (photos)** | **Built** (family-keyed Storage paths, no download URLs, pre-pairing photos moved by the server, legacy purge callable; rules, functions, unit and e2e tests); left: `firebase deploy --only storage`, the functions deploy, `purgeLegacyPhotoPaths` once, and DEVICE-CHECKLIST §3.10 on two phones | P0 | S |
 
@@ -2667,7 +2667,7 @@ period or deletes them); no attachment of files to an entry; no backup — an en
 journal alone would be the way to add one, and it is a product decision, not a default. Needs
 `41.json` from the Regenerate workflow before its migration test can run.
 
-### MON-24 · **PHASE 1 BUILT** · P1 · L · CoPlanly for iPhone
+### MON-24 · **PHASES 1–2 BUILT** · P1 · L · CoPlanly for iPhone
 
 **Where:** ☁️ cloud for the shared Kotlin and the job definitions; ⚙️ the iOS build and simulator
 jobs on a GitHub-hosted macOS runner; 💻 the iPhone, TestFlight and App Store review.
@@ -2680,7 +2680,9 @@ The plan of record is `docs/superpowers/specs/2026-10-27-iphone-app-design.md`: 
 the Android app into `shared` without behaviour change (the wire fixtures are the gate), the
 iPhone shell, the platform substitutes (APNs with a Notification Service Extension, WidgetKit,
 iOS Data Protection instead of SQLCipher, Sign in with Apple on both platforms), and the order of
-work. Depends on MON-25 before its phase 2.
+work. Depended on MON-25 before its phase 2; phase 2 went ahead without it (owner, 1 November
+2026), so MON-25 is now needed before an iPhone build reaches a user (phase 3's start conditions,
+below).
 
 **Phase 1 — the domain in a shared module: built** (November 2026, owner decision to build it now on
 an isolated branch and merge only after the Android release; plan
@@ -2704,6 +2706,151 @@ an isolated branch and merge only after the Android release; plan
   with every date and name pinned by the same reference fixtures, now in `commonTest`.
 - **The wire did not move**: `CurrentWireFixturesTest` passed without a regeneration at every
   step, and the `upgrade` job read and wrote each step's documents with the previous build.
+
+**Phase 2 — the whole Android app on Kotlin Multiplatform: built** (November 2026; plan
+`docs/superpowers/plans/2026-11-01-iphone-phase-2-multiplatform-app.md`, spec §5.1 steps 3–6). The
+Android app is a thin shell over three multiplatform modules, and it does what it did: the wire
+fixtures never moved (`CurrentWireFixturesTest` without a regeneration, the `upgrade` job's base
+build reading this branch's documents), the stored bytes never moved (the `upgrade` job and the R8
+probe), and the screenshots verified with no baseline change at every task. The last code commit,
+`a881fdaa`, was green on every job: 3,170 shared JVM tests, 1,321 on the iOS simulator, the app's
+unit tests, 73 e2e, the three emulator legs, the R8 probe and the upgrade; the UI tour of Task 12
+matched `main`'s screen for screen (334). Built before the Android release on phase 1's branch
+(draft pull request #158), task by task with the full CI at each task's end, by the owner's waiver
+of the plan's start gate (1 November 2026). What each task did:
+
+- **Task 1, Firebase on two platforms:** GitLive, after a spike on both platforms ("Firebase on two
+  platforms", below).
+- **Task 2, Hilt becomes Koin** (4.1.1; 4.2 lifts Compose past the BOM). `KoinGraphTest` runs
+  `verify()` over every module, `ViewModelScopeTest` holds the activity-scoped ViewModels to one
+  instance, and every instrumented test that starts the graph carries `@UsesFakeFirebase`.
+- **Task 3, Gson becomes kotlinx.serialization** through `StoredJson`, byte for byte, including the
+  key order Gson wrote on ART (by field name; `GsonDeviceParityTest` on the emulators).
+- **Task 4, Room generates Kotlin.** **Task 5, `:shared-data` and HTTP on Ktor.** **Task 6, the
+  platform services behind interfaces.** **Task 7, Room KMP in `:shared-data`.** **Task 8, the data
+  layer to `commonMain`** (slices 8a–8j). Each is a bullet of "Carried into phase 2", below.
+- **Task 9, `:shared-ui`, Compose Multiplatform and the resources** (slices 9a–9d): the strings,
+  the fonts, the theme and the design system, `UiText`, and the owner's language rule.
+- **Task 10, the ViewModels** (slices 10a–10f). **Task 11, the screens** (slices 11a–11g), behind
+  the platform interfaces and the date, money and image seams. **Task 12, the navigation and the
+  thin shell** (slices 12a–12c), with `ShellBoundaryTest`.
+- **Task 13, AGP 9.3.3 and Kotlin 2.4.21** (Gradle 9.5.1, KSP 2.3.13, kotlinx-serialization 1.12.0,
+  Ktor 3.6.1 with compileSdk 37), which phase 3 needs (toolchain, below).
+
+**What moved** — everything the iPhone needs that is not a platform's own:
+- **`:shared`**: the domain (phase 1, and the stay list's files in Tasks 8e–8i), with
+  `StoredJson`.
+- **`:shared-data`**: the Room database (entities, DAOs, converters; the legacy migrations and
+  SQLCipher in `androidMain`), the Firestore data sources and callables on GitLive, the HTTP clients
+  on Ktor, every repository but the AI assist's, the sync, the request clocks, the families, the
+  chat mirror, the shared files and the chat outbox, the school import, the export's sources and
+  receipts, the session's profile synchronizer, the event use cases with `EventValidator` and
+  `ErrorHandler`, `ActivityAnnouncer`, the two consent managers, and the seams the platform answers
+  (`data/platform/`, `SignedInUser`, `PushQueue`/`PushDevice`/`PushRegistration`, `AuthSession`,
+  `AccountSignIn`, `AccountConsistency`, `AccountDeletion`, `AccountTraces`, `RequestClockNotices`,
+  `SchoolImportWordings`/`SchoolImportScheduler`, `GoogleCalendarConnectionSource`,
+  `GoogleCalendarAccount`, `StorageBucket`, `PickedFiles`, `ExportVerifyAddress`,
+  `RecordFileWriter`, `DeviceRegion`).
+- **`:shared-ui`**: every string (five locales), the fonts, the theme, the design system, the shared
+  state, every ViewModel, every screen, the platform interfaces (`presentation/platform/`), the date,
+  money and image seams, the navigation graph and `CoPlanlyApp`. It makes the iPhone's one framework,
+  `Shared`.
+
+**What stayed in the app, and why** (CLAUDE.md's architecture map and its "Where a … path lives"
+notes list each file):
+- **Android only, by its nature:** `MainActivity` (the splash, the launch intent, the two
+  activity-bound sign-ins, the theme preference), `QRScannerActivity`, the Glance widget, the
+  previews, every `Worker` and WorkManager scheduler, the notifications and the reminder alarms,
+  `CoPlanlyMessagingService` and `PushNotifier` (with `PushRouting` and the card's push wording).
+- **The Android halves of the seams** — today's code, so nothing a parent sees changed: `FcmService`,
+  `FirebaseAuthService`, the Credential Manager classes, `FirebaseStorageBucket`,
+  `AndroidPickedFiles`, `AccountSwitchGuard`, `AccountDeletionService`, `DeviceTraces`, the
+  string-resource wordings, `ExportFileWriter` (`PdfDocument`), ML Kit's receipt text, on-device
+  dictation, `FirebaseImageStorage` (a `Bitmap`'s re-encoding), `RecordPhotoFetcher` (Coil 2), and
+  the platform interfaces' Android halves (`ProvideAndroidPlatform` and its siblings).
+- **Held by the `upgrade` job:** `EncryptedPreferences` with `InMemorySharedPreferences`, whose
+  constructors the seed calls in the base build (the database builder moved to `shared-data`'s
+  `androidMain` with its JVM class name for the same reason).
+- **Not needed on the iPhone yet:** `TelemetryConsentApplier` and `AnalyticsManager` (the iPhone
+  collects nothing until phase 4), the install referrer (Google Play's), `MinorUnits` (one Android
+  caller, `SupportReminderWorker`), `AppLocale` (Android's half of the language rule) and
+  `NetworkMonitor`, and the AI assist's repository (on the Functions SDK, off until configured).
+
+**Where phase 2 departed from the plan or the spec** (each recorded in the spec's §5.1):
+- Three modules, not one `shared`: `:shared-data` and `:shared-ui` beside phase 1's `:shared`.
+- The 41 legacy migrations stay Android-only; from 47 on a migration is written in `commonMain`
+  against `SQLiteConnection` (`ConnectionMigrationOnSqlCipherTest`). The schema goes out through
+  KSP's `room.schemaLocation`, not the Room Gradle plugin.
+- The strings are generated back into Android resources (`stringsToAndroidRes`), so `R.string`
+  keeps Android's reading wherever Android code reads them.
+- Coil 2 stays, behind `AppImage`; Coil 3 is not part of phase 2.
+- One Android behaviour changed, by the owner's decision of 4 November 2026: the language rule (the
+  phone's first language when shipped, otherwise European English, `en-150`; a per-app choice
+  wins).
+- Built before the Android release and before MON-25, on one branch (above). So the request
+  clocks' on-time steps moved into `commonMain`, their WorkManager scheduler staying in the app;
+  MON-25 still has to move them to the server (spec §9.2).
+- Task 13 (AGP 9 and Kotlin 2.4) joined the plan, because phase 3 needs Kotlin 2.4.
+
+**Carried to phase 3** (nothing here changes what an Android parent sees):
+- **The export's ways in on the iPhone.** The Family tab's, Earlier families' and the chat's entries
+  to the export are still drawn where `RecordFileWriter` or `ShareSheet` is unavailable (the iPhone
+  for now); the export screen itself offers no format there. Hide them, design item 8.
+- **About 25 symbols made public for app callers that have since moved** to `:shared-ui` (CLAUDE.md's
+  screenshots paragraph gives each one's original reason): `eventTimeLine`; `splitSharesText`,
+  `formatMoney` and `balanceCaption`; `SwapDayAnswers`, `SwapOfferSides`, `SwapNoteQuote`,
+  `sidesAsked`, `swapOfferHeading`, `swapAcceptLabel` and `swapDatesText`; `roleOrNull` and
+  `senderLine`; `CustodyPatternForm`, `CustodyPatternActions`, `createTempModel` and
+  `custodyPreviewText`; `DaySwapSheet`, `isConsecutive`, `SwapMonths` and `SwapSideGroup` (named in
+  two app KDoc comments only); `ChildFields`, `PetFields`, `childForm` and `petForm`; and
+  `rememberAccessDate`. No app source or test names them at `edff7f71`. Return each to `internal`,
+  in one sweep; none has a detekt baseline entry. (`PLAY_STORE_URL` and `playStoreUrlFor` stay
+  public for the app's `PairingLinkTest`.)
+- **`IosSignInStandInsTest`** (`shared-ui`'s `iosTest`) is compiled by the `shared` job but never
+  run: no job runs `:shared-ui:iosSimulatorArm64Test`, whose test executable would need
+  `shared-data`'s Firebase pods. Run it once the iPhone app's test host links them.
+- **Kover's gap under AGP 9**: the coverage figure counts the app's unit tests alone, because Kover
+  0.9.x does not recognise AGP 9.3's Android KMP library target; the `unit` variant is wired for the
+  shared modules (CI hygiene, below).
+- **The iPhone's stand-ins, which phase 3 and 4 replace.** In `:shared-data`'s
+  `di/koin/IosUnavailable.kt` and `platformDataModule`: `NoSignedInUser`, `NoAuthSession`,
+  `NoAccountSignIn`, `NoAccountSwitch`, `NoAccountDeletion`, `NoAccountTraces`, `NoPush` (one object
+  for `PushDevice` and `PushRegistration`, replaced together), `NoGoogleCalendar`, `NoStorageBucket`,
+  `NoPickedFiles`, `NoRecordPhotoStorage`, `NoReceiptText`, `NoRecordFiles`, `NoSyncRequests`,
+  `NoEventReminders`, `NoRequestClockJobs`, `NoRequestClockNotices`, `NoSchoolImportJob`,
+  `NoSupportReminderJob`, `NoExportVerifyAddress` and `NoWording` (which throws: a pairing's thread
+  title and a school import's titles are stored data, so no English stand-in is written). In
+  `:shared-ui`: `NoSpeechDictation`, `NoAiAssist` with `AiAssistAvailability(false)`,
+  `NoAuthErrors` and `NoInviteQrCodes` (`di/koin/IosUiUnavailable.kt`), and in
+  `presentation/platform/IosPlatform.kt` the platform interfaces' (`NoShareSheet`, `NoFilePicker`,
+  `NoCameraCapture`, `NoQrScanner`, `NoDictation`, `NoPermissions`, `NoOpenUrl`, `NoClipboard`,
+  `NoImages`, `NoQrCodes`, `NoAppLanguages`) with `NoCredentialSignIn` and `NoGoogleCalendarSignIn`,
+  which `ProvideIosShell` provides. Each says it is unavailable, and the screens hide what it
+  stands for.
+- **From the data-layer move** (Task 8, and "Carried into the data-layer move" below): the sign-in's
+  ID-token-only path through GitLive (Android passes no access token; GitLive's iOS side needs
+  both); `getToken()` of the FCM and APNs token on a phone with a real project; GitLive's iOS
+  `FirebaseApp.options`, which reads `databaseURL` as non-null; the iOS test that signs in on the
+  Auth emulator and reads an event written from the JVM; and the school data tests, which still run
+  in the app over `EncryptedPreferences`.
+- **For the shell itself:** the iPhone's view controller composes `CoPlanlyApp` inside
+  `ProvideIosShell`, and, since `AppLaunch` carries no family, switches the family before it arms
+  any link, as `MainActivity.readLaunchIntent` does (CLAUDE.md item 15).
+- The lists of tests to add, edge cases and CI hygiene below stay open as written.
+
+**Phase 3's start conditions:**
+1. **Phases 1 and 2 merged** (draft pull request #158), after the Android release and its first
+   feedback round (spec §2 and §6, phase 0), with the full CI green on the merge.
+2. **The toolchain:** Kotlin 2.4 is done (Task 13; Xcode up to 26.4). A **stable Kotlin 2.5** is
+   needed before the App Store submission (phase 6), for Xcode 27 and the SDK App Store Connect will
+   require (toolchain, below).
+3. **Once the iPhone app's test host exists:** `KeychainSecurePreferencesTest` app-hosted,
+   `IosDatabaseTest` on a real iPhone and the device checks of the toolchain list below.
+4. **Before any iPhone build reaches a user:** the privacy documents describe the iPhone's storage
+   (toolchain, below), and MON-25 has moved the request clocks' on-time steps to the server (spec
+   §9.2), since the iPhone schedules none of them.
+5. **Phase 3's own first step is the spike of spec §5.2** (native or Compose navigation bars inside
+   a tab), then the shell, the adaptive controls and the theme (spec §6).
 
 **Phase 1's stay list** — the domain files still under `app/src/main/java/com/coparently/app/domain/`,
 each with what keeps it there. Phase 2 moves them with Hilt's replacement and the data layer, or
@@ -2755,7 +2902,8 @@ moved (phase 2, Task 8e). `governing` lost its marker when `OtherFamiliesSignals
 `:shared-data` (phase 2, Task 8h), and stays public, because that is another module.
 
 **Carried into phase 2** (found in phase 1's reviews; none changes what a parent sees, and the
-bytes are identical on Android):
+bytes are identical on Android). Kept as the record of each step; what phase 2 left open is in
+"Carried to phase 3", above:
 - **`java.time` beyond the edges** in app code, converting losslessly with kotlinx's own
   converters: ~~the calendar's day model (`EventsByDay`, `OpeningHour`, `MiniMonthModel`,
   `DayWeekView`, `queryRangeFor`) and the holiday lookups it converts at~~ (kotlinx-datetime since
@@ -2880,8 +3028,8 @@ bytes are identical on Android):
   parity test.)* (The branch's full CI run passed with it; the
   parity tests read Compose Multiplatform's strings through their own context fallback, because
   Robolectric installs no content provider from the manifest — see slice 9b.)
-- **The theme and the design system's components** — **slice 9b built (phase 2, Task 9, November
-  2026), CI's first run pending**: `presentation/theme/` moved whole to `:shared-ui`'s
+- **The theme and the design system's components** — **slice 9b done (phase 2, Task 9, November
+  2026; CI green, the screenshots unchanged)**: `presentation/theme/` moved whole to `:shared-ui`'s
   `commonMain`, packages unchanged, with an `expect` and its Android code for each thing only
   Android answers (the system bars, the system contrast level, reduced motion, the adaptive
   dimensions) and an iPhone `actual` for each (nothing, standard contrast, Reduce Motion, the
@@ -2934,8 +3082,8 @@ bytes are identical on Android):
   language from the device's first to that one); (b) read the moved labels through `R.string` on
   Android behind an `expect`/`actual` until Compose Multiplatform falls back the same way; (c) leave
   it as a known gap until Task 11.
-- **`UiText` in its Compose Multiplatform form** — **slice 9c built (phase 2, Task 9, November
-  2026), CI's first run pending**: `UiText`, `ErrorText` and `UiState` moved to `:shared-ui`'s
+- **`UiText` in its Compose Multiplatform form** — **slice 9c done (phase 2, Task 9, November
+  2026; CI green)**: `UiText`, `ErrorText` and `UiState` moved to `:shared-ui`'s
   `commonMain`, package unchanged. `UiText.Res` and `UiText.Plural` hold Compose Multiplatform's
   `StringResource` and `PluralStringResource`, so the 25 ViewModels, state helpers and screens that
   build one name `Res.string`/`Res.plurals` with the same keys and arguments; `Date` and `Weekday`
@@ -2952,8 +3100,9 @@ bytes are identical on Android):
   `UiText` *(until slice 11e, which made the sign an argument)*. `UiTextParityTest` (Robolectric, five languages) compares both resolutions with what
   Android's resources and `java.time` made of the same samples; the screenshot baselines should not
   move. Task 9's Steps 5 and 6 are what remains of it.
-- **The ViewModels to `:shared-ui`** — **done but for the two sign-in ViewModels (phase 2, Task 10,
-  November 2026; slices 10a–10f, each reviewed and built in CI)**. Slice 10a: the infrastructure (JetBrains' multiplatform `lifecycle-viewmodel` 2.9.6,
+- **The ViewModels to `:shared-ui`** — **done (phase 2, Task 10, November 2026; slices 10a–10f,
+  each reviewed and built in CI; the two sign-in ViewModels followed with their screens in slice
+  11f)**. Slice 10a: the infrastructure (JetBrains' multiplatform `lifecycle-viewmodel` 2.9.6,
   which is androidx's 2.9.4 on Android and lifts the app's lifecycle artifacts there;
   `koin-core-viewmodel` 4.1.1 for `viewModelOf` in common code; coroutines-test and Turbine in
   `commonTest`, MockK in `androidUnitTest`, `androidHostTest` since Task 13), `:shared-ui`'s
@@ -2968,13 +3117,13 @@ bytes are identical on Android):
   kotlinx-io `Path`s the screens open as `File`s), the event card's, the search's, dictation's, the
   suggested reply's with `AiAssistSession`, and the settle-up payment's — with `AiConsentManager`
   moved to `:shared-data`. On the iPhone, `platformUiModule` stands in for dictation and the AI
-  assist (neither offered). **Slice 10b built, CI pending**: the calendar's ViewModel (its filters
+  assist (neither offered). **Slice 10b done**: the calendar's ViewModel (its filters
   and the dismissed custody change in `SecurePreferences`; its months, selection and custody lookup
   on kotlinx-datetime, which the calendar screen converts at its edge) with `CalendarViewMode`,
   `ParentFilter`, `CalendarSelection` and `CustodyHelper`; and the events' (the new-event draft and
   the custom types in `SecurePreferences`, the draft a stored model, so `:shared-ui` applies the
   serialization plugin) with the form's owner lookup. On the iPhone, `platformDataModule` now also
-  stands in for a record's photo storage (nothing stored). **Slice 10c built, CI pending**: custody
+  stands in for a record's photo storage (nothing stored). **Slice 10c done**: custody
   — the schedule editor (which onboarding shares) with its form helpers, the seasonal layers with
   the holiday-fairness card, and the choice between two patterns that pairing can leave, with the
   parenting plan's source they quote and cite (`custodyUiModule`; JetBrains'
@@ -2982,7 +3131,7 @@ bytes are identical on Android):
   with). Then requests (`requestsUiModule`): the inbox's ViewModel, the change-request form's and
   the one source Home's row, the calendar's banner and the inbox count from, with the mini month's
   model and the day index it reads, both now on kotlinx-datetime, which the screens convert at their
-  edge. **Slice 10d built, CI pending**: the family (`familyUiModule`) — the Family tab's hub with
+  edge. **Slice 10d done**: the family (`familyUiModule`) — the Family tab's hub with
   the month's money it shares with Home (`MonthMoney` and the bundle it is computed from, split out
   of Home's ViewModel), Earlier families (its last day now a kotlinx-datetime date) and "Records
   without a family"; then expenses (`expensesUiModule`) — the Expenses screen's and form's ViewModel
@@ -2992,7 +3141,7 @@ bytes are identical on Android):
   (`paymentsUiModule`, `supportUiModule`), on the signed-in account's seam; the support reminder's
   scheduler interface moved to `:shared-data` (the iPhone schedules nothing yet), and a typed amount
   is read by the new `DecimalText.parsePositiveAmount`, held to `BigDecimal`'s answers. **Slice 10e
-  built, CI pending**: settings (`settingsUiModule`) — Settings' ViewModel, on two new seams in
+  done**: settings (`settingsUiModule`) — Settings' ViewModel, on two new seams in
   `:shared-data` (`PushRegistration` for the push switch, `AccountDeletion` for the account's erasure,
   which the app's `FcmService` and `AccountDeletionService` answer; the iPhone offers neither yet)
   and its product events through `Analytics`, and the calendar-feed screen's. Then pairing
@@ -3022,7 +3171,8 @@ bytes are identical on Android):
   app's PDF writer answers, its range now kotlinx-datetime; the iPhone has no record file yet) and
   the school import (`schoolUiModule`). **Task 10 is done** but for the login screen's and Google
   Calendar's connection ViewModels, which move with their screens in Task 11.
-- **The screens to `:shared-ui`** — **started (phase 2, Task 11, November 2026; slices 11a–11g)**.
+- **The screens to `:shared-ui`** — **done (phase 2, Task 11, November 2026; slices 11a–11g, each
+  reviewed and green in CI)**.
   Slice 11a, the foundation: the screens' three libraries in common code (`koin-compose-viewmodel`
   4.1.1, JetBrains' `lifecycle-runtime-compose` 2.9.6, Compose Multiplatform's `ui-backhandler`
   1.9.3, none moving an Android version), and `presentation/platform/`: one interface per thing a
@@ -3042,7 +3192,7 @@ bytes are identical on Android):
   Multiplatform's predictive back, androidx.activity's on Android), the family switcher, the two
   panes, the list skeleton, the record-place mark and the notification and microphone requesters.
   What carries `java.time` or `@StringRes` to its callers moves with their screens. **Slice 11a
-  built, CI pending.** Slice 11b, chat: first the seams it needs beyond 11a's — a file's name and
+  done.** Slice 11b, chat: first the seams it needs beyond 11a's — a file's name and
   size (`FileDetails`), a QR code from text and shared as a picture (`QrCodes`, the settle-up
   payment code's ZXing and PNG on Android), money in the reader's conventions
   (`utils/ReaderMoneyText`, Android's `currencyFormat`, which moved with it) and a medium date for
@@ -3051,7 +3201,7 @@ bytes are identical on Android):
   1's stay list). Each Android call went behind a platform interface, the date seam or the money
   seam; the iPhone hides the attachment picker, the report, the IBAN's copy, the payment code and
   the thumbnails, as it has none of them yet. The previews and the dictation language's Android
-  half stay in the app. **Slice 11b built, CI pending.** Slice 11c, the calendar and the event
+  half stay in the app. **Slice 11b done.** Slice 11c, the calendar and the event
   form: first the helpers they read, onto kotlinx-datetime and Compose Multiplatform's resources —
   today's date, the date and time pickers, the "Answer by" block, holiday and event-type names, the
   member chips and the month-paging tween — each with a `java.time` twin in the app for the screens
@@ -3065,7 +3215,7 @@ bytes are identical on Android):
   `HorizontalCalendar`, Day and Week view, the banners, the legend and the swap selection and sheet,
   on kotlinx-datetime and Compose Multiplatform's resources, with what they read from custody, the
   requests and the parenting plan, and the pull to refresh through the data layer's sync request.
-  **Slice 11c built (both rounds), CI pending.**
+  **Slice 11c done (both rounds).**
   Slice 11d, custody and the requests: first custody's screens — the setup screen with its
   overview and parts, the pattern form, contact windows, seasonal layers, the children's schedules,
   the holiday fairness card — with the custody-conflict screen and the plan's reference card, every
@@ -3074,7 +3224,7 @@ bytes are identical on Android):
   change request form (its saved proposal now kotlinx-datetime, kept as text), with child support's
   amount and month and a profession's name, which the inbox's rows read. The expense split's
   wording stays in the app until 11e rewords its `%%` strings; the inbox takes it as a parameter.
-  **Slice 11d built, CI pending.**
+  **Slice 11d done.**
   Slice 11e, the family and the money: first the split's shares, which take the percent sign as an
   argument and so read alike in both string readers (the last exception check 7 made); then the
   Family tab, its earlier families and the records of no family, with the split's wording, the
@@ -3085,7 +3235,7 @@ bytes are identical on Android):
   text and its receipt's photo through the shell's picker and camera; on a phone with no picker,
   image loader or text recognition (the iPhone for now) the form offers no receipt and scans nothing.
   Then child support's screen, whose payer's reminder is offered only where the phone runs its job.
-  **Slice 11e built, CI pending.**
+  **Slice 11e done.**
   Slice 11f, Settings, pairing, onboarding, the sign-in and the sync: first Settings — its five
   groups, the colour picker, the calendar links, the data sources, the region and country pickers
   and the consent screens — with the Google Calendar connection's ViewModel. Google's sign-in screen
@@ -3104,7 +3254,7 @@ bytes are identical on Android):
   their failures the data layer's and the app's, every ordering rule unchanged; on a phone with no
   credential sheets (the iPhone for now) the sign-in offers neither Google nor a saved password, the
   shell (`ProvideIosShell`) providing an unavailable stand-in for them.
-  **Slice 11f built, CI pending.** Task 10's last two ViewModels moved with it.
+  **Slice 11f done.** Task 10's last two ViewModels moved with it.
   Slice 11g, everything else: first Home, the month in review and the stickers' shelf, their dates
   and amounts through the date and money seams (the same text on Android).
   Then the family's records — the child and pet records, the contacts and the guest's screen: their
@@ -3115,11 +3265,11 @@ bytes are identical on Android):
   iPhone for now) the export offers no format. The app's `java.time` picker overloads are gone.
   Then family friends, professionals and the parenting plan: their codes shared through the share
   sheet, no Share button where there is none.
-  Then the school import. **Slice 11g built, CI pending: every screen is in `:shared-ui`** — the app
+  Then the school import. **Slice 11g done: every screen is in `:shared-ui`** — the app
   keeps `MainActivity`, the widget, navigation (Task 12), the previews and the Android halves of the
   platform interfaces.
-- **The navigation to `:shared-ui`, and a thin Android shell** — **built, CI pending (phase 2, Task 12,
-  November 2026; slices 12a–12c)**. The navigation graph, its routes, the bar and the rail and the
+- **The navigation to `:shared-ui`, and a thin Android shell** — **done (phase 2, Task 12, November
+  2026; slices 12a–12c; CI green on `ab97310a`, every job and the API 35 16 KB leg included)**. The navigation graph, its routes, the bar and the rail and the
   readable pane are in `:shared-ui`'s `commonMain` on JetBrains' multiplatform navigation-compose
   2.9.2 (androidx's 2.9.7 on Android, up from 2.9.3), the same code with its strings on `Res`, its
   route arguments read from the multiplatform `SavedState` as `Bundle` read them, and its
@@ -3128,11 +3278,13 @@ bytes are identical on Android):
   beside the platform's capabilities; `MainActivity` keeps the splash, the launch intent (the family
   switch before any link, as before), the two activity-bound sign-ins and the theme preference, and
   calls it. `ShellBoundaryTest` keeps it that way: no `@Composable` in the app beyond the platform's
-  Android halves, the QR scanner's screen, the widget and the previews, and no `ViewModel`. Not yet
-  proven: that androidx navigation-compose 2.9.7 leaves the app's Compose at the BOM's (Google's Maven
-  repository is unreachable here, so its module metadata was not read), the screenshots, the emulator
-  legs and the UI tour against `main`'s gallery. Still owed from 11g's review: hiding the export's
-  ways in (Family, Earlier families, the chat) where the phone cannot draw or share the record, and
+  Android halves, the QR scanner's screen, the widget and the previews, and no `ViewModel`. Proven on
+  `ab97310a`: the screenshots verified unchanged, the emulator legs passed, and the UI tour matched
+  `main`'s gallery at `d45b249` (334 screens, the same skips; the differences only clocks, codes,
+  uids and timing). That androidx navigation-compose 2.9.7 leaves the app's Compose at the BOM's
+  rests on that run; its module metadata was never read (Google's Maven repository is unreachable
+  here). Still owed from 11g's review, now carried to phase 3 (above): hiding the export's ways in
+  (Family, Earlier families, the chat) where the phone cannot draw or share the record, and
   narrowing the symbols Task 11 made public for app callers that have since moved. **For phase 3**: the
   iPhone's view controller composes `CoPlanlyApp` inside `ProvideIosShell` (nothing does yet), and,
   since `AppLaunch` carries no family, it must switch the family before it arms any link, as
@@ -3312,7 +3464,9 @@ the Kotlin 2.4 step above. The spike used the app's toolchain: Kotlin 2.3.21, AG
 **Left for phase 1:**
 1. ~~Register the Mac as a self-hosted runner~~ — not needed: `shared-ios` runs on GitHub's macOS
    runners (owner decision, 1 November 2026).
-2. Run `shared-ios` green once — "Shared tests (iOS simulator)" runs every `commonTest`, and
+2. ~~Run `shared-ios` green once~~ — done in CI during phase 2: green on the hosted macOS runner
+   from Task 6 on (run 41535337665 on `3608f9da` among the first), and on
+   every full run since. "Shared tests (iOS simulator)" runs every `commonTest`, and
    `:shared:linkDebugFrameworkIosSimulatorArm64` produces `Shared.framework`. Both ran green by hand
    on the owner's Mac (Xcode 27.2, 818 tests, 0 failures) on 1 November 2026, after commonTest's
    names were made legal for Kotlin/Native (it refuses a comma or parentheses in a backticked name,
@@ -3330,6 +3484,10 @@ its "No answer" end (CLAUDE.md item 42) cannot stay on the proposer's phone once
 iPhone. Owner decision of 27 October 2026: a scheduled Cloud Function decides them for both
 platforms. Needs its own design pass first: the clock document's server-only fields, the rules'
 update shapes, the proposal withdrawal at the end, the silent chat cards, and the DPIA (R22).
+MON-24's phase 2 was built before it (owner, 1 November 2026): the clock's steps
+(`RequestClockSteps`, `RequestClockKeeper`) are in `:shared-data`'s `commonMain`, their WorkManager
+jobs and notices still in the Android app, and the iPhone schedules none of them yet. This item
+moves the deadline notice and the end to the server and removes them from both phones.
 
 ## 8. [FAM] More than one child, more than one pet
 

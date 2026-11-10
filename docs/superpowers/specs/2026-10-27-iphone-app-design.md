@@ -104,6 +104,12 @@ sessions write the code, a Mac and CI build it, and the owner tests on devices.
 
 The Android app moves into Kotlin Multiplatform without changing behaviour. Each step is its own
 pull request with the full CI. The order is chosen so that each step is small and can be reverted.
+*(Phase 2, steps 3–6, departed from this in one respect, by owner decision of 1 November 2026: it
+was built before the Android release, stacked on phase 1's branch (draft pull request #158) rather
+than as one pull request per step off `main`, with the full CI at the end of each task; and it went
+ahead before MON-25, so the request clocks' on-time steps moved into `commonMain` with their
+WorkManager scheduler left in the app. The plan of record for it is
+`docs/superpowers/plans/2026-11-01-iphone-phase-2-multiplatform-app.md`.)*
 
 1. **Toolchain.** Kotlin, KSP and Compose versions that Compose Multiplatform supports. A
    `shared` module (`commonMain`, `androidMain`, `iosMain`), and an iOS target that compiles
@@ -118,7 +124,9 @@ pull request with the full CI. The order is chosen so that each step is small an
    files in the app, each with its reason; ROADMAP MON-24 records it.)*
 3. **Dependency injection.** Hilt is Android-only. It is replaced by a multiplatform container.
    Koin is the default and kotlin-inject the alternative; the builder picks one, and the choice is
-   recorded with its reason.
+   recorded with its reason. *(Done in phase 2, November 2026: Koin 4.1.1, not 4.2, whose Compose
+   artifacts lift Compose past the app's BOM. `KoinGraphTest` runs `verify()` over every module,
+   since Koin checks nothing at compile time; CLAUDE.md, the hard rules.)*
 4. **Data layer.** Each Android-only dependency gets a common interface and two implementations:
    - Room becomes Room KMP; the schema and `app/schemas/` stay as they are.
    - Firebase goes through a common wrapper, either GitLive's `firebase-kotlin-sdk` or
@@ -129,14 +137,50 @@ pull request with the full CI. The order is chosen so that each step is small an
    - WorkManager stays on Android; iOS gets its own implementation (§5.4).
    - Gson becomes `kotlinx.serialization` (moved here from step 2, see there). The stored and wire
      bytes stay those of today's Gson, held by the same fixtures and the R8 probe.
+
+   *(Done in phase 2, November 2026, with these corrections. **The data layer is its own module,
+   `:shared-data`**, beside phase 1's `:shared` (the domain) and `:shared-ui` (step 5): three
+   modules, not one `shared`. **Room KMP kept the 41 legacy migrations Android-only**, in
+   `androidMain` with SQLCipher; an iPhone database is always created at the current version, and
+   a migration from 47 on is written once in `commonMain` against `SQLiteConnection` and runs under
+   SQLCipher on Android (`ConnectionMigrationOnSqlCipherTest`). The schema is exported through
+   KSP's `room.schemaLocation`, not the Room Gradle plugin. **Firebase is GitLive's**, decided by
+   the spike (§7), with small platform halves where its common API stops; the classes that answer
+   the data layer's seams with an Android SDK (FCM, Auth, the Credential Manager, image re-encoding)
+   stay in the app. **`EncryptedPreferences` stays in the app** as the Android half of
+   `SecurePreferences`, because the `upgrade` job's seed builds it with the base build's
+   constructors; the iPhone's is one Keychain item. **WorkManager stays on Android**, and on the
+   iPhone each background job is a stand-in that schedules nothing until phase 4. **Gson moved
+   first** (phase 2's Task 3), byte for byte, including the key order Gson wrote on ART (by field
+   name). ROADMAP MON-24 records what moved and what stayed, with each reason.)*
 5. **Presentation to `commonMain`.**
    - Lifecycle ViewModel and Navigation come from their multiplatform artifacts.
    - Strings become Compose Multiplatform resources, all five locales;
      `tools/check-invariants.js` learns the new location.
    - Coil 2 becomes Coil 3, and the calendar library its multiplatform artifact.
    - Roborazzi screenshots and every Android test keep running from the Android target.
+
+   *(Done in phase 2, November 2026, in `:shared-ui`, with these corrections. **The strings are
+   generated back into Android resources**: the files moved to `composeResources/`, and the app's
+   `stringsToAndroidRes` task copies them byte for byte into a generated resource directory, so
+   `R.string` keeps Android's own reading for pushes, notices, the widget and the tests; a few
+   texts were respelled so both readers read them alike (`\u0027` for an apostrophe, a percent
+   sign beside arguments passed as an argument), held by `StringsParityTest`, `PluralsParityTest`
+   and check 7 of `check-invariants.js`. **Coil 2 stays**, behind one image seam (`AppImage`), so
+   Coil 3 is not part of phase 2. The calendar is kizitonwose's `compose-multiplatform` 2.9.1,
+   Lifecycle and Navigation JetBrains' multiplatform artifacts (2.9.6 and 2.9.2, which are
+   androidx's 2.9.4 and 2.9.7 on Android). What a screen asks of the phone goes through
+   `presentation/platform/`, one interface per capability, each saying whether it is available, so
+   the iPhone's stand-ins hide what it cannot do yet. One deliberate change of Android behaviour,
+   by owner decision of 4 November 2026: the app speaks the phone's first language when it ships
+   it, otherwise European English, and a per-app choice still wins (CLAUDE.md, "Localization").)*
 6. **The Android app becomes a thin shell** over `shared`. The release, R8, upgrade, e2e and
-   UI-tour jobs all still pass.
+   UI-tour jobs all still pass. *(Done in phase 2, November 2026: the navigation graph and the
+   app's root, `CoPlanlyApp`, are in `:shared-ui`, and `MainActivity` calls it; `ShellBoundaryTest`
+   refuses a screen or a ViewModel in the app. Every job was green on the last code commit, the
+   screenshots verified with no baseline change, and the UI tour matched `main`'s. Phase 2 also
+   moved the toolchain to AGP 9 and Kotlin 2.4, which phase 3 needs (ROADMAP MON-24, "Toolchain
+   ahead of the iPhone").)*
 
 Every invariant in `CLAUDE.md` survives the move unchanged. The migration moves code; it does not
 rewrite rules. Where an invariant names a file path, the path is updated in the same pull request.
@@ -244,7 +288,7 @@ Rules and data shapes do not change.
 | --- | --- | --- |
 | 0 | Android released; first feedback round handled. | — |
 | 1 | §5.1 steps 1–2: toolchain, domain in `commonMain`, wire format proven unchanged. | Android unchanged |
-| 2 | §5.1 steps 3–6: DI, data layer, presentation, thin Android shell. | Android unchanged, now multiplatform |
+| 2 | §5.1 steps 3–6: DI, data layer, presentation, thin Android shell. *Built, November 2026.* | Android unchanged, now multiplatform |
 | 3 | §5.2 spike, then the iPhone shell, the adaptive controls and the theme. | iPhone app running on the simulator with real data |
 | 4 | §5.4 platform features; §5.5 server. | iPhone at parity |
 | 5 | Cross-platform e2e, device checklist for iPhone, TestFlight with testers who use iPhones. | Beta |
@@ -256,7 +300,7 @@ Phases 1–2 are about a third of the work, phases 3–4 another third, and 5–
 
 Left to the builder:
 
-- Koin or kotlin-inject (§5.1 step 3).
+- ~~Koin or kotlin-inject (§5.1 step 3).~~ Decided in phase 2: Koin (§5.1 step 3).
 - ~~GitLive or `expect`/`actual` Firebase (§5.1 step 4), decided by the spike.~~ Decided on
   1 November 2026: GitLive's `firebase-kotlin-sdk`, with small platform halves where its common
   API stops (ROADMAP MON-24, "Firebase on two platforms").

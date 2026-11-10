@@ -1244,7 +1244,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
 (`GridSwatch` is `internal` again, onboarding being in the module too), then `InvitationView`, which `InvitationViewTest` and the
 screenshots render; slice 11g: Home's `HandoverHero`, `StatTiles` and `TimelineRow`, then
 `FriendAgendaDay`, `FriendComparisonTable`, `FriendEventDetails` and `FriendInviteContent`, which the
-screenshots render). A test that moves with its code to `:shared-ui` keeps `internal`
+screenshots render). Those made public for an app caller ("which Home calls", "which onboarding
+calls", "which the requests' screens call", "which `MyStickersScreen` calls", `eventTimeLine` for
+`FriendEventDetails`) have had no app caller since their callers moved to `:shared-ui` too, by the
+end of Task 11; returning them to `internal` is carried to phase 3 (ROADMAP MON-24). A test that moves with its code to `:shared-ui` keeps `internal`
   reachable, as the calendar's ten pure tests do. The screenshot frame
   provides the platform capabilities as the app does (`ProvideAndroidPlatform`), so a moved screen
   that reads one renders as it does on a phone. Every fixture date is pinned (May 2026,
@@ -1612,129 +1615,80 @@ screenshots render). A test that moves with its code to `:shared-ui` keeps `inte
 ## Architecture map
 
 ```
-shared/    — Kotlin Multiplatform module (MON-24): the domain both apps run, moved out of app/
-             with its packages unchanged; commonMain/commonTest, Android and iOS targets
-shared-data/ — Kotlin Multiplatform module (MON-24 phase 2): the data layer both apps run, moving
-             out of app/ task by task with its packages unchanged; so far the HTTP clients on Ktor
-             (data/http/, the Bakaláři client and directory, Google Calendar's events.list) and
-             the platform services the data layer reaches through interfaces (data/platform/:
-             logger, directories, the sealed preference store, crash reports, analytics,
-             connectivity) and the Room database on Room KMP (data/local/: entities, DAOs and
-             Converters in commonMain; the migrations, SQLCipher and the Android builder in
-             androidMain; the iPhone's builder in iosMain) and the Firestore data sources and
-             the callables' wrappers on GitLive's firebase-kotlin-sdk (data/remote/, behind
-             FirestoreClient and CallableFunctions; the platform halves in androidMain/iosMain),
-             and (Task 8b) the chat, change-request, request-clock and parenting-plan
-             repositories (data/repository/, behind SignedInUser and PushQueue), the sync's pure
-             parts (data/sync/: EventDocument, ConflictResolver, FamilyIdBackfill, …) and the
-             revision outbox (data/versions/EventVersionRecorder), and (Task 8c) the activity
-             announcer (domain/activity/ActivityAnnouncer), the family on screen (data/family/:
-             FamilyView, SelectedFamilySource, KnownFamilies), the chat mirror (data/chat/), the
-             request clocks' RequestTelling, and the custody, expense-split, event and pet
-             repositories, and (Task 8d) the calendar-feed and guest repositories, the
-             co-parent's profile listener (PartnerProfileFlow), the stickers (data/stickers/)
-             and the vault's index and its cache (data/documents/), and (Task 8e) the money
-             between the parents (data/payment/, and data/support/ but for its reminder's
-             Worker), the agreements' sources and withdrawals, and the child info, friend and
-             professional repositories, and (Task 8f) the expense, user, pairing and journal
-             repositories, ProfileIdentity (data/session/), and the event use cases with
-             EventValidator and ErrorHandler (domain/usecase/, domain/error/), and (Task 8g)
-             the sync itself (data/sync/SyncService, behind PushDevice, AccountConsistency and
-             RequestClockSweep), ParentSlotMigrator, the preferences repository with the
-             currency hints (data/money/CurrencyHints) and the Google Calendar import with its
-             automatic run (data/sync/CalendarSyncRepository, GoogleCalendarAutoImport), and
-             (Task 8h) the request clocks (data/requests/: RequestTime, RequestClocks, the
-             keeper, the steps, the records and the actions, behind RequestClockNotices and
-             the domain's RequestClockScheduler) and the switcher's dot
-             (data/family/OtherFamiliesSignals), and (Task 8i) the school import (data/school/:
-             the Bakaláři parsers, the authorizer, the connection store, the connect flow, the
-             writer and the importer, behind SchoolImportWordings and SchoolImportScheduler),
-             the export's record sources (data/export/ but ExportFileWriter and ExportReceipts)
-             and data/family/UnassignedRecords, and (Task 8j) the shared files (data/files/ but
-             RecordPhotoFetcher, behind StorageBucket and PickedFiles), the chat attachment
-             outbox and the vault's repository (data/documents/), data/session/'s
-             SessionProfileSynchronizer and SignedInAccountSource, and the export's
-             ExportReceipts (on CallableFunctions, behind ExportVerifyAddress), and (Task 10)
-             the AI-assist and child-health consents (data/ai/AiConsentManager,
-             data/consent/HealthConsentManager), with the ViewModels that ask them, and the
-             export's file seam (data/export/RecordFileWriter, with ExportedFile).
-             Its Koin modules are dataModules and platformDataModule, which appModules includes;
-             on the iPhone platformDataModule binds every seam itself (Task 8j: stand-ins in
-             di/koin/IosUnavailable.kt where the iPhone has nothing yet).
-             Depends on shared/; no iOS framework of its own
-shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phase 2, from Task 9): the
-             UI both apps will run. So far the strings: composeResources/values*/ (every string,
-             plural and string array, five locales), from which Res (com.coparently.app.resources)
-             is generated, and from which the app generates its R.string copy; the Onest fonts
-             (composeResources/font/); presentation/theme/ (slice 9b, its Android-only halves in
-             androidMain behind expects); and the common components of presentation/common/ that
-             need no ViewModel and no Android API (the design system's primitives), with UiText
-             (slice 9c); and, from Task 10, the shared state of presentation/common/ (ParentsSource
-             and its siblings) and the ViewModels, group by group (so far common/'s, chat's, the
-             calendar's, the events', custody's, the requests', the family's, expenses', payments',
-             child support's, settings', pairing's, onboarding's, the session's, the profile's,
-             Home's, the month review's, the stickers', the consents', the AI consent's, the
-             child's and pet's records', the contacts', the documents', the journal's, family
-             friends', the guest's, professionals', the parenting plan's, the export's and the
-             school import's: every one but the two whose sign-ins run on an Android activity,
-             which followed in slice 11f),
-             with their Koin modules: uiModules and platformUiModule, which appModules includes.
-             Then the screens (Task 11), from slice 11a's foundation: presentation/platform/ (the
-             capabilities a screen asks of the phone, provided by the shell), the date seam
-             (utils/ReaderDateText) and the image seam; and, from slice 11b, chat's screens
-             (presentation/chat/), with the event preview, the AI consent's rows, the stickers'
-             wording, the message templates and the money seam (utils/ReaderMoneyText); and, from
-             slice 11c, the event form (presentation/event/) and the calendar's screens
-             (presentation/calendar/, on kizitonwose's multiplatform calendar), with the helpers
-             they read; and, from slice 11d, custody's screens (presentation/custody/), with the
-             custody-conflict screen and the parenting plan's reference card, and the requests'
-             screens (presentation/changerequests/: the inbox, its cards and the change request
-             form); and, from slice 11e, the family's screens (presentation/family/), with the
-             split's wording, the stickers' views, the family's two dialogs and Home's money text,
-             and the expenses' and child support's screens (presentation/expenses/,
-             presentation/support/); and, from slice 11f, Settings' screens (presentation/settings/,
-             with the country picker and the consent screens) and SyncViewModel, then pairing's and
-             onboarding's screens (presentation/pairing/, presentation/onboarding/), then the
-             sign-in's and the profile's (presentation/auth/, presentation/profile/) with
-             AuthViewModel; and, from slice 11g, Home's, the month review's and the stickers'
-             screens (presentation/home/, presentation/review/, presentation/stickers/), then the
-             family's records (presentation/childinfo/, pets/, contacts/, guests/), then the
-             vault's, the export's and the journal's (presentation/documents/, export/, journal/),
-             then family friends', professionals' and the parenting plan's (presentation/friends/,
-             professionals/, parentingplan/), then the school import's (presentation/school/):
-             every screen, Task 11 done. Then (Task 12) the navigation graph
-             (presentation/navigation/: NavGraph, Screen, the bar and the rail, ReadablePane) and
-             the app's root, CoPlanlyApp with AppLaunch (presentation/), the one composable a
-             shell sets as its content.
-             It makes the iPhone's one framework, Shared (static,
-             exporting shared/ and shared-data/)
-domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
-             ReminderScheduler, the export's record and the school import's plan — in shared/,
-             none of the phase-1 stay list is left in app/ (its last file, MessageTemplate,
-             went to shared-ui/ in Task 11's slice 11b)
-data/      — Room (v46 + migrations), Firestore/Google clients, repository impls, sync — in app/,
-             except what has moved to shared-data/ (below): the Room database, the Firestore data
-             sources, data/payment/, every repository but the AI assist's, data/files/ but the
-             photo fetcher and the Android halves of its seams, the
-             sync but its WorkManager classes, the request clocks but their notices and worker,
-             data/family/, the school import but its wording and worker, the export but its file
-             writer, and some of data/chat/, data/support/ and data/session/
-presentation/ — MainActivity and the widget: the app is a thin shell since Task 12
-             (ShellBoundaryTest), whose activity reads the launch, holds the splash, hosts the
-             two sign-ins and calls shared-ui's CoPlanlyApp. Every screen is in shared-ui/
-             since Task 11 (slices 11b–11g), and the navigation since Task 12, with the strings,
-             the theme, the design system's components, the shared state and every ViewModel
-             (Task 10; SyncViewModel and
-             AuthViewModel since slice 11f); the app keeps their previews and the Android halves
-             of the platform interfaces (presentation/platform/, the language picker's
-             AndroidAppLanguages, Google's sign-in's AndroidGoogleCalendarSignIn, the credential
-             sheets' AndroidCredentialSignIn with AndroidAuthErrors, the QR scanner's
-             QRScannerActivity and QrScannerScreen, the invitation QR's AndroidInviteQrCodes, the
-             export's RecordShareIntent, the dictation language, the file viewer and clipboard
-             helpers and the permission checks)
-di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
-             listed in appModules); the database builder (DatabaseBuilder.kt) and the file name
-             (DatabaseName.kt) are in shared-data/ since MON-24 phase 2
+shared/    — Kotlin Multiplatform module (MON-24 phase 1): the domain both apps run, moved out of
+             app/ with its packages unchanged (models, repository interfaces, holidays, the
+             export's record, the school import's plan, StoredJson, the time and text helpers);
+             commonMain/commonTest, Android and iOS targets. Depends on nothing of ours
+shared-data/ — Kotlin Multiplatform module (MON-24 phase 2, Tasks 5–8, done; Task 10 added the two
+             consent managers and RecordFileWriter): the data layer both apps run, packages
+             unchanged. commonMain holds the Room database on Room KMP
+             (data/local/: entities, DAOs, Converters, CoPlanlyDatabase), the Firestore data
+             sources and callables on GitLive's firebase-kotlin-sdk (data/remote/, behind
+             FirestoreClient and CallableFunctions), the HTTP clients on Ktor (data/http/, the
+             Bakaláři client, Google Calendar's events.list), every repository but the AI
+             assist's, the sync, the request clocks, the families, the chat mirror, the files and
+             the outbox, the school import, the export's sources and receipts, the session's
+             profile synchronizer, the event use cases with EventValidator and ErrorHandler
+             (domain/usecase/, domain/error/), ActivityAnnouncer (domain/activity/) and the
+             platform seams (data/platform/ and the narrow seams beside the classes that take
+             them: SignedInUser, PushQueue, StorageBucket, …). androidMain holds what only
+             Android has and the data layer itself needs: the 41 legacy migrations, SQLCipher,
+             EncryptionManager, CrashlyticsManager, the database builder (di/DatabaseBuilder.kt)
+             and the Android halves of a few seams. iosMain holds the iPhone's halves and, in
+             platformDataModule, a binding for every seam (stand-ins in di/koin/IosUnavailable.kt
+             where the iPhone has nothing yet). Its Koin modules are dataModules and
+             platformDataModule, which appModules includes. Depends on shared/; no iOS framework
+             of its own
+shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phase 2, Tasks 9–12,
+             done): the UI both apps run, packages unchanged. Every string, plural and string
+             array (composeResources/values*/, five locales; Res is generated from them, and the
+             app generates its R.string copy from the same files), the Onest fonts, the theme
+             (presentation/theme/), the design system and the rest of presentation/common/, every
+             ViewModel and every screen (presentation/<feature>/), the platform interfaces a
+             screen asks of the phone (presentation/platform/), the date and money seams
+             (utils/ReaderDateText, utils/ReaderMoneyText), the navigation graph
+             (presentation/navigation/) and the app's root, CoPlanlyApp with AppLaunch
+             (presentation/), the one composable a shell sets as its content. androidMain holds
+             the Android halves of its expects (the system bars, contrast, motion, the window,
+             LocalizedDates' java.time code, currencyFormat); iosMain the iPhone's, with
+             ProvideIosShell and the stand-ins. Its Koin modules are uiModules and
+             platformUiModule, which appModules includes. It makes the iPhone's one framework,
+             Shared (static, exporting shared/ and shared-data/)
+domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler, the export's
+             record and the school import's plan — in shared/, but for the event use cases with
+             EventValidator, ErrorHandler, ActivityAnnouncer and FamilyDocumentRepository
+             (shared-data/) and MessageTemplate (shared-ui/); none left in app/
+data/      — Room (v46 + migrations), Firestore/Google/HTTP clients, repository impls, sync — in
+             shared-data/ (above). In app/ only what stays on purpose, each for its reason: every
+             Worker and WorkManager scheduler (WorkManager); the notifications and the reminder
+             alarms (data/notification/, RequestNotices, PushNotifier: the notification manager,
+             AlarmManager, string resources); the messaging service and the classes that answer
+             the seams with an Android SDK (FcmService, FirebaseAuthService, the Credential
+             Manager classes, FirebaseStorageBucket, AndroidPickedFiles, AccountSwitchGuard,
+             AccountDeletionService, DeviceTraces); the string-resource wordings; Coil
+             (RecordPhotoFetcher), a Bitmap's re-encoding (FirebaseImageStorage), PdfDocument
+             (ExportFileWriter), ML Kit (data/mlkit/), dictation (data/dictation/);
+             TelemetryConsentApplier, AnalyticsManager, the theme preference, the install referrer,
+             MinorUnits and the AI assist's repository; and EncryptedPreferences, because the
+             upgrade seed builds it with the base build's constructors
+presentation/ — in shared-ui/ (above). The app is a thin shell since Task 12 (ShellBoundaryTest):
+             MainActivity (the splash, the launch intent, the two activity-bound sign-ins, then
+             CoPlanlyApp), QRScannerActivity, the Glance widget (widget/), the previews, and the
+             Android halves of the platform interfaces (platform/AndroidPlatform.kt and
+             AndroidQrCodes, the language picker's AndroidAppLanguages with
+             SystemDefaultRelaunch, Google's sign-in's AndroidGoogleCalendarSignIn, the credential
+             sheets' AndroidCredentialSignIn with AndroidAuthErrors, the QR scanner's screen, the
+             invitation QR's AndroidInviteQrCodes with BuildPairingLink, the export's
+             RecordShareIntent, the dictation language, the push's card wording, the file viewer,
+             clipboard and permission checks)
+di/        — Koin modules: dataModules and platformDataModule in shared-data/'s di/koin/, uiModules
+             and platformUiModule in shared-ui/'s, and the app's own in app/'s di/koin/ (database,
+             Firebase, Google, notifications, workers, …), all listed in appModules
+             (AppModules.kt); the database builder (DatabaseBuilder.kt) and the file name
+             (DatabaseName.kt) are in shared-data/
+utils/     — in shared-ui/ (the date and money seams, SwapDays, MonthTitle, …), but for AppLocale
+             (the owner's language rule on Android), NetworkMonitor, SwapDateList (the push's
+             locale overloads), Extensions and PreviewHelpers, which stay in app/
 ```
 
 **Where a `domain/…` path in this file lives** (MON-24 phase 1, November 2026). The domain moved
@@ -1781,10 +1735,37 @@ times are `IsoText.dateTimeShortest`, the bytes they hashed before), `receipts/`
 `canonicalDecomposition`), `chat/MessageReport.kt`, `ai/AiAssist.kt` and `review/MonthStatsWire.kt`
 (the month as `IsoText.yearMonth`).
 
-**Where a `data/…` path in this file lives** (MON-24 phase 2, from November 2026). The data layer
-moved to `shared-data/` a task at a time, package unchanged, so a moved `data/<package>/<File>.kt`
-is `shared-data/src/commonMain/kotlin/com/coparently/app/data/<package>/<File>.kt` (its test under
-`shared-data/src/commonTest/`). **Task 8, the data layer, is complete with slice 8j**: what is still
+**Where a `data/…` path in this file lives** (MON-24 phase 2, November 2026; done). **In
+`shared-data/`, package unchanged**: a path this file writes as `data/<package>/<File>.kt` is
+`shared-data/src/commonMain/kotlin/com/coparently/app/data/<package>/<File>.kt`, and its test is
+under `shared-data/src/commonTest/` (or `shared-data/src/androidHostTest/` when it compares with a
+JVM API or mocks). The rules and items that name those paths were not reworded; only the root
+changed. Three exceptions, each by a file's reason:
+- **`shared-data/src/androidMain/`**, same package: what only Android has and the data layer itself
+  needs — `data/local/DatabaseMigrations.kt` (the 41 legacy migrations), `data/local/security/`
+  (SQLCipher), `data/security/EncryptionManager.kt`, `data/crashlytics/CrashlyticsManager.kt`,
+  `di/DatabaseBuilder.kt`, OkHttp's engine (`data/http/HttpClients.android.kt`), the Android halves
+  of `data/platform/` that need only the SDK (the logger, the directories, `PhoneLocales` with
+  `AndroidDeviceRegion`) and of GitLive (`AndroidCallableFunctions`, `FirestorePlatform.android.kt`).
+- **`shared-data/src/iosMain/`**: the iPhone's halves of the same (`data/local/IosDatabase.kt`, the
+  Keychain's `KeychainTextStore`, Darwin's engine, …) and `di/koin/PlatformDataModule.ios.kt` with
+  the stand-ins in `di/koin/IosUnavailable.kt`.
+- **`app/src/main/java/com/coparently/app/data/`**, on purpose: a `Worker` or WorkManager scheduler,
+  a notification or an alarm (`data/notification/`, `RequestNotices`, `PushNotifier`), a string
+  resource (`AndroidPairingWording`, `SchoolImportWordingSource`, `SwapPushWording`), a class that
+  answers a seam with an Android SDK (`FcmService`, `FirebaseAuthService`, the Credential Manager
+  classes, `FirebaseStorageBucket`, `AndroidPickedFiles`, `AccountSwitchGuard`,
+  `AccountDeletionService`, `DeviceTraces`), Coil (`RecordPhotoFetcher`), a `Bitmap`
+  (`FirebaseImageStorage`), `PdfDocument` (`ExportFileWriter`), ML Kit (`data/mlkit/`), dictation
+  (`data/dictation/`), the telemetry switch and `AnalyticsManager` (`data/telemetry/`,
+  `data/analytics/`), the theme preference, the install referrer (`data/pairing/`), `MinorUnits`,
+  the AI assist's repository (`data/ai/FunctionsAiAssistRepository.kt`), and `EncryptedPreferences`
+  with its `InMemorySharedPreferences` (the `upgrade` seed builds it with the base build's
+  constructors). `docs/ROADMAP.md` MON-24 lists them with their reasons.
+
+A new data-layer class goes in `shared-data/` and reaches the platform only through the seams the
+last paragraph of this note lists. How it got there, task by task (the history; every rule in it
+stands): **Task 8, the data layer, is complete with slice 8j**: what is still
 under `app/src/main/java/com/coparently/app/data/` stays on purpose (a `Worker`, a notification, a
 string resource, the Android SDK a seam's Android half calls, Coil, `PdfDocument`, ML Kit, dictation,
 or the `upgrade` seed's constructors), and `docs/ROADMAP.md` MON-24 lists it. One more class
@@ -2048,10 +2029,11 @@ Calendar, no Cloud Storage (every bucket call an `IOException`), nothing picked,
 notice, no verification address, and no wording (a pairing's thread title and a school import's
 titles are stored data a co-parent reads, so no English stand-in is written; asking throws). A
 Koin `verify()` of `dataModules` with exactly those types resolves (run once on the JVM in this
-task; the iPhone has no `koin-test`). Phase 3's app replaces each stand-in. Every other
-`data/…` path is still under
-`app/src/main/java/com/coparently/app/`. **The data layer reaches the platform only through those
-interfaces**: a new data-layer class takes `SecurePreferences`, `AppDirectories`, `CrashReporter`,
+task; the iPhone has no `koin-test`). Phase 3's app replaces each stand-in. Every `data/…`
+path this history does not name as moved is under `app/src/main/java/com/coparently/app/` (the
+third exception at the top of this note).
+
+**The data layer reaches the platform only through those interfaces**: a new data-layer class takes `SecurePreferences`, `AppDirectories`, `CrashReporter`,
 `Analytics`, `DeviceRegion`, `SignedInUser`, `AuthSession`, `PushQueue`, `PushDevice`,
 `PushRegistration`, `AccountConsistency`, `AccountDeletion`, `AccountTraces`, `RequestClockNotices`,
 `RequestClockScheduler`, `GoogleCalendarConnectionSource`, `GoogleCalendarAccount`, `StorageBucket`, `PickedFiles`,
@@ -2064,8 +2046,38 @@ directory, `CrashlyticsManager`, `AnalyticsManager`, `FirebaseAuthService`, `Fcm
 `PushRegistration`, `AccountDeletion` and `AccountTraces` came with slice 10e, `RecordFileWriter`
 with slice 10f, `GoogleCalendarAccount` with slice 11f).
 
-**Where a `presentation/theme/…` or `presentation/common/…` path in this file lives** (MON-24
-phase 2, Task 9, slice 9b, November 2026). The theme moved whole to
+**Where a `presentation/…` or `utils/…` path in this file lives** (MON-24 phase 2, Tasks 9–12,
+November 2026; done). **In `shared-ui/`, package unchanged**: a path this file writes as
+`presentation/<package>/<File>.kt` — the theme, `common/`, every screen and ViewModel, the platform
+interfaces (`platform/`), the navigation (`navigation/`) and `CoPlanlyApp.kt` — or as
+`utils/<File>.kt` is `shared-ui/src/commonMain/kotlin/com/coparently/app/presentation/<package>/<File>.kt`
+(or `…/app/utils/<File>.kt`). Its test is under `shared-ui/src/commonTest/` (on `kotlin.test`) or
+`shared-ui/src/androidHostTest/` (MockK, a `java.time` oracle); the screenshots and the Robolectric
+tests stay in `app/src/test/`. The rules and items that name those paths were not reworded; only the
+root changed. Three exceptions:
+- **`shared-ui/src/androidMain/`**, same package: the Android `actual`s — `theme/Theme.android.kt`,
+  `ContrastLevel.android.kt`, `Motion.android.kt` and `AdaptiveDimensions.android.kt`,
+  `common/HolidayNames.android.kt`, `ReaderDates.android.kt` and `TwoPane.android.kt`,
+  `utils/LocalizedDates.kt` (the `java.time` date and time rules) with the Android halves of
+  `utils/ReaderDateText.kt` and `utils/ReaderMoneyText.kt`, `expenses/CurrencyFormat.kt`, and
+  `di/koin/PlatformUiModule.android.kt`.
+- **`shared-ui/src/iosMain/`**: the iPhone's `actual`s, `platform/IosPlatform.kt`
+  (`iosPlatformServices`, `ProvideIosShell` and their stand-ins) and `di/koin/IosUiUnavailable.kt`.
+- **`app/src/main/java/com/coparently/app/presentation/`**: what the thin shell keeps
+  (`ShellBoundaryTest` refuses any other `@Composable` there, and any `ViewModel`) — `MainActivity.kt`, `widget/`, the previews (`*Previews.kt`),
+  and the Android halves of the platform interfaces: `platform/AndroidPlatform.kt` and
+  `AndroidQrCodes.kt`, `auth/AndroidCredentialSignIn.kt` and `AndroidAuthErrors.kt`,
+  `sync/AndroidGoogleCalendarSignIn.kt`, `settings/AndroidAppLanguages.kt` and
+  `SystemDefaultRelaunch.kt`, `pairing/QRScannerActivity.kt`, `QrScannerScreen.kt`,
+  `AndroidInviteQrCodes.kt` and `BuildPairingLink.kt`, `export/RecordShareIntent.kt`,
+  `chat/DictationLanguage.kt` and `CardPushText.kt` (a chat card's push wording, beside
+  `PushNotifier`), and `common/SharedFileViewer.kt`, `SensitiveClipboard.kt` and
+  `AndroidPermissionChecks.kt`. Of `utils/`, the app keeps `AppLocale.kt`, `NetworkMonitor.kt`,
+  `SwapDateList.kt`, `Extensions.kt` and `PreviewHelpers.kt`.
+
+A new screen, component or ViewModel goes in `shared-ui/` (the hard rule "The Android app is a thin
+shell"). How it got there, slice by slice (the history; every rule and every "don't undo" in it
+stands): in Task 9's slice 9b the theme moved whole to
 `shared-ui/src/commonMain/kotlin/com/coparently/app/presentation/theme/`, package unchanged, with
 its tests in `shared-ui/src/androidHostTest/` (JVM, as they were). What only Android can answer is
 an `expect` in the common file and the code it was in `androidMain`, beside an iPhone `actual` in
@@ -2287,7 +2299,8 @@ screens** (slice 11f): `presentation/pairing/`'s `PairingScreen`, `InvitationVie
 `AppBuildValues.pairingWebLink`), and the app's `pairing/BuildPairingLink.kt` keeps the one-argument
 `pairingLinkFor(code)` over `BuildConfig.PAIRING_WEB_LINK` for `AndroidInviteQrCodes` and the tests,
 so the QR and the share text still carry one link (item 37); `PLAY_STORE_URL` and `playStoreUrlFor`
-are public for the friend and professional invitations still in the app. The invitation's share
+were made public for the friend and professional invitations, which moved to `:shared-ui` in slice
+11g, and stay public for the app's `PairingLinkTest`. The invitation's share
 sheet and copy go through `ShareSheet` and `SensitiveClipboard` (its text worded through
 `rememberUiTextResolver` in a coroutine at the tap, where it read the Activity's `getString`), the
 scan through `QrScanner` (`QRScannerActivity` on Android, unchanged), Back through Compose
@@ -2668,10 +2681,12 @@ and `CrashReporter` where they took `FirebaseAuthService`, `AnalyticsManager` an
 `CrashReporter.recordWithContext` (new, by default `record`; `CrashlyticsManager` answers it with
 `recordExceptionWithContext`, so the custom keys are set as before). `GuestInviteState.errorRes`
 is a `StringResource` (`GuestInviteSheet` reads it through Compose Multiplatform's
-`stringResource`), and `ChildFields`, `PetFields`, `childForm` and `petForm` are public now, for
-the editors still in the app. `FamilyDocumentsViewModel` asks `SignedInUser` for the uid. The
+`stringResource`), and `ChildFields`, `PetFields`, `childForm` and `petForm` were made public for
+the editors then still in the app (they moved in slice 11g; narrowing these back is carried to
+phase 3, ROADMAP MON-24). `FamilyDocumentsViewModel` asks `SignedInUser` for the uid. The
 journal editor's day (`JournalEditorState.entryDate`, `seededDate`, `setDate`) is a kotlinx-datetime
-`LocalDate`, which `JournalEditorScreen` converts for the date picker; a new entry's id is a `Uuid`
+`LocalDate`, which `JournalEditorScreen` converted for the date picker until it opened the kotlinx
+`LocalDatePickerDialog` directly; a new entry's id is a `Uuid`
 and its times `Clock.System`. The six tests (MockK) run in `androidHostTest`, the pet test verifying
 `Analytics.log("pet_updated", …)` where it verified `logPetUpdated()`. The third group is **the
 people outside the pair, and the plan**: `FriendViewModel` and `FriendCalendarViewModel`
@@ -2697,13 +2712,15 @@ rendered and saved through `data/export/RecordFileWriter` (new in `:shared-data`
 `FileProvider`, as before; `ExportedFile` moved with the interface and holds the `content://` URI as
 text, which the share sheet and `ExportFileWriterTest` read back through the app's
 `ExportedFile.contentUri` (`Uri.parse`, the same `Uri`). The export's range (`ExportUiState.from`,
-`to`, `setFrom`, `setTo`) is kotlinx-datetime, which `ExportScreen` converts for its pickers; the
+`to`, `setFrom`, `setTo`) is kotlinx-datetime, which `ExportScreen` converted for its pickers until
+slice 11g (no conversion since); the
 zone `TimeZone.currentSystemDefault()`, today `Clock.System.todayIn`, the default start three months
 back with `minus(3, DateTimeUnit.MONTH)` (java.time's `minusMonths`, the day clamped the same way).
 `ConnectSchoolViewModel`'s town filter folds case with `lowercase()`, what `lowercase(Locale.ROOT)`
 did. The iPhone's `platformDataModule` binds `NoRecordFiles` (it says `available` false, so the
 screen offers no format since slice 11g; rendering would fail and save nothing; the Family tab's,
-Earlier families' and the chat's ways into the export are still drawn there, carried past Task 12 in ROADMAP MON-24) and the school directory over its own client, as it binds the
+Earlier families' and the chat's ways into the export are still drawn there, carried to phase 3 in
+ROADMAP MON-24) and the school directory over its own client, as it binds the
 Bakaláři client. The three tests (MockK) run in `androidHostTest`. **Task 10 is done but for
 `AuthViewModel` and `SyncViewModel`**, which stay in the app until Task 11 (above); the app's
 `viewModelModule` holds those two alone (both moved in slice 11f, and `viewModelModule` with them).
@@ -2884,8 +2901,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    writer's output no longer matches `wire/current/`: regenerate with
    `UPDATE_WIRE_FIXTURES=1 ./gradlew :app:testDebugUnitTest --tests '*CurrentWireFixturesTest*' --rerun`
    and review the diff like a screenshot baseline. **Two modules run the harness**: a contract moves
-   to `shared-data`'s `wirecontracts/WireContracts` when its writer does (custody and request clocks
-   and pets, expenses and children so far — `PetWireContract` joined in Task 8d, once the pet mappers
+   to `shared-data`'s `wirecontracts/WireContracts` when its writer does (custody, request clocks,
+   pets, expenses, children, events and revisions — `PetWireContract` joined in Task 8d, once the pet mappers
    became top-level functions, and makes its one wall clock from a UTC instant so it reads in any
    zone, `ExpenseWireContract` in Task 8f, the same way, reading no wall clock at all, and
    `ChildInfoWireContract` in Task 8g, once `SyncService`, the second writer of `child_info`, moved,
@@ -3146,7 +3163,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     - **A chat card is worded on the receiving phone.** `notifyOfChatMessage` sends the card's
       facts beside its preview (`activityKind`, `activityEntityType`, `activityEntityId`,
       `activityTitle`, `activityWhenIso`, `activityAmount`, `activityCurrency` — fields, not types)
-      and `PushNotifier` words them through `presentation/chat/cardPushText`, the thread's sentence
+      and `PushNotifier` words them through `cardPushText` (`presentation/chat/CardPushText.kt`), the thread's sentence
       without Compose. It stays in the app beside its one caller, and reads `ActivityCardText`'s
       decisions (in `:shared-ui`, Compose Multiplatform `StringResource`s) as the app's `R.string` of
       the same key, so the push speaks the language of the context it is worded in;

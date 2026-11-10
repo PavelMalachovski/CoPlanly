@@ -1738,8 +1738,16 @@ unblocks Ktor 3.6 and later, whose OkHttp 5.5 needs compileSdk 37 (Task 5 stayed
   - The spec: §5.1 steps 3–6 marked done, with corrections where this plan departed (migrations
     kept Android-only; strings generated back into Android resources; three modules instead of one).
 
-- [ ] **Step 1: Write the notes.** Check every `CLAUDE.md` path that moved with
+- [x] **Step 1: Write the notes.** Check every `CLAUDE.md` path that moved with
   `git grep -n "presentation/\|data/" CLAUDE.md`. Each must resolve through the note or be updated.
-- [ ] **Step 2: Verify.** `node tools/check-invariants.js` and `node --test tools/test/*.test.js`
-  pass.
-- [ ] **Step 3: Commit.** `docs: record phase 2 of the iPhone work (MON-24)`
+  *Done 10 November 2026: the architecture map says the finished state; the `data/…` and
+  `presentation/…` notes answer up front (default root, the `androidMain`/`iosMain` exceptions and
+  what stays in `app/`), with their task-by-task history kept below. Every `data/`, `presentation/`,
+  `domain/` and `utils/` path in `CLAUDE.md` names an existing file or directory in the module its
+  note says; one did not (`presentation/chat/cardPushText`, a function, now
+  `presentation/chat/CardPushText.kt`'s `cardPushText`). ROADMAP MON-24 records phase 2, what stayed
+  and why, what is carried to phase 3 and phase 3's start conditions; the spec's §5.1 marks steps
+  3–6 done with their corrections.*
+- [x] **Step 2: Verify.** `node tools/check-invariants.js` and `node --test tools/test/*.test.js`
+  pass. *Done: all invariants hold; 128 tests pass.*
+- [x] **Step 3: Commit.** `docs: record phase 2 of the iPhone work (MON-24)`
