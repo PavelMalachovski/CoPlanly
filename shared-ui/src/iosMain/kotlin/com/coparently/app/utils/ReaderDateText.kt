@@ -113,11 +113,11 @@ private fun styledDate(date: LocalDate, style: NSDateFormatterStyle): String {
     return formatter.stringFromDate(instant)
 }
 
-/** The calendar `java.time`'s ISO dates are on. */
-private val gregorian = NSCalendar(calendarIdentifier = NSCalendarIdentifierGregorian).apply { timeZone = utc }
-
 /** Wall clocks carry no zone, so they are read and written in UTC. */
 private val utc = NSTimeZone.timeZoneWithName("UTC")!!
+
+/** The calendar `java.time`'s ISO dates are on. */
+private val gregorian = NSCalendar(calendarIdentifier = NSCalendarIdentifierGregorian).apply { timeZone = utc }
 
 /** [dateTime] as the moment it names in the phone's zone, on the Gregorian calendar. */
 private fun nsDate(dateTime: LocalDateTime): NSDate? = gregorian.dateFromComponents(dateTime.toNSDateComponents())
