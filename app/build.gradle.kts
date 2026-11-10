@@ -575,6 +575,10 @@ dependencies {
     // above.
     testImplementation("com.google.code.gson:gson:2.11.0")
     testImplementation(kotlin("test"))
+    // kotlin-test's JUnit 4 half, which gives the shared wire harness's `kotlin.test.Test` its
+    // `actual`. The Kotlin Android plugin chose it from the test framework on its own; AGP 9's
+    // built-in Kotlin does not, so it is named here.
+    testImplementation(kotlin("test-junit"))
     // kotlin-reflect at the compiler's own version for the JVM tests. MockK asks for 2.0.0, which
     // reads Kotlin metadata only up to 2.1, and this module is compiled with Kotlin 2.4; a
     // reflection library older than the compiler is unsupported. Unversioned, it follows the
