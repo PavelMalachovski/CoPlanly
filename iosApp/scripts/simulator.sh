@@ -6,9 +6,10 @@
 #       else the first available iPhone on the newest iOS runtime. Logs its choice to stderr.
 #
 #   iosApp/scripts/simulator.sh launch <udid> <app> <out-dir>
-#       Boots it, installs <app>, launches app.coplanly with its console in <out-dir>/console.log,
+#       Boots it, installs <app>, launches app.coplanly with its stdout and stderr in <out-dir>,
 #       waits, fails unless the app is still running, and saves <out-dir>/launch.png. Whatever
-#       happens it leaves the app's recent system log and any crash report in <out-dir>.
+#       happens it leaves the app's recent system log and any crash report in <out-dir>, and
+#       prints them into the job's log.
 set -euo pipefail
 
 BUNDLE_ID=app.coplanly
@@ -43,33 +44,57 @@ print(choice[2])
 collect() {
   local udid=$1 out=$2
   xcrun simctl spawn "$udid" log show --last 5m --style compact \
-    --predicate 'process == "CoPlanly" OR subsystem BEGINSWITH "com.google.firebase"' \
-    > "$out/system.log" 2>&1 || true
+    --predicate 'process == "CoPlanly"' > "$out/system.log" 2>&1 || true
   find "$HOME/Library/Logs/DiagnosticReports" -name 'CoPlanly*' -mmin -30 -exec cp {} "$out/" \; 2>/dev/null || true
+}
+
+# Prints what <out-dir> holds into the job's log, since an artifact may be out of a reader's reach.
+show() {
+  local out=$1 file
+  for file in "$out"/stdout.log "$out"/stderr.log; do
+    [ -f "$file" ] || continue
+    echo "::group::$(basename "$file")"; tail -n 200 "$file"; echo "::endgroup::"
+  done
+  echo "::group::system.log (last 150 lines)"; tail -n 150 "$out/system.log" 2>/dev/null || true; echo "::endgroup::"
+  for file in "$out"/CoPlanly*; do
+    [ -f "$file" ] || continue
+    echo "::group::crash report $(basename "$file")"; head -c 20000 "$file"; echo; echo "::endgroup::"
+  done
 }
 
 launch() {
   local udid=$1 app=$2 out=$3
   mkdir -p "$out"
+  out=$(cd "$out" && pwd)
   xcrun simctl boot "$udid" 2>/dev/null || true
   xcrun simctl bootstatus "$udid" -b
+  xcrun simctl list devices booted
   xcrun simctl install "$udid" "$app"
-  xcrun simctl launch --console-pty "$udid" "$BUNDLE_ID" < /dev/null > "$out/console.log" 2>&1 &
+  echo "Installed $(xcrun simctl get_app_container "$udid" "$BUNDLE_ID")"
+
+  # The app's own stdout and stderr (Kotlin's uncaught exceptions among them) go to files on this
+  # host; simctl prints "<bundle id>: <pid>" and returns.
+  local started pid
+  started=$(xcrun simctl launch --terminate-running-process \
+    --stdout="$out/stdout.log" --stderr="$out/stderr.log" "$udid" "$BUNDLE_ID")
+  echo "$started"
+  pid=${started##*: }
   sleep "$WAIT_SECONDS"
 
-  local entry
-  entry=$(xcrun simctl spawn "$udid" launchctl list | grep "UIKitApplication:$BUNDLE_ID" || true)
-  echo "launchctl: ${entry:-<not listed>}"
-  if ! awk '{ print $1 }' <<<"$entry" | grep -Eq '^[0-9]+$'; then
-    echo "::error::The app is not running ${WAIT_SECONDS} s after launch."
+  # A simulator's app is a process of this Mac.
+  if ! ps -p "$pid" > /dev/null 2>&1; then
+    echo "::error::The app (pid $pid) is not running ${WAIT_SECONDS} s after launch."
     collect "$udid" "$out"
-    tail -n 80 "$out/console.log" || true
+    show "$out"
     exit 1
   fi
   xcrun simctl io "$udid" screenshot "$out/launch.png"
-  echo "The app is running ${WAIT_SECONDS} s after launch; screenshot in $out/launch.png"
+  echo "The app (pid $pid) is running ${WAIT_SECONDS} s after launch; screenshot in $out/launch.png"
   collect "$udid" "$out"
-  tail -n 40 "$out/console.log" || true
+  show "$out"
+  # A small copy of the screenshot in the log, for a reader who cannot download the artifact.
+  sips -Z 360 -s format jpeg -s formatOptions 60 "$out/launch.png" --out "$out/launch-small.jpg" > /dev/null
+  echo "::group::launch-small.jpg (base64)"; base64 -i "$out/launch-small.jpg"; echo "::endgroup::"
 }
 
 case "${1:-}" in
