@@ -411,8 +411,13 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
 19. **Every screen that is not a tab is one readable column** (October 2026 audit, week 6). A
     destination is declared with `pane()` (`navigation/ReadablePane.kt`), which is `composable()`
     with the screen laid out at most 640 dp wide, centred, top bar included. Only the four tabs
-    and the loading screen use `composable()` directly; a new detail screen uses `pane()`. Don't
-    cap inside a screen: every detail screen brings its own Scaffold, and the cap belongs to the
+    and the loading screen use `composable()` directly; a new detail screen uses `pane()`. **Since
+    MON-24 phase 3 a destination is data**: an `AppDestination` in `rememberAppDestinations`
+    (`navigation/AppDestination.kt`), its kind in `AppDestinationCatalog` (`TAB_ROOT`, `PUSH`,
+    `FULL_WIDTH_PUSH` for Expenses, `FORM`, `ROOT_FLOW`), and `addDestination` declares it on Android
+    — `composable()` for the tabs, Expenses and the loading screen, `pane()` for the rest — so a new
+    screen is one entry in each, never a `composable()` of its own. A tab switch inside a
+    destination goes through `LocalTabSwitcher`. Don't cap inside a screen: every detail screen brings its own Scaffold, and the cap belongs to the
     one place that knows which destinations are tabs. On a phone it changes nothing.
     `ReadablePaneTest` measures both widths. The UI tour's `light-en-100-wide` variant (a
     1280 × 800 dp display) shows it next to the rail.
