@@ -136,7 +136,9 @@ internal class StackHost(
     private fun sync() {
         if (disposed || moving()) return
         val entries = wantedEntries()
-        if (onTabRootReached != null && entries.drop(1).any { kindOf(it) == DestinationKind.TAB_ROOT }) {
+        // The root flow never shows a tab's first screen: onboarding's finish navigates to Home with
+        // its own entry popped, so Home may be the only entry left.
+        if (onTabRootReached != null && entries.any { kindOf(it) == DestinationKind.TAB_ROOT }) {
             onTabRootReached.invoke()
             return
         }
