@@ -66,16 +66,17 @@ final class ShellUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Expenses"].exists, "A cancelled back swipe popped the screen")
 
         // The Add expense sheet, an edit, and a swipe down that must ask first.
-        element(app, labelled: "Add expense", in: app.buttons).tap()
+        press(element(app, labelled: "Add expense", in: app.buttons))
         let sheetBar = app.navigationBars["Add expense"]
         XCTAssertTrue(sheetBar.waitForExistence(timeout: timeout), "The form did not open as a sheet")
         shot(app, "04-add-expense-sheet")
         type("Shell check", into: field(app, labelled: "Title"), in: app)
+        dismissKeyboard(app)
         swipeSheetDown(app, from: sheetBar)
         let question = app.staticTexts["Discard changes?"]
         XCTAssertTrue(question.waitForExistence(timeout: timeout), "A swipe over edits did not ask first")
         shot(app, "05-discard-question")
-        element(app, labelled: "Keep editing", in: app.buttons).tap()
+        press(element(app, labelled: "Keep editing", in: app.buttons))
         XCTAssertTrue(sheetBar.waitForExistence(timeout: timeout))
         XCTAssertFalse(question.exists, "Keep editing left the question up")
         XCTAssertTrue(sheetBar.exists, "Keep editing closed the sheet")
@@ -83,7 +84,7 @@ final class ShellUITests: XCTestCase {
         // The close button asks too; Discard leaves the form and the sheet.
         sheetBar.buttons.firstMatch.tap()
         XCTAssertTrue(question.waitForExistence(timeout: timeout), "Closing over edits did not ask")
-        element(app, labelled: "Discard", in: app.buttons).tap()
+        press(element(app, labelled: "Discard", in: app.buttons))
         XCTAssertTrue(app.navigationBars["Expenses"].waitForExistence(timeout: timeout), "Discard did not close the sheet")
 
         // The system back button returns to Family; its gear opens Settings, with a large title.
@@ -99,10 +100,11 @@ final class ShellUITests: XCTestCase {
         // A screen that still draws its own Compose bar is pushed with the system bar hidden, and a
         // second tap on the selected tab pops both it and Settings, and the stack still works.
         let dataSources = element(app, containing: "Data sources and licences")
-        for _ in 0..<6 where !dataSources.isHittable {
+        let screenBottom = app.windows.firstMatch.frame.maxY - 120
+        for _ in 0..<6 where dataSources.frame.maxY > screenBottom {
             app.swipeUp()
         }
-        dataSources.tap()
+        press(dataSources)
         XCTAssertTrue(app.staticTexts["Data sources and licences"].waitForExistence(timeout: timeout))
         sleep(1)
         let systemBar = app.navigationBars.firstMatch
@@ -123,29 +125,48 @@ final class ShellUITests: XCTestCase {
         print("COPLANLY_UI_HIERARCHY_BEGIN\n\(app.debugDescription)\nCOPLANLY_UI_HIERARCHY_END")
         type(email, into: field(app, labelled: "Email address"), in: app)
         type(password, into: field(app, labelled: "Password"), in: app)
-        element(app, labelled: "Sign In", in: app.buttons).tap()
+        dismissKeyboard(app)
+        press(element(app, labelled: "Sign In", in: app.buttons))
     }
 
-    /// A text field by its label. Compose exposes a text field to accessibility with its own trait,
-    /// which XCUITest may report as a text field, a secure one, a text view or another element.
+    /// A text field by its label. Compose exposes a text field as a text view whose label is the
+    /// static text inside it; a text field proper is looked for too.
     private func field(_ app: XCUIApplication, labelled label: String) -> XCUIElement {
-        for query in [app.textFields, app.secureTextFields, app.textViews] {
-            let match = query.matching(NSPredicate(format: "label CONTAINS %@ OR placeholderValue CONTAINS %@", label, label))
-                .firstMatch
-            if match.waitForExistence(timeout: 5) { return match }
-        }
-        return element(app, containing: label)
+        let byLabel = NSPredicate(format: "label == %@", label)
+        let inside = app.textViews.containing(byLabel).firstMatch
+        if inside.waitForExistence(timeout: timeout) { return inside }
+        let field = app.textFields.matching(byLabel).firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5), "No field labelled \"\(label)\"")
+        return field
     }
 
     /// Types [text] into [field] through the keyboard, once a tap has focused it.
     private func type(_ text: String, into field: XCUIElement, in app: XCUIApplication) {
-        field.tap()
+        press(field)
         _ = app.keyboards.firstMatch.waitForExistence(timeout: 5)
         app.typeText(text)
     }
 
+    /// Closes the keyboard with its own key, so what it covered can be tapped.
+    private func dismissKeyboard(_ app: XCUIApplication) {
+        let keyboard = app.keyboards.firstMatch
+        guard keyboard.exists else { return }
+        app.typeText("\n")
+        _ = keyboard.waitForNonExistence(timeout: 5)
+    }
+
+    /// Taps [element] where it is drawn. Compose's elements are not always reported hittable, so a
+    /// tap at their centre stands in for XCUITest's own hit test.
+    private func press(_ element: XCUIElement) {
+        if element.isHittable {
+            element.tap()
+        } else {
+            element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        }
+    }
+
     private func openExpenses(_ app: XCUIApplication) {
-        element(app, containing: "This month").tap()
+        press(element(app, containing: "This month"))
         XCTAssertTrue(app.navigationBars["Expenses"].waitForExistence(timeout: timeout), "Expenses did not open")
     }
 
