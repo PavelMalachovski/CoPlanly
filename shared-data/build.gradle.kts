@@ -324,6 +324,13 @@ tasks.withType<org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeSimu
     listOf("COPLANLY_EMULATOR_HOST", "COPLANLY_REQUIRE_EMULATORS").forEach { name ->
         providers.environmentVariable(name).orNull?.let { environment("SIMCTL_CHILD_$name", it) }
     }
+    // On a booted simulator, when CI names one: Kotlin spawns the tests `--standalone` by default,
+    // outside a booted device's services, and the Keychain (which Firebase Auth saves the signed-in
+    // user to) answers errSecNotAvailable there. `ios-app` boots the simulator it launched the app on.
+    providers.environmentVariable("COPLANLY_SIMULATOR_UDID").orNull?.let { udid ->
+        device.set(udid)
+        standalone.set(false)
+    }
     testLogging {
         events("failed")
         showStandardStreams = true

@@ -21,9 +21,10 @@ import kotlin.test.assertTrue
  * skips itself without an emulator; the `ios-app` CI job runs it with one, as the check run "iPhone
  * tests on the emulators".
  *
- * The test binary carries simulated Keychain entitlements (`gradle/ios-test-entitlements.plist`):
- * Firebase Auth keeps the signed-in user in the Keychain and fails a sign-in it cannot save, and a
- * bare simulator process has no Keychain without them.
+ * Firebase Auth keeps the signed-in user in the Keychain and fails a sign-in it cannot save
+ * (`ERROR_KEYCHAIN_ERROR`), so these run where there is one: on the simulator `ios-app` booted
+ * (`COPLANLY_SIMULATOR_UDID`; Kotlin's default `--standalone` spawn has no Keychain), from a binary
+ * carrying simulated Keychain entitlements (`gradle/ios-test-entitlements.plist`).
  */
 class IosFirebaseAuthEmulatorTest {
 
