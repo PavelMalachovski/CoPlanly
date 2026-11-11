@@ -78,7 +78,9 @@ class IosAccountSwitchTest {
             withTimeout(FLOW_TIMEOUT_MILLIS) {
                 assertEquals(listOf("previous"), seen.receive())
                 phone.accountSwitch.ensureAccountConsistency()
-                while (seen.receive().isNotEmpty()) Unit
+                do {
+                    val rows = seen.receive()
+                } while (rows.isNotEmpty())
             }
         } finally {
             collector.cancel()
