@@ -165,16 +165,41 @@ test('every collection the gate must write has a rule, and the fixtures it names
   }
 });
 
-test('a real fixture compared with itself as the emulator would store it has no mismatch', () => {
-  for (const [collection, file] of [
-    ['events', 'events/repository-save.json'],
-    ['expenses', 'expenses/repository-save.json'],
-    ['pets', 'pets/repository-save.json'],
+test('a real fixture compared with itself as the emulator would store it, server keys added, has no mismatch', () => {
+  const cursor = { serverUpdatedAt: { timestampValue: '2026-11-11T07:00:00Z' } };
+  for (const [collection, file, added] of [
+    ['events', 'events/repository-save.json', cursor],
+    ['expenses', 'expenses/repository-save.json', {}],
+    ['pets', 'pets/repository-save.json', {}],
   ]) {
     const text = fs.readFileSync(path.join(FIXTURES, file), 'utf8');
-    const stored = doc(restFieldsOf(JSON.parse(text).document, text));
+    const stored = doc(Object.assign(restFieldsOf(JSON.parse(text).document, text), added));
     assert.deepEqual(compareDocument(ruleFor(collection, stored, FIXTURES).shape, stored), [], collection);
   }
+});
+
+
+test('an event carries the server cursor its data source adds, as a timestamp', () => {
+  const text = fs.readFileSync(path.join(FIXTURES, 'events/repository-save.json'), 'utf8');
+  const fields = restFieldsOf(JSON.parse(text).document, text);
+  const shape = ruleFor('events', doc(fields), FIXTURES).shape;
+  assert.deepEqual(compareDocument(shape, doc(fields)), ['serverUpdatedAt: missing (timestamp expected)']);
+  const stamped = doc(Object.assign({}, fields, { serverUpdatedAt: { timestampValue: '2026-11-11T07:00:00Z' } }));
+  assert.deepEqual(compareDocument(shape, stamped), []);
+  const asText = doc(Object.assign({}, fields, { serverUpdatedAt: s('2026-11-11T07:00:00') }));
+  assert.deepEqual(compareDocument(shape, asText), ['serverUpdatedAt: timestamp expected, string found']);
+});
+
+test('an announced card carries its entity as text attachments, and nothing else', () => {
+  const card = (attachments) => doc({
+    activity: map({ entityId: s('e'), entityType: s('EVENT'), kind: s('EVENT_CREATED'), title: s('Dentist'),
+      whenIso: s('2026-11-12T10:00:00') }),
+    attachments, content: s('x'), conversationId: s('a_b'), id: s('m'), isRead: b(false),
+    messageType: s('ACTIVITY'), replyToMessageId: s(''), senderId: s('a'), senderName: s('Alice'), timestamp: i(1),
+  });
+  const shape = ruleFor('messages', card(arr()), FIXTURES).shape;
+  assert.deepEqual(compareDocument(shape, card(arr(s('EVENT'), s('e')))), []);
+  assert.deepEqual(compareDocument(shape, card(arr(i(1)))), ['attachments[0]: string expected, integer found']);
 });
 
 /**

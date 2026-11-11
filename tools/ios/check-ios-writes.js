@@ -293,7 +293,12 @@ const NO_STORAGE = 'the iPhone has no Cloud Storage yet (NoStorageBucket): no ph
 const RULES = {
   // EventRepositoryImpl.insertEvent → EventDocument.fromEvent; the gate runs no sync, so every event
   // it writes is a repository save (never `sync-upload.json`'s nulls) and none is deleted.
-  events: () => ({ fixture: 'events/repository-save.json' }),
+  events: () => ({
+    fixture: 'events/repository-save.json',
+    // FirestoreEventDataSource.stamped adds the change cursor, FieldValue.serverTimestamp(), to
+    // every write after fromEvent built the document the fixture holds.
+    serverAdded: { serverUpdatedAt: TIMESTAMP },
+  }),
 
   // EventVersionRecorder; its `event` is the document `fromEvent` built for the same save, so it
   // is held to the repository save's fixture rather than `updated.json`'s own embedded copy (which
@@ -307,7 +312,9 @@ const RULES = {
   // Message.toFirestoreMap: a text message, or an activity card (ActivityAnnouncer).
   messages: (doc) => (stringField(doc, 'messageType') === 'ACTIVITY' ? {
     fixture: 'messages/activity-custody-proposed.json',
-    mayBeEmpty: { attachments: 'a card carries no file' },
+    // ActivityAnnouncer.announce writes [entityType, entityId] as the card's attachments, which
+    // the fixture (a card built without the announcer) leaves empty: text, as a message's are.
+    replace: { attachments: arrayOf(STRING) },
     mayBeAbsent: {
       'activity.planCitation': 'ActivityAnnouncement.toMap writes it only for a proposal citing the plan',
     },

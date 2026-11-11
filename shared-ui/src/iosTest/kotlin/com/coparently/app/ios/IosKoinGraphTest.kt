@@ -73,6 +73,7 @@ import com.coparently.app.presentation.auth.AuthErrors
 import com.coparently.app.presentation.pairing.InviteQrCodes
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
+import platform.Foundation.NSProcessInfo
 import kotlin.reflect.KClass
 import kotlin.test.Test
 import kotlin.test.fail
@@ -95,7 +96,12 @@ class IosKoinGraphTest {
 
     @Test
     fun `every seam the iPhone binds resolves in the graph IosApp starts`() {
-        startFirebaseOnce()
+        // The emulators' host where this run has one, as `IosAuthErrorsTest` configures it; the
+        // graph only builds clients, so a run without emulators configures loopback.
+        TestFirebase.configureOnce(
+            (NSProcessInfo.processInfo.environment["COPLANLY_EMULATOR_HOST"] as? String)?.takeIf { it.isNotBlank() }
+                ?: "127.0.0.1"
+        )
         val koin = startKoin {
             modules(dataModules + platformDataModule + uiModules + platformUiModule + iosAppModule)
         }.koin
@@ -111,24 +117,6 @@ class IosKoinGraphTest {
     }
 
     private companion object {
-        /** Whether this process has configured Firebase; the SDK refuses a second time. */
-        var firebaseStarted = false
-
-        /** Firebase, once per test process, as `IosApp.start` starts it for the emulators. */
-        fun startFirebaseOnce() {
-            if (firebaseStarted) return
-            IosFirebase.configure(
-                IosAppConfig(
-                    emulatorHost = "127.0.0.1",
-                    versionName = "test",
-                    privacyPolicyUrl = null,
-                    termsUrl = null,
-                    supportEmail = null,
-                )
-            )
-            firebaseStarted = true
-        }
-
         /** What `platformDataModule` and `platformUiModule` bind, and what `startSession` starts. */
         val SEAMS: List<KClass<*>> = listOf(
             // platformDataModule

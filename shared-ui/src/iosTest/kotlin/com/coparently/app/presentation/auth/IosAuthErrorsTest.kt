@@ -4,8 +4,7 @@ package com.coparently.app.presentation.auth
 
 import cocoapods.FirebaseAuth.FIRAuthErrorDomain
 import com.coparently.app.data.remote.firebase.IosFirebaseAuth
-import com.coparently.app.ios.IosAppConfig
-import com.coparently.app.ios.IosFirebase
+import com.coparently.app.ios.TestFirebase
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.FirebaseNetworkException
 import dev.gitlive.firebase.FirebaseTooManyRequestsException
@@ -114,15 +113,7 @@ class IosAuthErrorsTest {
             println("COPLANLY_EMULATOR_TEST_SKIPPED wrong password mapped")
             return
         }
-        IosFirebase.configure(
-            IosAppConfig(
-                emulatorHost = host,
-                versionName = "test",
-                privacyPolicyUrl = null,
-                termsUrl = null,
-                supportEmail = null,
-            )
-        )
+        TestFirebase.configureOnce(host)
         val auth = IosFirebaseAuth(Firebase.auth)
         val email = "iphone-${NSUUID().UUIDString.lowercase()}@example.test"
         try {
