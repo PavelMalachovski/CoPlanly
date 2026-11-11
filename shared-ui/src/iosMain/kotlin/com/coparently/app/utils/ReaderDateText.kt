@@ -119,20 +119,29 @@ private val utc = NSTimeZone.timeZoneWithName("UTC")!!
 /** The calendar `java.time`'s ISO dates are on. */
 private val gregorian = NSCalendar(calendarIdentifier = NSCalendarIdentifierGregorian).apply { timeZone = utc }
 
-/** [dateTime] as the moment it names in the phone's zone, on the Gregorian calendar. */
+/** [dateTime] as the moment it names in UTC, on the Gregorian calendar. */
 private fun nsDate(dateTime: LocalDateTime): NSDate? = gregorian.dateFromComponents(dateTime.toNSDateComponents())
 
-/** A formatter for [skeleton] in the reader's locale: Foundation's own order for the fields. */
+/**
+ * A formatter for [skeleton] in the reader's locale: Foundation's own order for the fields. In UTC,
+ * as [nsDate] writes the wall clock: a formatter left on the phone's zone moved every time by the
+ * zone's offset, and a date to the day before west of Greenwich.
+ */
 private fun formatter(skeleton: String): NSDateFormatter = NSDateFormatter().apply {
     locale = readerLocale()
     calendar = gregorian
+    timeZone = utc
     setLocalizedDateFormatFromTemplate(skeleton)
 }
 
-/** A formatter for a fixed [pattern], with the reader's month, weekday and day-period words. */
+/**
+ * A formatter for a fixed [pattern], with the reader's month, weekday and day-period words; in UTC,
+ * for [formatter]'s reason.
+ */
 private fun fixedPattern(pattern: String): NSDateFormatter = NSDateFormatter().apply {
     locale = readerLocale()
     calendar = gregorian
+    timeZone = utc
     dateFormat = pattern
 }
 

@@ -52,12 +52,27 @@ class ReaderDateTextIosTest {
     }
 
     @Test
+    fun `a date reads the same west of Greenwich`() {
+        preferredLanguagesForTest = listOf("en-US")
+        zone("America/New_York")
+        assertEquals("Mar 29, 2026", ReaderDateText.date(LocalDate(2026, 3, 29), "yMMMd"))
+        assertEquals("18:00", ReaderDateText.time(LocalTime(18, 0), is24Hour = true))
+    }
+
+    @Test
     fun `the reader's locale follows the owner's rule`() {
         preferredLanguagesForTest = listOf("sk-SK", "cs-CZ")
-        assertEquals("en_150", readerLocale().localeIdentifier)
+        assertEquals("en_150", identifier())
         preferredLanguagesForTest = listOf("cs-CZ")
-        assertEquals("cs_CZ", readerLocale().localeIdentifier)
+        assertEquals("cs_CZ", identifier())
         preferredLanguagesForTest = listOf("de")
-        assertEquals("de", readerLocale().localeIdentifier)
+        assertEquals("de", identifier())
     }
+
+    /**
+     * The reader locale's identifier in Foundation's underscore form: the simulator `ios-app` boots
+     * writes Foundation's canonical identifier with a hyphen ("en-150"), which names the same locale
+     * as "en_150".
+     */
+    private fun identifier(): String = readerLocale().localeIdentifier.replace('-', '_')
 }
