@@ -31,7 +31,7 @@ class StackMirrorTest {
 
     @Test
     fun `the same stack changes nothing`() {
-        assertEquals(emptyList(), StackMirror.diff(listOf("a"), listOf("a")))
+        assertEquals(emptyList<StackChange>(), StackMirror.diff(listOf("a"), listOf("a")))
     }
 
     @Test
@@ -98,6 +98,6 @@ class StackMirrorTest {
         val asked = listOf("a", "b", "c", "d")
         val shown = listOf("a", "b")
         val pops = StackMirror.poppedByUser(asked, shown, asked)
-        assertEquals(emptyList(), StackMirror.diff(shown, asked.dropLast(pops)))
+        assertEquals(emptyList<StackChange>(), StackMirror.diff(shown, asked.dropLast(pops)))
     }
 }
