@@ -14,14 +14,18 @@ import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.changerequests.RequestKind
 import com.coparently.app.domain.chat.ConversationKey
+import com.coparently.app.domain.custody.ChildScheduleOverride
+import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.CustodyDecisionOutcome
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideTransition
+import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChildInfo
+import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Expense
@@ -66,8 +70,11 @@ import kotlin.uuid.Uuid
  * emulators, its own Room database, the production repositories), pair through the real
  * `acceptPairingInvitation` callable. Alice's production repositories then write, in the pair's
  * family, a shared event, an important event (and its `event_important` push), an expense, a child
- * with a medical profile, a pet, a chat message, a change request, a custody schedule with a day
- * swap answered on Bob's phone and two proposals (one declined), and the swap's request deadline.
+ * with a medical profile, a pet, a chat message, a change request, a custody schedule (with a
+ * contact window, a seasonal layer and the child's own schedule) with a day swap answered on Bob's
+ * phone and two proposals (one declined), and the swap's request deadline. A second pair, Carol and
+ * Dan, writes the same kind of schedule and nothing over it, so one custody document is compared
+ * as a pattern write and the other as a swap write.
  * After each write Bob's production reader reads it back, and the test holds the domain value Bob
  * reads to the one Alice's phone holds — timestamps aside where the wire keeps only seconds.
  *
@@ -101,11 +108,15 @@ class IosWriteGateTest {
             runOnMainRunLoop(GATE_TIMEOUT) {
                 val alice = GatePhone.create("Alice", "gate_alice", host, written)
                 val bob = GatePhone.create("Bob", "gate_bob", host, written)
+                // A second pair, whose schedule sees only its pattern write (`pattern-write.json`):
+                // the first pair's goes on to swaps and proposals (`swap-beside-proposal.json`).
+                val carol = GatePhone.create("Carol", "gate_carol", host, written)
+                val dan = GatePhone.create("Dan", "gate_dan", host, written)
                 try {
                     GateScenario(alice, bob, written, problems).play()
+                    GateScenario(carol, dan, written, problems).playPatternOnly()
                 } finally {
-                    alice.close()
-                    bob.close()
+                    listOf(alice, bob, carol, dan).forEach(GatePhone::close)
                 }
             }
         } finally {
@@ -152,6 +163,26 @@ private class GateScenario(
         step("message") { message() }
         step("change request") { changeRequest() }
         step("custody") { custody() }
+    }
+
+    /**
+     * The second pair's part: they pair, the first parent saves a child and a schedule that holds
+     * a contact window, a seasonal layer and that child's own schedule, and nothing else touches
+     * the schedule, so its document stays the pattern write `pattern-write.json` holds.
+     */
+    suspend fun playPatternOnly() {
+        pair()
+        step("child of the pattern-only pair") { child() }
+        step("pattern only") {
+            val model = scheduleWithEverything(mondayOfThisWeek())
+            val submitted = alice.custodyRepository.submitPattern(model)
+            expectThat(submitted == PatternSubmission.ACTIVATED) { "the schedule was $submitted, not activated" }
+            val bobs = awaitShared(bob) { it.model.id == model.id }
+            same("the pattern-only schedule", model, bobs.model)
+            expectThat(bobs.dayOverrides.isEmpty() && bobs.proposal == null) {
+                "Bob read more than a pattern: $bobs"
+            }
+        }
     }
 
     /** Alice's code redeemed on Bob's phone; both phones see the pairing. Nothing runs without it. */
@@ -352,27 +383,74 @@ private class GateScenario(
 
     private suspend fun custody() {
         val today = nowToTheSecond().date
-        val monday = today.minus(today.dayOfWeek.isoDayNumber - 1, DateTimeUnit.DAY)
-        val first = alice.custodyRepository.createWeekOnWeekOff(monday, momFirst = true)
+        val monday = mondayOfThisWeek()
+        val schedule = scheduleWithEverything(monday)
+        val first = alice.custodyRepository.submitPattern(schedule)
         expectThat(first == PatternSubmission.ACTIVATED) { "the first schedule was $first, not activated" }
         val model = checkNotNull(alice.custodyRepository.getActiveModelSync()) { "Alice has no schedule" }
+        same("custody schedule as written", schedule, model)
         same("custody schedule", model, awaitShared(bob) { it.model.id == model.id }.model)
 
         // Well beyond the default three-day deadline, which the day caps (as on Android's e2e).
         val swapDay = today.plus(SWAP_DAYS_AHEAD, DateTimeUnit.DAY)
         daySwap(model.getCustodyFor(swapDay), swapDay)
 
-        val proposed = alice.custodyRepository.createTwoTwoThree(monday, momStartsFirst = true)
+        val windows = schedule.contactWindows
+        val proposed = alice.custodyRepository.createTwoTwoThree(monday, true, contactWindows = windows)
         expectThat(proposed == PatternSubmission.PROPOSED) { "the first proposal was $proposed, not sent" }
         awaitShared(bob) { it.proposal?.proposedBy == alice.uid }
         bob.custodyRepository.declineProposal(note = "Not in June").getOrThrow()
         awaitShared(alice) { it.proposal == null && it.lastDecision?.outcome == CustodyDecisionOutcome.DECLINED }
-        val again = alice.custodyRepository.createWeekOnWeekOff(monday, momFirst = false)
+        val again = alice.custodyRepository.createWeekOnWeekOff(monday, momFirst = false, contactWindows = windows)
         expectThat(again == PatternSubmission.PROPOSED) { "the second proposal was $again, not sent" }
         val bobs = awaitShared(bob) { it.proposal?.proposedBy == alice.uid && it.lastDecision != null }
         val alices = awaitShared(alice) { it.proposal != null && it.lastDecision != null }
         same("custody document", alices, bobs)
-        expectThat(bobs.proposal?.model?.modelType == CustodyModelType.WEEK_ON_WEEK_OFF) { "Bob read ${bobs.proposal}" }
+        // The proposal carries the window it was given and the agreed layer and child's schedule.
+        val proposal = bobs.proposal?.model
+        expectThat(
+            proposal != null && proposal.modelType == CustodyModelType.WEEK_ON_WEEK_OFF &&
+                proposal.contactWindows == schedule.contactWindows &&
+                proposal.seasonalLayers == schedule.seasonalLayers &&
+                proposal.childOverrides == schedule.childOverrides
+        ) { "Bob read the proposal $proposal" }
+        same("custody document's schedule", schedule, bobs.model)
+    }
+
+    /**
+     * A fortnight with one of each list the custody document carries as codec strings, so their
+     * elements reach the comparison (items 24, 30 and 33): a contact afternoon on the first
+     * parent's day for the second, next summer's layer, and the gate's child on a week of their own.
+     */
+    private fun scheduleWithEverything(monday: LocalDate) = CustodyModel.weekOnWeekOff(
+        id = Uuid.random().toString(),
+        startDate = monday,
+        momFirst = true
+    ).copy(
+        contactWindows = listOf(ContactWindow(2, LocalTime(15, 0), LocalTime(19, 0), "dad")),
+        seasonalLayers = listOf(
+            SeasonalLayer(
+                id = "summer",
+                name = "Summer ${monday.year + 1}",
+                fromDate = LocalDate(monday.year + 1, 7, 1),
+                toDate = LocalDate(monday.year + 1, 8, 31),
+                patternDays = 14,
+                momDayIndices = (0..6).toSet()
+            )
+        ),
+        childOverrides = listOf(
+            ChildScheduleOverride(
+                childId = childId,
+                patternDays = 7,
+                momDayIndices = setOf(0, 1, 2),
+                startDate = monday
+            )
+        )
+    )
+
+    private fun mondayOfThisWeek(): LocalDate {
+        val today = nowToTheSecond().date
+        return today.minus(today.dayOfWeek.isoDayNumber - 1, DateTimeUnit.DAY)
     }
 
     /** Alice offers [date], held by [holder], with the default deadline; Bob accepts it. */

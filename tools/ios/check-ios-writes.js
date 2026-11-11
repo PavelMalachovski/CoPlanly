@@ -325,14 +325,18 @@ const RULES = {
     mayBeEmpty: { attachments: NO_STORAGE },
   }),
 
-  // CustodyModelRepository: the pattern write, then (with `dayOverrides`) the swap and proposal
-  // writes, which carry the pattern's keys; the gate's final document is the latter.
-  custody_models: (doc) => (doc.fields && 'dayOverrides' in doc.fields ? {
+  // CustodyModelRepository: a pattern write alone (the gate's second pair), or (with
+  // `dayOverrides`) the swap and proposal writes over one (the first pair).
+  custody_models: (doc, fixtures) => (doc.fields && 'dayOverrides' in doc.fields ? {
     fixture: 'custody_models/swap-beside-proposal.json',
     keyedMaps: { dayOverrides: 'keyed by ISO date' },
     mayBeAbsent: {
       proposalPlanCitation: 'written only beside a proposal that cites an agreed parenting plan',
     },
+    // The swap fixture's three codec lists are empty, top level and in the proposal, so they would
+    // compare no element; the gate's schedule holds one of each, and a swap or proposal write
+    // carries them verbatim (items 24, 30 and 33), so each element is held to the pattern write's.
+    replace: codecLists(fixtures),
   } : { fixture: 'custody_models/pattern-write.json' }),
 
   // ChildInfoRepositoryImpl.upsertChildInfo → toFirestoreMap.
@@ -409,6 +413,24 @@ const RULES = {
     members: arrayOf(STRING), slots: mapOf(STRING), caresFor: mapOf(STRING), createdAt: INTEGER,
   })),
 };
+
+/** The custody document's codec lists, as `pattern-write.json` holds them, also under `proposal`. */
+const CODEC_LISTS = ['contactWindows', 'seasonalLayers', 'childOverrides'];
+
+/**
+ * [CODEC_LISTS], top level and under `proposal`, each a non-empty list of the element shape
+ * `pattern-write.json` holds (a codec string; a string if that fixture ever held none).
+ */
+function codecLists(fixtures) {
+  const pattern = fixture(fixtures, 'custody_models/pattern-write.json');
+  const lists = {};
+  for (const key of CODEC_LISTS) {
+    const list = { type: 'array', items: pattern.fields[key].items || STRING, nonEmpty: true };
+    lists[key] = list;
+    lists[`proposal.${key}`] = list;
+  }
+  return lists;
+}
 
 /** A rule whose shape is [shape], derived from [writer]. */
 function literal(writer, shape) {

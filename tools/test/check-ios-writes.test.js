@@ -202,6 +202,56 @@ test('an announced card carries its entity as text attachments, and nothing else
   assert.deepEqual(compareDocument(shape, card(arr(i(1)))), ['attachments[0]: string expected, integer found']);
 });
 
+
+/** A fixture's document as the REST API would store it, [changes] applied over its fields. */
+function storedFixture(file, changes = {}) {
+  const text = fs.readFileSync(path.join(FIXTURES, file), 'utf8');
+  return doc(Object.assign(restFieldsOf(JSON.parse(text).document, text), changes));
+}
+
+test('a pattern write alone is held to pattern-write.json, codec lists element by element', () => {
+  const rule = (d) => ruleFor('custody_models', d, FIXTURES);
+  const pattern = storedFixture('custody_models/pattern-write.json');
+  assert.equal(rule(pattern).source, 'wire/current/custody_models/pattern-write.json');
+  assert.deepEqual(compareDocument(rule(pattern).shape, pattern), []);
+  const empty = storedFixture('custody_models/pattern-write.json', { contactWindows: arr() });
+  assert.deepEqual(compareDocument(rule(empty).shape, empty), [
+    'contactWindows: empty, so the fixture\'s elements are not compared',
+  ]);
+  const wrong = storedFixture('custody_models/pattern-write.json', { seasonalLayers: arr(map({ id: s('summer') })) });
+  assert.deepEqual(compareDocument(rule(wrong).shape, wrong), ['seasonalLayers[0]: string expected, map found']);
+});
+
+test('a swap write\'s codec lists, top level and in the proposal, must hold codec strings', () => {
+  const lists = (extra = {}) => Object.assign({
+    contactWindows: arr(s('9|15:00|19:00|dad')),
+    seasonalLayers: arr(s('L1;summer;0;2027-07-01;2027-08-31;2027-07-01;14;0,1,2,3,4,5,6;;Summer')),
+    childOverrides: arr(s('C1;child:c1;2026-11-09;7;0,1,2;')),
+  }, extra);
+  const swapDoc = (top, inProposal) => {
+    const stored = storedFixture('custody_models/swap-beside-proposal.json', lists(top));
+    const proposal = stored.fields.proposal.mapValue.fields;
+    Object.assign(proposal, lists(inProposal));
+    return stored;
+  };
+  const rule = (d) => ruleFor('custody_models', d, FIXTURES);
+  const full = swapDoc();
+  assert.equal(rule(full).source, 'wire/current/custody_models/swap-beside-proposal.json');
+  assert.deepEqual(compareDocument(rule(full).shape, full), []);
+  const emptyTop = swapDoc({ childOverrides: arr() });
+  assert.deepEqual(compareDocument(rule(emptyTop).shape, emptyTop), [
+    'childOverrides: empty, so the fixture\'s elements are not compared',
+  ]);
+  const emptyProposal = swapDoc({}, { contactWindows: arr() });
+  assert.deepEqual(compareDocument(rule(emptyProposal).shape, emptyProposal), [
+    'proposal.contactWindows: empty, so the fixture\'s elements are not compared',
+  ]);
+  const wrongProposal = swapDoc({}, { seasonalLayers: arr(i(1)) });
+  assert.deepEqual(compareDocument(rule(wrongProposal).shape, wrongProposal), [
+    'proposal.seasonalLayers[0]: string expected, integer found',
+  ]);
+});
+
 /**
  * [value] as the REST API would answer it. Numbers are typed by [text]'s lexeme of the key's value,
  * good enough for the flat fixtures above (a whole number written as `1250.0` is a double).
