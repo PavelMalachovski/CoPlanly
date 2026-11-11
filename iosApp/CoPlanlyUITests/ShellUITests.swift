@@ -124,9 +124,9 @@ final class ShellUITests: XCTestCase {
         try goToExpenses()
         let before = cancelledTransitions()
         swipeBackAndLetGo(at: 0.2)
-        try require(waitForCancelledTransition(after: before), "The let-go swipe did not start a transition that was cancelled")
         sleep(1)
         try require(app.navigationBars["Expenses"].exists, "A cancelled back swipe popped the screen")
+        try requireCancelledTransition(after: before)
         // And the stack still works from there: the back button pops to Family.
         app.navigationBars["Expenses"].buttons.element(boundBy: 0).tap()
         try require(app.navigationBars["Family"].waitForExistence(timeout: timeout), "The back button after a cancelled swipe did not pop")
@@ -175,12 +175,12 @@ final class ShellUITests: XCTestCase {
         try openDataSources()
         let before = cancelledTransitions()
         swipeBackAndLetGo(at: 0.2)
-        try require(waitForCancelledTransition(after: before), "The let-go swipe did not start a transition that was cancelled")
         sleep(1)
+        shot("09-compose-bar-after-cancelled-swipe")
         // Data sources stays, with its own bar alone: the system bar is not left in Settings' state.
         try require(!app.navigationBars["Settings"].exists, "A cancelled back swipe popped Data sources")
         try require(app.navigationBars.count == 0, "Two bars after a cancelled swipe: the system bar over a Compose bar")
-        shot("09-compose-bar-after-cancelled-swipe")
+        try requireCancelledTransition(after: before)
         // A swipe that goes back brings Settings with its native bar.
         swipeBack(to: 0.85)
         try require(app.navigationBars["Settings"].waitForExistence(timeout: timeout), "The back swipe from Data sources did not show Settings' bar")
@@ -300,24 +300,24 @@ final class ShellUITests: XCTestCase {
 
     // MARK: - Cancelled transitions
 
-    /// The shell counts each cancelled transition in its root view's accessibility identifier.
+    /// The shell counts each cancelled transition in its tab bar's accessibility identifier.
     private let cancelledPrefix = "coplanly.shell.cancelledTransitions."
 
     private func cancelledTransitions() -> Int {
-        let marker = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "identifier BEGINSWITH %@", cancelledPrefix))
-            .firstMatch
-        guard marker.exists else { return 0 }
-        return Int(marker.identifier.dropFirst(cancelledPrefix.count)) ?? 0
+        let identifier = app.tabBars.firstMatch.identifier
+        guard identifier.hasPrefix(cancelledPrefix) else { return 0 }
+        return Int(identifier.dropFirst(cancelledPrefix.count)) ?? 0
     }
 
-    /// Whether the shell counted a cancelled transition beyond [count] within a few seconds.
-    private func waitForCancelledTransition(after count: Int) -> Bool {
+    /// Fails unless the shell counted a cancelled transition beyond [count] within a few seconds:
+    /// so a let-go swipe that never started a transition cannot pass.
+    private func requireCancelledTransition(after count: Int) throws {
         for _ in 0..<10 {
-            if cancelledTransitions() > count { return true }
+            if cancelledTransitions() > count { return }
             usleep(500_000)
         }
-        return false
+        let identifier = app.tabBars.firstMatch.identifier
+        throw StepFailure(description: "The let-go swipe did not start a transition that was cancelled (tab bar identifier \"\(identifier)\")")
     }
 
     // MARK: - Steps and failures

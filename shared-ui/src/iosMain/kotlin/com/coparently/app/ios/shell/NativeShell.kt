@@ -97,7 +97,7 @@ internal class ShellSession {
  * ([StackHost]): the shell shows the root flow from that route at once and ends the tabs, their
  * stacks and their ViewModels. Signing in again lands on fresh tabs.
  *
- * Each back swipe let go of is counted in the root view's accessibility identifier
+ * Each back swipe let go of is counted in the tab bar's accessibility identifier
  * ([CANCELLED_TRANSITIONS]), which the UI test reads to know a transition began and was cancelled;
  * nothing reads it in the app, and VoiceOver does not speak an identifier.
  *
@@ -167,9 +167,7 @@ internal class NativeShell(
 
     override fun transitionCancelled() {
         cancelledTransitions++
-        // UIView takes an identifier through its UIAccessibilityIdentification conformance.
-        (root.view as? UIAccessibilityIdentificationProtocol)
-            ?.setAccessibilityIdentifier(CANCELLED_TRANSITIONS + cancelledTransitions)
+        tabs?.markCancelledTransitions(CANCELLED_TRANSITIONS + cancelledTransitions)
     }
 
     private fun show(route: String) {
@@ -245,7 +243,7 @@ internal class NativeShell(
         ViewModelProvider.create(store, viewModelFactory { initializer { koin.get<T>() } })[T::class]
 
     private companion object {
-        /** The root view's accessibility identifier, followed by the number of cancelled transitions. */
+        /** The tab bar's accessibility identifier, followed by the number of cancelled transitions. */
         const val CANCELLED_TRANSITIONS = "coplanly.shell.cancelledTransitions."
     }
 }
@@ -304,6 +302,15 @@ internal class TabShell(shell: ShellEnvironment, session: ShellSession, chat: Ch
     fun selectFresh(tab: BottomNavDestination) {
         host(tab).popToStart()
         select(tab)
+    }
+
+    /**
+     * Writes [marker] as the tab bar's accessibility identifier, which UI automation reads and
+     * VoiceOver does not speak (the count of cancelled transitions, [NativeShell]).
+     */
+    fun markCancelledTransitions(marker: String) {
+        // UIView takes an identifier through its UIAccessibilityIdentification conformance.
+        (controller.tabBar as? UIAccessibilityIdentificationProtocol)?.setAccessibilityIdentifier(marker)
     }
 
     /** Ends the tabs: every stack's screens leave and their ViewModels are cleared. */
