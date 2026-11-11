@@ -28,6 +28,7 @@ import com.coparently.app.presentation.common.SheetGuard
 import com.coparently.app.presentation.navigation.AppDestination
 import com.coparently.app.presentation.navigation.LocalTabSwitcher
 import com.coparently.app.presentation.platform.ProvideIosShell
+import com.coparently.app.presentation.theme.CoPlanlyTheme
 import platform.UIKit.UIViewController
 
 /**
@@ -61,9 +62,12 @@ internal class ScreenController(
     private val bars = NativeBars(
         largeTitle = largeTitle,
         sheetRoot = sheetGuard != null,
-        // The chip's ViewModel is the screen's, as on Android, where the chip is in the screen.
+        // The chip's ViewModel is the screen's, as on Android, where the chip is in the screen. The
+        // theme alone, without the app's background surface, so the bar shows around the chip.
         chipFrame = { content ->
-            Shared { CompositionLocalProvider(LocalViewModelStoreOwner provides entry, content = content) }
+            CompositionLocalProvider(LocalViewModelStoreOwner provides entry) {
+                ProvideIosShell(shell.buildValues) { CoPlanlyTheme(content = content) }
+            }
         }
     )
 
