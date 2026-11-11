@@ -17,6 +17,15 @@ final class ShellUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    /// On any failure, what the app showed: a screenshot attachment and its accessibility hierarchy
+    /// in the log, so a run read only through its log still says where the walk stopped.
+    override func record(_ issue: XCTIssue) {
+        let app = XCUIApplication()
+        shot(app, "zz-failure")
+        print("COPLANLY_UI_HIERARCHY_BEGIN\n\(app.debugDescription)\nCOPLANLY_UI_HIERARCHY_END")
+        super.record(issue)
+    }
+
     func testShellWalk() throws {
         let environment = ProcessInfo.processInfo.environment
         let email = try XCTUnwrap(environment["COPLANLY_UITEST_EMAIL"], "No seeded account was handed to the test")
@@ -61,10 +70,7 @@ final class ShellUITests: XCTestCase {
         let sheetBar = app.navigationBars["Add expense"]
         XCTAssertTrue(sheetBar.waitForExistence(timeout: timeout), "The form did not open as a sheet")
         shot(app, "04-add-expense-sheet")
-        let title = app.textFields.firstMatch
-        XCTAssertTrue(title.waitForExistence(timeout: timeout))
-        title.tap()
-        title.typeText("Shell check")
+        type("Shell check", into: field(app, labelled: "Title"), in: app)
         swipeSheetDown(app, from: sheetBar)
         let question = app.staticTexts["Discard changes?"]
         XCTAssertTrue(question.waitForExistence(timeout: timeout), "A swipe over edits did not ask first")
@@ -111,16 +117,31 @@ final class ShellUITests: XCTestCase {
     }
 
     private func signIn(_ app: XCUIApplication, email: String, password: String) {
-        let emailField = app.textFields.firstMatch
-        XCTAssertTrue(emailField.waitForExistence(timeout: 120), "The sign-in screen did not appear")
+        // The sign-in screen's own text, before its fields: Compose draws the screen first.
+        _ = app.staticTexts["Welcome back!"].waitForExistence(timeout: 120)
         shot(app, "00-sign-in")
-        emailField.tap()
-        emailField.typeText(email)
-        let secure = app.secureTextFields.firstMatch
-        let passwordField = secure.exists ? secure : app.textFields.element(boundBy: 1)
-        passwordField.tap()
-        passwordField.typeText(password)
+        print("COPLANLY_UI_HIERARCHY_BEGIN\n\(app.debugDescription)\nCOPLANLY_UI_HIERARCHY_END")
+        type(email, into: field(app, labelled: "Email address"), in: app)
+        type(password, into: field(app, labelled: "Password"), in: app)
         element(app, labelled: "Sign In", in: app.buttons).tap()
+    }
+
+    /// A text field by its label. Compose exposes a text field to accessibility with its own trait,
+    /// which XCUITest may report as a text field, a secure one, a text view or another element.
+    private func field(_ app: XCUIApplication, labelled label: String) -> XCUIElement {
+        for query in [app.textFields, app.secureTextFields, app.textViews] {
+            let match = query.matching(NSPredicate(format: "label CONTAINS %@ OR placeholderValue CONTAINS %@", label, label))
+                .firstMatch
+            if match.waitForExistence(timeout: 5) { return match }
+        }
+        return element(app, containing: label)
+    }
+
+    /// Types [text] into [field] through the keyboard, once a tap has focused it.
+    private func type(_ text: String, into field: XCUIElement, in app: XCUIApplication) {
+        field.tap()
+        _ = app.keyboards.firstMatch.waitForExistence(timeout: 5)
+        app.typeText(text)
     }
 
     private func openExpenses(_ app: XCUIApplication) {

@@ -125,13 +125,18 @@ shell_test() {
     -resultBundlePath "$out/shell.xcresult" || status=$?
   mkdir -p "$out/shots"
   xcrun xcresulttool export attachments --path "$out/shell.xcresult" --output-path "$out/shots" || true
-  echo "::group::Exported attachments"; cat "$out/shots/manifest.json" 2>/dev/null || ls "$out/shots"; echo; echo "::endgroup::"
-  # A small copy of each screenshot in the log, for a reader who cannot download the artifact.
-  local shot
-  for shot in "$out"/shots/*.png; do
-    [ -f "$shot" ] || continue
-    sips -Z 300 -s format jpeg -s formatOptions 50 "$shot" --out "${shot%.png}-small.jpg" > /dev/null
-    echo "::group::$(basename "$shot") small (base64)"; base64 -i "${shot%.png}-small.jpg"; echo "::endgroup::"
+  # A small copy of each screenshot in the log, named as the test named it, for a reader who cannot
+  # download the artifact.
+  local file name
+  node -e '
+    const manifest = require(process.argv[1]);
+    for (const test of manifest) {
+      for (const a of test.attachments || []) {
+        if (a.exportedFileName.endsWith(".png")) console.log(a.exportedFileName + " " + a.suggestedHumanReadableName);
+      }
+    }' "$out/shots/manifest.json" 2>/dev/null | while read -r file name; do
+    sips -Z 300 -s format jpeg -s formatOptions 50 "$out/shots/$file" --out "$out/shots/${file%.png}-small.jpg" > /dev/null
+    echo "::group::${name%%_*}.png small (base64)"; base64 -i "$out/shots/${file%.png}-small.jpg"; echo "::endgroup::"
   done
   return "$status"
 }

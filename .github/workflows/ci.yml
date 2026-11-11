@@ -2393,6 +2393,26 @@ jobs:
           iosApp/scripts/simulator.sh launch "$UDID" \
             iosApp/build/Build/Products/Debug-iphonesimulator/CoPlanly.app iosApp/build/launch
 
+      # The native shell (MON-24 phase 3, Task 8): CoPlanlyUITests signs in by e-mail as a parent of a
+      # family seeded on fresh emulators (tools/ios/seed-shell-family.js), walks Home, Family, Expenses,
+      # the Add expense sheet and Settings with a screenshot of each, and checks the shell's review
+      # points: a back swipe, one let go of, a tab tap popping two screens, and a sheet with an edit
+      # swiped down asking "Discard changes?". The screenshots are the `ios-shell` artifact. Before the
+      # emulator tests, on emulators of its own, so a shell failure shows without waiting for them.
+      - name: The native shell on the emulators (XCUITest)
+        id: shell-test
+        env:
+          FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
+          UDID: ${{ steps.simulator.outputs.udid }}
+        run: |
+          set -o pipefail
+          export PATH="$FIREBASE_JAVA_HOME/bin:$PATH"
+          firestore-tests/node_modules/.bin/firebase emulators:exec \
+            --only auth,firestore,functions,storage \
+            --project demo-coplanly \
+            "iosApp/scripts/simulator.sh shell-test $UDID iosApp/build/shell" \
+            2>&1 | tee "$RUNNER_TEMP/shell-test.log"
+
       # The simulator hands a test process only `SIMCTL_CHILD_`-prefixed variables, without the
       # prefix: both forms are exported here, and the two modules' build files also forward the plain
       # names that way (`KotlinNativeSimulatorTest`), so the tests read COPLANLY_EMULATOR_HOST
@@ -2408,6 +2428,8 @@ jobs:
       # runs even when the tests failed, so its findings are in the same log.
       - name: iPhone tests on the emulators
         id: emulator-tests
+        # Whatever the shell's UI test found: the two are independent, and both must pass.
+        if: success() || steps.shell-test.outcome == 'failure'
         env:
           FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
           COPLANLY_EMULATOR_HOST: 127.0.0.1
@@ -2451,25 +2473,6 @@ jobs:
             echo "::error::The write gate (IosWriteGateTest) did not report that it ran."
             exit 1
           fi
-
-      # The native shell (MON-24 phase 3, Task 8): CoPlanlyUITests signs in by e-mail as a parent of a
-      # family seeded on fresh emulators (tools/ios/seed-shell-family.js), walks Home, Family, Expenses,
-      # the Add expense sheet and Settings with a screenshot of each, and checks the shell's review
-      # points: a back swipe, one let go of, a tab tap popping two screens, and a sheet with an edit
-      # swiped down asking "Discard changes?". The screenshots are the `ios-shell` artifact.
-      - name: The native shell on the emulators (XCUITest)
-        if: always() && steps.emulator-tests.outcome != 'skipped'
-        env:
-          FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
-          UDID: ${{ steps.simulator.outputs.udid }}
-        run: |
-          set -o pipefail
-          export PATH="$FIREBASE_JAVA_HOME/bin:$PATH"
-          firestore-tests/node_modules/.bin/firebase emulators:exec \
-            --only auth,firestore,functions,storage \
-            --project demo-coplanly \
-            "iosApp/scripts/simulator.sh shell-test $UDID iosApp/build/shell" \
-            2>&1 | tee "$RUNNER_TEMP/shell-test.log"
 
       - name: Upload the shell's screenshots
         if: always()
