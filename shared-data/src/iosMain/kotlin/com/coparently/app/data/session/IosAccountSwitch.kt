@@ -122,7 +122,11 @@ interface LastSignedInUid {
 
 /**
  * [LastSignedInUid] in `NSUserDefaults` under [KEY], as Android keeps it in a plain preference
- * file: not secret, and deleted with the app (the Keychain, where the sealed store lives, is not).
+ * file: not secret, and deleted with the app. The Keychain, where the sealed store and Firebase
+ * Auth's session live, does survive the app's deletion, but nothing of the previous install reaches
+ * the next account through it: on the first launch after a reinstall, `clearPreviousInstall`
+ * deletes the sealed store's item and signs Firebase Auth out before the first screen, so an empty
+ * last uid meets an empty store and nobody signed in.
  */
 internal object UserDefaultsLastSignedInUid : LastSignedInUid {
     /** The `NSUserDefaults` key. */

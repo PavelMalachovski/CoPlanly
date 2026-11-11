@@ -16,7 +16,9 @@ import kotlin.coroutines.cancellation.CancellationException
  * cannot say what the Android SDK call did, the member says so.
  *
  * The data layer and the shared sign-in screen reach it only through those three interfaces; the
- * signed-in user GitLive keeps in the Keychain, as the iOS SDK always does.
+ * signed-in user GitLive keeps in the Keychain, as the iOS SDK always does. That session outlives the
+ * app's deletion, where Android's goes with the app, so the first launch after a reinstall signs it
+ * out before the first screen (`clearPreviousInstall`, `data/session/PreviousInstall.kt`).
  *
  * @property auth GitLive's `FirebaseAuth`, the default app's (`Firebase.auth`), which `IosFirebase`
  *   points at the emulator when the app runs on one.

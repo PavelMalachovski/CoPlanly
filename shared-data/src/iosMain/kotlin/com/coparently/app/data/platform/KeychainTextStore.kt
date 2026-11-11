@@ -148,17 +148,15 @@ class KeychainException(operation: String, val status: Int) :
 
 /**
  * The app's [SecurePreferences] on the iPhone: one Keychain item (see [KeychainTextStore]). The
- * Keychain outlives an uninstall, so the first launch of an install clears what an earlier one
- * left ([FreshInstall]) before the store is built.
+ * Keychain outlives an uninstall, so what an earlier install left in that item is deleted on the
+ * first launch of this one, before the Koin graph builds this store: by `clearPreviousInstall`
+ * (`data/session/PreviousInstall.kt`), which the app's launch calls, together with Firebase Auth's
+ * saved session and under the same install marker.
  */
-fun keychainSecurePreferences(): SecurePreferences {
-    val store = KeychainTextStore()
-    FreshInstall(UserDefaultsInstallMarker, store).clearIfFirstLaunch()
-    return SealedSecurePreferences(store)
-}
+fun keychainSecurePreferences(): SecurePreferences = SealedSecurePreferences(KeychainTextStore())
 
 /** The install marker in `NSUserDefaults`, which iOS deletes with the app (the Keychain it does not). */
-private object UserDefaultsInstallMarker : InstallMarker {
+internal object UserDefaultsInstallMarker : InstallMarker {
     private const val KEY = "coplanly.installed"
 
     override fun isSet(): Boolean = NSUserDefaults.standardUserDefaults.boolForKey(KEY)

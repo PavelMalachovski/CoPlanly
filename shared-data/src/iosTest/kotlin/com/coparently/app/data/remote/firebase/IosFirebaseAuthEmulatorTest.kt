@@ -1,8 +1,12 @@
 package com.coparently.app.data.remote.firebase
 
+import com.coparently.app.data.platform.InstallMarker
+import com.coparently.app.data.platform.KeychainTextStore
+import com.coparently.app.data.platform.StoredText
 import com.coparently.app.data.session.AccountSwitchFixture
 import com.coparently.app.data.session.AccountSwitchFixture.Companion.ORDINARY_KEY
 import com.coparently.app.data.session.AccountSwitchFixture.Companion.SCHOOL_KEY
+import com.coparently.app.data.session.previousInstallCleanup
 import dev.gitlive.firebase.auth.FirebaseAuthInvalidCredentialsException
 import kotlinx.coroutines.flow.first
 import platform.Foundation.NSUUID
@@ -93,6 +97,41 @@ class IosFirebaseAuthEmulatorTest {
             assertEquals(auth.getCurrentUid(), phone.lastSignedInUid.get())
         } finally {
             phone.close()
+        }
+    }
+
+    @Test
+    fun `the first launch after a reinstall signs the previous account out`() =
+        AuthEmulator.run("reinstall signs out") { firebase ->
+            val auth = IosFirebaseAuth(firebase)
+            assertTrue(auth.createAccountWithEmail(newEmail(), PASSWORD).isSuccess)
+            assertNotNull(firebase.currentUser)
+            // The previous install's sealed store, in an item of the test's own.
+            val store = KeychainTextStore(service = "app.coplanly.test.previous-install", account = "reinstall")
+            store.write("the previous install's preferences")
+            val marker = FreshMarker()
+
+            previousInstallCleanup(marker, store, firebase).clearIfFirstLaunch()
+
+            assertNull(firebase.currentUser)
+            assertNull(auth.awaitSignedInUid())
+            assertEquals(StoredText.Absent, store.read())
+            assertTrue(marker.set)
+
+            // The second launch of the same install leaves the next account signed in.
+            assertTrue(auth.createAccountWithEmail(newEmail(), PASSWORD).isSuccess)
+            previousInstallCleanup(marker, store, firebase).clearIfFirstLaunch()
+            assertNotNull(firebase.currentUser)
+        }
+
+    /** An install marker as a fresh install finds it: unset. */
+    private class FreshMarker : InstallMarker {
+        var set = false
+
+        override fun isSet(): Boolean = set
+
+        override fun set() {
+            set = true
         }
     }
 

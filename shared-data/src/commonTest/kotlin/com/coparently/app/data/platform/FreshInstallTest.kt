@@ -13,39 +13,50 @@ class FreshInstallTest {
         }
     }
 
-    private class FakeStore(private val failing: Boolean = false) : SealedTextStore {
-        var deletes = 0
-        override fun read(): StoredText = StoredText.Absent
-        override fun write(text: String) = Unit
-        override fun delete() {
-            deletes++
+    /** Records each cleanup's name with whether the marker was already set when it ran. */
+    private class Journal(private val marker: FakeMarker) {
+        val entries = mutableListOf<String>()
+
+        fun cleanup(what: String, failing: Boolean = false) = LeftoverCleanup(what) {
+            entries += "$what marker=${marker.set}"
             if (failing) throw IllegalStateException("locked")
         }
     }
 
     @Test
-    fun `the first launch deletes the old item then marks the install`() {
+    fun `the first launch clears the store and signs out before it marks the install`() {
         val marker = FakeMarker()
-        val store = FakeStore()
-        FreshInstall(marker, store).clearIfFirstLaunch()
-        assertEquals(1, store.deletes)
+        val journal = Journal(marker)
+        FreshInstall(marker, listOf(journal.cleanup("preferences"), journal.cleanup("account"))).clearIfFirstLaunch()
+        assertEquals(listOf("preferences marker=false", "account marker=false"), journal.entries)
         assertTrue(marker.set)
     }
 
     @Test
     fun `the second launch touches nothing`() {
         val marker = FakeMarker(set = true)
-        val store = FakeStore()
-        FreshInstall(marker, store).clearIfFirstLaunch()
-        assertEquals(0, store.deletes)
+        val journal = Journal(marker)
+        FreshInstall(marker, listOf(journal.cleanup("preferences"), journal.cleanup("account"))).clearIfFirstLaunch()
+        assertEquals(emptyList(), journal.entries)
     }
 
     @Test
-    fun `a delete that throws still marks the install`() {
+    fun `a cleanup that throws is logged and the next one still runs before the mark`() {
         val marker = FakeMarker()
-        val store = FakeStore(failing = true)
-        FreshInstall(marker, store).clearIfFirstLaunch()
-        assertEquals(1, store.deletes)
+        val journal = Journal(marker)
+        val cleanups = listOf(journal.cleanup("preferences", failing = true), journal.cleanup("account"))
+        FreshInstall(marker, cleanups).clearIfFirstLaunch()
+        assertEquals(listOf("preferences marker=false", "account marker=false"), journal.entries)
+        assertTrue(marker.set)
+    }
+
+    @Test
+    fun `a sign-out that throws still marks the install`() {
+        val marker = FakeMarker()
+        val journal = Journal(marker)
+        val cleanups = listOf(journal.cleanup("preferences"), journal.cleanup("account", failing = true))
+        FreshInstall(marker, cleanups).clearIfFirstLaunch()
+        assertEquals(listOf("preferences marker=false", "account marker=false"), journal.entries)
         assertTrue(marker.set)
     }
 }

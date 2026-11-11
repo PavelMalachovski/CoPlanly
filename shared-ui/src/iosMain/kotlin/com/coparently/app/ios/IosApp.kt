@@ -1,6 +1,7 @@
 package com.coparently.app.ios
 
 import androidx.compose.ui.window.ComposeUIViewController
+import com.coparently.app.data.session.clearPreviousInstall
 import com.coparently.app.di.koin.dataModules
 import com.coparently.app.di.koin.platformDataModule
 import com.coparently.app.di.koin.platformUiModule
@@ -49,8 +50,11 @@ object IosApp {
     private var buildValues: AppBuildValues? = null
 
     /**
-     * Starts Firebase ([IosFirebase]) and the Koin graph the shared code reads: the data layer's
-     * and the UI's modules with the iPhone's platform halves, and [iosAppModule].
+     * Starts Firebase ([IosFirebase]), clears what an earlier install left in the Keychain on the
+     * first launch after an install (`clearPreviousInstall`: the sealed preferences and Firebase
+     * Auth's session, which an uninstall does not delete on the iPhone), then starts the Koin graph
+     * the shared code reads: the data layer's and the UI's modules with the iPhone's platform
+     * halves, and [iosAppModule]. All before the first screen.
      *
      * @throws IllegalStateException when called a second time.
      */
@@ -58,6 +62,8 @@ object IosApp {
     fun start(config: IosAppConfig) {
         check(buildValues == null) { "IosApp.start runs once per process" }
         IosFirebase.configure(config)
+        // After Firebase, which the sign-out needs; before Koin builds the preference store.
+        clearPreviousInstall()
         startKoin {
             modules(dataModules + platformDataModule + uiModules + platformUiModule + iosAppModule)
         }
