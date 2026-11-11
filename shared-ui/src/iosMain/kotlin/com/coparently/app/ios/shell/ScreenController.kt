@@ -15,6 +15,7 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.uikit.ComposeUIViewControllerDelegate
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
 import androidx.lifecycle.Lifecycle
@@ -76,9 +77,20 @@ internal class ScreenController(
     )
 
     /** The view controller a navigation controller shows. */
-    // Turning Compose's own back gesture off is still experimental in Compose Multiplatform 1.9.3.
+    // Turning Compose's own back gesture off is still experimental in Compose Multiplatform 1.9.3, and
+    // the appearance callbacks' delegate is deprecated for subclassing, which Kotlin cannot do here.
     @OptIn(ExperimentalComposeUiApi::class)
-    val viewController: UIViewController = ComposeUIViewController(configure = { enableBackGesture = false }) {
+    @Suppress("DEPRECATION")
+    val viewController: UIViewController = ComposeUIViewController(
+        configure = {
+            enableBackGesture = false
+            delegate = object : ComposeUIViewControllerDelegate {
+                override fun viewDidAppear(animated: Boolean) = bars.screenAppeared(true)
+
+                override fun viewDidDisappear(animated: Boolean) = bars.screenAppeared(false)
+            }
+        }
+    ) {
         Shared {
             CompositionLocalProvider(
                 LocalBarHost provides bars.takeIf { nativeBar },

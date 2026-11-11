@@ -26,11 +26,11 @@ import platform.UIKit.UIColor
 import platform.UIKit.UINavigationItemLargeTitleDisplayMode
 import platform.UIKit.UIViewController
 import platform.UIKit.accessibilityLabel
-import platform.UIKit.addChildViewController
-import platform.UIKit.didMoveToParentViewController
+import platform.UIKit.beginAppearanceTransition
+import platform.UIKit.endAppearanceTransition
 import platform.UIKit.navigationItem
-import platform.UIKit.removeFromParentViewController
-import platform.UIKit.willMoveToParentViewController
+import platform.darwin.dispatch_async
+import platform.darwin.dispatch_get_main_queue
 
 /**
  * The navigation bar of one hosted screen, drawn by UIKit from the screen's [ScreenBar] (MON-24
@@ -75,11 +75,27 @@ internal class NativeBars(
         draw(bar)
     }
 
-    /** Takes the chip's host out of the screen's children: the screen has left its stack. */
+    /** Whether the screen is on screen now, as its view controller last appeared or disappeared. */
+    private var screenVisible = false
+
+    /**
+     * The screen appeared or disappeared: the chip's host is told the same. It is no child of the
+     * screen (UIKit refuses a child whose view sits in the navigation bar, outside its parent's
+     * view), so its appearance is forwarded by hand, which is what starts and ends its composition.
+     */
+    fun screenAppeared(visible: Boolean) {
+        screenVisible = visible
+        chip?.let { forwardAppearance(it, visible) }
+    }
+
+    /** Lets go of the chip's host: the screen has left its stack. */
     fun release() {
-        chip?.willMoveToParentViewController(null)
-        chip?.removeFromParentViewController()
         chip = null
+    }
+
+    private fun forwardAppearance(host: UIViewController, visible: Boolean) {
+        host.beginAppearanceTransition(visible, animated = false)
+        host.endAppearanceTransition()
     }
 
     // `NSSelectorFromString` is Kotlin/Native's C interop.
@@ -178,13 +194,15 @@ internal class NativeBars(
                 }
             }
         }.also { created ->
-            viewController.addChildViewController(created)
             created.view.backgroundColor = UIColor.clearColor
             created.view.translatesAutoresizingMaskIntoConstraints = false
             chipWidth = created.view.widthAnchor.constraintEqualToConstant(MIN_CHIP_SIDE).apply { active = true }
             chipHeight = created.view.heightAnchor.constraintEqualToConstant(MIN_CHIP_SIDE).apply { active = true }
-            created.didMoveToParentViewController(viewController)
             chip = created
+            // Once the bar has put the chip in the window: the next turn of the main loop.
+            dispatch_async(dispatch_get_main_queue()) {
+                if (screenVisible && chip === created) forwardAppearance(created, true)
+            }
         }
         return UIBarButtonItem(customView = host.view)
     }
