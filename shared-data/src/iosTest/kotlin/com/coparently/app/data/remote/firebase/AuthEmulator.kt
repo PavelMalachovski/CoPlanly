@@ -51,9 +51,11 @@ internal object AuthEmulator {
     /** The Auth emulator's port in `firebase.json`. */
     private const val AUTH_PORT = 9099
 
-    private val host: String? = variable("COPLANLY_EMULATOR_HOST")
+    /** The emulators' host, or null in a run without them; the write gate reads it too. */
+    val host: String? = variable("COPLANLY_EMULATOR_HOST")
 
-    private val required: Boolean = variable("COPLANLY_REQUIRE_EMULATORS") == "1"
+    /** Whether this run must reach the emulators (`COPLANLY_REQUIRE_EMULATORS=1`). */
+    val required: Boolean = variable("COPLANLY_REQUIRE_EMULATORS") == "1"
 
     /**
      * The default app on `demo-coplanly`, with Auth on the emulator: once per test process, before
@@ -91,7 +93,8 @@ internal object AuthEmulator {
         println("$RAN $name")
     }
 
-    private fun variable(name: String): String? =
+    /** The environment variable [name], or null when unset or blank. */
+    fun variable(name: String): String? =
         (NSProcessInfo.processInfo.environment[name] as? String)?.takeIf { it.isNotBlank() }
 }
 

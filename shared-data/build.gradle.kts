@@ -315,13 +315,14 @@ tasks.named("detektBaseline") {
     enabled = false
 }
 
-// The emulator tests' two variables (`AuthEmulator`, iosTest), handed to the simulator's test
-// process: `simctl spawn` passes only `SIMCTL_CHILD_`-prefixed variables, without the prefix. Read
-// from the environment Gradle runs in (CI exports them inside `firebase emulators:exec`); tracked, so
-// the tests run again when they change. The tests' output is shown, so CI can see they reached the
-// emulator rather than skipping themselves.
+// The emulator tests' variables (`AuthEmulator`, iosTest, and the write gate's output file,
+// `IosWriteGateTest`), handed to the simulator's test process: `simctl spawn` passes only
+// `SIMCTL_CHILD_`-prefixed variables, without the prefix. Read from the environment Gradle runs in
+// (CI exports them inside `firebase emulators:exec`); tracked, so the tests run again when they
+// change. The tests' output is shown, so CI can see they reached the emulator rather than skipping
+// themselves.
 tasks.withType<org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeSimulatorTest>().configureEach {
-    listOf("COPLANLY_EMULATOR_HOST", "COPLANLY_REQUIRE_EMULATORS").forEach { name ->
+    listOf("COPLANLY_EMULATOR_HOST", "COPLANLY_REQUIRE_EMULATORS", "COPLANLY_GATE_OUTPUT").forEach { name ->
         providers.environmentVariable(name).orNull?.let { environment("SIMCTL_CHILD_$name", it) }
     }
     // On a booted simulator, when CI names one: Kotlin spawns the tests `--standalone` by default,

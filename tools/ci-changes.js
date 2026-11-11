@@ -32,6 +32,13 @@
  */
 const IOS_APP = /^iosApp\//;
 
+/**
+ * What the iPhone's write gate (MON-24 phase 3, Task 7) is held to, beside the shared modules it
+ * runs: its checker, the Android shapes it compares with (`wire/current/`), the rules the iPhone's
+ * writes must pass and the Cloud Functions it pairs through. A change to any of them runs `ios-app`.
+ */
+const IOS_GATE_INPUTS = /^(tools\/ios\/|tools\/test\/check-ios-writes\.test\.js$|app\/src\/test\/resources\/wire\/current\/|firestore\.rules$|functions\/)/;
+
 /** Paths that never need an Android build: docs, the server side, the rules and their tests, the iPhone app. */
 const NON_ANDROID = /^(docs\/|iosApp\/|functions\/|firestore-tests\/|web-tests\/|\.cursor\/|[^/]*\.md$|.*\.rules(\.simple)?$|firestore\.indexes\.json$|firebase\.json$|\.gitignore$|LICENSE$)/;
 
@@ -274,7 +281,8 @@ function decide(paths) {
   // Every `:shared-ui` path, screens and strings included: the iPhone compiles them.
   const shared = build || kept.some((p) => /^shared-ui\//.test(p));
   // The iPhone app links the shared modules' framework, so it runs whenever they do, and on its own project.
-  const ios = shared || kept.some((p) => IOS_APP.test(p));
+  // And on what the write gate is held to.
+  const ios = shared || kept.some((p) => IOS_APP.test(p) || IOS_GATE_INPUTS.test(p));
   return { android, e2e, screenshots, upgrade, matrix: fullMatrix ? FULL_MATRIX : [LEG_30], r8runtime, web, shared, ios };
 }
 

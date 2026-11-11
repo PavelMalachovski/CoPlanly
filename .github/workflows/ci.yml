@@ -2392,25 +2392,37 @@ jobs:
       # The simulator hands a test process only `SIMCTL_CHILD_`-prefixed variables, without the
       # prefix: both forms are exported here, and the two modules' build files also forward the plain
       # names that way (`KotlinNativeSimulatorTest`), so the tests read COPLANLY_EMULATOR_HOST
-      # either way. `--continue` runs `:shared-ui`'s tests even when `:shared-data`'s fail.
+      # either way. `--continue` runs `:shared-ui`'s tests even when `:shared-data`'s fail, and
+      # `--rerun` runs each even when Gradle's cache holds a result: the write gate must write.
+      #
+      # The write gate (MON-24 phase 3, Task 7) is two halves in one emulator session. The tests
+      # include `IosWriteGateTest`, whose two iPhone data layers write every kind of shared record and
+      # list each document written in COPLANLY_GATE_OUTPUT; then, before the emulators stop,
+      # `tools/ios/check-ios-writes.js` reads each of those documents back from the Firestore emulator
+      # (loopback only) and compares its keys and Firestore types with what Android writes
+      # (`wire/current/`, or a literal shape from the shared writer). Both must pass; the checker
+      # runs even when the tests failed, so its findings are in the same log.
       - name: iPhone tests on the emulators
         id: emulator-tests
         env:
           FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
           COPLANLY_EMULATOR_HOST: 127.0.0.1
           COPLANLY_REQUIRE_EMULATORS: '1'
+          COPLANLY_GATE_OUTPUT: ${{ github.workspace }}/build/ios-gate/written.txt
           SIMCTL_CHILD_COPLANLY_EMULATOR_HOST: 127.0.0.1
           SIMCTL_CHILD_COPLANLY_REQUIRE_EMULATORS: '1'
+          SIMCTL_CHILD_COPLANLY_GATE_OUTPUT: ${{ github.workspace }}/build/ios-gate/written.txt
           # The simulator the app was launched on, still booted: the tests run there rather than
           # `--standalone`, where no Keychain is available (see the modules' build files).
           COPLANLY_SIMULATOR_UDID: ${{ steps.simulator.outputs.udid }}
         run: |
           set -o pipefail
           export PATH="$FIREBASE_JAVA_HOME/bin:$PATH"
+          rm -f "$COPLANLY_GATE_OUTPUT"
           firestore-tests/node_modules/.bin/firebase emulators:exec \
             --only auth,firestore,functions,storage \
             --project demo-coplanly \
-            "./gradlew --continue :shared-data:iosSimulatorArm64Test :shared-ui:iosSimulatorArm64Test" \
+            './gradlew --continue :shared-data:iosSimulatorArm64Test --rerun :shared-ui:iosSimulatorArm64Test --rerun; tests=$?; node tools/ios/check-ios-writes.js --emulator 127.0.0.1:8080 --fixtures app/src/test/resources/wire/current --written "$COPLANLY_GATE_OUTPUT"; checker=$?; echo "tests: $tests, write gate checker: $checker"; [ "$tests" -eq 0 ] && [ "$checker" -eq 0 ]' \
             2>&1 | tee "$RUNNER_TEMP/emulator-tests.log"
 
       # A test that finds no emulator host returns at once, so a run where the variables never
@@ -2431,6 +2443,10 @@ jobs:
             echo "::error::No emulator test reported that it ran."
             exit 1
           fi
+          if ! grep -q "COPLANLY_EMULATOR_TEST_RAN write gate" <<< "$ran"; then
+            echo "::error::The write gate (IosWriteGateTest) did not report that it ran."
+            exit 1
+          fi
 
       - name: Upload the launch screenshot and logs
         if: always()
@@ -2449,6 +2465,7 @@ jobs:
           path: |
             shared-data/build/reports/
             shared-ui/build/reports/
+            build/ios-gate/
             ${{ runner.temp }}/emulator-tests.log
           if-no-files-found: ignore
           retention-days: 14

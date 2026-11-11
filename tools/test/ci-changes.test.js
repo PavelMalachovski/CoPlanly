@@ -472,6 +472,20 @@ test('an iPhone app path runs the iPhone app job alone (MON-24 phase 3)', () => 
   }
 });
 
+test('the iPhone app job runs on what its write gate is held to (MON-24 phase 3, Task 7)', () => {
+  for (const path of [
+    'tools/ios/check-ios-writes.js',
+    'tools/test/check-ios-writes.test.js',
+    'app/src/test/resources/wire/current/events/repository-save.json',
+    'firestore.rules',
+    'functions/index.js',
+  ]) {
+    assert.equal(decide([path]).ios, true, path);
+  }
+  // The hand-written fixtures of other builds are not what the gate compares with.
+  assert.equal(decide(['app/src/test/resources/wire/events/older.json']).ios, false);
+});
+
 test('the iPhone app job runs whenever the shared jobs do', () => {
   for (const path of [
     'shared-ui/src/iosMain/kotlin/com/coparently/app/ios/IosApp.kt',
@@ -491,7 +505,6 @@ test('the iPhone app job skips what the app cannot read', () => {
   for (const path of [
     'docs/x.md',
     'CLAUDE.md',
-    'functions/index.js',
     'app/src/main/java/com/coparently/app/presentation/MainActivity.kt',
     'app/src/main/res/values/colors.xml',
   ]) {
