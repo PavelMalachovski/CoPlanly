@@ -19,6 +19,7 @@ import androidx.compose.ui.uikit.ComposeUIViewControllerDelegate
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.LocalOwnersProvider
@@ -30,6 +31,7 @@ import com.coparently.app.presentation.common.LocalSheetGuard
 import com.coparently.app.presentation.common.SheetGuard
 import com.coparently.app.presentation.navigation.AppDestination
 import com.coparently.app.presentation.navigation.LocalTabSwitcher
+import com.coparently.app.presentation.navigation.Screen
 import com.coparently.app.presentation.platform.ProvideIosShell
 import com.coparently.app.presentation.theme.CoPlanlyTheme
 import platform.UIKit.UIViewController
@@ -41,7 +43,7 @@ import platform.UIKit.UIViewController
  *
  * Its composition is the screen alone, inside what every screen shares: the platform
  * ([ProvideIosShell]), the theme and the app-wide locals ([AppProviders], whose ViewModels the
- * shell's own owner holds, so the four tabs share one of each), the shell's messages and tab
+ * [session] holds, so the four tabs share one of each), the shell's messages and tab
  * switcher, and then the entry as the owner of the screen's ViewModels, lifecycle and saved state,
  * as `NavHost` provides it on Android. The offline line sits at the top of the content, under the
  * navigation bar, and the messages that outlive a screen show at its bottom.
@@ -50,6 +52,7 @@ import platform.UIKit.UIViewController
  * so the two never both answer one swipe.
  *
  * @property entry The back-stack entry this screen draws.
+ * @property session The owner of the ViewModels the session's screens share, which ends with them.
  * @property nativeBar Whether the screen describes its bar to the navigation bar ([LocalBarHost]);
  *   otherwise it draws its own Compose bar and the navigation bar is hidden over it.
  * @property sheetGuard The sheet the screen is the first screen of, or null.
@@ -58,12 +61,13 @@ internal class ScreenController(
     val entry: NavBackStackEntry,
     private val destination: AppDestination,
     private val shell: ShellEnvironment,
+    private val session: ViewModelStoreOwner,
     val nativeBar: Boolean,
-    largeTitle: Boolean,
     private val sheetGuard: SheetGuard?
 ) {
     private val bars = NativeBars(
-        largeTitle = largeTitle,
+        // Settings is the one pushed screen whose title is large, as iOS's own Settings app shows it.
+        largeTitle = entry.destination.route == Screen.Settings.route,
         sheetRoot = sheetGuard != null,
         // The chip's ViewModel is the screen's, as on Android, where the chip is in the screen. The
         // theme alone, without the app's background surface, so the bar shows around the chip.
@@ -111,7 +115,7 @@ internal class ScreenController(
     /** What every hosted composition is drawn in: the platform, the theme and the shell's locals. */
     @Composable
     private fun Shared(content: @Composable () -> Unit) {
-        CompositionLocalProvider(LocalViewModelStoreOwner provides shell.owner) {
+        CompositionLocalProvider(LocalViewModelStoreOwner provides session) {
             ProvideIosShell(shell.buildValues) {
                 AppProviders(darkTheme = null) {
                     CompositionLocalProvider(

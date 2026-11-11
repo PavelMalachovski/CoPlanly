@@ -5,9 +5,12 @@ import XCTest
 /// It signs in by e-mail as the first parent of the family `tools/ios/seed-shell-family.js` seeded,
 /// and walks the path part A converts — Home, Family, Expenses, the Add expense sheet, Settings —
 /// saving a screenshot of each as an attachment, which CI exports as the `ios-shell` artifact. On the
-/// way it does what the shell's review is about: a back swipe, a back swipe let go of, a second tap
-/// on the selected tab popping two screens, and a sheet holding an edit swiped down, which must ask
-/// "Discard changes?" and stay open on "Keep editing".
+/// way it does what the shell's review is about: a back swipe, a back swipe let go of (over native
+/// bars and over a screen that draws its own bar, each checked to have begun and been cancelled), a
+/// second tap on the selected tab popping two screens, a sheet holding an edit swiped down, which
+/// must ask "Discard changes?" and stay open on "Keep editing", a form that draws its own bar shown
+/// with exactly one bar, and a sign-out reaching the sign-in screen with no tabs, then a sign-in
+/// landing on fresh tabs.
 ///
 /// **One run reports every problem.** The walk is a list of steps. A step that fails records its
 /// reason, a screenshot and the app's accessibility hierarchy, and the walk goes on; each step starts
@@ -56,7 +59,12 @@ final class ShellUITests: XCTestCase {
         step("swipe down over an edit asks", after: ["Add expense sheet"]) { try self.dirtySwipeDown() }
         step("Keep editing stays, Discard leaves", after: ["swipe down over an edit asks"]) { try self.keepEditing() }
         step("Settings", after: ["Family"]) { try self.settings() }
+        step("cancelled back swipe over a Compose bar", after: ["Settings"]) { try self.cancelledSwipeOverComposeBar() }
         step("a tab tap pops two screens", after: ["Settings"]) { try self.tabTapPopsTwo() }
+        step("a form with its own bar shows one bar", after: ["Home"]) { try self.composeBarSheet() }
+        step("sign out, and sign in to fresh tabs", after: ["Settings"]) {
+            try self.signOutAndIn(email: email, password: password)
+        }
 
         print("COPLANLY_SHELL_WALK_SUMMARY_BEGIN")
         outcomes.forEach { print("COPLANLY_STEP \($0.name): \($0.outcome)") }
@@ -114,8 +122,10 @@ final class ShellUITests: XCTestCase {
 
     private func cancelledBackSwipe() throws {
         try goToExpenses()
+        let before = cancelledTransitions()
         swipeBackAndLetGo(at: 0.2)
-        sleep(2)
+        try require(waitForCancelledTransition(after: before), "The let-go swipe did not start a transition that was cancelled")
+        sleep(1)
         try require(app.navigationBars["Expenses"].exists, "A cancelled back swipe popped the screen")
         // And the stack still works from there: the back button pops to Family.
         app.navigationBars["Expenses"].buttons.element(boundBy: 0).tap()
@@ -160,19 +170,25 @@ final class ShellUITests: XCTestCase {
         shot("06-settings")
     }
 
+    private func cancelledSwipeOverComposeBar() throws {
+        if !app.navigationBars["Settings"].exists { try settings() }
+        try openDataSources()
+        let before = cancelledTransitions()
+        swipeBackAndLetGo(at: 0.2)
+        try require(waitForCancelledTransition(after: before), "The let-go swipe did not start a transition that was cancelled")
+        sleep(1)
+        // Data sources stays, with its own bar alone: the system bar is not left in Settings' state.
+        try require(!app.navigationBars["Settings"].exists, "A cancelled back swipe popped Data sources")
+        try require(app.navigationBars.count == 0, "Two bars after a cancelled swipe: the system bar over a Compose bar")
+        shot("09-compose-bar-after-cancelled-swipe")
+        // A swipe that goes back brings Settings with its native bar.
+        swipeBack(to: 0.85)
+        try require(app.navigationBars["Settings"].waitForExistence(timeout: timeout), "The back swipe from Data sources did not show Settings' bar")
+    }
+
     private func tabTapPopsTwo() throws {
         if !app.navigationBars["Settings"].exists { try settings() }
-        // A screen that still draws its own Compose bar is pushed with the system bar hidden.
-        let dataSources = try element(containing: "Data sources and licences")
-        let screenBottom = app.windows.firstMatch.frame.maxY - 120
-        for _ in 0..<6 where dataSources.frame.maxY > screenBottom {
-            app.swipeUp()
-        }
-        press(dataSources)
-        sleep(2)
-        try require(!app.navigationBars["Settings"].exists, "Data sources did not open over Settings")
-        let systemBar = app.navigationBars.firstMatch
-        try require(!(systemBar.exists && systemBar.isHittable), "Two bars: the system bar over a Compose bar")
+        try openDataSources()
         shot("07-compose-bar-screen")
         app.tabBars.firstMatch.buttons["Family"].tap()
         try require(app.navigationBars["Family"].waitForExistence(timeout: timeout), "The tab tap did not pop to Family")
@@ -183,7 +199,67 @@ final class ShellUITests: XCTestCase {
         shot("08-family-again")
     }
 
+    private func composeBarSheet() throws {
+        try goToHomeRoot()
+        press(try element(labelled: "Add event", in: app.buttons))
+        try require(app.staticTexts["New event"].waitForExistence(timeout: timeout), "The event form did not open")
+        sleep(1)
+        // The form draws its own bar; the sheet's navigation bar stays hidden over it. Home's own
+        // bar, behind the sheet, is the only one there.
+        let others = app.navigationBars.matching(NSPredicate(format: "identifier != %@", "Home"))
+        try require(others.count == 0, "Two bars in the event form's sheet")
+        shot("10-event-form-sheet")
+        press(try element(labelled: "Cancel", in: app.buttons))
+        try require(app.staticTexts["New event"].waitForNonExistence(timeout: timeout), "Cancel did not close the event form")
+        try require(app.navigationBars["Home"].waitForExistence(timeout: timeout), "Home is not back after the event form")
+    }
+
+    private func signOutAndIn(email: String, password: String) throws {
+        if !app.navigationBars["Settings"].exists { try settings() }
+        let row = try element(labelled: "Sign out of app", in: app.buttons)
+        let screenBottom = app.windows.firstMatch.frame.maxY - 120
+        for _ in 0..<12 where row.frame.maxY > screenBottom {
+            app.swipeUp()
+        }
+        press(row)
+        // The confirmation's button reads as the row does; it is the last one drawn.
+        let named = app.buttons.matching(NSPredicate(format: "label == %@", "Sign out of app"))
+        try require(named.element(boundBy: 0).waitForExistence(timeout: timeout), "No sign-out confirmation")
+        sleep(1)
+        press(named.element(boundBy: named.count - 1))
+        try require(app.staticTexts["Welcome back!"].waitForExistence(timeout: 120), "Signing out did not reach the sign-in screen")
+        try require(!app.tabBars.firstMatch.exists, "The tab bar is still there on the sign-in screen")
+        shot("11-signed-out")
+        try signIn(email: email, password: password)
+        // Fresh tabs: the Family tab opens at its first screen, not at the Settings it was left on.
+        app.tabBars.firstMatch.buttons["Family"].tap()
+        try require(app.navigationBars["Family"].waitForExistence(timeout: timeout), "The Family tab did not open at its first screen")
+        try require(!app.navigationBars["Settings"].exists, "The Family tab kept the signed-out session's Settings")
+        shot("12-fresh-tabs")
+    }
+
     // MARK: - Getting to a known place
+
+    private func goToHomeRoot() throws {
+        let home = app.tabBars.firstMatch.buttons["Home"]
+        home.tap()
+        if !app.navigationBars["Home"].waitForExistence(timeout: 3) { home.tap() }
+        try require(app.navigationBars["Home"].waitForExistence(timeout: timeout), "Home's first screen is missing")
+    }
+
+    /// Opens Data sources from Settings: a screen that draws its own Compose bar, pushed with the
+    /// system bar hidden.
+    private func openDataSources() throws {
+        let dataSources = try element(containing: "Data sources and licences")
+        let screenBottom = app.windows.firstMatch.frame.maxY - 120
+        for _ in 0..<6 where dataSources.frame.maxY > screenBottom {
+            app.swipeUp()
+        }
+        press(dataSources)
+        sleep(2)
+        try require(!app.navigationBars["Settings"].exists, "Data sources did not open over Settings")
+        try require(app.navigationBars.count == 0, "Two bars: the system bar over a Compose bar")
+    }
 
     /// The Family tab at its first screen, whatever an earlier step left: a question, a sheet, a
     /// pushed screen.
@@ -220,6 +296,28 @@ final class ShellUITests: XCTestCase {
     private func pressIfThere(_ label: String) {
         let button = app.buttons.matching(NSPredicate(format: "label == %@", label)).firstMatch
         if button.waitForExistence(timeout: 3) { press(button) }
+    }
+
+    // MARK: - Cancelled transitions
+
+    /// The shell counts each cancelled transition in its root view's accessibility identifier.
+    private let cancelledPrefix = "coplanly.shell.cancelledTransitions."
+
+    private func cancelledTransitions() -> Int {
+        let marker = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@", cancelledPrefix))
+            .firstMatch
+        guard marker.exists else { return 0 }
+        return Int(marker.identifier.dropFirst(cancelledPrefix.count)) ?? 0
+    }
+
+    /// Whether the shell counted a cancelled transition beyond [count] within a few seconds.
+    private func waitForCancelledTransition(after count: Int) -> Bool {
+        for _ in 0..<10 {
+            if cancelledTransitions() > count { return true }
+            usleep(500_000)
+        }
+        return false
     }
 
     // MARK: - Steps and failures
