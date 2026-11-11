@@ -177,8 +177,9 @@ internal class NativeBars(
      * screen's view controller, drawing the latest bar's trailing content. Its size follows what
      * the chip draws, which is nothing with one family.
      */
-    // A transparent Compose host (`opaque`) is still experimental in Compose Multiplatform 1.9.3.
-    @OptIn(ExperimentalComposeUiApi::class)
+    // A transparent Compose host (`opaque`) is still experimental in Compose Multiplatform 1.9.3, and
+    // `NSSelectorFromString` is Kotlin/Native's C interop.
+    @OptIn(ExperimentalComposeUiApi::class, ExperimentalForeignApi::class)
     private fun chipItem(): UIBarButtonItem {
         val host = chip ?: ComposeUIViewController(configure = { opaque = false }) {
             chipFrame {
@@ -204,7 +205,11 @@ internal class NativeBars(
                 if (screenVisible && chip === created) forwardAppearance(created, true)
             }
         }
-        return UIBarButtonItem(customView = host.view)
+        return UIBarButtonItem(customView = host.view).apply {
+            // iOS 26 sets each bar button on glass; the chip draws its own pill, and nothing at all
+            // with one family, where an empty glass circle would stand in the bar.
+            if (respondsToSelector(NSSelectorFromString("setHidesSharedBackground:"))) hidesSharedBackground = true
+        }
     }
 
     /** Sizes the chip's host to what the chip draws, in points; never zero, see [MIN_CHIP_SIDE]. */

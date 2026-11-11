@@ -61,8 +61,8 @@ final class ShellUITests: XCTestCase {
         openExpenses(app)
 
         // A swipe let go of early leaves Expenses on screen, and the shell still works from there.
-        swipeBack(app, to: 0.12)
-        sleep(1)
+        swipeBackAndLetGo(app, at: 0.2)
+        sleep(2)
         XCTAssertTrue(app.navigationBars["Expenses"].exists, "A cancelled back swipe popped the screen")
 
         // The Add expense sheet, an edit, and a swipe down that must ask first.
@@ -170,11 +170,19 @@ final class ShellUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Expenses"].waitForExistence(timeout: timeout), "Expenses did not open")
     }
 
-    /// A drag from the left edge to [fraction] of the width: past half pops, a short one is let go of.
+    /// A quick drag from the left edge to [fraction] of the width, which pops.
     private func swipeBack(_ app: XCUIApplication, to fraction: CGFloat) {
         let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.0, dy: 0.5))
         let end = app.coordinate(withNormalizedOffset: CGVector(dx: fraction, dy: 0.5))
         start.press(forDuration: 0.05, thenDragTo: end)
+    }
+
+    /// A slow drag from the left edge to [fraction] of the width, held still and let go of: UIKit
+    /// cancels the pop it started, as it does under a finger that changes its mind.
+    private func swipeBackAndLetGo(_ app: XCUIApplication, at fraction: CGFloat) {
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.0, dy: 0.5))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: fraction, dy: 0.5))
+        start.press(forDuration: 0.1, thenDragTo: end, withVelocity: XCUIGestureVelocity(60), thenHoldForDuration: 0.8)
     }
 
     private func swipeSheetDown(_ app: XCUIApplication, from bar: XCUIElement) {
