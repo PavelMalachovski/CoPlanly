@@ -5,6 +5,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestResult
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -39,9 +40,9 @@ class ForegroundSyncRunnerTest {
     }
 
     @Test
-    fun `two requests during one run produce exactly one more run`() = runTest {
+    fun `two requests during one run produce exactly one more run`() = runnerTest { scope ->
         val sync = SlowSync()
-        val runner = ForegroundSyncRunner(sync = sync::run, afterSync = {}, scope = backgroundScope)
+        val runner = ForegroundSyncRunner(sync = sync::run, afterSync = {}, scope = scope)
 
         runner.requestSyncNow()
         advanceTimeBy(SYNC_MILLIS / 2)
@@ -54,9 +55,9 @@ class ForegroundSyncRunnerTest {
     }
 
     @Test
-    fun `three requests while idle run once with at most one follow-up and never overlap`() = runTest {
+    fun `three requests while idle run once with at most one follow-up and never overlap`() = runnerTest { scope ->
         val sync = SlowSync()
-        val runner = ForegroundSyncRunner(sync = sync::run, afterSync = {}, scope = backgroundScope)
+        val runner = ForegroundSyncRunner(sync = sync::run, afterSync = {}, scope = scope)
 
         runner.requestSyncNow()
         runner.requestSyncNow()
@@ -68,9 +69,9 @@ class ForegroundSyncRunnerTest {
     }
 
     @Test
-    fun `a request after a run has ended starts a new run`() = runTest {
+    fun `a request after a run has ended starts a new run`() = runnerTest { scope ->
         val sync = SlowSync()
-        val runner = ForegroundSyncRunner(sync = sync::run, afterSync = {}, scope = backgroundScope)
+        val runner = ForegroundSyncRunner(sync = sync::run, afterSync = {}, scope = scope)
 
         runner.requestSyncNow()
         advanceUntilIdle()
@@ -81,7 +82,7 @@ class ForegroundSyncRunnerTest {
     }
 
     @Test
-    fun `the import runs after each sync and its failure does not stop the next run`() = runTest {
+    fun `the import runs after each sync and its failure does not stop the next run`() = runnerTest { scope ->
         val sync = SlowSync()
         val order = mutableListOf<String>()
         val runner = ForegroundSyncRunner(
@@ -90,7 +91,7 @@ class ForegroundSyncRunnerTest {
                 order += "import"
                 throw IllegalStateException("Google said no")
             },
-            scope = backgroundScope
+            scope = scope
         )
 
         runner.requestSyncNow()
@@ -102,7 +103,7 @@ class ForegroundSyncRunnerTest {
     }
 
     @Test
-    fun `a failed or throwing sync still lets the next request run`() = runTest {
+    fun `a failed or throwing sync still lets the next request run`() = runnerTest { scope ->
         var runs = 0
         val runner = ForegroundSyncRunner(
             sync = {
@@ -111,7 +112,7 @@ class ForegroundSyncRunnerTest {
                 Result.failure(IllegalStateException("denied"))
             },
             afterSync = {},
-            scope = backgroundScope
+            scope = scope
         )
 
         runner.requestSyncNow()
@@ -140,6 +141,20 @@ class ForegroundSyncRunnerTest {
 
         assertEquals(1, sync.runs)
         assertEquals(1, sync.running, "the cancelled run never reached its end")
+    }
+
+    /**
+     * Runs [body] with a scope of its own on the test's scheduler, cancelled at the end. Not
+     * `backgroundScope`: `advanceUntilIdle` does not run the tasks of that scope, and the runner's
+     * work is what these tests advance through.
+     */
+    private fun runnerTest(body: suspend TestScope.(CoroutineScope) -> Unit): TestResult = runTest {
+        val scope = CoroutineScope(StandardTestDispatcher(testScheduler) + Job())
+        try {
+            body(scope)
+        } finally {
+            scope.cancel()
+        }
     }
 
     private companion object {
