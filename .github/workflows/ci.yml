@@ -2250,7 +2250,11 @@ jobs:
     needs: changes
     if: needs.changes.outputs.ios == 'true'
     runs-on: macos-latest
-    timeout-minutes: 120
+    # 180 since the native shell's UI test (MON-24 phase 3, Task 8) joined the job: when the
+    # Firebase pods' cache misses (a new Xcode on the image), the emulator tests' step builds them
+    # cold, which took 77 minutes for Firestore's alone on 11 November 2026, and 120 ended the job
+    # before its tests had run.
+    timeout-minutes: 180
     permissions:
       contents: read
       checks: write
