@@ -2878,8 +2878,9 @@ resolve higher.
 2. **The toolchain:** Kotlin 2.4 is done (Task 13; Xcode up to 26.4). A **stable Kotlin 2.5** is
    needed before the App Store submission (phase 6), for Xcode 27 and the SDK App Store Connect will
    require (toolchain, below).
-3. **Once the iPhone app's test host exists:** `KeychainSecurePreferencesTest` app-hosted,
-   `IosDatabaseTest` on a real iPhone and the device checks of the toolchain list below.
+3. **Once the iPhone app's test host exists:** ~~`KeychainSecurePreferencesTest` app-hosted~~
+   (runs since phase 3's Task 5 on the simulator `ios-app` boots, with simulated Keychain
+   entitlements), `IosDatabaseTest` on a real iPhone and the device checks of the toolchain list below.
 4. **Before any iPhone build reaches a user:** the privacy documents describe the iPhone's storage
    (toolchain, below), and MON-25 has moved the request clocks' on-time steps to the server (spec
    §9.2), since the iPhone schedules none of them.
@@ -2989,8 +2990,9 @@ bytes are identical on Android). Kept as the record of each step; what phase 2 l
   plain `SharedPreferences` (the account-switch guard, the install referrer), `Base64` and the
   Keystore in `EncryptionManager`, the PDF writer, ML Kit, dictation and the Credential Manager.
   The contract and the store run under Kotlin/Native on the simulator over an in-memory store;
-  `KeychainSecurePreferencesTest` is `@Ignore`d, because a test binary with no app host has no
-  Keychain (every call answers `errSecNotAvailable`, −25291), and runs before phase 3 (below).
+  `KeychainSecurePreferencesTest` runs over the real Keychain since phase 3's Task 5, in `ios-app` on
+  a booted simulator (a standalone test binary has no Keychain: every call answers
+  `errSecNotAvailable`, −25291, so `shared-ios` leaves it out of its run).
 - ~~**Room on Kotlin Multiplatform**~~ **Done (phase 2, Task 7, November 2026)**: the database is
   in `:shared-data` on Room 2.7.2 for Kotlin Multiplatform — the entities, DAOs, `Converters` and
   `CoPlanlyDatabase` (with `@ConstructedBy`) in `commonMain`, Room's processor run there for
@@ -3401,7 +3403,8 @@ platform caches; they do not fail the link. So:
    Kotlin 2.4.21, KSP 2.3.13, kotlinx-serialization 1.12.0, and Ktor 3.6.1, whose OkHttp 5.5 needed
    compileSdk 37 (CLAUDE.md, toolchain). The shared modules' Android target is AGP's Android KMP
    library plugin, their JVM tests `androidHostTest`. And once the iPhone app's XCTest host
-   exists: run `KeychainSecurePreferencesTest` app-hosted (un-`@Ignore` it), and check on a phone that
+   exists: ~~run `KeychainSecurePreferencesTest` app-hosted (un-`@Ignore` it)~~ (runs since phase 3's
+   Task 5, on a booted simulator in `ios-app`), and check on a phone that
    the preference item survives a relaunch and is readable after the first unlock.
    On the same host, run `IosDatabaseTest` on a real iPhone, where its read-back of the
    protection class runs (the simulator reports none), and check on a phone that the database file

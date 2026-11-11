@@ -327,9 +327,14 @@ tasks.withType<org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeSimu
     // On a booted simulator, when CI names one: Kotlin spawns the tests `--standalone` by default,
     // outside a booted device's services, and the Keychain (which Firebase Auth saves the signed-in
     // user to) answers errSecNotAvailable there. `ios-app` boots the simulator it launched the app on.
-    providers.environmentVariable("COPLANLY_SIMULATOR_UDID").orNull?.let { udid ->
+    val udid = providers.environmentVariable("COPLANLY_SIMULATOR_UDID").orNull
+    if (udid != null) {
         device.set(udid)
         standalone.set(false)
+    } else {
+        // Standalone, the Keychain's own contract cannot run (errSecNotAvailable): it is left out
+        // of the run rather than reported as passed (`KeychainSecurePreferencesTest`).
+        filter.excludeTestsMatching("*KeychainSecurePreferencesTest*")
     }
     testLogging {
         events("failed")
