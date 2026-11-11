@@ -11,6 +11,7 @@ import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.remote.firebase.StoredDocument
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.domain.repository.MessageRepository
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.channels.ProducerScope
@@ -82,7 +83,7 @@ abstract class PairingRepositoryImplFixture {
         // get-or-create lookup to stub any more — the relaxed mock answers `ensureConversation`.
 
         userDao = mockk(relaxed = true)
-        wording = mockk { every { defaultPartnerName() } returns "Co-parent" }
+        wording = mockk { coEvery { defaultPartnerName() } returns "Co-parent" }
         // Relaxed: reconciling the shown family needs Firebase Auth and a real row, and what
         // these tests pin is that the mirror *delegates* the decision rather than making it.
         selectedFamilySource = mockk(relaxed = true)

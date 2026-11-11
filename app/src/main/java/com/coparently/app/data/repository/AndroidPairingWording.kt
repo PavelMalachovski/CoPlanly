@@ -11,5 +11,6 @@ import com.coparently.app.utils.inAppLanguage
  */
 class AndroidPairingWording(private val context: Context) : PairingWording {
 
-    override fun defaultPartnerName(): String = context.inAppLanguage().getString(R.string.pairing_default_partner_name)
+    override suspend fun defaultPartnerName(): String =
+        context.inAppLanguage().getString(R.string.pairing_default_partner_name)
 }

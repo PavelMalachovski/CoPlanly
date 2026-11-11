@@ -47,7 +47,11 @@ class IosWordingsTest {
     private class OneChild(private val id: String, private val name: String) : ChildInfoRepository {
         override fun getAllChildInfo(): Flow<List<ChildInfo>> = emptyFlow()
         override suspend fun getChildInfoById(id: String): ChildInfo? =
-            if (id == this.id) ChildInfo(id = id, childName = name, dateOfBirth = null, createdAt = STAMP, updatedAt = STAMP) else null
+            if (id == this.id) {
+                ChildInfo(id = id, childName = name, dateOfBirth = null, createdAt = STAMP, updatedAt = STAMP)
+            } else {
+                null
+            }
         override fun observeChildInfoById(id: String): Flow<ChildInfo?> = flowOf(null)
         override suspend fun upsertChildInfo(childInfo: ChildInfo) = Unit
         override suspend fun deleteChildInfo(childInfo: ChildInfo) = Unit

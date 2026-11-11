@@ -5,7 +5,6 @@ import com.coparently.app.data.export.ExportedFile
 import com.coparently.app.data.export.RecordFileWriter
 import com.coparently.app.data.files.PickedFiles
 import com.coparently.app.data.files.StorageBucket
-import com.coparently.app.data.remote.firebase.PushDevice
 import com.coparently.app.data.remote.firebase.PushRegistration
 import com.coparently.app.data.remote.google.CredentialProvider
 import com.coparently.app.data.remote.google.GoogleAccess
@@ -14,13 +13,10 @@ import com.coparently.app.data.remote.google.GoogleAccessFailure
 import com.coparently.app.data.remote.google.GoogleCalendarAccount
 import com.coparently.app.data.remote.google.GoogleCalendarConnection
 import com.coparently.app.data.remote.google.GoogleCredential
-import com.coparently.app.data.repository.PairingWording
 import com.coparently.app.data.requests.RequestClockNotices
 import com.coparently.app.data.school.SchoolImportScheduler
-import com.coparently.app.data.school.SchoolImportWordings
 import com.coparently.app.data.session.AccountDeletion
 import com.coparently.app.data.support.SupportReminderScheduler
-import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.export.CommunicationRecord
 import com.coparently.app.domain.export.ExportFormat
@@ -31,7 +27,6 @@ import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.notification.RequestClockScheduler
 import com.coparently.app.domain.receipts.ReceiptTextRecognizer
 import com.coparently.app.domain.repository.RecordPhotoStorage
-import com.coparently.app.domain.school.SchoolImportWording
 import kotlinx.io.IOException
 import kotlinx.io.RawSource
 import kotlinx.io.files.Path
@@ -39,38 +34,32 @@ import kotlinx.io.files.Path
 /*
  * What the data layer asks of the platform that the iPhone does not have yet (MON-24 phase 2, Task
  * 8j): each answers as a phone with nothing of the kind would — no Google Calendar connected, no
- * push, no Cloud Storage, nothing picked — or does nothing, so `platformDataModule` resolves every
- * definition of `dataModules` without promising a feature (design item 8). Each is replaced by the
- * real one as the iPhone app gains it (phase 3: the push token, account deletion, the Storage SDK,
- * the picker, the background jobs and the app's own wording). None of them writes or reads anything.
+ * push token, no Cloud Storage, nothing picked — or does nothing, so `platformDataModule` resolves
+ * every definition of `dataModules` without promising a feature (design item 8). Each is replaced by
+ * the real one as the iPhone app gains it (phase 3 and 4: the push token, account deletion, the
+ * Storage SDK, the picker and the background jobs). None of them writes or reads anything.
  * The sign-in's stand-ins (`NoSignedInUser`, `NoAuthSession`, `NoAccountSignIn`, `NoAccountSwitch`,
  * `NoAccountTraces`) left in Task 5 of phase 3, for `IosFirebaseAuth`, `IosAccountSwitch` and
- * `IosAccountTraces`.
+ * `IosAccountTraces`; in Task 6 the push queue, the sync requests and the wording left too
+ * (`NoPush` kept only the push switch, `NoSyncRequests` and `NoWording` went), for
+ * `FirestorePushQueue`, `ForegroundSyncRunner` and `:shared-ui`'s `IosPairingWording` and
+ * `IosSchoolImportWordings`.
  */
 
 /**
- * No push token and no push (the sync and the repositories ask [PushDevice]; slice 10e: Settings'
- * switch and sign-out ask [PushRegistration]): the iPhone registers with no messaging service yet,
- * so nothing is queued, no token is read or written, the switch reads off, turning it on fails as a
- * phone with no messaging service would, and there is no token to detach.
+ * No push token (slice 10e: Settings' switch and sign-out ask [PushRegistration]): the iPhone
+ * registers with no messaging service yet, so the switch reads off, turning it on fails as a phone
+ * with no messaging service would, and there is no token to detach.
  *
- * **One object for both, as `FcmService` is on Android**, bound under both types: phase 3 must
- * replace push delivery and the token's unregistration together. A real token with this
- * unregistration left behind would keep a signed-out account's pushes arriving on the phone
+ * Since phase 3's Task 6 the iPhone queues pushes for the co-parent (`FirestorePushQueue`, bound as
+ * `PushDevice` and `PushQueue`), which holds no token either: it reads none and writes none, so this
+ * no-op detach is still safe. **Phase 4 must replace the token's registration (the queue's
+ * `getCurrentToken` and `updateUserToken`) and this unregistration together**: a real token with
+ * this unregistration left behind would keep a signed-out account's pushes arriving on the phone
  * (CLAUDE.md item 23).
  */
-internal object NoPush : PushDevice, PushRegistration {
+internal object NoPush : PushRegistration {
     override val available: Boolean = false
-
-    override suspend fun queueNotificationForUser(
-        targetUserId: String,
-        notificationData: Map<String, String>
-    ): Result<Unit> = Result.failure(IllegalStateException(UNAVAILABLE))
-
-    override suspend fun getCurrentToken(): String? = null
-
-    override suspend fun updateUserToken(token: String): Result<Unit> =
-        Result.failure(IllegalStateException(UNAVAILABLE))
 
     override fun isPushEnabled(): Boolean = false
 
@@ -125,11 +114,6 @@ internal object NoSupportReminderJob : SupportReminderScheduler {
     override fun cancel() = Unit
 }
 
-/** No background jobs yet: a sync asked for now is not run in the background. */
-internal object NoSyncRequests : SyncRequester {
-    override fun requestSyncNow() = Unit
-}
-
 /** No notifications yet: a request clock's notice is not shown, so a reminder is never counted. */
 internal object NoRequestClockNotices : RequestClockNotices {
     override suspend fun remind(clock: RequestDeadline): Boolean = false
@@ -155,19 +139,6 @@ internal object NoGoogleCalendar : GoogleCalendarAccount, CredentialProvider {
         throw GoogleAccessException(GoogleAccessFailure.NOT_CONNECTED)
 
     override suspend fun <T> withCredential(call: suspend (GoogleCredential) -> T): T = call(getCredential())
-}
-
-/**
- * No wording yet: the iPhone app's own strings, in the reader's language, come with its screens.
- * A pairing's thread title and a school import's titles are stored and read by the co-parent, so
- * no English stand-in is written in their place; nothing on the iPhone pairs or imports yet, so
- * neither is asked for.
- */
-internal object NoWording : PairingWording, SchoolImportWordings {
-    override fun defaultPartnerName(): String = throw UnsupportedOperationException(UNAVAILABLE)
-
-    override suspend fun forChild(childId: String, fallbackName: String): SchoolImportWording =
-        throw UnsupportedOperationException(UNAVAILABLE)
 }
 
 /** No Cloud Storage yet: every call fails as an unreachable bucket would, by path and never by URL. */

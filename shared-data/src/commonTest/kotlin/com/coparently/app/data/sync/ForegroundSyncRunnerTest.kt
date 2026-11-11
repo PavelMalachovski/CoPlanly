@@ -107,7 +107,8 @@ class ForegroundSyncRunnerTest {
         val runner = ForegroundSyncRunner(
             sync = {
                 runs++
-                if (runs == 1) throw IllegalStateException("offline") else Result.failure(IllegalStateException("denied"))
+                if (runs == 1) throw IllegalStateException("offline")
+                Result.failure(IllegalStateException("denied"))
             },
             afterSync = {},
             scope = backgroundScope

@@ -1,7 +1,10 @@
 package com.coparently.app.ios
 
 import androidx.compose.ui.window.ComposeUIViewController
+import com.coparently.app.data.chat.ChatMirror
+import com.coparently.app.data.session.SessionProfileSynchronizer
 import com.coparently.app.data.session.clearPreviousInstall
+import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.di.koin.dataModules
 import com.coparently.app.di.koin.platformDataModule
 import com.coparently.app.di.koin.platformUiModule
@@ -14,6 +17,7 @@ import com.coparently.app.presentation.navigation.PendingInviteCodes
 import com.coparently.app.presentation.platform.AppBuildValues
 import com.coparently.app.presentation.platform.ProvideIosShell
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.koin.core.Koin
 import org.koin.core.context.startKoin
 import org.koin.core.module.Module
 import org.koin.dsl.module
@@ -54,7 +58,8 @@ object IosApp {
      * first launch after an install (`clearPreviousInstall`: the sealed preferences and Firebase
      * Auth's session, which an uninstall does not delete on the iPhone), then starts the Koin graph
      * the shared code reads: the data layer's and the UI's modules with the iPhone's platform
-     * halves, and [iosAppModule]. All before the first screen.
+     * halves, and [iosAppModule]. Then it starts what runs for the whole session ([startSession]).
+     * All before the first screen.
      *
      * @throws IllegalStateException when called a second time.
      */
@@ -64,9 +69,10 @@ object IosApp {
         IosFirebase.configure(config)
         // After Firebase, which the sign-out needs; before Koin builds the preference store.
         clearPreviousInstall()
-        startKoin {
+        val koin = startKoin {
             modules(dataModules + platformDataModule + uiModules + platformUiModule + iosAppModule)
-        }
+        }.koin
+        startSession(koin)
         buildValues = AppBuildValues(
             versionName = config.versionName,
             privacyPolicyUrl = config.privacyPolicyUrl,
@@ -74,6 +80,25 @@ object IosApp {
             supportEmail = config.supportEmail,
             pairingWebLink = PAIRING_WEB_LINK,
         )
+    }
+
+    /**
+     * What Android's `CoPlanlyApplication.onCreate` starts once the graph is up, on the iPhone (Task
+     * 6), and in its order: the chat mirror, the signed-in account's profile, a sync now and one on
+     * every return to the foreground ([IosLifecycle]). Each is harmless while nobody is signed in,
+     * as on Android: the mirror waits for a co-parent, the profile for an account, and a sync with
+     * nobody signed in ends at once. Telemetry, the widget and the periodic job are not here: the
+     * iPhone collects nothing, has no widget yet and no background job until phase 4.
+     *
+     * After the first-launch cleanup and Koin, never before: the sync's account check reads the last
+     * uid and the preference store the cleanup has just made consistent.
+     */
+    private fun startSession(koin: Koin) {
+        koin.get<ChatMirror>().start()
+        koin.get<SessionProfileSynchronizer>().start()
+        val sync = koin.get<SyncRequester>()
+        sync.requestSyncNow()
+        IosLifecycle.observe { sync.requestSyncNow() }
     }
 
     /**
@@ -98,8 +123,9 @@ object IosApp {
 }
 
 /**
- * The iPhone app's own definitions, beside the shared modules. Empty in Task 4: the sign-in
- * (Task 5), the sync and push (Task 6), the native shell (Task 8) and Google (Task 9) add theirs.
+ * The iPhone app's own definitions, beside the shared modules. Empty so far: the sign-in (Task 5)
+ * and the sync, push queue and wordings (Task 6) went into the platform modules, where the shared
+ * graph asks for them; the native shell (Task 8) and Google (Task 9) may add theirs here.
  */
 internal val iosAppModule: Module = module { }
 

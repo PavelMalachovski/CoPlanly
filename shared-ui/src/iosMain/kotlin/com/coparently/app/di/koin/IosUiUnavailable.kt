@@ -14,7 +14,9 @@ import kotlinx.datetime.YearMonth
  * phase 2, Task 10), beside `:shared-data`'s `IosUnavailable.kt`: each answers as a phone with
  * nothing of the kind would, so `platformUiModule` resolves every ViewModel's definition without
  * promising a feature (design item 8). Each is replaced as the iPhone app gains it (phase 3 and 4);
- * `NoAuthErrors` left in phase 3's Task 5, for `IosAuthErrors`.
+ * `NoAuthErrors` left in phase 3's Task 5, for `IosAuthErrors`. The data layer's wording, which
+ * `:shared-data`'s `NoWording` stood in for, is bound here since Task 6 (`IosPairingWording`,
+ * `IosSchoolImportWordings`), because it reads this module's strings.
  */
 
 /**
