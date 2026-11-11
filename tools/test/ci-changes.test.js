@@ -479,6 +479,8 @@ test('the iPhone app job runs on what its write gate is held to (MON-24 phase 3,
     'app/src/test/resources/wire/current/events/repository-save.json',
     'firestore.rules',
     'functions/index.js',
+    'tools/ios/seed-shell-family.js',
+    'tools/e2e/pairing-smoke.js',
   ]) {
     assert.equal(decide([path]).ios, true, path);
   }

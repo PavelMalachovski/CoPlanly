@@ -35,9 +35,10 @@ const IOS_APP = /^iosApp\//;
 /**
  * What the iPhone's write gate (MON-24 phase 3, Task 7) is held to, beside the shared modules it
  * runs: its checker, the Android shapes it compares with (`wire/current/`), the rules the iPhone's
- * writes must pass and the Cloud Functions it pairs through. A change to any of them runs `ios-app`.
+ * writes must pass and the Cloud Functions it pairs through — and the pairing smoke's helpers, which
+ * seed the native shell's UI test (Task 8). A change to any of them runs `ios-app`.
  */
-const IOS_GATE_INPUTS = /^(tools\/ios\/|tools\/test\/check-ios-writes\.test\.js$|app\/src\/test\/resources\/wire\/current\/|firestore\.rules$|functions\/)/;
+const IOS_GATE_INPUTS = /^(tools\/ios\/|tools\/test\/check-ios-writes\.test\.js$|tools\/e2e\/pairing-smoke\.js$|app\/src\/test\/resources\/wire\/current\/|firestore\.rules$|functions\/)/;
 
 /** Paths that never need an Android build: docs, the server side, the rules and their tests, the iPhone app. */
 const NON_ANDROID = /^(docs\/|iosApp\/|functions\/|firestore-tests\/|web-tests\/|\.cursor\/|[^/]*\.md$|.*\.rules(\.simple)?$|firestore\.indexes\.json$|firebase\.json$|\.gitignore$|LICENSE$)/;

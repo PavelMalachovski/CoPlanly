@@ -2380,7 +2380,7 @@ jobs:
             -configuration Debug \
             -destination "platform=iOS Simulator,id=$UDID" \
             -derivedDataPath iosApp/build \
-            build 2>&1 | tee iosApp/build/xcodebuild.log
+            build-for-testing 2>&1 | tee iosApp/build/xcodebuild.log
 
       - name: Launch it on the simulator
         env:
@@ -2447,6 +2447,37 @@ jobs:
             echo "::error::The write gate (IosWriteGateTest) did not report that it ran."
             exit 1
           fi
+
+      # The native shell (MON-24 phase 3, Task 8): CoPlanlyUITests signs in by e-mail as a parent of a
+      # family seeded on fresh emulators (tools/ios/seed-shell-family.js), walks Home, Family, Expenses,
+      # the Add expense sheet and Settings with a screenshot of each, and checks the shell's review
+      # points: a back swipe, one let go of, a tab tap popping two screens, and a sheet with an edit
+      # swiped down asking "Discard changes?". The screenshots are the `ios-shell` artifact.
+      - name: The native shell on the emulators (XCUITest)
+        if: always() && steps.emulator-tests.outcome != 'skipped'
+        env:
+          FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
+          UDID: ${{ steps.simulator.outputs.udid }}
+        run: |
+          set -o pipefail
+          export PATH="$FIREBASE_JAVA_HOME/bin:$PATH"
+          firestore-tests/node_modules/.bin/firebase emulators:exec \
+            --only auth,firestore,functions,storage \
+            --project demo-coplanly \
+            "iosApp/scripts/simulator.sh shell-test $UDID iosApp/build/shell" \
+            2>&1 | tee "$RUNNER_TEMP/shell-test.log"
+
+      - name: Upload the shell's screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-shell
+          path: |
+            iosApp/build/shell/shots/
+            iosApp/build/shell/shell.xcresult
+            ${{ runner.temp }}/shell-test.log
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Upload the launch screenshot and logs
         if: always()

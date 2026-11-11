@@ -10,6 +10,13 @@
 #       waits, fails unless the app is still running, and saves <out-dir>/launch.png. Whatever
 #       happens it leaves the app's recent system log and any crash report in <out-dir>, and
 #       prints them into the job's log.
+#
+#   iosApp/scripts/simulator.sh shell-test <udid> <out-dir>
+#       Inside `firebase emulators:exec`: seeds a paired family (tools/ios/seed-shell-family.js),
+#       runs the CoPlanlyUITests target (built by `build-for-testing`) on the booted simulator
+#       signed in as its first parent, keeps the result bundle in <out-dir>/shell.xcresult and
+#       exports its screenshots to <out-dir>/shots, printing a small copy of each into the log.
+#       Fails when the test fails.
 set -euo pipefail
 
 BUNDLE_ID=app.coplanly
@@ -97,8 +104,41 @@ launch() {
   echo "::group::launch-small.jpg (base64)"; base64 -i "$out/launch-small.jpg"; echo "::endgroup::"
 }
 
+shell_test() {
+  local udid=$1 out=$2 seed status=0
+  mkdir -p "$out"
+  out=$(cd "$out" && pwd)
+  seed=$(node tools/ios/seed-shell-family.js)
+  # xcodebuild hands the test runner every TEST_RUNNER_-prefixed variable, without the prefix.
+  export TEST_RUNNER_COPLANLY_UITEST_EMAIL
+  export TEST_RUNNER_COPLANLY_UITEST_PASSWORD
+  TEST_RUNNER_COPLANLY_UITEST_EMAIL=$(node -e 'console.log(JSON.parse(process.argv[1]).email)' "$seed")
+  TEST_RUNNER_COPLANLY_UITEST_PASSWORD=$(node -e 'console.log(JSON.parse(process.argv[1]).password)' "$seed")
+  echo "Seeded family; signing in as $TEST_RUNNER_COPLANLY_UITEST_EMAIL"
+  rm -rf "$out/shell.xcresult"
+  xcodebuild test-without-building \
+    -project iosApp/CoPlanly.xcodeproj \
+    -scheme CoPlanly \
+    -destination "platform=iOS Simulator,id=$udid" \
+    -derivedDataPath iosApp/build \
+    -only-testing:CoPlanlyUITests \
+    -resultBundlePath "$out/shell.xcresult" || status=$?
+  mkdir -p "$out/shots"
+  xcrun xcresulttool export attachments --path "$out/shell.xcresult" --output-path "$out/shots" || true
+  echo "::group::Exported attachments"; cat "$out/shots/manifest.json" 2>/dev/null || ls "$out/shots"; echo; echo "::endgroup::"
+  # A small copy of each screenshot in the log, for a reader who cannot download the artifact.
+  local shot
+  for shot in "$out"/shots/*.png; do
+    [ -f "$shot" ] || continue
+    sips -Z 300 -s format jpeg -s formatOptions 50 "$shot" --out "${shot%.png}-small.jpg" > /dev/null
+    echo "::group::$(basename "$shot") small (base64)"; base64 -i "${shot%.png}-small.jpg"; echo "::endgroup::"
+  done
+  return "$status"
+}
+
 case "${1:-}" in
   pick) pick ;;
   launch) shift; launch "$@" ;;
-  *) echo "usage: $0 pick | launch <udid> <app> <out-dir>" >&2; exit 2 ;;
+  shell-test) shift; shell_test "$@" ;;
+  *) echo "usage: $0 pick | launch <udid> <app> <out-dir> | shell-test <udid> <out-dir>" >&2; exit 2 ;;
 esac
