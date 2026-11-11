@@ -1,6 +1,5 @@
 package com.coparently.app.ios
 
-import androidx.compose.ui.window.ComposeUIViewController
 import com.coparently.app.data.chat.ChatMirror
 import com.coparently.app.data.session.SessionProfileSynchronizer
 import com.coparently.app.data.session.clearPreviousInstall
@@ -9,13 +8,12 @@ import com.coparently.app.di.koin.dataModules
 import com.coparently.app.di.koin.platformDataModule
 import com.coparently.app.di.koin.platformUiModule
 import com.coparently.app.di.koin.uiModules
+import com.coparently.app.ios.shell.NativeShell
 import com.coparently.app.presentation.AppLaunch
-import com.coparently.app.presentation.CoPlanlyApp
 import com.coparently.app.presentation.navigation.PendingChatOpen
 import com.coparently.app.presentation.navigation.PendingDestinationOpen
 import com.coparently.app.presentation.navigation.PendingInviteCodes
 import com.coparently.app.presentation.platform.AppBuildValues
-import com.coparently.app.presentation.platform.ProvideIosShell
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.koin.core.Koin
 import org.koin.core.context.startKoin
@@ -46,12 +44,18 @@ data class IosAppConfig(
  * The iPhone app's entry point into the shared code (MON-24 phase 3), which its `AppDelegate`
  * calls: [start] once, then [rootViewController] for the window.
  *
- * Task 4's skeleton: one Compose view controller drawing [CoPlanlyApp], as `MainActivity` does on
- * Android, inside [ProvideIosShell]'s stand-ins. The native shell (Task 8) replaces the root.
+ * The root is the native shell (Task 8): UIKit's tab and navigation bars around the shared screens,
+ * each screen its own Compose view controller ([NativeShell]).
  */
 object IosApp {
     /** Set by [start]; what the shell's platform values are built from. */
     private var buildValues: AppBuildValues? = null
+
+    /** Set by [start]: the graph the shell resolves its ViewModels from. */
+    private var koin: Koin? = null
+
+    /** The shell, built by the first [rootViewController]. */
+    private var shell: NativeShell? = null
 
     /**
      * Starts Firebase ([IosFirebase]), clears what an earlier install left in the Keychain on the
@@ -73,6 +77,7 @@ object IosApp {
             modules(dataModules + platformDataModule + uiModules + platformUiModule + iosAppModule)
         }.koin
         startSession(koin)
+        this.koin = koin
         buildValues = AppBuildValues(
             versionName = config.versionName,
             privacyPolicyUrl = config.privacyPolicyUrl,
@@ -102,17 +107,18 @@ object IosApp {
     }
 
     /**
-     * The window's root: one Compose view controller with the whole app. Call after [start].
+     * The window's root: the native shell, which shows the screens before the app proper or the
+     * four tabs. Call after [start]; every call answers the one shell.
      *
      * @throws IllegalStateException when [start] has not run.
      */
     fun rootViewController(): UIViewController {
         val values = checkNotNull(buildValues) { "IosApp.start must run before rootViewController" }
-        return ComposeUIViewController {
-            ProvideIosShell(values) {
-                CoPlanlyApp(launch = IosLaunch.none(), darkTheme = null)
-            }
+        val current = shell ?: NativeShell(checkNotNull(koin), values).also {
+            shell = it
+            it.start()
         }
+        return current.root
     }
 
     /**
@@ -125,7 +131,8 @@ object IosApp {
 /**
  * The iPhone app's own definitions, beside the shared modules. Empty so far: the sign-in (Task 5)
  * and the sync, push queue and wordings (Task 6) went into the platform modules, where the shared
- * graph asks for them; the native shell (Task 8) and Google (Task 9) may add theirs here.
+ * graph asks for them, and the native shell (Task 8) resolves what it needs itself; Google (Task 9)
+ * may add its own here.
  */
 internal val iosAppModule: Module = module { }
 
@@ -133,7 +140,8 @@ internal val iosAppModule: Module = module { }
 internal object IosLaunch {
     /**
      * A launch with nothing pending: no invitation code, no chat link and no push's screen. The
-     * iPhone reads none of those yet (links and pushes come with Tasks 6 and 8).
+     * iPhone reads none of those in part A; the shell arms them in part B, after the family switch
+     * (CLAUDE.md item 15).
      */
     fun none(): AppLaunch = AppLaunch(
         inviteCodes = PendingInviteCodes(

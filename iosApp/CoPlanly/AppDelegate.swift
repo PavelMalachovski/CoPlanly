@@ -1,13 +1,12 @@
 import Shared
 import UIKit
 
-/// The iPhone app's entry point (MON-24 phase 3). It reads what the build hands the shared code,
-/// starts it (`IosApp`, in the `Shared` framework `:shared-ui` builds) and shows its root view
-/// controller. Every screen is the shared code's; nothing the user reads is written here.
+/// The iPhone app's entry point (MON-24 phase 3). It reads what the build hands the shared code and
+/// starts it (`IosApp`, in the `Shared` framework `:shared-ui` builds). The window is the scene's
+/// (`SceneDelegate`, named in `Info.plist`'s scene manifest), which shows the shared code's root
+/// view controller. Every screen is the shared code's; nothing the user reads is written here.
 @main
 final class AppDelegate: UIResponder, UIApplicationDelegate {
-    var window: UIWindow?
-
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -24,11 +23,6 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         } catch {
             fatalError("The shared code did not start: \(error)")
         }
-
-        let window = UIWindow(frame: UIScreen.main.bounds)
-        window.rootViewController = IosApp.shared.rootViewController()
-        window.makeKeyAndVisible()
-        self.window = window
         return true
     }
 
