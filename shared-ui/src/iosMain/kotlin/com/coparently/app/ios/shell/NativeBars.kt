@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -14,6 +15,7 @@ import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.BarHost
 import com.coparently.app.presentation.common.BarLeading
 import com.coparently.app.presentation.common.ScreenBar
+import kotlinx.cinterop.ExperimentalForeignApi
 import platform.Foundation.NSSelectorFromString
 import platform.UIKit.NSLayoutConstraint
 import platform.UIKit.UIAction
@@ -80,6 +82,8 @@ internal class NativeBars(
         chip = null
     }
 
+    // `NSSelectorFromString` is Kotlin/Native's C interop.
+    @OptIn(ExperimentalForeignApi::class)
     private fun draw(bar: ScreenBar) {
         val item = viewController.navigationItem
         item.title = bar.title
@@ -157,6 +161,8 @@ internal class NativeBars(
      * screen's view controller, drawing the latest bar's trailing content. Its size follows what
      * the chip draws, which is nothing with one family.
      */
+    // A transparent Compose host (`opaque`) is still experimental in Compose Multiplatform 1.9.3.
+    @OptIn(ExperimentalComposeUiApi::class)
     private fun chipItem(): UIBarButtonItem {
         val host = chip ?: ComposeUIViewController(configure = { opaque = false }) {
             chipFrame {

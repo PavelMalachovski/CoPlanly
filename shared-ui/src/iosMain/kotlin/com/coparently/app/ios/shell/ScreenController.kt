@@ -12,6 +12,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -72,6 +73,8 @@ internal class ScreenController(
     )
 
     /** The view controller a navigation controller shows. */
+    // Turning Compose's own back gesture off is still experimental in Compose Multiplatform 1.9.3.
+    @OptIn(ExperimentalComposeUiApi::class)
     val viewController: UIViewController = ComposeUIViewController(configure = { enableBackGesture = false }) {
         Shared {
             CompositionLocalProvider(

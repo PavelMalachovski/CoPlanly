@@ -20,6 +20,7 @@ import com.coparently.app.presentation.navigation.startDestinationFor
 import com.coparently.app.presentation.platform.AppBuildValues
 import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
+import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -154,6 +155,8 @@ internal class NativeShell(
         showChild(created.controller)
     }
 
+    // `bounds` is a C struct, read through Kotlin/Native's C interop.
+    @OptIn(ExperimentalForeignApi::class)
     private fun showChild(child: UIViewController) {
         shown?.let { old ->
             old.willMoveToParentViewController(null)
