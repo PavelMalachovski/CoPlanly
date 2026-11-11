@@ -5,10 +5,14 @@ import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.session.AccountSwitchFixture.Companion.ORDINARY_KEY
 import com.coparently.app.data.session.AccountSwitchFixture.Companion.SCHOOL_KEY
 import com.coparently.app.data.session.AccountSwitchFixture.Companion.SLOT_MARKER_KEY
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -54,6 +58,31 @@ class IosAccountSwitchTest {
         assertEquals(1, phone.clocks.cancelledAll)
         phone.traceFiles.forEach { assertFalse(phone.exists(it), "$it is still there") }
         assertEquals("next", phone.lastSignedInUid.get())
+    }
+
+    /**
+     * Room KMP has no `clearAllTables`, so the wipe deletes table by table on Room's writer
+     * connection; a screen, the chat mirror or the sync observing a table must still hear of it
+     * through Room's invalidation tracker, or it would go on showing the previous account's rows.
+     */
+    @Test
+    fun `an open flow of the rows sees them go when a different account signs in`() = runBlocking {
+        val phone = fixture(lastUid = "previous")
+        phone.fillWithThePreviousAccount()
+        signedIn.uid = "next"
+        val seen = Channel<List<String>>(Channel.UNLIMITED)
+        val collector = launch(Dispatchers.Default) {
+            phone.database.userDao().getAllUsers().collect { rows -> seen.send(rows.map { it.id }) }
+        }
+        try {
+            withTimeout(FLOW_TIMEOUT_MILLIS) {
+                assertEquals(listOf("previous"), seen.receive())
+                phone.accountSwitch.ensureAccountConsistency()
+                while (seen.receive().isNotEmpty()) Unit
+            }
+        } finally {
+            collector.cancel()
+        }
     }
 
     @Test
@@ -111,6 +140,11 @@ class IosAccountSwitchTest {
         assertEquals(0, phone.reminders.cancelledAll)
         assertEquals(0, phone.clocks.cancelledAll)
         phone.traceFiles.forEach { assertTrue(phone.exists(it), "$it was removed") }
+    }
+
+    private companion object {
+        /** How long an open flow may take to hear of the wipe. */
+        const val FLOW_TIMEOUT_MILLIS = 10_000L
     }
 
     /** A [SignedInUser] whose uid the test sets. */
