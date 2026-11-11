@@ -2428,8 +2428,6 @@ jobs:
       # runs even when the tests failed, so its findings are in the same log.
       - name: iPhone tests on the emulators
         id: emulator-tests
-        # Whatever the shell's UI test found: the two are independent, and both must pass.
-        if: success() || steps.shell-test.outcome == 'failure'
         env:
           FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
           COPLANLY_EMULATOR_HOST: 127.0.0.1
