@@ -211,13 +211,20 @@ object AppDestinationCatalog {
 }
 
 /**
- * Switches to one of the four tabs from inside a destination: Home's chat tile, a tapped push. On
- * Android `NavGraph` provides [navigateToTab] on its controller, the bottom bar's own back-stack
- * policy; the iPhone's shell selects its tab.
+ * Switches to one of the four tabs from inside a destination: Home's chat tile, a tapped push,
+ * settle-up's thread. On Android `NavGraph` provides [navigateToTab] on its controller, the bottom
+ * bar's own back-stack policy; the iPhone's shell selects its tab.
  */
-fun interface TabSwitcher {
-    /** Shows [tab], as tapping it in the bar would. */
+interface TabSwitcher {
+    /** Shows [tab], as tapping it in the bar would: the tab as it was left. */
     fun select(tab: BottomNavDestination)
+
+    /**
+     * Shows [tab] at its first screen, not as it was left: settle-up shows the thread its card was
+     * posted in. On Android [navigateToTabFresh], the bar's policy with `restoreState = false`; on
+     * the iPhone the tab, popped to its first screen.
+     */
+    fun selectFresh(tab: BottomNavDestination)
 }
 
 /**
@@ -263,12 +270,15 @@ private fun destination(
     content = content
 )
 
-/** The destinations [rememberAppDestinations] remembers, in [AppDestinationCatalog]'s order. */
+/**
+ * The destinations [rememberAppDestinations] remembers, in [AppDestinationCatalog]'s order. Internal
+ * for the iPhone's shell, which builds each stack's list outside composition (MON-24 phase 3).
+ */
 // One flat list of route declarations, not branching logic — splitting it would only relocate the
 // length into a second function without reducing what a reader has to scan to find a given route.
 // The NavHost's body it was moved from carried the same suppression for the same reason.
 @Suppress("LongMethod")
-private fun appDestinations(
+internal fun appDestinations(
     navController: NavHostController,
     syncViewModel: SyncViewModel,
     authStateViewModel: AuthStateViewModel
@@ -1174,6 +1184,7 @@ private fun appDestinations(
     // (design item 19's one exception): from 840 dp it lays the month out in two panes,
     // which a 640 dp column would squeeze.
     destination(route = Screen.Expenses.route) {
+        val tabSwitcher = LocalTabSwitcher.current
         com.coparently.app.presentation.expenses.ExpenseScreen(
             onNavigateUp = { navController.popBackStack() },
             onAddExpense = {
@@ -1187,12 +1198,9 @@ private fun appDestinations(
                 // only shows it. Same tab semantics as navigateToTab — a plain
                 // navigate() here pushed the Chat route onto the tab Expenses was
                 // opened from, so the next tab switch saved that mixed stack and a
-                // later visit restored the chat screen on top of it.
-                navController.navigate(Screen.Conversations.createRoute()) {
-                    popUpTo(Screen.Home.route) { saveState = true }
-                    launchSingleTop = true
-                    restoreState = false
-                }
+                // later visit restored the chat screen on top of it. Through the tab
+                // switcher, so the iPhone's shell selects its Chat tab (MON-24 phase 3).
+                tabSwitcher.selectFresh(BottomNavDestination.CHAT)
             }
         )
     },

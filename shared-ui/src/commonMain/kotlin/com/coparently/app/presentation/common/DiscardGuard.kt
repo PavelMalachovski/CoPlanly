@@ -1,6 +1,7 @@
 package com.coparently.app.presentation.common
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -35,6 +36,10 @@ import org.jetbrains.compose.resources.stringResource
  * what it leads to is a question rather than the previous screen, which is why the form does not
  * slide away as a plain Back's does. Releasing asks; letting go early changes nothing.
  *
+ * In a sheet ([LocalSheetGuard], the iPhone's forms) it also tells the sheet whether it holds
+ * edits and hands it the question, so a swipe down over edits asks it too and leaves the sheet open
+ * on "Keep editing". With no sheet, which is every screen on Android, nothing more happens.
+ *
  * @param dirty Whether the form holds edits that leaving would lose.
  * @param onLeave Leaves the form, dropping them.
  * @return What the form's up arrow calls, carrying the gesture's preview for the form to wear.
@@ -54,6 +59,14 @@ fun rememberDiscardGuard(dirty: Boolean, onLeave: () -> Unit): DiscardGuard {
             asking = true
         } finally {
             progress.floatValue = 0f
+        }
+    }
+
+    val sheetGuard = LocalSheetGuard.current
+    if (sheetGuard != null) {
+        DisposableEffect(sheetGuard, dirty) {
+            sheetGuard.report(dirty) { asking = true }
+            onDispose { sheetGuard.report(false) {} }
         }
     }
 

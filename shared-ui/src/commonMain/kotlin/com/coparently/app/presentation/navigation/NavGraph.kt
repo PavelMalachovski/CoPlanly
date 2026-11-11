@@ -90,7 +90,13 @@ fun NavGraph(
     val destinations = rememberAppDestinations(navController, syncViewModel, authStateViewModel)
     // A tab switch from inside a destination, or from a tapped push, takes the bottom bar's own
     // back-stack policy (MON-24 phase 3; the iPhone's shell provides its own switcher).
-    val tabSwitcher = remember(navController) { TabSwitcher { navController.navigateToTab(it) } }
+    val tabSwitcher = remember(navController) {
+        object : TabSwitcher {
+            override fun select(tab: BottomNavDestination) = navController.navigateToTab(tab)
+
+            override fun selectFresh(tab: BottomNavDestination) = navController.navigateToTabFresh(tab)
+        }
+    }
 
     CompositionLocalProvider(LocalTabSwitcher provides tabSwitcher) {
         PairingDeepLinkEffect(
