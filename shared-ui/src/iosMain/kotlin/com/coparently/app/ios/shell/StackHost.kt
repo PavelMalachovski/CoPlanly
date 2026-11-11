@@ -232,7 +232,7 @@ internal class StackHost(
     /** Marks every visible entry's transition complete, as `NavHost` does once its animation settles. */
     private fun completeTransitions() {
         navController.visibleEntries.value
-            .filter { it.destination.navigatorName == composeNavigator.name }
+            .filter { it.destination is ComposeNavigator.Destination }
             .forEach { composeNavigator.onTransitionComplete(it) }
     }
 
