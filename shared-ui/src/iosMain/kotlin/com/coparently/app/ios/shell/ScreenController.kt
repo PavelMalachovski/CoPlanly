@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.LocalOwnersProvider
@@ -66,8 +67,10 @@ internal class ScreenController(
         // The chip's ViewModel is the screen's, as on Android, where the chip is in the screen. The
         // theme alone, without the app's background surface, so the bar shows around the chip.
         chipFrame = { content ->
-            CompositionLocalProvider(LocalViewModelStoreOwner provides entry) {
-                ProvideIosShell(shell.buildValues) { CoPlanlyTheme(content = content) }
+            WhileAlive(entry) {
+                CompositionLocalProvider(LocalViewModelStoreOwner provides entry) {
+                    ProvideIosShell(shell.buildValues) { CoPlanlyTheme(content = content) }
+                }
             }
         }
     )
@@ -82,7 +85,9 @@ internal class ScreenController(
                 LocalSheetGuard provides sheetGuard
             ) {
                 ScreenFrame(shell) {
-                    entry.LocalOwnersProvider(rememberSaveableStateHolder()) { destination.content(entry) }
+                    WhileAlive(entry) {
+                        entry.LocalOwnersProvider(rememberSaveableStateHolder()) { destination.content(entry) }
+                    }
                 }
             }
         }
@@ -131,5 +136,18 @@ private fun ScreenFrame(shell: ShellEnvironment, content: @Composable () -> Unit
         ) {
             content()
         }
+    }
+}
+
+/**
+ * Draws [content] while [entry] is not destroyed. A screen popped or a stack ended destroys its
+ * entry, whose ViewModels may then no more be read, while UIKit can still be drawing its view for a
+ * moment; `NavHost` never composes a destroyed entry, and neither does the shell.
+ */
+@Composable
+private fun WhileAlive(entry: NavBackStackEntry, content: @Composable () -> Unit) {
+    val state by entry.lifecycle.currentStateFlow.collectAsState()
+    if (state != Lifecycle.State.DESTROYED && entry.lifecycle.currentState != Lifecycle.State.DESTROYED) {
+        content()
     }
 }

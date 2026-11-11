@@ -125,6 +125,18 @@ shell_test() {
     -resultBundlePath "$out/shell.xcresult" || status=$?
   mkdir -p "$out/shots"
   xcrun xcresulttool export attachments --path "$out/shell.xcresult" --output-path "$out/shots" || true
+  # A crash the walk met, as the test recorded it, and the app's own lines from the system log: what
+  # stopped it, for a reader of the log alone.
+  local crash
+  for crash in "$out"/shots/*.ips; do
+    [ -f "$crash" ] || continue
+    echo "::group::crash log $(basename "$crash")"; head -c 60000 "$crash"; echo; echo "::endgroup::"
+  done
+  echo "::group::the app's errors in the system log"
+  xcrun simctl spawn "$udid" log show --last 30m --style compact \
+    --predicate 'process == "CoPlanly" AND (messageType == error OR messageType == fault OR eventMessage CONTAINS[c] "exception")' \
+    2>/dev/null | tail -n 200 || true
+  echo "::endgroup::"
   # A small copy of each screenshot in the log, named as the test named it, for a reader who cannot
   # download the artifact.
   local file name

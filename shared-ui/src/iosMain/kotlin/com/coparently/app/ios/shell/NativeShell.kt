@@ -132,9 +132,9 @@ internal class NativeShell(
 
     private fun showFlow(route: String) {
         if (flow?.startRoute == route) return
-        tabs?.dispose()
+        val oldTabs = tabs
+        val oldFlow = flow
         tabs = null
-        flow?.dispose()
         val host = StackHost(this, route) {
             // Onboarding finished at Home: the tabs, now rather than after the next decision.
             scope.launch {
@@ -144,15 +144,29 @@ internal class NativeShell(
         }
         flow = host
         showChild(host.navigation)
+        disposeLater(oldTabs, oldFlow)
     }
 
     private fun showTabs() {
         if (tabs != null) return
-        flow?.dispose()
+        val oldFlow = flow
         flow = null
         val created = TabShell(this, chat)
         tabs = created
         showChild(created.controller)
+        disposeLater(null, oldFlow)
+    }
+
+    /**
+     * Ends the stacks the window no longer shows, on the next turn of the main loop: once UIKit has
+     * taken their views out of the window, so no screen of theirs composes over a destroyed entry.
+     */
+    private fun disposeLater(oldTabs: TabShell?, oldFlow: StackHost?) {
+        if (oldTabs == null && oldFlow == null) return
+        scope.launch {
+            oldTabs?.dispose()
+            oldFlow?.dispose()
+        }
     }
 
     // `bounds` is a C struct, read through Kotlin/Native's C interop.
