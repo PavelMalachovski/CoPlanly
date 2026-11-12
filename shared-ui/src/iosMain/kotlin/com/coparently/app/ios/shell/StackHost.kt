@@ -327,6 +327,9 @@ internal class StackHost(
             willShowViewController: UIViewController,
             animated: Boolean
         ) {
+            // The edge swipe's delegate, once the navigation controller has made its gesture.
+            edgeSwipe.attach()
+            sheetEdgeSwipe?.attach()
             // The bar shows for a screen that describes its bar, and hides over one that draws its own.
             val nativeBar = screens.values.firstOrNull { it.viewController === willShowViewController }?.nativeBar
             if (nativeBar != null) navigationController.setNavigationBarHidden(!nativeBar, animated)

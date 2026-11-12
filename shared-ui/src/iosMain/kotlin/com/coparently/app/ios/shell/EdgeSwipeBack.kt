@@ -18,13 +18,18 @@ import platform.darwin.NSObject
  * back button (a back that is disabled).
  *
  * UIKit holds a gesture's delegate weakly, so the stack host keeps this object as long as
- * [navigation].
+ * [navigation], and attaches it ([attach]) once the gesture exists.
  */
 internal class EdgeSwipeBack(private val navigation: UINavigationController) :
     NSObject(), UIGestureRecognizerDelegateProtocol {
 
-    init {
-        navigation.interactivePopGestureRecognizer?.delegate = this
+    /**
+     * Becomes the gesture's delegate. The navigation controller makes its gesture with its view, so
+     * this is called again whenever it shows a screen ([StackHost]), until the gesture exists.
+     */
+    fun attach() {
+        val gesture = navigation.interactivePopGestureRecognizer ?: return
+        if (gesture.delegate !== this) gesture.delegate = this
     }
 
     /** Lets go of the gesture once the stack has ended. */

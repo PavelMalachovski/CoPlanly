@@ -180,10 +180,11 @@ final class ShellUITests: XCTestCase {
         // Data sources stays, with its own bar alone: the system bar is not left in Settings' state.
         try require(!app.navigationBars["Settings"].exists, "A cancelled back swipe popped Data sources")
         try require(app.navigationBars.count == 0, "Two bars after a cancelled swipe: the system bar over a Compose bar")
-        try requireCancelledTransition(after: before)
+        let counted = Result { try requireCancelledTransition(after: before) }
         // A swipe that goes back brings Settings with its native bar.
         swipeBack(to: 0.85)
         try require(app.navigationBars["Settings"].waitForExistence(timeout: timeout), "The back swipe from Data sources did not show Settings' bar")
+        try counted.get()
     }
 
     private func tabTapPopsTwo() throws {
