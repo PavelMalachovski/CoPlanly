@@ -1,5 +1,6 @@
 package com.coparently.app.presentation.navigation
 
+import android.os.SystemClock
 import androidx.annotation.StringRes
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -13,6 +14,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
+import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -130,13 +132,33 @@ class MainNavigationSmokeTest {
         composeTestRule.pumpUntil("the Calendar again after Back from Home") {
             exists(bottomBar) && exists(viewModeTitle)
         }
-        // Asserted on the main thread right after the Back, not by waiting for the activity's
-        // destruction: that is the OS lifecycle's, which the paused Compose clock cannot pump.
-        // With nothing left on the back stack the dispatcher's fallback calls finish() at once.
+        composeTestRule.settle()
+        // The app's half: on the root nothing in the app may take the Back — no screen's
+        // BackHandler (Day view's, the swap selection's) and not the NavHost's, which is enabled
+        // only while the back stack holds more than the root.
         scenario.onActivity {
+            assertFalse(
+                "nothing in the app intercepts Back on the Calendar, the root",
+                it.onBackPressedDispatcher.hasEnabledCallbacks()
+            )
             it.onBackPressedDispatcher.onBackPressed()
-            assertTrue("Back on the Calendar, the root, leaves the app", it.isFinishing)
         }
+        // The platform's half, which is not synchronous: MainActivity is its task's root
+        // (singleTask), so Activity.onBackPressed asks the system (onBackPressedOnTaskRoot), which
+        // posts finish() back on API 29-30 and moves a launcher task to the back from API 31.
+        // Either way the activity leaves the foreground; wait for that in real time — the OS
+        // lifecycle runs on the main looper, not on the paused Compose clock.
+        assertTrue("Back on the Calendar, the root, leaves the app", awaitActivityLeftForeground())
+    }
+
+    /** Polls, in real time, until [scenario]'s activity is stopped or destroyed. */
+    private fun awaitActivityLeftForeground(): Boolean {
+        val deadline = SystemClock.uptimeMillis() + LEAVE_TIMEOUT_MILLIS
+        while (SystemClock.uptimeMillis() < deadline) {
+            if (!scenario.state.isAtLeast(Lifecycle.State.STARTED)) return true
+            SystemClock.sleep(LEAVE_POLL_MILLIS)
+        }
+        return !scenario.state.isAtLeast(Lifecycle.State.STARTED)
     }
 
     @Test
@@ -215,4 +237,9 @@ class MainNavigationSmokeTest {
     /** A tab's label (`Res`, since the bar moved to `:shared-ui`), read as the app's `R.string` of its key. */
     private fun string(resource: StringResource): String =
         string(context.resources.getIdentifier(resource.key, "string", context.packageName))
+
+    private companion object {
+        const val LEAVE_TIMEOUT_MILLIS = 10_000L
+        const val LEAVE_POLL_MILLIS = 50L
+    }
 }
