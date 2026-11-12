@@ -229,8 +229,7 @@ class SchoolAccounts(
      */
     suspend fun reconnectEdupage(connectionId: String, password: String): SchoolConnection? {
         val uid = userRepository.getCurrentUserId() ?: return null
-        val stored = store.get(uid, connectionId) ?: return null
-        if (stored.edupage == null) return null
+        val stored = store.get(uid, connectionId)?.takeIf { it.edupage != null } ?: return null
         val host = stored.connection.baseUrl.removePrefix("https://")
         val session = edupageClient.signIn(host, stored.connection.username, password)
         return store.update(uid, connectionId) { current ->

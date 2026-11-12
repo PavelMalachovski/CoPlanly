@@ -34,6 +34,7 @@ import com.coparently.app.resources.school_edupage_address_invalid
 import com.coparently.app.resources.school_edupage_captcha
 import com.coparently.app.resources.school_edupage_second_factor
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -203,7 +204,7 @@ class ConnectSchoolViewModel(
 
     init {
         if (reconnectId != null) {
-            startReconnect(reconnectId)
+            _state.startReconnect(viewModelScope, accounts, reconnectId)
         } else if (!buildValues.edupageImport) {
             loadTowns()
         }
@@ -322,8 +323,11 @@ class ConnectSchoolViewModel(
         viewModelScope.launch {
             when {
                 reconnectId != null && current.system == SchoolSystem.EDUPAGE ->
-                    finishEdupageReconnect(reconnectId, password)
-                reconnectId != null -> finishReconnect(reconnectId, password)
+                    _state.finishReconnect(importer, reconnectId) {
+                        accounts.reconnectEdupage(reconnectId, password) != null
+                    }
+                reconnectId != null ->
+                    _state.finishReconnect(importer, reconnectId) { accounts.reconnect(reconnectId, password) != null }
                 current.system == SchoolSystem.EDUPAGE ->
                     signInEdupage(current.edupageAddress, current.username, password)
                 baseUrl != null -> signInNew(baseUrl, current.username, password)
@@ -335,7 +339,7 @@ class ConnectSchoolViewModel(
     /** The parent picked the family [familyId]; its children are offered. */
     fun chooseFamily(familyId: String) {
         _state.update { it.copy(familyId = familyId, childId = null) }
-        viewModelScope.launch { loadChildren(familyId) }
+        viewModelScope.launch { _state.loadChildren(childInfoRepository, familyId) }
     }
 
     /** The parent picked the child [childId]. */
@@ -356,7 +360,7 @@ class ConnectSchoolViewModel(
         _state.update { it.copy(isBusy = true, error = null) }
         viewModelScope.launch {
             val saved = if (current.system == SchoolSystem.EDUPAGE) {
-                saveEdupage(current, childId)
+                saveEdupage(accounts, pendingEdupage, current, childId)
             } else {
                 pending?.let { accounts.connect(it, current.schoolName, childId, current.familyId) }
             }
@@ -367,12 +371,6 @@ class ConnectSchoolViewModel(
         }
     }
 
-    private suspend fun saveEdupage(current: ConnectSchoolUiState, childId: String): SchoolConnection? {
-        val signIn = pendingEdupage ?: return null
-        val pupil = signIn.account.children.firstOrNull { it.studentId == current.edupageChild } ?: return null
-        return accounts.connectEdupage(signIn, pupil, childId, current.familyId)
-    }
-
     /**
      * One step back, or false when there is none and the screen should close. A signed-in step
      * goes back to the credentials, and the sign-in is dropped with it.
@@ -380,74 +378,11 @@ class ConnectSchoolViewModel(
     fun back(): Boolean {
         val current = _state.value
         if (current.isBusy) return true
-        val previous = previousStep(current) ?: return false
+        val previous = previousStep(current, buildValues.edupageImport) ?: return false
         if (current.step == ConnectStep.CHOOSE) pending = null
         if (current.step == ConnectStep.EDUPAGE_CHILD) pendingEdupage = null
         _state.update { it.copy(step = previous, error = null) }
         return true
-    }
-
-    private fun previousStep(current: ConnectSchoolUiState): ConnectStep? = when (current.step) {
-        ConnectStep.SYSTEM -> null
-        ConnectStep.TOWN -> if (buildValues.edupageImport) ConnectStep.SYSTEM else null
-        ConnectStep.SCHOOL, ConnectStep.MANUAL -> ConnectStep.TOWN
-        ConnectStep.CREDENTIALS -> when {
-            current.reconnecting -> null
-            current.schoolName.isEmpty() -> ConnectStep.MANUAL
-            else -> ConnectStep.SCHOOL
-        }
-        ConnectStep.EDUPAGE_CREDENTIALS -> if (current.reconnecting) null else ConnectStep.SYSTEM
-        ConnectStep.CHOOSE -> ConnectStep.CREDENTIALS
-        ConnectStep.EDUPAGE_CHILD -> ConnectStep.EDUPAGE_CREDENTIALS
-        ConnectStep.CONFIRM ->
-            if (current.system == SchoolSystem.EDUPAGE) ConnectStep.EDUPAGE_CHILD else ConnectStep.CHOOSE
-    }
-
-    private fun startReconnect(connectionId: String) {
-        _state.update { it.copy(reconnecting = true, step = ConnectStep.CREDENTIALS, isLoading = true) }
-        viewModelScope.launch {
-            val connection = accounts.connection(connectionId)
-            _state.update {
-                if (connection == null) {
-                    it.copy(isLoading = false, done = true)
-                } else {
-                    it.copy(
-                        isLoading = false,
-                        system = connection.system,
-                        step = if (connection.system == SchoolSystem.EDUPAGE) {
-                            ConnectStep.EDUPAGE_CREDENTIALS
-                        } else {
-                            ConnectStep.CREDENTIALS
-                        },
-                        schoolName = connection.schoolName,
-                        baseUrl = connection.baseUrl,
-                        username = connection.username
-                    )
-                }
-            }
-        }
-    }
-
-    private suspend fun finishReconnect(connectionId: String, password: String) {
-        var reconnected = false
-        val failure = failureOf { reconnected = accounts.reconnect(connectionId, password) != null }
-        if (failure != null) {
-            _state.update { it.copy(isBusy = false, error = failure) }
-            return
-        }
-        if (reconnected) importer.sync(connectionId)
-        _state.update { it.copy(isBusy = false, done = true) }
-    }
-
-    private suspend fun finishEdupageReconnect(connectionId: String, password: String) {
-        var reconnected = false
-        val failure = failureOf { reconnected = accounts.reconnectEdupage(connectionId, password) != null }
-        if (failure != null) {
-            _state.update { it.copy(isBusy = false, error = failure) }
-            return
-        }
-        if (reconnected) importer.sync(connectionId)
-        _state.update { it.copy(isBusy = false, done = true) }
     }
 
     private suspend fun signInEdupage(address: String, username: String, password: String) {
@@ -476,7 +411,7 @@ class ConnectSchoolViewModel(
                 childId = null
             )
         }
-        if (families.size <= 1) loadChildren(familyId)
+        if (families.size <= 1) _state.loadChildren(childInfoRepository, familyId)
     }
 
     private suspend fun signInNew(baseUrl: String, username: String, password: String) {
@@ -506,29 +441,105 @@ class ConnectSchoolViewModel(
                 childId = null
             )
         }
-        if (families.size <= 1) loadChildren(familyId)
-    }
-
-    /**
-     * The children of [familyId] — records stamped with it, and records that belong to no family
-     * yet (made before pairing). With one child, that child is chosen; with several, none is.
-     */
-    private suspend fun loadChildren(familyId: String?) {
-        val children = childInfoRepository.getAllChildInfoInEveryFamily().first()
-            .filter { it.belongsTo(familyId) }
-            .map { ChildChoice(it.id, it.childName) }
-        _state.update { current ->
-            if (current.familyId != familyId) {
-                current
-            } else {
-                current.copy(children = children, childId = children.singleOrNull()?.id)
-            }
-        }
+        if (families.size <= 1) _state.loadChildren(childInfoRepository, familyId)
     }
 
     companion object {
         /** The navigation argument naming a stored connection to sign in again. */
         const val ARG_CONNECTION_ID = "connectionId"
+    }
+}
+
+private suspend fun saveEdupage(
+    accounts: SchoolAccounts,
+    signIn: EdupageSignIn?,
+    current: ConnectSchoolUiState,
+    childId: String
+): SchoolConnection? {
+    val pupil = signIn?.account?.children?.firstOrNull { it.studentId == current.edupageChild } ?: return null
+    return accounts.connectEdupage(signIn, pupil, childId, current.familyId)
+}
+
+/** The step before [current], or null when there is none and the screen should close. */
+private fun previousStep(current: ConnectSchoolUiState, edupageImport: Boolean): ConnectStep? = when (current.step) {
+    ConnectStep.SYSTEM -> null
+    ConnectStep.TOWN -> ConnectStep.SYSTEM.takeIf { edupageImport }
+    ConnectStep.SCHOOL, ConnectStep.MANUAL -> ConnectStep.TOWN
+    ConnectStep.CREDENTIALS -> credentialsPrevious(current)
+    ConnectStep.EDUPAGE_CREDENTIALS -> ConnectStep.SYSTEM.takeUnless { current.reconnecting }
+    ConnectStep.CHOOSE -> ConnectStep.CREDENTIALS
+    ConnectStep.EDUPAGE_CHILD -> ConnectStep.EDUPAGE_CREDENTIALS
+    ConnectStep.CONFIRM ->
+        if (current.system == SchoolSystem.EDUPAGE) ConnectStep.EDUPAGE_CHILD else ConnectStep.CHOOSE
+}
+
+private fun credentialsPrevious(current: ConnectSchoolUiState): ConnectStep? = when {
+    current.reconnecting -> null
+    current.schoolName.isEmpty() -> ConnectStep.MANUAL
+    else -> ConnectStep.SCHOOL
+}
+
+private fun MutableStateFlow<ConnectSchoolUiState>.startReconnect(
+    scope: CoroutineScope,
+    accounts: SchoolAccounts,
+    connectionId: String
+) {
+    update { it.copy(reconnecting = true, step = ConnectStep.CREDENTIALS, isLoading = true) }
+    scope.launch {
+        val connection = accounts.connection(connectionId)
+        update {
+            if (connection == null) {
+                it.copy(isLoading = false, done = true)
+            } else {
+                it.copy(
+                    isLoading = false,
+                    system = connection.system,
+                    step = if (connection.system == SchoolSystem.EDUPAGE) {
+                        ConnectStep.EDUPAGE_CREDENTIALS
+                    } else {
+                        ConnectStep.CREDENTIALS
+                    },
+                    schoolName = connection.schoolName,
+                    baseUrl = connection.baseUrl,
+                    username = connection.username
+                )
+            }
+        }
+    }
+}
+
+private suspend fun MutableStateFlow<ConnectSchoolUiState>.finishReconnect(
+    importer: SchoolImporter,
+    connectionId: String,
+    reconnect: suspend () -> Boolean
+) {
+    var reconnected = false
+    val failure = failureOf { reconnected = reconnect() }
+    if (failure != null) {
+        update { it.copy(isBusy = false, error = failure) }
+        return
+    }
+    if (reconnected) importer.sync(connectionId)
+    update { it.copy(isBusy = false, done = true) }
+}
+
+/**
+ * The children of [familyId] — records stamped with it, and records that belong to no family
+ * yet (made before pairing). With one child, that child is chosen; with several, none is.
+ */
+private suspend fun MutableStateFlow<ConnectSchoolUiState>.loadChildren(
+    childInfoRepository: ChildInfoRepository,
+    familyId: String?
+) {
+    val children = childInfoRepository.getAllChildInfoInEveryFamily().first()
+        .filter { it.belongsTo(familyId) }
+        .map { ChildChoice(it.id, it.childName) }
+    update { current ->
+        if (current.familyId != familyId) {
+            current
+        } else {
+            current.copy(children = children, childId = children.singleOrNull()?.id)
+        }
     }
 }
 
