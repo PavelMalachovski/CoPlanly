@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.dp
  * Generous corner radii give the app a soft, modern look consistent with
  * current Material 3 expressive styling.
  *
- * - extraSmall: chips, small controls, a day cell's selection
+ * - extraSmall: chips, small controls
  * - small: text fields, menu surfaces, list rows, banners
  * - medium: cards, grouped sections
  * - large: dialogs, bottom sheets, hero cards
@@ -37,6 +37,13 @@ object CoPlanlyCorners {
 
     /** A bar or a tag inside a component: a split bar, a contact window, a colour sample. */
     val Tag: Shape = RoundedCornerShape(4.dp)
+
+    /**
+     * A month cell's tile (November 2026 redesign). Between [Tag] and `extraSmall` on purpose: a
+     * ~50 dp tile at 8 dp read as square, and at 12 dp a row of tiles stopped reading as one
+     * custody band.
+     */
+    val Cell: Shape = RoundedCornerShape(10.dp)
 
     /** Ends that are half the height, however tall the text makes it: pills and chips. */
     val Pill: Shape = CircleShape

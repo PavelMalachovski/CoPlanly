@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -56,22 +55,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
-import com.coparently.app.data.family.RecordPlace
-import com.coparently.app.data.family.placementFamilyId
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.holidays.Holiday
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.displayName
 import com.coparently.app.presentation.common.monthPagingTween
-import com.coparently.app.presentation.common.placeOf
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.CoPlanlyColors
+import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyMediumEmphasized
 import com.coparently.app.presentation.theme.dimensions
-import com.coparently.app.presentation.theme.labelSmallEmphasized
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.calendar_contact_window_desc
 import com.coparently.app.resources.calendar_day_click_label
@@ -122,7 +118,7 @@ private const val DAYS_PER_WEEK = 7
  * between months with follow-the-finger physics (kizitonwose HorizontalCalendar).
  *
  * Day cells show custody colouring (slot 1 pink / slot 2 blue), public holidays,
- * parent-coloured event dots and — along the bottom edge — a neutral school-vacation line.
+ * event pills marked in their parent's colour and — along the bottom edge — a neutral school-vacation line.
  *
  * @param parentNames Resolves a slot to that parent's name, for the cells' accessibility
  *   descriptions — the grid says the colour out loud for anyone not reading it.
@@ -320,6 +316,12 @@ fun MonthView(
     }
 }
 
+/**
+ * The gap between two month tiles (November 2026 redesign). The custody band still runs edge to
+ * edge as a row of tiles (design item 10): a gap this narrow keeps the pattern one run.
+ */
+private val CELL_GAP = 3.dp
+
 /** Thickness of the school-vacation line along a month cell's bottom edge (MON-13). */
 private val VACATION_LINE_HEIGHT = 2.dp
 
@@ -396,7 +398,7 @@ private fun WeekdayHeader(firstDayOfWeek: DayOfWeek) {
 }
 
 /**
- * Individual day cell: day number, custody/holiday backgrounds and event dots.
+ * Individual day cell: day number, custody/holiday backgrounds and event pills, on a rounded tile.
  */
 // A day cell renders many orthogonal visual states (today/selected/custody/
 // holiday/vacation/events) — the branching is inherent to the design.
@@ -678,14 +680,15 @@ private fun DayCell(
                     )
                 }
             }
-            .padding(dims.paddingSmall / 8)
+            // Half of the 3 dp gap between tiles on each side (an off-grid literal: the board's gap).
+            .padding(CELL_GAP / 2)
             .background(
                 color = baseColor,
-                shape = MaterialTheme.shapes.extraSmall
+                shape = CoPlanlyCorners.Cell
             )
             .background(
                 color = overlayColor,
-                shape = MaterialTheme.shapes.extraSmall
+                shape = CoPlanlyCorners.Cell
             )
             // A handover day is split on a diagonal: the parent who had the child yesterday in
             // the top-left triangle, today's parent in the bottom-right, reading the way time
@@ -701,7 +704,7 @@ private fun DayCell(
             // two translucent parent hues stacked would read as a muddy third colour — and the
             // second lays yesterday's parent over it at the same custody alpha. The weekend base
             // still shows through both halves, so this file's invariant survives.
-            .clip(MaterialTheme.shapes.extraSmall)
+            .clip(CoPlanlyCorners.Cell)
             .drawBehind {
                 handoverColor?.let { color ->
                     val triangle = Path().apply {
@@ -819,57 +822,10 @@ private fun DayCell(
                 )
             }
 
-            // Parent-coloured dots, one per event up to MAX_EVENT_DOTS, then a "+" marker.
-            //
-            // These replace a single full-width event chip plus a "+N" counter. The chip's
-            // label rendered at roughly 9sp inside a 48dp cell — below the legibility floor —
-            // and it showed only the *first* event, so a day with three things on it looked
-            // much like a day with one. Dots make the count the signal and hand the titles to
-            // the agenda card under the grid, where there is room to read them.
-            if (events.isNotEmpty()) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(3.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    events.take(MAX_EVENT_DOTS).forEach { event ->
-                        Box(
-                            modifier = Modifier
-                                // A ring of the cell's own base around the dot. Since the custody
-                                // wash got brighter (October 2026) a dot in the day parent's hue
-                                // sinks into it — 2.5:1 at worst — while against the base it keeps
-                                // the 3:1 `ParentColorsTest` holds every fill to.
-                                .size(EVENT_DOT_SIZE + EVENT_DOT_HALO * 2)
-                                .background(color = baseColor, shape = CircleShape)
-                                .padding(EVENT_DOT_HALO)
-                                .background(
-                                    color = eventDotColor(
-                                        // An earlier family's event is drawn neutral: its slot
-                                        // colour would now name the wrong person.
-                                        parentOwner = if (
-                                            placeOf(event.placementFamilyId, event.createdByFirebaseUid) ==
-                                            RecordPlace.EARLIER_FAMILY
-                                        ) {
-                                            ""
-                                        } else {
-                                            event.parentOwner
-                                        },
-                                        isCurrentMonth = isCurrentMonth,
-                                        friendParticipates =
-                                        !event.friendParticipates.isNullOrBlank()
-                                    ),
-                                    shape = CircleShape
-                                )
-                        )
-                    }
-                    if (events.size > MAX_EVENT_DOTS) {
-                        Text(
-                            text = "+",
-                            style = MaterialTheme.typography.labelSmallEmphasized,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
+            // One event pill and "+n" for the rest (November 2026 redesign). They replaced the
+            // dots, which made the count the signal and left the titles to Day view; a pill names
+            // the day's first event where the parent is already looking.
+            DayCellPills(events = events, isCurrentMonth = isCurrentMonth)
         }
     }
 }
@@ -911,6 +867,6 @@ private fun CalendarState.isSettledOnBoundary(): Boolean {
 private const val MONTH_SETTLE_FLING_THRESHOLD = 300f
 
 /**
- * The pending-swap arrows. Small enough not to compete with the day number or the event dots —
+ * The pending-swap arrows. Small enough not to compete with the day number or the event pills —
  * a swap under discussion is a footnote on the cell, not its headline.
  */

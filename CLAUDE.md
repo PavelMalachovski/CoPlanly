@@ -97,7 +97,7 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
 
    **Corners, spacing, emphasis and buttons come from the theme too** (week 5, D-19/D-20):
    - A corner is `MaterialTheme.shapes` (8/12/16/24/32), `CoPlanlyCorners` (`Mark` 2, `Tag` 4,
-     `Pill`) or `chatBubbleShape`, all in `theme/Shape.kt`. detekt's `ForbiddenImport` refuses
+     `Cell` 10 — a month tile, November 2026 — and `Pill`) or `chatBubbleShape`, all in `theme/Shape.kt`. detekt's `ForbiddenImport` refuses
      `RoundedCornerShape` outside `presentation/theme/` — pick a step, or add one there with its
      reason.
    - A padding, a `spacedBy` gap or a spacer on the 4 dp grid names a `theme/Spacing.kt` step
@@ -148,7 +148,11 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    changed the grid's height between months) nor the old teal strip: since MON-13 it is a thin
    neutral line along each vacation day's bottom edge (`DayCellFill.schoolVacation`, theme
    `outline`, no height). Month
-   cells carry event **dots**, tapping a day selects it **and opens Day view** (an owner
+   cells are **rounded tiles** (`CoPlanlyCorners.Cell`, a 3 dp gap) that **carry event pills**
+   (November 2026 redesign, `MonthCellPills.kt`): one pill — the `surface`, a 3 dp mark in the
+   event's colour, the title on one line, ellipsised — and "+n" for the rest (`pillsFor`, one
+   whatever the cell's height), the cell's description still naming the events; they replaced the
+   dots. Tapping a day selects it **and opens Day view** (an owner
    decision from the Aug 2026 walkthrough — a select-only tap left no route to creating an
    event on a chosen day; an empty hour slot in Day view is that route), and
    the grid fills its screen. **Back from a Day view opened that way returns to Month** (D-11);
@@ -205,7 +209,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     holiday tint, the proposal preview, the swap arrows, the long press. That is the line — a
     pattern crosses the month boundary, a thing you would answer does not. The school-vacation
     line (MON-13) is a pattern too and crosses into borrowed days at the same scale; it is a line,
-    never a fill or a hue.
+    never a fill or a hue. **Since the November 2026 redesign a cell is a tile** with a 3 dp gap;
+    the band still runs edge to edge as a row of tiles, and the handover diagonal stays inside its
+    tile. An event pill on a borrowed day is dimmed like the dot it replaced.
 
 11. **Motion has one vocabulary** (September 2026 audit, `docs/AUDIT-2026-09.md` §4).
     `presentation/theme/Motion.kt` holds the only durations — `SHORT_MS` 150 (fades, crossfades),
@@ -671,7 +677,8 @@ When touching the UI, keep these invariants:
    phone.
 3. **Calendar**: month view is a classic grid from the 1st with horizontal month paging
    (kizitonwose `HorizontalCalendar`); day/week use `HorizontalPager` with fling physics.
-   Event chips are single-line (`softWrap = false` + ellipsis). School vacation is a thin
+   Event chips are single-line (`softWrap = false` + ellipsis), and so is a month cell's event
+   pill (one pill and "+n", design refresh item 5). School vacation is a thin
    neutral line along the cell's bottom edge (theme `outline`, 2 dp, no height), never a
    full-cell fill (it used to drown custody colors) and never a hue (teal is the calendar friend).
 4. **Custody coloring** must go through the unified lookup in `CalendarScreen`
@@ -703,8 +710,9 @@ When touching the UI, keep these invariants:
    `ParentColors.custodyTintAlpha`, 20 % light and 30 % dark (it was 14 % in both, which read as
    maroon and brown on the dark surface), with the proposal wash at three-fifths of it. The dark
    theme washes `ParentColor.darkWash`, the dark fill capped at luminance 0.30, so a yellow parent
-   does not wash a day number out; a month cell's event dot sits in a ring of the day's base so it
-   keeps 3:1 on its own parent's wash. `ParentColorsTest` holds what sits on the wash to AA — don't
+   does not wash a day number out; a month cell's event pill is the opaque `surface`, so its
+   title and its 3 dp mark are held against the surface (`ParentColorsTest`), and the mini month's
+   event dot sits in a ring of the day's base so it keeps 3:1 on its own parent's wash. `ParentColorsTest` holds what sits on the wash to AA — don't
    raise an alpha without it.
 7. **Notification permission** is requested contextually via
    `rememberNotificationPermissionRequester()` (push toggle, reminder selection, and once in
