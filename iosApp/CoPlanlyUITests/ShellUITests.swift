@@ -221,6 +221,7 @@ final class ShellUITests: XCTestCase {
         for _ in 0..<12 where row.frame.maxY > screenBottom {
             app.swipeUp()
         }
+        sleep(1)
         press(row)
         // The confirmation's button reads as the row does; it is the last one drawn.
         let named = app.buttons.matching(NSPredicate(format: "label == %@", "Sign out of app"))
@@ -255,7 +256,11 @@ final class ShellUITests: XCTestCase {
         for _ in 0..<6 where dataSources.frame.maxY > screenBottom {
             app.swipeUp()
         }
+        // A tap while the list still glides after a swipe only stops it: let it settle, and tap
+        // once more if the first tap was spent that way.
+        sleep(1)
         press(dataSources)
+        if !app.navigationBars["Settings"].waitForNonExistence(timeout: 3) { press(dataSources) }
         sleep(2)
         try require(!app.navigationBars["Settings"].exists, "Data sources did not open over Settings")
         try require(app.navigationBars.count == 0, "Two bars: the system bar over a Compose bar")
