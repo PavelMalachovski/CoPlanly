@@ -100,7 +100,6 @@
     <ID>MagicNumber:EventViewModel.kt$EventViewModel$60</ID>
     <ID>MagicNumber:FirebaseAuthService.kt$FirebaseAuthService$10</ID>
     <ID>MagicNumber:FirebaseAuthService.kt$FirebaseAuthService$100</ID>
-    <ID>MagicNumber:HomeScreen.kt$4</ID>
     <ID>MagicNumber:MonthView.kt$0.8f</ID>
     <ID>MagicNumber:MonthView.kt$6</ID>
     <ID>MagicNumber:MonthView.kt$8</ID>
@@ -122,9 +121,7 @@
     <ID>MagicNumber:ValidationUtils.kt$ValidationUtils$50</ID>
     <ID>MatchingDeclarationName:Color.kt$CoPlanlyColors</ID>
     <ID>MatchingDeclarationName:WindowSize.kt$Dimensions</ID>
-    <ID>MaxLineLength:CalendarScreen.kt$onEventResize</ID>
     <ID>MaxLineLength:DatabaseMigrations.kt$DatabaseMigrations.&lt;no name provided&gt;$"CREATE INDEX IF NOT EXISTS index_events_parentOwner_startDateTime ON events(parentOwner, startDateTime)"</ID>
-    <ID>MaximumLineLength:CalendarScreen.kt$ </ID>
     <ID>MaximumLineLength:DatabaseMigrations.kt$DatabaseMigrations.&lt;no name provided&gt;$ </ID>
     <ID>NoWildcardImports:ActivityEditor.kt$import androidx.compose.foundation.layout.*</ID>
     <ID>NoWildcardImports:ActivityEditor.kt$import androidx.compose.material3.*</ID>
