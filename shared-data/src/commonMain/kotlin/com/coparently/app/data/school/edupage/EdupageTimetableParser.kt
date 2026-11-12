@@ -31,13 +31,8 @@ object EdupageTimetableParser {
      *   holds no timetable.
      */
     fun weeks(json: String, from: LocalDate, to: LocalDate): List<SchoolWeek> {
-        val root = EdupageJson.parseOrNull(json) as? JsonObject
-        val result = root?.obj("r") ?: throw EdupageException.Server(OK_STATUS)
-        val error = result["error"]
-        if (error != null && error !is JsonNull) {
-            throw EdupageException.Server(OK_STATUS)
-        }
-        if ("ttitems" !in result) throw EdupageException.Server(OK_STATUS)
+        val result = (EdupageJson.parseOrNull(json) as? JsonObject)?.obj("r")?.takeIf { readable(it) }
+            ?: throw EdupageException.Server(OK_STATUS)
         val spans = lessonSpans(result.items("ttitems"))
         val days = generateSequence(from) { it.plus(1, DateTimeUnit.DAY) }
             .takeWhile { it <= to }
@@ -46,6 +41,12 @@ object EdupageTimetableParser {
         return days.groupBy { SchoolWeek.mondayOf(it.date) }
             .map { (monday, weekDays) -> SchoolWeek(monday, weekDays) }
             .sortedBy { it.monday }
+    }
+
+    /** An answer with no `r.error` and a `ttitems` key (present, possibly empty) can be read. */
+    private fun readable(result: JsonObject): Boolean {
+        val error = result["error"]
+        return (error == null || error is JsonNull) && "ttitems" in result
     }
 
     private fun lessonSpans(items: List<JsonObject>): Map<LocalDate, Span> {

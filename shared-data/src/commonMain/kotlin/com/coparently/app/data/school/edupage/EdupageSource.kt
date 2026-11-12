@@ -129,12 +129,22 @@ class EdupageSource(
     private suspend fun open(uid: String, connectionId: String, signInFirst: Boolean): Pass =
         lockFor(connectionId).withLock { openLocked(uid, connectionId, signInFirst) }
 
-    private suspend fun openLocked(uid: String, connectionId: String, signInFirst: Boolean): Pass {
-        val stored = store.get(uid, connectionId) ?: throw SchoolSourceFailure.Gone()
-        val secrets = stored.edupage ?: throw SchoolSourceFailure.Gone()
+    /**
+     * The stored connection and its EduPage secrets, or the reason the connection cannot be used: it is
+     * gone, or EduPage refused its password and it waits for a new one.
+     */
+    private fun usable(uid: String, connectionId: String): Pair<StoredSchoolConnection, EdupageSecrets> {
+        val stored = store.get(uid, connectionId)?.takeIf { it.edupage != null }
+            ?: throw SchoolSourceFailure.Gone()
+        val secrets = checkNotNull(stored.edupage)
         if (stored.connection.status == SchoolConnectionStatus.NEEDS_PASSWORD) {
             throw SchoolSourceFailure.NeedsPassword()
         }
+        return stored to secrets
+    }
+
+    private suspend fun openLocked(uid: String, connectionId: String, signInFirst: Boolean): Pass {
+        val (stored, secrets) = usable(uid, connectionId)
         val host = hostOf(stored.connection.baseUrl)
         var session = if (signInFirst) {
             signInAgain(uid, stored, secrets, host)
