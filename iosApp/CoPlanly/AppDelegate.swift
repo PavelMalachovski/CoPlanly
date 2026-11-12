@@ -2,7 +2,8 @@ import Shared
 import UIKit
 
 /// The iPhone app's entry point (MON-24 phase 3). It reads what the build hands the shared code and
-/// starts it (`IosApp`, in the `Shared` framework `:shared-ui` builds). The window is the scene's
+/// starts it (`IosApp`, in the `Shared` framework `:shared-ui` builds), with Google's sign-in sheet
+/// (`GoogleSignInBridge`). The window is the scene's
 /// (`SceneDelegate`, named in `Info.plist`'s scene manifest), which shows the shared code's root
 /// view controller. Every screen is the shared code's; nothing the user reads is written here.
 @main
@@ -19,7 +20,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
             supportEmail: Self.infoString("CoPlanlySupportEmail")
         )
         do {
-            try IosApp.shared.start(config: config)
+            try IosApp.shared.start(config: config, google: GoogleSignInBridge())
         } catch {
             fatalError("The shared code did not start: \(error)")
         }

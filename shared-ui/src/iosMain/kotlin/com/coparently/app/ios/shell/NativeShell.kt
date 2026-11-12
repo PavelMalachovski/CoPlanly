@@ -18,6 +18,8 @@ import com.coparently.app.presentation.navigation.DestinationKind
 import com.coparently.app.presentation.navigation.TabSwitcher
 import com.coparently.app.presentation.navigation.startDestinationFor
 import com.coparently.app.presentation.platform.AppBuildValues
+import com.coparently.app.presentation.platform.CredentialSignIn
+import com.coparently.app.presentation.platform.ProvideIosShell
 import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -50,6 +52,9 @@ import platform.darwin.NSObject
  */
 internal interface ShellEnvironment {
     val buildValues: AppBuildValues
+
+    /** The credential sheets every screen is drawn with ([ProvideIosShell]). */
+    val credentialSignIn: CredentialSignIn
     val syncViewModel: SyncViewModel
     val authStateViewModel: AuthStateViewModel
     val connectivity: ConnectivityViewModel
@@ -109,7 +114,8 @@ internal class ShellSession {
  */
 internal class NativeShell(
     private val koin: Koin,
-    override val buildValues: AppBuildValues
+    override val buildValues: AppBuildValues,
+    override val credentialSignIn: CredentialSignIn
 ) : ShellEnvironment, TabSwitcher {
 
     /** The window's root: a container that holds the root flow or the tabs. */

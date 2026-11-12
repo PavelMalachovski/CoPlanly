@@ -74,7 +74,7 @@ internal class ScreenController(
         chipFrame = { content ->
             WhileAlive(entry) {
                 CompositionLocalProvider(LocalViewModelStoreOwner provides entry) {
-                    ProvideIosShell(shell.buildValues) { CoPlanlyTheme(content = content) }
+                    ProvideIosShell(shell.buildValues, shell.credentialSignIn) { CoPlanlyTheme(content = content) }
                 }
             }
         }
@@ -116,7 +116,7 @@ internal class ScreenController(
     @Composable
     private fun Shared(content: @Composable () -> Unit) {
         CompositionLocalProvider(LocalViewModelStoreOwner provides session) {
-            ProvideIosShell(shell.buildValues) {
+            ProvideIosShell(shell.buildValues, shell.credentialSignIn) {
                 AppProviders(darkTheme = null) {
                     CompositionLocalProvider(
                         LocalAppMessages provides shell.messages,

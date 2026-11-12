@@ -18,4 +18,11 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         window.makeKeyAndVisible()
         self.window = window
     }
+
+    /// Hands Google's sign-in the URL its sheet returns through (`GoogleSignInBridge`).
+    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        for context in URLContexts {
+            _ = GoogleSignInBridge.handle(context.url)
+        }
+    }
 }

@@ -14,6 +14,7 @@ import com.coparently.app.presentation.navigation.PendingChatOpen
 import com.coparently.app.presentation.navigation.PendingDestinationOpen
 import com.coparently.app.presentation.navigation.PendingInviteCodes
 import com.coparently.app.presentation.platform.AppBuildValues
+import com.coparently.app.presentation.platform.CredentialSignIn
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.koin.core.Koin
 import org.koin.core.context.startKoin
@@ -54,6 +55,9 @@ object IosApp {
     /** Set by [start]: the graph the shell resolves its ViewModels from. */
     private var koin: Koin? = null
 
+    /** Set by [start]: the credential sheets every screen is drawn with. */
+    private var credentialSignIn: CredentialSignIn? = null
+
     /** The shell, built by the first [rootViewController]. */
     private var shell: NativeShell? = null
 
@@ -65,10 +69,12 @@ object IosApp {
      * halves, and [iosAppModule]. Then it starts what runs for the whole session ([startSession]).
      * All before the first screen.
      *
+     * @param google Google's sign-in sheet, which the app's Swift side runs (`GoogleSignInBridge`);
+     *   the sign-in screen offers it only where it is available ([IosCredentialSignIn]).
      * @throws IllegalStateException when called a second time.
      */
     @Throws(Throwable::class)
-    fun start(config: IosAppConfig) {
+    fun start(config: IosAppConfig, google: GoogleIdTokenSource) {
         check(buildValues == null) { "IosApp.start runs once per process" }
         IosFirebase.configure(config)
         // After Firebase, which the sign-out needs; before Koin builds the preference store.
@@ -78,6 +84,7 @@ object IosApp {
         }.koin
         startSession(koin)
         this.koin = koin
+        credentialSignIn = IosCredentialSignIn(google)
         buildValues = AppBuildValues(
             versionName = config.versionName,
             privacyPolicyUrl = config.privacyPolicyUrl,
@@ -114,7 +121,7 @@ object IosApp {
      */
     fun rootViewController(): UIViewController {
         val values = checkNotNull(buildValues) { "IosApp.start must run before rootViewController" }
-        val current = shell ?: NativeShell(checkNotNull(koin), values).also {
+        val current = shell ?: NativeShell(checkNotNull(koin), values, checkNotNull(credentialSignIn)).also {
             shell = it
             it.start()
         }
@@ -131,8 +138,8 @@ object IosApp {
 /**
  * The iPhone app's own definitions, beside the shared modules. Empty so far: the sign-in (Task 5)
  * and the sync, push queue and wordings (Task 6) went into the platform modules, where the shared
- * graph asks for them, and the native shell (Task 8) resolves what it needs itself; Google (Task 9)
- * may add its own here.
+ * graph asks for them, the native shell (Task 8) resolves what it needs itself, and Google's sheet
+ * (Task 9) is handed to [IosApp.start] and reaches the screens through the shell.
  */
 internal val iosAppModule: Module = module { }
 

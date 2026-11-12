@@ -40,38 +40,31 @@ fun iosPlatformServices(buildValues: AppBuildValues): PlatformServices = Platfor
 )
 
 /**
- * Everything the shell provides, for the iPhone app's view controller to wrap its content in (phase
- * 3): [iosPlatformServices] and the two capabilities `MainActivity` provides on its own on Android,
- * because they need its activity — the credential sheets ([LocalCredentialSignIn]) and Google's
- * sign-in ([LocalGoogleCalendarSignIn]). Their locals throw outside a provider, so Settings and the
- * sign-in screen would fail before their `available` checks; here both are stand-ins that say they
- * are not available, so the sign-in offers neither Google nor a saved password and Settings draws no
- * Google Calendar row (the 11f review's I1). Its content will be `CoPlanlyApp` (Task 12), as
- * `MainActivity`'s is inside the Android providers; nothing composes that yet, until phase 3's view
- * controller. That shell must also switch the family before it arms any link (CLAUDE.md item 15):
+ * Everything the shell provides, for the iPhone app's screens to be drawn in: [iosPlatformServices]
+ * and the two capabilities `MainActivity` provides on its own on Android, because they need its
+ * activity — the credential sheets ([LocalCredentialSignIn]) and Google Calendar's sign-in
+ * ([LocalGoogleCalendarSignIn]). Their locals throw outside a provider, so Settings and the sign-in
+ * screen would fail before their `available` checks. The credential sheets are [credentialSignIn],
+ * the app's own (`IosCredentialSignIn`, Task 9: Google's sheet where the app carries Google's
+ * configuration, unavailable otherwise, so the sign-in then offers e-mail alone); Google Calendar's
+ * is a stand-in that says it is not available, so Settings draws no Google Calendar row (the 11f
+ * review's I1). The shell must also switch the family before it arms any link (CLAUDE.md item 15):
  * `AppLaunch` carries no family, so the order is the shell's.
  */
 @Composable
-fun ProvideIosShell(buildValues: AppBuildValues, content: @Composable () -> Unit) {
+fun ProvideIosShell(
+    buildValues: AppBuildValues,
+    credentialSignIn: CredentialSignIn,
+    content: @Composable () -> Unit
+) {
     val services = remember(buildValues) { iosPlatformServices(buildValues) }
     ProvidePlatform(services) {
         CompositionLocalProvider(
-            LocalCredentialSignIn provides NoCredentialSignIn,
+            LocalCredentialSignIn provides credentialSignIn,
             LocalGoogleCalendarSignIn provides NoGoogleCalendarSignIn,
             content = content
         )
     }
-}
-
-/** No credential sheets until the iPhone has its own sign-in (phase 3). */
-internal object NoCredentialSignIn : CredentialSignIn {
-    override val available: Boolean = false
-
-    override suspend fun googleIdToken(): Result<String> = Result.failure(IllegalStateException(NO_SIGN_IN))
-
-    override suspend fun savedPassword(): Result<SavedCredential> = Result.failure(IllegalStateException(NO_SIGN_IN))
-
-    override suspend fun offerToSave(email: String, password: String) = Unit
 }
 
 /** No Google sign-in until phase 3: nothing to open. */
@@ -80,8 +73,6 @@ internal object NoGoogleCalendarSignIn : GoogleCalendarSignIn {
 
     override fun open(): GoogleSignInStart = GoogleSignInStart.UNAVAILABLE
 }
-
-private const val NO_SIGN_IN = "No sign-in sheet in this iPhone build yet"
 
 /** A launcher with nothing behind it. */
 private val NothingToLaunch = PlatformLauncher { }

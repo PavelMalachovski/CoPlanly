@@ -24,6 +24,12 @@ packages:
   Firebase:
     url: https://github.com/firebase/firebase-ios-sdk
     exactVersion: "11.8.0"
+  # Google's sign-in sheet (MON-24 phase 3, Task 9; GoogleSignInBridge.swift). 9.2.0 needs iOS 12 and
+  # shares only Firebase's own ranges (GoogleUtilities 8, AppCheckCore 11, GTMSessionFetcher 3) with
+  # Firebase 11.8.0. Pinned exactly, as Firebase is.
+  GoogleSignIn:
+    url: https://github.com/google/GoogleSignIn-iOS
+    exactVersion: "9.2.0"
 
 targets:
   CoPlanly:
@@ -48,6 +54,8 @@ targets:
       # The sign-in (MON-24 phase 3, Task 5): GitLive's Auth bindings in `Shared` call it.
       - package: Firebase
         product: FirebaseAuth
+      - package: GoogleSignIn
+        product: GoogleSignIn
     preBuildScripts:
       # Builds `Shared` for the configuration and simulator or device Xcode is building, into
       # shared-ui/build/xcode-frameworks/<configuration>/<sdk>, which FRAMEWORK_SEARCH_PATHS names.
@@ -56,6 +64,36 @@ targets:
         script: |
           cd "$SRCROOT/.."
           ./gradlew :shared-ui:embedAndSignAppleFrameworkForXcode
+    postBuildScripts:
+      # Google's sign-in returns through a URL scheme, the reversed client id of the bundled
+      # GoogleService-Info.plist, which only the owner's Mac has (never committed). The scheme is the
+      # build setting COPLANLY_GOOGLE_URL_SCHEME when it is set, else read from that file when it is
+      # there; with neither (CI, the emulators) nothing is added, and GoogleSignInBridge offers no
+      # Google. It writes the built Info.plist, after Xcode has processed it and before signing.
+      - name: Register Google's URL scheme
+        basedOnDependencyAnalysis: false
+        inputFiles:
+          - "$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)"
+        script: |
+          scheme="${COPLANLY_GOOGLE_URL_SCHEME}"
+          google="${SRCROOT}/CoPlanly/GoogleService-Info.plist"
+          if [ -z "$scheme" ] && [ -f "$google" ]; then
+            scheme=$(/usr/libexec/PlistBuddy -c "Print :REVERSED_CLIENT_ID" "$google" 2>/dev/null || true)
+          fi
+          if [ -z "$scheme" ]; then
+            echo "No Google URL scheme: the app offers e-mail sign-in alone."
+            exit 0
+          fi
+          plist="${TARGET_BUILD_DIR}/${INFOPLIST_PATH}"
+          /usr/libexec/PlistBuddy -c "Delete :CFBundleURLTypes" "$plist" 2>/dev/null || true
+          /usr/libexec/PlistBuddy \
+            -c "Add :CFBundleURLTypes array" \
+            -c "Add :CFBundleURLTypes:0 dict" \
+            -c "Add :CFBundleURLTypes:0:CFBundleURLName string google" \
+            -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" \
+            -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string $scheme" \
+            "$plist"
+          echo "Registered Google's URL scheme."
     settings:
       base:
         PRODUCT_NAME: CoPlanly
@@ -94,6 +132,10 @@ targets:
         COPLANLY_PRIVACY_POLICY_URL: "https://coparently-a39c9.web.app/privacy/"
         COPLANLY_TERMS_URL: "https://coparently-a39c9.web.app/terms/"
         COPLANLY_SUPPORT_EMAIL: ""
+        # Google's sign-in URL scheme (the "Register Google's URL scheme" phase). Blank: read from the
+        # bundled GoogleService-Info.plist when there is one. Set it only on your own Mac; never commit
+        # a value.
+        COPLANLY_GOOGLE_URL_SCHEME: ""
       configs:
         Debug:
           ONLY_ACTIVE_ARCH: YES

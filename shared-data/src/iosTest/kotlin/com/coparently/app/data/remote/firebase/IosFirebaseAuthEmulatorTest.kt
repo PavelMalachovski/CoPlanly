@@ -80,6 +80,37 @@ class IosFirebaseAuthEmulatorTest {
         assertTrue(auth.sendPasswordResetEmail(email).isSuccess)
     }
 
+    /**
+     * Task 9: Google's access token, held beside the ID token the sheet answered
+     * ([GoogleAccessTokens]), makes the credential GitLive builds from the two. The Auth emulator
+     * accepts an ID token that is the claims as JSON, unsigned, as Firebase documents for testing.
+     */
+    @Test
+    fun `a Google ID token with its held access token signs in`() = AuthEmulator.run("google signs in") { firebase ->
+        val auth = IosFirebaseAuth(firebase)
+        val idToken = googleIdToken()
+        GoogleAccessTokens.hold(idToken, "an-access-token")
+
+        val result = auth.signInWithGoogleIdToken(idToken)
+
+        assertTrue(result.isSuccess, "${result.exceptionOrNull()}")
+        val account = assertNotNull(auth.getCurrentAccount())
+        assertTrue("google.com" in account.providers.map { it.providerId })
+        assertNull(GoogleAccessTokens.take(idToken))
+    }
+
+    @Test
+    fun `an access token held for another ID token is not used`() =
+        AuthEmulator.run("google stale token") { firebase ->
+            val auth = IosFirebaseAuth(firebase)
+            GoogleAccessTokens.hold(googleIdToken(), "an-access-token")
+
+            val result = auth.signInWithGoogleIdToken(googleIdToken())
+
+            assertTrue(result.isFailure)
+            assertNull(auth.getCurrentUid())
+        }
+
     @Test
     fun `a different account signing in wipes the previous one`() = AuthEmulator.run("account switch") { firebase ->
         val auth = IosFirebaseAuth(firebase)
@@ -133,6 +164,12 @@ class IosFirebaseAuthEmulatorTest {
         override fun set() {
             set = true
         }
+    }
+
+    /** An ID token the Auth emulator accepts for a new Google account: its claims as JSON. */
+    private fun googleIdToken(): String {
+        val id = NSUUID().UUIDString.lowercase()
+        return """{"sub":"$id","email":"iphone-$id@example.test","email_verified":true}"""
     }
 
     private fun newEmail(): String = "iphone-${NSUUID().UUIDString.lowercase()}@example.test"

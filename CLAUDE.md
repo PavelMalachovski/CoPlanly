@@ -2344,10 +2344,13 @@ iPhone's `NoAuthErrors` calls every failure `Unknown`) — a Koin seam rather th
 `CredentialSignIn`, because the password reset has no sheet to be handed. The events are
 `data/platform/AnalyticsEvents.kt`'s new `logLogin` and `logSignUp` (Firebase's `login` and `sign_up`
 with `method`, as `AnalyticsManager`'s functions of those names logged them; they left it), the reports
-`CrashReporter.recordWithContext`. The screen offers Google and a saved password only where
-`CredentialSignIn.available` (on the iPhone the shell's `ProvideIosShell` provides the unavailable
-`NoCredentialSignIn`; `IosSignInStandInsTest`, in `iosTest`, states both stand-ins unavailable and is
-compiled by the `shared` job, but no job runs `:shared-ui:iosSimulatorArm64Test` yet); the legal notice draws the terms clause and the two
+`CrashReporter.recordWithContext`. The screen offers Google only where `CredentialSignIn.available`
+and a saved password only where `CredentialSignIn.offersSavedPasswords` (which is `available` unless a
+platform says otherwise; on the iPhone, since MON-24 phase 3's Task 9, the shell's `ProvideIosShell`
+provides `IosCredentialSignIn`: Google's sheet through the app's `GoogleSignInBridge.swift`,
+available only with a bundled `GoogleService-Info.plist`, and never a saved-password button, which
+iOS autofill replaces; the access token the iOS credential needs beside the ID token waits in
+`shared-data`'s iOS `GoogleAccessTokens` for the matching ID token, used once); the legal notice draws the terms clause and the two
 links only while their address is set and the phone opens links (`AppBuildValues`, `OpenUrl`), so the
 app's `PrivacyPolicyLink` and `TermsOfServiceLink` are gone. The profile's dates are
 `readerMediumDate` and its picker the kotlinx `LocalDatePickerDialog` with the child records' labels
@@ -2755,9 +2758,9 @@ the screens called (`Intent.createChooser`, the activity-result contracts, `QRSc
 `OnDeviceSpeechDictation`'s rule, `copySensitive`, `openSharedFile`, `BuildConfig`); `MainActivity`,
 `QRScannerActivity` and the screenshot frame (`ScreenshotFrame`) wrap their content in it. The
 iPhone's `iosPlatformServices(buildValues)` (`iosMain`) answers with stand-ins that are not available
-until phase 3 and 4, and its `ProvideIosShell(buildValues, content)` provides those with the two locals
-`MainActivity` provides on its own (`LocalCredentialSignIn`, `LocalGoogleCalendarSignIn`), as the
-unavailable `NoCredentialSignIn` and `NoGoogleCalendarSignIn`: with `CoPlanlyApp` inside it (Task
+until phase 3 and 4, and its `ProvideIosShell(buildValues, credentialSignIn, content)` provides those with
+the two locals `MainActivity` provides on its own (`LocalCredentialSignIn`, `LocalGoogleCalendarSignIn`),
+as the app's `IosCredentialSignIn` (Task 9 of phase 3) and the unavailable `NoGoogleCalendarSignIn`: with `CoPlanlyApp` inside it (Task
 12), the one call the phase-3 view controller makes. Three things not to undo. **A local read outside the provider throws** — no
 "unavailable" default, which would hide a feature in production with no test noticing; a test that
 composes a screen provides the platform as the app does. **`AndroidPlatformTest`** (the app's,

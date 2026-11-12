@@ -83,23 +83,30 @@ class IosFirebaseAuth(private val auth: FirebaseAuth) : SignedInUser, AuthSessio
     /**
      * Signs in with a Google ID token.
      *
-     * **Fails on the iPhone until Task 9**: GitLive's iOS `GoogleAuthProvider.credential` requires
-     * an access token beside the ID token (the iOS SDK's Google credential is made of both), where
-     * Android's takes a null one. Asked with the ID token alone, as [AccountSignIn] asks, it throws,
-     * and that becomes this call's failure. Nothing on the iPhone calls it yet: the shared screen
-     * offers Google only where `CredentialSignIn.available`, which the iPhone's stand-in is not.
+     * GitLive's iOS `GoogleAuthProvider.credential` requires Google's access token beside the ID
+     * token (the iOS SDK's Google credential is made of both), where Android's takes a null one. The
+     * iPhone's credential sheet holds the access token it was answered with in [GoogleAccessTokens],
+     * and it is taken from there only for the ID token it came with. Without a matching one the
+     * credential throws, and that becomes this call's failure.
      */
-    override suspend fun signInWithGoogleIdToken(idToken: String): Result<Any> = attempt {
-        checkNotNull(auth.signInWithCredential(GoogleAuthProvider.credential(idToken, null)).user)
-    }.onFailure { logger.e(TAG, "Google sign-in failed", it) }
+    override suspend fun signInWithGoogleIdToken(idToken: String): Result<Any> {
+        val accessToken = GoogleAccessTokens.take(idToken)
+        return attempt {
+            checkNotNull(auth.signInWithCredential(GoogleAuthProvider.credential(idToken, accessToken)).user)
+        }.onFailure { logger.e(TAG, "Google sign-in failed", it) }
+    }
 
     /** Sends a password reset e-mail. */
     override suspend fun sendPasswordResetEmail(email: String): Result<Unit> = attempt {
         auth.sendPasswordResetEmail(email)
     }
 
-    /** Signs out of Firebase Auth, which removes the user the SDK keeps in the Keychain. */
+    /**
+     * Signs out of Firebase Auth, which removes the user the SDK keeps in the Keychain, and drops a
+     * Google access token still held for a sign-in that never came ([GoogleAccessTokens]).
+     */
     override suspend fun signOutCompletely(): Result<Unit> = attempt {
+        GoogleAccessTokens.clear()
         auth.signOut()
     }.onFailure { logger.e(TAG, "Error signing out: ${it.message}", it) }
 

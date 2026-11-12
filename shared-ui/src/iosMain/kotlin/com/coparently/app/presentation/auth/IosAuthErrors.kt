@@ -15,10 +15,10 @@ import dev.gitlive.firebase.auth.code
  * codes Android's mapping names by their `ERROR_…` text. Anything else, or a failure that is not
  * Firebase's, is [AuthError.Unknown] on the e-mail path, as on Android.
  *
- * Android's Credential Manager outcomes (interrupted, no account, no saved password) have no iPhone
- * counterpart yet: the iPhone offers neither Google nor saved passwords (`NoCredentialSignIn`). A
- * Google sheet the parent dismisses arrives, from Task 9, as [GoogleSignInCancelled], and is no
- * error.
+ * Android's Credential Manager outcomes have two iPhone counterparts since Task 9
+ * (`IosCredentialSignIn`): a Google sheet the parent dismisses arrives as [GoogleSignInCancelled],
+ * which is no error, and a saved password, which the iPhone's autofill offers in the fields rather
+ * than in a sheet, fails as [NoSavedPassword] if it is ever asked for.
  */
 object IosAuthErrors : AuthErrors {
 
@@ -45,8 +45,11 @@ object IosAuthErrors : AuthErrors {
         else -> firebaseError(cause) ?: AuthError.Unknown
     }
 
-    /** A failure of the saved-password path, which the iPhone does not offer yet. */
-    override fun fromSavedPassword(cause: Throwable): AuthError? = firebaseError(cause) ?: AuthError.Unknown
+    /** A failure of the saved-password path, which the iPhone leaves to autofill. */
+    override fun fromSavedPassword(cause: Throwable): AuthError? = when (cause) {
+        is NoSavedPassword -> AuthError.NoSavedPassword
+        else -> firebaseError(cause) ?: AuthError.Unknown
+    }
 
     /** The Firebase reason, or null when [cause] is not Firebase Auth's. */
     private fun firebaseError(cause: Throwable): AuthError? = when (cause) {
@@ -70,3 +73,10 @@ object IosAuthErrors : AuthErrors {
  * iPhone's Google sign-in (Task 9) fails with then, which [IosAuthErrors.fromGoogle] calls no error.
  */
 class GoogleSignInCancelled : Exception("The Google sign-in was cancelled")
+
+/**
+ * No saved password was offered: on the iPhone the system's autofill fills the sign-in fields with
+ * one instead of a sheet answering it (`IosCredentialSignIn.savedPassword`, Task 9), so
+ * [IosAuthErrors.fromSavedPassword] calls it [AuthError.NoSavedPassword].
+ */
+class NoSavedPassword : Exception("Saved passwords are offered by autofill in the fields on the iPhone")
