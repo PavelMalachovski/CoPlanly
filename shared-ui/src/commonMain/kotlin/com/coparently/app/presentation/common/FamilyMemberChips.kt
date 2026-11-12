@@ -7,11 +7,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.family.names
 import com.coparently.app.presentation.theme.IconSizes
@@ -62,7 +66,7 @@ fun FamilyMemberChips(
                 .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
-            MemberChips(members = members, selected = selected, onToggle = onToggle)
+            MemberChips(members, selected, onToggle, avatarSize = IconSizes.Standard)
         }
     }
 }
@@ -78,6 +82,8 @@ fun FamilyMemberChips(
  * @param selected The references currently chosen; none means "everyone".
  * @param onToggle Called with the chip's reference; the caller adds or removes it.
  * @param label Leads the row, so the chips are not an unexplained row of names.
+ * @param compact Draws the chips in a 40 dp row with smaller faces, where every dp of height goes
+ *   to something else (the calendar, whose grid takes what the strip leaves).
  */
 @Composable
 fun FamilyMemberFilterStrip(
@@ -85,7 +91,8 @@ fun FamilyMemberFilterStrip(
     selected: List<FamilyMemberRef>,
     onToggle: (FamilyMemberRef) -> Unit,
     label: StringResource,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    compact: Boolean = false
 ) {
     if (members.size < 2) return
 
@@ -101,23 +108,35 @@ fun FamilyMemberFilterStrip(
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        MemberChips(members = members, selected = selected, onToggle = onToggle)
+        if (compact) {
+            // A chip's own height is 32 dp; Material pads its touch target to 48. Here the row
+            // gives up 8 of those, so the grid below grows (tester feedback, 12 November 2026).
+            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides COMPACT_CHIP_TARGET) {
+                MemberChips(members, selected, onToggle, avatarSize = IconSizes.Small)
+            }
+        } else {
+            MemberChips(members, selected, onToggle, avatarSize = IconSizes.Standard)
+        }
     }
 }
+
+/** The compact strip's touch target, between a chip's 32 dp and Material's 48. */
+private val COMPACT_CHIP_TARGET = 40.dp
 
 /** One multi-select chip per member, named, never coloured. */
 @Composable
 private fun MemberChips(
     members: List<FamilyMember>,
     selected: List<FamilyMemberRef>,
-    onToggle: (FamilyMemberRef) -> Unit
+    onToggle: (FamilyMemberRef) -> Unit,
+    avatarSize: Dp
 ) {
     members.forEach { member ->
         FilterChip(
             selected = selected.names(member.ref),
             onClick = { onToggle(member.ref) },
             label = { Text(member.name) },
-            leadingIcon = member.child?.let { child -> { ChildAvatar(child, IconSizes.Standard) } }
+            leadingIcon = member.child?.let { child -> { ChildAvatar(child, avatarSize) } }
         )
     }
 }

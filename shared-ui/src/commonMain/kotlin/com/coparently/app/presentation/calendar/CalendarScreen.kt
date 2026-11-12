@@ -975,10 +975,8 @@ fun CalendarScreen(
                         selected = activeMemberFilter,
                         onToggle = { memberFilter = activeMemberFilter.toggling(it) },
                         label = Res.string.calendar_filter_members,
-                        modifier = Modifier.padding(
-                            horizontal = dims.paddingMedium,
-                            vertical = dims.paddingSmall / 2
-                        )
+                        modifier = Modifier.padding(horizontal = dims.paddingMedium),
+                        compact = true
                     )
 
                     // While a swap selection is open, the grid needs a way out and a way to commit —

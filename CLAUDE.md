@@ -140,7 +140,10 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
 5. **Calendar header is three rows** (redesign, November 2026; `components/CalendarHeader.kt`):
    the brand row (`BrandHeader`: wordmark, the children's avatars, gear), "Your family calendar"
    with "Together, for Emma and Leo" under it (left out with no children and from font scale
-   1.3), then the Month/Week/Day segmented control and Filters. The month title, Today and the
+   1.3), then the Month/Week/Day segmented control and Filters. The header and the member strip
+   are tight on purpose (tester feedback, 12 November 2026): `titleMediumEmphasized` over
+   `bodySmall`, 4 dp gaps, and the strip's chips at a 40 dp target (`compact`), so the grid
+   gets the height. The month title, Today and the
    arrows head the grid's own white card (`CalendarMonthBar` in `CalendarGridCard`, the legend with
    the swap button under them); tapping the title opens "Jump to date". The Today card
    (`TodayCard`, built through `HomeWeek.todayOf` like the widget's) sits in the

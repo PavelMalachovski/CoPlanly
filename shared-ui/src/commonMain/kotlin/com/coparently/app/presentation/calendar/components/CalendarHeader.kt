@@ -32,6 +32,7 @@ import com.coparently.app.presentation.common.BrandHeader
 import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.titleMediumEmphasized
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.calendar_filters_button
 import com.coparently.app.resources.calendar_heading
@@ -74,8 +75,10 @@ fun CalendarHeader(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Spacing.L, vertical = Spacing.S),
-        verticalArrangement = Arrangement.spacedBy(Spacing.S)
+            // Tight on purpose (tester feedback, 12 November 2026): every dp the header gives up
+            // goes to the month grid under it.
+            .padding(horizontal = Spacing.L, vertical = Spacing.XS),
+        verticalArrangement = Arrangement.spacedBy(Spacing.XS)
     ) {
         BrandHeader(children = children, onSettingsClick = onSettingsClick)
         HeadingLines(childNames = children.map { it.childName })
@@ -103,10 +106,10 @@ fun CalendarHeader(
 @Composable
 private fun HeadingLines(childNames: List<String>) {
     val together = togetherFor(childNames)
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.XXS)) {
+    Column {
         Text(
             text = stringResource(Res.string.calendar_heading),
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.titleMediumEmphasized,
             modifier = Modifier.semantics { heading() }
         )
         if (together != null && !stacksAtLargeFont()) {
@@ -116,7 +119,7 @@ private fun HeadingLines(childNames: List<String>) {
             ) {
                 Text(
                     text = together,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f, fill = false)
                 )
