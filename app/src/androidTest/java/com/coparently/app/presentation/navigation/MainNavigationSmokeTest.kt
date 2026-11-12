@@ -13,7 +13,6 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
-import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -29,6 +28,7 @@ import com.coparently.app.testing.settle
 import org.jetbrains.compose.resources.StringResource
 import org.junit.After
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -127,9 +127,12 @@ class MainNavigationSmokeTest {
         composeTestRule.pumpUntil("the Calendar again after Back from Home") {
             exists(bottomBar) && exists(viewModeTitle)
         }
-        scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
-        composeTestRule.pumpUntil("the app closed by Back on the Calendar") {
-            scenario.state == Lifecycle.State.DESTROYED
+        // Asserted on the main thread right after the Back, not by waiting for the activity's
+        // destruction: that is the OS lifecycle's, which the paused Compose clock cannot pump.
+        // With nothing left on the back stack the dispatcher's fallback calls finish() at once.
+        scenario.onActivity {
+            it.onBackPressedDispatcher.onBackPressed()
+            assertTrue("Back on the Calendar, the root, leaves the app", it.isFinishing)
         }
     }
 
