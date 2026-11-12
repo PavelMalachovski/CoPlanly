@@ -6,6 +6,7 @@ import com.coparently.app.presentation.auth.AuthViewModel
 import com.coparently.app.presentation.calendar.CalendarViewModel
 import com.coparently.app.presentation.changerequests.ChangeRequestViewModel
 import com.coparently.app.presentation.changerequests.RequestChangeViewModel
+import com.coparently.app.presentation.changerequests.RequestsBadgeViewModel
 import com.coparently.app.presentation.changerequests.RequestsSource
 import com.coparently.app.presentation.chat.ChatAttachmentViewModel
 import com.coparently.app.presentation.chat.ChatEventCardViewModel
@@ -158,6 +159,7 @@ val requestsUiModule: Module = module {
     factoryOf(::RequestsSource)
     viewModelOf(::ChangeRequestViewModel)
     viewModelOf(::RequestChangeViewModel)
+    viewModelOf(::RequestsBadgeViewModel)
 }
 
 /**

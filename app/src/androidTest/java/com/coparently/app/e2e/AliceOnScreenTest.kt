@@ -227,7 +227,10 @@ abstract class AliceOnScreenTest {
         composeTestRule.mainClock.autoAdvance = false
         scenario = ActivityScenario.launch(MainActivity::class.java)
         if (opensOnHome) {
-            composeTestRule.pumpUntil("Home with the tab bar", HOME_TIMEOUT_MS) { exists(tabBar) }
+            composeTestRule.pumpUntil("the tab bar", HOME_TIMEOUT_MS) { exists(tabBar) }
+            // The app opens on the Calendar since the redesign (part 2a); every test written for
+            // this base walks Home first, so it starts there, as a parent who taps the tab does.
+            openTab(BottomNavDestination.HOME)
         }
         composeTestRule.settle()
         step("before: the app is up")

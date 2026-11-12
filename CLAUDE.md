@@ -149,7 +149,7 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    a Day view chosen in the title's picker keeps the default Back. Day view's header carries
    **"Swap this day"** beside the date (D-10), the visible twin of the month cell's long-press.
    The member filter is **one scrolling row, label first** (`FamilyMemberFilterStrip`) and stays
-   with the banners over the grid on purpose, not in Filters. **Every tap on the Calendar tab opens
+   with the banners over the grid on purpose, not in Filters. **Every tap on the Calendar tab (the start screen) opens
    Month on today** (`navigation/CalendarTabTaps`, tester feedback, October 2026), from another
    tab and from the tab itself; a restored Day view on another month read as a broken calendar. The month title omits the current
    year. In Day and Week view **a drag deletes only when it ends over the red delete button**
@@ -533,7 +533,14 @@ When touching the UI, keep these invariants:
    or more it is a rail instead** (`NavigationLayout`: a tablet, an unfolded foldable, a phone on
    its side; October 2026 audit, week 5), with the same destinations and badge. It shows only on
    those routes (`BottomNavDestination.topLevelRoutes`); detail screens hide it and keep
-   an up-arrow. **Expenses is not a tab either since October 2026** (new-user review): it is a
+   an up-arrow. **The app opens on Calendar, and Calendar is the back stack's root** (redesign,
+   part 2a, November 2026): `startDestinationFor` answers `Screen.Calendar.route`, `navigateToTab`
+   and the post-onboarding and sign-out navigations pop to it, so Back from any tab lands on the
+   Calendar and from the Calendar leaves the app. What Home used to put first — what waits for
+   this parent — is **the Home tab's badge** (`RequestsBadgeViewModel`, `rememberHomeRequestsCount`
+   beside the Chat badge in `NavGraph`, the `home_requests_badge` plural): exactly Home's
+   Requests row number, `inbox.waitingOnMe.count`, and nothing while it is loading. Home stays a tab,
+   declared as before. **Expenses is not a tab either since October 2026** (new-user review): it is a
    detail screen opened from the Family tab's money card and Home's month tile, with an up-arrow,
    and a money push opens Family and then Expenses so Back lands on the tab. **Settings is NOT a tab** — it opens from a gear action in each top-level
    screen's top bar and is a detail screen (`onNavigateUp = popBackStack`, bottom bar

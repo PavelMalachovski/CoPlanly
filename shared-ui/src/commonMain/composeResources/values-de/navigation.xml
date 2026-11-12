@@ -8,4 +8,9 @@
     <string name="budgets_back">Zurück</string>
     <string name="conversations_title">Nachrichten</string>
     <string name="navigation_loading">Wird geladen…</string>
+    <!-- The Home tab's badge: requests waiting for this parent's answer. -->
+    <plurals name="home_requests_badge">
+        <item quantity="one">%1$d Anfrage wartet auf deine Antwort</item>
+        <item quantity="other">%1$d Anfragen warten auf deine Antwort</item>
+    </plurals>
 </resources>

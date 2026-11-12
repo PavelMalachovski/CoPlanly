@@ -2363,6 +2363,24 @@ the check reads A's side). Push notifications on for A.
   `retainOrDeleteConversations` and `sweepRetainedConversationsImpl` in `functions/index.js`,
   `firebase functions:log --only deleteAccount,sweepRetentionLimits`.
 
+### 3.35 The app opens on the Calendar; Home carries a badge · 1P, badge check 2P
+
+Redesign part 2a (CLAUDE.md "UX overhaul" item 1). Pinned by `StartDestinationTest` and
+`RequestsBadgeViewModelTest`; `MainNavigationSmokeTest` walks the cold start and Back. What is left is
+the real launch and the badge as drawn.
+
+- [ ] **Cold start lands on Calendar.** Kill the app and open it from the launcher: the Calendar tab
+      is selected and the month shows. A push or an invitation link still opens its own screen
+      over it.
+- [ ] **Back exits.** From Calendar press Back: the app closes. From Home or Chat or Family press
+      Back once: Calendar; once more: the app closes.
+- [ ] **Home badge matches the Requests row** (2P). Bob sends Alice a change request: the Home tab
+      shows a badge with the number Home's **Requests** row shows (a proposed expense split counts,
+      the calendar banner does not); TalkBack reads "1 request waiting for your answer"; answering
+      it clears the badge. On a tablet the rail shows the same badge.
+- **If it fails:** `startDestinationFor` and `navigateToTab` in `presentation/navigation/`,
+  `RequestsBadgeViewModel`, `rememberHomeRequestsCount` in `NavGraph.kt`.
+
 ---
 
 ## After the session

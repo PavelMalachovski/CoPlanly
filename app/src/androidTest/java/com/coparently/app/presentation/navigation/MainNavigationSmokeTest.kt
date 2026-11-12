@@ -13,6 +13,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
+import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -70,7 +71,7 @@ class MainNavigationSmokeTest {
         session.signIn()
         composeTestRule.mainClock.autoAdvance = false
         scenario = ActivityScenario.launch(MainActivity::class.java)
-        composeTestRule.pumpUntil("Home with the bottom bar") { exists(settingsButton) && exists(bottomBar) }
+        composeTestRule.pumpUntil("the start screen with the bottom bar") { exists(settingsButton) && exists(bottomBar) }
         composeTestRule.settle()
     }
 
@@ -82,7 +83,8 @@ class MainNavigationSmokeTest {
 
     @Test
     fun everyTopLevelScreen_opens_andTheBottomBarShowsOnlyOnTabs() {
-        tab(BottomNavDestination.HOME).assertIsSelected()
+        // The app opens on the Calendar (redesign, part 2a).
+        tab(BottomNavDestination.CALENDAR).assertIsSelected()
         composeTestRule.onNode(bottomBar).assertIsDisplayed()
 
         for (destination in listOf(
@@ -117,7 +119,23 @@ class MainNavigationSmokeTest {
     }
 
     @Test
+    fun coldStart_landsOnTheCalendar_andBackLeavesTheApp() {
+        tab(BottomNavDestination.CALENDAR).assertIsSelected()
+        // Calendar is the back stack's root: a tab visited from it unwinds to it, then Back exits.
+        openTab(BottomNavDestination.HOME)
+        scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        composeTestRule.pumpUntil("the Calendar again after Back from Home") {
+            exists(bottomBar) && exists(viewModeTitle)
+        }
+        scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        composeTestRule.pumpUntil("the app closed by Back on the Calendar") {
+            scenario.state == Lifecycle.State.DESTROYED
+        }
+    }
+
+    @Test
     fun mainScreens_iconOnlyControls_haveALabelAndA48dpTarget() {
+        openTab(BottomNavDestination.HOME)
         composeTestRule.assertIconOnlyControlsAreAccessible("Home")
         openTab(BottomNavDestination.CALENDAR)
         composeTestRule.assertIconOnlyControlsAreAccessible("Calendar (month)")

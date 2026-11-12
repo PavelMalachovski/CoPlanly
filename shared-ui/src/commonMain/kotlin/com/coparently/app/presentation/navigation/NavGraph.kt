@@ -45,6 +45,7 @@ import com.coparently.app.domain.telemetry.TelemetryConsent
 import com.coparently.app.presentation.auth.AuthScreen
 import com.coparently.app.presentation.calendar.CalendarScreen
 import com.coparently.app.presentation.changerequests.AgreementScreen
+import com.coparently.app.presentation.changerequests.RequestsBadgeViewModel
 import com.coparently.app.presentation.chat.ChatViewModel
 import com.coparently.app.presentation.childinfo.ChildInfoScreen
 import com.coparently.app.presentation.common.ConnectivityBanner
@@ -115,6 +116,7 @@ fun NavGraph(
     val isLoading by authStateViewModel.isLoading.collectAsState()
     val needsOnboarding by authStateViewModel.needsOnboarding.collectAsState()
     val chatUnreadCount = rememberChatUnreadCount()
+    val homeBadgeCount = rememberHomeRequestsCount()
 
     // Determine start destination based on authentication state, and — for a signed-in account
     // — on whether the first-run questionnaire still has to run. That second answer is a Room
@@ -161,7 +163,10 @@ fun NavGraph(
         // warning. Above the bottom bar on a tab; at the bottom on a detail screen.
         snackbarHost = { LocalAppMessages.current?.let { SnackbarHost(it.hostState) } },
         bottomBar = {
-            BottomBarSlot(navigationLayout, onTopLevelRoute, currentRoute, navController, chatUnreadCount)
+            BottomBarSlot(
+                navigationLayout, onTopLevelRoute, currentRoute, navController,
+                TabBadges(chatUnreadCount, homeBadgeCount)
+            )
         }
     ) { innerPadding ->
         Row(
@@ -170,7 +175,10 @@ fun NavGraph(
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
         ) {
-            RailSlot(navigationLayout, onTopLevelRoute, currentRoute, navController, chatUnreadCount)
+            RailSlot(
+                navigationLayout, onTopLevelRoute, currentRoute, navController,
+                TabBadges(chatUnreadCount, homeBadgeCount)
+            )
             NavHost(
                 navController = navController,
                 startDestination = startDestination,
@@ -230,7 +238,7 @@ fun NavGraph(
                 ) {
                     OnboardingScreen(
                         onFinished = {
-                            navController.navigate(Screen.Home.route) {
+                            navController.navigate(Screen.Calendar.route) {
                                 popUpTo(Screen.Onboarding.route) { inclusive = true }
                             }
                         },
@@ -502,7 +510,7 @@ fun NavGraph(
                         },
                         onSignOut = {
                             navController.navigate(Screen.Auth.route) {
-                                popUpTo(Screen.Home.route) { inclusive = true }
+                                popUpTo(Screen.Calendar.route) { inclusive = true }
                             }
                         },
                         syncViewModel = syncViewModel
@@ -1199,7 +1207,7 @@ fun NavGraph(
                             // opened from, so the next tab switch saved that mixed stack and a
                             // later visit restored the chat screen on top of it.
                             navController.navigate(Screen.Conversations.createRoute()) {
-                                popUpTo(Screen.Home.route) { saveState = true }
+                                popUpTo(Screen.Calendar.route) { saveState = true }
                                 launchSingleTop = true
                                 restoreState = false
                             }
@@ -1259,6 +1267,19 @@ private fun rememberChatUnreadCount(): Int {
     val chatViewModel: ChatViewModel = koinViewModel()
     val unreadCount by chatViewModel.unreadCount.collectAsState()
     return unreadCount
+}
+
+/**
+ * The number on the Home tab's badge, read here for the reason [rememberChatUnreadCount] is: the
+ * ViewModel is scoped to the ambient owner (the hosting Activity), so the bar is right while any
+ * tab shows. The app opens on the Calendar, so what waits for this parent's answer has to be
+ * visible from the bar (redesign, part 2a); it is the number Home's Requests row shows.
+ */
+@Composable
+private fun rememberHomeRequestsCount(): Int {
+    val badgeViewModel: RequestsBadgeViewModel = koinViewModel()
+    val waiting by badgeViewModel.waitingOnMe.collectAsState()
+    return waiting
 }
 
 /**
@@ -1398,8 +1419,16 @@ fun startDestinationFor(
     isAuthenticated != true -> Screen.Auth.route
     needsOnboarding == null -> Screen.Loading.route
     needsOnboarding == true -> Screen.Onboarding.route
-    else -> Screen.Home.route
+    else -> Screen.Calendar.route
 }
+
+/**
+ * The counts the tab bar or rail badges.
+ *
+ * @property chatUnread Messages from the co-parent not yet read, on Chat
+ * @property homeRequests Requests waiting for this parent's answer, on Home
+ */
+private data class TabBadges(val chatUnread: Int, val homeRequests: Int)
 
 /**
  * The bottom bar on a narrow window, sliding in and out with the four tab routes; nothing on a
@@ -1409,7 +1438,7 @@ fun startDestinationFor(
  * @param visible Whether the route on screen is one of the four tabs
  * @param currentRoute The route on screen, to mark its tab
  * @param navController Tabs switch through [navigateToTab]
- * @param chatUnreadCount The Chat tab's badge
+ * @param badges The Chat and Home tabs' badges
  */
 @Composable
 private fun BottomBarSlot(
@@ -1417,7 +1446,7 @@ private fun BottomBarSlot(
     visible: Boolean,
     currentRoute: String?,
     navController: NavHostController,
-    chatUnreadCount: Int
+    badges: TabBadges
 ) {
     if (layout != NavigationLayout.BAR) return
     AnimatedVisibility(
@@ -1428,7 +1457,8 @@ private fun BottomBarSlot(
         CoPlanlyBottomBar(
             currentRoute = currentRoute,
             onNavigate = navController::navigateToTab,
-            chatUnreadCount = chatUnreadCount
+            chatUnreadCount = badges.chatUnread,
+            homeBadgeCount = badges.homeRequests
         )
     }
 }
@@ -1441,7 +1471,7 @@ private fun BottomBarSlot(
  * @param visible Whether the route on screen is one of the four tabs
  * @param currentRoute The route on screen, to mark its tab
  * @param navController Tabs switch through [navigateToTab]
- * @param chatUnreadCount The Chat tab's badge
+ * @param badges The Chat and Home tabs' badges
  */
 @Composable
 private fun RowScope.RailSlot(
@@ -1449,7 +1479,7 @@ private fun RowScope.RailSlot(
     visible: Boolean,
     currentRoute: String?,
     navController: NavHostController,
-    chatUnreadCount: Int
+    badges: TabBadges
 ) {
     if (layout != NavigationLayout.RAIL) return
     AnimatedVisibility(
@@ -1460,7 +1490,8 @@ private fun RowScope.RailSlot(
         CoPlanlyNavigationRail(
             currentRoute = currentRoute,
             onNavigate = navController::navigateToTab,
-            chatUnreadCount = chatUnreadCount
+            chatUnreadCount = badges.chatUnread,
+            homeBadgeCount = badges.homeRequests
         )
     }
 }
