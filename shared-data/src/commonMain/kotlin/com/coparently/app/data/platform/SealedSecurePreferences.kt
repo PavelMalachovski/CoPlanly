@@ -272,7 +272,8 @@ class SealedSecurePreferences(private val storage: SealedTextStore) : SecurePref
         /** The key families [clear] keeps; each prefix's own KDoc says why. */
         val PRESERVED_PREFIXES = listOf(
             PreferenceKeys.PARENT_SLOT_MARKER_PREFIX,
-            PreferenceKeys.SCHOOL_CONNECTION_PREFIX
+            PreferenceKeys.SCHOOL_CONNECTION_PREFIX,
+            PreferenceKeys.EDUPAGE_CONNECTION_PREFIX
         )
     }
 }

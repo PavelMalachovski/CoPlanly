@@ -12,6 +12,8 @@ package com.coparently.app.presentation.platform
  * @property supportEmail The chat report's address, or null, which hides the action (F-10)
  * @property pairingWebLink Whether invitations carry the web link rather than the app's own scheme
  *   (CLAUDE.md item 37)
+ * @property edupageImport Whether the school import offers EduPage beside Bakaláři: on in debug builds,
+ *   off in release unless the build says otherwise (`-PCOPLANLY_EDUPAGE_IMPORT=true`)
  */
 data class AppBuildValues(
     val versionName: String,
@@ -19,4 +21,5 @@ data class AppBuildValues(
     val termsUrl: String?,
     val supportEmail: String?,
     val pairingWebLink: Boolean,
+    val edupageImport: Boolean,
 )

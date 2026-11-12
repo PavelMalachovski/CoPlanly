@@ -125,6 +125,14 @@ val aiAssistOverride: String? = (findProperty("COPLANLY_AI_ASSIST_ENABLED") as S
     ?.lowercase()
     ?.takeIf { it == "true" || it == "false" }
 
+/**
+ * The `EDUPAGE_IMPORT` value for a build type whose own default is [default]:
+ * `-PCOPLANLY_EDUPAGE_IMPORT=true|false` overrides it for one build.
+ */
+fun edupageImportFlag(default: Boolean): String =
+    (project.findProperty("COPLANLY_EDUPAGE_IMPORT") as String?)?.trim()?.toBooleanStrictOrNull()?.toString()
+        ?: default.toString()
+
 /** The `AI_ASSIST_ENABLED` value for a build type whose own default is [default]. */
 fun aiAssistFlag(default: Boolean): String = aiAssistOverride ?: default.toString()
 
@@ -222,6 +230,7 @@ android {
             buildConfigField("Boolean", "ENABLE_CRASHLYTICS", "false")
             buildConfigField("Boolean", "ENABLE_ANALYTICS", "false")
             buildConfigField("Boolean", "AI_ASSIST_ENABLED", aiAssistFlag(default = true))
+            buildConfigField("boolean", "EDUPAGE_IMPORT", edupageImportFlag(default = true))
         }
 
         release {
@@ -238,6 +247,8 @@ android {
             buildConfigField("Boolean", "ENABLE_ANALYTICS", "true")
             // Premium, and gated until billing (MON-11) exists: no AI affordance in a release.
             buildConfigField("Boolean", "AI_ASSIST_ENABLED", aiAssistFlag(default = false))
+            // The EduPage import is hidden in a release until the owner turns it on.
+            buildConfigField("boolean", "EDUPAGE_IMPORT", edupageImportFlag(default = false))
         }
 
         // REL-7's runtime proof: `release` as R8 builds it, plus the probe in `src/r8Test/`, run on

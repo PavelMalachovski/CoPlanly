@@ -19,7 +19,10 @@ enum class SchoolImportKind(val stored: String) {
     HOURS("hours"),
 
     /** A run of days without lessons that the app's own holiday calendar does not draw. */
-    DAY_OFF("dayoff");
+    DAY_OFF("dayoff"),
+
+    /** A homework or assignment due on a day, as an all-day event. */
+    TASK("task");
 
     companion object {
         /** The kind [stored] names, or null for one this build does not know. */
@@ -85,6 +88,8 @@ interface SchoolImportWording {
  * @property ownerUid The signed-in parent, who creates the events.
  * @property ownerSlot That parent's own slot, which a created event's `parentOwner` takes — the
  *   same rule a Google Calendar import follows.
+ * @property system The school system, which decides how an event id is derived.
+ * @property studentKey The system's own id for the pupil (EduPage's student id); blank for Bakaláři.
  */
 data class SchoolImportTarget(
     val baseUrl: String,
@@ -92,7 +97,9 @@ data class SchoolImportTarget(
     val childId: String,
     val familyId: String?,
     val ownerUid: String,
-    val ownerSlot: String
+    val ownerSlot: String,
+    val system: SchoolSystem = SchoolSystem.BAKALARI,
+    val studentKey: String = ""
 )
 
 /**
@@ -110,6 +117,7 @@ data class SchoolImportTarget(
  * @property existing What Room holds under each id in [SchoolImportPlanner.idsToLookUp].
  * @property ledger What this connection has imported before, by event id.
  * @property wording The titles to write.
+ * @property tasks The school's homework and assignments; empty when none were fetched.
  */
 data class SchoolImportInput(
     val target: SchoolImportTarget,
@@ -121,7 +129,8 @@ data class SchoolImportInput(
     val drawnHolidays: Set<LocalDate>,
     val existing: Map<String, ExistingImport>,
     val ledger: Map<String, SchoolImportRecord>,
-    val wording: SchoolImportWording
+    val wording: SchoolImportWording,
+    val tasks: List<SchoolTask> = emptyList()
 )
 
 /**
@@ -179,6 +188,7 @@ object SchoolImportPlanner {
     fun idsToLookUp(input: SchoolImportInput): Set<String> {
         val days = SchoolImportItems.daysInWindow(input)
         return SchoolImportItems.events(input).map { it.id }.toSet() +
+            SchoolImportItems.tasks(input).map { it.id } +
             days.map { SchoolImportIds.hours(input.target, it.date) } +
             days.map { SchoolImportIds.dayOff(input.target, it.date) } +
             input.ledger.keys
@@ -210,8 +220,10 @@ object SchoolImportPlanner {
 
     /**
      * The id of the imported event of [kind] under [key] for [target]'s account:
-     * `"school-"` and the first 32 hex digits of the SHA-256 of
-     * `bakalari|<baseUrl>|<username>|<kind>|<key>`. Deterministic, so an update finds what the
+     * `"school-"` and the first 32 hex digits of the SHA-256 of `<identity>|<kind>|<key>`, where
+     * the identity is `bakalari|<baseUrl>|<username>` for Bakaláři and `edupage|<host>|<studentKey>`
+     * for EduPage (the school's host and EduPage's pupil id, so two parents of one child get the same
+     * ids). Deterministic, so an update finds what the
      * last one made instead of making it again; Firestore-safe, having no slash.
      */
     fun idOf(target: SchoolImportTarget, kind: SchoolImportKind, key: String): String =

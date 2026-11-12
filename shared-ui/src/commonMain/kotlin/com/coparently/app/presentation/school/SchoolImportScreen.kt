@@ -32,6 +32,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.coparently.app.domain.school.SchoolConnectionStatus
+import com.coparently.app.domain.school.SchoolSystem
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.InlineBanner
@@ -40,6 +41,7 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberUiTextResolver
+import com.coparently.app.presentation.platform.LocalAppBuildValues
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.screenTopAppBarColors
@@ -62,6 +64,8 @@ import com.coparently.app.resources.school_import_status_needs_password
 import com.coparently.app.resources.school_import_title
 import com.coparently.app.resources.school_import_update_now
 import com.coparently.app.resources.school_import_updating
+import com.coparently.app.resources.school_system_bakalari
+import com.coparently.app.resources.school_system_edupage
 import com.coparently.app.utils.ReaderDateText
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -198,12 +202,24 @@ private fun ConnectionList(state: SchoolImportUiState, actions: ConnectionAction
 private fun ConnectionGroup(row: SchoolConnectionRow, updating: Boolean, actions: ConnectionActions) {
     val connection = row.connection
     val id = connection.id
+    val systemName = stringResource(
+        if (connection.system == SchoolSystem.EDUPAGE) {
+            Res.string.school_system_edupage
+        } else {
+            Res.string.school_system_bakalari
+        }
+    )
+    // Where EduPage is not offered, a Bakaláři connection is the only kind and needs no label.
+    val named = LocalAppBuildValues.current.edupageImport || connection.system == SchoolSystem.EDUPAGE
+    val place = connection.schoolName.ifBlank { connection.baseUrl }
     SectionGroup {
         SectionRow(
             icon = Icons.Default.School,
             title = row.childName,
-            supporting = listOf(connection.schoolName.ifBlank { connection.baseUrl }, statusLine(row))
-                .joinToString("\n"),
+            supporting = listOf(
+                if (named) "$systemName · $place" else place,
+                statusLine(row)
+            ).joinToString("\n"),
             supportingColor = if (connection.status == SchoolConnectionStatus.OK && !row.needsFamily) {
                 MaterialTheme.colorScheme.onSurfaceVariant
             } else {

@@ -62,6 +62,7 @@
     <string name="school_connect_family_unnamed">Семья %1$d</string>
     <string name="school_connect_child_label">Какой это ребёнок?</string>
     <string name="school_connect_no_children">В этой семье пока нет записей о детях. Добавьте ребёнка в настройках в разделе «Информация о ребёнке» и подключитесь снова.</string>
+    <string name="school_connect_edupage_no_pupils">В этом аккаунте EduPage нет ни одного ученика, поэтому подключать нечего. Войдите с аккаунтом родителя или ученика либо вернитесь и попробуйте другой логин.</string>
     <string name="school_connect_continue">Продолжить</string>
     <string name="school_connect_confirm_label">Что будет импортировано</string>
     <string name="school_connect_confirm_events">Школьные мероприятия для класса ребёнка, для самого ребёнка и для всей школы на ближайшие 90 дней</string>
@@ -70,4 +71,13 @@
     <string name="school_connect_confirm_shared">Они станут обычными событиями этой семьи о ребёнке (%1$s), и второй родитель их тоже увидит.</string>
     <string name="school_connect_confirm_not_imported">Оценки, домашние задания и отдельные уроки не импортируются.</string>
     <string name="school_connect_save">Подключить и импортировать</string>
+    <string name="school_system_title">Какую систему использует школа?</string>
+    <string name="school_system_bakalari">Bakaláři</string>
+    <string name="school_system_edupage">EduPage</string>
+    <string name="school_edupage_address_label">Адрес школы (необязательно)</string>
+    <string name="school_edupage_address_hint">Только если вход не находит вашу школу, например zsx.edupage.org</string>
+    <string name="school_edupage_second_factor">Этот аккаунт требует второго подтверждения. Подтвердите вход в приложении EduPage или по e-mail и попробуйте снова.</string>
+    <string name="school_edupage_password_kept">CoPlanly хранит этот пароль на этом телефоне в зашифрованном виде, чтобы импорт мог входить каждый день. Он отправляется только в EduPage.</string>
+    <string name="school_edupage_captcha">EduPage просит ввести CAPTCHA. Один раз войдите на сайте EduPage и попробуйте снова.</string>
+    <string name="school_edupage_address_invalid">Это не адрес EduPage. Он должен выглядеть как zsx.edupage.org.</string>
 </resources>

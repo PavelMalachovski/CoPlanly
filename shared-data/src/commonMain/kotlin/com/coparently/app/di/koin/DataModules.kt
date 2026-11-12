@@ -83,6 +83,8 @@ import com.coparently.app.data.school.SchoolEventWriter
 import com.coparently.app.data.school.SchoolImporter
 import com.coparently.app.data.school.bakalari.BakalariAuthorizer
 import com.coparently.app.data.school.bakalari.BakalariClient
+import com.coparently.app.data.school.edupage.EdupageClient
+import com.coparently.app.data.school.edupage.EdupageSource
 import com.coparently.app.data.session.SessionProfileSynchronizer
 import com.coparently.app.data.session.SignedInAccountSource
 import com.coparently.app.data.stickers.ParentRoles
@@ -400,6 +402,7 @@ val schoolDataModule: Module = module {
     singleOf(::SchoolAccounts)
     singleOf(::SchoolEventWriter)
     single { BakalariAuthorizer(get<BakalariClient>(), get<SchoolConnectionStore>()) }
+    single { EdupageSource(get<EdupageClient>(), get<SchoolConnectionStore>()) }
     factory { SchoolImporter.Collaborators(get(), get(), get(), get()) }
     single {
         SchoolImporter(
@@ -407,7 +410,8 @@ val schoolDataModule: Module = module {
             get<BakalariClient>(),
             get<SchoolConnectionStore>(),
             get<UserRepository>(),
-            get<SchoolImporter.Collaborators>()
+            get<SchoolImporter.Collaborators>(),
+            get<EdupageSource>()
         )
     }
 }

@@ -83,6 +83,7 @@ fun androidBuildValues(): AppBuildValues = AppBuildValues(
     termsUrl = BuildConfig.TERMS_URL.takeIf { it.isNotBlank() },
     supportEmail = BuildConfig.SUPPORT_EMAIL.takeIf { it.isNotBlank() },
     pairingWebLink = BuildConfig.PAIRING_WEB_LINK,
+    edupageImport = BuildConfig.EDUPAGE_IMPORT,
 )
 
 /** `ACTION_SEND` in `Intent.createChooser`, as the invitation, feed and export screens built it. */

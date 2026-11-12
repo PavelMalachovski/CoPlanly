@@ -2392,6 +2392,47 @@ the real launch and the badge as drawn.
   `RequestsBadgeViewModel`, `rememberHomeRequestsCount` in `NavGraph.kt`; for Back from a day,
   `CalendarDayRequests` and `dayOpenedFromMonth` in `CalendarScreen.kt`.
 
+### 3.36 The EduPage school import · 1P, sharing check 2P
+
+EduPage import (design `docs/superpowers/specs/2026-11-12-edupage-import-design.md`). The client, the
+three parsers and the store are JVM-tested against **inferred** answers (the open-source
+`edupage-api` 0.13.3's description of the protocol, `EdupageFixtures`); **no real EduPage account has
+answered the app yet**, so this section is the first contact. Needs a parent's EduPage login (Zuzana's
+school) and a build with the row switched on: a debug build, or release with
+`-PCOPLANLY_EDUPAGE_IMPORT=true` (`BuildConfig.EDUPAGE_IMPORT`; the row is hidden in release otherwise).
+
+- [ ] Settings → Sync → Connect a school → EduPage. Leave the school's address empty (the sign-in goes
+      through `login1.edupage.org`) or type the school's `https://<school>.edupage.org`.
+- [ ] A **wrong** password: a plain "wrong username or password", nothing stored. Then the right one:
+      the screen names the school and each child with class.
+- [ ] Choose the child (and, with two families, the family). Confirm. Within a minute the calendar
+      shows, on each school day of the next four weeks, one event from the first lesson's start to
+      the last lesson's end: **compare three days with the EduPage app**, one with a substitution.
+- [ ] School events for the child's class and for the whole school appear; another class's do not.
+      A test (písomka) and a homework with a date appear as all-day events titled "Subject: title".
+- [ ] Update now twice: no duplicates. Delete one imported event, Update now: it does not come back.
+- [ ] On the co-parent's phone: the imported events (hours, events, tests, homework) are there,
+      tagged with the child.
+- [ ] Two children on one EduPage login: connect both; each child's events carry that child and a
+      second parent's own login for the same child makes no duplicate (the ids name the child).
+- [ ] **Record the real answers.** With a debug build and a proxy or `adb logcat` that shows
+      responses, save the sign-in page, the `userhome(...)` object, `curentttGetData` and the
+      timeline answer (names, ids and school redacted) and replace the inferred ones in
+      `EdupageFixtures` and `EdupageParsersTest`; list the timeline item types seen
+      (`typ`) and fix `EdupageTimelineParser`'s three sets if they differ.
+- [ ] **Change the password on EduPage**, then Update now: the row says it needs the password again;
+      entering the new one resumes the import, nothing duplicated.
+- [ ] **A second-factor account** (approval in the EduPage app or an e-mailed code): the app says
+      to approve the sign-in in EduPage and try again; after approving, the retry connects. Note
+      whether EduPage asks again on every new session.
+- [ ] Disconnect: the connection and the stored password go, the imported events stay. Sign out and
+      back in, and delete an account: no EduPage connection or password is remembered.
+- [ ] Airplane mode, Update now: an error line, nothing lost. The password is sent only to
+      `*.edupage.org` (a proxy log shows no other host).
+- **If it fails:** `data/school/edupage/` (`shared-data/`: client, parsers, source),
+  `data/school/SchoolConnectionStore`, `domain/school/`, `presentation/school/`. Capture the failing
+  answer (redacted) as a fixture with a test.
+
 ---
 
 ## After the session

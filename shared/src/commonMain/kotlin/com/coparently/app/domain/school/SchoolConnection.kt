@@ -42,6 +42,7 @@ enum class SchoolConnectionStatus(val stored: String) {
  *   no family when it connected.
  * @property status Whether it can still import.
  * @property lastSuccessAtMillis When an update last worked, or null when none has.
+ * @property system Which school system it reads; a record written before EduPage is [SchoolSystem.BAKALARI].
  */
 data class SchoolConnection(
     val id: String,
@@ -52,5 +53,6 @@ data class SchoolConnection(
     val childId: String,
     val familyId: String?,
     val status: SchoolConnectionStatus,
-    val lastSuccessAtMillis: Long?
+    val lastSuccessAtMillis: Long?,
+    val system: SchoolSystem = SchoolSystem.BAKALARI
 )

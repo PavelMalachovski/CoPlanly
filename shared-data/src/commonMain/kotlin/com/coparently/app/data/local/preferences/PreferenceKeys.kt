@@ -305,4 +305,13 @@ object PreferenceKeys {
      * and the store refuses it to any other account.
      */
     const val SCHOOL_CONNECTION_PREFIX = "school_connection_"
+
+    /**
+     * Prefix of the EduPage school connections, one key each: the same record as
+     * [SCHOOL_CONNECTION_PREFIX]'s, plus the parent's password and the session cookies EduPage's
+     * sign-in needs (it has no refresh token to keep instead). Sealed in the same store, and
+     * **exempt from `EncryptedPreferences.clear()` for the same reason**; the same three places
+     * forget it explicitly through `SchoolConnectionStore.clearAll()` or its prefix.
+     */
+    const val EDUPAGE_CONNECTION_PREFIX = "school_edupage_connection_"
 }

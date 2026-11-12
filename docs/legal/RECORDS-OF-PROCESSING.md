@@ -197,6 +197,19 @@ only what is specific to it.
 | Where | Device `EncryptedPreferences`; imported events in `events` |
 | Note | The integration uses the community-documented Bakaláři API v3 (`client_id=ANDR`, as other third-party apps do); Bakaláři has published no terms for third-party clients. Reassess if it does |
 
+### P11b. School import from EduPage (optional)
+
+| | |
+| --- | --- |
+| Purpose | Put the child's school hours, the school's events, tests and homework into the family calendar, at the parent's request |
+| Data subjects | The child; the parent (their EduPage username) |
+| Data | On the device only: **the parent's EduPage password**, the EduPage session cookie, the school's EduPage host, username, the child's EduPage id, name and class. Imported into events: per school day the first-lesson start and last-lesson end, titles and dates of events, tests and homework meant for the child, their class or the whole school, and days without lessons. **Not** collected: grades, absences, individual lessons; messages arrive in the same timeline answer and are discarded on the phone, never kept or imported |
+| Legal basis | Art. 6(1)(b) — the parent asked for the import |
+| Recipients | The co-parent (as ordinary events of the chosen family). EduPage's servers (`*.edupage.org`) are contacted by the parent's phone directly and receive the password, which is sent nowhere else; the school is the controller of its own EduPage data |
+| Retention | Password, cookie and connection details: until disconnect, sign-out or account deletion (device only). Imported events: as any event (P2) |
+| Where | Device `EncryptedPreferences` (sealed under the Keystore key); imported events in `events` |
+| Note | Unlike Bakaláři (P11a), EduPage issues no refresh token, so the password is kept (owner decision, November 2026). The integration follows the protocol EduPage's web app uses; EduPage has published no terms for third-party clients. Reassess if it does |
+
 ### P12. Usage statistics and crash reports (optional)
 
 | | |

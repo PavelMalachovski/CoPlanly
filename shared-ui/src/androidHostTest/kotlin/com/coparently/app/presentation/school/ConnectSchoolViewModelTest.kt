@@ -19,6 +19,7 @@ import com.coparently.app.domain.school.SchoolConnectionStatus
 import com.coparently.app.domain.school.SchoolStudent
 import com.coparently.app.domain.school.SchoolSyncResult
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.presentation.platform.AppBuildValues
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.school_connect_url_invalid
 import com.coparently.app.resources.school_connect_url_not_bakalari
@@ -287,7 +288,8 @@ class ConnectSchoolViewModelTest {
         directory = directory,
         importer = importer,
         selectedFamilySource = families,
-        childInfoRepository = children
+        childInfoRepository = children,
+        buildValues = AppBuildValues("1", null, null, null, pairingWebLink = false, edupageImport = false)
     )
 
     private fun TestScope.signedIn(): ConnectSchoolViewModel {
