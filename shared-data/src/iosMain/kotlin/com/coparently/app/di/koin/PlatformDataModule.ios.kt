@@ -55,6 +55,7 @@ import com.coparently.app.data.school.SchoolImportScheduler
 import com.coparently.app.data.school.SchoolImportWordings
 import com.coparently.app.data.school.bakalari.BakalariClient
 import com.coparently.app.data.school.bakalari.BakalariSchoolDirectory
+import com.coparently.app.data.school.edupage.EdupageClient
 import com.coparently.app.data.session.AccountConsistency
 import com.coparently.app.data.session.AccountDeletion
 import com.coparently.app.data.session.AccountTraces
@@ -112,6 +113,7 @@ actual val platformDataModule: Module = module {
 
     single { GoogleCalendarApi(httpClient(HttpTimeouts.GOOGLE_CALENDAR)) }
     single { BakalariClient(httpClient(HttpTimeouts.SCHOOL)) }
+    single { EdupageClient(httpClient(HttpTimeouts.SCHOOL)) }
     // The school directory the connect screen's ViewModel searches (slice 10f), on a client of its
     // own with the same timeouts (Android shares one named client; nothing on the iPhone needs that).
     single { BakalariSchoolDirectory(httpClient(HttpTimeouts.SCHOOL)) }

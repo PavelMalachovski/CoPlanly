@@ -4,9 +4,6 @@ import com.coparently.app.data.platform.logger
 import com.coparently.app.data.platform.newMonitor
 import com.coparently.app.data.school.bakalari.BakalariAuthorizer
 import com.coparently.app.data.school.bakalari.BakalariClient
-import com.coparently.app.data.school.bakalari.BakalariException
-import com.coparently.app.data.school.bakalari.events
-import com.coparently.app.data.school.bakalari.timetable
 import com.coparently.app.data.school.bakalari.withStatus
 import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.family.FamilyAudience
@@ -18,12 +15,12 @@ import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.school.SchoolConnection
 import com.coparently.app.domain.school.SchoolConnectionStatus
-import com.coparently.app.domain.school.SchoolEvent
 import com.coparently.app.domain.school.SchoolImportInput
 import com.coparently.app.domain.school.SchoolImportPlanner
 import com.coparently.app.domain.school.SchoolImportTarget
 import com.coparently.app.domain.school.SchoolSyncFailure
 import com.coparently.app.domain.school.SchoolSyncResult
+import com.coparently.app.domain.school.SchoolSystem
 import com.coparently.app.domain.school.SchoolWeek
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
@@ -45,8 +42,7 @@ import kotlin.time.Clock
  */
 @Suppress("LongParameterList") // a clock and its zone, which one `java.time.Clock` carried (MON-24)
 class SchoolImporter internal constructor(
-    private val authorizer: BakalariAuthorizer,
-    private val client: BakalariClient,
+    private val sources: Map<SchoolSystem, SchoolSource>,
     private val store: SchoolConnectionStore,
     private val userRepository: UserRepository,
     private val collaborators: Collaborators,
@@ -73,15 +69,24 @@ class SchoolImporter internal constructor(
 
     /**
      * The production importer, on the system clock in the zone the phone had when it was built —
-     * what `java.time.Clock.systemDefaultZone()` gave it before MON-24.
+     * what `java.time.Clock.systemDefaultZone()` gave it before MON-24. Bakaláři is read through
+     * [BakalariSource]; [edupage] is the EduPage source, or null while the build has none.
      */
     constructor(
         authorizer: BakalariAuthorizer,
         client: BakalariClient,
         store: SchoolConnectionStore,
         userRepository: UserRepository,
-        collaborators: Collaborators
-    ) : this(authorizer, client, store, userRepository, collaborators, Clock.System, TimeZone.currentSystemDefault())
+        collaborators: Collaborators,
+        edupage: SchoolSource? = null
+    ) : this(
+        sourcesOf(authorizer, client, edupage),
+        store,
+        userRepository,
+        collaborators,
+        Clock.System,
+        TimeZone.currentSystemDefault()
+    )
 
     /** One lock per connection, made on first use; [locksMonitor] guards the map, as a concurrent map did. */
     private val locks = HashMap<String, Mutex>()
@@ -107,7 +112,7 @@ class SchoolImporter internal constructor(
                 syncLocked(uid, connectionId)
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: BakalariException) {
+            } catch (e: SchoolSourceFailure) {
                 failure(uid, connectionId, e)
             }
         }
@@ -128,10 +133,13 @@ class SchoolImporter internal constructor(
         }
 
         val today = clock.todayIn(zone)
-        val weeks = timetableWeeks(uid, connectionId, today)
-        val events = schoolEvents(uid, connectionId, today)
+        val source = sources[stored.connection.system] ?: throw SchoolSourceFailure.Gone()
+        // The timetable first: a source opens its session there and reuses it for the rest.
+        val weeks = source.weeks(uid, connectionId, SchoolWeek.mondayOf(today))
+        val events = source.events(uid, connectionId, today)
+        val tasks = source.tasks(uid, connectionId, today)
         // Re-read: the fetch may have rotated the tokens, and those must not be written back stale.
-        val latest = store.get(uid, connectionId) ?: throw BakalariException.ConnectionGone()
+        val latest = store.get(uid, connectionId) ?: throw SchoolSourceFailure.Gone()
         val connection = latest.connection
         val draft = SchoolImportInput(
             target = SchoolImportTarget(
@@ -140,12 +148,15 @@ class SchoolImporter internal constructor(
                 childId = connection.childId,
                 familyId = family.familyId,
                 ownerUid = uid,
-                ownerSlot = family.familyId?.let { collaborators.familySlots.get(it)?.of(uid) } ?: user.role
+                ownerSlot = family.familyId?.let { collaborators.familySlots.get(it)?.of(uid) } ?: user.role,
+                system = connection.system,
+                studentKey = latest.edupage?.studentId.orEmpty()
             ),
             today = today,
             now = clock.now().toLocalDateTime(zone),
             student = latest.student,
             events = events,
+            tasks = tasks,
             weeks = weeks,
             drawnHolidays = drawnHolidays(user, today),
             existing = emptyMap(),
@@ -205,30 +216,6 @@ class SchoolImporter internal constructor(
         }
     }
 
-    /** [SchoolImportPlanner.TIMETABLE_WEEKS] weeks from this one; none when the right is missing. */
-    private suspend fun timetableWeeks(uid: String, connectionId: String, today: LocalDate): List<SchoolWeek> {
-        val monday = SchoolWeek.mondayOf(today)
-        return try {
-            (0 until SchoolImportPlanner.TIMETABLE_WEEKS).map { week ->
-                authorizer.withAccess(uid, connectionId) { baseUrl, token ->
-                    client.timetable(baseUrl, token, monday.plus(week, DateTimeUnit.WEEK))
-                }
-            }
-        } catch (e: BakalariException.Forbidden) {
-            // The summer holidays can take the right away; nothing is imported, nothing deleted.
-            logger.i(TAG, "No timetable right on this account right now", e)
-            emptyList()
-        }
-    }
-
-    private suspend fun schoolEvents(uid: String, connectionId: String, today: LocalDate): List<SchoolEvent> =
-        try {
-            authorizer.withAccess(uid, connectionId) { baseUrl, token -> client.events(baseUrl, token, today) }
-        } catch (e: BakalariException.Forbidden) {
-            logger.i(TAG, "No events right on this account right now", e)
-            emptyList()
-        }
-
     /**
      * The days the calendar already draws as a public holiday or a school vacation for [user]'s
      * country and region — the same `HolidayLocation` the calendar reads.
@@ -240,16 +227,16 @@ class SchoolImporter internal constructor(
         return (provider.holidaysInRange(from, to).keys + provider.schoolVacationDaysInRange(from, to)).toSet()
     }
 
-    private fun failure(uid: String, connectionId: String, error: BakalariException): SchoolSyncResult {
+    private fun failure(uid: String, connectionId: String, error: SchoolSourceFailure): SchoolSyncResult {
         logger.w(TAG, "School import failed", error)
         return when (error) {
-            // The authorizer has already marked the connection.
-            is BakalariException.NeedsPassword, is BakalariException.InvalidGrant -> SchoolSyncResult.NeedsPassword
-            is BakalariException.ConnectionGone -> SchoolSyncResult.NotFound
+            // The source has already marked the connection.
+            is SchoolSourceFailure.NeedsPassword -> SchoolSyncResult.NeedsPassword
+            is SchoolSourceFailure.Gone -> SchoolSyncResult.NotFound
             else -> {
                 store.update(uid, connectionId) { it.withStatus(SchoolConnectionStatus.ERROR) }
                 SchoolSyncResult.Failed(
-                    if (error is BakalariException.Network) SchoolSyncFailure.NETWORK else SchoolSyncFailure.SERVER
+                    if (error is SchoolSourceFailure.Network) SchoolSyncFailure.NETWORK else SchoolSyncFailure.SERVER
                 )
             }
         }
@@ -269,7 +256,7 @@ class SchoolImporter internal constructor(
     companion object {
         private const val TAG = "SchoolImporter"
 
-        /** An importer on [clock] in [zone], for a test. */
+        /** An importer on [clock] in [zone], for a test; [edupage] is the EduPage source, if the test has one. */
         @InternalSharedApi
         @Suppress("LongParameterList") // the constructor's, one by one
         fun on(
@@ -279,7 +266,18 @@ class SchoolImporter internal constructor(
             userRepository: UserRepository,
             collaborators: Collaborators,
             clock: Clock,
-            zone: TimeZone
-        ): SchoolImporter = SchoolImporter(authorizer, client, store, userRepository, collaborators, clock, zone)
+            zone: TimeZone,
+            edupage: SchoolSource? = null
+        ): SchoolImporter =
+            SchoolImporter(sourcesOf(authorizer, client, edupage), store, userRepository, collaborators, clock, zone)
+
+        private fun sourcesOf(
+            authorizer: BakalariAuthorizer,
+            client: BakalariClient,
+            edupage: SchoolSource?
+        ): Map<SchoolSystem, SchoolSource> = buildMap {
+            put(SchoolSystem.BAKALARI, BakalariSource(authorizer, client))
+            edupage?.let { put(SchoolSystem.EDUPAGE, it) }
+        }
     }
 }

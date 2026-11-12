@@ -219,8 +219,10 @@ object SchoolImportPlanner {
 
     /**
      * The id of the imported event of [kind] under [key] for [target]'s account:
-     * `"school-"` and the first 32 hex digits of the SHA-256 of
-     * `bakalari|<baseUrl>|<username>|<kind>|<key>`. Deterministic, so an update finds what the
+     * `"school-"` and the first 32 hex digits of the SHA-256 of `<identity>|<kind>|<key>`, where
+     * the identity is `bakalari|<baseUrl>|<username>` for Bakaláři and `edupage|<host>|<studentKey>`
+     * for EduPage (the school's host and EduPage's pupil id, so two parents of one child get the same
+     * ids). Deterministic, so an update finds what the
      * last one made instead of making it again; Firestore-safe, having no slash.
      */
     fun idOf(target: SchoolImportTarget, kind: SchoolImportKind, key: String): String =

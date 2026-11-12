@@ -46,6 +46,7 @@ import com.coparently.app.data.school.SchoolImportWordings
 import com.coparently.app.data.school.WorkManagerSchoolImportScheduler
 import com.coparently.app.data.school.bakalari.BakalariClient
 import com.coparently.app.data.school.bakalari.BakalariSchoolDirectory
+import com.coparently.app.data.school.edupage.EdupageClient
 import com.coparently.app.data.security.EncryptionManager
 import com.coparently.app.data.session.AccountConsistency
 import com.coparently.app.data.session.AccountDeletion
@@ -128,6 +129,7 @@ val dataModule = module {
     single<SchoolImportWordings> { get<SchoolImportWordingSource>() }
     singleOf(::WorkManagerSchoolImportScheduler)
     single { BakalariClient(get<HttpClient>(SCHOOL_HTTP_CLIENT)) }
+    single { EdupageClient(get<HttpClient>(SCHOOL_HTTP_CLIENT)) }
     single { BakalariSchoolDirectory(get<HttpClient>(SCHOOL_HTTP_CLIENT)) }
     singleOf(::AccountDeletionService)
     // The account's erasure, which Settings' ViewModel in `:shared-ui` asks for.
