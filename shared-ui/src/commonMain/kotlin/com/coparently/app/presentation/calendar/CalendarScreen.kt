@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -29,6 +30,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -970,14 +972,17 @@ fun CalendarScreen(
                     // they always saw. Placed with the banners rather than in the Filters sheet: the
                     // question "what does Anya's week look like" is asked at a glance, and the
                     // Expenses screen answers the same question the same way.
-                    FamilyMemberFilterStrip(
-                        members = familyMembers,
-                        selected = activeMemberFilter,
-                        onToggle = { memberFilter = activeMemberFilter.toggling(it) },
-                        label = Res.string.calendar_filter_members,
-                        modifier = Modifier.padding(horizontal = dims.paddingMedium),
-                        compact = true
-                    )
+                    // A chip is 32 dp tall and Material pads its target to 48; here the row gives
+                    // up 8 of those so the grid below grows (tester feedback, 12 November 2026).
+                    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides COMPACT_CHIP_TARGET) {
+                        FamilyMemberFilterStrip(
+                            members = familyMembers,
+                            selected = activeMemberFilter,
+                            onToggle = { memberFilter = activeMemberFilter.toggling(it) },
+                            label = Res.string.calendar_filter_members,
+                            modifier = Modifier.padding(horizontal = dims.paddingMedium)
+                        )
+                    }
 
                     // While a swap selection is open, the grid needs a way out and a way to commit —
                     // predictive back is on, so a `BackHandler` clears it too. Shown only in MONTH:
@@ -1341,3 +1346,6 @@ private fun swapSidesOf(
     holderOf: (LocalDate) -> String?,
     offererSlot: String
 ): SwapSides = SwapSides.of(selection.toList(), holderOf, offererSlot)
+
+/** The member strip's touch target on the calendar, between a chip's 32 dp and Material's 48. */
+private val COMPACT_CHIP_TARGET = 40.dp
