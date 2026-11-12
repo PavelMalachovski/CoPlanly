@@ -318,9 +318,12 @@ fun FamilyScreen(
                 Divider()
                 // What this family co-parents, and the way back into that answer: without it a
                 // family that gets a dog a year later could never reach the pet records.
-                NavRow(Icons.Default.FamilyRestroom, Res.string.settings_family_kind_title, caresForSummary(caresFor)) {
-                    showFamilyKindPicker = true
-                }
+                NavRow(
+                    Icons.Default.FamilyRestroom,
+                    Res.string.settings_family_kind_title,
+                    caresForSummary(caresFor),
+                    onClick = { showFamilyKindPicker = true }
+                )
             }
 
             RecordsGroup(destinations)

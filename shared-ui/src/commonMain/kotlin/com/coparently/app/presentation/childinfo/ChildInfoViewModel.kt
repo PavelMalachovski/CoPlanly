@@ -523,7 +523,9 @@ class ChildInfoViewModel(
     fun removePhoto(childInfo: ChildInfo) {
         val old = childInfo.photo ?: return
         viewModelScope.launch {
-            if (RecordPhotoCodec.isReference(old) && !deletePhoto(old, childInfo.familyId, portrait = true)) return@launch
+            val objectGone = !RecordPhotoCodec.isReference(old) ||
+                deletePhoto(old, childInfo.familyId, portrait = true)
+            if (!objectGone) return@launch
             persist(childInfo.copy(photo = null), isNewChild = false)
         }
     }
