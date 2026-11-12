@@ -245,10 +245,10 @@ fun MonthView(
                 .weight(1f)
                 .fillMaxWidth()
         ) {
-            val cellHeight = remember(maxHeight) {
-                val calculated = maxHeight / 6
-                if (calculated < 48.dp) 48.dp else calculated
-            }
+            // Six equal rows that fill the card, never more than it holds. A 48 dp floor made six
+            // rows taller than a phone's card, so the sixth was cut short (UI tour, November 2026).
+            // The cell is still a 48 dp touch target: Compose widens a smaller one's touch bounds.
+            val cellHeight = remember(maxHeight) { maxHeight / GRID_ROWS }
 
             // The settle animation is ours, not the library's. `calendarScrollPaged = true`
             // snaps with an internal spring whose feel cannot be configured and, in practice,
@@ -323,7 +323,10 @@ fun MonthView(
 private val CELL_GAP = 3.dp
 
 /** The day number's disc (today's, the selected day's ring). */
-private val DAY_NUMBER_SIZE = 24.dp
+private val DAY_NUMBER_SIZE = 22.dp
+
+/** The month grid always draws six weeks, borrowed days included. */
+private const val GRID_ROWS = 6
 
 /** Thickness of the school-vacation line along a month cell's bottom edge (MON-13). */
 private val VACATION_LINE_HEIGHT = 2.dp
@@ -789,11 +792,11 @@ private fun DayCell(
 
         Column(
             modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Spacing.XXS)
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Day number: filled circle for today, outlined ring for the selected day. 24 dp, not
-            // 28: the cell is the touch target, and the pill under the number needs the room.
+            // Day number: filled circle for today, outlined ring for the selected day. 22 dp, not
+            // 28: the cell is the touch target, and the pill under the number needs the room in a
+            // phone's 45 dp row.
             Box(
                 modifier = Modifier
                     .defaultMinSize(minWidth = DAY_NUMBER_SIZE, minHeight = DAY_NUMBER_SIZE)
