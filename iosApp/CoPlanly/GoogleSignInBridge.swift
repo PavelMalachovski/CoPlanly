@@ -28,28 +28,38 @@ final class GoogleSignInBridge: NSObject, GoogleIdTokenSource {
 
     var available: Bool { clientId != nil }
 
+    /// Opens Google's sheet. The shared code calls it on the main thread, where UIKit and Google
+    /// Sign-In must be used, and Google Sign-In answers there too.
     func requestIdToken(
-        completion: @escaping (String?, String?, KotlinBoolean, String?) -> KotlinUnit
+        completion: @escaping @Sendable (String?, String?, KotlinBoolean, String?) -> Void
     ) {
+        MainActor.assumeIsolated {
+            signIn(completion: completion)
+        }
+    }
+
+    @MainActor
+    private func signIn(completion: @escaping @Sendable (String?, String?, KotlinBoolean, String?) -> Void) {
         guard clientId != nil, let presenter = Self.topViewController() else {
-            _ = completion(nil, nil, KotlinBoolean(value: false), "Google sign-in has no client id or no screen to show on")
+            completion(nil, nil, KotlinBoolean(value: false), "Google sign-in has no client id or no screen to show on")
             return
         }
         GIDSignIn.sharedInstance.signIn(withPresenting: presenter) { result, error in
             if let error {
                 let cancelled = (error as? GIDSignInError)?.code == .canceled
-                _ = completion(nil, nil, KotlinBoolean(value: cancelled), cancelled ? nil : String(describing: error))
+                completion(nil, nil, KotlinBoolean(value: cancelled), cancelled ? nil : String(describing: error))
                 return
             }
             guard let user = result?.user, let idToken = user.idToken?.tokenString else {
-                _ = completion(nil, nil, KotlinBoolean(value: false), "Google sign-in answered no ID token")
+                completion(nil, nil, KotlinBoolean(value: false), "Google sign-in answered no ID token")
                 return
             }
-            _ = completion(idToken, user.accessToken.tokenString, KotlinBoolean(value: false), nil)
+            completion(idToken, user.accessToken.tokenString, KotlinBoolean(value: false), nil)
         }
     }
 
     /// The URL Google's sheet returns through, handed on by the scene (`SceneDelegate`).
+    @MainActor
     static func handle(_ url: URL) -> Bool {
         GIDSignIn.sharedInstance.handle(url)
     }
@@ -71,6 +81,7 @@ final class GoogleSignInBridge: NSObject, GoogleIdTokenSource {
     }
 
     /// The view controller on top of the app's key window, which presents Google's sheet.
+    @MainActor
     private static func topViewController() -> UIViewController? {
         let window = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
