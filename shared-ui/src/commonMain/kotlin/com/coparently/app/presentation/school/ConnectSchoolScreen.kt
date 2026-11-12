@@ -41,6 +41,7 @@ import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import com.coparently.app.data.family.FamilyOption
+import com.coparently.app.domain.school.SchoolSystem
 import com.coparently.app.presentation.common.BannerTone
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ErrorState
@@ -90,6 +91,12 @@ import com.coparently.app.resources.school_connect_url_check
 import com.coparently.app.resources.school_connect_url_hint
 import com.coparently.app.resources.school_connect_url_label
 import com.coparently.app.resources.school_connect_username
+import com.coparently.app.resources.school_edupage_address_hint
+import com.coparently.app.resources.school_edupage_address_label
+import com.coparently.app.resources.school_edupage_password_kept
+import com.coparently.app.resources.school_system_bakalari
+import com.coparently.app.resources.school_system_edupage
+import com.coparently.app.resources.school_system_title
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -180,6 +187,16 @@ private fun StepContent(
     modifier: Modifier
 ) {
     when (state.step) {
+        ConnectStep.SYSTEM -> StepColumn(state, modifier) { SystemStep(viewModel) }
+        ConnectStep.EDUPAGE_CREDENTIALS -> StepColumn(state, modifier) {
+            EdupageCredentialsFields(
+                state = state,
+                password = password,
+                onPassword = onPassword,
+                viewModel = viewModel
+            )
+        }
+        ConnectStep.EDUPAGE_CHILD -> StepColumn(state, modifier) { EdupageChildStep(state, viewModel) }
         ConnectStep.TOWN -> TownStep(state, viewModel, modifier)
         ConnectStep.SCHOOL -> SchoolStep(state, viewModel, modifier)
         ConnectStep.MANUAL -> StepColumn(state, modifier) {
@@ -215,12 +232,23 @@ private fun PrimaryAction(
     viewModel: ConnectSchoolViewModel
 ) {
     when (state.step) {
-        ConnectStep.TOWN, ConnectStep.SCHOOL -> Unit
+        ConnectStep.SYSTEM, ConnectStep.TOWN, ConnectStep.SCHOOL -> Unit
         ConnectStep.MANUAL -> StickyActionBar(
             label = stringResource(Res.string.school_connect_url_check),
             onClick = viewModel::checkManualUrl,
             enabled = state.manualUrl.isNotBlank(),
             busy = state.isBusy
+        )
+        ConnectStep.EDUPAGE_CREDENTIALS -> StickyActionBar(
+            label = stringResource(Res.string.school_connect_sign_in),
+            onClick = onSignIn,
+            enabled = !state.isLoading && state.username.isNotBlank() && passwordEntered,
+            busy = state.isBusy
+        )
+        ConnectStep.EDUPAGE_CHILD -> StickyActionBar(
+            label = stringResource(Res.string.school_connect_continue),
+            onClick = viewModel::toConfirm,
+            enabled = state.canContinue
         )
         ConnectStep.CREDENTIALS -> StickyActionBar(
             label = stringResource(Res.string.school_connect_sign_in),
@@ -253,6 +281,97 @@ private fun StepColumn(state: ConnectSchoolUiState, modifier: Modifier, content:
         state.error?.let { InlineBanner(text = it.asString(), tone = BannerTone.ATTENTION) }
         content()
     }
+}
+
+/** Which system the school uses; EduPage is offered only while the build offers it. */
+@Composable
+private fun SystemStep(viewModel: ConnectSchoolViewModel) {
+    Column {
+        GroupLabel(stringResource(Res.string.school_system_title))
+        SectionGroup {
+            SectionRow(
+                icon = Icons.Default.School,
+                title = stringResource(Res.string.school_system_bakalari),
+                onClick = { viewModel.chooseSystem(SchoolSystem.BAKALARI) }
+            )
+            Divider()
+            SectionRow(
+                icon = Icons.Default.School,
+                title = stringResource(Res.string.school_system_edupage),
+                onClick = { viewModel.chooseSystem(SchoolSystem.EDUPAGE) }
+            )
+        }
+    }
+}
+
+/** EduPage's sign-in: the optional school address, username and password, and where the password goes. */
+@Composable
+private fun EdupageCredentialsFields(
+    state: ConnectSchoolUiState,
+    password: String,
+    onPassword: (String) -> Unit,
+    viewModel: ConnectSchoolViewModel
+) {
+    if (state.reconnecting) {
+        Text(
+            text = state.schoolName.ifBlank { state.baseUrl.orEmpty() },
+            style = MaterialTheme.typography.titleMediumEmphasized
+        )
+    } else {
+        OutlinedTextField(
+            value = state.edupageAddress,
+            onValueChange = viewModel::onEdupageAddress,
+            label = { Text(stringResource(Res.string.school_edupage_address_label)) },
+            supportingText = { Text(stringResource(Res.string.school_edupage_address_hint)) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+    OutlinedTextField(
+        value = state.username,
+        onValueChange = viewModel::onUsername,
+        label = { Text(stringResource(Res.string.school_connect_username)) },
+        readOnly = state.reconnecting,
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth()
+    )
+    OutlinedTextField(
+        value = password,
+        onValueChange = onPassword,
+        label = { Text(stringResource(Res.string.school_connect_password)) },
+        visualTransformation = PasswordVisualTransformation(),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth()
+    )
+    InlineBanner(
+        text = stringResource(Res.string.school_edupage_password_kept),
+        icon = Icons.Default.Lock
+    )
+}
+
+/** EduPage's pupils (asked at two or more), then the CoPlanly family and child as for Bakaláři. */
+@Composable
+private fun EdupageChildStep(state: ConnectSchoolUiState, viewModel: ConnectSchoolViewModel) {
+    if (state.edupageChildren.size > 1) {
+        Column {
+            GroupLabel(stringResource(Res.string.school_connect_child_label))
+            SectionGroup {
+                state.edupageChildren.forEachIndexed { index, pupil ->
+                    if (index > 0) Divider()
+                    SectionRow(
+                        icon = Icons.Default.AccountCircle,
+                        title = pupil.name,
+                        supporting = pupil.className.takeIf { it.isNotBlank() },
+                        onClick = { viewModel.chooseEdupageChild(pupil.studentId) },
+                        trailing = { RadioButton(selected = pupil.studentId == state.edupageChild, onClick = null) }
+                    )
+                }
+            }
+        }
+    }
+    ChooseStep(state, viewModel)
 }
 
 /** The town search: a field, the manual route, and the matching towns. */

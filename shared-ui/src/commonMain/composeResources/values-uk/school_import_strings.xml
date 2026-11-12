@@ -70,4 +70,13 @@
     <string name="school_connect_confirm_shared">Вони стануть звичайними подіями цієї родини про дитину (%1$s), і другий із батьків їх теж побачить.</string>
     <string name="school_connect_confirm_not_imported">Оцінки, домашні завдання й окремі уроки не імпортуються.</string>
     <string name="school_connect_save">Підключити й імпортувати</string>
+    <string name="school_system_title">Яку систему використовує школа?</string>
+    <string name="school_system_bakalari">Bakaláři</string>
+    <string name="school_system_edupage">EduPage</string>
+    <string name="school_edupage_address_label">Адреса школи (необовʼязково)</string>
+    <string name="school_edupage_address_hint">Лише якщо вхід не знаходить вашу школу, наприклад zsx.edupage.org</string>
+    <string name="school_edupage_second_factor">Цей обліковий запис вимагає другого підтвердження. Підтвердьте вхід у застосунку EduPage або через e-mail і спробуйте ще раз.</string>
+    <string name="school_edupage_password_kept">CoPlanly зберігає цей пароль на цьому телефоні в зашифрованому вигляді, щоб імпорт міг входити щодня. Він надсилається лише до EduPage.</string>
+    <string name="school_edupage_captcha">EduPage просить ввести CAPTCHA. Один раз увійдіть на сайті EduPage і спробуйте ще раз.</string>
+    <string name="school_edupage_address_invalid">Це не адреса EduPage. Вона має виглядати як zsx.edupage.org.</string>
 </resources>

@@ -70,4 +70,13 @@
     <string name="school_connect_confirm_shared">Stanou se běžnými událostmi této rodiny týkajícími se dítěte %1$s a uvidí je i druhý rodič.</string>
     <string name="school_connect_confirm_not_imported">Známky, domácí úkoly a jednotlivé hodiny se neimportují.</string>
     <string name="school_connect_save">Připojit a importovat</string>
+    <string name="school_system_title">Jaký systém škola používá?</string>
+    <string name="school_system_bakalari">Bakaláři</string>
+    <string name="school_system_edupage">EduPage</string>
+    <string name="school_edupage_address_label">Adresa školy (nepovinné)</string>
+    <string name="school_edupage_address_hint">Jen když přihlášení vaši školu nenajde, např. zsx.edupage.org</string>
+    <string name="school_edupage_second_factor">Tento účet žádá druhé potvrzení. Potvrďte přihlášení v aplikaci EduPage nebo v e-mailu a zkuste to znovu.</string>
+    <string name="school_edupage_password_kept">CoPlanly si toto heslo uchovává v tomto telefonu, zašifrované, aby se import mohl každý den přihlásit. Odesílá se jen do EduPage.</string>
+    <string name="school_edupage_captcha">EduPage žádá CAPTCHA. Přihlaste se jednou na webu EduPage a zkuste to znovu.</string>
+    <string name="school_edupage_address_invalid">Toto není adresa EduPage. Měla by vypadat jako zsx.edupage.org.</string>
 </resources>

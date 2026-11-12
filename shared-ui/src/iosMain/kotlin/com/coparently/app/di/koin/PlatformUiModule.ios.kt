@@ -5,6 +5,7 @@ import com.coparently.app.domain.ai.AiAssistRepository
 import com.coparently.app.domain.dictation.SpeechDictation
 import com.coparently.app.presentation.auth.AuthErrors
 import com.coparently.app.presentation.pairing.InviteQrCodes
+import com.coparently.app.presentation.platform.AppBuildValues
 import org.koin.core.module.Module
 import org.koin.dsl.module
 
@@ -23,4 +24,16 @@ actual val platformUiModule: Module = module {
     single<AiAssistRepository> { NoAiAssist }
     single<InviteQrCodes> { NoInviteQrCodes }
     single<AuthErrors> { NoAuthErrors }
+    // The EduPage import is not offered on the iPhone: this stand-in is what a ViewModel reads, while
+    // the screens read the real values the shell provides (`ProvideIosShell`).
+    single {
+        AppBuildValues(
+            versionName = "",
+            privacyPolicyUrl = null,
+            termsUrl = null,
+            supportEmail = null,
+            pairingWebLink = false,
+            edupageImport = false
+        )
+    }
 }

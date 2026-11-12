@@ -81,7 +81,8 @@ class PlatformServicesTest {
             privacyPolicyUrl = null,
             termsUrl = null,
             supportEmail = null,
-            pairingWebLink = false
+            pairingWebLink = false,
+            edupageImport = false
         ),
         images = object : PlatformImages {
             override val available = false

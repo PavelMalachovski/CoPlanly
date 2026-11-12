@@ -44,6 +44,7 @@ class AndroidPlatformTest {
 
         assertEquals(BuildConfig.VERSION_NAME, values.versionName)
         assertEquals(BuildConfig.PAIRING_WEB_LINK, values.pairingWebLink)
+        assertEquals(BuildConfig.EDUPAGE_IMPORT, values.edupageImport)
         assertEquals(BuildConfig.PRIVACY_POLICY_URL.ifBlank { null }, values.privacyPolicyUrl)
         assertEquals(BuildConfig.TERMS_URL.ifBlank { null }, values.termsUrl)
         if (BuildConfig.SUPPORT_EMAIL.isBlank()) assertNull(values.supportEmail)
