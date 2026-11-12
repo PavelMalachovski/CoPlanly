@@ -27,6 +27,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,6 +49,7 @@ import com.coparently.app.presentation.common.AnswerByPickSaver
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.StickyActionBar
+import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.common.rememberAnswerByOffer
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
@@ -72,6 +75,7 @@ import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -121,11 +125,10 @@ class SwapSheetActions(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DaySwapSheet(offer: SwapSheetOffer, parentNames: ParentNames, actions: SwapSheetActions) {
-    ModalBottomSheet(
-        onDismissRequest = actions.onCancel,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
-    ) {
-        DaySwapSheetContent(offer, parentNames, actions)
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val scope = rememberCoroutineScope()
+    ModalBottomSheet(onDismissRequest = actions.onCancel, sheetState = sheetState) {
+        DaySwapSheetContent(offer, parentNames, actions, onNeedRoom = { scope.launch { sheetState.expand() } })
     }
 }
 
@@ -147,8 +150,12 @@ fun DaySwapSheetContent(
     offer: SwapSheetOffer,
     parentNames: ParentNames,
     actions: SwapSheetActions,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onNeedRoom: () -> Unit = {}
 ) {
+    // At a large font the half-height anchor cannot hold the rows and the pinned button.
+    val largeFont = stacksAtLargeFont()
+    LaunchedEffect(largeFont) { if (largeFont) onNeedRoom() }
     var note by rememberSaveable { mutableStateOf("") }
     var answerBy by rememberSaveable(stateSaver = AnswerByPickSaver) { mutableStateOf(AnswerByPick.DEFAULT) }
     val sides = offer.sides
@@ -163,7 +170,7 @@ fun DaySwapSheetContent(
                 .padding(bottom = Spacing.M),
             verticalArrangement = Arrangement.spacedBy(Spacing.M)
         ) {
-            SwapSheetBody(offer, parentNames, note, { note = it }, answerBy) { answerBy = it }
+            SwapSheetBody(offer, parentNames, note, { note = it }, answerBy, { answerBy = it }, onNeedRoom)
         }
         if (scroll.canScrollForward || scroll.canScrollBackward) HorizontalDivider()
         SwapSheetBar(sides, offer.coParentName, actions) {
@@ -181,12 +188,13 @@ private fun SwapSheetBody(
     note: String,
     onNoteChange: (String) -> Unit,
     answerBy: AnswerByPick,
-    onAnswerByChange: (AnswerByPick) -> Unit
+    onAnswerByChange: (AnswerByPick) -> Unit,
+    onNeedRoom: () -> Unit
 ) {
     val sides = offer.sides
     val name = offer.coParentName
     val me = parentNames.parents.me?.slot
-    if (sides.isEmpty || me == null) {
+    if (sides.isEmpty) {
         Text(
             text = stringResource(Res.string.day_swap_sheet_title_with, name),
             style = MaterialTheme.typography.titleLargeEmphasized
@@ -204,11 +212,13 @@ private fun SwapSheetBody(
         style = MaterialTheme.typography.titleLargeEmphasized,
         modifier = Modifier.semantics { heading() }
     )
-    SectionGroup {
-        val rows = swapSheetRows(sides, me)
-        rows.forEachIndexed { index, row ->
-            if (index > 0) Divider()
-            SwapSheetRowLine(row, parentNames)
+    // An unknown own slot cannot be told which side is whose: the rows are left out, the offer stands.
+    if (me != null) {
+        SectionGroup {
+            swapSheetRows(sides, me).forEachIndexed { index, row ->
+                if (index > 0) Divider()
+                SwapSheetRowLine(row, parentNames)
+            }
         }
     }
     if (sides.unknown.isNotEmpty()) {
@@ -218,7 +228,7 @@ private fun SwapSheetBody(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
-    SwapOptions(sides.offerable, name, note, onNoteChange, answerBy, onAnswerByChange)
+    SwapOptions(sides.offerable, name, note, onNoteChange, answerBy, onAnswerByChange, onNeedRoom)
 }
 
 /** One row: the receiver's dot, the days, and "→ name" or "→ you" in the receiver's text colour. */
@@ -261,7 +271,8 @@ private fun SwapOptions(
     note: String,
     onNoteChange: (String) -> Unit,
     answerBy: AnswerByPick,
-    onAnswerByChange: (AnswerByPick) -> Unit
+    onAnswerByChange: (AnswerByPick) -> Unit,
+    onNeedRoom: () -> Unit
 ) {
     var noteOpen by rememberSaveable { mutableStateOf(false) }
     var answerByOpen by rememberSaveable { mutableStateOf(false) }
@@ -275,13 +286,19 @@ private fun SwapOptions(
     ) {
         if (!noteOpen && note.isEmpty()) {
             AssistChip(
-                onClick = { noteOpen = true },
+                onClick = {
+                    noteOpen = true
+                    onNeedRoom()
+                },
                 label = { Text(stringResource(Res.string.day_swap_add_note)) },
                 leadingIcon = { Icon(Icons.Default.EditNote, null, Modifier.size(IconSizes.Small)) }
             )
         }
         AssistChip(
-            onClick = { answerByOpen = !answerByOpen },
+            onClick = {
+                answerByOpen = !answerByOpen
+                if (answerByOpen) onNeedRoom()
+            },
             label = {
                 Text(
                     if (answerByMillis == null) {

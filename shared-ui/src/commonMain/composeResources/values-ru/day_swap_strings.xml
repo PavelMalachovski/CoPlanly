@@ -132,10 +132,10 @@
     </plurals>
     <string name="day_swap_day_to_you">%1$s → вам</string>
     <plurals name="day_swap_sheet_title_count">
-        <item quantity="one">Обмен: %1$d день с %2$s</item>
-        <item quantity="few">Обмен: %1$d дня с %2$s</item>
-        <item quantity="many">Обмен: %1$d дней с %2$s</item>
-        <item quantity="other">Обмен: %1$d дня с %2$s</item>
+        <item quantity="one">Обмен, дней: %1$d — %2$s</item>
+        <item quantity="few">Обмен, дней: %1$d — %2$s</item>
+        <item quantity="many">Обмен, дней: %1$d — %2$s</item>
+        <item quantity="other">Обмен, дней: %1$d — %2$s</item>
     </plurals>
     <string name="day_swap_add_note">Добавить заметку</string>
 </resources>
