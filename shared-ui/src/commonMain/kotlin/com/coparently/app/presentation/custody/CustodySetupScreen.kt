@@ -49,7 +49,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -92,6 +91,7 @@ import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyLargeEmphasized
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.labelMediumEmphasized
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.presentation.theme.titleMediumEmphasized
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.custody_back
@@ -203,6 +203,7 @@ fun CustodySetupScreen(
         containerColor = ScreenContainerColor,
         topBar = {
             TopAppBar(
+                colors = screenTopAppBarColors(),
                 title = {
                     Text(
                         text = custodyTitle(childScope, section),
@@ -225,10 +226,7 @@ fun CustodySetupScreen(
                             contentDescription = stringResource(Res.string.custody_back)
                         )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                }
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },

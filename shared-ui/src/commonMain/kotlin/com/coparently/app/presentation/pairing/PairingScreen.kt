@@ -69,6 +69,7 @@ import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.labelLargeEmphasized
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.pairing_add_another_description
 import com.coparently.app.resources.pairing_add_another_title
@@ -386,6 +387,7 @@ private fun PairingTopBar(state: PairingState, partnerOnScreen: PartnerSummary?,
             ?: stringResource(Res.string.parent_label_coparent)
     } ?: stringResource(Res.string.pairing_screen_title)
     TopAppBar(
+        colors = screenTopAppBarColors(),
         title = { Text(title) },
         navigationIcon = {
             IconButton(onClick = onNavigateBack) {

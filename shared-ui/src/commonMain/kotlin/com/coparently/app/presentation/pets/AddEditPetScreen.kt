@@ -62,6 +62,7 @@ import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.platform.LocalFilePicker
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.pet_add_button
 import com.coparently.app.resources.pet_breed_label
@@ -247,6 +248,7 @@ fun AddEditPetScreen(
         modifier = Modifier.then(leave.backPreview),
         topBar = {
             TopAppBar(
+                colors = screenTopAppBarColors(),
                 title = {
                     Text(
                         if (isNewPet) {

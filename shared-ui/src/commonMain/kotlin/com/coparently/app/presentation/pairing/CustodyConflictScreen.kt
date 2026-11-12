@@ -44,6 +44,7 @@ import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.labelMediumEmphasized
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.custody_conflict_body
 import com.coparently.app.resources.custody_conflict_keep_local
@@ -111,7 +112,10 @@ fun CustodyConflictScreen(
     Scaffold(
         containerColor = ScreenContainerColor,
         topBar = {
-            TopAppBar(title = { Text(stringResource(Res.string.custody_conflict_title)) })
+            TopAppBar(
+                colors = screenTopAppBarColors(),
+                title = { Text(stringResource(Res.string.custody_conflict_title)) }
+            )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->

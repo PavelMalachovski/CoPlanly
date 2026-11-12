@@ -47,6 +47,7 @@ import com.coparently.app.presentation.platform.LocalSensitiveClipboard
 import com.coparently.app.presentation.platform.LocalShareSheet
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.calendar_feed_copy
 import com.coparently.app.resources.calendar_feed_create
@@ -118,6 +119,7 @@ fun CalendarFeedScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
+                colors = screenTopAppBarColors(),
                 title = { Text(stringResource(Res.string.calendar_feed_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {

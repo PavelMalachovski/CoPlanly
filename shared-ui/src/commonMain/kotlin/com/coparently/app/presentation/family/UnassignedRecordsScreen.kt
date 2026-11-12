@@ -61,6 +61,7 @@ import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyLargeEmphasized
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
 import com.coparently.app.resources.common_dialog_cancel
@@ -194,6 +195,7 @@ fun UnassignedRecordsScreen(
 @Composable
 private fun UnassignedTopBar(onNavigateUp: () -> Unit) {
     TopAppBar(
+        colors = screenTopAppBarColors(),
         title = { Text(stringResource(Res.string.unassigned_records_title)) },
         navigationIcon = {
             IconButton(onClick = onNavigateUp) {

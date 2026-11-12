@@ -67,6 +67,7 @@ import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
 import com.coparently.app.resources.payment_card_received
@@ -145,6 +146,7 @@ fun SupportScreen(onNavigateUp: () -> Unit, viewModel: SupportViewModel = koinVi
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
+                colors = screenTopAppBarColors(),
                 title = { Text(stringResource(Res.string.support_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {

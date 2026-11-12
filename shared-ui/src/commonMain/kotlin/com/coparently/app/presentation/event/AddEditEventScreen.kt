@@ -125,6 +125,7 @@ import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.labelLargeEmphasized
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.event_all_day
 import com.coparently.app.resources.event_delete
@@ -808,6 +809,7 @@ fun AddEditEventScreen(
         modifier = Modifier.then(leave.backPreview),
         topBar = {
             TopAppBar(
+                colors = screenTopAppBarColors(),
                 title = {
                     Text(
                         if (eventId == null) {

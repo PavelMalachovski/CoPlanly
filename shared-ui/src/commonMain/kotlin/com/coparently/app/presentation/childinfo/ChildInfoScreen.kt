@@ -38,6 +38,7 @@ import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.placeOf
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.childinfo_add_child_button
 import com.coparently.app.resources.childinfo_back
@@ -109,6 +110,7 @@ fun ChildInfoScreen(
         containerColor = ScreenContainerColor,
         topBar = {
             TopAppBar(
+                colors = screenTopAppBarColors(),
                 title = { Text(stringResource(Res.string.childinfo_screen_title)) },
                 navigationIcon = {
                     IconButton(onClick = {

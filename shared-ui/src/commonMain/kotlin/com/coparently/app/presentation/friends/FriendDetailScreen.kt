@@ -41,6 +41,7 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
 import com.coparently.app.resources.friend_detail_title
@@ -105,6 +106,7 @@ fun FriendDetailScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
+                colors = screenTopAppBarColors(),
                 title = { Text(name) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {

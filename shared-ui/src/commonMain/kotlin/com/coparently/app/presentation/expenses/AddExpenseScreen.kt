@@ -96,6 +96,7 @@ import com.coparently.app.presentation.platform.LocalPlatformImages
 import com.coparently.app.presentation.theme.CoPlanlyShapes
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.budgets_back
 import com.coparently.app.resources.expense_add_title
@@ -340,6 +341,7 @@ fun AddExpenseScreen(
         modifier = Modifier.then(leave.backPreview),
         topBar = {
             TopAppBar(
+                colors = screenTopAppBarColors(),
                 title = {
                     Text(
                         stringResource(

@@ -38,6 +38,7 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
 import com.coparently.app.resources.earlier_families_empty_description
@@ -281,6 +282,7 @@ private fun familyTitle(family: EarlierFamily): String =
 @Composable
 private fun BackTopBar(title: String, onNavigateUp: () -> Unit) {
     TopAppBar(
+        colors = screenTopAppBarColors(),
         title = { Text(title) },
         navigationIcon = {
             IconButton(onClick = onNavigateUp) {

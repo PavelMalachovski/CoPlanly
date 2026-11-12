@@ -37,6 +37,7 @@ import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.pets_add
 import com.coparently.app.resources.pets_back
@@ -72,6 +73,7 @@ fun PetsScreen(
         containerColor = ScreenContainerColor,
         topBar = {
             TopAppBar(
+                colors = screenTopAppBarColors(),
                 title = { Text(stringResource(Res.string.pets_screen_title)) },
                 navigationIcon = {
                     IconButton(onClick = {

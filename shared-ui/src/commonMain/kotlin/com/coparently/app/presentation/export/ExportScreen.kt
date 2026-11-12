@@ -62,6 +62,7 @@ import com.coparently.app.presentation.parentingplan.PlanStrings
 import com.coparently.app.presentation.platform.LocalShareSheet
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.export_action_created
 import com.coparently.app.resources.export_action_current
@@ -233,6 +234,7 @@ fun ExportScreen(
 @Composable
 private fun ExportTopBar(onNavigateBack: () -> Unit) {
     TopAppBar(
+        colors = screenTopAppBarColors(),
         title = { Text(stringResource(Res.string.export_title)) },
         navigationIcon = {
             IconButton(onClick = onNavigateBack) {

@@ -85,6 +85,7 @@ import com.coparently.app.presentation.payments.PaymentsViewModel
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.expense_analytics_tab_analytics
 import com.coparently.app.resources.expense_analytics_tab_list
@@ -288,6 +289,7 @@ fun ExpenseScreen(
         containerColor = ScreenContainerColor,
         topBar = {
             TopAppBar(
+                colors = screenTopAppBarColors(),
                 title = { Text(stringResource(Res.string.expenses_title)) },
                 // A detail screen since the Family tab replaced the Expenses tab (new-user review,
                 // October 2026): opened from the tab's money card, Home's tile or a push.

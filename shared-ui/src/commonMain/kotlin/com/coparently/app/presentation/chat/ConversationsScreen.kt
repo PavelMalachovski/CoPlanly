@@ -51,6 +51,7 @@ import com.coparently.app.presentation.common.WideColumn
 import com.coparently.app.presentation.common.rememberTwoPane
 import com.coparently.app.presentation.common.valueOrNull
 import com.coparently.app.presentation.theme.ScreenContainerColor
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.chat_coparent_link_pending
 import com.coparently.app.resources.chat_empty_description
@@ -240,6 +241,7 @@ private fun ConversationList(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
+                colors = screenTopAppBarColors(),
                 title = { Text(stringResource(Res.string.conversations_title)) },
                 actions = {
                     IconButton(onClick = onOpenSettings) {

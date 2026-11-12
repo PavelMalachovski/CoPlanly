@@ -75,6 +75,7 @@ import com.coparently.app.presentation.parentingplan.planCitationLine
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyMediumEmphasized
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.change_request_accept
 import com.coparently.app.resources.change_request_back
@@ -300,6 +301,7 @@ private fun ShowErrorOnce(message: UiText?, onShown: () -> Unit) {
 @Composable
 private fun InboxTopBar(onBack: () -> Unit) {
     TopAppBar(
+        colors = screenTopAppBarColors(),
         title = { Text(stringResource(Res.string.change_request_inbox_title)) },
         navigationIcon = {
             IconButton(onClick = onBack) {

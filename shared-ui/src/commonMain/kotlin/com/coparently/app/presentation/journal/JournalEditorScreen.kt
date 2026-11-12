@@ -43,6 +43,7 @@ import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
 import com.coparently.app.resources.journal_delete
@@ -215,6 +216,7 @@ private fun EditorForm(
 @Composable
 private fun EditorTopBar(isNew: Boolean, onNavigateUp: () -> Unit) {
     TopAppBar(
+        colors = screenTopAppBarColors(),
         title = {
             Text(
                 stringResource(if (isNew) Res.string.journal_editor_new_title else Res.string.journal_editor_edit_title)
