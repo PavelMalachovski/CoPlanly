@@ -55,16 +55,17 @@ import org.jetbrains.compose.resources.stringResource
  * @param selectedDate The day whose month titles the card: the first of the month in Month view,
  *   the selected day in Week and Day view, as the header's title always read it
  * @param onToday Brings the calendar back to today
- * @param onPrevious One period back: a month, a week or a day, as the view shows
- * @param onNext One period on
+ * @param onPrevious One period back: a month, a week or a day, as the view shows; null draws no
+ *   arrows (while days are chosen for a swap, the selection header pages the month)
+ * @param onNext One period on; null as [onPrevious]
  * @param onJumpToDate Opens the date picker
  */
 @Composable
 fun CalendarMonthBar(
     selectedDate: LocalDate,
     onToday: () -> Unit,
-    onPrevious: () -> Unit,
-    onNext: () -> Unit,
+    onPrevious: (() -> Unit)?,
+    onNext: (() -> Unit)?,
     onJumpToDate: () -> Unit
 ) {
     Row(
@@ -81,19 +82,23 @@ fun CalendarMonthBar(
                 )
             }
         )
-        IconButton(onClick = onPrevious) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                contentDescription = stringResource(Res.string.calendar_previous_period),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        onPrevious?.let { onClick ->
+            IconButton(onClick = onClick) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                    contentDescription = stringResource(Res.string.calendar_previous_period),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
-        IconButton(onClick = onNext) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = stringResource(Res.string.calendar_next_period),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        onNext?.let { onClick ->
+            IconButton(onClick = onClick) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = stringResource(Res.string.calendar_next_period),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

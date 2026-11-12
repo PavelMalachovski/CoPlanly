@@ -107,7 +107,9 @@ class MainNavigationSmokeTest {
         )
         for (mode in views) {
             chooseCalendarView(mode)
-            composeTestRule.onNode(viewModeTitle).assertIsDisplayed()
+            composeTestRule.onAllNodes(hasText(string(mode)) and hasClickAction() and isMenuItem())
+                .onFirst()
+                .assertIsSelected()
             composeTestRule.onNode(bottomBar).assertIsDisplayed()
         }
 

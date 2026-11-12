@@ -71,7 +71,6 @@
         <item quantity="other">%1$d чекають на вашу відповідь</item>
     </plurals>
     <string name="calendar_change_requests_review">Переглянути</string>
-    <string name="calendar_change_view_mode">Змінити вигляд або перейти до дати</string>
     <string name="calendar_jump_to_date">Перейти до дати…</string>
 
     <!-- Noun phrase, not "X змінив(ла)" — Ukrainian inflects that verb for gender and a name
@@ -118,9 +117,9 @@
         <item quantity="other">%1$s з вами</item>
     </plurals>
     <plurals name="calendar_today_card_children_with_parent">
-        <item quantity="one">%1$s і %2$s разом</item>
-        <item quantity="few">%1$s і %2$s разом</item>
-        <item quantity="many">%1$s і %2$s разом</item>
-        <item quantity="other">%1$s і %2$s разом</item>
+        <item quantity="one">%1$s — з одним із батьків: %2$s</item>
+        <item quantity="few">%1$s — з одним із батьків: %2$s</item>
+        <item quantity="many">%1$s — з одним із батьків: %2$s</item>
+        <item quantity="other">%1$s — з одним із батьків: %2$s</item>
     </plurals>
 </resources>

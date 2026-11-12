@@ -36,6 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -50,6 +51,7 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import com.coparently.app.data.requests.minuteTicks
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.CustodyHistory
@@ -435,7 +437,19 @@ fun CalendarScreen(
     // loaded, through `HomeWeek.todayOf` — the value Home's today card and the widget read.
     LaunchedEffect(today) { eventViewModel.showTodayCardFor(today) }
     val todayEvents by eventViewModel.todayEvents.collectAsState()
-    val todayModel = remember(todayEvents, today, parents, getCustody, getContactWindows, familyMembers, dayOverrides) {
+    // A minute's tick, so the card's "next event" moves on while the screen stays open.
+    val now by produceState(wallClockNow()) { minuteTicks().collect { value = wallClockNow() } }
+    val todayModel = remember(
+        todayEvents,
+        today,
+        now,
+        parents,
+        getCustody,
+        getContactWindows,
+        familyMembers,
+        custodyModel,
+        dayOverrides
+    ) {
         TodayModel.of(
             agenda = HomeWeek.todayOf(
                 events = todayEvents,
@@ -446,9 +460,12 @@ fun CalendarScreen(
             ),
             childNames = familyMembers.filter { it.ref is FamilyMemberRef.Child }.map { it.name },
             childrenApart = ChildrenToday.of(today, custodyModel, dayOverrides, familyMembers).isNotEmpty(),
-            now = wallClockNow()
+            now = now
         )
     }
+
+    // Whether the swap selection header stands in for the calendar's own (design item 23).
+    val swapHeaderShown = selectingSwap && viewMode == CalendarViewMode.MONTH
 
     // The grid card's arrows: a month in Month view, a week or a day in the other two.
     val stepPeriod: (Int) -> Unit = { step ->
@@ -692,7 +709,7 @@ fun CalendarScreen(
     Scaffold(
         containerColor = ScreenContainerColor,
         topBar = {
-            if (selectingSwap && viewMode == CalendarViewMode.MONTH) {
+            if (swapHeaderShown) {
                 SwapSelectionHeader(
                     month = displayedMonth,
                     onPreviousMonth = { calendarViewModel.showMonth(displayedMonth.minusMonth()) },
@@ -724,8 +741,9 @@ fun CalendarScreen(
                     parentNames = parentNames,
                     onOpen = {
                         endSwapSelection()
-                        // Back from it returns to the month it was opened over, as a cell's tap does.
-                        dayOpenedFromMonth = viewMode == CalendarViewMode.MONTH
+                        // Back from it returns to the month it was opened over, as a cell's tap does,
+                        // and keeps returning there when a cell already opened this Day view (D-11).
+                        dayOpenedFromMonth = dayOpenedFromMonth || viewMode == CalendarViewMode.MONTH
                         calendarViewModel.setSelectedDate(today)
                         calendarViewModel.setViewMode(CalendarViewMode.DAY)
                     },
@@ -1007,8 +1025,9 @@ fun CalendarScreen(
                         onToday = {
                             calendarViewModel.showMonth(Clock.System.todayIn(TimeZone.currentSystemDefault()).yearMonth)
                         },
-                        onPrevious = { stepPeriod(-1) },
-                        onNext = { stepPeriod(1) },
+                        // While days are chosen the selection header pages the month itself.
+                        onPrevious = { stepPeriod(-1) }.takeUnless { swapHeaderShown },
+                        onNext = { stepPeriod(1) }.takeUnless { swapHeaderShown },
                         onJumpToDate = { showDatePicker = true }
                     )
                     // Whose colour is whose and what the marks mean, in every view (new-user review,

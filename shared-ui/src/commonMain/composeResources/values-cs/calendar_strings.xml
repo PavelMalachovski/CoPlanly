@@ -84,7 +84,6 @@
         <item quantity="other">%1$d čeká na vaši odpověď</item>
     </plurals>
     <string name="calendar_change_requests_review">Zkontrolovat</string>
-    <string name="calendar_change_view_mode">Změnit zobrazení nebo přejít na datum</string>
     <string name="calendar_jump_to_date">Přejít na datum…</string>
 
     <!-- Noun phrase, not "X změnil(a)" — Czech inflects that verb for gender and a name cannot
@@ -116,7 +115,7 @@
 
     <!-- The calendar's header and Today card (redesign, November 2026). -->
     <string name="calendar_heading">Váš rodinný kalendář</string>
-    <string name="calendar_together_for">Společně, pro: %1$s</string>
+    <string name="calendar_together_for">Společně pro %1$s</string>
     <string name="calendar_names_and">a</string>
     <string name="calendar_previous_period">Předchozí období</string>
     <string name="calendar_next_period">Další období</string>
@@ -131,9 +130,9 @@
         <item quantity="other">%1$s jsou s vámi</item>
     </plurals>
     <plurals name="calendar_today_card_children_with_parent">
-        <item quantity="one">%1$s a %2$s jsou spolu</item>
-        <item quantity="few">%1$s a %2$s jsou spolu</item>
-        <item quantity="many">%1$s a %2$s jsou spolu</item>
-        <item quantity="other">%1$s a %2$s jsou spolu</item>
+        <item quantity="one">%1$s – u rodiče %2$s</item>
+        <item quantity="few">%1$s – u rodiče %2$s</item>
+        <item quantity="many">%1$s – u rodiče %2$s</item>
+        <item quantity="other">%1$s – u rodiče %2$s</item>
     </plurals>
 </resources>
