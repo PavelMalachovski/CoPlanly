@@ -178,20 +178,21 @@ and the merging of days off are the planner's, shared with Bakaláři unchanged.
 
 ### Connecting
 
-The *Connect a school* screen gains a system choice. For EduPage the parent enters:
-
-1. the school's EduPage address (`<school>` or `https://<school>.edupage.org`, normalised to the
-   host),
-2. the username and password.
+The *Connect a school* screen gains a system choice (shown only while the release flag allows
+EduPage). For EduPage the parent enters the username and password; sign-in goes through EduPage's
+own portal (`login1.edupage.org`), which redirects to the school, so the school's address is
+optional and asked only when the portal cannot find the school (normalised to
+`<school>.edupage.org`).
 
 A parent login and a child's own login are both accepted (my call); a child's login lists one
-child. If the account answers with a second-factor step, the screen asks for the code once. If
-EduPage offers to remember the device after a second factor, that token is stored with the
-password and covered by the same legal lines; if it does not, such an account signs in again only
-when the parent types the code, and the screen says so (my call — whether EduPage asks on every
-new session is learnt from the live account). Then the
-existing flow: pick the child (pre-selected when there is one; a parent account lists its
-children), pick the family at two or more (never pre-selected), import.
+child. **Second factor (plan-time narrowing):** EduPage confirms a second factor by approval in its
+own app or by an e-mailed code. The first build tells the parent to approve the sign-in in EduPage
+and try again; a "remember this device" token, if the live account shows one, is stored with the
+password under the same legal lines. Whether EduPage asks again on every new session is learnt from
+the live account.
+
+Then the existing flow: pick the child (pre-selected when there is one), pick the family at two or
+more (never pre-selected), import.
 
 The removed "EduPage — coming soon" row (September 2026) is not brought back as a placeholder; the
 real row arrives with this feature (design item 8).
