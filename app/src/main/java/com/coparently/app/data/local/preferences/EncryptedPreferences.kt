@@ -486,7 +486,8 @@ class EncryptedPreferences internal constructor(
     /**
      * Clears stored preferences — **except** the per-user parent-slot markers
      * ([PreferenceKeys.PARENT_SLOT_MARKER_PREFIX]) and the school connections
-     * ([PreferenceKeys.SCHOOL_CONNECTION_PREFIX], whose KDoc says who clears them instead).
+     * ([PreferenceKeys.SCHOOL_CONNECTION_PREFIX] and [PreferenceKeys.EDUPAGE_CONNECTION_PREFIX], whose
+     * KDoc says who clears them instead).
      *
      * This is no longer literally "all", and that is deliberate, not an oversight: this method
      * is reached from the app's own Sign out (`SettingsScreen`'s confirm dialog runs
@@ -648,7 +649,8 @@ class EncryptedPreferences internal constructor(
         /** The key families [clear] keeps; each prefix's own KDoc says why. */
         private val PRESERVED_PREFIXES = listOf(
             PreferenceKeys.PARENT_SLOT_MARKER_PREFIX,
-            PreferenceKeys.SCHOOL_CONNECTION_PREFIX
+            PreferenceKeys.SCHOOL_CONNECTION_PREFIX,
+            PreferenceKeys.EDUPAGE_CONNECTION_PREFIX
         )
     }
 }
