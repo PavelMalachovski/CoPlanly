@@ -124,8 +124,9 @@ class EdupageConnectionStoreTest {
 
     @Test
     fun `a bakalari record is written byte for byte as before`() {
-        val expected = """{"v":1,"id":"c1","owner":"alice","system":"bakalari","baseUrl":"https://skola.example.cz",""" +
-            """"username":"novak","schoolName":"School","studentName":"Anna","childId":"child-1","status":"ok",""" +
+        val expected = """{"v":1,"id":"c1","owner":"alice","system":"bakalari",""" +
+            """"baseUrl":"https://skola.example.cz","username":"novak","schoolName":"School","studentName":"Anna",""" +
+            """"childId":"child-1","status":"ok",""" +
             """"userUid":"u1","fullName":"Anna N","classId":"X","accessToken":"a","refreshToken":"r",""" +
             """"expiresAt":5,"ledger":{}}"""
         val bakalari = record("c1").copy(
