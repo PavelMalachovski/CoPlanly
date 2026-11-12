@@ -81,7 +81,8 @@ class CalendarScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant
                 onToday = {},
                 onPrevious = {},
                 onNext = {},
-                onJumpToDate = {}
+                onJumpToDate = {},
+                onAddEvent = {}
             )
             CustodyLegend(
                 parentNames = ScreenshotFixtures.parentNames,

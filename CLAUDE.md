@@ -143,11 +143,14 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    1.3), then the Month/Week/Day segmented control and Filters. The header and the member strip
    are tight on purpose (tester feedback, 12 November 2026): `titleMediumEmphasized` over
    `bodySmall`, 4 dp gaps, and the strip's chips at a 40 dp target (`LocalMinimumInteractiveComponentSize` around it in `CalendarScreen`), so the grid
-   gets the height. The month title, Today and the
-   arrows head the grid's own white card (`CalendarMonthBar` in `CalendarGridCard`, the legend with
-   the swap button under them); tapping the title opens "Jump to date". The Today card
+   gets the height. The month title, Today, the
+   arrows and the "+" for a new event head the grid's own white card (`CalendarMonthBar` in
+   `CalendarGridCard`, the legend with the swap button under them); tapping the title opens "Jump to
+   date". **The "+" is the bar's, not a floating button** (tester feedback, 12 November 2026): once
+   the six rows reached the card's bottom a floating "+" covered the last row's cells. The Scaffold's
+   floating slot holds only the red delete button a long press or a drag brings up. The Today card
    (`TodayCard`, built through `HomeWeek.todayOf` like the widget's) sits in the
-   Scaffold's bottom bar slot so the "+" floats above it, and is left out on two panes. What waits on this parent's answer is an inline banner over the grid
+   Scaffold's bottom bar slot, and is left out on two panes. What waits on this parent's answer is an inline banner over the grid
    (`components/CalendarBanners.kt`), not a badged glyph, and its number is the one Home's
    open requests card shows (item 40 of "Things that are easy to get wrong"). School vacation is neither a banner (it
    changed the grid's height between months) nor the old teal strip: since MON-13 it is a thin

@@ -9,11 +9,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -107,7 +105,6 @@ import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.resources.Res
-import com.coparently.app.resources.calendar_add_event
 import com.coparently.app.resources.calendar_delete_event
 import com.coparently.app.resources.calendar_dialog_cancel
 import com.coparently.app.resources.calendar_dialog_ok
@@ -773,7 +770,8 @@ fun CalendarScreen(
         },
         floatingActionButton = {
             Box {
-                // Red delete button - appears above the "+" button when long pressing event or dragging
+                // Red delete button - appears while an event is long-pressed or dragged. The "+" is
+                // the month bar's since 12 November 2026, so this slot holds nothing else.
                 if ((showDeleteButton && eventToDelete != null) || isDragOverDeleteButton) {
                     FloatingActionButton(
                         onClick = {
@@ -792,7 +790,6 @@ fun CalendarScreen(
                         contentColor = MaterialTheme.colorScheme.onError,
                         shape = MaterialTheme.shapes.small,
                         modifier = Modifier
-                            .offset(y = (-64).dp)
                             .graphicsLayer {
                                 scaleX = if (isDragOverDeleteButton) 1.2f else 1f
                                 scaleY = if (isDragOverDeleteButton) 1.2f else 1f
@@ -808,25 +805,6 @@ fun CalendarScreen(
                             modifier = Modifier.size(IconSizes.Standard)
                         )
                     }
-                }
-
-                // Regular "+" button. Pre-fills the day on screen: the selected day when there
-                // is one, otherwise the anchor of the current view — a null date made the form
-                // default to today even with another day highlighted.
-                FloatingActionButton(
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onAddEventClick(selectedDate ?: anchorDate, null)
-                    },
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    shape = MaterialTheme.shapes.small
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = stringResource(Res.string.calendar_add_event),
-                        modifier = Modifier.size(IconSizes.Standard)
-                    )
                 }
             }
         }
@@ -1049,7 +1027,14 @@ fun CalendarScreen(
                         // While days are chosen the selection header pages the month itself.
                         onPrevious = { stepPeriod(-1) }.takeUnless { swapHeaderShown },
                         onNext = { stepPeriod(1) }.takeUnless { swapHeaderShown },
-                        onJumpToDate = { showDatePicker = true }
+                        onJumpToDate = { showDatePicker = true },
+                        // Pre-fills the day on screen: the selected day when there is one, otherwise
+                        // the anchor of the current view — a null date made the form default to
+                        // today even with another day highlighted.
+                        onAddEvent = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onAddEventClick(selectedDate ?: anchorDate, null)
+                        }.takeUnless { swapHeaderShown }
                     )
                     // Whose colour is whose and what the marks mean, in every view (new-user review,
                     // October 2026). Only with a schedule: without one the grid has no wash to explain.

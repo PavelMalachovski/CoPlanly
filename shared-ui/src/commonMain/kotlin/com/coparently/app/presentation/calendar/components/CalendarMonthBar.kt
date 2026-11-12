@@ -12,9 +12,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +36,7 @@ import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
+import com.coparently.app.resources.calendar_add_event
 import com.coparently.app.resources.calendar_jump_to_date
 import com.coparently.app.resources.calendar_next_period
 import com.coparently.app.resources.calendar_previous_period
@@ -59,14 +62,19 @@ import org.jetbrains.compose.resources.stringResource
  *   arrows (while days are chosen for a swap, the selection header pages the month)
  * @param onNext One period on; null as [onPrevious]
  * @param onJumpToDate Opens the date picker
+ * @param onAddEvent Opens the new-event form, or null to draw no "+" (while days are chosen for a
+ *   swap). It closes the row since the tester redesign of 12 November 2026: a floating "+" sat on
+ *   the grid's last row once the six rows reached the card's bottom.
  */
 @Composable
+@Suppress("LongParameterList") // the bar's actions are this component's API surface
 fun CalendarMonthBar(
     selectedDate: LocalDate,
     onToday: () -> Unit,
     onPrevious: (() -> Unit)?,
     onNext: (() -> Unit)?,
-    onJumpToDate: () -> Unit
+    onJumpToDate: () -> Unit,
+    onAddEvent: (() -> Unit)? = null
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -97,6 +105,14 @@ fun CalendarMonthBar(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = stringResource(Res.string.calendar_next_period),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        onAddEvent?.let { onClick ->
+            FilledTonalIconButton(onClick = onClick) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = stringResource(Res.string.calendar_add_event)
                 )
             }
         }
