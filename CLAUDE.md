@@ -3944,10 +3944,9 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     phone's clock (`domain/export/RecordJournal.kt`). Don't add a sync path, a backup or an outbox
     column.
 
-35. **The school import talks from the phone to the school, keeps no password, and never deletes
-    by absence** (MON-8, September 2026; Bakaláři now. EduPage's greyed "Coming soon" row was
-    removed before the first release (owner decision, September 2026); EduPage returns as a row
-    only when its import exists). `data/school/bakalari/` is the client (`/api/login`
+35. **The school import talks from the phone to the school, keeps no Bakaláři password, and never
+    deletes by absence** (MON-8, September 2026; Bakaláři first, EduPage the second source since
+    November 2026, below). `data/school/bakalari/` is the client (`/api/login`
     with `client_id=ANDR`, `/api/3/timetable/actual`, `/api/3/events`, the school directory at
     `sluzby.bakalari.cz`), parsed by hand over a JSON tree (kotlinx.serialization's `JsonElement`
     since MON-24, read as leniently as Gson's tree was) — no reflected DTO, so R8 has nothing to
@@ -4003,6 +4002,39 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     Nothing here reaches our servers except the imported events themselves, which sync like any
     shared event. What a live school server answers is unverified until `docs/DEVICE-CHECKLIST.md`
     §3.18 is run.
+    **EduPage is the second source** (November 2026; design
+    `docs/superpowers/specs/2026-11-12-edupage-import-design.md`), behind the `SchoolSource` seam, in
+    `shared-data/`'s `data/school/edupage/` (`EdupageClient`, `EdupageSource`, three parsers over a
+    JSON tree, as Bakaláři's). It reads the timetable (`curentttGetData`) and the timeline (events,
+    tests, homework) for the child; EduPage has no API, so the protocol is inferred from the
+    open-source `edupage-api` 0.13.3 and **no real answer has been recorded** until
+    `docs/DEVICE-CHECKLIST.md` §3.36 is run. Six things not to undo.
+    - **The password is stored, the one exception to "used once and dropped"** (owner decision):
+      EduPage has no refresh token, only a session cookie that expires, so the connection keeps the
+      password (`EdupageSecrets`: password, cookies, studentId, device token), sealed in
+      `EncryptedPreferences` like every connection, signed in with once a day and whenever the
+      cookie is refused. It goes only to `edupage.org` and `*.edupage.org` (`originOf` and the
+      redirect rule refuse any other host), is never logged, and goes with the connection
+      (disconnect, sign-out, account switch, deletion). A Bakaláři connection still stores none.
+      The privacy policy, P11b, DATA-SAFETY and DPIA R16 say so; change them with this.
+    - **Its own key prefix**, `school_edupage_connection_`, so an older build (which reads
+      `school_connection_`) never tries Bakaláři's refresh against an EduPage record; the store's
+      `clearAll()` and the `EncryptedPreferences.clear()` exemption cover both prefixes.
+    - **Ids name the child, not the login**: `"edupage|" + host + "|" + studentId + "|" + kind + "|"
+      + key` hashed like Bakaláři's, because one login lists several children and each parent has
+      their own login for the same child. Kinds are `event`, `hours`, `dayoff` and the new `task`
+      (a test or homework, a dated all-day event "Subject: title", keyed on EduPage's item id).
+    - **A pupil's own timeline entry is matched by name or class** (`user_meno`, whitespace and case
+      folded) or whole school; anything else is not the child's and is dropped.
+    - **A second factor is not handled by the app**: `EdupageException.SecondFactor` says "approve
+      the sign-in in EduPage, then try again"; the app never sees the code, and the cookies it was
+      given are kept for the retry. A captcha is refused the same plain way.
+    - **Hidden in release**: the connect screen's EduPage row follows `AppBuildValues.edupageImport`
+      (`BuildConfig.EDUPAGE_IMPORT`, `COPLANLY_EDUPAGE_IMPORT`, default on in debug, off in
+      release) until the device check is run; turning it on in release is its own pull request.
+      The R8 probe runs the client and parsers on `CannedEngine` (`HttpImportProbe`, the case
+      "EduPage sign-in, timetable and timeline through the minified Ktor pipeline", required by
+      `check-r8-probe.js`).
 
 36. **AI assist is a server-side callable, off until configured, and never sees more than it
     needs** (MON-12, September 2026, owner decisions; `functions/ai-assist.js`, `aiAssist` in
