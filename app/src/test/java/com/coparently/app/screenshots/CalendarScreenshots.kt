@@ -8,9 +8,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.custody.SwapSides
+import com.coparently.app.domain.model.ChildInfo
+import com.coparently.app.domain.model.Event
+import com.coparently.app.presentation.calendar.CalendarViewMode
 import com.coparently.app.presentation.calendar.MonthView
 import com.coparently.app.presentation.calendar.SwapDaysButton
 import com.coparently.app.presentation.calendar.SwapMark
+import com.coparently.app.presentation.calendar.components.CalendarGridCard
+import com.coparently.app.presentation.calendar.components.CalendarHeader
+import com.coparently.app.presentation.calendar.components.CalendarMonthBar
 import com.coparently.app.presentation.calendar.components.ChangeRequestBanner
 import com.coparently.app.presentation.calendar.components.CustodyChangedBanner
 import com.coparently.app.presentation.calendar.components.CustodyLegend
@@ -18,9 +24,13 @@ import com.coparently.app.presentation.calendar.components.DaySwapSelectionBar
 import com.coparently.app.presentation.calendar.components.DaySwapSheetContent
 import com.coparently.app.presentation.calendar.components.SwapSheetActions
 import com.coparently.app.presentation.calendar.components.SwapSheetOffer
+import com.coparently.app.presentation.calendar.components.TodayCard
+import com.coparently.app.presentation.calendar.components.TodayModel
 import com.coparently.app.presentation.calendar.components.VacationBanner
 import com.coparently.app.presentation.calendar.swapMiniMonths
 import com.coparently.app.testing.RobolectricTestApplication
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.atTime
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinYearMonth
@@ -48,6 +58,66 @@ class CalendarScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant
 
     @Test
     fun monthGrid() = snap("calendar_month_grid") { MonthGridFixture() }
+
+    /** The header's three rows (redesign, November 2026): brand, heading and together line, views. */
+    @Test
+    fun header() = snap("calendar_header") {
+        CalendarHeader(
+            children = HEADER_CHILDREN,
+            viewMode = CalendarViewMode.MONTH,
+            onViewModeChange = {},
+            onFiltersClick = {},
+            filtersActive = true,
+            onSettingsClick = {}
+        )
+    }
+
+    /** The grid in its white card: the month bar, the legend with the swap button, the month. */
+    @Test
+    fun gridCard() = snap("calendar_grid_card") {
+        CalendarGridCard {
+            CalendarMonthBar(
+                selectedDate = ScreenshotFixtures.MONTH.atDay(1).toKotlinLocalDate(),
+                onToday = {},
+                onPrevious = {},
+                onNext = {},
+                onJumpToDate = {}
+            )
+            CustodyLegend(
+                parentNames = ScreenshotFixtures.parentNames,
+                showContactWindows = true,
+                trailing = { SwapDaysButton(onClick = {}) }
+            )
+            MonthGridFixture()
+        }
+    }
+
+    /** The Today card: the children with the reader, and the next event. */
+    @Test
+    fun todayCard() = snap("calendar_today_card") {
+        val today = ScreenshotFixtures.TODAY.toKotlinLocalDate()
+        val start = today.atTime(TODAY_EVENT_HOUR, 0)
+        TodayCard(
+            today = TodayModel(
+                date = today,
+                dayParent = "mom",
+                childNames = HEADER_CHILDREN.map { it.childName },
+                nextEvent = Event(
+                    id = "dance",
+                    title = "Dancing class",
+                    startDateTime = start,
+                    endDateTime = start,
+                    eventType = "general",
+                    parentOwner = "mom",
+                    createdAt = start,
+                    updatedAt = start
+                ),
+                hasEvents = true
+            ),
+            parentNames = ScreenshotFixtures.parentNames,
+            onOpen = {}
+        )
+    }
 
     @Test
     fun banners() = snap("calendar_banners") {
@@ -115,6 +185,11 @@ class CalendarScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant
 
     companion object {
         private val BANNER_GAP = 8.dp
+        private const val TODAY_EVENT_HOUR = 16
+        private val CHILD_STAMP = LocalDateTime(2026, 5, 1, 9, 0)
+        private val HEADER_CHILDREN = listOf("Emma", "Leo").map {
+            ChildInfo(id = it, childName = it, dateOfBirth = null, createdAt = CHILD_STAMP, updatedAt = CHILD_STAMP)
+        }
         private const val PENDING_REQUESTS = 2
         private const val SWAP_GIVE_DAY = 13
         private const val SWAP_TAKE_DAY = 20

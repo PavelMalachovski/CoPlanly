@@ -64,7 +64,8 @@ class MainNavigationSmokeTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
     private val bottomBar = hasTestTag(BOTTOM_BAR_TEST_TAG)
     private val settingsButton = hasContentDescription(string(R.string.nav_settings)) and hasClickAction()
-    private val viewModeTitle = hasContentDescription(string(R.string.calendar_change_view_mode))
+    // The calendar's header heading, drawn in every view (redesign, part 2b).
+    private val viewModeTitle = hasText(string(R.string.calendar_heading))
 
     @Before
     fun launchSignedIn() {
@@ -192,8 +193,7 @@ class MainNavigationSmokeTest {
     }
 
     private fun chooseCalendarView(@StringRes mode: Int) {
-        composeTestRule.onNode(viewModeTitle).performClick()
-        composeTestRule.settle()
+        // The header's segmented Month/Week/Day control (redesign, part 2b).
         composeTestRule.onAllNodes(hasText(string(mode)) and hasClickAction() and isMenuItem()).onFirst().performClick()
         composeTestRule.settle()
     }
@@ -205,7 +205,7 @@ class MainNavigationSmokeTest {
         composeTestRule.settle()
     }
 
-    /** A dropdown entry, as opposed to the same word elsewhere on screen: it sits outside the bar. */
+    /** A control outside the bottom bar, as opposed to the same word in it. */
     private fun isMenuItem(): SemanticsMatcher = !hasAnyAncestor(bottomBar)
 
     private fun string(@StringRes id: Int): String = context.getString(id)

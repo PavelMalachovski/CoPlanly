@@ -4,7 +4,6 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -79,7 +78,6 @@ class OnScreenIsolationTest : AliceOnScreenTest() {
 
         assertScreenShowsOnly("Home", marker, canary)
         openTab(BottomNavDestination.CALENDAR)
-        tap(hasContentDescription(string(R.string.calendar_change_view_mode)) and hasClickAction())
         tap(hasText(string(R.string.calendar_viewmode_day)) and hasClickAction())
         assertScreenShowsOnly("the calendar's Day view", marker, canary)
         openExpenses()

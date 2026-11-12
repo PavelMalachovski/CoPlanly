@@ -135,8 +135,14 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    "What {name} has shared"), Only mine — with the stickers at the bottom. It reuses Settings' dialogs (`FamilyKindDialog`, `SplitRatioDialog`) rather than
    drawing its own, and its money figures come from `home/MonthMoney`, the one computation Home's
    tile reads too.
-5. **Calendar header is one row**: title (which *is* the Month/Week/Day picker), Today,
-   Filters, gear. What waits on this parent's answer is an inline banner over the grid
+5. **Calendar header is three rows** (redesign, November 2026; `components/CalendarHeader.kt`):
+   the brand row (`BrandHeader`: wordmark, the children's avatars, gear), "Your family calendar"
+   with "Together, for Emma and Leo" under it (left out with no children and from font scale
+   1.3), then the Month/Week/Day segmented control and Filters. The month title, Today and the
+   arrows head the grid's own white card (`CalendarMonthBar` in `CalendarGridCard`, the legend with
+   the swap button under them); tapping the title opens "Jump to date". The Today card
+   (`TodayCard`, built through `HomeWeek.todayOf` like Home's and the widget's) sits in the
+   Scaffold's bottom bar slot so the "+" floats above it, and is left out on two panes. What waits on this parent's answer is an inline banner over the grid
    (`components/CalendarBanners.kt`), not a badged glyph, and its number is the one Home's
    **Requests** row shows (item 40 of "Things that are easy to get wrong"). School vacation is neither a banner (it
    changed the grid's height between months) nor the old teal strip: since MON-13 it is a thin
@@ -284,7 +290,7 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     read `FamilySwitcherViewModel`, observed off the signed-in Room row. Don't give Settings its
     own copy of the family list again — two sources for "which family is on screen" is how they
     come to disagree. With one co-parent the chip renders nothing. It is deliberately not on the
-    Calendar header (item 5's fixed four). It is not on Chat either — the original reason (chat
+    Calendar header (item 5). It is not on Chat either — the original reason (chat
     followed the first co-parent, whatever the switcher said) is fixed, and what remains is a
     layout call: the tab renders the thread in place (item 7) and its header already names the
     co-parent. **The chip and each dialog row carry a dot — never a count — when a family *not* on

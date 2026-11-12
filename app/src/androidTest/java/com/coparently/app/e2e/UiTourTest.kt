@@ -211,10 +211,8 @@ class UiTourTest : AliceOnScreenTest() {
         }
     }
 
-    /** Switches the calendar through its title menu, which is also the Month/Week/Day picker. */
+    /** Switches the calendar through the header's Month/Week/Day control. */
     private fun viewMode(label: Int) {
-        val menu = hasContentDescription(string(R.string.calendar_change_view_mode)) and hasClickAction()
-        driver.press("the view-mode menu", menu)
         driver.press("the mode", textButton(label))
         driver.linger()
     }

@@ -12,7 +12,6 @@ import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
 import com.coparently.app.utils.createSampleEvent
 import com.coparently.app.utils.previewParentNames
-import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
@@ -24,19 +23,14 @@ import kotlin.time.Clock
  * `ChatPreviews.kt` did: the preview annotations and `PreviewWrapper` are Android Studio's.
  */
 
-/** A Monday in July 2026, for the week preview. */
-private val WEEK_PREVIEW_DATE = LocalDate(2026, 7, 20)
-
 @LightDarkPreviews
 @Composable
 private fun CalendarHeaderTodayPreview() {
     PreviewWrapper {
         CalendarHeader(
-            selectedDate = Clock.System.todayIn(TimeZone.currentSystemDefault()),
+            children = emptyList(),
             viewMode = CalendarViewMode.MONTH,
             onViewModeChange = {},
-            onNavigateToToday = {},
-            onJumpToDate = {},
             onFiltersClick = {},
             onSettingsClick = {}
         )
@@ -48,11 +42,9 @@ private fun CalendarHeaderTodayPreview() {
 private fun CalendarHeaderWeekPreview() {
     PreviewWrapper {
         CalendarHeader(
-            selectedDate = WEEK_PREVIEW_DATE,
+            children = emptyList(),
             viewMode = CalendarViewMode.WEEK,
             onViewModeChange = {},
-            onNavigateToToday = {},
-            onJumpToDate = {},
             onFiltersClick = {},
             filtersActive = true,
             onSettingsClick = {}

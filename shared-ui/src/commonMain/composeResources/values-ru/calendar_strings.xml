@@ -100,4 +100,27 @@
     <string name="mini_month_mark_swap_day">предложен для обмена</string>
     <string name="mini_month_marked_day">%1$s, %2$s: %3$s.</string>
     <string name="mini_month_marked_day_no_custody">%1$s: %2$s.</string>
+
+    <!-- The calendar's header and Today card (redesign, November 2026). -->
+    <string name="calendar_heading">Ваш семейный календарь</string>
+    <string name="calendar_together_for">Вместе ради: %1$s</string>
+    <string name="calendar_names_and">и</string>
+    <string name="calendar_previous_period">Предыдущий период</string>
+    <string name="calendar_next_period">Следующий период</string>
+    <string name="calendar_today_card_title">Сегодня · %1$s</string>
+    <string name="calendar_today_card_open">Открыть сегодняшний день</string>
+    <string name="calendar_today_card_nothing_more">Сегодня больше ничего</string>
+    <string name="calendar_today_card_event">%1$s – %2$s</string>
+    <plurals name="calendar_today_card_children_with_you">
+        <item quantity="one">%1$s с вами</item>
+        <item quantity="few">%1$s с вами</item>
+        <item quantity="many">%1$s с вами</item>
+        <item quantity="other">%1$s с вами</item>
+    </plurals>
+    <plurals name="calendar_today_card_children_with_parent">
+        <item quantity="one">%1$s и %2$s вместе</item>
+        <item quantity="few">%1$s и %2$s вместе</item>
+        <item quantity="many">%1$s и %2$s вместе</item>
+        <item quantity="other">%1$s и %2$s вместе</item>
+    </plurals>
 </resources>

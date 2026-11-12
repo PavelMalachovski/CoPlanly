@@ -42,13 +42,13 @@ import org.jetbrains.compose.resources.stringResource
  * them otherwise, followed by a "+n" disc for the rest.
  *
  * @param children The family's children, in the order they are shown
- * @param onSettingsClick Opens Settings
+ * @param onSettingsClick Opens Settings; null draws no gear (a screen with nowhere to send it)
  * @param modifier Modifier for the row
  */
 @Composable
 fun BrandHeader(
     children: List<ChildInfo>,
-    onSettingsClick: () -> Unit,
+    onSettingsClick: (() -> Unit)?,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -59,12 +59,14 @@ fun BrandHeader(
         Wordmark()
         Row(verticalAlignment = Alignment.CenterVertically) {
             ChildAvatarStack(children)
-            IconButton(onClick = onSettingsClick) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = stringResource(Res.string.calendar_settings),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            onSettingsClick?.let { onClick ->
+                IconButton(onClick = onClick) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = stringResource(Res.string.calendar_settings),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }

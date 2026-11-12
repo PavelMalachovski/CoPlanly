@@ -1,261 +1,201 @@
 package com.coparently.app.presentation.calendar.components
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedIconButton
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.presentation.calendar.CalendarViewMode
-import com.coparently.app.presentation.common.rememberToday
+import com.coparently.app.presentation.common.BrandHeader
 import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.IconSizes
-import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.presentation.theme.titleLargeEmphasized
 import com.coparently.app.resources.Res
-import com.coparently.app.resources.calendar_change_view_mode
 import com.coparently.app.resources.calendar_filters_button
-import com.coparently.app.resources.calendar_jump_to_date
-import com.coparently.app.resources.calendar_settings
-import com.coparently.app.resources.calendar_today_button
+import com.coparently.app.resources.calendar_heading
+import com.coparently.app.resources.calendar_names_and
+import com.coparently.app.resources.calendar_together_for
 import com.coparently.app.resources.calendar_viewmode_day
 import com.coparently.app.resources.calendar_viewmode_month
 import com.coparently.app.resources.calendar_viewmode_week
-import com.coparently.app.utils.ReaderDateText
-import kotlinx.datetime.LocalDate
-import kotlinx.datetime.yearMonth
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * Calendar screen header — one row.
+ * The calendar's header (redesign, November 2026), three rows over the lavender ground:
+ * the brand row (wordmark, the children's avatars, the gear), "Your family calendar" with
+ * "Together, for Emma and Leo" under it, and the Month/Week/Day control with Filters.
  *
- * Reworked by the August 2026 design review, which found four actions in the bar plus a
- * permanent 44dp segmented row underneath, two of them unlabelled glyphs whose meaning you had
- * to already know (`view_list` = weekly summary, `swap_horiz` = change requests).
+ * It replaced the one-row bar whose month title was also the view picker and the way to a date
+ * (design item 5 of the August 2026 refresh). The month title, Today and the arrows now head the
+ * grid's own card ([CalendarMonthBar]); tapping that title still opens "Jump to date". The view
+ * picker became a visible segmented control, because a parent new to the app never found it in
+ * the title.
  *
- * What is left: the month title, which is now itself the view-mode control (tap for
- * Month/Week/Day), a labelled "Today" pill, one labelled Filters action, and the gear that
- * every top-level screen carries. Change requests moved to an inline banner over the grid,
- * where there is room to say what is waiting; the weekly summary keeps its single entry point
- * on Home rather than a second unlabelled one here.
- *
- * @param selectedDate Currently selected date, whose month and year title the screen
- * @param viewMode Current calendar view mode, shown in the title menu
- * @param onViewModeChange Called with the mode picked from the title menu
- * @param onNavigateToToday Callback when user taps "Today"
+ * @param children The family on screen's children, in display order. With none, the together
+ *   line is left out.
+ * @param viewMode The view the grid shows
+ * @param onViewModeChange Called with the mode picked in the segmented control
  * @param onFiltersClick Opens the filter sheet
  * @param filtersActive Whether any filter is narrowing the calendar
- * @param onSettingsClick Optional callback for settings button, null to hide button
+ * @param onSettingsClick Opens Settings, or null to draw no gear
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-@Suppress("LongParameterList") // header actions are this component's API surface
+@Suppress("LongParameterList") // the header's actions are this component's API surface
 fun CalendarHeader(
-    selectedDate: LocalDate,
+    children: List<ChildInfo>,
     viewMode: CalendarViewMode,
     onViewModeChange: (CalendarViewMode) -> Unit,
-    onNavigateToToday: () -> Unit,
-    onJumpToDate: () -> Unit,
     onFiltersClick: () -> Unit,
     filtersActive: Boolean = false,
     onSettingsClick: (() -> Unit)? = null
 ) {
-    TopAppBar(
-        title = {
-            MonthTitle(
-                selectedDate = selectedDate,
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.L, vertical = Spacing.S),
+        verticalArrangement = Arrangement.spacedBy(Spacing.S)
+    ) {
+        BrandHeader(children = children, onSettingsClick = onSettingsClick)
+        HeadingLines(childNames = children.map { it.childName })
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            ViewModeControl(
                 viewMode = viewMode,
                 onViewModeChange = onViewModeChange,
-                onJumpToDate = onJumpToDate
+                modifier = Modifier.weight(1f, fill = false)
             )
-        },
-        actions = {
-            TodayButton(onClick = onNavigateToToday)
+            Spacer(modifier = Modifier.width(Spacing.S))
             FiltersButton(onClick = onFiltersClick, active = filtersActive)
-            onSettingsClick?.let { onClick ->
-                SettingsButton(onClick = onClick)
-            }
         }
-    )
+    }
 }
 
 /**
- * "July 2026 ▾" — the title doubles as the view-mode picker, and as the way to reach a date.
- *
- * Month/Week/Day used to occupy a permanent segmented row under the bar, spending a fixed 44dp
- * of a phone screen on a setting most people change rarely. Folding it into the title costs one
- * tap when you do want it and gives the grid the row back when you don't.
- *
- * **Jump to date** joins that menu rather than becoming a fifth action in the bar. The date
- * picker it opens was written, wired to a `showDatePicker` flag, and never set to true — forty
- * lines of unreachable UI, with no route to a date eight months out except swiping there. The
- * title is already what a person taps when they want to be somewhere else in time, so this is
- * where the route belongs; a new unlabelled glyph beside Today, Filters and the gear would cost
- * the header row the August refresh deliberately gave back to the grid.
+ * "Your family calendar" and, under it, "Together, for Emma and Leo". The second line is left
+ * out with no children, and from font scale 1.3, where the header would otherwise take a third
+ * of a phone's height before the grid starts.
  */
 @Composable
-private fun MonthTitle(
-    selectedDate: LocalDate,
-    viewMode: CalendarViewMode,
-    onViewModeChange: (CalendarViewMode) -> Unit,
-    onJumpToDate: () -> Unit
-) {
-    var menuOpen by remember { mutableStateOf(false) }
-    val yearMonth = selectedDate.yearMonth
-    // The month's stand-alone name, "LLLL": `java.time`'s `Month.getDisplayName(FULL_STANDALONE)`.
-    val monthName = ReaderDateText.pattern(yearMonth, "LLLL").replaceFirstChar { it.uppercase() }
-    // The year only when it is not this one, as calendar apps do: beside the Today and Filters
-    // pills "Сентябрь 2026" had no room and ended in an ellipsis (docs/AUDIT-2026-10-design.md
-    // D-3), while "Сентябрь" fits, and a month in another year still names its year.
-    val today by rememberToday()
-    val monthLabel = if (yearMonth.year == today.year) monthName else "$monthName ${yearMonth.year}"
-
-    Box {
-        Row(
-            // The one control in this bar that Material does not size for us: the two chips
-            // and `IconButton` all expand their own touch target to 48dp, and a
-            // bare `clickable` Row does not. It measured about 28dp and announced no role, so
-            // TalkBack did not call it a control at all.
-            modifier = Modifier
-                .clip(MaterialTheme.shapes.extraSmall)
-                .clickable(role = Role.Button) { menuOpen = true }
-                .defaultMinSize(minHeight = LayoutConstants.MIN_TOUCH_TARGET)
-                .padding(end = Spacing.XS),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = monthLabel,
-                style = MaterialTheme.typography.titleLargeEmphasized,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                // The name gives way, never the chevron: unweighted, a long month at 1.3x took
-                // the whole title slot and measured the chevron at zero, and the chevron is the
-                // only sign that the title opens the view picker.
-                modifier = Modifier.weight(1f, fill = false)
-            )
-            Icon(
-                imageVector = Icons.Default.ExpandMore,
-                contentDescription = stringResource(Res.string.calendar_change_view_mode),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-            CalendarViewMode.entries.forEach { mode ->
-                DropdownMenuItem(
-                    text = { Text(viewModeLabel(mode)) },
-                    onClick = {
-                        menuOpen = false
-                        onViewModeChange(mode)
-                    },
-                    leadingIcon = {
-                        if (mode == viewMode) {
-                            Icon(Icons.Default.Check, contentDescription = null)
-                        }
-                    }
+private fun HeadingLines(childNames: List<String>) {
+    val together = togetherFor(childNames)
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.XXS)) {
+        Text(
+            text = stringResource(Res.string.calendar_heading),
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.semantics { heading() }
+        )
+        if (together != null && !stacksAtLargeFont()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.XS)
+            ) {
+                Text(
+                    text = together,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                Icon(
+                    imageVector = Icons.Default.Favorite,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(IconSizes.Inline)
                 )
             }
-            HorizontalDivider()
-            DropdownMenuItem(
-                text = { Text(stringResource(Res.string.calendar_jump_to_date)) },
-                onClick = {
-                    menuOpen = false
-                    onJumpToDate()
-                }
+        }
+    }
+}
+
+/** "Together, for Emma and Leo", or null for a family without children. */
+@Composable
+internal fun togetherFor(childNames: List<String>): String? {
+    val names = childrenList(childNames, stringResource(Res.string.calendar_names_and)) ?: return null
+    return stringResource(Res.string.calendar_together_for, names)
+}
+
+/**
+ * Children's names as one phrase: "Emma", "Emma and Leo", "Emma, Leo and Max", or null for
+ * none. Pure, so the joining is tested without a composition.
+ *
+ * @param names The names, in display order
+ * @param and The reader's word for "and", from `calendar_names_and`
+ */
+internal fun childrenList(names: List<String>, and: String): String? = when (names.size) {
+    0 -> null
+    1 -> names.single()
+    else -> names.dropLast(1).joinToString(", ") + " $and " + names.last()
+}
+
+/** Month, Week and Day as one segmented control: the view is a choice always in sight. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ViewModeControl(
+    viewMode: CalendarViewMode,
+    onViewModeChange: (CalendarViewMode) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val modes = CalendarViewMode.entries
+    SingleChoiceSegmentedButtonRow(modifier = modifier) {
+        modes.forEachIndexed { index, mode ->
+            SegmentedButton(
+                selected = mode == viewMode,
+                onClick = { onViewModeChange(mode) },
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = modes.size),
+                // No check mark: three short labels already fit badly at 200 % in German.
+                icon = {},
+                label = { Text(text = viewModeLabel(mode), maxLines = 1) }
             )
         }
     }
 }
 
 /**
- * The single labelled filter action, replacing the segmented row's trailing chip.
+ * The filter action, a round icon button: outlined while nothing is filtered, filled tonal
+ * while a filter narrows the calendar, so an active filter is visible without opening the sheet.
  *
  * @param onClick Opens the filter sheet
  * @param active Whether any filter is currently narrowing the calendar
  */
 @Composable
 private fun FiltersButton(onClick: () -> Unit, active: Boolean) {
-    // From 1.3x the label goes and the glyph stays (second audit: at 130 % in Russian the labelled
-    // chip squeezed the month to "Октя…"). The glyph is the same one the chip leads with, named
-    // for TalkBack, and coloured as the chip is when a filter is on.
-    if (stacksAtLargeFont()) {
-        IconButton(onClick = onClick) {
+    val description = stringResource(Res.string.calendar_filters_button)
+    if (active) {
+        FilledTonalIconButton(onClick = onClick) {
+            Icon(Icons.Default.FilterList, contentDescription = description)
+        }
+    } else {
+        OutlinedIconButton(onClick = onClick) {
             Icon(
                 imageVector = Icons.Default.FilterList,
-                contentDescription = stringResource(Res.string.calendar_filters_button),
-                tint = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                contentDescription = description,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        return
     }
-    FilterChip(
-        selected = active,
-        onClick = onClick,
-        label = {
-            Text(
-                text = stringResource(Res.string.calendar_filters_button),
-                style = MaterialTheme.typography.labelMedium
-            )
-        },
-        leadingIcon = {
-            Icon(
-                imageVector = Icons.Default.FilterList,
-                contentDescription = null,
-                modifier = Modifier.size(IconSizes.Inline)
-            )
-        },
-        modifier = Modifier.padding(end = Spacing.XS)
-    )
-}
-
-/**
- * Compact outlined "Today" pill.
- *
- * Replaces a button whose entire label was the current day number — which told the user the
- * date but not that tapping it jumps the calendar there.
- *
- * A chip, not an `OutlinedButton`, so it has the Filters chip beside it for a twin: the button's
- * 40 dp minimum height stood a head taller than the chip's 32 dp, with a heavier label and a
- * darker outline, and the two actions of one bar read as two different kinds of control.
- */
-@Composable
-private fun TodayButton(onClick: () -> Unit) {
-    AssistChip(
-        onClick = onClick,
-        label = {
-            Text(
-                text = stringResource(Res.string.calendar_today_button),
-                style = MaterialTheme.typography.labelMedium
-            )
-        },
-        modifier = Modifier.padding(end = Spacing.XS)
-    )
 }
 
 /** Display label for a calendar view mode. */
@@ -264,18 +204,4 @@ private fun viewModeLabel(mode: CalendarViewMode): String = when (mode) {
     CalendarViewMode.MONTH -> stringResource(Res.string.calendar_viewmode_month)
     CalendarViewMode.WEEK -> stringResource(Res.string.calendar_viewmode_week)
     CalendarViewMode.DAY -> stringResource(Res.string.calendar_viewmode_day)
-}
-
-/**
- * Settings icon button.
- */
-@Composable
-private fun SettingsButton(onClick: () -> Unit) {
-    IconButton(onClick = onClick) {
-        Icon(
-            imageVector = Icons.Default.Settings,
-            contentDescription = stringResource(Res.string.calendar_settings),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
 }

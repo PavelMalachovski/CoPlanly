@@ -1,6 +1,7 @@
 package com.coparently.app.presentation.common
 
 import com.coparently.app.domain.family.FamilyMemberRef
+import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.PetRepository
 import kotlinx.coroutines.flow.Flow
@@ -63,4 +64,10 @@ class FamilyMembersSource(
         // Room re-emits a whole table when any column of any row moves, and a medical note or a
         // vaccination date renames nobody.
         .distinctUntilChanged()
+
+    /**
+     * The children alone, as whole records, in the order [observe] names them: the list the
+     * calendar header draws its avatars from. Cold for the reason [observe] is.
+     */
+    fun observeChildren(): Flow<List<ChildInfo>> = childInfoRepository.getAllChildInfo()
 }
