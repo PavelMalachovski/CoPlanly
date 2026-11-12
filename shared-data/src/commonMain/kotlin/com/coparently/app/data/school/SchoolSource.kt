@@ -26,6 +26,12 @@ interface SchoolSource {
 
     /** The school's homework and assignments from [today] on; none for a system that has no such list. */
     suspend fun tasks(uid: String, connectionId: String, today: LocalDate): List<SchoolTask>
+
+    /**
+     * Called by the importer when an update of [connectionId] has ended, whatever its outcome, so a
+     * source can drop what it kept for the update (a session, cookies). Nothing by default.
+     */
+    fun finish(connectionId: String) = Unit
 }
 
 /** Why a [SchoolSource] could not read: facts for the importer, never sentences (CQ-14). */

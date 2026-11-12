@@ -74,6 +74,38 @@ class SchoolTaskItemsTest {
         assertTrue(SchoolImportItems.tasks(input(listOf(SchoolTask("1", today, "  ", null)))).isEmpty())
     }
 
+    @Test
+    fun `the ids to look up name every task`() {
+        val tasks = listOf(SchoolTask("a", today, "A", null), SchoolTask("b", today, "B", null))
+        val ids = SchoolImportPlanner.idsToLookUp(input(tasks))
+        tasks.forEach { assertTrue(SchoolImportIds.of(target, SchoolImportKind.TASK, it.id) in ids) }
+    }
+
+    @Test
+    fun `a second connection for one pupil does not create a task that is already live`() {
+        val task = SchoolTask("991", today, "Maths", null)
+        val first = SchoolImportPlanner.plan(input(listOf(task)))
+        val existing = first.creates.associate { it.id to ExistingImport.Live(it) }
+
+        // The second parent's connection: same pupil, so the same ids, but an empty ledger.
+        val second = SchoolImportPlanner.plan(input(listOf(task)).copy(existing = existing, ledger = emptyMap()))
+
+        assertEquals(1, first.creates.size)
+        assertTrue(second.creates.isEmpty())
+    }
+
+    @Test
+    fun `a task with a pending tombstone is not created again`() {
+        val task = SchoolTask("991", today, "Maths", null)
+        val id = SchoolImportIds.of(target, SchoolImportKind.TASK, "991")
+
+        val plan = SchoolImportPlanner.plan(
+            input(listOf(task)).copy(existing = mapOf(id to ExistingImport.Deleted), ledger = emptyMap())
+        )
+
+        assertTrue(plan.creates.isEmpty())
+    }
+
     private fun input(tasks: List<SchoolTask>) = SchoolImportInput(
         target = target,
         today = today,

@@ -143,11 +143,13 @@ class EncryptedPreferencesContractTest {
     }
 
     @Test
-    fun `clear keeps the slot markers and the school connections and nothing else`() {
+    fun `clear keeps the slot markers and the school and EduPage connections and nothing else`() {
         val marker = "${PreferenceKeys.PARENT_SLOT_MARKER_PREFIX}u1"
         val otherMarker = "${PreferenceKeys.PARENT_SLOT_MARKER_PREFIX}u2"
         val connection = "${PreferenceKeys.SCHOOL_CONNECTION_PREFIX}conn1"
+        val edupage = "${PreferenceKeys.EDUPAGE_CONNECTION_PREFIX}conn2"
         open().apply {
+            putString(edupage, CONNECTION_OF_ALICE)
             putString(marker, "dad")
             putString(otherMarker, "mom")
             putString(connection, CONNECTION_OF_ALICE)
@@ -162,6 +164,7 @@ class EncryptedPreferencesContractTest {
         assertEquals("dad", reopened.getString(marker))
         assertEquals("mom", reopened.getString(otherMarker))
         assertEquals(CONNECTION_OF_ALICE, reopened.getString(connection), "the record and its owner kept whole")
+        assertEquals(CONNECTION_OF_ALICE, reopened.getString(edupage), "an EduPage connection is kept too")
         assertNull(reopened.getAccessToken())
         assertNull(reopened.getUserEmail())
         assertNull(reopened.getString(PreferenceKeys.TELEMETRY_CONSENT))

@@ -62,6 +62,7 @@
     <string name="school_connect_family_unnamed">Rodina %1$d</string>
     <string name="school_connect_child_label">Které dítě to je?</string>
     <string name="school_connect_no_children">Tato rodina zatím nemá záznam o žádném dítěti. Přidejte dítě v Nastavení v části Informace o dítěti a pak se připojte znovu.</string>
+    <string name="school_connect_edupage_no_pupils">Tento účet EduPage nemá žádného žáka, takže není co připojit. Přihlaste se účtem rodiče nebo žáka, nebo se vraťte a zkuste jiné přihlášení.</string>
     <string name="school_connect_continue">Pokračovat</string>
     <string name="school_connect_confirm_label">Co se bude importovat</string>
     <string name="school_connect_confirm_events">Školní akce pro třídu dítěte, pro dítě samotné a pro celou školu na příštích 90 dní</string>

@@ -114,6 +114,9 @@ class SchoolImporter internal constructor(
                 throw e
             } catch (e: SchoolSourceFailure) {
                 failure(uid, connectionId, e)
+            } finally {
+                // The update is over, however it ended: a source keeps nothing of it.
+                sources.values.forEach { it.finish(connectionId) }
             }
         }
     }

@@ -188,6 +188,7 @@ object SchoolImportPlanner {
     fun idsToLookUp(input: SchoolImportInput): Set<String> {
         val days = SchoolImportItems.daysInWindow(input)
         return SchoolImportItems.events(input).map { it.id }.toSet() +
+            SchoolImportItems.tasks(input).map { it.id } +
             days.map { SchoolImportIds.hours(input.target, it.date) } +
             days.map { SchoolImportIds.dayOff(input.target, it.date) } +
             input.ledger.keys

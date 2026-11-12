@@ -59,30 +59,44 @@ class EdupageSource(
         translated {
             // A new update: the session is opened again, never carried over from the last one.
             passesMonitor.locked { passes.remove(connectionId) }
-            val pass = open(uid, connectionId)
-            passesMonitor.locked { passes[connectionId] = pass }
+            val first = open(uid, connectionId, signInFirst = false)
+            passesMonitor.locked { passes[connectionId] = first }
             val to = monday.plus(SchoolImportPlanner.TIMETABLE_WEEKS, DateTimeUnit.WEEK)
                 .minus(1, DateTimeUnit.DAY)
-            val json = client.timetableJson(pass.session, pass.studentId, monday, to)
-            val weeks = EdupageTimetableParser.weeks(json, monday, to)
-            // `today` is not known here, only its Monday: reading from a week earlier covers the
-            // `today - 7 days` the events and tasks want, so the timeline is still read once.
-            val daysOff = timeline(pass, lookbackFrom(monday)).daysOff
-            mergeDaysOff(weeks, daysOff)
+            reading(uid, connectionId, first) { pass ->
+                val json = client.timetableJson(pass.session, pass.studentId, monday, to)
+                val weeks = EdupageTimetableParser.weeks(json, monday, to)
+                // `today` is not known here, only its Monday: reading from a week earlier covers the
+                // `today - 7 days` the events and tasks want, so the timeline is still read once.
+                mergeDaysOff(weeks, timeline(pass, lookbackFrom(monday)).daysOff)
+            }
         }
 
     override suspend fun events(uid: String, connectionId: String, today: LocalDate): List<SchoolEvent> =
-        translated { timeline(passFor(uid, connectionId), lookbackFrom(today)).events }
+        translated {
+            reading(uid, connectionId, passFor(uid, connectionId)) { timeline(it, lookbackFrom(today)).events }
+        }
 
     override suspend fun tasks(uid: String, connectionId: String, today: LocalDate): List<SchoolTask> =
-        translated { timeline(passFor(uid, connectionId), lookbackFrom(today)).tasks }
+        translated {
+            reading(uid, connectionId, passFor(uid, connectionId)) { timeline(it, lookbackFrom(today)).tasks }
+        }
+
+    /** The update is over: the session, its cookies and the timeline are dropped from memory. */
+    override fun finish(connectionId: String) {
+        passesMonitor.locked {
+            passes.remove(connectionId)
+            locks.remove(connectionId)
+        }
+    }
 
     private fun lookbackFrom(today: LocalDate): LocalDate = today.minus(TIMELINE_LOOKBACK_DAYS, DateTimeUnit.DAY)
 
     private suspend fun passFor(uid: String, connectionId: String): Pass =
-        passesMonitor.locked { passes[connectionId] } ?: open(uid, connectionId).also { pass ->
-            passesMonitor.locked { passes[connectionId] = pass }
-        }
+        passesMonitor.locked { passes[connectionId] }
+            ?: open(uid, connectionId, signInFirst = false).also { pass ->
+                passesMonitor.locked { passes[connectionId] = pass }
+            }
 
     /** The timeline from [from] or earlier, read at most once per pass. */
     private suspend fun timeline(pass: Pass, from: LocalDate): EdupageTimelineParser.Result {
@@ -93,19 +107,44 @@ class EdupageSource(
         return result
     }
 
-    /** The session for the connection, signed in again when its cookies have lapsed. */
-    private suspend fun open(uid: String, connectionId: String): Pass = lockFor(connectionId).withLock {
+    /**
+     * Runs [read] on [first]. When EduPage answers a data call with its sign-in page, the stored
+     * cookies have lapsed after all: sign in once with the stored password and run [read] again on the
+     * new pass. A second failure is the caller's.
+     */
+    private suspend fun <T> reading(uid: String, connectionId: String, first: Pass, read: suspend (Pass) -> T): T =
+        try {
+            read(first)
+        } catch (e: EdupageException.SessionExpired) {
+            logger.i(TAG, "EduPage refused the session mid-update; signing in once more", e)
+            val renewed = open(uid, connectionId, signInFirst = true)
+            passesMonitor.locked { passes[connectionId] = renewed }
+            read(renewed)
+        }
+
+    /**
+     * The session for the connection, signed in again when its cookies have lapsed, or at once when
+     * [signInFirst] says they are known to have.
+     */
+    private suspend fun open(uid: String, connectionId: String, signInFirst: Boolean): Pass =
+        lockFor(connectionId).withLock { openLocked(uid, connectionId, signInFirst) }
+
+    private suspend fun openLocked(uid: String, connectionId: String, signInFirst: Boolean): Pass {
         val stored = store.get(uid, connectionId) ?: throw SchoolSourceFailure.Gone()
         val secrets = stored.edupage ?: throw SchoolSourceFailure.Gone()
         if (stored.connection.status == SchoolConnectionStatus.NEEDS_PASSWORD) {
             throw SchoolSourceFailure.NeedsPassword()
         }
         val host = hostOf(stored.connection.baseUrl)
-        var session = try {
-            client.resume(host, secrets.cookies)
-        } catch (e: EdupageException.SessionExpired) {
-            logger.i(TAG, "The EduPage session lapsed; signing in again", e)
+        var session = if (signInFirst) {
             signInAgain(uid, stored, secrets, host)
+        } else {
+            try {
+                client.resume(host, secrets.cookies)
+            } catch (e: EdupageException.SessionExpired) {
+                logger.i(TAG, "The EduPage session lapsed; signing in again", e)
+                signInAgain(uid, stored, secrets, host)
+            }
         }
         keepCookies(uid, connectionId, session)
         val account = EdupageAccountParser.parse(session.userhome)
@@ -114,8 +153,8 @@ class EdupageSource(
             keepCookies(uid, connectionId, session)
         }
         val child = account.children.firstOrNull { it.studentId == secrets.studentId }
-            ?: EdupageChild(secrets.studentId, stored.connection.studentName, "")
-        Pass(session, child, secrets.studentId)
+            ?: EdupageChild(secrets.studentId, stored.student.name, stored.student.classId)
+        return Pass(session, child, secrets.studentId)
     }
 
     private suspend fun signInAgain(

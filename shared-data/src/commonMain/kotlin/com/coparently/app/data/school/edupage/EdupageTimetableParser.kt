@@ -23,17 +23,22 @@ object EdupageTimetableParser {
 
     /**
      * The weeks covering [from] to [to]. A day holds its first lesson's start and last lesson's end;
-     * a weekday in range with no lesson is a work day without hours. Throws
-     * [EdupageException.Server] when EduPage answered with `r.error`.
+     * a weekday in range with no lesson is a work day without hours. Only a present but empty
+     * `r.ttitems` means "no lessons": an answer that is not a JSON object, has no `r` object or no
+     * `ttitems` is unreadable, and reading it as an empty week would delete the school-hours events.
+     *
+     * @throws EdupageException.Server when EduPage answered with `r.error`, or with an answer that
+     *   holds no timetable.
      */
     fun weeks(json: String, from: LocalDate, to: LocalDate): List<SchoolWeek> {
         val root = EdupageJson.parseOrNull(json) as? JsonObject
-        val result = root?.obj("r")
-        val error = result?.get("error")
+        val result = root?.obj("r") ?: throw EdupageException.Server(OK_STATUS)
+        val error = result["error"]
         if (error != null && error !is JsonNull) {
             throw EdupageException.Server(OK_STATUS)
         }
-        val spans = lessonSpans(result?.items("ttitems").orEmpty())
+        if ("ttitems" !in result) throw EdupageException.Server(OK_STATUS)
+        val spans = lessonSpans(result.items("ttitems"))
         val days = generateSequence(from) { it.plus(1, DateTimeUnit.DAY) }
             .takeWhile { it <= to }
             .mapNotNull { dayOf(it, spans[it]) }

@@ -65,6 +65,7 @@
     <string name="school_connect_family_unnamed">Family %1$d</string>
     <string name="school_connect_child_label">Which child is this?</string>
     <string name="school_connect_no_children">This family has no child records yet. Add the child under Child information in Settings, then connect again.</string>
+    <string name="school_connect_edupage_no_pupils">This EduPage account does not list any pupil, so there is nothing to connect. Sign in with a parent or pupil account, or go back and try another login.</string>
     <string name="school_connect_continue">Continue</string>
     <string name="school_connect_confirm_label">What will be imported</string>
     <string name="school_connect_confirm_events">School events for the child’s class, for the child and for the whole school, for the next 90 days</string>

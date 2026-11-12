@@ -146,6 +146,51 @@ class EdupageSourceTest {
         }
         assertEquals(mapOf("PHPSESSID" to "switched"), cookies())
     }
+
+    @Test
+    fun `a session refused mid-update signs in once with the stored password and retries`() = runTest {
+        connect()
+        val stale = session(mapOf("PHPSESSID" to "old"))
+        val fresh = session(mapOf("PHPSESSID" to "new"))
+        coEvery { client.resume(HOST, mapOf("PHPSESSID" to "old")) } returns stale
+        coEvery { client.timetableJson(stale, any(), any(), any()) } throws EdupageException.SessionExpired()
+        coEvery { client.signIn(HOST, "novak", "hunter2") } returns fresh
+        serveTimetable(fresh)
+
+        val weeks = source.weeks("alice", "ep1", monday)
+
+        assertTrue(weeks.isNotEmpty())
+        coVerify(exactly = 1) { client.signIn(HOST, "novak", "hunter2") }
+        assertEquals(mapOf("PHPSESSID" to "new"), cookies())
+    }
+
+    @Test
+    fun `a second refusal after the new sign-in is a server failure`() = runTest {
+        connect()
+        val stale = session(mapOf("PHPSESSID" to "old"))
+        val fresh = session(mapOf("PHPSESSID" to "new"))
+        coEvery { client.resume(any(), any()) } returns stale
+        coEvery { client.signIn(any(), any(), any()) } returns fresh
+        coEvery { client.timetableJson(any(), any(), any(), any()) } throws EdupageException.SessionExpired()
+
+        assertFailsWith<SchoolSourceFailure.Server> { source.weeks("alice", "ep1", monday) }
+
+        coVerify(exactly = 1) { client.signIn(any(), any(), any()) }
+    }
+
+    @Test
+    fun `finishing an update drops the pass so the next one opens a session again`() = runTest {
+        connect()
+        val live = session(mapOf("PHPSESSID" to "old"))
+        coEvery { client.resume(HOST, mapOf("PHPSESSID" to "old")) } returns live
+        serveTimetable(live)
+
+        source.weeks("alice", "ep1", monday)
+        source.finish("ep1")
+        source.events("alice", "ep1", monday)
+
+        coVerify(exactly = 2) { client.resume(HOST, mapOf("PHPSESSID" to "old")) }
+    }
 }
 
 private const val HOST = "zsx.edupage.org"

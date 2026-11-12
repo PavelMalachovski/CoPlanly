@@ -109,6 +109,32 @@ class EdupageParsersTest {
     }
 
     @Test
+    fun `a timetable answer that is not JSON is a server failure`() {
+        val day = LocalDate(2025, 10, 20)
+        assertFailsWith<EdupageException.Server> { EdupageTimetableParser.weeks("<html>Sign in</html>", day, day) }
+    }
+
+    @Test
+    fun `a timetable answer without r or without ttitems is a server failure`() {
+        val day = LocalDate(2025, 10, 20)
+        assertFailsWith<EdupageException.Server> { EdupageTimetableParser.weeks("{}", day, day) }
+        assertFailsWith<EdupageException.Server> { EdupageTimetableParser.weeks("""{"r":{}}""", day, day) }
+        assertFailsWith<EdupageException.Server> { EdupageTimetableParser.weeks("[]", day, day) }
+    }
+
+    @Test
+    fun `a timeline answer that is not JSON or has no items is a server failure`() {
+        assertFailsWith<EdupageException.Server> { EdupageTimelineParser.parse("<html></html>", child) }
+        assertFailsWith<EdupageException.Server> { EdupageTimelineParser.parse("""{"status":"ok"}""", child) }
+    }
+
+    @Test
+    fun `an empty timeline is an empty result`() {
+        val result = EdupageTimelineParser.parse(timeline(), child)
+        assertTrue(result.events.isEmpty() && result.tasks.isEmpty() && result.daysOff.isEmpty())
+    }
+
+    @Test
     fun `a trip for the child's class is an event`() {
         val result = EdupageTimelineParser.parse(
             timeline(item("trip", "5.A", Fields(cas = "2025-10-22 08:30:00", text = "Zoo"))),

@@ -27,6 +27,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -66,6 +67,7 @@ import com.coparently.app.resources.school_connect_confirm_label
 import com.coparently.app.resources.school_connect_confirm_not_imported
 import com.coparently.app.resources.school_connect_confirm_shared
 import com.coparently.app.resources.school_connect_continue
+import com.coparently.app.resources.school_connect_edupage_no_pupils
 import com.coparently.app.resources.school_connect_family_label
 import com.coparently.app.resources.school_connect_family_unnamed
 import com.coparently.app.resources.school_connect_family_with
@@ -354,6 +356,17 @@ private fun EdupageCredentialsFields(
 /** EduPage's pupils (asked at two or more), then the CoPlanly family and child as for Bakaláři. */
 @Composable
 private fun EdupageChildStep(state: ConnectSchoolUiState, viewModel: ConnectSchoolViewModel) {
+    if (state.edupageChildren.isEmpty()) {
+        // A teacher account, or a page with no pupils in it: say so, and let the parent go back.
+        InlineBanner(
+            text = stringResource(Res.string.school_connect_edupage_no_pupils),
+            tone = BannerTone.ATTENTION,
+            actions = {
+                TextButton(onClick = { viewModel.back() }) { Text(stringResource(Res.string.common_back)) }
+            }
+        )
+        return
+    }
     if (state.edupageChildren.size > 1) {
         Column {
             GroupLabel(stringResource(Res.string.school_connect_child_label))

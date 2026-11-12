@@ -28,10 +28,17 @@ object EdupageTimelineParser {
 
     private class Stamp(val date: LocalDate, val time: LocalTime, val raw: String)
 
-    /** The events, tasks and days off in [json] that are meant for [child]. */
+    /**
+     * The events, tasks and days off in [json] that are meant for [child].
+     *
+     * @throws EdupageException.Server when [json] is not an object holding `timelineItems` (at the
+     *   top or under `r`): an unreadable answer is not an empty timeline.
+     */
     fun parse(json: String, child: EdupageChild): Result {
         val root = EdupageJson.parseOrNull(json) as? JsonObject
-        val items = (root?.items("timelineItems") ?: root?.obj("r")?.items("timelineItems")).orEmpty()
+        val holder = listOfNotNull(root, root?.obj("r")).firstOrNull { "timelineItems" in it }
+            ?: throw EdupageException.Server(OK_STATUS)
+        val items = holder.items("timelineItems")
         val events = ArrayList<SchoolEvent>()
         val tasks = ArrayList<SchoolTask>()
         val daysOff = ArrayList<SchoolDay>()
@@ -95,6 +102,7 @@ object EdupageTimelineParser {
     private fun dayOffOf(item: JsonObject, stamp: Stamp): SchoolDay =
         SchoolDay(stamp.date, SchoolDayType.HOLIDAY, titleOf(item), false, null, null)
 
+    private const val OK_STATUS = 200
     private const val WHOLE_DAY_END_HOUR = 23
     private const val WHOLE_DAY_END_MINUTE = 59
 }

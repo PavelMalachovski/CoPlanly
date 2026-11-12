@@ -62,6 +62,7 @@
     <string name="school_connect_family_unnamed">Родина %1$d</string>
     <string name="school_connect_child_label">Яка це дитина?</string>
     <string name="school_connect_no_children">У цій родині ще немає записів про дітей. Додайте дитину в налаштуваннях у розділі «Інформація про дитину» й підключіться знову.</string>
+    <string name="school_connect_edupage_no_pupils">У цьому акаунті EduPage немає жодного учня, тож підключати нічого. Увійдіть з акаунтом батьків або учня чи поверніться й спробуйте інший логін.</string>
     <string name="school_connect_continue">Продовжити</string>
     <string name="school_connect_confirm_label">Що буде імпортовано</string>
     <string name="school_connect_confirm_events">Шкільні заходи для класу дитини, для самої дитини й для всієї школи на найближчі 90 днів</string>

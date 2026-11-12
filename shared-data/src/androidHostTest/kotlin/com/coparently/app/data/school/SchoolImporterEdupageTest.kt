@@ -175,6 +175,34 @@ class SchoolImporterEdupageTest {
     }
 
     @Test
+    fun `a source that needs the password is reported as NeedsPassword`() = runTest {
+        store.put(edupage("ep1", "novak"))
+        val refusing = object : SchoolSource {
+            override suspend fun weeks(uid: String, connectionId: String, monday: LocalDate): List<SchoolWeek> =
+                throw SchoolSourceFailure.NeedsPassword()
+
+            override suspend fun events(uid: String, connectionId: String, today: LocalDate): List<SchoolEvent> =
+                emptyList()
+
+            override suspend fun tasks(uid: String, connectionId: String, today: LocalDate): List<SchoolTask> =
+                emptyList()
+        }
+        val client = BakalariClient(HttpClient(MockEngine { respond("", HttpStatusCode.Forbidden) }))
+        val importer = SchoolImporter.on(
+            authorizer = BakalariAuthorizer.on(client, store) { clock.now().toEpochMilliseconds() },
+            client = client,
+            store = store,
+            userRepository = users,
+            collaborators = SchoolImporter.Collaborators(writer, wording, children),
+            clock = clock,
+            zone = TimeZone.UTC,
+            edupage = refusing
+        )
+
+        assertEquals(SchoolSyncResult.NeedsPassword, importer.sync("ep1"))
+    }
+
+    @Test
     fun `a bakalari connection still goes through the bakalari source`() = runTest {
         store.put(
             edupage("bk1", "novak").let {

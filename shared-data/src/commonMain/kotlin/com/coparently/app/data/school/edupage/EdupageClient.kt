@@ -115,7 +115,7 @@ class EdupageClient(private val http: HttpClient) {
         }
         val url = "${originOf(session.host)}/timetable/server/currenttt.js?__func=curentttGetData"
         val answer = exchange(HttpMethod.Post, url, EdupageCookieJar(session.cookies), body.toString(), JSON)
-        return okBody(answer)
+        return jsonBody(answer)
     }
 
     /**
@@ -126,7 +126,7 @@ class EdupageClient(private val http: HttpClient) {
     suspend fun timelineJson(session: EdupageSession, from: LocalDate): String {
         val url = "${originOf(session.host)}/timeline/?module=todo&akcia=getData&filterTab=messages"
         val answer = exchange(HttpMethod.Post, url, EdupageCookieJar(session.cookies), formOf("datefrom" to "$from"))
-        return okBody(answer)
+        return jsonBody(answer)
     }
 
     /** Where an exchange ended: the last answer, the address that gave it, and whether it moved. */
@@ -188,6 +188,17 @@ class EdupageClient(private val http: HttpClient) {
         }
         if (reached.answer.status !in SUCCESS) throw EdupageException.Server(reached.answer.status)
         return reached.answer.body
+    }
+
+    /**
+     * The body of a successful answer to a JSON data call.
+     *
+     * @throws EdupageException.SessionExpired when it is not JSON at all: a 200 sign-in page.
+     */
+    private fun jsonBody(reached: Reached): String {
+        val body = okBody(reached)
+        if (EdupageJson.parseOrNull(body) == null) throw EdupageException.SessionExpired()
+        return body
     }
 
     /**

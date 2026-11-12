@@ -328,6 +328,19 @@ class EdupageClientTest {
     }
 
     @Test
+    fun `a 200 sign-in page answering a data call is SessionExpired`() = runTest {
+        val server = RecordingServer { answer(LOGIN_PAGE) }
+        val client = EdupageClient(server.client)
+
+        assertFailsWith<EdupageException.SessionExpired> {
+            client.timelineJson(sessionOn(SCHOOL_HOST), LocalDate(2026, 9, 1))
+        }
+        assertFailsWith<EdupageException.SessionExpired> {
+            client.timetableJson(sessionOn(SCHOOL_HOST), "11", LocalDate(2026, 9, 1), LocalDate(2026, 9, 28))
+        }
+    }
+
+    @Test
     fun `switching the child keeps the cookies it sets and refuses anything but OK`() = runTest {
         val switched = RecordingServer { answer("OK", headers = cookie("edid=child-4711; path=/")) }
 

@@ -41,6 +41,7 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberUiTextResolver
+import com.coparently.app.presentation.platform.LocalAppBuildValues
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.screenTopAppBarColors
@@ -208,12 +209,15 @@ private fun ConnectionGroup(row: SchoolConnectionRow, updating: Boolean, actions
             Res.string.school_system_bakalari
         }
     )
+    // Where EduPage is not offered, a Bakaláři connection is the only kind and needs no label.
+    val named = LocalAppBuildValues.current.edupageImport || connection.system == SchoolSystem.EDUPAGE
+    val place = connection.schoolName.ifBlank { connection.baseUrl }
     SectionGroup {
         SectionRow(
             icon = Icons.Default.School,
             title = row.childName,
             supporting = listOf(
-                "$systemName · ${connection.schoolName.ifBlank { connection.baseUrl }}",
+                if (named) "$systemName · $place" else place,
                 statusLine(row)
             ).joinToString("\n"),
             supportingColor = if (connection.status == SchoolConnectionStatus.OK && !row.needsFamily) {
