@@ -48,6 +48,13 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    `Card { Text }` for one, and don't pass an action that does nothing). Home,
    Settings, Expenses and Chat all render through these — do not reintroduce
    `Card { ListItem { … } }` per row, which is what the audit called "double surfaces".
+   **Since the November 2026 redesign (part 1) cards are `large` and white on a lavender ground**:
+   `SectionGroup` and `InlineBanner` take `MaterialTheme.shapes.large`, a `SectionGroup` carries a
+   1 dp `outlineVariant` border, `surfaceContainer` is white in the light theme, and the ground is
+   `theme/AppGround.kt` — a vertical gradient from `background` to `LightGroundEnd` (dark partner
+   `DarkGroundEnd`) drawn once by `NavGraph`'s root Scaffold. Every screen's Scaffold takes
+   `containerColor = ScreenContainerColor` (transparent) so the ground shows through; a new
+   screen does the same. The light custody wash is 0.14 (proposal 0.08) on that ground.
    **Five more sit beside them in `presentation/common/`** (October 2026 audit, D-15/D-16), each
    the one anatomy for something screens used to draw their own way:
    - `StickyActionBar` is a form's pinned primary action. It has a minimum height, not a fixed
