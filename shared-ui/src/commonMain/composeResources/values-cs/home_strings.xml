@@ -61,17 +61,12 @@
     <string name="home_dialog_review">Zkontrolovat</string>
 
     <!-- The empty seven-day card's action. -->
-    <plurals name="home_requests_waiting_on_you">
-        <item quantity="one">%1$d čeká na vaši odpověď</item>
-        <item quantity="few">%1$d čekají na vaši odpověď</item>
-        <item quantity="many">%1$d čeká na vaši odpověď</item>
-        <item quantity="other">%1$d čeká na vaši odpověď</item>
-    </plurals>
-    <plurals name="home_requests_waiting_on_them">
-        <item quantity="one">%1$d čeká na odpověď: %2$s</item>
-        <item quantity="few">%1$d čekají na odpověď: %2$s</item>
-        <item quantity="many">%1$d čeká na odpověď: %2$s</item>
-        <item quantity="other">%1$d čeká na odpověď: %2$s</item>
+    <!-- How many requests wait in one row of Home's "Open requests" card; the row's title says on whom. -->
+    <plurals name="home_open_requests_count">
+        <item quantity="one">%1$d žádost</item>
+        <item quantity="few">%1$d žádosti</item>
+        <item quantity="many">%1$d žádosti</item>
+        <item quantity="other">%1$d žádostí</item>
     </plurals>
     <!-- A noun phrase and the name in brackets, not "X přijal(a)": a name cannot agree with a gendered verb. -->
     <string name="home_activity_accepted_new_time">Přijat váš nový čas: %1$s</string>

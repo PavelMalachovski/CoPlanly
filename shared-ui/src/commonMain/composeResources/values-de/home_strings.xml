@@ -55,13 +55,10 @@
     <string name="home_dialog_review">Prüfen</string>
 
     <!-- The empty seven-day card's action. -->
-    <plurals name="home_requests_waiting_on_you">
-        <item quantity="one">%1$d wartet auf deine Antwort</item>
-        <item quantity="other">%1$d warten auf deine Antwort</item>
-    </plurals>
-    <plurals name="home_requests_waiting_on_them">
-        <item quantity="one">%1$d wartet auf %2$s</item>
-        <item quantity="other">%1$d warten auf %2$s</item>
+    <!-- How many requests wait in one row of Home's "Open requests" card; the row's title says on whom. -->
+    <plurals name="home_open_requests_count">
+        <item quantity="one">%1$d Anfrage</item>
+        <item quantity="other">%1$d Anfragen</item>
     </plurals>
     <string name="home_activity_accepted_new_time">Deine neue Zeit angenommen: %1$s</string>
     <string name="home_activity_declined_new_time">Deine neue Zeit abgelehnt: %1$s</string>

@@ -322,6 +322,9 @@ fun MonthView(
  */
 private val CELL_GAP = 3.dp
 
+/** The day number's disc (today's, the selected day's ring). */
+private val DAY_NUMBER_SIZE = 24.dp
+
 /** Thickness of the school-vacation line along a month cell's bottom edge (MON-13). */
 private val VACATION_LINE_HEIGHT = 2.dp
 
@@ -767,7 +770,9 @@ private fun DayCell(
                 },
                 onClickLabel = if (selectingSwap) swapClickLabel else clickLabel
             )
-            .padding(dims.paddingSmall / 2),
+            // Tight at the top and bottom so the day's pill fits under its number in a phone's
+            // 48 dp cell (the UI tour showed the titles cut in half with the old 4 dp).
+            .padding(horizontal = dims.paddingSmall / 2, vertical = Spacing.XXS),
         contentAlignment = Alignment.TopCenter
     ) {
         // Whom a chosen or waiting day would go to, in words (`SwapMark`): the colour alone must not
@@ -783,13 +788,15 @@ private fun DayCell(
         }
 
         Column(
+            modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(Spacing.XXS)
         ) {
-            // Day number: filled circle for today, outlined ring for the selected day
+            // Day number: filled circle for today, outlined ring for the selected day. 24 dp, not
+            // 28: the cell is the touch target, and the pill under the number needs the room.
             Box(
                 modifier = Modifier
-                    .defaultMinSize(minWidth = 28.dp, minHeight = 28.dp)
+                    .defaultMinSize(minWidth = DAY_NUMBER_SIZE, minHeight = DAY_NUMBER_SIZE)
                     .background(
                         color = when {
                             isToday -> MaterialTheme.colorScheme.primary
@@ -825,7 +832,7 @@ private fun DayCell(
             // One event pill and "+n" for the rest (November 2026 redesign). They replaced the
             // dots, which made the count the signal and left the titles to Day view; a pill names
             // the day's first event where the parent is already looking.
-            DayCellPills(events = events, isCurrentMonth = isCurrentMonth)
+            DayCellPills(events = events, isCurrentMonth = isCurrentMonth, modifier = Modifier.weight(1f))
         }
     }
 }

@@ -93,8 +93,8 @@ class UiTextParityTest(private val language: String) {
                     android.getQuantityString(R.plurals.request_left_days, count, count)
             )
             add(
-                UiText.Plural(Res.plurals.home_requests_waiting_on_them, count, listOf(count, "Pavel")) to
-                    android.getQuantityString(R.plurals.home_requests_waiting_on_them, count, count, "Pavel")
+                UiText.Plural(Res.plurals.day_swap_inbox_offered_by_you_days, count, listOf(count, "Pavel")) to
+                    android.getQuantityString(R.plurals.day_swap_inbox_offered_by_you_days, count, count, "Pavel")
             )
             val window = listOf(count, UiText.Date(DAY), UiText.Date(LATER))
             add(

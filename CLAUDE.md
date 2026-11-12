@@ -154,7 +154,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    (November 2026 redesign, `MonthCellPills.kt`, `CellPills.kt`): one pill — the `surface`, a 3 dp mark in the
    event's colour, the title on one line, ellipsised — and "+n" for the rest (`pillsFor`, one
    whatever the cell's height), the cell's description still naming the events; they replaced the
-   dots. Tapping a day selects it **and opens Day view** (an owner
+   dots. **A pill is drawn only where its line fits** under the 24 dp day number (its own 13 sp
+   line); a cell too short for it draws a 4 dp bar in the mark's colour instead — never a title cut
+   in half, which is what the first UI tour of the redesign showed. Tapping a day selects it **and opens Day view** (an owner
    decision from the Aug 2026 walkthrough — a select-only tap left no route to creating an
    event on a chosen day; an empty hour slot in Day view is that route), and
    the grid fills its screen. **Back from a Day view opened that way returns to Month** (D-11);

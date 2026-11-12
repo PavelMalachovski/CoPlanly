@@ -17,9 +17,8 @@ import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.titleSmallEmphasized
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.home_activity_review
+import com.coparently.app.resources.home_open_requests_count
 import com.coparently.app.resources.home_open_requests_title
-import com.coparently.app.resources.home_requests_waiting_on_them
-import com.coparently.app.resources.home_requests_waiting_on_you
 import com.coparently.app.resources.home_waiting_for_coparent
 import com.coparently.app.resources.home_waiting_for_you
 import org.jetbrains.compose.resources.pluralStringResource
@@ -29,7 +28,9 @@ import org.jetbrains.compose.resources.stringResource
  * Home's "Open requests" card (redesign, November 2026, variant A): "Waiting for you" with Review,
  * and "Waiting for {co-parent}", each only while something waits there. The counts are the
  * Requests row's ([RequestsRowState], design item 40), so the card, the inbox and the calendar's
- * banner count from one inbox. Home leaves the card out when nothing waits on either parent.
+ * banner count from one inbox. Home leaves the card out when nothing waits on either parent. A row's
+ * title says on whom the requests wait, so its second line is the count alone ("1 request"): the
+ * tour showed "Waiting for Bob" over "1 waiting for Bob".
  *
  * Public, not internal, so the app's screenshot tests can render it on its own.
  *
@@ -52,7 +53,7 @@ fun OpenRequestsCard(state: RequestsRowState, coParentName: String, onOpenChange
             SectionRow(
                 title = stringResource(Res.string.home_waiting_for_you),
                 supporting = pluralStringResource(
-                    Res.plurals.home_requests_waiting_on_you,
+                    Res.plurals.home_open_requests_count,
                     state.waitingOnMe,
                     state.waitingOnMe
                 ),
@@ -70,10 +71,9 @@ fun OpenRequestsCard(state: RequestsRowState, coParentName: String, onOpenChange
             SectionRow(
                 title = stringResource(Res.string.home_waiting_for_coparent, coParentName),
                 supporting = pluralStringResource(
-                    Res.plurals.home_requests_waiting_on_them,
+                    Res.plurals.home_open_requests_count,
                     state.waitingOnThem,
-                    state.waitingOnThem,
-                    coParentName
+                    state.waitingOnThem
                 ),
                 onClick = onOpenChangeRequests,
                 trailing = {
