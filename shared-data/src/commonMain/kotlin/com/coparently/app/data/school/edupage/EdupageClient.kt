@@ -120,10 +120,11 @@ class EdupageClient(private val http: HttpClient) {
 
     /**
      * The timeline (school events, homework, tests and messages) from [from] on, as EduPage writes
-     * it: `POST /timeline/` with the form `datefrom`.
+     * it: `POST /timeline/` with the form `datefrom`. EduPage's web app sends `filterTab` twice (blank,
+     * then `messages`); PHP keeps the last, and Ktor regroups a repeated key, so it is sent once.
      */
     suspend fun timelineJson(session: EdupageSession, from: LocalDate): String {
-        val url = "${originOf(session.host)}/timeline/?module=todo&filterTab=&akcia=getData&filterTab=messages"
+        val url = "${originOf(session.host)}/timeline/?module=todo&akcia=getData&filterTab=messages"
         val answer = exchange(HttpMethod.Post, url, EdupageCookieJar(session.cookies), formOf("datefrom" to "$from"))
         return okBody(answer)
     }

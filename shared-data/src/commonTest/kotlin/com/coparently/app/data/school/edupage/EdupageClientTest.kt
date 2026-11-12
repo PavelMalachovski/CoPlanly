@@ -235,7 +235,7 @@ class EdupageClientTest {
         val request = server.requests.single()
         assertEquals("POST", request.method.value)
         assertEquals(
-            "https://$SCHOOL_HOST/timeline/?module=todo&filterTab=&akcia=getData&filterTab=messages",
+            "https://$SCHOOL_HOST/timeline/?module=todo&akcia=getData&filterTab=messages",
             request.url.toString()
         )
         assertEquals("application/x-www-form-urlencoded", request.body.contentType.toString())
