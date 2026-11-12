@@ -1,0 +1,70 @@
+package com.coparently.app.data.school.edupage
+
+import com.coparently.app.data.school.edupage.EdupageJson.items
+import com.coparently.app.data.school.edupage.EdupageJson.obj
+import com.coparently.app.data.school.edupage.EdupageJson.text
+import com.coparently.app.domain.school.SchoolDay
+import com.coparently.app.domain.school.SchoolDayType
+import com.coparently.app.domain.school.SchoolWeek
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.plus
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+
+/** Reads EduPage's timetable answer (`r.ttitems`) into the school import's weeks. */
+object EdupageTimetableParser {
+
+    private const val OK_STATUS = 200
+
+    private class Span(val start: LocalTime, val end: LocalTime)
+
+    /**
+     * The weeks covering [from] to [to]. A day holds its first lesson's start and last lesson's end;
+     * a weekday in range with no lesson is a work day without hours. Throws
+     * [EdupageException.Server] when EduPage answered with `r.error`.
+     */
+    fun weeks(json: String, from: LocalDate, to: LocalDate): List<SchoolWeek> {
+        val root = EdupageJson.parseOrNull(json) as? JsonObject
+        val result = root?.obj("r")
+        val error = result?.get("error")
+        if (error != null && error !is JsonNull) {
+            throw EdupageException.Server(OK_STATUS)
+        }
+        val spans = lessonSpans(result?.items("ttitems").orEmpty())
+        val days = generateSequence(from) { it.plus(1, DateTimeUnit.DAY) }
+            .takeWhile { it <= to }
+            .mapNotNull { dayOf(it, spans[it]) }
+            .toList()
+        return days.groupBy { SchoolWeek.mondayOf(it.date) }
+            .map { (monday, weekDays) -> SchoolWeek(monday, weekDays) }
+            .sortedBy { it.monday }
+    }
+
+    private fun lessonSpans(items: List<JsonObject>): Map<LocalDate, Span> {
+        val spans = HashMap<LocalDate, Span>()
+        for (item in items) {
+            if (item.text("type") != "lesson" || item.text("removed") in REMOVED) continue
+            val date = EdupageJson.date(item.text("date")) ?: continue
+            val start = EdupageJson.time(item.text("starttime")) ?: continue
+            val end = EdupageJson.time(item.text("endtime")) ?: continue
+            val known = spans[date]
+            spans[date] = if (known == null) {
+                Span(start, end)
+            } else {
+                Span(minOf(known.start, start), maxOf(known.end, end))
+            }
+        }
+        return spans
+    }
+
+    private fun dayOf(date: LocalDate, span: Span?): SchoolDay? {
+        val weekend = date.dayOfWeek == DayOfWeek.SATURDAY || date.dayOfWeek == DayOfWeek.SUNDAY
+        if (span == null && weekend) return null
+        return SchoolDay(date, SchoolDayType.WORK_DAY, "", false, span?.start, span?.end)
+    }
+
+    private val REMOVED = setOf("true", "1")
+}
