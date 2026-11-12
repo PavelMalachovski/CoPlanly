@@ -105,3 +105,4 @@ day swap pill initials 2026-10-28T11:03:24Z
 2026-10-28T12:31:34Z requests gather everything
 2026-10-28T12:35:10Z requests gather everything, again
 requested: 2026-11-12 — export schema 47 (child_info.photo) and screenshot baselines for the tester redesign (PR #161); check the detekt baseline half adds nothing
+requested: 2026-11-12 — screenshot baselines after the final review fixes (top bars, portrait line, Home without a co-parent; PR #161)
