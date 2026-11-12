@@ -100,6 +100,10 @@ internal class StackHost(
         delegate = navigationDelegate
     }
 
+    /** The edge swipe back over every pushed screen, a Compose bar's included ([EdgeSwipeBack]). */
+    private val edgeSwipe = EdgeSwipeBack(navigation)
+    private var sheetEdgeSwipe: EdgeSwipeBack? = null
+
     /** Each entry's screen, by entry id, while the entry is on the stack. */
     private val screens = mutableMapOf<String, ScreenController>()
 
@@ -133,6 +137,8 @@ internal class StackHost(
         sheet?.navigationOrNull?.let { it.presentingViewController?.dismissViewControllerAnimated(false, null) }
         sheet = null
         navigation.delegate = null
+        edgeSwipe.detach()
+        sheetEdgeSwipe?.detach()
         navigation.setViewControllers(emptyList<UIViewController>(), animated = false)
         screens.values.forEach { it.release() }
         screens.clear()
@@ -214,6 +220,7 @@ internal class StackHost(
             if (controllers.size > 1) sheetNavigation.setViewControllers(controllers, animated = false)
             // UIKit need not call `willShow` for a presented navigation controller's first screen.
             sheetNavigation.applyBar(screens.values)
+            sheetEdgeSwipe = EdgeSwipeBack(sheetNavigation)
             sheetMoving = true
             navigation.presentViewController(sheetNavigation, animated) { transitionEnded() }
         } else if (!sameControllers(existing.viewControllers, controllers)) {
