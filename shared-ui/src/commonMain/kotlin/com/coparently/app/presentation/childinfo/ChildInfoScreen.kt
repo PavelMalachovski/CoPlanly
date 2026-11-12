@@ -242,7 +242,8 @@ internal fun ChildInfoContent(
     childInfo: ChildInfo,
     onEditClick: (String) -> Unit,
     onInviteGuest: () -> Unit,
-    onRevokeGuest: (String) -> Unit
+    onRevokeGuest: (String) -> Unit,
+    portrait: (@Composable () -> Unit)? = null
 ) {
     val haptic = LocalHapticFeedback.current
     val onRowClick: () -> Unit = {
@@ -256,6 +257,7 @@ internal fun ChildInfoContent(
             .padding(Spacing.L),
         verticalArrangement = Arrangement.spacedBy(Spacing.L)
     ) {
+        if (portrait != null) item { portrait() }
         item { BasicInfoGroup(childInfo = childInfo, onClick = onRowClick) }
 
         if (childInfo.medications.isNotEmpty()) {

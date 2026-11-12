@@ -824,6 +824,12 @@ the tap actually landing on that screen.
       `medical_photos/<childId>/…` or `pet_photos/<petId>/…` paths.
 - [ ] §7 needs the same four kinds of photo on the throwaway account.
 
+- [ ] **A child's portrait (part 5b):** on one phone open a child's screen, "Add a photo", pick one
+      (a 120 dp portrait appears, with "Only you and {co-parent} see this photo"). On the other
+      phone it shows in the calendar and Home headers and on the child's filter chip. "Change
+      photo" replaces it; "Remove photo" returns the initial. A guest of the child sees the
+      initial only.
+
 ### 3.11 Seasonal schedules and holiday fairness (MON-14, MON-20) · 1P, proposal check 2P
 
 > **[CI e2e]** `OnScreenAgreementsTest` runs the **2P proposal check's** mechanism on one real screen: B proposes a one-day layer, the proposal pops up on A's Home naming B, A accepts, and today's month cell then says "With B" on A's grid while B's phone holds the decision. The phone still adds the editor itself, the band's colour, B's grid, and everything above the 2P line.

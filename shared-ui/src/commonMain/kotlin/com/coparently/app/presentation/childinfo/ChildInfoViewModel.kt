@@ -11,6 +11,7 @@ import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.files.RecordPhotoAccess
+import com.coparently.app.domain.files.RecordPhotoCodec
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.guests.GuestAccessDuration
 import com.coparently.app.domain.guests.GuestInvite
@@ -438,9 +439,14 @@ class ChildInfoViewModel(
      *
      * @return the stored reference, or null when the upload failed.
      */
-    private suspend fun uploadPhoto(childInfoId: String, familyId: String?, localUri: String): String? = try {
+    private suspend fun uploadPhoto(
+        childInfoId: String,
+        familyId: String?,
+        localUri: String,
+        kind: RecordPhotoKind = RecordPhotoKind.MEDICAL
+    ): String? = try {
         photoStorage.upload(
-            kind = RecordPhotoKind.MEDICAL,
+            kind = kind,
             recordId = childInfoId,
             recordFamilyId = familyId,
             localUri = localUri
@@ -459,6 +465,49 @@ class ChildInfoViewModel(
         logger.e(TAG, "Uploading a medical photo to medical_photos/$childInfoId failed", e)
         _photoError.value = MedicalPhotoError.UPLOAD_FAILED
         null
+    }
+
+    /**
+     * Sets or replaces the child's portrait (part 5b), from a photo picked on this phone.
+     *
+     * Upload-then-delete, as every record photo (Legal item 8): the new object is uploaded under
+     * `child_photos/{family or solo}/{childId}/`, the reference is saved, and only then is the old
+     * object deleted. A failed upload keeps the old portrait; a failed save removes the new object
+     * again; a failed delete keeps the new reference (the old object is an orphan `sweep` removes
+     * with the record, never a missing photo). Failures reach [photoError].
+     *
+     * @param childInfo The record as it stands, carrying the portrait it has now.
+     * @param localUri Content URI of the picked photo.
+     */
+    fun setPhoto(childInfo: ChildInfo, localUri: String) {
+        viewModelScope.launch {
+            val reference = uploadPhoto(childInfo.id, childInfo.familyId, localUri, RecordPhotoKind.CHILD)
+                ?: return@launch
+            val saved = persist(childInfo.copy(photo = reference), isNewChild = false)
+            if (!saved) {
+                deletePhoto(reference, childInfo.familyId)
+                return@launch
+            }
+            val old = childInfo.photo
+            if (old != null && old != reference && RecordPhotoCodec.isReference(old)) {
+                deletePhoto(old, childInfo.familyId)
+            }
+        }
+    }
+
+    /**
+     * Removes the child's portrait: the object is deleted first and the reference is kept when that
+     * fails, so a photo is never left in the bucket with nothing pointing at it. A legacy value
+     * (never drawn, item 8) has no object to delete and is simply cleared.
+     *
+     * @param childInfo The record as it stands.
+     */
+    fun removePhoto(childInfo: ChildInfo) {
+        val old = childInfo.photo ?: return
+        viewModelScope.launch {
+            if (RecordPhotoCodec.isReference(old) && !deletePhoto(old, childInfo.familyId)) return@launch
+            persist(childInfo.copy(photo = null), isNewChild = false)
+        }
     }
 
     /**

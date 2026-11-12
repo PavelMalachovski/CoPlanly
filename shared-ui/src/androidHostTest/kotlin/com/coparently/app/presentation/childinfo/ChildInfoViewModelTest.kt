@@ -7,6 +7,10 @@ import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.GuestRepository
 import com.coparently.app.domain.repository.RecordPhotoStorage
+import com.coparently.app.domain.files.RecordPhotoKind
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -134,6 +138,63 @@ class ChildInfoViewModelTest {
 
         assertEquals("a", viewModel.currentChildInfo.value?.id)
         assertEquals("Anna", viewModel.currentChildInfo.value?.childName)
+    }
+
+    private val photoStorage = mockk<RecordPhotoStorage>(relaxed = true)
+    private val signedIn = mockk<SignedInUser>(relaxed = true) { every { getCurrentUid() } returns "uid" }
+
+    private fun photoViewModel() = ChildInfoViewModel(
+        childInfoRepository,
+        photoStorage,
+        mockk<GuestRepository>(relaxed = true),
+        signedIn,
+        mockk<Analytics>(relaxed = true),
+        mockk<CrashReporter>(relaxed = true)
+    )
+
+    @Test
+    fun `a new portrait is saved before the old object is deleted`() = runTest(dispatcher) {
+        coEvery { photoStorage.upload(RecordPhotoKind.CHILD, "a", "fam", "content://x") } returns "ph1|new"
+        photoViewModel().setPhoto(childA.copy(familyId = "fam", photo = "ph1|old"), "content://x")
+        advanceUntilIdle()
+
+        coVerifyOrder {
+            photoStorage.upload(RecordPhotoKind.CHILD, "a", "fam", "content://x")
+            childInfoRepository.upsertChildInfo(match { it.photo == "ph1|new" })
+            photoStorage.delete("ph1|old", "fam")
+        }
+    }
+
+    @Test
+    fun `a failed delete of the old object keeps the new reference`() = runTest(dispatcher) {
+        coEvery { photoStorage.upload(any(), any(), any(), any()) } returns "ph1|new"
+        coEvery { photoStorage.delete(any(), any()) } throws java.io.IOException("offline")
+        val vm = photoViewModel()
+        vm.setPhoto(childA.copy(photo = "ph1|old"), "content://x")
+        advanceUntilIdle()
+
+        coVerify { childInfoRepository.upsertChildInfo(match { it.photo == "ph1|new" }) }
+        assertEquals(MedicalPhotoError.DELETE_FAILED, vm.photoError.value)
+    }
+
+    @Test
+    fun `removing the portrait deletes the object then clears the field`() = runTest(dispatcher) {
+        photoViewModel().removePhoto(childA.copy(photo = "ph1|old"))
+        advanceUntilIdle()
+
+        coVerifyOrder {
+            photoStorage.delete("ph1|old", null)
+            childInfoRepository.upsertChildInfo(match { it.photo == null })
+        }
+    }
+
+    @Test
+    fun `a failed delete on removal keeps the reference`() = runTest(dispatcher) {
+        coEvery { photoStorage.delete(any(), any()) } throws java.io.IOException("offline")
+        photoViewModel().removePhoto(childA.copy(photo = "ph1|old"))
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { childInfoRepository.upsertChildInfo(any()) }
     }
 
     private fun child(id: String, name: String) = ChildInfo(

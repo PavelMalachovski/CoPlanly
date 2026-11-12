@@ -39,6 +39,8 @@ import com.coparently.app.resources.childinfo_screen_title
 import com.coparently.app.resources.guest_invite_share
 import com.coparently.app.resources.guest_invite_share_message
 import com.coparently.app.resources.guest_revoke_failed
+import com.coparently.app.resources.medical_photos_delete_failed
+import com.coparently.app.resources.medical_photos_upload_failed
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -87,6 +89,21 @@ fun ChildDetailScreen(
         if (revokeFailed) {
             snackbarHostState.showSnackbar(revokeFailedMessage)
             viewModel.clearGuestRevokeFailed()
+        }
+    }
+
+    val photoError by viewModel.photoError.collectAsState()
+    val uploadFailed = stringResource(Res.string.medical_photos_upload_failed)
+    val deleteFailed = stringResource(Res.string.medical_photos_delete_failed)
+    LaunchedEffect(photoError) {
+        val message = when (photoError) {
+            MedicalPhotoError.UPLOAD_FAILED -> uploadFailed
+            MedicalPhotoError.DELETE_FAILED -> deleteFailed
+            null -> null
+        }
+        if (message != null) {
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearPhotoError()
         }
     }
 
@@ -148,7 +165,14 @@ fun ChildDetailScreen(
                     childInfo = childInfo,
                     onEditClick = onEditClick,
                     onInviteGuest = { viewModel.openGuestInvite(childInfo.id) },
-                    onRevokeGuest = { uid -> viewModel.revokeGuest(childInfo, uid) }
+                    onRevokeGuest = { uid -> viewModel.revokeGuest(childInfo, uid) },
+                    portrait = {
+                        ChildPortrait(
+                            child = childInfo,
+                            onPick = { uri -> viewModel.setPhoto(childInfo, uri) },
+                            onRemove = { viewModel.removePhoto(childInfo) }
+                        )
+                    }
                 )
                 // The record was deleted, here or on the co-parent's phone, while this screen was
                 // open. Saying so beats an empty page that looks like a failed load — and it is

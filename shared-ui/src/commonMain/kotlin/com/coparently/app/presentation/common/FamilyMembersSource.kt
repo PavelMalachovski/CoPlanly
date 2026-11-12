@@ -13,10 +13,12 @@ import kotlinx.coroutines.flow.distinctUntilChanged
  *
  * @property ref What a record stores to point at them.
  * @property name What a parent calls them.
+ * @property child The child's record, for the portrait a chip leads with; null for a pet.
  */
 data class FamilyMember(
     val ref: FamilyMemberRef,
-    val name: String
+    val name: String,
+    val child: ChildInfo? = null
 )
 
 /**
@@ -58,7 +60,7 @@ class FamilyMembersSource(
         childInfoRepository.getAllChildInfo(),
         petRepository.getAllPets()
     ) { children, pets ->
-        children.map { FamilyMember(FamilyMemberRef.Child(it.id), it.childName) } +
+        children.map { FamilyMember(FamilyMemberRef.Child(it.id), it.childName, it) } +
             pets.map { FamilyMember(FamilyMemberRef.Pet(it.id), it.name) }
     }
         // Room re-emits a whole table when any column of any row moves, and a medical note or a
