@@ -34,8 +34,8 @@ class ChildPortraitScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(va
                 modifier = Modifier.padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                ChildPortrait(child = CHILD, onPick = {}, onRemove = {})
-                ChildPortrait(child = CHILD.copy(photo = PHOTO), onPick = {}, onRemove = {})
+                ChildPortrait(child = CHILD, coParentName = "Bob", onPick = {}, onRemove = {})
+                ChildPortrait(child = CHILD.copy(photo = PHOTO), coParentName = null, onPick = {}, onRemove = {})
             }
         }
     }

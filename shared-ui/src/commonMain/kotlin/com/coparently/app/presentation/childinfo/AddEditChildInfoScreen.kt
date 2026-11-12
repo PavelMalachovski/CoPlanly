@@ -28,6 +28,7 @@ import com.coparently.app.presentation.consent.LockedMedicalSection
 import com.coparently.app.presentation.platform.LocalFilePicker
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.child_photo_delete_failed
 import com.coparently.app.resources.child_photo_save_first
@@ -230,6 +231,7 @@ fun AddEditChildInfoScreen(
         modifier = Modifier.then(leave.backPreview),
         topBar = {
             TopAppBar(
+                colors = screenTopAppBarColors(),
                 title = {
                     Text(
                         if (childInfoId == "new") {
@@ -275,23 +277,23 @@ fun AddEditChildInfoScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(Spacing.L)
         ) {
-            // The portrait (part 5b): an existing child's, where the phone can pick one. A new child
-            // has no id for the photo's folder yet, so it asks to be saved first.
-            if (LocalFilePicker.current.available) {
-                val saved = currentChildInfo
-                if (childInfoId != null && childInfoId != "new" && saved != null) {
-                    ChildPortrait(
-                        child = saved,
-                        onPick = { uri -> viewModel.setPhoto(saved, uri) },
-                        onRemove = { viewModel.removePhoto(saved) }
-                    )
-                } else if (childInfoId == "new") {
-                    Text(
-                        text = stringResource(Res.string.child_photo_save_first),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+            // The portrait (part 5b): an existing child's. Its Remove works without a picker, so it
+            // is drawn wherever a child is saved. A new child has no id for the photo's folder yet,
+            // so, where the phone can pick one, it asks to be saved first.
+            val saved = currentChildInfo
+            if (childInfoId != null && childInfoId != "new" && saved != null) {
+                ChildPortrait(
+                    child = saved,
+                    coParentName = rememberCoParentName(),
+                    onPick = { uri -> viewModel.setPhoto(saved, uri) },
+                    onRemove = { viewModel.removePhoto(saved) }
+                )
+            } else if (childInfoId == "new" && LocalFilePicker.current.available) {
+                Text(
+                    text = stringResource(Res.string.child_photo_save_first),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             // Basic Information Section

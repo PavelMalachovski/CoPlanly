@@ -127,4 +127,5 @@
     <string name="child_photo_upload_failed">Не вдалося завантажити фото. Спробуйте ще раз.</string>
     <string name="child_photo_delete_failed">Не вдалося видалити фото. Спробуйте ще раз.</string>
     <string name="child_photo_private">Це фото бачите лише ви і %1$s</string>
+    <string name="child_photo_private_alone">Це фото бачите лише ви</string>
 </resources>

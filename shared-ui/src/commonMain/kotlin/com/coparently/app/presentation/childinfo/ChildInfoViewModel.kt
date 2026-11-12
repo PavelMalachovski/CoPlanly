@@ -501,7 +501,9 @@ class ChildInfoViewModel(
         viewModelScope.launch {
             val reference = uploadPhoto(childInfo.id, childInfo.familyId, localUri, RecordPhotoKind.CHILD)
                 ?: return@launch
-            val saved = persist(childInfo.copy(photo = reference), isNewChild = false)
+            // The upload takes seconds, and the record may have changed meanwhile (an edit, a sync):
+            // only the photo is this call's to change, on the record as it stands now.
+            val saved = persist(current(childInfo).copy(photo = reference), isNewChild = false)
             if (!saved) {
                 deletePhoto(reference, childInfo.familyId, portrait = true)
                 return@launch
@@ -526,9 +528,13 @@ class ChildInfoViewModel(
             val objectGone = !RecordPhotoCodec.isReference(old) ||
                 deletePhoto(old, childInfo.familyId, portrait = true)
             if (!objectGone) return@launch
-            persist(childInfo.copy(photo = null), isNewChild = false)
+            persist(current(childInfo).copy(photo = null), isNewChild = false)
         }
     }
+
+    /** The record as the repository holds it now, or [childInfo] when it holds none. */
+    private suspend fun current(childInfo: ChildInfo): ChildInfo =
+        childInfoRepository.getChildInfoById(childInfo.id) ?: childInfo
 
     /**
      * Deletes child information.

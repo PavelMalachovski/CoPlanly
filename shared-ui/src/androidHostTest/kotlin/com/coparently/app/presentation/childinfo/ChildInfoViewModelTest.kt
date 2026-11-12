@@ -58,6 +58,7 @@ class ChildInfoViewModelTest {
             every { getAllChildInfo() } returns children
             every { observeChildInfoById("a") } returns MutableStateFlow(childA)
             every { observeChildInfoById("b") } returns MutableStateFlow(childB)
+            coEvery { getChildInfoById(any()) } returns null
         }
     }
 
@@ -175,6 +176,18 @@ class ChildInfoViewModelTest {
 
         coVerify { childInfoRepository.upsertChildInfo(match { it.photo == "ph1|new" }) }
         assertEquals(MedicalPhotoError.DELETE_FAILED, vm.photoError.value)
+    }
+
+    @Test
+    fun `a portrait lands on the record as it stands after the upload`() = runTest(dispatcher) {
+        coEvery { photoStorage.upload(any(), any(), any(), any()) } returns "ph1|new"
+        coEvery { childInfoRepository.getChildInfoById("a") } returns childA.copy(childName = "Anna edited")
+        photoViewModel().setPhoto(childA, "content://x")
+        advanceUntilIdle()
+
+        coVerify {
+            childInfoRepository.upsertChildInfo(match { it.photo == "ph1|new" && it.childName == "Anna edited" })
+        }
     }
 
     @Test

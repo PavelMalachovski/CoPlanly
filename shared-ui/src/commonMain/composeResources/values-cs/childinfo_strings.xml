@@ -127,4 +127,5 @@
     <string name="child_photo_upload_failed">Fotku se nepodařilo nahrát. Zkuste to znovu.</string>
     <string name="child_photo_delete_failed">Fotku se nepodařilo odstranit. Zkuste to znovu.</string>
     <string name="child_photo_private">Tuto fotku vidíte jen vy a %1$s</string>
+    <string name="child_photo_private_alone">Tuto fotku vidíte jen vy</string>
 </resources>

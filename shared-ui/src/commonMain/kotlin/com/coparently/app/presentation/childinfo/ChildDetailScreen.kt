@@ -31,6 +31,7 @@ import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.platform.LocalShareSheet
 import com.coparently.app.presentation.theme.ScreenContainerColor
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.child_photo_delete_failed
 import com.coparently.app.resources.child_photo_upload_failed
@@ -143,6 +144,7 @@ fun ChildDetailScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
+                colors = screenTopAppBarColors(),
                 title = {
                     Text(childInfo?.childName ?: stringResource(Res.string.childinfo_screen_title))
                 },
@@ -175,6 +177,7 @@ fun ChildDetailScreen(
                     portrait = {
                         ChildPortrait(
                             child = childInfo,
+                            coParentName = rememberCoParentName(),
                             onPick = { uri -> viewModel.setPhoto(childInfo, uri) },
                             onRemove = { viewModel.removePhoto(childInfo) }
                         )
