@@ -32,15 +32,17 @@ class EdupageParsersTest {
 
     private fun home(text: String) = Json.parseToJsonElement(text) as JsonObject
 
-    private fun item(
-        typ: String,
-        meno: String,
-        cas: String = "2025-10-20 00:00:00",
-        text: String = "Text",
-        data: String = "{}",
-        removed: String = "0"
-    ) = """{"timelineid":"t-$typ-$meno","typ":"$typ","text":"$text","cas_udalosti":"$cas",
+    private class Fields(
+        val cas: String = "2025-10-20 00:00:00",
+        val text: String = "Text",
+        val data: String = "{}",
+        val removed: String = "0"
+    )
+
+    private fun item(typ: String, meno: String, fields: Fields = Fields()) = with(fields) {
+        """{"timelineid":"t-$typ-$meno","typ":"$typ","text":"$text","cas_udalosti":"$cas",
         "user_meno":"$meno","removed":"$removed","data":${JsonPrimitive(data)}}"""
+    }
 
     private fun timeline(vararg items: String) = """{"timelineItems":[${items.joinToString(",")}]}"""
 
@@ -109,7 +111,7 @@ class EdupageParsersTest {
     @Test
     fun `a trip for the child's class is an event`() {
         val result = EdupageTimelineParser.parse(
-            timeline(item("trip", "5.A", cas = "2025-10-22 08:30:00", text = "Zoo")),
+            timeline(item("trip", "5.A", Fields(cas = "2025-10-22 08:30:00", text = "Zoo"))),
             child
         )
         val event = result.events.single()
@@ -145,7 +147,7 @@ class EdupageParsersTest {
     @Test
     fun `a test with a date is a task titled by subject`() {
         val result = EdupageTimelineParser.parse(
-            timeline(item("bexam", "5.A", text = "Písomka", data = """{"predmet":"Matematika"}""")),
+            timeline(item("bexam", "5.A", Fields(text = "Písomka", data = """{"predmet":"Matematika"}"""))),
             child
         )
         assertEquals("Matematika: Písomka", result.tasks.single().title)
@@ -160,7 +162,7 @@ class EdupageParsersTest {
 
     @Test
     fun `a free day is a day off`() {
-        val day = EdupageTimelineParser.parse(timeline(item("freeday", "*", text = "Voľno")), child)
+        val day = EdupageTimelineParser.parse(timeline(item("freeday", "*", Fields(text = "Voľno"))), child)
             .daysOff.single()
         assertEquals(SchoolDayType.HOLIDAY, day.type)
         assertEquals("Voľno", day.description)
@@ -169,7 +171,7 @@ class EdupageParsersTest {
 
     @Test
     fun `a removed item is ignored`() {
-        val result = EdupageTimelineParser.parse(timeline(item("trip", "5.A", removed = "1")), child)
+        val result = EdupageTimelineParser.parse(timeline(item("trip", "5.A", Fields(removed = "1"))), child)
         assertTrue(result.events.isEmpty())
     }
 }

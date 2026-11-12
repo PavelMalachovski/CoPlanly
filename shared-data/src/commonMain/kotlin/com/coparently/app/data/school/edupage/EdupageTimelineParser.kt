@@ -35,15 +35,15 @@ object EdupageTimelineParser {
         val events = ArrayList<SchoolEvent>()
         val tasks = ArrayList<SchoolTask>()
         val daysOff = ArrayList<SchoolDay>()
-        for (item in items) {
-            if (item.text("removed") == "1" || !isForChild(item, child)) continue
-            val stamp = stampOf(item) ?: continue
-            when (item.text("typ")) {
-                in EVENT_TYPES -> eventOf(item, stamp)?.let(events::add)
-                in TASK_TYPES -> taskOf(item, stamp)?.let(tasks::add)
-                in DAY_OFF_TYPES -> daysOff.add(dayOffOf(item, stamp))
+        items.filter { it.text("removed") != "1" && isForChild(it, child) }
+            .mapNotNull { item -> stampOf(item)?.let { item to it } }
+            .forEach { (item, stamp) ->
+                when (item.text("typ")) {
+                    in EVENT_TYPES -> eventOf(item, stamp)?.let(events::add)
+                    in TASK_TYPES -> taskOf(item, stamp)?.let(tasks::add)
+                    in DAY_OFF_TYPES -> daysOff.add(dayOffOf(item, stamp))
+                }
             }
-        }
         return Result(events, tasks, daysOff)
     }
 
@@ -59,9 +59,9 @@ object EdupageTimelineParser {
     private fun stampOf(item: JsonObject): Stamp? {
         val raw = item.text("cas_udalosti")?.trim() ?: return null
         val parts = raw.split(' ', limit = 2)
-        val date = EdupageJson.date(parts[0]) ?: return null
-        val time = if (parts.size > 1) EdupageJson.time(parts[1]) ?: return null else LocalTime(0, 0)
-        return Stamp(date, time, raw)
+        val date = EdupageJson.date(parts[0])
+        val time = if (parts.size > 1) EdupageJson.time(parts[1]) else LocalTime(0, 0)
+        return if (date != null && time != null) Stamp(date, time, raw) else null
     }
 
     private fun dataOf(item: JsonObject): JsonObject? = when (val data = item["data"]) {

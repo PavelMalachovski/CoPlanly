@@ -45,18 +45,16 @@ object EdupageTimetableParser {
 
     private fun lessonSpans(items: List<JsonObject>): Map<LocalDate, Span> {
         val spans = HashMap<LocalDate, Span>()
-        for (item in items) {
-            if (item.text("type") != "lesson" || item.text("removed") in REMOVED) continue
-            val date = EdupageJson.date(item.text("date")) ?: continue
-            val start = EdupageJson.time(item.text("starttime")) ?: continue
-            val end = EdupageJson.time(item.text("endtime")) ?: continue
-            val known = spans[date]
-            spans[date] = if (known == null) {
-                Span(start, end)
-            } else {
-                Span(minOf(known.start, start), maxOf(known.end, end))
+        items.filter { it.text("type") == "lesson" && it.text("removed") !in REMOVED }
+            .forEach { item ->
+                val date = EdupageJson.date(item.text("date"))
+                val start = EdupageJson.time(item.text("starttime"))
+                val end = EdupageJson.time(item.text("endtime"))
+                if (date != null && start != null && end != null) {
+                    val known = spans[date]
+                    spans[date] = known?.let { Span(minOf(it.start, start), maxOf(it.end, end)) } ?: Span(start, end)
+                }
             }
-        }
         return spans
     }
 

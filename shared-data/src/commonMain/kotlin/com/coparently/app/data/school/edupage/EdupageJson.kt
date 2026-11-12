@@ -48,14 +48,29 @@ internal object EdupageJson {
 
     /** `HH:mm` or `HH:mm:ss` as a time, with `24:00` read as 23:59; null when unreadable. */
     fun time(text: String?): LocalTime? {
-        val value = text?.trim() ?: return null
-        if (value == "24:00" || value == "24:00:00") return LocalTime(23, 59)
-        val parts = value.split(':')
-        if (parts.size !in 2..3) return null
-        val hour = parts[0].toIntOrNull() ?: return null
-        val minute = parts[1].toIntOrNull() ?: return null
-        val second = parts.getOrNull(2)?.toIntOrNull() ?: 0
-        if (hour !in 0..23 || minute !in 0..59 || second !in 0..59) return null
-        return LocalTime(hour, minute, second)
+        val value = text?.trim()
+        return when {
+            value == null -> null
+            value in END_OF_DAY -> LocalTime(LAST_HOUR, LAST_MINUTE)
+            else -> clock(value)
+        }
     }
+
+    private fun clock(value: String): LocalTime? {
+        val parts = value.split(':')
+        val hour = parts.getOrNull(0)?.toIntOrNull()
+        val minute = parts.getOrNull(1)?.toIntOrNull()
+        val second = parts.getOrNull(2)?.toIntOrNull() ?: 0
+        return when {
+            parts.size !in CLOCK_PARTS || hour == null || minute == null -> null
+            hour in 0..LAST_HOUR && minute in 0..LAST_MINUTE && second in 0..LAST_MINUTE ->
+                LocalTime(hour, minute, second)
+            else -> null
+        }
+    }
+
+    private val END_OF_DAY = setOf("24:00", "24:00:00")
+    private val CLOCK_PARTS = 2..3
+    private const val LAST_HOUR = 23
+    private const val LAST_MINUTE = 59
 }

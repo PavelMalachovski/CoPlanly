@@ -178,9 +178,14 @@ class EdupageClientTest {
                 when {
                     request.url.encodedPath == "/login/" -> answer(LOGIN_PAGE)
                     request.url.encodedPath == "/login/edubarLogin.php" && request.url.host == LOGIN_HOST ->
-                        answer("", status = status, headers = headersOf(
-                            HttpHeaders.Location, "https://$SCHOOL_HOST/login/edubarLogin.php"
-                        ))
+                        answer(
+                            "",
+                            status = status,
+                            headers = headersOf(
+                                HttpHeaders.Location,
+                                "https://$SCHOOL_HOST/login/edubarLogin.php"
+                            )
+                        )
                     else -> answer(USER_PAGE)
                 }
             }
@@ -200,9 +205,14 @@ class EdupageClientTest {
                 when {
                     request.url.encodedPath == "/login/" -> answer(LOGIN_PAGE)
                     request.url.encodedPath == "/login/edubarLogin.php" ->
-                        answer("", status = status, headers = headersOf(
-                            HttpHeaders.Location, "https://$SCHOOL_HOST/user"
-                        ))
+                        answer(
+                            "",
+                            status = status,
+                            headers = headersOf(
+                                HttpHeaders.Location,
+                                "https://$SCHOOL_HOST/user"
+                            )
+                        )
                     else -> answer(USER_PAGE)
                 }
             }
