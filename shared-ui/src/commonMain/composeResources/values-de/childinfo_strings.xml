@@ -123,5 +123,6 @@
     <string name="child_photo_change">Foto ändern</string>
     <string name="child_photo_add">Foto hinzufügen</string>
     <string name="child_photo_remove">Foto entfernen</string>
+    <string name="child_photo_save_first">Erst speichern, dann ein Foto hinzufügen</string>
     <string name="child_photo_private">Nur du und %1$s sehen dieses Foto</string>
 </resources>

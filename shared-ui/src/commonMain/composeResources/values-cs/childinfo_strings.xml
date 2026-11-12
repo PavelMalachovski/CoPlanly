@@ -123,5 +123,6 @@
     <string name="child_photo_change">Změnit fotku</string>
     <string name="child_photo_add">Přidat fotku</string>
     <string name="child_photo_remove">Odstranit fotku</string>
+    <string name="child_photo_save_first">Nejdřív uložte, pak přidejte fotku</string>
     <string name="child_photo_private">Tuto fotku vidíte jen vy a %1$s</string>
 </resources>

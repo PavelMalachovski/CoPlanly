@@ -42,7 +42,7 @@ private val PORTRAIT_SIZE = 120.dp
  * @param onRemove Removes the portrait.
  */
 @Composable
-internal fun ChildPortrait(child: ChildInfo, onPick: (String) -> Unit, onRemove: () -> Unit) {
+fun ChildPortrait(child: ChildInfo, onPick: (String) -> Unit, onRemove: () -> Unit) {
     val picker = LocalFilePicker.current
     val launcher = picker.rememberImagePicker(onPick)
     Column(

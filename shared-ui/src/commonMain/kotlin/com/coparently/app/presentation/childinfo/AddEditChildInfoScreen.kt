@@ -29,6 +29,7 @@ import com.coparently.app.presentation.platform.LocalFilePicker
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
+import com.coparently.app.resources.child_photo_save_first
 import com.coparently.app.resources.childinfo_add_child_button
 import com.coparently.app.resources.childinfo_back
 import com.coparently.app.resources.childinfo_child_name_label
@@ -268,6 +269,25 @@ fun AddEditChildInfoScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(Spacing.L)
         ) {
+            // The portrait (part 5b): an existing child's, where the phone can pick one. A new child
+            // has no id for the photo's folder yet, so it asks to be saved first.
+            if (LocalFilePicker.current.available) {
+                val saved = currentChildInfo
+                if (childInfoId != null && childInfoId != "new" && saved != null) {
+                    ChildPortrait(
+                        child = saved,
+                        onPick = { uri -> viewModel.setPhoto(saved, uri) },
+                        onRemove = { viewModel.removePhoto(saved) }
+                    )
+                } else if (childInfoId == "new") {
+                    Text(
+                        text = stringResource(Res.string.child_photo_save_first),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
             // Basic Information Section
             Card(
                 modifier = Modifier.fillMaxWidth()

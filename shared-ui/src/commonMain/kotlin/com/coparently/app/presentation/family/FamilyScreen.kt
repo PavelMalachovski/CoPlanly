@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import com.coparently.app.data.repository.RatioSubmission
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.FamilyKind
+import com.coparently.app.presentation.common.ChildAvatarStack
 import com.coparently.app.presentation.common.FamilySwitcherChip
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.SectionGroup
@@ -198,6 +199,7 @@ fun FamilyScreen(
     val earlierFamilies by earlierFamiliesViewModel.families.collectAsState()
     val money by viewModel.money.collectAsState()
     val hasChildren by viewModel.hasChildren.collectAsState()
+    val children by viewModel.children.collectAsState()
     val schedule by viewModel.schedule.collectAsState()
     val caresFor by settingsViewModel.caresFor.collectAsState()
     val myCaresFor by settingsViewModel.myCaresFor.collectAsState()
@@ -300,7 +302,10 @@ fun FamilyScreen(
                                 Res.string.family_children_add
                             }
                         ),
-                        destinations.childInfo
+                        destinations.childInfo,
+                        leading = children.takeIf { it.isNotEmpty() }?.let { kids ->
+                            { ChildAvatarStack(kids, IconSizes.Large) }
+                        }
                     )
                     Divider()
                 }
@@ -539,10 +544,12 @@ private fun SectionGroupScope.NavRow(
     icon: ImageVector,
     title: StringResource,
     supporting: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    leading: @Composable (() -> Unit)? = null
 ) {
     SectionRow(
         icon = icon,
+        leading = leading,
         title = stringResource(title),
         supporting = supporting,
         onClick = onClick,

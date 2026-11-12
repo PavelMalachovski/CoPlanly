@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.presentation.theme.Spacing
@@ -86,7 +87,7 @@ private fun Wordmark() {
 }
 
 @Composable
-private fun ChildAvatarStack(children: List<ChildInfo>) {
+internal fun ChildAvatarStack(children: List<ChildInfo>, size: Dp = AVATAR_SIZE) {
     val shown = AvatarStack.visible(children.size)
     if (shown == 0) return
     val overflow = AvatarStack.overflow(children.size)
@@ -101,13 +102,13 @@ private fun ChildAvatarStack(children: List<ChildInfo>) {
             .clearAndSetSemantics { contentDescription = description }
     ) {
         for (index in 0 until shown) {
-            Ringed { ChildAvatar(children[index], AVATAR_SIZE) }
+            Ringed { ChildAvatar(children[index], size) }
         }
         if (overflow > 0) {
             Ringed {
                 Box(
                     modifier = Modifier
-                        .size(AVATAR_SIZE)
+                        .size(size)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.secondaryContainer),
                     contentAlignment = Alignment.Center

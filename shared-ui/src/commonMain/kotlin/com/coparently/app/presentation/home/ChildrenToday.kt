@@ -4,6 +4,7 @@ import com.coparently.app.domain.custody.ChildCustody
 import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.family.FamilyMemberRef
+import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.presentation.common.FamilyMember
 import kotlinx.datetime.LocalDate
@@ -14,8 +15,9 @@ import kotlinx.datetime.LocalDate
  * @property childName What the parents call the child — their own words, never translated.
  * @property slot `"mom"` or `"dad"`; the hero renders it as that parent's **name**, never as a
  *   colour, because a member is a name (FAM-2) and the parent hues already mean the parents.
+ * @property child The child's record, for the portrait the line leads with; null draws no avatar.
  */
-data class ChildWithParent(val childName: String, val slot: String)
+data class ChildWithParent(val childName: String, val slot: String, val child: ChildInfo? = null)
 
 /**
  * The lines Home's handover hero adds on a day the children are not all with the same parent.
@@ -41,11 +43,11 @@ internal object ChildrenToday {
         members: List<FamilyMember>
     ): List<ChildWithParent> {
         val children = members.mapNotNull { member ->
-            (member.ref as? FamilyMemberRef.Child)?.let { it.id to member.name }
+            (member.ref as? FamilyMemberRef.Child)?.let { it.id to member }
         }
         val names = children.toMap()
         val family = CustodyResolver.resolver(model, overrides, legacy = { null })
         return ChildCustody.whereaboutsOn(today, children.map { it.first }, model?.childOverrides.orEmpty(), family)
-            .mapNotNull { where -> names[where.childId]?.let { ChildWithParent(it, where.slot) } }
+            .mapNotNull { where -> names[where.childId]?.let { ChildWithParent(it.name, where.slot, it.child) } }
     }
 }
