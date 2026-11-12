@@ -29,7 +29,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import org.koin.core.Koin
-import platform.UIKit.UIAccessibilityIdentificationProtocol
+import platform.Foundation.setValue
 import platform.UIKit.UITabBarController
 import platform.UIKit.UITabBarControllerDelegateProtocol
 import platform.UIKit.UITabBarItem
@@ -309,8 +309,8 @@ internal class TabShell(shell: ShellEnvironment, session: ShellSession, chat: Ch
      * VoiceOver does not speak (the count of cancelled transitions, [NativeShell]).
      */
     fun markCancelledTransitions(marker: String) {
-        // UIView takes an identifier through its UIAccessibilityIdentification conformance.
-        (controller.tabBar as? UIAccessibilityIdentificationProtocol)?.setAccessibilityIdentifier(marker)
+        // Key-value coding: Kotlin/Native lists `accessibilityIdentifier` on UIView's protocol alone.
+        controller.tabBar.setValue(marker, forKey = "accessibilityIdentifier")
     }
 
     /** Ends the tabs: every stack's screens leave and their ViewModels are cleared. */
