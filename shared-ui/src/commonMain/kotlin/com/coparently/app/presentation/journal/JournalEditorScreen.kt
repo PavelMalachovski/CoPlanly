@@ -118,14 +118,7 @@ fun JournalEditorScreen(
         modifier = Modifier.then(leave.backPreview),
         topBar = { EditorTopBar(isNew = state.isNew, onNavigateUp = leave) },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        bottomBar = {
-            StickyActionBar(
-                label = stringResource(Res.string.journal_save),
-                onClick = viewModel::save,
-                enabled = state.canSave,
-                busy = state.saving
-            )
-        }
+        bottomBar = { SaveBar(state.canSave, state.saving, viewModel::save) }
     ) { padding ->
         EditorForm(
             state = state,
@@ -135,6 +128,16 @@ fun JournalEditorScreen(
             modifier = Modifier.padding(padding)
         )
     }
+}
+
+@Composable
+private fun SaveBar(canSave: Boolean, saving: Boolean, onSave: () -> Unit) {
+    StickyActionBar(
+        label = stringResource(Res.string.journal_save),
+        onClick = onSave,
+        enabled = canSave,
+        busy = saving
+    )
 }
 
 /**

@@ -213,19 +213,7 @@ fun ExportScreen(
     Scaffold(
         containerColor = ScreenContainerColor,
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(Res.string.export_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(Res.string.export_back)
-                        )
-                    }
-                }
-            )
-        }
+        topBar = { ExportTopBar(onNavigateBack) }
     ) { padding ->
         ExportContent(
             state = state,
@@ -239,6 +227,22 @@ fun ExportScreen(
             )
         )
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ExportTopBar(onNavigateBack: () -> Unit) {
+    TopAppBar(
+        title = { Text(stringResource(Res.string.export_title)) },
+        navigationIcon = {
+            IconButton(onClick = onNavigateBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(Res.string.export_back)
+                )
+            }
+        }
+    )
 }
 
 /**
