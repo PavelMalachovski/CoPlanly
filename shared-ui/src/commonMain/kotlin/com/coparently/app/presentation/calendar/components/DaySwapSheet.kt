@@ -10,8 +10,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EditNote
@@ -23,17 +23,19 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.heading
@@ -49,33 +51,34 @@ import com.coparently.app.presentation.common.AnswerByPickSaver
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.StickyActionBar
-import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.common.rememberAnswerByOffer
+import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.labelLargeEmphasized
 import com.coparently.app.presentation.theme.titleLargeEmphasized
-import com.coparently.app.utils.ReaderDateText
-import com.coparently.app.utils.swapDateList
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.answer_by_compressed
 import com.coparently.app.resources.answer_by_title
 import com.coparently.app.resources.day_swap_add_note
 import com.coparently.app.resources.day_swap_cancel
 import com.coparently.app.resources.day_swap_change_days
-import com.coparently.app.resources.day_swap_needs_coparent
 import com.coparently.app.resources.day_swap_mark_to
 import com.coparently.app.resources.day_swap_mark_to_you
+import com.coparently.app.resources.day_swap_needs_coparent
 import com.coparently.app.resources.day_swap_note_to
 import com.coparently.app.resources.day_swap_send_to
 import com.coparently.app.resources.day_swap_sheet_title_with
 import com.coparently.app.resources.day_swap_skipped_days
+import com.coparently.app.utils.ReaderDateText
+import com.coparently.app.utils.swapDateList
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
-import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -127,6 +130,15 @@ class SwapSheetActions(
 fun DaySwapSheet(offer: SwapSheetOffer, parentNames: ParentNames, actions: SwapSheetActions) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     val scope = rememberCoroutineScope()
+    // At a large font the half-height anchor cannot hold the rows and the pinned button; wait until
+    // the sheet's own show() has settled, or this expand races it.
+    val largeFont = stacksAtLargeFont()
+    LaunchedEffect(largeFont) {
+        if (largeFont) {
+            snapshotFlow { sheetState.currentValue }.first { it != SheetValue.Hidden }
+            sheetState.expand()
+        }
+    }
     ModalBottomSheet(onDismissRequest = actions.onCancel, sheetState = sheetState) {
         DaySwapSheetContent(offer, parentNames, actions, onNeedRoom = { scope.launch { sheetState.expand() } })
     }
@@ -153,9 +165,6 @@ fun DaySwapSheetContent(
     modifier: Modifier = Modifier,
     onNeedRoom: () -> Unit = {}
 ) {
-    // At a large font the half-height anchor cannot hold the rows and the pinned button.
-    val largeFont = stacksAtLargeFont()
-    LaunchedEffect(largeFont) { if (largeFont) onNeedRoom() }
     var note by rememberSaveable { mutableStateOf("") }
     var answerBy by rememberSaveable(stateSaver = AnswerByPickSaver) { mutableStateOf(AnswerByPick.DEFAULT) }
     val sides = offer.sides

@@ -132,10 +132,10 @@
     </plurals>
     <string name="day_swap_day_to_you">%1$s → вам</string>
     <plurals name="day_swap_sheet_title_count">
-        <item quantity="one">Обмін, днів: %1$d — %2$s</item>
-        <item quantity="few">Обмін, днів: %1$d — %2$s</item>
-        <item quantity="many">Обмін, днів: %1$d — %2$s</item>
-        <item quantity="other">Обмін, днів: %1$d — %2$s</item>
+        <item quantity="one">%2$s: обмін %1$d днем</item>
+        <item quantity="few">%2$s: обмін %1$d днями</item>
+        <item quantity="many">%2$s: обмін %1$d днями</item>
+        <item quantity="other">%2$s: обмін %1$d днями</item>
     </plurals>
     <string name="day_swap_add_note">Додати нотатку</string>
 </resources>
