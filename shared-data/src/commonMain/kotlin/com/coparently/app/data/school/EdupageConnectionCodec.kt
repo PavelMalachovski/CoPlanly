@@ -6,7 +6,6 @@ import com.coparently.app.data.school.bakalari.BakalariTokens
 import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.school.SchoolConnection
 import com.coparently.app.domain.school.SchoolConnectionStatus
-import com.coparently.app.domain.school.SchoolImportRecord
 import com.coparently.app.domain.school.SchoolStudent
 import com.coparently.app.domain.school.SchoolSystem
 import com.coparently.app.domain.serialization.StoredJson
