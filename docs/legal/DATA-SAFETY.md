@@ -92,7 +92,8 @@ not declare the school login as collected: nothing about it reaches us.
 issues no refresh token, so the password is kept, encrypted under the Keystore key in the app's
 sealed preference store, and sent only to `*.edupage.org`. It is deleted on disconnect, sign-out
 and account deletion. Nothing about it reaches us, so it is not "collected" in Play's sense; what
-it imports becomes ordinary *Calendar events*, already declared.
+it imports (school events, tests and homework, the day's first and last lesson times, days without
+lessons) becomes ordinary *Calendar events*, already declared.
 
 **Receipt OCR is on-device.** ML Kit's bundled model recognises receipt text without the
 photograph or the text leaving the device. Nothing about it is collected or shared, and it is

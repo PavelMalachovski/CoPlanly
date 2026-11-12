@@ -376,8 +376,10 @@ Bakaláři in one way that matters to you:
   EduPage and try again. It never sees or stores the confirmation.
 - From EduPage the app reads **only** your child's timetable for the next four weeks and the
   timeline entries meant for your child, their class or the whole school: events, tests and
-  homework with a date. It keeps the first lesson's start and the last one's end for each school
-  day, and the title of each entry. It does **not** read or keep grades, absences or messages.
+  homework with a date, and days without lessons. It keeps the first lesson's start and the last
+  one's end for each school day, and the title of each entry. It does **not** keep or import
+  grades, absences or messages: EduPage sends messages in the same timeline answer, and the phone
+  discards them.
 - What it imports becomes **ordinary events in the family you chose**, about the child you chose
   — visible to your co-parent like any event you enter yourself, and kept and deleted like them.
 
