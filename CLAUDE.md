@@ -146,7 +146,8 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    gets the height. The month title, Today, the
    arrows, the swap button and the "+" for a new event head the grid's own white card in one row
    (`CalendarMonthBar` in `CalendarGridCard`, the legend under them on the full width; the title
-   steps its size down before it ellipsises); tapping the title opens "Jump to
+   steps its size down before it ellipsises, and from font scale 1.3 takes a line of its own above
+   the actions); tapping the title opens "Jump to
    date". **The "+" is the bar's, not a floating button** (tester feedback, 12 November 2026): once
    the six rows reached the card's bottom a floating "+" covered the last row's cells. The Scaffold's
    floating slot holds only the red delete button a long press or a drag brings up. The Today card

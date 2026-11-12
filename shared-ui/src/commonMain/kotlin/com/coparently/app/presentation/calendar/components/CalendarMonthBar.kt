@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import com.coparently.app.presentation.calendar.CalendarViewMode
 import com.coparently.app.presentation.calendar.SwapDaysButton
 import com.coparently.app.presentation.common.rememberToday
+import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
@@ -84,46 +85,73 @@ fun CalendarMonthBar(
     onSwapDays: (() -> Unit)? = null,
     onAddEvent: (() -> Unit)? = null
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        MonthTitle(selectedDate, onJumpToDate, Modifier.weight(1f))
-        AssistChip(
-            onClick = onToday,
-            label = {
-                Text(
-                    text = stringResource(Res.string.calendar_today_button),
-                    style = MaterialTheme.typography.labelMedium
-                )
-            }
-        )
-        onPrevious?.let { onClick ->
-            IconButton(onClick = onClick) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = stringResource(Res.string.calendar_previous_period),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+    // From font scale 1.3 the actions alone fill the row (German's "Heute" chip at 200 % left the
+    // month no room at all), so the title takes a line of its own above them.
+    if (stacksAtLargeFont()) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            MonthTitle(selectedDate, onJumpToDate, Modifier.fillMaxWidth())
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                MonthBarActions(onToday, onPrevious, onNext, onSwapDays, onAddEvent)
             }
         }
-        onNext?.let { onClick ->
-            IconButton(onClick = onClick) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = stringResource(Res.string.calendar_next_period),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+    } else {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            MonthTitle(selectedDate, onJumpToDate, Modifier.weight(1f))
+            MonthBarActions(onToday, onPrevious, onNext, onSwapDays, onAddEvent)
         }
-        onSwapDays?.let { onClick -> SwapDaysButton(onClick = onClick) }
-        onAddEvent?.let { onClick ->
-            FilledTonalIconButton(onClick = onClick) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = stringResource(Res.string.calendar_add_event)
-                )
-            }
+    }
+}
+
+/** Today, the arrows, "⇄" and "+", in that order; see [CalendarMonthBar]. */
+@Composable
+private fun MonthBarActions(
+    onToday: () -> Unit,
+    onPrevious: (() -> Unit)?,
+    onNext: (() -> Unit)?,
+    onSwapDays: (() -> Unit)?,
+    onAddEvent: (() -> Unit)?
+) {
+    AssistChip(
+        onClick = onToday,
+        label = {
+            Text(
+                text = stringResource(Res.string.calendar_today_button),
+                style = MaterialTheme.typography.labelMedium
+            )
+        }
+    )
+    onPrevious?.let { onClick ->
+        IconButton(onClick = onClick) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                contentDescription = stringResource(Res.string.calendar_previous_period),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+    onNext?.let { onClick ->
+        IconButton(onClick = onClick) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = stringResource(Res.string.calendar_next_period),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+    onSwapDays?.let { onClick -> SwapDaysButton(onClick = onClick) }
+    onAddEvent?.let { onClick ->
+        FilledTonalIconButton(onClick = onClick) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = stringResource(Res.string.calendar_add_event)
+            )
         }
     }
 }
