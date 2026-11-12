@@ -101,4 +101,25 @@
     <string name="home_activity_declined_swap">Ваш обмін днями відхилено: %1$s</string>
     <string name="home_activity_accepted_event">Прийнято: %1$s</string>
     <string name="home_activity_declined_event">Відхилено: %1$s</string>
+    <!-- Home, variant A (redesign, November 2026): the Updates card, the open requests, the
+         handover card and the money tile. %1$s = the co-parent; %1$d = whole days. -->
+    <string name="home_updates_title">Новини</string>
+    <string name="home_updates_empty">%1$s: нічого нового</string>
+    <string name="home_updates_see_all">Усі</string>
+    <string name="home_open_requests_title">Відкриті запити</string>
+    <string name="home_waiting_for_you">Чекає на вашу відповідь</string>
+    <string name="home_waiting_for_coparent">Чекає на відповідь: %1$s</string>
+    <plurals name="home_handover_in_days">
+        <item quantity="one">Передача через %1$d день</item>
+        <item quantity="few">Передача через %1$d дні</item>
+        <item quantity="many">Передача через %1$d днів</item>
+        <item quantity="other">Передача через %1$d дня</item>
+    </plurals>
+    <string name="home_handover_today">Передача сьогодні</string>
+    <string name="home_expenses_tile">Витрати за місяць</string>
+    <!-- Under the handover card's headline: whom the days go to. -->
+    <string name="home_handover_goes_to_you">Далі — у вас</string>
+    <string name="home_handover_goes_to">Далі — %1$s</string>
+    <!-- Appended to a week tile's spoken description when the day has events. -->
+    <string name="home_week_tile_has_events">є події</string>
 </resources>

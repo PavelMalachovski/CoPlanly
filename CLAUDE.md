@@ -141,10 +141,10 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    1.3), then the Month/Week/Day segmented control and Filters. The month title, Today and the
    arrows head the grid's own white card (`CalendarMonthBar` in `CalendarGridCard`, the legend with
    the swap button under them); tapping the title opens "Jump to date". The Today card
-   (`TodayCard`, built through `HomeWeek.todayOf` like Home's and the widget's) sits in the
+   (`TodayCard`, built through `HomeWeek.todayOf` like the widget's) sits in the
    Scaffold's bottom bar slot so the "+" floats above it, and is left out on two panes. What waits on this parent's answer is an inline banner over the grid
    (`components/CalendarBanners.kt`), not a badged glyph, and its number is the one Home's
-   **Requests** row shows (item 40 of "Things that are easy to get wrong"). School vacation is neither a banner (it
+   open requests card shows (item 40 of "Things that are easy to get wrong"). School vacation is neither a banner (it
    changed the grid's height between months) nor the old teal strip: since MON-13 it is a thin
    neutral line along each vacation day's bottom edge (`DayCellFill.schoolVacation`, theme
    `outline`, no height). Month
@@ -168,7 +168,16 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    same `DayAgendaCard` composable so the two surfaces cannot drift. Month paging is snapped
    by `MonthView`'s own nestedScroll settle — one 500 ms tween, identical in both
    directions — with `calendarScrollPaged = false`; don't hand snapping back to the library,
-   whose spring read differently per direction.)*
+   whose spring read differently per direction.)* *(November 2026: the today card left Home for
+   the Calendar's `TodayCard`; Home shows no today agenda.)*
+   **Home is variant A** (redesign, November 2026; `home/HomeSection.kt` decides the order):
+   the brand header, then **Updates** (`UpdatesCard`: `HomeFeed.items`, at most five rows, a
+   status disc each — `updateMark` — and "See all" to the inbox's History; empty, "Nothing new from
+   Bob" inside the card), **Open requests** (`OpenRequestsCard`, the Requests row's counts; left out
+   when nothing waits on either parent), **This week** (`WeekTiles`: seven tiles from today in each
+   day's custody wash, `HomeWeek.daysOf`, today ringed, a dot on a day with events; a tap opens Day
+   view on it through `navigation/CalendarDayRequests`), the **next handover** (`HandoverCard`), and
+   the expenses and chat tiles (`StatTiles`). The handover hero and the week list are gone.
 6. **There is no weekly-summary screen any more** (commit `340af30` removed the screen, its
    ViewModel, the route and the strings; this line used to say it had "exactly one entry point").
    Home's seven-day card is the surviving surface — don't add a summary route back, and don't
@@ -436,9 +445,8 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     `ReadablePaneTest` measures both widths. The UI tour's `light-en-100-wide` variant (a
     1280 × 800 dp display) shows it next to the rail.
     **The tabs go to two panes from 840 dp** (release audit R-8, week 8; `common/TwoPane.kt`,
-    `rememberTwoPane()` off the window width, as the rail is). Home puts what the parent acts on
-    now — the handover, today, what waits on them — beside what they read after — the
-    week, the co-parent's changes, the month's figures; Expenses puts the month's summary and
+    `rememberTwoPane()` off the window width, as the rail is). Home puts Updates, the open requests
+    and the handover beside this week's tiles and the month's figures (`homeSections`); Expenses puts the month's summary and
     where the money went beside its expenses, with no List/Analytics switch; Chat puts the list
     beside the open thread when there is more than one, and caps a single thread at 840 dp
     (`WideColumn`). The pair is at most 1200 dp, centred. Deliberately not
@@ -454,10 +462,11 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     the owner's decision to make first.
 21. **The second new-user audit (24 October 2026) fixed these; keep them** (each with its test):
     - **Home asks one thing per visit** (`HomeAskQueue.nextThisVisit`): what already waited beside
-      the first ask waits for the next visit, on the Requests row; an ask that arrives during the
+      the first ask waits for the next visit, on the open requests card; an ask that arrives during the
       visit is asked. Two dialogs in a row on opening the app read as pressure.
-    - **A request is called "Requests" everywhere** — Home, the inbox, the calendar's banner and
-      Home's dialog — and the banner counts "waiting for your answer", as the row does.
+    - **A request is called "Requests" everywhere** — the inbox, the calendar's banner and Home's
+      dialog (Home's card says "Open requests") — and the banner counts "waiting for your answer",
+      as Home's card does.
     - **A swap says whom the days go to** (`home_dialog_swap_goes_to_*`), and nothing about a
       schedule says "the child": a family with two read it as wrong.
     - **A schedule is described from its dated start, and the presets named by weekdays start on a
@@ -480,7 +489,7 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
       never from the offerer's: Home's dialog and the inbox card read the one rule, and an unknown
       slot says "proposes swapping", never a direction it cannot know.
     - **The reader is "you"** (H4): `ParentNames.isReader`/`labelOrYou` word every line that would
-      otherwise name the reader to themselves — Home's hero and week, the today card and widget, the
+      otherwise name the reader to themselves — Home's handover card, the today card and widget, the
       calendar's swap strip, expenses' rows and shares.
     - **A parent answers through `AnswerButtons`** (`common/AnswerButtons.kt`, M1): outlined Decline,
       filled Accept, stacked from font scale 1.3, a text "Later" under them on a dialog. Home's three
@@ -495,8 +504,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
       decision, 28 October 2026, reversing H2's neutral hour grid). There is no named band over the
       week's columns any more: the legend above the grid names the colours, and a second strip of
       names repeated it. Event titles wrap to the lines their block has room for (`titleLinesFor`).
-    - **Home's activity offers Review only while a request waits** (M2), and says how it ended once
-      answered; the handover hero carries no Review chip (M3).
+    - **Home offers Review only while a request waits** (M2; since November 2026 on the open
+      requests card, which Home leaves out when nothing waits); the handover card carries no Review
+      chip (M3).
     - **Expenses shows one currency's summary at a time** with chips (M7), a row says how it divides
       only when that differs from the agreement (`dividesAsAgreed`), and the analytics are bars in
       the primary colour, never a pie (M8).
@@ -536,7 +546,8 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
       "Accept swap"/"Accept", and "Answer day by day" (two waiting days or more) switches to
       `SwapDayAnswers` in their place. A part-answer leaves the rest waiting, and the card then shows
       and decides only those (`DaySwapGroup.waitingOn`).
-    Home's hero and its children's lines say "you" too (`handoverHeadline`, `ChildrenTodayLines`).
+    Home's handover card and its children's lines say "you" too (`HandoverCard`'s `handoverGoesTo`,
+    `ChildrenTodayLines`).
 
 ## UX/UI overhaul (July 2026 design review) — implemented, keep consistent
 

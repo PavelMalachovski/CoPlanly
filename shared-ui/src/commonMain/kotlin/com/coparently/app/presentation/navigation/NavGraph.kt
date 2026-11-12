@@ -331,10 +331,11 @@ fun NavGraph(
                         onOpenChat = {
                             navController.navigateToTab(BottomNavDestination.CHAT)
                         },
-                        // The empty week's action: the same form the calendar opens, with no date
-                        // preset, so the form starts from its own default.
-                        onAddEvent = {
-                            navController.navigate(Screen.AddEvent.createRoute())
+                        // A week tile opens the calendar's Day view on its day (redesign, November
+                        // 2026, variant A): the request first, then the tab, which answers it.
+                        onOpenDay = { date ->
+                            CalendarDayRequests.open(date)
+                            navController.navigateToTab(BottomNavDestination.CALENDAR)
                         },
                         onOpenUnassignedRecords = {
                             navController.navigate(Screen.UnassignedRecords.route)

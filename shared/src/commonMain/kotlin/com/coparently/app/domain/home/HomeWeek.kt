@@ -53,6 +53,20 @@ data class TodayAgenda(
 )
 
 /**
+ * One of the seven day tiles on Home (redesign, November 2026, variant A).
+ *
+ * @property date The day.
+ * @property dayParent The slot whose custody day it is, or null when no arrangement answers —
+ *   the same lookup as [WeekEntry.dayParent], so a tile's wash and the calendar grid agree.
+ * @property hasEvents Whether any event this parent may see touches the day.
+ */
+data class WeekDay(
+    val date: LocalDate,
+    val dayParent: String?,
+    val hasEvents: Boolean
+)
+
+/**
  * The child's week, as the home screen shows it.
  *
  * Pure, so the window arithmetic and the filtering can be tested without a ViewModel, a
@@ -130,6 +144,31 @@ object HomeWeek {
         dayParent = custodyFor(today),
         contactWindows = contactWindowsFor(today)
     )
+
+    /**
+     * The seven days from [today], one per tile: whose day each is and whether anything happens
+     * on it. An event counts on every day it touches, the rule [todayOf] follows, and only events
+     * [userId] may see count.
+     *
+     * @param events Events overlapping the home window, recurring series already expanded.
+     * @param custodyFor Whose day a date is; bind through `CustodyResolver` as [of] asks.
+     */
+    fun daysOf(
+        events: List<Event>,
+        today: LocalDate,
+        userId: String,
+        custodyFor: (LocalDate) -> String?
+    ): List<WeekDay> {
+        val visible = events.filter { it.isVisibleTo(userId) }
+        return (0 until DAYS.toInt()).map { offset ->
+            val date = today.plus(offset, DateTimeUnit.DAY)
+            WeekDay(
+                date = date,
+                dayParent = custodyFor(date),
+                hasEvents = visible.any { it.covers(date) }
+            )
+        }
+    }
 
     /** Whether this event touches [day] — start and end dates inclusive. */
     private fun Event.covers(day: LocalDate): Boolean {

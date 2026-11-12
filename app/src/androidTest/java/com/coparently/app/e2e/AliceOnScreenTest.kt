@@ -311,6 +311,18 @@ abstract class AliceOnScreenTest {
         composeTestRule.settle()
     }
 
+    /**
+     * Opens the Requests inbox from Home (redesign, November 2026, variant A): through the open
+     * requests card while something waits on either parent, and through the Updates card's "See
+     * all", which opens it at History, when nothing does.
+     */
+    protected fun openRequestsFromHome() {
+        val waiting = hasText(string(R.string.home_waiting_for_coparent, "").trim(), substring = true) and
+            hasClickAction()
+        val seeAll = hasText(string(R.string.home_updates_see_all)) and hasClickAction()
+        tap(if (composeTestRule.exists(waiting)) waiting else seeAll)
+    }
+
     /** A button labelled by [labelRes] inside the dialog on screen. */
     protected fun dialogButton(labelRes: Int): SemanticsMatcher =
         hasAnyAncestor(isDialog()) and hasText(string(labelRes)) and hasClickAction()

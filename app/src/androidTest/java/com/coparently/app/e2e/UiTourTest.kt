@@ -126,7 +126,10 @@ class UiTourTest : AliceOnScreenTest() {
         }
         driver.pressIfPresent(dialogButton(R.string.home_dialog_later))
         camera.shot("change_requests_inbox") {
-            driver.press("the Requests row", hasText(string(R.string.home_requests_title)) and hasClickAction())
+            driver.press(
+                "the open requests card",
+                hasText(string(R.string.home_waiting_for_coparent, "").trim(), substring = true) and hasClickAction()
+            )
             driver.appeared(hasText(content.events.dentist, substring = true))
             driver.linger()
         }

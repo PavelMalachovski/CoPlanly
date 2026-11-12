@@ -105,13 +105,16 @@ class IsolationScenarioTest : QaOnScreenTest() {
 
         report.step(
             id = "home_today",
-            title = "Home's today card in the family with $onScreenCoParent",
-            expected = "\"${mine.title}\" is on Home; \"${theirs.title}\" from the family with $otherCoParent is not"
+            // The today card moved from Home to the Calendar (redesign, November 2026); the step
+            // keeps its id so earlier reports still line up.
+            title = "The Calendar's today card in the family with $onScreenCoParent",
+            expected = "\"${mine.title}\" is on the Calendar; " +
+                "\"${theirs.title}\" from the family with $otherCoParent is not"
         ) {
-            openTab(BottomNavDestination.HOME)
+            openTab(BottomNavDestination.CALENDAR)
             awaitDelivered(this, "today's event from $onScreenCoParent", hasText(mine.title, substring = true), false)
             check(!composeTestRule.exists(hasText(theirs.title, substring = true))) {
-                "the other family's event \"${theirs.title}\" is shown on Home"
+                "the other family's event \"${theirs.title}\" is shown on the Calendar"
             }
         }
 

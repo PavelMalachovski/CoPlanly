@@ -87,4 +87,23 @@
     <string name="home_activity_declined_swap">Dein Tagestausch abgelehnt: %1$s</string>
     <string name="home_activity_accepted_event">Angenommen: %1$s</string>
     <string name="home_activity_declined_event">Abgelehnt: %1$s</string>
+    <!-- Home, variant A (redesign, November 2026): the Updates card, the open requests, the
+         handover card and the money tile. %1$s = the co-parent; %1$d = whole days. -->
+    <string name="home_updates_title">Neuigkeiten</string>
+    <string name="home_updates_empty">Nichts Neues von %1$s</string>
+    <string name="home_updates_see_all">Alle anzeigen</string>
+    <string name="home_open_requests_title">Offene Anfragen</string>
+    <string name="home_waiting_for_you">Wartet auf dich</string>
+    <string name="home_waiting_for_coparent">Wartet auf %1$s</string>
+    <plurals name="home_handover_in_days">
+        <item quantity="one">Übergabe in %1$d Tag</item>
+        <item quantity="other">Übergabe in %1$d Tagen</item>
+    </plurals>
+    <string name="home_handover_today">Übergabe heute</string>
+    <string name="home_expenses_tile">Ausgaben diesen Monat</string>
+    <!-- Under the handover card's headline: whom the days go to. -->
+    <string name="home_handover_goes_to_you">Dann bei dir</string>
+    <string name="home_handover_goes_to">Dann bei %1$s</string>
+    <!-- Appended to a week tile's spoken description when the day has events. -->
+    <string name="home_week_tile_has_events">mit Terminen</string>
 </resources>

@@ -97,6 +97,7 @@ import com.coparently.app.presentation.event.EventOperation
 import com.coparently.app.presentation.event.EventUiState
 import com.coparently.app.presentation.event.EventViewModel
 import com.coparently.app.presentation.home.ChildrenToday
+import com.coparently.app.presentation.navigation.CalendarDayRequests
 import com.coparently.app.presentation.navigation.CalendarTabTaps
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.parentingplan.planCitationShortLine
@@ -698,6 +699,20 @@ fun CalendarScreen(
             endSwapSelection()
             calendarViewModel.setViewMode(CalendarViewMode.MONTH)
             calendarViewModel.showMonth(Clock.System.todayIn(TimeZone.currentSystemDefault()).yearMonth)
+        }
+    }
+    // A day opened from elsewhere — Home's week tiles (redesign, November 2026) — shows that day in
+    // Day view, with the default Back; answered once, like the tab taps above, and after them.
+    val dayRequest by CalendarDayRequests.request.collectAsState()
+    var answeredDayRequest by rememberSaveable { mutableIntStateOf(dayRequest?.id ?: 0) }
+    LaunchedEffect(dayRequest) {
+        val request = dayRequest
+        if (request != null && request.id != answeredDayRequest) {
+            answeredDayRequest = request.id
+            dayOpenedFromMonth = false
+            endSwapSelection()
+            calendarViewModel.setSelectedDate(request.date)
+            calendarViewModel.setViewMode(CalendarViewMode.DAY)
         }
     }
     // Leaving Day by any other route (the view picker, the date picker) ends the drill-down, so

@@ -103,4 +103,23 @@
     <string name="home_activity_declined_swap">Declined your day swap: %1$s</string>
     <string name="home_activity_accepted_event">Accepted %1$s</string>
     <string name="home_activity_declined_event">Declined %1$s</string>
+    <!-- Home, variant A (redesign, November 2026): the Updates card, the open requests, the
+         handover card and the money tile. %1$s = the co-parent; %1$d = whole days. -->
+    <string name="home_updates_title">Updates</string>
+    <string name="home_updates_empty">Nothing new from %1$s</string>
+    <string name="home_updates_see_all">See all</string>
+    <string name="home_open_requests_title">Open requests</string>
+    <string name="home_waiting_for_you">Waiting for you</string>
+    <string name="home_waiting_for_coparent">Waiting for %1$s</string>
+    <plurals name="home_handover_in_days">
+        <item quantity="one">Handover in %1$d day</item>
+        <item quantity="other">Handover in %1$d days</item>
+    </plurals>
+    <string name="home_handover_today">Handover today</string>
+    <string name="home_expenses_tile">Expenses this month</string>
+    <!-- Under the handover card's headline: whom the days go to. -->
+    <string name="home_handover_goes_to_you">Goes to you</string>
+    <string name="home_handover_goes_to">Goes to %1$s</string>
+    <!-- Appended to a week tile's spoken description when the day has events. -->
+    <string name="home_week_tile_has_events">has events</string>
 </resources>
