@@ -119,7 +119,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
 3. **Colours come from `MaterialTheme.colorScheme`, not literal hex.** The prototype was
    authored in dark and its palette *is* `DarkColorScheme`, so every value has a role
    (`#1F1F25` = `surfaceContainer`, `#C2C1FF` = `primary`, …). Using roles is what keeps
-   light theme working on the redesigned screens.
+   light theme working on the redesigned screens. Every screen's `TopAppBar` takes
+   `screenTopAppBarColors()` (`theme/AppGround.kt`): transparent over the ground at rest,
+   `surfaceContainer` once content scrolls under it — never an opaque `surface` band.
 4. **Settings is five labelled groups** — Sync, App, Chat, Privacy and data, Account, in that
    order (design audit, 27 October 2026, M6: App had grown to eleven rows; the pause before sending
    is Chat's, telemetry, health, AI and the data sources are Privacy and data's, and My details sits
@@ -163,13 +165,14 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    Month on today** (`navigation/CalendarTabTaps`, tester feedback, October 2026), from another
    tab and from the tab itself; a restored Day view on another month read as a broken calendar. The month title omits the current
    year. In Day and Week view **a drag deletes only when it ends over the red delete button**
-   (its bounds, via a file-private local in `DayWeekView`), never over a screen region. *(Aug 2026, second pass: the `DayAgendaCard` no longer sits
-   under the grid — it renders on Home as the "today" card (`HomeWeek.todayOf`), fed by the
-   same `DayAgendaCard` composable so the two surfaces cannot drift. Month paging is snapped
-   by `MonthView`'s own nestedScroll settle — one 500 ms tween, identical in both
+   (its bounds, via a file-private local in `DayWeekView`), never over a screen region. **Today's agenda is the Calendar's `TodayCard`** (November 2026
+   redesign), built from `HomeWeek.todayOf`, the value the widget reads too; Home shows no today
+   agenda, and `DayAgendaCard` survives only in the screenshots and previews. Month paging is
+   snapped by `MonthView`'s own nestedScroll settle — one 500 ms tween, identical in both
    directions — with `calendarScrollPaged = false`; don't hand snapping back to the library,
-   whose spring read differently per direction.)* *(November 2026: the today card left Home for
-   the Calendar's `TodayCard`; Home shows no today agenda.)*
+   whose spring read differently per direction. **A Day view opened from Home's week tiles**
+   (`CalendarDayRequests`) **returns to Month on Back** too, as from a month cell (D-11): the
+   Calendar is the back stack's root, so the default Back would leave the app.
    **Home is variant A** (redesign, November 2026; `home/HomeSection.kt` decides the order):
    the brand header, then **Updates** (`UpdatesCard`: `HomeFeed.items`, at most five rows, a
    status disc each — `updateMark` — and "See all" to the inbox's History; empty, "Nothing new from
@@ -180,7 +183,7 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    the expenses and chat tiles (`StatTiles`). The handover hero and the week list are gone.
 6. **There is no weekly-summary screen any more** (commit `340af30` removed the screen, its
    ViewModel, the route and the strings; this line used to say it had "exactly one entry point").
-   Home's seven-day card is the surviving surface — don't add a summary route back, and don't
+   Home's week tiles (`WeekTiles`) are the surviving surface — don't add a summary route back, and don't
    resurrect the unlabelled `view_list` action in the calendar header either.
 7. **The Chat tab renders the thread in place** when there is exactly one conversation
    (`ConversationsScreen` composes `ChatScreen` with `onBack = null`). Do not "fix" this by
@@ -397,7 +400,7 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     nothing loses contrast; `ContrastScreenshots` renders three components at high contrast. The
     parent colours, the weekend grey and the holiday reds are the app's own tokens and do not
     change with the level; they are held to AA by `ParentColorsTest` in both themes.
-18. **The "Today" widget is Home's today card on the home screen, never a second opinion**
+18. **The "Today" widget is the Calendar's today card on the home screen, never a second opinion**
     (October 2026 audit, week 6; `presentation/widget/`). A Glance 1.1.1 widget: whose day it is,
     the day's contact windows, the next handover and today's events. The compact layout counts the
     events (from font scale 1.3 it keeps three lines, `compactAtLargeText`, since a widget cannot
@@ -567,8 +570,9 @@ When touching the UI, keep these invariants:
    and the post-onboarding and sign-out navigations pop to it, so Back from any tab lands on the
    Calendar and from the Calendar leaves the app. What Home used to put first — what waits for
    this parent — is **the Home tab's badge** (`RequestsBadgeViewModel`, `rememberHomeRequestsCount`
-   beside the Chat badge in `NavGraph`, the `home_requests_badge` plural): exactly Home's
-   Requests row number, `inbox.waitingOnMe.count`, and nothing while it is loading. Home stays a tab,
+   beside the Chat badge in `NavGraph`, the `home_requests_badge` plural): exactly the count Home's
+   Open requests card shows waiting on this parent, `inbox.waitingOnMe.count`, and nothing while it
+   is loading. Home stays a tab,
    declared as before. **Expenses is not a tab either since October 2026** (new-user review): it is a
    detail screen opened from the Family tab's money card and Home's month tile, with an up-arrow,
    and a money push opens Family and then Expenses so Back lands on the tab. **Settings is NOT a tab** — it opens from a gear action in each top-level

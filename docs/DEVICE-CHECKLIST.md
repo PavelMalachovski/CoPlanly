@@ -2130,7 +2130,7 @@ requests they had already accepted or declined, and the co-parent's words on an 
 for an answer.
 
 > **[CI]** The rules are unit tests — `RequestHistoryTest`, `RequestInboxTest`, `InboxItemsTest`,
-> `RequestsRowTextTest`, `HomeFeedTest`, `RequestsSourceTest` and `ChangeRequestWithdrawTest` — and
+> `HomeFeedTest`, `RequestsSourceTest` and `ChangeRequestWithdrawTest` — and
 > the screens render in the screenshot matrix (`requests_*`). A withdrawn swap and a withdrawn custody
 > proposal run between two phones against the real rules in `TwoParentCustodyTest`. What a phone adds
 > is the two phones answering each other live, the cards and the buttons as drawn.
@@ -2180,7 +2180,7 @@ for an answer.
   arrive on the next open rather than live.
 - **If it fails:** tag `ChangeRequestViewModel`, `HomeViewModel`, `CustodyModelRepository`;
   `presentation/changerequests/`, `domain/changerequests/`, `domain/custody/DayOverrideTransition.kt`,
-  `presentation/home/RequestsRow.kt`, `presentation/home/HomeFeed.kt`.
+  `presentation/home/RequestsRowState.kt`, `presentation/home/HomeFeed.kt`.
 
 
 ### 5.9 Deadlines, reminders and the last chance (phase 3a) · 2P, 1P + a second account fallback
@@ -2384,8 +2384,13 @@ the real launch and the badge as drawn.
       shows a badge with the number Home's **Requests** row shows (a proposed expense split counts,
       the calendar banner does not); TalkBack reads "1 request waiting for your answer"; answering
       it clears the badge. On a tablet the rail shows the same badge.
+- [ ] **Back from a day opened on Home returns to Month.** On Home tap a day of the week tiles: the
+      Calendar opens that day in Day view. Press Back: the Calendar shows Month (not the app
+      closing); Back once more closes the app. The same from a month cell. A Day view chosen in
+      the title's picker keeps the default Back.
 - **If it fails:** `startDestinationFor` and `navigateToTab` in `presentation/navigation/`,
-  `RequestsBadgeViewModel`, `rememberHomeRequestsCount` in `NavGraph.kt`.
+  `RequestsBadgeViewModel`, `rememberHomeRequestsCount` in `NavGraph.kt`; for Back from a day,
+  `CalendarDayRequests` and `dayOpenedFromMonth` in `CalendarScreen.kt`.
 
 ---
 

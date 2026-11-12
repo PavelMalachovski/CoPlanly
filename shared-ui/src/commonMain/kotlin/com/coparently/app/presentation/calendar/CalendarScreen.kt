@@ -702,22 +702,26 @@ fun CalendarScreen(
         }
     }
     // A day opened from elsewhere — Home's week tiles (redesign, November 2026) — shows that day in
-    // Day view, with the default Back. Consumed once, so the first composition in a process opens
-    // it too; declared after the tab-tap effect, so on the same frame the day wins over its reset.
+    // Day view, and Back returns to Month as from a tapped month cell (D-11): the Calendar is the
+    // back stack's root, so the default Back would leave the app. Consumed once, so the first
+    // composition in a process opens it too; declared after the tab-tap effect, so on the same
+    // frame the day wins over its reset.
     val pendingDay by CalendarDayRequests.pending.collectAsState()
     LaunchedEffect(pendingDay) {
         val date = if (pendingDay != null) CalendarDayRequests.consume() else null
         if (date != null) {
-            dayOpenedFromMonth = false
+            dayOpenedFromMonth = true
             endSwapSelection()
             calendarViewModel.setSelectedDate(date)
             calendarViewModel.setViewMode(CalendarViewMode.DAY)
         }
     }
     // Leaving Day by any other route (the view picker, the date picker) ends the drill-down, so
-    // a Day view reached later through the picker keeps the default Back.
+    // a Day view reached later through the picker keeps the default Back. It reads the ViewModel's
+    // own value, not the collected state: on the screen's first composition the day request above
+    // has just set Day, and the collected state still says the view it was before.
     LaunchedEffect(viewMode) {
-        if (viewMode != CalendarViewMode.DAY) dayOpenedFromMonth = false
+        if (calendarViewModel.viewMode.value != CalendarViewMode.DAY) dayOpenedFromMonth = false
     }
 
     Scaffold(

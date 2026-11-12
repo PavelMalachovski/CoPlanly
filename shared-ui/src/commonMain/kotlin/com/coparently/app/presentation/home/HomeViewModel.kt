@@ -577,14 +577,13 @@ class HomeViewModel(
         initialValue = emptyList()
     )
 
-    /** What the Requests row says, or nothing while the family's requests are still loading. */
+    /** What Home's Open requests card counts, or nothing while the family's requests are still loading. */
     private val requestsRow: StateFlow<RequestsRowState> = requests
         .map { state ->
             val ready = state as? RequestsState.Ready ?: return@map RequestsRowState()
             RequestsRowState(
                 waitingOnMe = ready.inbox.waitingOnMe.count,
-                waitingOnThem = ready.inbox.waitingOnThem.count,
-                latestAnswer = RequestsRowText.latestAnswer(ready.inbox.history, ready.scope, wallClockNow())
+                waitingOnThem = ready.inbox.waitingOnThem.count
             )
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), RequestsRowState())

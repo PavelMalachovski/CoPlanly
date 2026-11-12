@@ -76,12 +76,11 @@ class UiTextParityTest(private val language: String) {
         )
         add(
             UiText.Res(
-                Res.string.home_requests_answer_accepted,
-                listOf(UiText.Res(Res.string.home_requests_day_yesterday), "Pavel")
+                Res.string.sync_google_signed_in_as,
+                listOf(UiText.Res(Res.string.parent_label_coparent))
             ) to android.getString(
-                R.string.home_requests_answer_accepted,
-                android.getString(R.string.home_requests_day_yesterday),
-                "Pavel"
+                R.string.sync_google_signed_in_as,
+                android.getString(R.string.parent_label_coparent)
             )
         )
         add(

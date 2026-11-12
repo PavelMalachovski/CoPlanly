@@ -415,7 +415,9 @@ private fun LazyListScope.homeSection(
     actions: DashboardActions
 ) {
     when (section) {
-        HomeSection.UPDATES -> {
+        // With no co-parent there is nobody for an update to come from: an empty card would say
+        // "Nothing new from Parent", so it is left out until there is something to list.
+        HomeSection.UPDATES -> if (state.partner != null || state.recentChanges.isNotEmpty()) {
             item { SectionHeader(stringResource(Res.string.home_updates_title)) }
             item {
                 UpdatesCard(
