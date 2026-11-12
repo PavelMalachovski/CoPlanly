@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.pairing.components.CodeEntryField
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.guest_accept_action
@@ -68,6 +69,7 @@ fun GuestAcceptScreen(
     LaunchedEffect(prefilledCode) { viewModel.prefill(prefilledCode) }
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(Res.string.guest_accept_title)) },

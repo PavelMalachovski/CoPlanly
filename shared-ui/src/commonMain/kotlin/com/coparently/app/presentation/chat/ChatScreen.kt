@@ -58,6 +58,7 @@ import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.valueOrNull
 import com.coparently.app.presentation.platform.LocalDictation
 import com.coparently.app.presentation.theme.Motion
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.chat_back
@@ -251,6 +252,7 @@ fun ChatScreen(
     }
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         topBar = {
             ChatTopBar(
                 searchQuery = searchQuery.takeIf { searching },

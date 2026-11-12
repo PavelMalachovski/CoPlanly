@@ -26,6 +26,7 @@ import com.coparently.app.presentation.consent.HealthConsentDialog
 import com.coparently.app.presentation.consent.HealthConsentViewModel
 import com.coparently.app.presentation.consent.LockedMedicalSection
 import com.coparently.app.presentation.platform.LocalFilePicker
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.childinfo_add_child_button
@@ -217,6 +218,7 @@ fun AddEditChildInfoScreen(
     }
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         // A back gesture over unsaved edits shrinks the form before it asks (D-11).
         modifier = Modifier.then(leave.backPreview),
         topBar = {

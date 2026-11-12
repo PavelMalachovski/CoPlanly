@@ -41,6 +41,7 @@ import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.rememberUiTextResolver
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
@@ -112,6 +113,7 @@ fun JournalEditorScreen(
     val leave = rememberDiscardGuard(dirty = state.hasUnsavedEdits && !state.saving, onLeave = onNavigateUp)
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         // A back gesture over unsaved edits shrinks the form before it asks (D-11).
         modifier = Modifier.then(leave.backPreview),
         topBar = { EditorTopBar(isNew = state.isNew, onNavigateUp = leave) },

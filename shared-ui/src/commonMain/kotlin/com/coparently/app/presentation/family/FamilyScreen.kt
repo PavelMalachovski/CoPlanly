@@ -67,6 +67,7 @@ import com.coparently.app.presentation.settings.caresForSummary
 import com.coparently.app.presentation.stickers.HomeStickers
 import com.coparently.app.presentation.stickers.StickersRow
 import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.documents_settings_description
@@ -239,6 +240,7 @@ fun FamilyScreen(
     val linkedCoParent = parentNames.parents.coParent?.let { parentNames.labelForUid(it.uid) }
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(

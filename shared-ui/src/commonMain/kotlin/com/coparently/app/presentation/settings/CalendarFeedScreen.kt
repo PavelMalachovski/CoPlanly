@@ -45,6 +45,7 @@ import com.coparently.app.presentation.common.readerLanguage
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.platform.LocalSensitiveClipboard
 import com.coparently.app.presentation.platform.LocalShareSheet
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.calendar_feed_copy
@@ -113,6 +114,7 @@ fun CalendarFeedScreen(
     }
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(

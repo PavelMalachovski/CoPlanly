@@ -30,6 +30,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
@@ -69,6 +70,7 @@ import com.coparently.app.presentation.stickers.MyStickersScreen
 import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.appGround
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.navigation_loading
 import kotlinx.coroutines.flow.StateFlow
@@ -149,6 +151,9 @@ fun NavGraph(
     val onTopLevelRoute = currentRoute in BottomNavDestination.topLevelRoutes
 
     Scaffold(
+        // The lavender ground is drawn here once; every screen's Scaffold is transparent over it.
+        modifier = Modifier.appGround(),
+        containerColor = Color.Transparent,
         // Empty while online, so the status-bar inset the NavHost consumes below is the
         // Scaffold's own; while offline the banner pads itself below the status bar instead.
         topBar = { ConnectivityBanner(offline = offline) },

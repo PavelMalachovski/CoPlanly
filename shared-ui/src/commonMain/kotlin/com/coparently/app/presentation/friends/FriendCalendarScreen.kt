@@ -40,6 +40,7 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.professionals.ProfessionalDay
 import com.coparently.app.presentation.professionals.WindowPager
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
@@ -85,6 +86,7 @@ fun FriendCalendarScreen(
         if (ready == null) opened = null
     }
     Scaffold(
+        containerColor = ScreenContainerColor,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(Res.string.friend_calendar_title)) },

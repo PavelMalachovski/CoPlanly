@@ -87,6 +87,7 @@ import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.parentingplan.PlanReferenceCard
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyLargeEmphasized
 import com.coparently.app.presentation.theme.dimensions
@@ -199,6 +200,7 @@ fun CustodySetupScreen(
     BackHandler(enabled = childScope == null && section != null) { section = null }
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         topBar = {
             TopAppBar(
                 title = {

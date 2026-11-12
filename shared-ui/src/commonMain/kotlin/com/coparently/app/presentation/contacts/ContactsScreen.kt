@@ -40,6 +40,7 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.valueOrNull
 import com.coparently.app.presentation.platform.LocalOpenUrl
 import com.coparently.app.presentation.platform.OpenUrl
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.contacts_back
@@ -96,6 +97,7 @@ fun ContactsScreen(
     val noDialerMessage = stringResource(Res.string.contacts_no_dialer)
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         topBar = { ContactsTopBar(onNavigateUp = onNavigateUp) },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->

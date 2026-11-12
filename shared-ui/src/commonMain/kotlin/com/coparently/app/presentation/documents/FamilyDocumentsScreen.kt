@@ -41,6 +41,7 @@ import com.coparently.app.presentation.platform.CaptureTarget
 import com.coparently.app.presentation.platform.LocalCameraCapture
 import com.coparently.app.presentation.platform.LocalFilePicker
 import com.coparently.app.presentation.platform.LocalOpenUrl
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
@@ -98,6 +99,7 @@ fun FamilyDocumentsScreen(
     val pickers = rememberDocumentPickers(onPicked = { pendingUri = it })
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(

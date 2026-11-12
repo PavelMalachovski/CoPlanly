@@ -159,7 +159,11 @@ def solve(rgb, backgrounds, target):
     darker = all(luminance(rgb) <= luminance(bg) for bg in backgrounds)
     lighter = all(luminance(rgb) >= luminance(bg) for bg in backgrounds)
     if darker == lighter:
-        raise SystemExit(f'#{rgb:06X} sits between its backgrounds; no single direction clears them')
+        # Between its backgrounds (a hairline on a lavender light theme sits under white and over
+        # the deepest container): no direction is nearer, so follow the theme, darker on a light
+        # one and lighter on a dark one, and let the search find where every background clears.
+        mean = sum(luminance(bg) for bg in backgrounds) / len(backgrounds)
+        darker = mean > 0.5
     step = -0.1 if darker else 0.1
     L = L0
     while 0 <= L + step <= 100:

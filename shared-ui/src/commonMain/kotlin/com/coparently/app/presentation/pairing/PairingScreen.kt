@@ -66,6 +66,7 @@ import com.coparently.app.presentation.platform.LocalQrScanner
 import com.coparently.app.presentation.platform.LocalSensitiveClipboard
 import com.coparently.app.presentation.platform.LocalShareSheet
 import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.labelLargeEmphasized
 import com.coparently.app.resources.Res
@@ -197,6 +198,7 @@ fun PairingScreen(
     }
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         topBar = { PairingTopBar(state, partnerOnScreen, onNavigateBack) },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->

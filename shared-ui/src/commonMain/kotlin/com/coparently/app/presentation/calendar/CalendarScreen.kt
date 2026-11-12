@@ -90,6 +90,7 @@ import com.coparently.app.presentation.navigation.CalendarTabTaps
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.parentingplan.planCitationShortLine
 import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.calendar_add_event
@@ -650,6 +651,7 @@ fun CalendarScreen(
     }
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         topBar = {
             if (selectingSwap && viewMode == CalendarViewMode.MONTH) {
                 SwapSelectionHeader(

@@ -102,6 +102,7 @@ import com.coparently.app.presentation.family.UnassignedRecordsPrompt
 import com.coparently.app.presentation.stickers.ParentRolePrompt
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyMediumEmphasized
 import com.coparently.app.presentation.theme.headlineSmallEmphasized
@@ -262,6 +263,7 @@ fun HomeScreen(
     }
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(

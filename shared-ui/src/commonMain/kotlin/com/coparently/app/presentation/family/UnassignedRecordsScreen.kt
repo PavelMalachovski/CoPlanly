@@ -58,6 +58,7 @@ import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.custody.labelRes
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.LayoutConstants
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyLargeEmphasized
 import com.coparently.app.resources.Res
@@ -142,6 +143,7 @@ fun UnassignedRecordsScreen(
     }
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = { UnassignedTopBar(onNavigateUp) }
     ) { padding ->

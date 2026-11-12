@@ -83,6 +83,7 @@ import com.coparently.app.presentation.common.valueOrNull
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.payments.PaymentsViewModel
 import com.coparently.app.presentation.theme.Motion
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.expense_analytics_tab_analytics
@@ -284,6 +285,7 @@ fun ExpenseScreen(
     LaunchedEffect(monthOfExpenses.month, showAnalytics) { fabVisibility.show() }
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(Res.string.expenses_title)) },

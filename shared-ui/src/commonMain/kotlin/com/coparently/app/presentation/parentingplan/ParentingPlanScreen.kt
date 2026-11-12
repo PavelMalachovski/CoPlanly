@@ -41,6 +41,7 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionGroupScope
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.rememberParentNames
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.parenting_plan_back
@@ -96,6 +97,7 @@ fun ParentingPlanScreen(
     var openQuestionId by rememberSaveable { mutableStateOf<String?>(null) }
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(Res.string.parenting_plan_title)) },

@@ -29,6 +29,7 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.platform.LocalOpenUrl
 import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
@@ -169,6 +170,7 @@ fun DataSourcesScreen(onNavigateUp: () -> Unit) {
     val openUrl = LocalOpenUrl.current
     val open: ((String) -> Unit)? = if (openUrl.available) { url -> openUrl.open(url) } else null
     Scaffold(
+        containerColor = ScreenContainerColor,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(Res.string.settings_data_sources_title)) },

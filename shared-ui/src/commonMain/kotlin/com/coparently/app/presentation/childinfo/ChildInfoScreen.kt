@@ -36,6 +36,7 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.placeOf
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.childinfo_add_child_button
@@ -105,6 +106,7 @@ fun ChildInfoScreen(
     val children = (uiState as? ChildInfoUiState.Success)?.childInfoList.orEmpty()
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(Res.string.childinfo_screen_title)) },

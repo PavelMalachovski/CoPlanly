@@ -72,6 +72,7 @@ import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.custody.custodyDiffDescription
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.parentingplan.planCitationLine
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyMediumEmphasized
 import com.coparently.app.resources.Res
@@ -206,6 +207,7 @@ fun ChangeRequestsScreen(
     }
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = { InboxTopBar(onBack) }
     ) { padding ->

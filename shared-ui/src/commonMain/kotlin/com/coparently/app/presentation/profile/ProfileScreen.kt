@@ -45,6 +45,7 @@ import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.StickyActionBar
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.childinfo_cancel
@@ -115,6 +116,7 @@ fun ProfileScreen(
     val person = if (editable) uiState.me else uiState.coParent
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         topBar = { ProfileTopBar(editable = editable, onNavigateUp = onNavigateUp) },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {

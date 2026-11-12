@@ -52,6 +52,7 @@ import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.components.TimePickerDialog
 import com.coparently.app.presentation.event.plusHour
 import com.coparently.app.presentation.parentingplan.coParentLabel
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.change_request_back
@@ -100,6 +101,7 @@ fun RequestChangeScreen(
     }
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(Res.string.change_request_form_title)) },

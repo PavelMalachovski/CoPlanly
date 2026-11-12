@@ -30,6 +30,7 @@ import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.platform.LocalShareSheet
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.childinfo_back
 import com.coparently.app.resources.childinfo_record_gone_description
@@ -115,6 +116,7 @@ fun ChildDetailScreen(
     )
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(

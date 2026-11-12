@@ -60,6 +60,7 @@ import com.coparently.app.presentation.common.field
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.platform.LocalFilePicker
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.pet_add_button
@@ -241,6 +242,7 @@ fun AddEditPetScreen(
     }
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         // A back gesture over unsaved edits shrinks the form before it asks (D-11).
         modifier = Modifier.then(leave.backPreview),
         topBar = {

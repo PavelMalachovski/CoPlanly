@@ -36,6 +36,7 @@ import com.coparently.app.presentation.common.AccountAvatar
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
@@ -104,7 +105,7 @@ fun FriendsScreen(
         }
     }
 
-    Scaffold(topBar = { FriendsTopBar(onNavigateUp) }) { padding ->
+    Scaffold(containerColor = ScreenContainerColor, topBar = { FriendsTopBar(onNavigateUp) }) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
