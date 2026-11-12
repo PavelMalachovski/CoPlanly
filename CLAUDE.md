@@ -149,7 +149,7 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    neutral line along each vacation day's bottom edge (`DayCellFill.schoolVacation`, theme
    `outline`, no height). Month
    cells are **rounded tiles** (`CoPlanlyCorners.Cell`, a 3 dp gap) that **carry event pills**
-   (November 2026 redesign, `MonthCellPills.kt`): one pill — the `surface`, a 3 dp mark in the
+   (November 2026 redesign, `MonthCellPills.kt`, `CellPills.kt`): one pill — the `surface`, a 3 dp mark in the
    event's colour, the title on one line, ellipsised — and "+n" for the rest (`pillsFor`, one
    whatever the cell's height), the cell's description still naming the events; they replaced the
    dots. Tapping a day selects it **and opens Day view** (an owner
