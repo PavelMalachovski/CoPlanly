@@ -131,9 +131,11 @@ decide what each of you may read. **Legal basis:** performance of our contract w
 - **Expenses** — amounts, currencies, categories, and optional receipt photos. (Earlier test
   builds also let you set a monthly budget per category. This version no longer creates, shows
   or syncs budgets; any an earlier build saved stay in your account until you delete it.)
-- **Records about your child** — name, date of birth, school and activity details, emergency
-  contacts, and a medical profile: allergies, medications, conditions, blood group,
-  vaccinations, doctors' notes and photographs you attach to them.
+- **Records about your child** — name, date of birth, an optional photo of your child, school and
+  activity details, emergency contacts, and a medical profile: allergies, medications, conditions,
+  blood group, vaccinations, doctors' notes and photographs you attach to them. **A photo of your
+  child is not health data**: it is not covered by the consent the medical details need, and
+  withdrawing that consent does not remove it. Only you and your co-parent see it.
 - **Records about a pet**, in the same shape.
 - **Messages** between you and your co-parent, and the **photos and PDF files** either of you
   sends in them. A file sent in a message stays in the thread like the message itself: neither of
@@ -153,8 +155,8 @@ export can list the files a message carried by name and fingerprint (the files t
 never put into an export). Files are stored in Cloud Storage under your family, and only the two
 parents of that family can download them; we never create a public link to one.
 
-**Photographs attached to a record** — an event's photo, a receipt, and the photographs on a
-child's medical notes or a pet's record — are stored the same way: in Cloud Storage under your
+**Photographs attached to a record** — an event's photo, a receipt, a photo of your child, and
+the photographs on a child's medical notes or a pet's record — are stored the same way: in Cloud Storage under your
 family, with their size, type and SHA-256 fingerprint, downloadable by the two parents of that
 family only, and never through a public link. **A guest, a family friend or a professional
 never sees them**, even where they can read the record itself. A photograph you add before you
@@ -502,8 +504,8 @@ within which a claim arising from the family's affairs can generally still be br
 - deletes the deadlines of every request you sent or were asked to answer, with what was recorded
   about them (when a request was received and opened, its reminders, a last chance, "no answer") —
   for your co-parent too, since each of these names you both;
-- deletes the photographs attached to those records — event photos, receipts, and medical and
-  pet photographs — any photograph you added before you linked a co-parent, and the family
+- deletes the photographs attached to those records — event photos, receipts, photos of a child,
+  and medical and pet photographs — any photograph you added before you linked a co-parent, and the family
   documents you added. A photograph you added to a record your co-parent created stays with that
   record;
 - **keeps the message thread with your co-parent for 30 days, then deletes it** — messages and

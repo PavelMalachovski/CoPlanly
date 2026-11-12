@@ -45,7 +45,9 @@ import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.StickyActionBar
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.childinfo_cancel
 import com.coparently.app.resources.childinfo_ok
@@ -115,6 +117,7 @@ fun ProfileScreen(
     val person = if (editable) uiState.me else uiState.coParent
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         topBar = { ProfileTopBar(editable = editable, onNavigateUp = onNavigateUp) },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
@@ -144,6 +147,7 @@ fun ProfileScreen(
 @Composable
 private fun ProfileTopBar(editable: Boolean, onNavigateUp: () -> Unit) {
     TopAppBar(
+        colors = screenTopAppBarColors(),
         title = {
             Text(stringResource(if (editable) Res.string.profile_my_title else Res.string.profile_coparent_title))
         },

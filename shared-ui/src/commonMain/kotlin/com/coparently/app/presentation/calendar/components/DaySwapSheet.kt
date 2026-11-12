@@ -1,52 +1,81 @@
 package com.coparently.app.presentation.calendar.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
+import com.coparently.app.domain.changerequests.AnswerBy
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.RequestCap
 import com.coparently.app.domain.custody.SwapSides
-import com.coparently.app.domain.custody.receiverOf
 import com.coparently.app.presentation.calendar.MiniMonthModel
-import com.coparently.app.presentation.changerequests.SwapMonths
 import com.coparently.app.presentation.common.AnswerByField
 import com.coparently.app.presentation.common.AnswerByPickSaver
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.SectionGroup
+import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.rememberAnswerByOffer
+import com.coparently.app.presentation.common.stacksAtLargeFont
+import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.labelLargeEmphasized
 import com.coparently.app.presentation.theme.titleLargeEmphasized
 import com.coparently.app.resources.Res
+import com.coparently.app.resources.answer_by_compressed
+import com.coparently.app.resources.answer_by_title
+import com.coparently.app.resources.day_swap_add_note
 import com.coparently.app.resources.day_swap_cancel
 import com.coparently.app.resources.day_swap_change_days
+import com.coparently.app.resources.day_swap_mark_to
+import com.coparently.app.resources.day_swap_mark_to_you
 import com.coparently.app.resources.day_swap_needs_coparent
 import com.coparently.app.resources.day_swap_note_to
 import com.coparently.app.resources.day_swap_send_to
-import com.coparently.app.resources.day_swap_sheet_caption
+import com.coparently.app.resources.day_swap_sheet_title_count
 import com.coparently.app.resources.day_swap_sheet_title_with
 import com.coparently.app.resources.day_swap_skipped_days
-import com.coparently.app.resources.day_swap_you_give
-import com.coparently.app.resources.day_swap_you_take
+import com.coparently.app.utils.ReaderDateText
+import com.coparently.app.utils.swapDateList
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -55,13 +84,12 @@ import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * What the review sheet offers: the chosen days split by way, whom they are offered to, and the
- * months they fall in, each day in the wash of whom it would go to.
+ * What the review sheet offers: the chosen days split by way and whom they are offered to.
  *
  * @property sides The chosen days, from this parent's side.
  * @property coParentName The co-parent's name, which the title, the note and the button use.
- * @property months [com.coparently.app.presentation.calendar.swapMiniMonths]'s months, or empty to
- *   draw none.
+ * @property months [com.coparently.app.presentation.calendar.swapMiniMonths]'s months. The compact
+ *   sheet draws none, the grid behind it being in view; kept for callers that still pass them.
  */
 data class SwapSheetOffer(
     val sides: SwapSides,
@@ -87,10 +115,9 @@ class SwapSheetActions(
  * Offers one day, or several, to the other parent: the review step of a day swap (day swap design,
  * 28 October 2026, board SW-3).
  *
- * "You give Lana" and "You take", each with its days; the months as they will look if Lana accepts;
- * an optional message, the deadline, and "Send to Lana". It replaced a sheet that counted the days
- * and said "Mom gives 2 days to Dad" in grey under it, which the owner could not read a direction
- * from.
+ * A title counting the days, one row per way ("Fri 13, Sat 14 Nov → Lana", "Sat 21 Nov → you"), an
+ * optional note and deadline behind two chips, and "Send to Lana". The grid stays in view above it
+ * (it opens partly expanded), where it used to carry mini months of its own.
  *
  * **This sheet never applies anything by itself.** It offers; the co-parent answers in the inbox.
  * A swap that applied itself would just be an edit, which the custody editor already does, and
@@ -102,11 +129,19 @@ class SwapSheetActions(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DaySwapSheet(offer: SwapSheetOffer, parentNames: ParentNames, actions: SwapSheetActions) {
-    ModalBottomSheet(
-        onDismissRequest = actions.onCancel,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ) {
-        DaySwapSheetContent(offer, parentNames, actions)
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val scope = rememberCoroutineScope()
+    // At a large font the half-height anchor cannot hold the rows and the pinned button; wait until
+    // the sheet's own show() has settled, or this expand races it.
+    val largeFont = stacksAtLargeFont()
+    LaunchedEffect(largeFont) {
+        if (largeFont) {
+            snapshotFlow { sheetState.currentValue }.first { it != SheetValue.Hidden }
+            sheetState.expand()
+        }
+    }
+    ModalBottomSheet(onDismissRequest = actions.onCancel, sheetState = sheetState) {
+        DaySwapSheetContent(offer, parentNames, actions, onNeedRoom = { scope.launch { sheetState.expand() } })
     }
 }
 
@@ -114,50 +149,47 @@ fun DaySwapSheet(offer: SwapSheetOffer, parentNames: ParentNames, actions: SwapS
  * The sheet's body, split out of the `ModalBottomSheet` so a screenshot can capture it (a sheet
  * opens its own window, which a node capture does not see).
  *
- * **The buttons are pinned under a part that scrolls.** The months, the message and the deadline
- * outgrew a phone's height at a large font, and a sheet does not scroll its content by itself: the
- * column was cut at the window's edge with "Send" below it, and an offer could not be sent at all
- * (owner report, 9 November 2026). Everything above the buttons scrolls now, and the buttons stay
- * on screen whatever the height; a divider shows while there is more to scroll to.
+ * **It is compact on purpose, so the grid stays in view** (Zuzana's redesign, November 2026): a
+ * title that counts the days, one row per way ("Fri 13, Sat 14 Nov → Bob"), and two chips — "Add a
+ * note" and "Answer by …" — each opening its field in place, with "Send to Bob" pinned under them.
+ * The mini months the sheet used to draw are the inbox card's and Home's pop-up's now.
+ *
+ * **The send button is pinned under a part that scrolls.** A sheet does not scroll its content by
+ * itself, and at a large font an offer once could not be sent at all (owner report, 9 November
+ * 2026). Everything above the button scrolls, and a divider shows while there is more to scroll to.
  */
 @Composable
 fun DaySwapSheetContent(
     offer: SwapSheetOffer,
     parentNames: ParentNames,
     actions: SwapSheetActions,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onNeedRoom: () -> Unit = {}
 ) {
     var note by rememberSaveable { mutableStateOf("") }
     var answerBy by rememberSaveable(stateSaver = AnswerByPickSaver) { mutableStateOf(AnswerByPick.DEFAULT) }
     val sides = offer.sides
     val scroll = rememberScrollState()
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(bottom = Spacing.XL)
-    ) {
+    Column(modifier = modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
-                // Wraps a short offer; takes what is left above the buttons, and scrolls, for a long one.
+                // Wraps a short offer; takes what is left above the button, and scrolls, for a long one.
                 .weight(1f, fill = false)
                 .verticalScroll(scroll)
                 .padding(horizontal = Spacing.XL)
                 .padding(bottom = Spacing.M),
             verticalArrangement = Arrangement.spacedBy(Spacing.M)
         ) {
-            SwapSheetBody(offer, parentNames, note, { note = it }, answerBy) { answerBy = it }
+            SwapSheetBody(offer, parentNames, note, { note = it }, answerBy, { answerBy = it }, onNeedRoom)
         }
         if (scroll.canScrollForward || scroll.canScrollBackward) HorizontalDivider()
-        SwapSheetButtons(
-            sides = sides,
-            name = offer.coParentName,
-            actions = actions,
-            modifier = Modifier.padding(horizontal = Spacing.XL).padding(top = Spacing.S)
-        ) { actions.onOffer(sides.offerable, note.ifBlank { null }, answerBy) }
+        SwapSheetBar(sides, offer.coParentName, actions) {
+            actions.onOffer(sides.offerable, note.ifBlank { null }, answerBy)
+        }
     }
 }
 
-/** Everything above the buttons: the title, both sides, the months, the message and the deadline. */
+/** Everything above the button: the title, the rows, the note and the deadline. */
 @Composable
 @Suppress("LongParameterList") // the body's two fields are hoisted, each with its setter
 private fun SwapSheetBody(
@@ -166,16 +198,17 @@ private fun SwapSheetBody(
     note: String,
     onNoteChange: (String) -> Unit,
     answerBy: AnswerByPick,
-    onAnswerByChange: (AnswerByPick) -> Unit
+    onAnswerByChange: (AnswerByPick) -> Unit,
+    onNeedRoom: () -> Unit
 ) {
     val sides = offer.sides
     val name = offer.coParentName
     val me = parentNames.parents.me?.slot
-    Text(
-        text = stringResource(Res.string.day_swap_sheet_title_with, name),
-        style = MaterialTheme.typography.titleLargeEmphasized
-    )
     if (sides.isEmpty) {
+        Text(
+            text = stringResource(Res.string.day_swap_sheet_title_with, name),
+            style = MaterialTheme.typography.titleLargeEmphasized
+        )
         Text(
             text = stringResource(Res.string.day_swap_needs_coparent),
             style = MaterialTheme.typography.bodyMedium,
@@ -183,10 +216,21 @@ private fun SwapSheetBody(
         )
         return
     }
-    receiverOf(me)?.let { other ->
-        SwapSideGroup(stringResource(Res.string.day_swap_you_give, name), sides.toOther, other)
+    val count = sides.offerable.size
+    Text(
+        text = pluralStringResource(Res.plurals.day_swap_sheet_title_count, count, count, name),
+        style = MaterialTheme.typography.titleLargeEmphasized,
+        modifier = Modifier.semantics { heading() }
+    )
+    // An unknown own slot cannot be told which side is whose: the rows are left out, the offer stands.
+    if (me != null) {
+        SectionGroup {
+            swapSheetRows(sides, me).forEachIndexed { index, row ->
+                if (index > 0) Divider()
+                SwapSheetRowLine(row, parentNames)
+            }
+        }
     }
-    me?.let { SwapSideGroup(stringResource(Res.string.day_swap_you_take), sides.toOfferer, it) }
     if (sides.unknown.isNotEmpty()) {
         Text(
             text = pluralStringResource(Res.plurals.day_swap_skipped_days, sides.unknown.size, sides.unknown.size),
@@ -194,67 +238,123 @@ private fun SwapSheetBody(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
-    if (offer.months.isNotEmpty()) {
-        SwapMonths(offer.months, parentNames)
-        Text(
-            text = stringResource(Res.string.day_swap_sheet_caption, name),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-    OutlinedTextField(
-        value = note,
-        onValueChange = onNoteChange,
-        label = { Text(stringResource(Res.string.day_swap_note_to, name)) },
-        modifier = Modifier.fillMaxWidth()
-    )
-    SwapDeadline(sides.offerable, name, answerBy, onAnswerByChange)
+    SwapOptions(sides.offerable, name, note, onNoteChange, answerBy, onAnswerByChange, onNeedRoom)
 }
 
-/** "Change days" (or "Not now") and "Send to {name}", wrapping under each other at a large font. */
-@OptIn(ExperimentalLayoutApi::class)
+/** One row: the receiver's dot, the days, and "→ name" or "→ you" in the receiver's text colour. */
 @Composable
-private fun SwapSheetButtons(
-    sides: SwapSides,
-    name: String,
-    actions: SwapSheetActions,
-    modifier: Modifier = Modifier,
-    onSend: () -> Unit
-) {
-    FlowRow(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.S),
-        verticalArrangement = Arrangement.spacedBy(Spacing.XS)
+private fun SwapSheetRowLine(row: SwapSheetRow, parentNames: ParentNames) {
+    val target = if (parentNames.isReader(row.receiverSlot)) {
+        stringResource(Res.string.day_swap_mark_to_you)
+    } else {
+        stringResource(Res.string.day_swap_mark_to, parentNames.labelFor(row.receiverSlot))
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.L, vertical = Spacing.M),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.M),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        val back = actions.onChangeDays
-        TextButton(onClick = back ?: actions.onCancel) {
-            Text(stringResource(if (back != null) Res.string.day_swap_change_days else Res.string.day_swap_cancel))
-        }
-        if (!sides.isEmpty) {
-            Button(onClick = onSend) { Text(stringResource(Res.string.day_swap_send_to, name)) }
-        }
+        Box(Modifier.size(DOT_SIZE).background(ParentColors.fill(row.receiverSlot), CircleShape))
+        Text(
+            text = swapDateList(row.dates),
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = target,
+            style = MaterialTheme.typography.labelLargeEmphasized,
+            color = ParentColors.text(row.receiverSlot)
+        )
     }
 }
 
 /**
- * When the offer should be answered by (phase 3a, spec §6.1). The cap is the offer's earliest day, so
- * an offer that starts today or tomorrow gets a shorter choice, or none.
+ * "Add a note" and "Answer by …": two chips, each opening its field in place. A note already typed
+ * keeps its field open, and so does a rotation (both flags are saveable).
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SwapDeadline(
+@Suppress("LongParameterList") // the two fields are hoisted, each with its setter
+private fun SwapOptions(
     offerable: List<LocalDate>,
     coParentName: String,
-    selected: AnswerByPick,
-    onSelect: (AnswerByPick) -> Unit
+    note: String,
+    onNoteChange: (String) -> Unit,
+    answerBy: AnswerByPick,
+    onAnswerByChange: (AnswerByPick) -> Unit,
+    onNeedRoom: () -> Unit
 ) {
-    val cap = remember(offerable) { RequestCap.forSwap(offerable, TimeZone.currentSystemDefault()) }
-    AnswerByField(
-        offer = rememberAnswerByOffer(cap),
-        selected = selected,
-        onSelect = onSelect,
-        coParentName = coParentName
-    )
+    var noteOpen by rememberSaveable { mutableStateOf(false) }
+    var answerByOpen by rememberSaveable { mutableStateOf(false) }
+    val zone = TimeZone.currentSystemDefault()
+    val cap = remember(offerable) { RequestCap.forSwap(offerable, zone) }
+    val offer = rememberAnswerByOffer(cap)
+    val answerByMillis = AnswerBy.resolve(answerBy, offer, zone)
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+        verticalArrangement = Arrangement.spacedBy(Spacing.S)
+    ) {
+        if (!noteOpen && note.isEmpty()) {
+            AssistChip(
+                onClick = {
+                    noteOpen = true
+                    onNeedRoom()
+                },
+                label = { Text(stringResource(Res.string.day_swap_add_note)) },
+                leadingIcon = { Icon(Icons.Default.EditNote, null, Modifier.size(IconSizes.Small)) }
+            )
+        }
+        AssistChip(
+            onClick = {
+                answerByOpen = !answerByOpen
+                if (answerByOpen) onNeedRoom()
+            },
+            label = {
+                Text(
+                    if (answerByMillis == null) {
+                        stringResource(Res.string.answer_by_title)
+                    } else {
+                        stringResource(Res.string.answer_by_compressed, ReaderDateText.answerBy(answerByMillis, zone))
+                    }
+                )
+            },
+            leadingIcon = { Icon(Icons.Default.Schedule, null, Modifier.size(IconSizes.Small)) }
+        )
+    }
+    if (noteOpen || note.isNotEmpty()) {
+        OutlinedTextField(
+            value = note,
+            onValueChange = onNoteChange,
+            label = { Text(stringResource(Res.string.day_swap_note_to, coParentName)) },
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+    if (answerByOpen) {
+        AnswerByField(offer, answerBy, onAnswerByChange, coParentName)
+    }
 }
+
+/** "Not now" (or "Change days") and the pinned "Send to {name}". */
+@Composable
+private fun SwapSheetBar(sides: SwapSides, name: String, actions: SwapSheetActions, onSend: () -> Unit) {
+    val back = actions.onChangeDays
+    val backButton = @Composable {
+        TextButton(onClick = back ?: actions.onCancel) {
+            Text(stringResource(if (back != null) Res.string.day_swap_change_days else Res.string.day_swap_cancel))
+        }
+    }
+    if (sides.isEmpty) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = Spacing.XL, vertical = Spacing.S)) { backButton() }
+    } else {
+        StickyActionBar(
+            label = stringResource(Res.string.day_swap_send_to, name),
+            onClick = onSend,
+            notice = backButton
+        )
+    }
+}
+
+private val DOT_SIZE = 10.dp
 
 /** Whether [dates], soonest first, are one run of consecutive days. */
 fun isConsecutive(dates: List<LocalDate>): Boolean =

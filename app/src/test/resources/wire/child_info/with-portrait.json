@@ -1,0 +1,65 @@
+{
+  "about": "A child record with a portrait (schema 47) beside its medical photos: read, and written back with both.",
+  "document": {
+    "activities": [],
+    "allergies": [
+      "peanuts"
+    ],
+    "childName": "Anya",
+    "createdAt": "2026-03-01T09:30:00",
+    "createdByFirebaseUid": "uidA",
+    "dateOfBirth": "2019-04-02T00:00:00",
+    "emergencyContacts": [],
+    "familyId": "uidA__uidB",
+    "guests": {},
+    "id": "child-2",
+    "lastModifiedBy": "uidA",
+    "medicalNotes": "Asthma",
+    "medicalPhotos": [
+      "ph1|medical_photos/uidA__uidB/child-2/1c2d3e4f.jpg|image/jpeg|40112|5555555555555555555555555555555555555555555555555555555555555555"
+    ],
+    "medicalProfile": {
+      "hereditaryConditions": [],
+      "intolerances": [
+        "lactose"
+      ],
+      "vaccinations": []
+    },
+    "medications": [
+      {
+        "dosage": "2 puffs",
+        "frequency": "as needed",
+        "name": "Ventolin",
+        "notes": null
+      }
+    ],
+    "photo": "ph1|child_photos/uidA__uidB/child-2/7e3a9b10.jpg|image/jpeg|58211|4444444444444444444444444444444444444444444444444444444444444444",
+    "schoolInfo": null,
+    "sharedWith": [
+      "uidA",
+      "uidB"
+    ],
+    "updatedAt": "2026-05-02T18:45:10"
+  },
+  "reads": {
+    "allergies": [
+      "peanuts"
+    ],
+    "childName": "Anya",
+    "createdByFirebaseUid": "uidA",
+    "dateOfBirth": "2019-04-02T00:00:00",
+    "deleted": false,
+    "familyId": "uidA__uidB",
+    "guests": [],
+    "id": "child-2",
+    "intolerances": [
+      "lactose"
+    ],
+    "medications": [
+      "Ventolin"
+    ],
+    "photo": "ph1|child_photos/uidA__uidB/child-2/7e3a9b10.jpg|image/jpeg|58211|4444444444444444444444444444444444444444444444444444444444444444",
+    "school": null,
+    "updatedAtMillis": 1777747510000
+  }
+}

@@ -118,4 +118,14 @@
     <string name="childinfo_school_clear_message">This empties the school, teacher and contact fields.</string>
     <string name="childinfo_record_gone_title">This record no longer exists</string>
     <string name="childinfo_record_gone_description">It was deleted on this phone or on your co-parent’s.</string>
+
+    <!-- A child's portrait (part 5b). -->
+    <string name="child_photo_change">Change photo</string>
+    <string name="child_photo_add">Add a photo</string>
+    <string name="child_photo_remove">Remove photo</string>
+    <string name="child_photo_save_first">Save first to add a photo</string>
+    <string name="child_photo_upload_failed">The photo could not be uploaded. Try again.</string>
+    <string name="child_photo_delete_failed">The photo could not be removed. Try again.</string>
+    <string name="child_photo_private">Only you and %1$s see this photo</string>
+    <string name="child_photo_private_alone">Only you see this photo</string>
 </resources>

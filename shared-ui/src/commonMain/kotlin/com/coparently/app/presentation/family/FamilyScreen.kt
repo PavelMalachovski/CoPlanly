@@ -47,8 +47,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.coparently.app.data.repository.RatioSubmission
+import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.FamilyKind
+import com.coparently.app.presentation.common.ChildAvatarStack
 import com.coparently.app.presentation.common.FamilySwitcherChip
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.SectionGroup
@@ -67,7 +69,9 @@ import com.coparently.app.presentation.settings.caresForSummary
 import com.coparently.app.presentation.stickers.HomeStickers
 import com.coparently.app.presentation.stickers.StickersRow
 import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.documents_settings_description
 import com.coparently.app.resources.documents_settings_title
@@ -197,6 +201,7 @@ fun FamilyScreen(
     val earlierFamilies by earlierFamiliesViewModel.families.collectAsState()
     val money by viewModel.money.collectAsState()
     val hasChildren by viewModel.hasChildren.collectAsState()
+    val children by viewModel.children.collectAsState()
     val schedule by viewModel.schedule.collectAsState()
     val caresFor by settingsViewModel.caresFor.collectAsState()
     val myCaresFor by settingsViewModel.myCaresFor.collectAsState()
@@ -239,9 +244,11 @@ fun FamilyScreen(
     val linkedCoParent = parentNames.parents.coParent?.let { parentNames.labelForUid(it.uid) }
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
+                colors = screenTopAppBarColors(),
                 title = { Text(stringResource(Res.string.family_title)) },
                 actions = {
                     FamilySwitcherChip()
@@ -264,72 +271,62 @@ fun FamilyScreen(
                 FamilyMoneyCard(money = money, coParentName = linkedCoParent, onOpen = destinations.expenses)
                 Divider()
                 NavRow(
-                    Icons.Default.Balance,
-                    Res.string.settings_split_ratio_title,
-                    stringResource(
+                    icon = Icons.Default.Balance,
+                    title = Res.string.settings_split_ratio_title,
+                    supporting = stringResource(
                         Res.string.settings_split_ratio_value_named,
                         parentNames.labelFor(SLOT_ONE),
                         familySplit.ratio.momPercent,
                         parentNames.labelFor(SLOT_TWO),
                         familySplit.ratio.dadPercent
-                    )
-                ) { showSplitPicker = true }
+                    ),
+                    onClick = { showSplitPicker = true }
+                )
                 // Child support (25 October 2026): its own screen, never part of the balance.
                 Divider()
                 NavRow(
-                    Icons.Default.Payments,
-                    Res.string.support_title,
-                    Res.string.support_row_supporting,
-                    destinations.support
+                    icon = Icons.Default.Payments,
+                    title = Res.string.support_title,
+                    supporting = Res.string.support_row_supporting,
+                    onClick = destinations.support
                 )
             }
 
             AgreementsGroup(schedule, destinations)
 
             Group(Res.string.family_group_home) {
-                if (FamilyKind.CHILDREN in caresFor) {
-                    NavRow(
-                        Icons.Default.ChildCare,
-                        Res.string.settings_child_info_title,
-                        stringResource(
-                            if (hasChildren) {
-                                Res.string.settings_child_info_description
-                            } else {
-                                Res.string.family_children_add
-                            }
-                        ),
-                        destinations.childInfo
-                    )
-                    Divider()
-                }
+                ChildrenRow(FamilyKind.CHILDREN in caresFor, hasChildren, children, destinations.childInfo)
                 if (FamilyKind.PETS in caresFor) {
                     NavRow(
-                        Icons.Default.Pets,
-                        Res.string.settings_pets_title,
-                        Res.string.settings_pets_description,
-                        destinations.pets
+                        icon = Icons.Default.Pets,
+                        title = Res.string.settings_pets_title,
+                        supporting = Res.string.settings_pets_description,
+                        onClick = destinations.pets
                     )
                     Divider()
                 }
                 NavRow(
-                    Icons.Default.Contacts,
-                    Res.string.home_contacts,
-                    Res.string.home_contacts_supporting,
-                    destinations.contacts
+                    icon = Icons.Default.Contacts,
+                    title = Res.string.home_contacts,
+                    supporting = Res.string.home_contacts_supporting,
+                    onClick = destinations.contacts
                 )
                 Divider()
                 NavRow(
-                    Icons.Default.FolderShared,
-                    Res.string.documents_settings_title,
-                    Res.string.documents_settings_description,
-                    destinations.documents
+                    icon = Icons.Default.FolderShared,
+                    title = Res.string.documents_settings_title,
+                    supporting = Res.string.documents_settings_description,
+                    onClick = destinations.documents
                 )
                 Divider()
                 // What this family co-parents, and the way back into that answer: without it a
                 // family that gets a dog a year later could never reach the pet records.
-                NavRow(Icons.Default.FamilyRestroom, Res.string.settings_family_kind_title, caresForSummary(caresFor)) {
-                    showFamilyKindPicker = true
-                }
+                NavRow(
+                    icon = Icons.Default.FamilyRestroom,
+                    title = Res.string.settings_family_kind_title,
+                    supporting = caresForSummary(caresFor),
+                    onClick = { showFamilyKindPicker = true }
+                )
             }
 
             RecordsGroup(destinations)
@@ -339,12 +336,12 @@ fun FamilyScreen(
                 // some wait.
                 UnassignedRecordsRow(onOpen = destinations.unassignedRecords)
                 NavRow(
-                    Icons.Default.Group,
-                    Res.string.settings_pairing_title,
+                    icon = Icons.Default.Group,
+                    title = Res.string.settings_pairing_title,
                     // Linked: who with. Not yet: what linking gives.
-                    linkedCoParent?.let { stringResource(Res.string.family_pairing_linked, it) }
+                    supporting = linkedCoParent?.let { stringResource(Res.string.family_pairing_linked, it) }
                         ?: stringResource(Res.string.settings_pairing_description),
-                    destinations.pairing
+                    onClick = destinations.pairing
                 )
                 // Only once linked: before that the screen could say nothing but "not linked",
                 // which the row above already says (second audit). Named for the co-parent, under
@@ -362,17 +359,17 @@ fun FamilyScreen(
                 }
                 Divider()
                 NavRow(
-                    Icons.Default.Diversity3,
-                    Res.string.friend_section_title,
-                    Res.string.friend_section_supporting,
-                    destinations.friends
+                    icon = Icons.Default.Diversity3,
+                    title = Res.string.friend_section_title,
+                    supporting = Res.string.friend_section_supporting,
+                    onClick = destinations.friends
                 )
                 Divider()
                 NavRow(
-                    Icons.Default.Gavel,
-                    Res.string.professional_section_title,
-                    Res.string.professional_section_supporting,
-                    destinations.professionals
+                    icon = Icons.Default.Gavel,
+                    title = Res.string.professional_section_title,
+                    supporting = Res.string.professional_section_supporting,
+                    onClick = destinations.professionals
                 )
             }
 
@@ -395,19 +392,19 @@ fun FamilyScreen(
 private fun AgreementsGroup(schedule: CustodyModelType?, destinations: FamilyDestinations) {
     Group(Res.string.family_group_agreements) {
         NavRow(
-            Icons.Default.DateRange,
-            Res.string.settings_custody_title,
+            icon = Icons.Default.DateRange,
+            title = Res.string.settings_custody_title,
             // The schedule in force, by kind; the set-up prompt only while there is none.
-            schedule?.let { stringResource(it.labelRes()) }
+            supporting = schedule?.let { stringResource(it.labelRes()) }
                 ?: stringResource(Res.string.settings_custody_description),
-            destinations.custody
+            onClick = destinations.custody
         )
         Divider()
         NavRow(
-            Icons.AutoMirrored.Filled.Assignment,
-            Res.string.parenting_plan_title,
-            Res.string.parenting_plan_settings_description,
-            destinations.parentingPlan
+            icon = Icons.AutoMirrored.Filled.Assignment,
+            title = Res.string.parenting_plan_title,
+            supporting = Res.string.parenting_plan_settings_description,
+            onClick = destinations.parentingPlan
         )
     }
 }
@@ -421,24 +418,24 @@ private fun AgreementsGroup(schedule: CustodyModelType?, destinations: FamilyDes
 private fun RecordsGroup(destinations: FamilyDestinations) {
     Group(Res.string.family_group_records) {
         NavRow(
-            Icons.Default.Insights,
-            Res.string.month_review_title,
-            Res.string.month_review_settings_description,
-            destinations.monthReview
+            icon = Icons.Default.Insights,
+            title = Res.string.month_review_title,
+            supporting = Res.string.month_review_settings_description,
+            onClick = destinations.monthReview
         )
         Divider()
         NavRow(
-            Icons.Default.Description,
-            Res.string.export_settings_title,
-            Res.string.export_settings_description,
-            destinations.export
+            icon = Icons.Default.Description,
+            title = Res.string.export_settings_title,
+            supporting = Res.string.export_settings_description,
+            onClick = destinations.export
         )
         Divider()
         NavRow(
-            Icons.Default.Lock,
-            Res.string.journal_title,
-            Res.string.journal_settings_description,
-            destinations.journal
+            icon = Icons.Default.Lock,
+            title = Res.string.journal_title,
+            supporting = Res.string.journal_settings_description,
+            onClick = destinations.journal
         )
     }
 }
@@ -519,7 +516,40 @@ private fun Group(label: StringResource, content: @Composable SectionGroupScope.
 private fun SectionGroupScope.EarlierFamiliesRow(shown: Boolean, onOpen: () -> Unit) {
     if (!shown) return
     Divider()
-    NavRow(Icons.Default.History, Res.string.earlier_families_title, Res.string.earlier_families_row_supporting, onOpen)
+    NavRow(
+        icon = Icons.Default.History,
+        title = Res.string.earlier_families_title,
+        supporting = Res.string.earlier_families_row_supporting,
+        onClick = onOpen
+    )
+}
+
+/**
+ * The children row: their avatars lead it once there are any, and until then it asks for the first
+ * child. Drawn only for a family that cares for children.
+ */
+@Composable
+private fun SectionGroupScope.ChildrenRow(
+    shown: Boolean,
+    hasChildren: Boolean,
+    children: List<ChildInfo>,
+    onOpen: () -> Unit
+) {
+    if (!shown) return
+    NavRow(
+        icon = Icons.Default.ChildCare,
+        title = Res.string.settings_child_info_title,
+        supporting = stringResource(
+            if (hasChildren) Res.string.settings_child_info_description else Res.string.family_children_add
+        ),
+        onClick = onOpen,
+        leading = if (children.isEmpty()) {
+            null
+        } else {
+            { ChildAvatarStack(children, IconSizes.Large) }
+        }
+    )
+    Divider()
 }
 
 /** A row that opens a screen, with its title and description as resources. */
@@ -529,7 +559,7 @@ private fun SectionGroupScope.NavRow(
     title: StringResource,
     supporting: StringResource,
     onClick: () -> Unit
-) = NavRow(icon, title, stringResource(supporting), onClick)
+) = NavRow(icon = icon, title = title, supporting = stringResource(supporting), onClick = onClick)
 
 /** A row that opens a screen or a dialog, with a description already worded. */
 @Composable
@@ -537,10 +567,12 @@ private fun SectionGroupScope.NavRow(
     icon: ImageVector,
     title: StringResource,
     supporting: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    leading: @Composable (() -> Unit)? = null
 ) {
     SectionRow(
         icon = icon,
+        leading = leading,
         title = stringResource(title),
         supporting = supporting,
         onClick = onClick,

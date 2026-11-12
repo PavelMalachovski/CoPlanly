@@ -131,4 +131,11 @@
         <item quantity="other">%1$s žádá o %2$d vašich dní</item>
     </plurals>
     <string name="day_swap_day_to_you">%1$s → vám</string>
+    <plurals name="day_swap_sheet_title_count">
+        <item quantity="one">Výměna %1$d dne: %2$s</item>
+        <item quantity="few">Výměna %1$d dnů: %2$s</item>
+        <item quantity="many">Výměna %1$d dne: %2$s</item>
+        <item quantity="other">Výměna %1$d dnů: %2$s</item>
+    </plurals>
+    <string name="day_swap_add_note">Přidat poznámku</string>
 </resources>

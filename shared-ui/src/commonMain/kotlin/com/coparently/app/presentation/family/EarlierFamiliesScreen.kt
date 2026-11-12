@@ -36,7 +36,9 @@ import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
 import com.coparently.app.resources.earlier_families_empty_description
@@ -90,7 +92,10 @@ fun EarlierFamiliesScreen(
     viewModel: EarlierFamiliesViewModel = koinViewModel()
 ) {
     val families by viewModel.families.collectAsState()
-    Scaffold(topBar = { BackTopBar(stringResource(Res.string.earlier_families_title), onNavigateUp) }) { padding ->
+    Scaffold(
+        containerColor = ScreenContainerColor,
+        topBar = { BackTopBar(stringResource(Res.string.earlier_families_title), onNavigateUp) }
+    ) { padding ->
         val bodyModifier = Modifier
             .fillMaxSize()
             .padding(padding)
@@ -155,7 +160,7 @@ fun EarlierFamilyScreen(
     val families by viewModel.families.collectAsState()
     val family = families?.firstOrNull { it.familyId == familyId }
     val title = family?.let { familyTitle(it) } ?: stringResource(Res.string.earlier_families_title)
-    Scaffold(topBar = { BackTopBar(title, onNavigateUp) }) { padding ->
+    Scaffold(containerColor = ScreenContainerColor, topBar = { BackTopBar(title, onNavigateUp) }) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -277,6 +282,7 @@ private fun familyTitle(family: EarlierFamily): String =
 @Composable
 private fun BackTopBar(title: String, onNavigateUp: () -> Unit) {
     TopAppBar(
+        colors = screenTopAppBarColors(),
         title = { Text(title) },
         navigationIcon = {
             IconButton(onClick = onNavigateUp) {

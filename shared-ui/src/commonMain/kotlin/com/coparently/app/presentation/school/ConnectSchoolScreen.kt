@@ -51,7 +51,9 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.presentation.theme.titleMediumEmphasized
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
@@ -122,8 +124,10 @@ fun ConnectSchoolScreen(
     BackHandler(onBack = goBack)
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         topBar = {
             TopAppBar(
+                colors = screenTopAppBarColors(),
                 title = {
                     val title = if (state.reconnecting) {
                         Res.string.school_connect_reconnect_title

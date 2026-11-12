@@ -50,7 +50,9 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
 import com.coparently.app.resources.month_review_days
@@ -112,6 +114,7 @@ fun MonthReviewScreen(
     val summaryState by viewModel.summaryState.collectAsState()
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         topBar = { MonthReviewTopBar(onNavigateUp) }
     ) { padding ->
         Column(
@@ -166,6 +169,7 @@ fun MonthReviewScreen(
 @Composable
 private fun MonthReviewTopBar(onNavigateUp: () -> Unit) {
     TopAppBar(
+        colors = screenTopAppBarColors(),
         title = { Text(stringResource(Res.string.month_review_title)) },
         navigationIcon = {
             IconButton(onClick = onNavigateUp) {

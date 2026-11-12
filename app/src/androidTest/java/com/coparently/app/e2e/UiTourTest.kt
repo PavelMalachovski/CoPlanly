@@ -126,7 +126,10 @@ class UiTourTest : AliceOnScreenTest() {
         }
         driver.pressIfPresent(dialogButton(R.string.home_dialog_later))
         camera.shot("change_requests_inbox") {
-            driver.press("the Requests row", hasText(string(R.string.home_requests_title)) and hasClickAction())
+            driver.press(
+                "the open requests card",
+                hasText(string(R.string.home_waiting_for_coparent, "").trim(), substring = true) and hasClickAction()
+            )
             driver.appeared(hasText(content.events.dentist, substring = true))
             driver.linger()
         }
@@ -211,10 +214,8 @@ class UiTourTest : AliceOnScreenTest() {
         }
     }
 
-    /** Switches the calendar through its title menu, which is also the Month/Week/Day picker. */
+    /** Switches the calendar through the header's Month/Week/Day control. */
     private fun viewMode(label: Int) {
-        val menu = hasContentDescription(string(R.string.calendar_change_view_mode)) and hasClickAction()
-        driver.press("the view-mode menu", menu)
         driver.press("the mode", textButton(label))
         driver.linger()
     }

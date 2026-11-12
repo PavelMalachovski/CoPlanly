@@ -24,6 +24,7 @@ class RecordPhotoTest {
         assertEquals("pet_photos/alice__bob/pet-1/a.jpg", familyPath)
         assertEquals("pet_photos/solo_alice/pet-1/a.jpg", soloPath)
         assertEquals("medical_photos", RecordPhotoKind.MEDICAL.prefix)
+        assertEquals("child_photos", RecordPhotoKind.CHILD.prefix)
         assertEquals("receipts", RecordPhotoKind.RECEIPT.prefix)
         assertEquals("event_images", RecordPhotoKind.EVENT.prefix)
     }
@@ -94,6 +95,19 @@ class RecordPhotoTest {
             ViewablePhoto(listOf(familyPath), "image/jpeg", SHA),
             RecordPhotoAccess.viewable(reference, RecordPhotoKind.PET, "pet-1", FAMILY, BOB)
         )
+    }
+
+    @Test
+    fun `a child's portrait is the two parents' alone and never read as a medical photo`() {
+        val path = RecordPhotoPaths.build(RecordPhotoKind.CHILD, FAMILY, ALICE, "child-1", "p.jpg")
+        assertEquals("child_photos/alice__bob/child-1/p.jpg", path)
+        val reference = RecordPhotoCodec.encode(RecordPhoto(path, "image/jpeg", 1024, SHA))
+        assertEquals(
+            listOf(path),
+            RecordPhotoAccess.viewable(reference, RecordPhotoKind.CHILD, "child-1", FAMILY, BOB)?.paths
+        )
+        assertNull(RecordPhotoAccess.viewable(reference, RecordPhotoKind.CHILD, "child-1", FAMILY, GUEST))
+        assertNull(RecordPhotoAccess.viewable(reference, RecordPhotoKind.MEDICAL, "child-1", FAMILY, BOB))
     }
 
     @Test

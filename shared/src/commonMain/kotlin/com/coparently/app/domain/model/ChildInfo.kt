@@ -24,6 +24,9 @@ import kotlinx.serialization.Serializable
  *   Readable by the two parents only: a guest reads the record without them. **Not encrypted**
  *   beyond Storage's own at-rest encryption, and deliberately so: a false promise about medical
  *   images would be worse than none.
+ * @property photo A `RecordPhotoCodec` reference to the child's portrait (`RecordPhotoKind.CHILD`),
+ *   or null for none. Readable by the two parents only, like [medicalPhotos], but **not health
+ *   data**: it sits behind no consent and is not cleared when the health consent is withdrawn.
  * @property guests People who may read this record without being a parent of the child, keyed
  *   by uid — a grandparent for a weekend. A guest sits beside the two-slot parent model and
  *   never occupies a slot. Being here is what makes them a *guest*; being in the document's
@@ -57,7 +60,8 @@ data class ChildInfo(
      * The co-parenting relationship this record belongs to, or null while it belongs to nobody
      * but its creator. See [com.coparently.app.domain.model.Event.familyId].
      */
-    val familyId: String? = null
+    val familyId: String? = null,
+    val photo: String? = null
 )
 
 /**

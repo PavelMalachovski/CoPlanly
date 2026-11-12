@@ -48,4 +48,25 @@ class ChildInfoPhotosTest {
             ChildInfoPhotos.decode(listOf("", "   ", "https://example.test/a.jpg"))
         )
     }
+
+    @Test
+    fun `a document without a portrait reads as none`() {
+        // Every document an older build wrote, and every one before schema 47.
+        assertEquals(null, ChildInfoPhotos.decodePortrait(null))
+    }
+
+    @Test
+    fun `a portrait reference survives as it is`() {
+        val reference = "ph1|child_photos/a__b/c1/p.jpg|image/jpeg|10|" + "a".repeat(64)
+
+        assertEquals(reference, ChildInfoPhotos.decodePortrait(reference))
+    }
+
+    @Test
+    fun `a portrait of the wrong shape or blank reads as none`() {
+        assertEquals(null, ChildInfoPhotos.decodePortrait(""))
+        assertEquals(null, ChildInfoPhotos.decodePortrait("   "))
+        assertEquals(null, ChildInfoPhotos.decodePortrait(42))
+        assertEquals(null, ChildInfoPhotos.decodePortrait(listOf("ph1|child_photos/a__b/c1/p.jpg")))
+    }
 }

@@ -41,8 +41,10 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.labelMediumEmphasized
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.custody_conflict_body
 import com.coparently.app.resources.custody_conflict_keep_local
@@ -108,8 +110,12 @@ fun CustodyConflictScreen(
     val legend = rememberLegend(mySlot = pending.mySlot, parents = parents, parentNames = parentNames)
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         topBar = {
-            TopAppBar(title = { Text(stringResource(Res.string.custody_conflict_title)) })
+            TopAppBar(
+                colors = screenTopAppBarColors(),
+                title = { Text(stringResource(Res.string.custody_conflict_title)) }
+            )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->

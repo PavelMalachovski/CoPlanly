@@ -46,9 +46,8 @@ import com.coparently.app.data.local.entity.UserEntity
  * `app/schemas/`. How the file is opened is not: Android opens it through SQLCipher with the whole
  * migration chain (`buildCoPlanlyDatabase` in `androidMain`, `di/DatabaseBuilder.kt`), the iPhone
  * through the bundled SQLite driver under iOS Data Protection (`IosDatabase.kt`). A migration
- * from version 47 on is written here, against `SQLiteConnection`, so both platforms run it; the
- * legacy chain up to 46 stays Android's (`DatabaseMigrations`), since an iPhone database is always
- * created at the current version.
+ * from version 47 on is written in common code, against `SQLiteConnection` (`CommonMigrations.kt`),
+ * so both platforms run it; the legacy chain up to 46 stays Android's (`DatabaseMigrations`).
  *
  * @see RoomDatabase
  */
@@ -71,7 +70,7 @@ import com.coparently.app.data.local.entity.UserEntity
         FamilyDocumentCacheEntity::class,
         KnownFamilyEntity::class
     ],
-    version = 46,
+    version = 47,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

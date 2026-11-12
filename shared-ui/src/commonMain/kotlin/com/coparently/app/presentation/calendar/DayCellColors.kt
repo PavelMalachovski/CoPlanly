@@ -17,16 +17,13 @@ import com.coparently.app.presentation.theme.ParentColors
 /** Public-holiday tint strength, drawn over the cell's base fill. */
 internal const val HOLIDAY_TINT_ALPHA = 0.10f
 
-/** Most event dots a cell shows before collapsing the rest into a "+". */
-internal const val MAX_EVENT_DOTS = 3
-
-/** Diameter of an event dot in a month cell. */
+/** Diameter of an event dot in the mini month (a month cell draws pills since November 2026). */
 internal val EVENT_DOT_SIZE = 6.dp
 
 /** Width of the ring of the cell's base around an event dot, which keeps it 3:1 on any wash. */
 internal val EVENT_DOT_HALO = 1.dp
 
-/** Dot opacity on leading/trailing days from the neighbouring months. */
+/** Dot and pill opacity on leading/trailing days from the neighbouring months. */
 internal const val OUTSIDE_MONTH_DOT_ALPHA = 0.4f
 
 /**

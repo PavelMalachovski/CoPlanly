@@ -185,7 +185,7 @@ describe('sweepDeletedDocuments', () => {
     const db = fakeDb({
       events: [owned(tombstonedDaysAgo('e-old', 120)), owned({id: 'e-live'})],
       expenses: [owned(tombstonedDaysAgo('x-old', 120))],
-      child_info: [owned(tombstonedDaysAgo('c-new', 3))],
+      child_info: [owned(tombstonedDaysAgo('c-new', 3)), owned(tombstonedDaysAgo('c-old', 120))],
       pets: [Object.assign(tombstonedDaysAgo('p-old', 120), {familyId: '', createdByFirebaseUid: 'alice-uid'})],
     });
     const prefixes = [];
@@ -197,8 +197,13 @@ describe('sweepDeletedDocuments', () => {
 
     const removed = await index.sweepDeletedDocumentsImpl(db, NOW, undefined, bucket);
 
-    assert.strictEqual(removed, 3);
+    assert.strictEqual(removed, 4);
     assert.deepStrictEqual(prefixes.sort(), [
+      // A child's portrait goes with its medical photos.
+      `child_photos/${fam}/c-old/`,
+      'child_photos/solo_alice-uid/c-old/',
+      `medical_photos/${fam}/c-old/`,
+      'medical_photos/solo_alice-uid/c-old/',
       `event_images/${fam}/e-old/`,
       'event_images/solo_alice-uid/e-old/',
       'pet_photos/solo_alice-uid/p-old/',

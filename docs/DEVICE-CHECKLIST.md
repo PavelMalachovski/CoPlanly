@@ -824,6 +824,12 @@ the tap actually landing on that screen.
       `medical_photos/<childId>/…` or `pet_photos/<petId>/…` paths.
 - [ ] §7 needs the same four kinds of photo on the throwaway account.
 
+- [ ] **A child's portrait (part 5b):** on one phone open a child's screen, "Add a photo", pick one
+      (a 120 dp portrait appears, with "Only you and {co-parent} see this photo"). On the other
+      phone it shows in the calendar and Home headers and on the child's filter chip. "Change
+      photo" replaces it; "Remove photo" returns the initial. A guest of the child sees the
+      initial only.
+
 ### 3.11 Seasonal schedules and holiday fairness (MON-14, MON-20) · 1P, proposal check 2P
 
 > **[CI e2e]** `OnScreenAgreementsTest` runs the **2P proposal check's** mechanism on one real screen: B proposes a one-day layer, the proposal pops up on A's Home naming B, A accepts, and today's month cell then says "With B" on A's grid while B's phone holds the decision. The phone still adds the editor itself, the band's colour, B's grid, and everything above the 2P line.
@@ -2124,7 +2130,7 @@ requests they had already accepted or declined, and the co-parent's words on an 
 for an answer.
 
 > **[CI]** The rules are unit tests — `RequestHistoryTest`, `RequestInboxTest`, `InboxItemsTest`,
-> `RequestsRowTextTest`, `HomeFeedTest`, `RequestsSourceTest` and `ChangeRequestWithdrawTest` — and
+> `HomeFeedTest`, `RequestsSourceTest` and `ChangeRequestWithdrawTest` — and
 > the screens render in the screenshot matrix (`requests_*`). A withdrawn swap and a withdrawn custody
 > proposal run between two phones against the real rules in `TwoParentCustodyTest`. What a phone adds
 > is the two phones answering each other live, the cards and the buttons as drawn.
@@ -2174,7 +2180,7 @@ for an answer.
   arrive on the next open rather than live.
 - **If it fails:** tag `ChangeRequestViewModel`, `HomeViewModel`, `CustodyModelRepository`;
   `presentation/changerequests/`, `domain/changerequests/`, `domain/custody/DayOverrideTransition.kt`,
-  `presentation/home/RequestsRow.kt`, `presentation/home/HomeFeed.kt`.
+  `presentation/home/RequestsRowState.kt`, `presentation/home/HomeFeed.kt`.
 
 
 ### 5.9 Deadlines, reminders and the last chance (phase 3a) · 2P, 1P + a second account fallback
@@ -2362,6 +2368,29 @@ the check reads A's side). Push notifications on for A.
   `data/chat/DepartedThreadSource.kt`, `presentation/chat/DepartedThreadNotice.kt`,
   `retainOrDeleteConversations` and `sweepRetainedConversationsImpl` in `functions/index.js`,
   `firebase functions:log --only deleteAccount,sweepRetentionLimits`.
+
+### 3.35 The app opens on the Calendar; Home carries a badge · 1P, badge check 2P
+
+Redesign part 2a (CLAUDE.md "UX overhaul" item 1). Pinned by `StartDestinationTest` and
+`RequestsBadgeViewModelTest`; `MainNavigationSmokeTest` walks the cold start and Back. What is left is
+the real launch and the badge as drawn.
+
+- [ ] **Cold start lands on Calendar.** Kill the app and open it from the launcher: the Calendar tab
+      is selected and the month shows. A push or an invitation link still opens its own screen
+      over it.
+- [ ] **Back exits.** From Calendar press Back: the app closes. From Home or Chat or Family press
+      Back once: Calendar; once more: the app closes.
+- [ ] **Home badge matches the Requests row** (2P). Bob sends Alice a change request: the Home tab
+      shows a badge with the number Home's **Requests** row shows (a proposed expense split counts,
+      the calendar banner does not); TalkBack reads "1 request waiting for your answer"; answering
+      it clears the badge. On a tablet the rail shows the same badge.
+- [ ] **Back from a day opened on Home returns to Month.** On Home tap a day of the week tiles: the
+      Calendar opens that day in Day view. Press Back: the Calendar shows Month (not the app
+      closing); Back once more closes the app. The same from a month cell. A Day view chosen in
+      the title's picker keeps the default Back.
+- **If it fails:** `startDestinationFor` and `navigateToTab` in `presentation/navigation/`,
+  `RequestsBadgeViewModel`, `rememberHomeRequestsCount` in `NavGraph.kt`; for Back from a day,
+  `CalendarDayRequests` and `dayOpenedFromMonth` in `CalendarScreen.kt`.
 
 ---
 

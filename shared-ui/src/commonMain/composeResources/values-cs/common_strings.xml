@@ -56,4 +56,6 @@
     <string name="common_discard_changes_message">Změny tady ještě nejsou uložené. Když teď odejdete, přijdete o ně.</string>
     <string name="common_expanded">Rozbaleno</string>
     <string name="common_collapsed">Sbaleno</string>
+    <string name="children_avatars_more">+%1$d</string>
+    <string name="children_avatars_description">Děti: %1$s</string>
 </resources>

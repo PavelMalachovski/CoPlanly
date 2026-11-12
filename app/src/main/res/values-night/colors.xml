@@ -5,5 +5,5 @@
 <resources>
     <!-- CoPlanlyColors.DarkBackground: the window a dark-mode cold start shows before the first
          Compose frame, instead of AppCompat Light's white. -->
-    <color name="window_background">#131318</color>
+    <color name="window_background">#16141F</color>
 </resources>

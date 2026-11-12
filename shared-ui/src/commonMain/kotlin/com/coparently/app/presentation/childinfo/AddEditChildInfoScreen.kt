@@ -26,8 +26,13 @@ import com.coparently.app.presentation.consent.HealthConsentDialog
 import com.coparently.app.presentation.consent.HealthConsentViewModel
 import com.coparently.app.presentation.consent.LockedMedicalSection
 import com.coparently.app.presentation.platform.LocalFilePicker
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
+import com.coparently.app.resources.child_photo_delete_failed
+import com.coparently.app.resources.child_photo_save_first
+import com.coparently.app.resources.child_photo_upload_failed
 import com.coparently.app.resources.childinfo_add_child_button
 import com.coparently.app.resources.childinfo_back
 import com.coparently.app.resources.childinfo_child_name_label
@@ -192,10 +197,14 @@ fun AddEditChildInfoScreen(
     val photoError by viewModel.photoError.collectAsState()
     val uploadFailed = stringResource(Res.string.medical_photos_upload_failed)
     val deleteFailed = stringResource(Res.string.medical_photos_delete_failed)
+    val portraitUploadFailed = stringResource(Res.string.child_photo_upload_failed)
+    val portraitDeleteFailed = stringResource(Res.string.child_photo_delete_failed)
     LaunchedEffect(photoError) {
         val message = when (photoError) {
             MedicalPhotoError.UPLOAD_FAILED -> uploadFailed
             MedicalPhotoError.DELETE_FAILED -> deleteFailed
+            MedicalPhotoError.PORTRAIT_UPLOAD_FAILED -> portraitUploadFailed
+            MedicalPhotoError.PORTRAIT_DELETE_FAILED -> portraitDeleteFailed
             null -> null
         }
         if (message != null) {
@@ -217,10 +226,12 @@ fun AddEditChildInfoScreen(
     }
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         // A back gesture over unsaved edits shrinks the form before it asks (D-11).
         modifier = Modifier.then(leave.backPreview),
         topBar = {
             TopAppBar(
+                colors = screenTopAppBarColors(),
                 title = {
                     Text(
                         if (childInfoId == "new") {
@@ -266,6 +277,25 @@ fun AddEditChildInfoScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(Spacing.L)
         ) {
+            // The portrait (part 5b): an existing child's. Its Remove works without a picker, so it
+            // is drawn wherever a child is saved. A new child has no id for the photo's folder yet,
+            // so, where the phone can pick one, it asks to be saved first.
+            val saved = currentChildInfo
+            if (childInfoId != null && childInfoId != "new" && saved != null) {
+                ChildPortrait(
+                    child = saved,
+                    coParentName = rememberCoParentName(),
+                    onPick = { uri -> viewModel.setPhoto(saved, uri) },
+                    onRemove = { viewModel.removePhoto(saved) }
+                )
+            } else if (childInfoId == "new" && LocalFilePicker.current.available) {
+                Text(
+                    text = stringResource(Res.string.child_photo_save_first),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
             // Basic Information Section
             Card(
                 modifier = Modifier.fillMaxWidth()

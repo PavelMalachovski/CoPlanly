@@ -146,18 +146,18 @@ class ParentToneMathTest {
 
         /** The surfaces a parent colour is drawn over in the light theme (see `ParentColorsTest`). */
         val LIGHT_SURFACES = listOf(
-            "surface" to CoPlanlyColors.LightSurface.argb(),
-            "background" to CoPlanlyColors.LightBackground.argb(),
+            "surface" to LightColorScheme.surface.argb(),
+            "background" to LightColorScheme.background.argb(),
             "weekend" to CoPlanlyColors.WeekendBackgroundLight.argb(),
-            "surfaceContainer" to 0xFFF0EEF5.toInt()
+            "surfaceContainer" to LightColorScheme.surfaceContainer.argb()
         )
 
         /** The same four in the dark theme. */
         val DARK_SURFACES = listOf(
-            "surface" to CoPlanlyColors.DarkSurface.argb(),
-            "background" to CoPlanlyColors.DarkBackground.argb(),
+            "surface" to DarkColorScheme.surface.argb(),
+            "background" to DarkColorScheme.background.argb(),
             "weekend" to CoPlanlyColors.WeekendBackgroundDark.argb(),
-            "surfaceContainer" to 0xFF1F1F25.toInt()
+            "surfaceContainer" to DarkColorScheme.surfaceContainer.argb()
         )
     }
 }

@@ -118,4 +118,14 @@
     <string name="childinfo_school_clear_message">Vyprázdní se pole školy, učitele a kontaktů.</string>
     <string name="childinfo_record_gone_title">Tento záznam už neexistuje</string>
     <string name="childinfo_record_gone_description">Byl smazán v tomto telefonu nebo v telefonu druhého rodiče.</string>
+
+    <!-- A child's portrait (part 5b). -->
+    <string name="child_photo_change">Změnit fotku</string>
+    <string name="child_photo_add">Přidat fotku</string>
+    <string name="child_photo_remove">Odstranit fotku</string>
+    <string name="child_photo_save_first">Nejdřív uložte, pak přidejte fotku</string>
+    <string name="child_photo_upload_failed">Fotku se nepodařilo nahrát. Zkuste to znovu.</string>
+    <string name="child_photo_delete_failed">Fotku se nepodařilo odstranit. Zkuste to znovu.</string>
+    <string name="child_photo_private">Tuto fotku vidíte jen vy a %1$s</string>
+    <string name="child_photo_private_alone">Tuto fotku vidíte jen vy</string>
 </resources>

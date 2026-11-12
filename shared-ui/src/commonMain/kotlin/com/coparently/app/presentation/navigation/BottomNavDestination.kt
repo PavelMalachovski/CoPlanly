@@ -29,6 +29,7 @@ import com.coparently.app.presentation.common.windowWidthDp
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.chat_unread_count_overflow
 import com.coparently.app.resources.chat_unread_messages_badge
+import com.coparently.app.resources.home_requests_badge
 import com.coparently.app.resources.nav_calendar
 import com.coparently.app.resources.nav_chat
 import com.coparently.app.resources.nav_family
@@ -117,14 +118,14 @@ enum class BottomNavDestination(
  * Extracted from the bottom bar's own handler because the home dashboard's stat tiles are
  * deep links into Expenses and Chat and must land the user in exactly the state tapping the
  * tab would have: one instance per tab, each tab's own scroll position restored, and a back
- * stack that unwinds to Home rather than accumulating tab entries.
+ * stack that unwinds to Calendar, the start screen, rather than accumulating tab entries.
  *
  * @param destination Tab to show
  */
 internal fun NavHostController.navigateToTab(destination: BottomNavDestination) {
     navigate(destination.navRoute) {
         // Keep one instance per tab, preserve each tab's state
-        popUpTo(Screen.Home.route) { saveState = true }
+        popUpTo(Screen.Calendar.route) { saveState = true }
         launchSingleTop = true
         restoreState = true
     }
@@ -174,12 +175,15 @@ const val NAVIGATION_RAIL_TEST_TAG = "navigation_rail"
  * @param chatUnreadCount Number of messages from the co-parent not yet read. A badge is
  *   shown on the Chat tab's icon while this is above zero, and hidden entirely at zero —
  *   it is not decorative, so nothing is rendered when there is nothing to report.
+ * @param homeBadgeCount Requests waiting for this parent's answer, badged on the Home tab the
+ *   same way (the app opens on the Calendar, so the bar carries what Home used to show first).
  */
 @Composable
 fun CoPlanlyBottomBar(
     currentRoute: String?,
     onNavigate: (BottomNavDestination) -> Unit,
-    chatUnreadCount: Int = 0
+    chatUnreadCount: Int = 0,
+    homeBadgeCount: Int = 0
 ) {
     NavigationBar(modifier = Modifier.testTag(BOTTOM_BAR_TEST_TAG)) {
         BottomNavDestination.entries.forEach { destination ->
@@ -187,7 +191,7 @@ fun CoPlanlyBottomBar(
             NavigationBarItem(
                 selected = selected,
                 onClick = { onTabClick(destination, selected, onNavigate) },
-                icon = { TabIcon(destination, selected, chatUnreadCount) },
+                icon = { TabIcon(destination, selected, chatUnreadCount, homeBadgeCount) },
                 label = { Text(stringResource(destination.labelRes)) }
             )
         }
@@ -202,12 +206,14 @@ fun CoPlanlyBottomBar(
  * @param currentRoute Route of the currently displayed destination
  * @param onNavigate Callback invoked with the destination the user tapped
  * @param chatUnreadCount Unread messages from the co-parent, badged as on the bar
+ * @param homeBadgeCount Requests waiting for this parent's answer, badged on Home
  */
 @Composable
 fun CoPlanlyNavigationRail(
     currentRoute: String?,
     onNavigate: (BottomNavDestination) -> Unit,
-    chatUnreadCount: Int = 0
+    chatUnreadCount: Int = 0,
+    homeBadgeCount: Int = 0
 ) {
     NavigationRail(
         modifier = Modifier.testTag(NAVIGATION_RAIL_TEST_TAG),
@@ -218,7 +224,7 @@ fun CoPlanlyNavigationRail(
             NavigationRailItem(
                 selected = selected,
                 onClick = { onTabClick(destination, selected, onNavigate) },
-                icon = { TabIcon(destination, selected, chatUnreadCount) },
+                icon = { TabIcon(destination, selected, chatUnreadCount, homeBadgeCount) },
                 label = { Text(stringResource(destination.labelRes)) }
             )
         }
@@ -239,37 +245,52 @@ private fun onTabClick(
 }
 
 /**
- * A destination's icon, filled when selected, with the Chat tab's unread badge: the bar and the
- * rail draw the same thing.
+ * A destination's icon, filled when selected, with the Chat tab's unread badge and the Home tab's
+ * waiting-requests badge: the bar and the rail draw the same thing.
  *
  * @param destination The tab
  * @param selected Whether it is the tab on screen
  * @param chatUnreadCount Unread messages from the co-parent; badged on Chat above zero
+ * @param homeBadgeCount Requests waiting for this parent's answer; badged on Home above zero
  */
 @Composable
-private fun TabIcon(destination: BottomNavDestination, selected: Boolean, chatUnreadCount: Int) {
+private fun TabIcon(
+    destination: BottomNavDestination,
+    selected: Boolean,
+    chatUnreadCount: Int,
+    homeBadgeCount: Int
+) {
     val icon = if (selected) destination.selectedIcon else destination.unselectedIcon
-    if (destination == BottomNavDestination.CHAT && chatUnreadCount > 0) {
-        val unreadDescription = pluralStringResource(
-            Res.plurals.chat_unread_messages_badge,
+    when {
+        destination == BottomNavDestination.CHAT && chatUnreadCount > 0 -> CountBadgedIcon(
+            icon,
             chatUnreadCount,
-            chatUnreadCount
+            pluralStringResource(Res.plurals.chat_unread_messages_badge, chatUnreadCount, chatUnreadCount)
         )
-        val badgeText = if (chatUnreadCount > MAX_BADGE_DISPLAY_COUNT) {
-            stringResource(Res.string.chat_unread_count_overflow, MAX_BADGE_DISPLAY_COUNT)
-        } else {
-            chatUnreadCount.toString()
-        }
-        BadgedBox(
-            badge = {
-                Badge(modifier = Modifier.semantics { contentDescription = unreadDescription }) {
-                    Text(badgeText)
-                }
-            }
-        ) {
-            Icon(imageVector = icon, contentDescription = null)
-        }
+        destination == BottomNavDestination.HOME && homeBadgeCount > 0 -> CountBadgedIcon(
+            icon,
+            homeBadgeCount,
+            pluralStringResource(Res.plurals.home_requests_badge, homeBadgeCount, homeBadgeCount)
+        )
+        else -> Icon(imageVector = icon, contentDescription = null)
+    }
+}
+
+/** A tab icon with a count badge, capped at [MAX_BADGE_DISPLAY_COUNT]; [description] is what TalkBack reads. */
+@Composable
+private fun CountBadgedIcon(icon: ImageVector, count: Int, description: String) {
+    val badgeText = if (count > MAX_BADGE_DISPLAY_COUNT) {
+        stringResource(Res.string.chat_unread_count_overflow, MAX_BADGE_DISPLAY_COUNT)
     } else {
+        count.toString()
+    }
+    BadgedBox(
+        badge = {
+            Badge(modifier = Modifier.semantics { contentDescription = description }) {
+                Text(badgeText)
+            }
+        }
+    ) {
         Icon(imageVector = icon, contentDescription = null)
     }
 }

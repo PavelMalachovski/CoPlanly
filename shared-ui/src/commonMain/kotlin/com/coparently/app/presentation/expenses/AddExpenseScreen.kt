@@ -94,7 +94,9 @@ import com.coparently.app.presentation.platform.LocalCameraCapture
 import com.coparently.app.presentation.platform.LocalFilePicker
 import com.coparently.app.presentation.platform.LocalPlatformImages
 import com.coparently.app.presentation.theme.CoPlanlyShapes
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.budgets_back
 import com.coparently.app.resources.expense_add_title
@@ -334,10 +336,12 @@ fun AddExpenseScreen(
     val leave = rememberDiscardGuard(dirty = dirty && !isSaving, onLeave = onBack)
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         // A back gesture over unsaved edits shrinks the form before it asks (D-11).
         modifier = Modifier.then(leave.backPreview),
         topBar = {
             TopAppBar(
+                colors = screenTopAppBarColors(),
                 title = {
                     Text(
                         stringResource(

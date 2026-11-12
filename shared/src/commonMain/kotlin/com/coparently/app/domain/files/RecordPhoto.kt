@@ -1,7 +1,7 @@
 package com.coparently.app.domain.files
 
 /**
- * The four kinds of record that carry photographs (L-4), each with its Storage prefix.
+ * The five kinds of photograph a record carries (L-4), each with its Storage prefix.
  *
  * The prefixes are part of the stored schema — `storage.rules`, `functions/index.js`
  * (`RECORD_PHOTO_LAYOUTS`) and every stored [RecordPhoto] name them — and are never renamed.
@@ -11,6 +11,12 @@ package com.coparently.app.domain.files
 enum class RecordPhotoKind(val prefix: String) {
     /** Photographs attached to a child's medical notes (`child_info.medicalPhotos`). */
     MEDICAL("medical_photos"),
+
+    /**
+     * A child's portrait (`child_info.photo`). Personal data about a child but not health data:
+     * it sits behind no consent and stays when the health consent is withdrawn.
+     */
+    CHILD("child_photos"),
 
     /** A pet's photographs (`pets.photos`). */
     PET("pet_photos"),

@@ -59,8 +59,8 @@ class ParentColorsTest {
     fun `every colour's fill is a visible graphic on every surface it is drawn on, in both themes`() {
         // WCAG 1.4.11: a dot or bar that identifies a parent needs 3:1 against what is under it.
         // Purple was 2.09:1 on the dark surface and 1.74:1 on the dark weekend grey before it got
-        // a dark-theme fill (docs/AUDIT-2026-10-design.md D-14). A month cell's event dot sits in
-        // a ring of the cell's own base (MonthView), so this is also what the dot is measured on.
+        // a dark-theme fill (docs/AUDIT-2026-10-design.md D-14). The mini month's event dot sits in
+        // a ring of the cell's own base (MiniMonth), so this is also what the dot is measured on.
         everyColour.forEach { colour ->
             surfaces(dark = false).forEach { (name, surface) ->
                 val ratio = ParentColors.contrastRatio(colour.fillIn(darkTheme = false), surface)
@@ -172,13 +172,32 @@ class ParentColorsTest {
 
     @Test
     fun `a holiday's day number reads at AA on the plain surface and the weekend grey`() {
-        surfaces(dark = false).filter { (name, _) -> name != "surfaceContainer" }.forEach { (name, surface) ->
+        surfaces(dark = false).forEach { (name, surface) ->
             val ratio = ParentColors.contrastRatio(CoPlanlyColors.HolidayRed, surface)
             assertTrue(ratio >= AA_NORMAL_TEXT, "light $name: $ratio")
         }
         surfaces(dark = true).forEach { (name, surface) ->
             val ratio = ParentColors.contrastRatio(CoPlanlyColors.HolidayRedDark, surface)
             assertTrue(ratio >= AA_NORMAL_TEXT, "dark $name: $ratio")
+        }
+    }
+
+    @Test
+    fun `a month cell's event pill carries its title at AA and its mark at 3 to 1`() {
+        // A pill (November 2026 redesign) is the theme's opaque surface on the custody wash, so the
+        // title is measured on the surface whatever the wash; the 3 dp mark at its start is a parent
+        // fill, the friend's teal or, for an event of neither parent, the tertiary role.
+        listOf(false, true).forEach { dark ->
+            val pill = scheme(dark).surface
+            val title = ParentColors.contrastRatio(onSurface(dark), pill)
+            assertTrue(title >= AA_NORMAL_TEXT, "pill title ${theme(dark)}: $title")
+
+            val marks = everyColour.map { it.storedCode to it.fillIn(dark) } +
+                listOf("friend" to CoPlanlyColors.FriendTeal, "neither" to scheme(dark).tertiary)
+            marks.forEach { (name, mark) ->
+                val ratio = ParentColors.contrastRatio(mark, pill)
+                assertTrue(ratio >= NON_TEXT_MINIMUM, "$name pill mark ${theme(dark)}: $ratio")
+            }
         }
     }
 
@@ -210,29 +229,25 @@ class ParentColorsTest {
 
         fun theme(dark: Boolean) = if (dark) "dark" else "light"
 
-        fun onSurface(dark: Boolean) = if (dark) CoPlanlyColors.DarkOnSurface else CoPlanlyColors.LightOnSurface
+        fun onSurface(dark: Boolean) = scheme(dark).onSurface
 
         fun holidayRed(dark: Boolean) = if (dark) CoPlanlyColors.HolidayRedDark else CoPlanlyColors.HolidayRed
 
         /**
-         * What a parent fill is drawn over: the surface and background, the weekend base, and
-         * `surfaceContainer` (`Theme.kt`'s literal, which the scheme keeps private).
+         * What a parent fill is drawn over: the scheme's surface, background and
+         * `surfaceContainer` (read from [LightColorScheme] and [DarkColorScheme], so a change to
+         * the theme is measured here at once), and the weekend base.
          */
-        fun surfaces(dark: Boolean) = if (dark) {
+        fun surfaces(dark: Boolean) = scheme(dark).let { colors ->
             listOf(
-                "surface" to CoPlanlyColors.DarkSurface,
-                "background" to CoPlanlyColors.DarkBackground,
-                "weekend" to CoPlanlyColors.WeekendBackgroundDark,
-                "surfaceContainer" to Color(0xFF1F1F25)
-            )
-        } else {
-            listOf(
-                "surface" to CoPlanlyColors.LightSurface,
-                "background" to CoPlanlyColors.LightBackground,
-                "weekend" to CoPlanlyColors.WeekendBackgroundLight,
-                "surfaceContainer" to Color(0xFFF0EEF5)
+                "surface" to colors.surface,
+                "background" to colors.background,
+                "weekend" to if (dark) CoPlanlyColors.WeekendBackgroundDark else CoPlanlyColors.WeekendBackgroundLight,
+                "surfaceContainer" to colors.surfaceContainer
             )
         }
+
+        fun scheme(dark: Boolean) = if (dark) DarkColorScheme else LightColorScheme
 
         /** The two bases a calendar day is drawn on before its custody wash (`DayCellFills`). */
         fun dayBases(dark: Boolean) = surfaces(dark).filter { (name, _) -> name == "surface" || name == "weekend" }

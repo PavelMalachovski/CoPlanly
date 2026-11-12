@@ -225,9 +225,11 @@ receiver gets one notification for it.</li>
 <li><strong>Expenses</strong> — amounts, currencies, categories, and optional receipt photos. (Earlier test
 builds also let you set a monthly budget per category. This version no longer creates, shows
 or syncs budgets; any an earlier build saved stay in your account until you delete it.)</li>
-<li><strong>Records about your child</strong> — name, date of birth, school and activity details, emergency
-contacts, and a medical profile: allergies, medications, conditions, blood group,
-vaccinations, doctors&#39; notes and photographs you attach to them.</li>
+<li><strong>Records about your child</strong> — name, date of birth, an optional photo of your child, school and
+activity details, emergency contacts, and a medical profile: allergies, medications, conditions,
+blood group, vaccinations, doctors&#39; notes and photographs you attach to them. <strong>A photo of your
+child is not health data</strong>: it is not covered by the consent the medical details need, and
+withdrawing that consent does not remove it. Only you and your co-parent see it.</li>
 <li><strong>Records about a pet</strong>, in the same shape.</li>
 <li><strong>Messages</strong> between you and your co-parent, and the <strong>photos and PDF files</strong> either of you
 sends in them. A file sent in a message stays in the thread like the message itself: neither of
@@ -246,8 +248,8 @@ contents, so that the app can check a downloaded file is the one that was shared
 export can list the files a message carried by name and fingerprint (the files themselves are
 never put into an export). Files are stored in Cloud Storage under your family, and only the two
 parents of that family can download them; we never create a public link to one.</p>
-<p><strong>Photographs attached to a record</strong> — an event&#39;s photo, a receipt, and the photographs on a
-child&#39;s medical notes or a pet&#39;s record — are stored the same way: in Cloud Storage under your
+<p><strong>Photographs attached to a record</strong> — an event&#39;s photo, a receipt, a photo of your child, and
+the photographs on a child&#39;s medical notes or a pet&#39;s record — are stored the same way: in Cloud Storage under your
 family, with their size, type and SHA-256 fingerprint, downloadable by the two parents of that
 family only, and never through a public link. <strong>A guest, a family friend or a professional
 never sees them</strong>, even where they can read the record itself. A photograph you add before you
@@ -674,8 +676,8 @@ records from that family out of any family they have later;</li>
 <li>deletes the deadlines of every request you sent or were asked to answer, with what was recorded
 about them (when a request was received and opened, its reminders, a last chance, &quot;no answer&quot;) —
 for your co-parent too, since each of these names you both;</li>
-<li>deletes the photographs attached to those records — event photos, receipts, and medical and
-pet photographs — any photograph you added before you linked a co-parent, and the family
+<li>deletes the photographs attached to those records — event photos, receipts, photos of a child,
+and medical and pet photographs — any photograph you added before you linked a co-parent, and the family
 documents you added. A photograph you added to a record your co-parent created stays with that
 record;</li>
 <li><strong>keeps the message thread with your co-parent for 30 days, then deletes it</strong> — messages and

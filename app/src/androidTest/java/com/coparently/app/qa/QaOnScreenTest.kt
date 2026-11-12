@@ -3,7 +3,6 @@ package com.coparently.app.qa
 import android.content.Context
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import com.coparently.app.R
 import com.coparently.app.e2e.AliceOnScreenTest
@@ -112,9 +111,8 @@ abstract class QaOnScreenTest : AliceOnScreenTest() {
     /** A clickable node whose text is the app's string [label]. */
     protected fun textButton(label: Int): SemanticsMatcher = hasText(string(label)) and hasClickAction()
 
-    /** Switches the calendar through its title menu, which is also the Month/Week/Day picker. */
+    /** Switches the calendar through the header's Month/Week/Day control. */
     protected fun viewMode(label: Int) {
-        tap(hasContentDescription(string(R.string.calendar_change_view_mode)) and hasClickAction())
         tap(textButton(label))
     }
 

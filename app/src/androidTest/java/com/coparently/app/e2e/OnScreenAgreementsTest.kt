@@ -175,7 +175,7 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
         }
 
         step("split: the answer is in the inbox's History")
-        tap(hasText(string(R.string.home_requests_title)) and hasClickAction())
+        openRequestsFromHome()
         waitFor(
             "Bob's split in History, answered by Alice",
             hasText(string(R.string.request_history_theirs_answered, bob.name), substring = true)

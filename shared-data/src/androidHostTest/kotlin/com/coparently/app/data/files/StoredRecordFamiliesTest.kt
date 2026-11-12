@@ -44,6 +44,8 @@ class StoredRecordFamiliesTest {
         assertEquals(StoredRecordFamily(FAMILY), stored.of(RecordPhotoKind.RECEIPT, "receipt-of"))
         assertEquals(StoredRecordFamily(FAMILY), stored.of(RecordPhotoKind.PET, "rex"))
         assertEquals(StoredRecordFamily(null), stored.of(RecordPhotoKind.MEDICAL, "only-mine"))
+        // A child's portrait is on the same record as its medical photos.
+        assertEquals(StoredRecordFamily(null), stored.of(RecordPhotoKind.CHILD, "only-mine"))
     }
 
     @Test

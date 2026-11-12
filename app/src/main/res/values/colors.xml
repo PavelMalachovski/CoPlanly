@@ -23,6 +23,6 @@
     <!-- The window behind Compose before its first frame, per theme (UX-13). values-night
          overrides it, so a cold start in dark mode no longer flashes white. Equal to
          CoPlanlyColors.LightBackground / DarkBackground. -->
-    <color name="window_background">#FCFBFF</color>
+    <color name="window_background">#F5F2FC</color>
 </resources>
 

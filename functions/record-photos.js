@@ -1,6 +1,6 @@
 /**
- * Record photographs on the server (L-4): a child's medical photos, a pet's photos, an expense's
- * receipt and an event's photo.
+ * Record photographs on the server (L-4): a child's medical photos and portrait, a pet's photos, an
+ * expense's receipt and an event's photo.
  *
  * The app stores each photo at `{prefix}/{owner}/{recordId}/{objectName}` in Cloud Storage and a
  * `ph1|{path}|{contentType}|{size}|{sha256}` reference on the record (`RecordPhotoCodec` in the
@@ -23,15 +23,31 @@
 const PHOTO_REF_PREFIX = 'ph1|';
 
 /**
- * Where each record kind keeps its photos: the Storage prefix, the field on the Firestore
- * document, and whether that field is a list (`medicalPhotos`, `photos`) or a single string.
+ * Where each record kind keeps its photos: for each collection, one layout per photo field — the
+ * Storage prefix, the field on the Firestore document, and whether that field is a list
+ * (`medicalPhotos`, `photos`) or a single string.
+ *
+ * A child's record has two: its medical photos, which sit behind the health consent, and its
+ * portrait (`photo`, `RecordPhotoKind.CHILD` in the app), which is not health data.
  */
 const RECORD_PHOTO_LAYOUTS = {
-  child_info: {prefix: 'medical_photos', field: 'medicalPhotos', list: true},
-  pets: {prefix: 'pet_photos', field: 'photos', list: true},
-  expenses: {prefix: 'receipts', field: 'receiptUrl', list: false},
-  events: {prefix: 'event_images', field: 'imageUrl', list: false},
+  child_info: [
+    {prefix: 'medical_photos', field: 'medicalPhotos', list: true},
+    {prefix: 'child_photos', field: 'photo', list: false},
+  ],
+  pets: [{prefix: 'pet_photos', field: 'photos', list: true}],
+  expenses: [{prefix: 'receipts', field: 'receiptUrl', list: false}],
+  events: [{prefix: 'event_images', field: 'imageUrl', list: false}],
 };
+
+/**
+ * Every layout of every collection, in declaration order.
+ *
+ * @return {!Array<{prefix: string, field: string, list: boolean}>} The layouts.
+ */
+function allLayouts() {
+  return Object.values(RECORD_PHOTO_LAYOUTS).flat();
+}
 
 /** The owner segment of a personal folder is this followed by the uploader's uid. */
 const SOLO_PREFIX = 'solo_';
@@ -67,7 +83,7 @@ function parsePhotoPath(path) {
   const parts = path.split('/');
   if (parts.length !== 4 || parts.some((p) => p === '')) return null;
   const [prefix, owner, recordId, objectName] = parts;
-  if (!Object.values(RECORD_PHOTO_LAYOUTS).some((l) => l.prefix === prefix)) return null;
+  if (!allLayouts().some((l) => l.prefix === prefix)) return null;
   const soloUid = owner.startsWith(SOLO_PREFIX) ? owner.slice(SOLO_PREFIX.length) : null;
   const validOwner = soloUid !== null ?
     soloUid !== '' && !soloUid.includes('__') :
@@ -136,16 +152,18 @@ function photoValuesOf(layout, data) {
  *     photos or a record naming neither a family nor a creator.
  */
 function recordPhotoFolders(collection, id, data) {
-  const layout = RECORD_PHOTO_LAYOUTS[collection];
-  if (!layout || typeof id !== 'string' || id === '' || id.includes('/')) return [];
+  const layouts = RECORD_PHOTO_LAYOUTS[collection];
+  if (!layouts || typeof id !== 'string' || id === '' || id.includes('/')) return [];
   const folders = [];
   const familyId = data && data.familyId;
-  if (typeof familyId === 'string' && isFamilyOwner(familyId)) {
-    folders.push(`${layout.prefix}/${familyId}/${id}/`);
-  }
   const creator = data && data.createdByFirebaseUid;
-  if (typeof creator === 'string' && creator !== '' && !creator.includes('/')) {
-    folders.push(`${layout.prefix}/${SOLO_PREFIX}${creator}/${id}/`);
+  for (const layout of layouts) {
+    if (typeof familyId === 'string' && isFamilyOwner(familyId)) {
+      folders.push(`${layout.prefix}/${familyId}/${id}/`);
+    }
+    if (typeof creator === 'string' && creator !== '' && !creator.includes('/')) {
+      folders.push(`${layout.prefix}/${SOLO_PREFIX}${creator}/${id}/`);
+    }
   }
   return folders;
 }
@@ -159,7 +177,7 @@ function recordPhotoFolders(collection, id, data) {
  */
 function soloPhotoFolders(uid) {
   if (typeof uid !== 'string' || uid === '' || uid.includes('/')) return [];
-  return Object.values(RECORD_PHOTO_LAYOUTS).map((l) => `${l.prefix}/${SOLO_PREFIX}${uid}/`);
+  return allLayouts().map((l) => `${l.prefix}/${SOLO_PREFIX}${uid}/`);
 }
 
 /**
@@ -172,6 +190,52 @@ function soloPhotoFolders(uid) {
 async function objectExists(bucket, path) {
   const [exists] = await bucket.file(path).exists();
   return exists === true;
+}
+
+/**
+ * Copies one photo field's personal photos into the family's folder: the half of
+ * [movePhotosToFamily] that runs per field, writing nothing to Firestore and deleting nothing.
+ *
+ * @param {!Object} bucket The Storage bucket.
+ * @param {{prefix: string, field: string, list: boolean}} layout The field's layout.
+ * @param {!Object} data The record.
+ * @param {string} recordId The record's id.
+ * @param {string} soloOwner The uploader's personal owner segment, `solo_{uid}`.
+ * @param {string} familyId The family the record names.
+ * @param {{moved: number, missing: number}} result Counters, updated in place.
+ * @return {!Promise<{next: !Array<string>, leftovers: !Array<string>, changed: boolean}>} The
+ *     field's new values, the personal copies to delete once the record is written, and whether
+ *     any value changed.
+ */
+async function moveFieldToFamily(bucket, layout, data, recordId, soloOwner, familyId, result) {
+  const next = [];
+  const leftovers = [];
+  let changed = false;
+  for (const value of photoValuesOf(layout, data)) {
+    const photo = decodePhotoRef(value);
+    const parsed = photo && parsePhotoPath(photo.path);
+    if (!parsed || parsed.prefix !== layout.prefix || parsed.owner !== soloOwner ||
+        parsed.recordId !== recordId) {
+      next.push(value);
+      continue;
+    }
+    const target = `${layout.prefix}/${familyId}/${recordId}/${parsed.objectName}`;
+    const hereAlready = await objectExists(bucket, target);
+    const stillSolo = await objectExists(bucket, photo.path);
+    if (!hereAlready && !stillSolo) {
+      next.push(value);
+      result.missing++;
+      continue;
+    }
+    if (!hereAlready) {
+      await bucket.file(photo.path).copy(bucket.file(target));
+      result.moved++;
+    }
+    if (stillSolo) leftovers.push(photo.path);
+    next.push(encodePhotoRef(Object.assign({}, photo, {path: target})));
+    changed = true;
+  }
+  return {next, leftovers, changed};
 }
 
 /**
@@ -210,42 +274,22 @@ async function movePhotosToFamily(db, bucket, uid, familyId) {
     return result;
   }
   const soloOwner = `${SOLO_PREFIX}${uid}`;
-  for (const [collection, layout] of Object.entries(RECORD_PHOTO_LAYOUTS)) {
+  for (const [collection, layouts] of Object.entries(RECORD_PHOTO_LAYOUTS)) {
     const snap = await db.collection(collection).where('createdByFirebaseUid', '==', uid).get();
     for (const doc of snap.docs) {
       const data = doc.data() || {};
       if (data.familyId !== familyId) continue;
-      const values = photoValuesOf(layout, data);
-      const next = [];
+      const update = {};
       const leftovers = [];
-      let changed = false;
-      for (const value of values) {
-        const photo = decodePhotoRef(value);
-        const parsed = photo && parsePhotoPath(photo.path);
-        if (!parsed || parsed.prefix !== layout.prefix || parsed.owner !== soloOwner ||
-            parsed.recordId !== doc.id) {
-          next.push(value);
-          continue;
-        }
-        const target = `${layout.prefix}/${familyId}/${doc.id}/${parsed.objectName}`;
-        const hereAlready = await objectExists(bucket, target);
-        const stillSolo = await objectExists(bucket, photo.path);
-        if (!hereAlready && !stillSolo) {
-          next.push(value);
-          result.missing++;
-          continue;
-        }
-        if (!hereAlready) {
-          await bucket.file(photo.path).copy(bucket.file(target));
-          result.moved++;
-        }
-        if (stillSolo) leftovers.push(photo.path);
-        next.push(encodePhotoRef(Object.assign({}, photo, {path: target})));
-        changed = true;
+      for (const layout of layouts) {
+        const moved = await moveFieldToFamily(bucket, layout, data, doc.id, soloOwner, familyId, result);
+        if (moved.changed) update[layout.field] = layout.list ? moved.next : moved.next[0];
+        leftovers.push(...moved.leftovers);
       }
-      if (changed) {
+      // One write per record, whatever number of its fields moved.
+      if (Object.keys(update).length > 0) {
         const batch = db.batch();
-        batch.update(doc.ref, {[layout.field]: layout.list ? next : next[0]});
+        batch.update(doc.ref, update);
         await batch.commit();
         result.rewritten++;
       }
@@ -279,7 +323,7 @@ function isLegacyPhotoValue(value) {
  */
 function isLegacyPhotoObject(name) {
   const prefix = name.split('/')[0];
-  if (!Object.values(RECORD_PHOTO_LAYOUTS).some((l) => l.prefix === prefix)) return false;
+  if (!allLayouts().some((l) => l.prefix === prefix)) return false;
   return parsePhotoPath(name) === null;
 }
 
@@ -288,14 +332,15 @@ function isLegacyPhotoObject(name) {
  * behind. An owner decision: before release every one of them is test data, so they are deleted,
  * not migrated.
  *
- * Two passes. **Objects**: every object under the four prefixes whose path is not a current
+ * Two passes. **Objects**: every object under the record-photo prefixes whose path is not a current
  * `{owner}/{recordId}/{name}` path — `receipts/{id}.jpg`, `event_images/{id}.jpg`,
  * `medical_photos/{childId}/{photoId}.jpg`, `pet_photos/{petId}/{photoId}.jpg` — is deleted. No
- * rule block matches those paths any more, so no client can reach them either way. **Records**:
- * every legacy value (a download URL or a flat path) is removed from `medicalPhotos`/`photos` and
- * blanked from `receiptUrl`/`imageUrl`; references in the current format are kept. Only that
- * field is written, and the tombstone fields, `updatedAt` and every other field are left alone,
- * so no conflict comparison on a phone changes its answer.
+ * rule block matches those paths any more, so no client can reach them either way (`child_photos`
+ * came after L-4 and never had a flat layout). **Records**: every legacy value (a download URL or a
+ * flat path) is removed from `medicalPhotos`/`photos` and blanked from `receiptUrl`/`imageUrl`/
+ * `photo`; references in the current format are kept. Only those fields are written, and the
+ * tombstone fields, `updatedAt` and every other field are left alone, so no conflict comparison on
+ * a phone changes its answer.
  *
  * Idempotent: a second run finds nothing to delete and nothing to clear.
  *
@@ -307,7 +352,7 @@ function isLegacyPhotoObject(name) {
 async function purgeLegacyPhotoPathsImpl(db, bucket) {
   const summary = {objectsDeleted: 0, recordsCleared: 0, perCollection: {}};
   if (bucket) {
-    for (const layout of Object.values(RECORD_PHOTO_LAYOUTS)) {
+    for (const layout of allLayouts()) {
       const [files] = await bucket.getFiles({prefix: `${layout.prefix}/`});
       for (const file of files) {
         if (!isLegacyPhotoObject(file.name)) continue;
@@ -316,16 +361,21 @@ async function purgeLegacyPhotoPathsImpl(db, bucket) {
       }
     }
   }
-  for (const [collection, layout] of Object.entries(RECORD_PHOTO_LAYOUTS)) {
+  for (const [collection, layouts] of Object.entries(RECORD_PHOTO_LAYOUTS)) {
     summary.perCollection[collection] = 0;
     const snap = await db.collection(collection).get();
     let batch = db.batch();
     let pending = 0;
     for (const doc of snap.docs) {
-      const values = photoValuesOf(layout, doc.data() || {});
-      if (!values.some(isLegacyPhotoValue)) continue;
-      const kept = values.filter((v) => !isLegacyPhotoValue(v));
-      batch.update(doc.ref, {[layout.field]: layout.list ? kept : (kept[0] || '')});
+      const update = {};
+      for (const layout of layouts) {
+        const values = photoValuesOf(layout, doc.data() || {});
+        if (!values.some(isLegacyPhotoValue)) continue;
+        const kept = values.filter((v) => !isLegacyPhotoValue(v));
+        update[layout.field] = layout.list ? kept : (kept[0] || '');
+      }
+      if (Object.keys(update).length === 0) continue;
+      batch.update(doc.ref, update);
       pending++;
       summary.recordsCleared++;
       summary.perCollection[collection]++;

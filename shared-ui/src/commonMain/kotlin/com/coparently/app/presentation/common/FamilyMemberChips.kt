@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.family.names
+import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -115,7 +116,8 @@ private fun MemberChips(
         FilterChip(
             selected = selected.names(member.ref),
             onClick = { onToggle(member.ref) },
-            label = { Text(member.name) }
+            label = { Text(member.name) },
+            leadingIcon = member.child?.let { child -> { ChildAvatar(child, IconSizes.Standard) } }
         )
     }
 }
