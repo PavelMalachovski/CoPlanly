@@ -1,5 +1,5 @@
 {
-  "about": "ChildInfoRepositoryImpl.upsertChildInfo's document: medical profile, a guest, a school.",
+  "about": "ChildInfoRepositoryImpl.upsertChildInfo's document: medical profile, a guest, a school, a portrait.",
   "document": {
     "activities": [],
     "allergies": [
@@ -40,6 +40,7 @@
         "notes": null
       }
     ],
+    "photo": "ph1|child_photos/uidA__uidB/child-current-1/5d1f7c2a.jpg|image/jpeg|61027|2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae",
     "schoolInfo": {
       "address": null,
       "grade": "2",
@@ -54,6 +55,9 @@
       "guest-1"
     ],
     "updatedAt": "2026-05-02T18:45:10"
+  },
+  "notPreserved": {
+    "photo": "the child's portrait (schema 47) is a top-level key a build before it does not know, so its set() drops it: accepted, the parents update both phones and set the photo again"
   },
   "reads": {
     "allergies": [
@@ -74,6 +78,7 @@
     "medications": [
       "Ventolin"
     ],
+    "photo": "ph1|child_photos/uidA__uidB/child-current-1/5d1f7c2a.jpg|image/jpeg|61027|2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae",
     "school": "ZS Vinohrady",
     "updatedAtMillis": 1777747510000
   }

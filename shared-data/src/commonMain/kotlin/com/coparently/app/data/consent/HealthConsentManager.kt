@@ -170,7 +170,8 @@ internal fun ChildInfo.hasHealthData(): Boolean =
 
 /**
  * [this] record with every field the child-health consent covers cleared, and nothing else
- * touched: name, activities, emergency contacts, school and guests stay.
+ * touched: name, activities, emergency contacts, school, guests and the portrait (`photo`, which
+ * is not health data — Legal item 4) stay.
  */
 internal fun ChildInfo.withoutHealthData(): ChildInfo = copy(
     medications = emptyList(),

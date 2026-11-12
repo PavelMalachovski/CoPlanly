@@ -26,6 +26,10 @@ import kotlinx.datetime.LocalDateTime
  * wire and a wall clock in the domain, so the current write's wall clock is made from that instant
  * in the zone it runs in, and the read reports the instant. The app's run, in UTC, writes the same
  * document as before.
+ *
+ * **The portrait (`photo`, schema 47) is a new top-level key** an older build drops on its next
+ * `set()` (item 5): accepted by the design, since testers update both phones and the photo is set
+ * again, and declared in the current write's [CurrentWrite.olderBuildsMayDrop].
  */
 @OptIn(InternalSharedApi::class)
 internal object ChildInfoWireContract : WireContract {
@@ -47,6 +51,7 @@ internal object ChildInfoWireContract : WireContract {
             "medications" to child.medications.map { it.name },
             "intolerances" to child.medicalProfile.intolerances,
             "school" to child.schoolInfo?.name,
+            "photo" to child.photo,
             "guests" to child.guests.keys.sorted(),
             "updatedAtMillis" to EventTimestamp.ofWallClock(child.updatedAt),
             "createdByFirebaseUid" to child.createdByFirebaseUid,
@@ -64,8 +69,13 @@ internal object ChildInfoWireContract : WireContract {
     override fun currentWrites(): List<CurrentWrite> = listOf(
         CurrentWrite(
             case = "repository-save",
-            about = "ChildInfoRepositoryImpl.upsertChildInfo's document: medical profile, a guest, a school.",
-            document = child().toFirestoreMap(listOf("uidA", "uidB", "guest-1"))
+            about = "ChildInfoRepositoryImpl.upsertChildInfo's document: medical profile, a guest, a school, " +
+                "a portrait.",
+            document = child().toFirestoreMap(listOf("uidA", "uidB", "guest-1")),
+            olderBuildsMayDrop = mapOf(
+                "photo" to "the child's portrait (schema 47) is a top-level key a build before it does not know, " +
+                    "so its set() drops it: accepted, the parents update both phones and set the photo again"
+            )
         )
     )
 
@@ -82,6 +92,8 @@ internal object ChildInfoWireContract : WireContract {
             "ph1|medical_photos/uidA__uidB/child-current-1/0b6c4a9e.jpg|image/jpeg|48213|" +
                 "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
         ),
+        photo = "ph1|child_photos/uidA__uidB/child-current-1/5d1f7c2a.jpg|image/jpeg|61027|" +
+            "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae",
         guests = mapOf(
             "guest-1" to GuestGrant(
                 uid = "guest-1",

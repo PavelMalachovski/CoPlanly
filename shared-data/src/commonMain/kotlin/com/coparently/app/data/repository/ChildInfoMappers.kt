@@ -45,7 +45,8 @@ fun ChildInfoEntity.toDomain(): ChildInfo {
         createdByFirebaseUid = createdByFirebaseUid,
         lastModifiedBy = lastModifiedBy,
         syncedToFirestore = syncedToFirestore,
-        familyId = familyId
+        familyId = familyId,
+        photo = photo
     )
 }
 
@@ -75,7 +76,8 @@ fun ChildInfo.toEntity(): ChildInfoEntity {
         createdByFirebaseUid = createdByFirebaseUid,
         lastModifiedBy = lastModifiedBy,
         syncedToFirestore = syncedToFirestore,
-        familyId = familyId
+        familyId = familyId,
+        photo = photo
     )
 }
 
@@ -132,6 +134,9 @@ fun ChildInfo.toFirestoreMap(audience: List<String>): Map<String, Any?> {
         },
         "medicalProfile" to StoredJson.decodeObject(StoredJson.encode(MedicalProfile.serializer(), medicalProfile)),
         "medicalPhotos" to medicalPhotos,
+        // A top-level key an older build drops on its next `set()` (wire contract, item 5):
+        // accepted, the portrait is set again.
+        "photo" to photo,
         "guests" to ChildInfoGuests.encode(guests),
         "createdAt" to IsoText.dateTime(createdAt),
         // UTC, offset-free: the field keeps its name and type so an older build still parses
@@ -197,6 +202,7 @@ fun Map<String, Any?>.toChildInfo(): ChildInfo {
             } ?: MedicalProfile()
             ).withSanitizedVaccinationNames(),
         medicalPhotos = ChildInfoPhotos.decode(this["medicalPhotos"]),
+        photo = ChildInfoPhotos.decodePortrait(this["photo"]),
         guests = ChildInfoGuests.decode(this["guests"]),
         createdAt = IsoText.parseDateTime(this["createdAt"] as String),
         // The instant the document names, shown in this phone's zone (see `EventTimestamp`).

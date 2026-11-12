@@ -951,7 +951,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   attachment stays off the server while its upload fails and arrives after the outbox retry, the
   co-parent's download matches its bytes, a stranger's is refused, and a vault document opens for
   the co-parent, who cannot delete it, while the uploader's delete is a tombstone. And **record
-  photos** (`TwoParentRecordPhotosTest`, L-4): all four kinds under the family's path, the
+  photos** (`TwoParentRecordPhotosTest`, L-4): all five kinds under the family's path, the
   co-parent's digest-checked download, a stranger refused, either parent deleting, no overwrite,
   and a photo taken before pairing moved into the family by the real `onFamilyCreated`. Each
   `EmulatorParent` has `files`, `cache`, `no_backup` and preference names of its own
@@ -1710,7 +1710,7 @@ domain/    — models, repository interfaces, use cases, holidays, ReminderSched
              record and the school import's plan — in shared/, but for the event use cases with
              EventValidator, ErrorHandler, ActivityAnnouncer and FamilyDocumentRepository
              (shared-data/) and MessageTemplate (shared-ui/); none left in app/
-data/      — Room (v46 + migrations), Firestore/Google/HTTP clients, repository impls, sync — in
+data/      — Room (v47 + migrations), Firestore/Google/HTTP clients, repository impls, sync — in
              shared-data/ (above). In app/ only what stays on purpose, each for its reason: every
              Worker and WorkManager scheduler (WorkManager); the notifications and the reminder
              alarms (data/notification/, RequestNotices, PushNotifier: the notification manager,
@@ -2885,8 +2885,14 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    `commonMain` against `SQLiteConnection`** (`connection.execSQL(…)`, never
    `SupportSQLiteDatabase`) and added by both platforms' builders: Android runs it through
    SQLCipher's open helper, in Room's compatibility mode, which `ConnectionMigrationOnSqlCipherTest`
-   proves on the emulators. A column's stored text is fixed: a date column goes through
-   `Converters` (`IsoText`), never `kotlinx.datetime`'s own `toString()`.
+   proves on the emulators. **47 is the first** (`MIGRATION_46_47`, a child's portrait,
+   `child_info.photo`): `data/local/CommonMigrations.kt` holds it in `COMMON_MIGRATIONS`, which
+   `coPlanlyDatabaseBuilder` adds after the legacy chain and `IosDatabase.kt` adds alone — a new one
+   joins that array. `MigrationTestHelper.runMigrationsAndValidate`'s support-SQLite path calls
+   `migrate(SupportSQLiteDatabase)`, which a common migration cannot override, so
+   `CoPlanlyDatabaseMigrationTest` opens such a step through Room itself
+   (`migration46To47_givesEveryChildAnEmptyPortrait`). A column's stored text is fixed: a date
+   column goes through `Converters` (`IsoText`), never `kotlinx.datetime`'s own `toString()`.
 2. **Event editing must preserve fields.** `AddEditEventScreen` keeps a snapshot of the
    loaded event and uses `copy()`. Never rebuild an `Event` from scratch on save —
    that wipes `sharedWith`/`permissions`/`createdByFirebaseUid` (this was a real bug).
@@ -3127,7 +3133,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     the conversation as `{uid: epochMillis}` maps — one write per event — and the ticks and
     unread badge are derived from them by `ChatReadState`, never stored per message.
     Message times are stored the same way: `Message.sentAtMillis`, epoch millis (Room
-    schema v13, since superseded — the database is at v46), not a naive `LocalDateTime`, so two
+    schema v13, since superseded — the database is at v47), not a naive `LocalDateTime`, so two
     parents in different time zones agree
     on what a mark means and on when a message was sent. The Firestore field keeps its name
     (`timestamp`) and the read path still accepts a legacy ISO string, so a co-parent on an
@@ -4636,17 +4642,24 @@ below hold what it fixed in place.
      identifier (L-13).
 8. **A record's photo is stored under its family's path, read only by the family's two parents,
    and never reached by a download URL** (L-4, September 2026; MON-23's shape, item 31). Medical,
-   pet, receipt and event photos live at `{prefix}/{owner}/{recordId}/{random}.jpg`
+   a child's portrait, pet, receipt and event photos live at `{prefix}/{owner}/{recordId}/{random}.jpg`
    (`domain/files/RecordPhotoPaths`), `{owner}` the record's family id, or `solo_{uid}` while the
    uploader has no co-parent. One interface, `RecordPhotoStorage` (`FirebaseImageStorage`), for
-   all four. Seven things not to undo.
+   all five. **The portrait** (`RecordPhotoKind.CHILD`, `child_photos/`, November 2026) is the
+   record's single `photo` field (schema 47; a top-level Firestore key both writers write, read
+   through `ChildInfoPhotos.decodePortrait`, which an older build's `set()` drops — declared in the
+   wire contract). It is **not health data**: no consent gate, and `HealthConsentManager`'s
+   withdrawal leaves it. In `functions/record-photos.js` a collection maps to a list of layouts, so
+   `child_info` has two (`medicalPhotos`, `photo`) for the sweep, `AUTHORED_FILES` and the move.
+   Seven things not to undo.
    - **The gate is the path.** `storage.rules` lets the two uids of a family id read, create and
      delete (`isOneOfPair`), and the uploader alone a `solo_` path. **Both parents may delete** a
      family photo (either may edit the record); nothing may be overwritten (`resource == null`); a
      create stamps `uploader` and `sha256`, is an image and is under 10 MB (`RecordPhotoPolicy`,
      pinned by `RecordPhotoTest`). The flat layouts from before L-4 match no block.
    - **No download URL, ever.** The record's existing field (`imageUrl`, `receiptUrl`, the entries
-     of `medicalPhotos`/`photos` — names kept, no schema bump) holds a `RecordPhotoCodec` string,
+     of `medicalPhotos`/`photos` — names kept, no schema bump; the portrait's `photo` is the one
+     new field) holds a `RecordPhotoCodec` string,
      `ph1|path|contentType|size|sha256`, never Gson. A screen draws it through `AppImage` (the image
      seam, `presentation/platform/PlatformImages.kt`, MON-24 phase 2), whose Android half is Coil 2
      with `RecordPhotoFetcher` (registered by `CoPlanlyApplication` as `ImageLoaderFactory`), which

@@ -681,6 +681,7 @@ class SyncService(
                 "medicalPhotos" to ChildInfoPhotos.decode(
                     StoredJson.decodeArray(entity.medicalPhotosJson)
                 ),
+                "photo" to ChildInfoPhotos.decodePortrait(entity.photo),
                 "guests" to ChildInfoGuests.encode(guestsOf(entity)),
                 "createdAt" to IsoText.dateTime(entity.createdAt),
                 // UTC, offset-free, from the instant (schema 40) — see `EventTimestamp`.
@@ -774,6 +775,7 @@ class SyncService(
                                 "medicalPhotos" to ChildInfoPhotos.decode(
                                     StoredJson.decodeArray(localEntity.medicalPhotosJson)
                                 ),
+                                "photo" to ChildInfoPhotos.decodePortrait(localEntity.photo),
                                 "guests" to ChildInfoGuests.encode(guestsOf(localEntity)),
                                 "createdAt" to IsoText.dateTime(localEntity.createdAt),
                                 "updatedAt" to EventTimestamp.toWire(Clock.System.now().toEpochMilliseconds()),
@@ -1054,7 +1056,8 @@ class SyncService(
             createdByFirebaseUid = this["createdByFirebaseUid"] as? String,
             lastModifiedBy = this["lastModifiedBy"] as? String,
             syncedToFirestore = true,
-            familyId = (this["familyId"] as? String)?.takeIf { it.isNotEmpty() }
+            familyId = (this["familyId"] as? String)?.takeIf { it.isNotEmpty() },
+            photo = ChildInfoPhotos.decodePortrait(this["photo"])
         )
     }
 

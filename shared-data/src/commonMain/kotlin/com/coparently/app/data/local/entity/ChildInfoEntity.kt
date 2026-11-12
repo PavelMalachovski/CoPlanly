@@ -20,6 +20,7 @@ import kotlinx.datetime.LocalDateTime
  * `{}` when never filled
  * @property medicalPhotosJson JSON array of `RecordPhotoCodec` references; `[]` when none
  * @property guestsJson JSON object of guest grants keyed by uid; `{}` when none
+ * @property photo `RecordPhotoCodec` reference to the child's portrait; null when none
  * @property createdAt Timestamp when the info was created
  * @property updatedAt Wall-clock time, for display, when the info was last updated
  * @property createdByFirebaseUid Firebase UID of the user who created this info
@@ -80,5 +81,10 @@ data class ChildInfoEntity(
      * The co-parenting relationship this record belongs to, or null while it belongs to nobody
      * but its creator. See [com.coparently.app.data.local.entity.EventEntity.familyId].
      */
-    val familyId: String? = null
+    val familyId: String? = null,
+    /**
+     * A `RecordPhotoCodec` reference to the child's portrait, or null for none (schema 47, the
+     * first migration written in common code). Last, because `ALTER TABLE … ADD COLUMN` appends.
+     */
+    val photo: String? = null
 )

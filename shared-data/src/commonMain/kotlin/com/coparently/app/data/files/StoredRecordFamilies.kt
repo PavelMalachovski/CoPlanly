@@ -20,8 +20,9 @@ data class StoredRecordFamily(val familyId: String?)
  * A caller passes the record's stored family, and null for a record it is creating, so null alone
  * cannot tell "a new record, about to be stamped with the family on screen" from "a stored record
  * that names no family". The second must not be filed under the family on screen while the parent
- * has two (`RecordPhotoPaths.uploadFamily`), and the four record kinds live in four tables, so this
- * reads the one the photograph's kind names.
+ * has two (`RecordPhotoPaths.uploadFamily`), and the record kinds live in four tables (a child's
+ * medical photos and portrait both in `child_info`), so this reads the one the photograph's kind
+ * names.
  */
 class StoredRecordFamilies(
     private val expenseDao: ExpenseDao,
@@ -36,7 +37,8 @@ class StoredRecordFamilies(
      */
     suspend fun of(kind: RecordPhotoKind, recordId: String): StoredRecordFamily? = when (kind) {
         RecordPhotoKind.RECEIPT -> expenseDao.getExpenseById(recordId)?.let { StoredRecordFamily(it.familyId) }
-        RecordPhotoKind.MEDICAL -> childInfoDao.getChildInfoById(recordId)?.let { StoredRecordFamily(it.familyId) }
+        RecordPhotoKind.MEDICAL,
+        RecordPhotoKind.CHILD -> childInfoDao.getChildInfoById(recordId)?.let { StoredRecordFamily(it.familyId) }
         RecordPhotoKind.PET -> petDao.getPetById(recordId)?.let { StoredRecordFamily(it.familyId) }
         RecordPhotoKind.EVENT -> eventDao.getEventById(recordId)?.let { StoredRecordFamily(it.familyId) }
     }

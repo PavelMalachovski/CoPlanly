@@ -36,8 +36,8 @@ import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 /**
- * A record's photographs between two phones (L-4): a child's medical photos, a pet's photos, an
- * expense's receipt and an event's photo, through `FirebaseImageStorage` — the class the
+ * A record's photographs between two phones (L-4): a child's medical photos and portrait, a pet's
+ * photos, an expense's receipt and an event's photo, through `FirebaseImageStorage` — the class the
  * ViewModels upload with — and `SharedFileCache`, the verified download the image loader uses,
  * against the real `storage.rules` and the real `onFamilyCreated` trigger on the emulators.
  *
@@ -67,6 +67,13 @@ class TwoParentRecordPhotosTest : TwoParentTest() {
         bob.childInfoRepository.pullOnce()
         assertEquals(listOf(medical), checkNotNull(bob.childInfoRepository.getChildInfoById(child.id)).medicalPhotos)
         assertOpensForBobOnly(medical, RecordPhotoKind.MEDICAL, child.id, familyId, carol)
+
+        EmulatorEnvironment.step("child's portrait")
+        val portrait = upload(RecordPhotoKind.CHILD, child.id)
+        alice.childInfoRepository.upsertChildInfo(child.copy(medicalPhotos = listOf(medical), photo = portrait))
+        bob.childInfoRepository.pullOnce()
+        assertEquals(portrait, checkNotNull(bob.childInfoRepository.getChildInfoById(child.id)).photo)
+        assertOpensForBobOnly(portrait, RecordPhotoKind.CHILD, child.id, familyId, carol)
 
         EmulatorEnvironment.step("pet photo")
         val pet = newPet(alice)

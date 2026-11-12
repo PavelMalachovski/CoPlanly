@@ -33,13 +33,15 @@ import java.io.File
  * encrypted file, and the file is still ciphertext afterwards.
  *
  * **Why one version back rather than forward.** Room takes the version it opens at from
- * `@Database`, which is 46, so opening "at 47" would need a second database class and Room's
- * processor in this module, which the move took away. Instead the encrypted file is written at 46
- * through the production path, its `user_version` is stepped back to 45, and it is reopened with a
- * connection-only `Migration(45, 46)` that replaces the real last step for this file. Room runs it
- * through exactly the code a `Migration(46, 47)` would go through: the open helper sees an older
- * version, Room finds the migration, hands it a connection, validates the schema and records the
- * new version. The real 45→46 migration is `CoPlanlyDatabaseMigrationTest`'s.
+ * `@Database`, so opening one version ahead would need a second database class and Room's
+ * processor in this module, which the move took away. Instead the encrypted file is written at the
+ * current version through the production path, its `user_version` is stepped back one, and it is
+ * reopened with a connection-only migration that replaces the real last step for this file (since
+ * schema 47 that step is itself a common one, `MIGRATION_46_47`; Room keeps the migration added
+ * last for a pair of versions). Room runs it through exactly the code the real step goes through:
+ * the open helper sees an older version, Room finds the migration, hands it a connection,
+ * validates the schema and records the new version. The real last step is
+ * `CoPlanlyDatabaseMigrationTest`'s.
  *
  * Hermetic as `EncryptedDatabaseTest` is: a database name of its own, every file it could leave
  * deleted before and after, and `DatabaseKey`'s one fixed passphrase store snapshotted and
