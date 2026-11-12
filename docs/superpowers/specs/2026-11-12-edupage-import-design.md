@@ -111,6 +111,15 @@ would stop every few days or weeks. Consequences the build carries:
   sign in again with the stored password. A refused password or a two-factor prompt during a
   background sign-in sets `NEEDS_PASSWORD`; the parent signs in again from the school screen.
 
+## Shipping before a live recording (owner decision, 12 November 2026)
+
+The client is written now, from the protocol description, with fixtures marked as inferred. **The
+EduPage row on the connect screen is hidden in release builds** behind a build flag
+(`BuildConfig`, read through `AppBuildValues` like the other flags) until Zuzana has run the
+device check with her account; debug builds show it. Until then nothing in a release build offers
+EduPage (design item 8). Turning the flag on in release is its own small pull request, after the
+device check passes and the fixtures have been replaced or confirmed by recorded traffic.
+
 ## Design
 
 ### The source seam
