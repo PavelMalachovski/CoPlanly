@@ -82,12 +82,12 @@ class CalendarScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant
                 onPrevious = {},
                 onNext = {},
                 onJumpToDate = {},
+                onSwapDays = {},
                 onAddEvent = {}
             )
             CustodyLegend(
                 parentNames = ScreenshotFixtures.parentNames,
-                showContactWindows = true,
-                trailing = { SwapDaysButton(onClick = {}) }
+                showContactWindows = true
             )
             MonthGridFixture()
         }

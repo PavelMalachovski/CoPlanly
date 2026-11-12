@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -31,7 +33,9 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.coparently.app.presentation.calendar.CalendarViewMode
+import com.coparently.app.presentation.calendar.SwapDaysButton
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.Spacing
@@ -62,9 +66,12 @@ import org.jetbrains.compose.resources.stringResource
  *   arrows (while days are chosen for a swap, the selection header pages the month)
  * @param onNext One period on; null as [onPrevious]
  * @param onJumpToDate Opens the date picker
+ * @param onSwapDays Opens the day swap's selection, or null to draw no "⇄" (outside Month view,
+ *   while days are chosen, without a family schedule)
  * @param onAddEvent Opens the new-event form, or null to draw no "+" (while days are chosen for a
  *   swap). It closes the row since the tester redesign of 12 November 2026: a floating "+" sat on
- *   the grid's last row once the six rows reached the card's bottom.
+ *   the grid's last row once the six rows reached the card's bottom. "⇄" sits before it, in one row
+ *   of actions, where it used to end the legend's row and push the legend onto two lines.
  */
 @Composable
 @Suppress("LongParameterList") // the bar's actions are this component's API surface
@@ -74,6 +81,7 @@ fun CalendarMonthBar(
     onPrevious: (() -> Unit)?,
     onNext: (() -> Unit)?,
     onJumpToDate: () -> Unit,
+    onSwapDays: (() -> Unit)? = null,
     onAddEvent: (() -> Unit)? = null
 ) {
     Row(
@@ -108,6 +116,7 @@ fun CalendarMonthBar(
                 )
             }
         }
+        onSwapDays?.let { onClick -> SwapDaysButton(onClick = onClick) }
         onAddEvent?.let { onClick ->
             FilledTonalIconButton(onClick = onClick) {
                 Icon(
@@ -131,11 +140,15 @@ private fun MonthTitle(selectedDate: LocalDate, onJumpToDate: () -> Unit, modifi
     val monthName = ReaderDateText.pattern(yearMonth, "LLLL").replaceFirstChar { it.uppercase() }
     val today by rememberToday()
     val label = if (yearMonth.year == today.year) monthName else "$monthName ${yearMonth.year}"
-    Text(
+    val style = MaterialTheme.typography.titleMedium
+    // The row holds up to six actions now, so a long month name ("Сентябрь", "September 2027")
+    // steps its size down before it ends in an ellipsis.
+    BasicText(
         text = label,
-        style = MaterialTheme.typography.titleMedium,
+        style = style.copy(color = MaterialTheme.colorScheme.onSurface),
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
+        autoSize = TextAutoSize.StepBased(minFontSize = MIN_TITLE_SIZE, maxFontSize = style.fontSize),
         modifier = modifier
             .clip(MaterialTheme.shapes.extraSmall)
             .clickable(
@@ -182,3 +195,6 @@ internal fun steppedDay(viewMode: CalendarViewMode, anchor: LocalDate, step: Int
     CalendarViewMode.WEEK -> anchor.plus(step, DateTimeUnit.WEEK)
     CalendarViewMode.DAY, CalendarViewMode.MONTH -> anchor.plus(step, DateTimeUnit.DAY)
 }
+
+/** The smallest the month title steps down to before it ends in an ellipsis. */
+private val MIN_TITLE_SIZE = 12.sp

@@ -144,8 +144,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    are tight on purpose (tester feedback, 12 November 2026): `titleMediumEmphasized` over
    `bodySmall`, 4 dp gaps, and the strip's chips at a 40 dp target (`LocalMinimumInteractiveComponentSize` around it in `CalendarScreen`), so the grid
    gets the height. The month title, Today, the
-   arrows and the "+" for a new event head the grid's own white card (`CalendarMonthBar` in
-   `CalendarGridCard`, the legend with the swap button under them); tapping the title opens "Jump to
+   arrows, the swap button and the "+" for a new event head the grid's own white card in one row
+   (`CalendarMonthBar` in `CalendarGridCard`, the legend under them on the full width; the title
+   steps its size down before it ellipsises); tapping the title opens "Jump to
    date". **The "+" is the bar's, not a floating button** (tester feedback, 12 November 2026): once
    the six rows reached the card's bottom a floating "+" covered the last row's cells. The Scaffold's
    floating slot holds only the red delete button a long press or a drag brings up. The Today card
@@ -536,7 +537,8 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
       (`receiverOf`), and the bar, the review sheet, the grid's marks, the push and the answer card
       all read it; a day nobody is recorded for is left out and counted, never guessed.
     - **The way in is visible**: an icon-only "⇄" (`SwapDaysButton`, "Swap days" for TalkBack and on
-      a long press, owner decision) at the end of the legend row opens selection mode empty; the long
+      a long press, owner decision) in the month bar, before the "+" (12 November 2026; it ended the
+      legend's row before) opens selection mode empty; the long
       press stays. While choosing, the calendar header is `SwapSelectionHeader` (close, title, month
       arrows), **a tap only chooses** — a borrowed day pages to its month and is chosen there
       (`SwapTap`), never opens Day view — and the selection is `rememberSaveable` across paging and

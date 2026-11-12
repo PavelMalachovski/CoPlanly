@@ -1028,6 +1028,13 @@ fun CalendarScreen(
                         onPrevious = { stepPeriod(-1) }.takeUnless { swapHeaderShown },
                         onNext = { stepPeriod(1) }.takeUnless { swapHeaderShown },
                         onJumpToDate = { showDatePicker = true },
+                        // The visible way into a swap (SW-1): the long press alone was found by
+                        // nobody. Month only, where the grid can show the chosen days; in the bar
+                        // since 12 November 2026, so the legend keeps one line.
+                        onSwapDays = offerSwapDay?.takeIf {
+                            custodyModel != null && viewMode == CalendarViewMode.MONTH && !selectingSwap &&
+                                grid.followsFamily
+                        }?.let { { selectingSwap = true } },
                         // Pre-fills the day on screen: the selected day when there is one, otherwise
                         // the anchor of the current view — a null date made the form default to
                         // today even with another day highlighted.
@@ -1044,11 +1051,6 @@ fun CalendarScreen(
                             showContactWindows = custodyModel?.contactWindows?.isNotEmpty() == true,
                             showPendingSwap = viewMode == CalendarViewMode.MONTH && grid.followsFamily &&
                                 pendingSwapTo.keys.any { it.yearMonth == displayedMonth },
-                            // The visible way into a swap (SW-1): the long press alone was found
-                            // by nobody. Month only, where the grid can show the chosen days.
-                            trailing = offerSwapDay?.takeIf {
-                                viewMode == CalendarViewMode.MONTH && !selectingSwap && grid.followsFamily
-                            }?.let { { SwapDaysButton(onClick = { selectingSwap = true }) } },
                             modifier = Modifier.padding(horizontal = dims.paddingSmall / 2)
                         )
                     }
