@@ -164,8 +164,11 @@ fun NavGraph(
         snackbarHost = { LocalAppMessages.current?.let { SnackbarHost(it.hostState) } },
         bottomBar = {
             BottomBarSlot(
-                navigationLayout, onTopLevelRoute, currentRoute, navController,
-                TabBadges(chatUnreadCount, homeBadgeCount)
+                layout = navigationLayout,
+                visible = onTopLevelRoute,
+                currentRoute = currentRoute,
+                navController = navController,
+                badges = TabBadges(chatUnreadCount, homeBadgeCount)
             )
         }
     ) { innerPadding ->
@@ -176,8 +179,11 @@ fun NavGraph(
                 .consumeWindowInsets(innerPadding)
         ) {
             RailSlot(
-                navigationLayout, onTopLevelRoute, currentRoute, navController,
-                TabBadges(chatUnreadCount, homeBadgeCount)
+                layout = navigationLayout,
+                visible = onTopLevelRoute,
+                currentRoute = currentRoute,
+                navController = navController,
+                badges = TabBadges(chatUnreadCount, homeBadgeCount)
             )
             NavHost(
                 navController = navController,
