@@ -124,5 +124,7 @@
     <string name="child_photo_add">Add a photo</string>
     <string name="child_photo_remove">Remove photo</string>
     <string name="child_photo_save_first">Save first to add a photo</string>
+    <string name="child_photo_upload_failed">The photo could not be uploaded. Try again.</string>
+    <string name="child_photo_delete_failed">The photo could not be removed. Try again.</string>
     <string name="child_photo_private">Only you and %1$s see this photo</string>
 </resources>

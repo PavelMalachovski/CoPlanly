@@ -32,6 +32,8 @@ import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.platform.LocalShareSheet
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.resources.Res
+import com.coparently.app.resources.child_photo_delete_failed
+import com.coparently.app.resources.child_photo_upload_failed
 import com.coparently.app.resources.childinfo_back
 import com.coparently.app.resources.childinfo_record_gone_description
 import com.coparently.app.resources.childinfo_record_gone_title
@@ -95,10 +97,14 @@ fun ChildDetailScreen(
     val photoError by viewModel.photoError.collectAsState()
     val uploadFailed = stringResource(Res.string.medical_photos_upload_failed)
     val deleteFailed = stringResource(Res.string.medical_photos_delete_failed)
+    val portraitUploadFailed = stringResource(Res.string.child_photo_upload_failed)
+    val portraitDeleteFailed = stringResource(Res.string.child_photo_delete_failed)
     LaunchedEffect(photoError) {
         val message = when (photoError) {
             MedicalPhotoError.UPLOAD_FAILED -> uploadFailed
             MedicalPhotoError.DELETE_FAILED -> deleteFailed
+            MedicalPhotoError.PORTRAIT_UPLOAD_FAILED -> portraitUploadFailed
+            MedicalPhotoError.PORTRAIT_DELETE_FAILED -> portraitDeleteFailed
             null -> null
         }
         if (message != null) {
