@@ -521,8 +521,11 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
       dashed while waiting, and "→ L"/"→ you" in words (the co-parent's initial: a cell is too narrow
       for a name, and its description says it in full). They replaced the grey arrows; in-month
       cells only. `ParentColorsTest` holds the day number on the hatch to AA.
-    - **The sheet shows both sides and the result** (`DaySwapSheet` over `DaySwapSheetContent`):
-      "You give Lana", "You take", the mini months, "Send to Lana"; after sending, a snackbar says it
+    - **The sheet shows both sides, compactly, and the result** (`DaySwapSheet` over
+      `DaySwapSheetContent`, opening partly expanded so the grid stays in view): a title that counts
+      the days, one row per way from `swapSheetRows` ("Fri 13, Sat 14 Nov → Lana", "→ you"; the given
+      days first), "Add a note" and "Answer by …" chips that open their fields in place, and a pinned
+      "Send to Lana" — no mini months (the inbox card and Home's pop-up keep them); after sending, a snackbar says it
       went and offers Withdraw for exactly that group (`CalendarViewModel.swapSent`).
     - **The push names the sender and the dates**: `datesToYou`/`datesToSender` (ISO dates, from the
       addressee's side, bounded at 160 in `firestore.rules`) and `actorName` ride the existing swap

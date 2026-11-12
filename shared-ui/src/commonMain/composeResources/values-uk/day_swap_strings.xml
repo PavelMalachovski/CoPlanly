@@ -131,4 +131,11 @@
         <item quantity="other">%1$s просить %2$d вашого дня</item>
     </plurals>
     <string name="day_swap_day_to_you">%1$s → вам</string>
+    <plurals name="day_swap_sheet_title_count">
+        <item quantity="one">Обмін: %1$d день з %2$s</item>
+        <item quantity="few">Обмін: %1$d дні з %2$s</item>
+        <item quantity="many">Обмін: %1$d днів з %2$s</item>
+        <item quantity="other">Обмін: %1$d дня з %2$s</item>
+    </plurals>
+    <string name="day_swap_add_note">Додати нотатку</string>
 </resources>

@@ -109,4 +109,9 @@
         <item quantity="other">%1$s bittet um %2$d deiner Tage</item>
     </plurals>
     <string name="day_swap_day_to_you">%1$s → dir</string>
+    <plurals name="day_swap_sheet_title_count">
+        <item quantity="one">%1$d Tag mit %2$s tauschen</item>
+        <item quantity="other">%1$d Tage mit %2$s tauschen</item>
+    </plurals>
+    <string name="day_swap_add_note">Notiz hinzufügen</string>
 </resources>
