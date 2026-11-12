@@ -47,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.coparently.app.data.repository.RatioSubmission
+import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.FamilyKind
 import com.coparently.app.presentation.common.ChildAvatarStack
@@ -291,24 +292,7 @@ fun FamilyScreen(
             AgreementsGroup(schedule, destinations)
 
             Group(Res.string.family_group_home) {
-                if (FamilyKind.CHILDREN in caresFor) {
-                    NavRow(
-                        Icons.Default.ChildCare,
-                        Res.string.settings_child_info_title,
-                        stringResource(
-                            if (hasChildren) {
-                                Res.string.settings_child_info_description
-                            } else {
-                                Res.string.family_children_add
-                            }
-                        ),
-                        destinations.childInfo,
-                        leading = children.takeIf { it.isNotEmpty() }?.let { kids ->
-                            { ChildAvatarStack(kids, IconSizes.Large) }
-                        }
-                    )
-                    Divider()
-                }
+                ChildrenRow(FamilyKind.CHILDREN in caresFor, hasChildren, children, destinations.childInfo)
                 if (FamilyKind.PETS in caresFor) {
                     NavRow(
                         Icons.Default.Pets,
@@ -527,6 +511,34 @@ private fun SectionGroupScope.EarlierFamiliesRow(shown: Boolean, onOpen: () -> U
     if (!shown) return
     Divider()
     NavRow(Icons.Default.History, Res.string.earlier_families_title, Res.string.earlier_families_row_supporting, onOpen)
+}
+
+/**
+ * The children row: their avatars lead it once there are any, and until then it asks for the first
+ * child. Drawn only for a family that cares for children.
+ */
+@Composable
+private fun SectionGroupScope.ChildrenRow(
+    shown: Boolean,
+    hasChildren: Boolean,
+    children: List<ChildInfo>,
+    onOpen: () -> Unit
+) {
+    if (!shown) return
+    NavRow(
+        Icons.Default.ChildCare,
+        Res.string.settings_child_info_title,
+        stringResource(
+            if (hasChildren) Res.string.settings_child_info_description else Res.string.family_children_add
+        ),
+        onOpen,
+        leading = if (children.isEmpty()) {
+            null
+        } else {
+            { ChildAvatarStack(children, IconSizes.Large) }
+        }
+    )
+    Divider()
 }
 
 /** A row that opens a screen, with its title and description as resources. */

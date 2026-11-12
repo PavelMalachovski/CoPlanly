@@ -3,11 +3,11 @@ package com.coparently.app.presentation.childinfo
 import com.coparently.app.data.platform.Analytics
 import com.coparently.app.data.platform.CrashReporter
 import com.coparently.app.data.remote.firebase.SignedInUser
+import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.GuestRepository
 import com.coparently.app.domain.repository.RecordPhotoStorage
-import com.coparently.app.domain.files.RecordPhotoKind
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
