@@ -31,7 +31,7 @@ import com.coparently.app.presentation.theme.titleMediumEmphasized
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.home_timeline_meta
 import com.coparently.app.resources.home_timeline_meta_you
-import com.coparently.app.resources.home_week_tile_has_events
+import com.coparently.app.resources.home_week_tile_with_events
 import com.coparently.app.utils.ReaderDateText
 import kotlinx.datetime.LocalDate
 import org.jetbrains.compose.resources.stringResource
@@ -84,7 +84,9 @@ private fun WeekTile(
     modifier: Modifier = Modifier
 ) {
     val shape = MaterialTheme.shapes.medium
-    val wash = day.dayParent?.let { ParentColors.container(it) } ?: Color.Transparent
+    // The calendar grid's custody wash (`DayCellColors`): the parent's wash at the custody alpha.
+    val wash = day.dayParent?.let { ParentColors.container(it, alpha = ParentColors.custodyTintAlpha) }
+        ?: Color.Transparent
     val slot = day.dayParent
     val dotColor = when {
         !day.hasEvents -> Color.Transparent
@@ -143,5 +145,5 @@ private fun tileDescription(day: WeekDay, parentNames: ParentNames): String {
             stringResource(Res.string.home_timeline_meta, date, parentNames.labelFor(slot))
         }
     } ?: date
-    return if (day.hasEvents) "$whose, ${stringResource(Res.string.home_week_tile_has_events)}" else whose
+    return if (day.hasEvents) stringResource(Res.string.home_week_tile_with_events, whose) else whose
 }

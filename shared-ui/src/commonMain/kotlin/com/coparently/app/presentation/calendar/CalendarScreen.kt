@@ -702,16 +702,15 @@ fun CalendarScreen(
         }
     }
     // A day opened from elsewhere — Home's week tiles (redesign, November 2026) — shows that day in
-    // Day view, with the default Back; answered once, like the tab taps above, and after them.
-    val dayRequest by CalendarDayRequests.request.collectAsState()
-    var answeredDayRequest by rememberSaveable { mutableIntStateOf(dayRequest?.id ?: 0) }
-    LaunchedEffect(dayRequest) {
-        val request = dayRequest
-        if (request != null && request.id != answeredDayRequest) {
-            answeredDayRequest = request.id
+    // Day view, with the default Back. Consumed once, so the first composition in a process opens
+    // it too; declared after the tab-tap effect, so on the same frame the day wins over its reset.
+    val pendingDay by CalendarDayRequests.pending.collectAsState()
+    LaunchedEffect(pendingDay) {
+        val date = if (pendingDay != null) CalendarDayRequests.consume() else null
+        if (date != null) {
             dayOpenedFromMonth = false
             endSwapSelection()
-            calendarViewModel.setSelectedDate(request.date)
+            calendarViewModel.setSelectedDate(date)
             calendarViewModel.setViewMode(CalendarViewMode.DAY)
         }
     }

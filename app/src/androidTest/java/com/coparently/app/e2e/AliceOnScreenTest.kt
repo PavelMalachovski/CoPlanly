@@ -320,6 +320,13 @@ abstract class AliceOnScreenTest {
         val waiting = hasText(string(R.string.home_waiting_for_coparent, "").trim(), substring = true) and
             hasClickAction()
         val seeAll = hasText(string(R.string.home_updates_see_all)) and hasClickAction()
+        // The dashboard first, then a bounded while for the requests to load: the card is left out
+        // until they have, so its absence at the first frame does not mean nothing waits.
+        waitFor("Home's Updates card", seeAll, HOME_TIMEOUT_MS)
+        val settleBy = SystemClock.uptimeMillis() + REQUESTS_SETTLE_MS
+        composeTestRule.pumpUntil("the open requests card, or nothing waiting", 2 * REQUESTS_SETTLE_MS) {
+            exists(waiting) || SystemClock.uptimeMillis() > settleBy
+        }
         tap(if (composeTestRule.exists(waiting)) waiting else seeAll)
     }
 
@@ -440,6 +447,9 @@ abstract class AliceOnScreenTest {
         private const val TAG = "AliceOnScreenTest"
         private const val PASSWORD = "e2e-password-1"
         private const val HOME_TIMEOUT_MS = 60_000L
+
+        /** How long Home is given to show the open requests card before "See all" is taken. */
+        private const val REQUESTS_SETTLE_MS = 5_000L
         private const val SHORT_ID_LENGTH = 6
 
         /** Past every `WhileSubscribed(5_000)` in the app's process-lifetime singletons, with margin. */

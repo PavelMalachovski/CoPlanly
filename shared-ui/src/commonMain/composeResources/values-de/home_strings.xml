@@ -104,6 +104,6 @@
     <!-- Under the handover card's headline: whom the days go to. -->
     <string name="home_handover_goes_to_you">Dann bei dir</string>
     <string name="home_handover_goes_to">Dann bei %1$s</string>
-    <!-- Appended to a week tile's spoken description when the day has events. -->
-    <string name="home_week_tile_has_events">mit Terminen</string>
+    <!-- A week tile's spoken description on a day with events. %1$s = the day and whose it is. -->
+    <string name="home_week_tile_with_events">%1$s, mit Terminen</string>
 </resources>

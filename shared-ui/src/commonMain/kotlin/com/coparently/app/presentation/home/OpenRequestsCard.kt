@@ -65,6 +65,7 @@ fun OpenRequestsCard(state: RequestsRowState, coParentName: String, onOpenChange
                 }
             )
         }
+        if (state.waitingOnMe > 0 && state.waitingOnThem > 0) Divider()
         if (state.waitingOnThem > 0) {
             SectionRow(
                 title = stringResource(Res.string.home_waiting_for_coparent, coParentName),

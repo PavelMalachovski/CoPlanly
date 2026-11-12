@@ -407,9 +407,12 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     `CustodyResolver` over the same Room rows Home reads, so swaps, contact windows and private
     events follow Home's rules. Don't give the widget a rule of its own. **One wording**:
     `TodayWidgetText` uses the app's string for every line it shares with Home ("Today with
-    Alex", the hero's handover sentence, the card's contact window and empty day), names parents
+    Alex", the handover sentence, the card's contact window and empty day), names parents
     through `ParentNames` and colours them from the family's palette. `widget_strings.xml` holds
-    only what the app never says. **Room and nothing else**: the co-parent's name lives in
+    only what the app never says. **One accepted divergence** (redesign, November 2026): Home's
+    handover card reads "Handover in N days" over "date · Goes to …" (`HandoverCard`), while the
+    widget keeps the former hero's one sentence ("Handover to you in 4 days",
+    `home_handover_hero_*`), which a widget line has the room for and the card splits in two. **Room and nothing else**: the co-parent's name lives in
     Firestore alone, so the app remembers the parents for the widget while `MainActivity` is
     started (`TodayWidgetRefresher.followParents` → `TodayWidgetNames`, in `EncryptedPreferences`,
     cleared with them and refused for another uid). Never attach `ParentsSource` from a widget
