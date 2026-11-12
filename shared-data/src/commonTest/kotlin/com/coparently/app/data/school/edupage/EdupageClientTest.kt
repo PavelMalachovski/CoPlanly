@@ -155,6 +155,66 @@ class EdupageClientTest {
     }
 
     @Test
+    fun `a host outside edupage dot org is refused by every entry point with nothing sent`() = runTest {
+        val server = RecordingServer { answer(LOGIN_PAGE) }
+        val client = EdupageClient(server.client)
+        val session = EdupageClient(RecordingServer { answer(USER_PAGE) }.client)
+            .resume(SCHOOL_HOST, mapOf("PHPSESSID" to SESSION_ID))
+
+        for (host in listOf("evil.example", "edupage.org.evil.example", "notedupage.org")) {
+            assertFailsWith<EdupageException.NotEdupage>(host) { client.signIn(host, USERNAME, PASSWORD) }
+            assertFailsWith<EdupageException.NotEdupage>(host) { client.resume(host, mapOf("a" to "b")) }
+            assertFailsWith<EdupageException.NotEdupage>(host) {
+                client.timelineJson(session.copy(host = host), LocalDate(2026, 11, 2))
+            }
+        }
+        assertTrue(server.requests.isEmpty())
+    }
+
+    @Test
+    fun `a 307 or 308 on the sign-in form keeps POST and the body`() = runTest {
+        for (status in listOf(307, 308)) {
+            val server = RecordingServer { request ->
+                when {
+                    request.url.encodedPath == "/login/" -> answer(LOGIN_PAGE)
+                    request.url.encodedPath == "/login/edubarLogin.php" && request.url.host == LOGIN_HOST ->
+                        answer("", status = status, headers = headersOf(
+                            HttpHeaders.Location, "https://$SCHOOL_HOST/login/edubarLogin.php"
+                        ))
+                    else -> answer(USER_PAGE)
+                }
+            }
+            signIn(server)
+            val last = server.requests.last()
+            assertEquals("POST", last.method.value, "status $status")
+            assertEquals(SCHOOL_HOST, last.url.host)
+            assertEquals(server.bodyOf(server.requests.size - 2), server.bodyOf(server.requests.size - 1))
+            assertTrue(server.bodyOf(server.requests.size - 1).contains("password="))
+        }
+    }
+
+    @Test
+    fun `a 301 or 303 on the sign-in form becomes a GET with no body`() = runTest {
+        for (status in listOf(301, 303)) {
+            val server = RecordingServer { request ->
+                when {
+                    request.url.encodedPath == "/login/" -> answer(LOGIN_PAGE)
+                    request.url.encodedPath == "/login/edubarLogin.php" ->
+                        answer("", status = status, headers = headersOf(
+                            HttpHeaders.Location, "https://$SCHOOL_HOST/user"
+                        ))
+                    else -> answer(USER_PAGE)
+                }
+            }
+            signIn(server)
+            val last = server.requests.last()
+            assertEquals("GET", last.method.value, "status $status")
+            assertEquals(SCHOOL_HOST, last.url.host)
+            assertEquals("", server.bodyOf(server.requests.size - 1))
+        }
+    }
+
+    @Test
     fun `resume with an expired cookie is SessionExpired`() = runTest {
         val server = RecordingServer { request ->
             if (request.url.encodedPath == "/user") {

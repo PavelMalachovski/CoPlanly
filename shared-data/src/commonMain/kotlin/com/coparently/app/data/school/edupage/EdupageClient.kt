@@ -28,8 +28,8 @@ import kotlinx.serialization.json.putJsonArray
  * EduPage keeps a signed-in account in a session cookie and moves a sign-in from
  * `login1.edupage.org` to the school's own host, so the client follows redirects itself, one
  * request at a time ([sendOnce]), carrying every cookie an answer sets to the next host. It follows
- * at most [MAX_REDIRECTS] redirects, only to `https` hosts of the `edupage.org` family (or the host
- * it started on): 301, 302 and 303 as a GET without a body, 307 and 308 with the method and body.
+ * at most [MAX_REDIRECTS] redirects, only to `https` hosts of the `edupage.org` family: 301, 302 and 303
+ * as a GET without a body, 307 and 308 with the method and body.
  *
  * Stateless, and it only fetches: storing the session and reading the timetable and the timeline
  * out of what EduPage answers are the import's job. The requests follow the open-source
@@ -155,7 +155,7 @@ class EdupageClient(private val http: HttpClient) {
                 throw EdupageException.Network(e)
             }
             jar.absorb(answer.headers.getAll(HttpHeaders.SetCookie).orEmpty())
-            val target = redirectTarget(answer, address, start)
+            val target = redirectTarget(answer, address)
             if (target == null || followed >= MAX_REDIRECTS) return Reached(answer, address, followed > 0)
             followed++
             address = target
@@ -169,11 +169,10 @@ class EdupageClient(private val http: HttpClient) {
     }
 
     /** Where [answer] redirects to, when it is a redirect the client follows; otherwise null. */
-    private fun redirectTarget(answer: Answer, from: WebAddress, start: WebAddress): WebAddress? {
+    private fun redirectTarget(answer: Answer, from: WebAddress): WebAddress? {
         if (answer.status !in FOLLOWED) return null
         val target = answer.headers[HttpHeaders.Location]?.let(from::resolve) ?: return null
-        val inFamily = target.host == start.host || target.host.endsWith(EDUPAGE_FAMILY)
-        return target.takeIf { it.isHttps && inFamily }
+        return target.takeIf { it.isHttps && isEdupageHost(it.host) }
     }
 
     /**
@@ -247,7 +246,8 @@ class EdupageClient(private val http: HttpClient) {
 
         /**
          * `https://{host}`, after checking that [host] is a host alone (no scheme, port, path or
-         * account), so nothing typed can send the password elsewhere.
+         * account) and is `edupage.org` or one of its subdomains, so nothing typed can send the
+         * password elsewhere.
          */
         fun originOf(host: String): String {
             val clean = host.trim().lowercase()
@@ -255,8 +255,13 @@ class EdupageClient(private val http: HttpClient) {
             if (address == null || address.host != clean || address.port != HTTPS_PORT) {
                 throw EdupageException.NotEdupage("Not a host")
             }
+            if (!isEdupageHost(address.host)) throw EdupageException.NotEdupage("Not an EduPage host")
             return "https://${address.host}"
         }
+
+        /** True for `edupage.org` and its subdomains; [host] is already lower-cased. */
+        fun isEdupageHost(host: String): Boolean =
+            host == EDUPAGE_FAMILY.removePrefix(".") || host.endsWith(EDUPAGE_FAMILY)
 
         const val HTTPS_PORT = 443
     }
