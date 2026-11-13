@@ -56,4 +56,6 @@
     <string name="common_discard_changes_message">Зміни тут ще не збережено. Якщо піти зараз, вони пропадуть.</string>
     <string name="common_expanded">Розгорнуто</string>
     <string name="common_collapsed">Згорнуто</string>
+    <string name="children_avatars_more">+%1$d</string>
+    <string name="children_avatars_description">Діти: %1$s</string>
 </resources>

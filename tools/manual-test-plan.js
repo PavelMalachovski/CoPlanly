@@ -139,6 +139,11 @@ const RULES = [
     paths: ['K/data/school/**', 'K/domain/school/**', 'K/presentation/school/**', 'K/data/http/**'],
   },
   {
+    sections: ['3.36'],
+    why: 'the EduPage school import',
+    paths: ['K/data/school/**', 'K/domain/school/**', 'K/presentation/school/**', 'K/data/http/**'],
+  },
+  {
     sections: ['3.16'],
     why: 'the Add button, "Later", the default currency or the reader\'s clock',
     paths: ['K/presentation/common/FabScrollVisibility.kt', 'K/presentation/expenses/ExpenseScreen.kt',

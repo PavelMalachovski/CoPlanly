@@ -8,6 +8,7 @@ import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.di.koin.appModules
 import com.coparently.app.di.koin.firebaseModule
 import com.coparently.app.domain.ai.AiAssistAvailability
+import com.coparently.app.presentation.platform.AppBuildValues
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.crashlytics.FirebaseCrashlytics
@@ -43,7 +44,8 @@ import org.koin.test.verify.verify
  *    module, so the list cannot claim a type the module stopped defining.
  *  * [CustodyModelRepository]'s public primary constructor takes the `CoroutineScope` the tests
  *    hand in; the graph calls its secondary constructor, which supplies the scope itself.
- *  * [AiAssistAvailability] is built from `BuildConfig` in its definition, not resolved.
+ *  * [AiAssistAvailability] and [AppBuildValues] are built from `BuildConfig` in their
+ *    definitions, not resolved.
  *  * Ktor's `HttpClient` is built by `shared-data`'s `httpClient`, which hands its public
  *    constructor the [HttpClientEngine] (OkHttp) itself; nothing resolves an engine.
  */
@@ -68,7 +70,8 @@ class KoinGraphTest {
                 firebaseSdkTypes + HttpClientEngine::class,
             injections = injectedParameters(
                 definition<CustodyModelRepository>(CoroutineScope::class),
-                definition<AiAssistAvailability>(Boolean::class)
+                definition<AiAssistAvailability>(Boolean::class),
+                definition<AppBuildValues>(String::class, Boolean::class)
             )
         )
     }

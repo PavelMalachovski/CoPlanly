@@ -186,11 +186,16 @@ describe('record photo references', () => {
         photos.recordPhotoFolders('expenses', 'ex1', {familyId: '', createdByFirebaseUid: 'alice'}),
         ['receipts/solo_alice/ex1/']);
     // Never a folder that would widen to a whole family or a whole prefix.
+    // A child's record has two photo folders: the medical photos and the portrait.
+    assert.deepStrictEqual(
+        photos.recordPhotoFolders('child_info', 'c1', {familyId: FAMILY, createdByFirebaseUid: 'alice'}),
+        [`medical_photos/${FAMILY}/c1/`, 'medical_photos/solo_alice/c1/',
+          `child_photos/${FAMILY}/c1/`, 'child_photos/solo_alice/c1/']);
     assert.deepStrictEqual(photos.recordPhotoFolders('events', '', {familyId: FAMILY}), []);
     assert.deepStrictEqual(photos.recordPhotoFolders('budgets', 'b1', {familyId: FAMILY}), []);
     assert.deepStrictEqual(photos.soloPhotoFolders('alice'), [
-      'medical_photos/solo_alice/', 'pet_photos/solo_alice/', 'receipts/solo_alice/',
-      'event_images/solo_alice/',
+      'medical_photos/solo_alice/', 'child_photos/solo_alice/', 'pet_photos/solo_alice/',
+      'receipts/solo_alice/', 'event_images/solo_alice/',
     ]);
     assert.deepStrictEqual(photos.soloPhotoFolders(''), []);
   });
@@ -229,6 +234,66 @@ describe('movePhotosToFamily', () => {
     const second = await photos.movePhotosToFamily(db, bucket, 'alice', FAMILY);
     assert.deepStrictEqual(second, {moved: 0, rewritten: 0, missing: 0});
     assert.strictEqual(bucket.copies.length, 3);
+  });
+
+  it('moves a child\'s portrait and medical photos in one write, and keeps a family\'s own',
+      async () => {
+        const db = fakeDb(pairSeed({
+          pets: {},
+          expenses: {},
+          child_info: {
+            c1: {
+              createdByFirebaseUid: 'alice', familyId: FAMILY,
+              photo: ref('child_photos/solo_alice/c1/p.jpg'),
+              medicalPhotos: [ref('medical_photos/solo_alice/c1/m.jpg'), ref(`medical_photos/${FAMILY}/c1/k.jpg`)],
+            },
+          },
+        }));
+        const bucket = fakeBucket([
+          'child_photos/solo_alice/c1/p.jpg', 'medical_photos/solo_alice/c1/m.jpg',
+          `medical_photos/${FAMILY}/c1/k.jpg`, 'event_images/solo_alice/ev1/e.jpg',
+        ]);
+        let writes = 0;
+        const batch = db.batch.bind(db);
+        db.batch = () => {
+          const b = batch();
+          const update = b.update.bind(b);
+          b.update = (r, u) => {
+            if (r.collection === 'child_info') writes++;
+            update(r, u);
+          };
+          return b;
+        };
+
+        const result = await photos.movePhotosToFamily(db, bucket, 'alice', FAMILY);
+
+        // The portrait, the medical photo and ev1's photo; two records rewritten.
+        assert.deepStrictEqual(result, {moved: 3, rewritten: 2, missing: 0});
+        assert.strictEqual(writes, 1);
+        assert.strictEqual(db._docs.child_info.c1.photo, ref(`child_photos/${FAMILY}/c1/p.jpg`));
+        assert.deepStrictEqual(db._docs.child_info.c1.medicalPhotos,
+            [ref(`medical_photos/${FAMILY}/c1/m.jpg`), ref(`medical_photos/${FAMILY}/c1/k.jpg`)]);
+        assert.ok(!bucket.objects.has('child_photos/solo_alice/c1/p.jpg'));
+        assert.ok(bucket.objects.has(`child_photos/${FAMILY}/c1/p.jpg`));
+        // A portrait reference under the medical prefix is not moved as a portrait.
+        assert.deepStrictEqual(bucket.copies.map(([from]) => from).sort(), [
+          'child_photos/solo_alice/c1/p.jpg', 'event_images/solo_alice/ev1/e.jpg',
+          'medical_photos/solo_alice/c1/m.jpg',
+        ]);
+      });
+
+  it('never moves a portrait reference that names the medical prefix', async () => {
+    const db = fakeDb({
+      child_info: {
+        c1: {createdByFirebaseUid: 'alice', familyId: FAMILY, photo: ref('medical_photos/solo_alice/c1/m.jpg')},
+      },
+    });
+    const bucket = fakeBucket(['medical_photos/solo_alice/c1/m.jpg']);
+
+    const result = await photos.movePhotosToFamily(db, bucket, 'alice', FAMILY);
+
+    assert.deepStrictEqual(result, {moved: 0, rewritten: 0, missing: 0});
+    assert.strictEqual(db._docs.child_info.c1.photo, ref('medical_photos/solo_alice/c1/m.jpg'));
   });
 
   it('finishes a move that died between the copy and the delete', async () => {
@@ -365,7 +430,13 @@ describe('purgeLegacyPhotoPathsImpl', () => {
         pet1: {photos: ['https://legacy.example/pet.jpg', ref(`pet_photos/${FAMILY}/pet1/a.jpg`)]},
         pet2: {photos: [ref(`pet_photos/${FAMILY}/pet2/b.jpg`)]},
       },
-      child_info: {c1: {medicalPhotos: ['medical_photos/c1/p1.jpg'], updatedAt: '2026-09-01T10:00:00'}},
+      child_info: {
+        c1: {
+          medicalPhotos: ['medical_photos/c1/p1.jpg'], updatedAt: '2026-09-01T10:00:00',
+          photo: ref(`child_photos/${FAMILY}/c1/p.jpg`),
+        },
+        c2: {medicalPhotos: ['https://legacy.example/m.jpg'], photo: 'https://legacy.example/p.jpg'},
+      },
       expenses: {
         ex1: {receiptUrl: 'https://legacy.example/r.jpg', deletedAtMillis: 5},
         ex2: {receiptUrl: ''},
@@ -379,6 +450,7 @@ describe('purgeLegacyPhotoPathsImpl', () => {
       'pet_photos/pet1/photo.jpg',
       `pet_photos/${FAMILY}/pet1/a.jpg`,
       'pet_photos/solo_alice/pet3/c.jpg',
+      `child_photos/${FAMILY}/c1/p.jpg`,
       `family_documents/${FAMILY}/d1/order.pdf`,
     ]);
 
@@ -386,13 +458,20 @@ describe('purgeLegacyPhotoPathsImpl', () => {
 
     assert.strictEqual(summary.objectsDeleted, 4);
     assert.deepStrictEqual([...bucket.objects.keys()].sort(), [
+      `child_photos/${FAMILY}/c1/p.jpg`,
       `family_documents/${FAMILY}/d1/order.pdf`,
       `pet_photos/${FAMILY}/pet1/a.jpg`,
       'pet_photos/solo_alice/pet3/c.jpg',
     ]);
-    assert.strictEqual(summary.recordsCleared, 3);
+    // c2's two legacy fields are one record cleared.
+    assert.strictEqual(summary.recordsCleared, 4);
+    assert.strictEqual(summary.perCollection.child_info, 2);
     assert.deepStrictEqual(db._docs.pets.pet1.photos, [ref(`pet_photos/${FAMILY}/pet1/a.jpg`)]);
     assert.deepStrictEqual(db._docs.child_info.c1.medicalPhotos, []);
+    // A current portrait stays; a legacy one is blanked like a receipt.
+    assert.strictEqual(db._docs.child_info.c1.photo, ref(`child_photos/${FAMILY}/c1/p.jpg`));
+    assert.deepStrictEqual(db._docs.child_info.c2.medicalPhotos, []);
+    assert.strictEqual(db._docs.child_info.c2.photo, '');
     // Only the photo field is written: no clock and no tombstone field moves.
     assert.strictEqual(db._docs.child_info.c1.updatedAt, '2026-09-01T10:00:00');
     assert.strictEqual(db._docs.expenses.ex1.receiptUrl, '');

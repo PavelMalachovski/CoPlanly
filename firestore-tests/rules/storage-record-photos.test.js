@@ -1,6 +1,7 @@
 /**
- * `storage.rules` for the four record-photo prefixes (L-4): `medical_photos/`, `pet_photos/`,
- * `receipts/` and `event_images/`, plus the closing deny-all.
+ * `storage.rules` for the five record-photo prefixes (L-4): `medical_photos/`, `child_photos/` (a
+ * child's portrait, which came later in the same shape), `pet_photos/`, `receipts/` and
+ * `event_images/`, plus the closing deny-all.
  *
  * Every photo lives at `{prefix}/{owner}/{recordId}/{objectName}`, where `{owner}` is a family id
  * — `FamilyKey.of(uidA, uidB)`, the two parents' uids sorted and joined with `__` — or
@@ -95,7 +96,7 @@ function freshPath(prefix, owner) {
   return `${prefix}/${owner}/record-${objectCounter}/photo-${objectCounter}.jpg`;
 }
 
-const PREFIXES = ['medical_photos', 'pet_photos', 'receipts', 'event_images'];
+const PREFIXES = ['medical_photos', 'child_photos', 'pet_photos', 'receipts', 'event_images'];
 
 describe('storage.rules: record photos (L-4)', function() {
   let env;
@@ -104,7 +105,7 @@ describe('storage.rules: record photos (L-4)', function() {
     env = await storageTestEnv(PROJECT);
   });
 
-  // The four blocks carry identical rules, so they are exercised identically. Per prefix rather
+  // The five blocks carry identical rules, so they are exercised identically. Per prefix rather
   // than one looped assertion, so a failure names the path that broke.
   for (const prefix of PREFIXES) {
     describe(`${prefix} in a family's folder`, function() {

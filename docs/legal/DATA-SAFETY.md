@@ -39,7 +39,7 @@ our processor are declared.
 | Other info | Yes | No | **Yes** | App functionality — a child's date of birth, school and activity details; how a parent's stickers address them (`users/{uid}.parentRole`: dad, mom or parent, October 2026), read by their co-parent and used only to word stickers |
 | Device or other IDs | Yes | No | No | App functionality (the FCM push token stored on `users/{uid}`) and, with consent, analytics/crash reporting (Firebase installation ID) |
 | User IDs | Yes | No | No | Account management |
-| Photos | Yes | No | Yes | App functionality — receipts, event images, medical and pet photos, photos in the document vault and sent in chat |
+| Photos | Yes | No | Yes | App functionality — receipts, event images, a photo of each child, medical and pet photos, photos in the document vault and sent in chat |
 | Files and docs | Yes | No | Yes | App functionality — the family document vault and PDFs sent in chat (MON-23). Always shared with the co-parent by design; optional to use |
 | Calendar events | Yes | No | No | App functionality |
 | Messages (in-app) | Yes | No | No | App functionality |
@@ -61,16 +61,17 @@ allergies, medications, conditions, blood group, vaccinations, notes, and photog
 documents. It is optional, entered by a parent **after an explicit-consent dialog**, and readable
 only by the two parents and by guests they explicitly invite for a limited time. Declare it as
 **Health info → collected, optional**. The app collects no health information about the adult
-users.
+users. **A photo of a child is not health info** (November 2026): it sits outside the consent,
+stays when the consent is withdrawn, and is declared under *Photos*.
 
 **Where it is processed.** Cloud Functions run in `europe-west3`; Firestore and Storage in the
 project's location, which must be in the EU (`LEGAL-REVIEW-2026-09.md` L-3).
 
 **Every photo and file is access-controlled by its family** (L-4, September 2026; MON-23 before
-it). Receipts, event photos, medical and pet photos, vault documents and chat attachments are
-stored under a path that names the family's two parents, and `storage.rules` lets only those two
-download them — not a guest, a calendar friend or a professional. No public download link is ever
-created. A photo taken before a parent linked a co-parent is readable by that parent alone until
+it). Receipts, event photos, photos of a child, medical and pet photos, vault documents and chat
+attachments are stored under a path that names the family's two parents, and `storage.rules` lets
+only those two download them — not a guest, a calendar friend or a professional. No public
+download link is ever created. A photo taken before a parent linked a co-parent is readable by that parent alone until
 the server moves it into the family. The one caveat `storage.rules` states: the path still names
 an ex-partner after an unpair. This does not change the declaration (*Photos: collected, shared
 with the co-parent*); it is what makes "shared" mean "with the other parent" and nobody else.
@@ -86,6 +87,13 @@ talks to the school's server directly; the password is used once and never store
 refresh token stays on the device, encrypted. What it imports (school events, the day's first and
 last lesson times, days without lessons) becomes ordinary *Calendar events*, already declared. Do
 not declare the school login as collected: nothing about it reaches us.
+
+**The EduPage school import stores the parent's EduPage password on the device only.** EduPage
+issues no refresh token, so the password is kept, encrypted under the Keystore key in the app's
+sealed preference store, and sent only to `*.edupage.org`. It is deleted on disconnect, sign-out
+and account deletion. Nothing about it reaches us, so it is not "collected" in Play's sense; what
+it imports (school events, tests and homework, the day's first and last lesson times, days without
+lessons) becomes ordinary *Calendar events*, already declared.
 
 **Receipt OCR is on-device.** ML Kit's bundled model recognises receipt text without the
 photograph or the text leaving the device. Nothing about it is collected or shared, and it is

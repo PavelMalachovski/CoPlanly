@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.coparently.app.domain.telemetry.TelemetryConsent
+import com.coparently.app.presentation.changerequests.RequestsBadgeViewModel
 import com.coparently.app.presentation.chat.ChatViewModel
 import com.coparently.app.presentation.common.AppMessages
 import com.coparently.app.presentation.common.ConnectivityViewModel
@@ -209,7 +210,8 @@ internal class NativeShell(
         val newSession = ShellSession()
         session = newSession
         val chat: ChatViewModel = shellViewModel(newSession.owner.viewModelStore)
-        val created = TabShell(this, newSession, chat)
+        val requests: RequestsBadgeViewModel = shellViewModel(newSession.owner.viewModelStore)
+        val created = TabShell(this, newSession, TabBadgeSources(chat, requests))
         tabs = created
         showChild(created.controller)
         disposeLater(null, oldFlow, oldSession)
@@ -260,11 +262,13 @@ internal class NativeShell(
  * tab's stack and each tab keeps its stack while another is shown.
  *
  * The tab items carry the shared labels (`nav_home` …, read in the reader's language) and SF
- * Symbols ([SfSymbols]); the Chat item's badge is the unread count; a tap on the Calendar tab is
+ * Symbols ([SfSymbols]); the Chat item's badge is the unread count and the Home item's the requests
+ * waiting for this parent's answer (the tester redesign, November 2026, as Android's bar); the tabs
+ * open on the Calendar, Android's start screen since that redesign; a tap on the Calendar tab is
  * counted for `CalendarTabTaps`, a second tap on a selected tab pops it to its first screen (UIKit's
  * own), which its host mirrors into its shared controller.
  */
-internal class TabShell(shell: ShellEnvironment, session: ShellSession, chat: ChatViewModel) {
+internal class TabShell(shell: ShellEnvironment, session: ShellSession, badges: TabBadgeSources) {
 
     private val scope: CoroutineScope = MainScope()
     private val hosts: List<StackHost> = BottomNavDestination.entries.map { tab ->
@@ -293,10 +297,16 @@ internal class TabShell(shell: ShellEnvironment, session: ShellSession, chat: Ch
             }
         }
         scope.launch {
-            chat.unreadCount.collect { count ->
+            badges.chat.unreadCount.collect { count ->
                 host(BottomNavDestination.CHAT).navigation.tabBarItem.badgeValue = count.takeIf { it > 0 }?.toString()
             }
         }
+        scope.launch {
+            badges.requests.waitingOnMe.collect { count ->
+                host(BottomNavDestination.HOME).navigation.tabBarItem.badgeValue = count.takeIf { it > 0 }?.toString()
+            }
+        }
+        select(BottomNavDestination.CALENDAR)
     }
 
     /** Shows [tab] as it was left. */
@@ -339,3 +349,12 @@ internal class TabShell(shell: ShellEnvironment, session: ShellSession, chat: Ch
         }
     }
 }
+
+/**
+ * What the tab bar's badges read: the Chat tab's unread count and the Home tab's requests waiting
+ * for this parent's answer, each from the ViewModel Android's bar reads.
+ *
+ * @property chat The unread count's ViewModel
+ * @property requests The waiting requests' ViewModel
+ */
+internal class TabBadgeSources(val chat: ChatViewModel, val requests: RequestsBadgeViewModel)

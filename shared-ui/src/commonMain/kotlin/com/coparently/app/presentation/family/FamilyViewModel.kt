@@ -3,6 +3,7 @@ package com.coparently.app.presentation.family
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.repository.CustodyModelRepository
+import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.UserRepository
@@ -58,6 +59,10 @@ class FamilyViewModel(
     ) { expenses, view, currency, uid, parents ->
         MonthMoney.of(expenses, view, wallClockNow().date, currency, uid, parents.roleByUid)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+
+    /** The family on screen's children, for the avatars on the children row. */
+    val children: StateFlow<List<ChildInfo>> = childInfoRepository.getAllChildInfo()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
     /** Whether the family on screen has a child record; the children row asks for one until then. */
     val hasChildren: StateFlow<Boolean> = childInfoRepository.getAllChildInfo()

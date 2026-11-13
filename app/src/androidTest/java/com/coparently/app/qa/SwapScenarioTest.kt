@@ -202,7 +202,7 @@ class SwapScenarioTest : QaOnScreenTest() {
 
     private fun openRequests() {
         openTab(BottomNavDestination.HOME)
-        tap(hasText(string(R.string.home_requests_title)) and hasClickAction())
+        openRequestsFromHome()
     }
 
     private suspend fun slots(): Pair<String, String> {

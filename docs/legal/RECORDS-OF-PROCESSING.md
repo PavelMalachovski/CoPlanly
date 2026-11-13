@@ -100,12 +100,12 @@ only what is specific to it.
 | --- | --- |
 | Purpose | Both parents holding the same information about their child, including what is needed in an emergency |
 | Data subjects | Children; third parties (doctors, teachers, emergency contacts) |
-| Data | Name, date of birth, school, activities, contacts; **medical profile**: allergies, medications, conditions, blood group, vaccinations, notes, medical document photos |
+| Data | Name, date of birth, an optional photo of the child (`child_info.photo`, schema 47, November 2026 — not health data: outside the consent below, and kept when it is withdrawn), school, activities, contacts; **medical profile**: allergies, medications, conditions, blood group, vaccinations, notes, medical document photos |
 | Legal basis | Art. 6(1)(b) for the record; **Art. 9(2)(a) explicit consent** of the parent, as the child's legal representative, for the medical profile — recorded with version and time (P1) |
 | Recipients | The other parent of the family the record belongs to — never a parent of another family when a parent co-parents in two (enforced in the app and by `firestore.rules` since October 2026; DPIA R20); a guest the parent admits to that one child's record, until the grant expires (a pet's record admits no guest). A record not assigned to a family is shared with no co-parent while its parent has two |
-| Retention | Life of the record; tombstone 90 days after deletion; on consent withdrawal the medical profile of records this parent created is cleared |
-| Where | `child_info`, `pets`; Storage `medical_photos/{familyId}/…`, `pet_photos/{familyId}/…` (`solo_{uid}/…` before pairing) |
-| Note | Photos: readable by the family's two parents only, never by a guest; no download URL is minted; digest-checked; swept with the record's tombstone after 90 days (LEGAL-REVIEW L-4, fixed September 2026). Photos stored before L-4 are deleted by the operator-run `purgeLegacyPhotoPaths` |
+| Retention | Life of the record; tombstone 90 days after deletion, the child's photo and the medical photos swept with it; a replaced or removed photo deleted on save; on consent withdrawal the medical profile of records this parent created is cleared (the child's photo stays) |
+| Where | `child_info`, `pets`; Storage `medical_photos/{familyId}/…`, `child_photos/{familyId}/…`, `pet_photos/{familyId}/…` (`solo_{uid}/…` before pairing) |
+| Note | Photos (the child's photo included): readable by the family's two parents only, never by a guest; no download URL is minted; digest-checked; swept with the record's tombstone after 90 days (LEGAL-REVIEW L-4, fixed September 2026). Photos stored before L-4 are deleted by the operator-run `purgeLegacyPhotoPaths` |
 
 ### P5. Chat and files
 
@@ -196,6 +196,19 @@ only what is specific to it.
 | Retention | Tokens and connection details: until disconnect, sign-out or account deletion (device only). Imported events: as any event (P2) |
 | Where | Device `EncryptedPreferences`; imported events in `events` |
 | Note | The integration uses the community-documented Bakaláři API v3 (`client_id=ANDR`, as other third-party apps do); Bakaláři has published no terms for third-party clients. Reassess if it does |
+
+### P11b. School import from EduPage (optional)
+
+| | |
+| --- | --- |
+| Purpose | Put the child's school hours, the school's events, tests and homework into the family calendar, at the parent's request |
+| Data subjects | The child; the parent (their EduPage username) |
+| Data | On the device only: **the parent's EduPage password**, the EduPage session cookie, the school's EduPage host, username, the child's EduPage id, name and class. Imported into events: per school day the first-lesson start and last-lesson end, titles and dates of events, tests and homework meant for the child, their class or the whole school, and days without lessons. **Not** collected: grades, absences, individual lessons; messages arrive in the same timeline answer and are discarded on the phone, never kept or imported |
+| Legal basis | Art. 6(1)(b) — the parent asked for the import |
+| Recipients | The co-parent (as ordinary events of the chosen family). EduPage's servers (`*.edupage.org`) are contacted by the parent's phone directly and receive the password, which is sent nowhere else; the school is the controller of its own EduPage data |
+| Retention | Password, cookie and connection details: until disconnect, sign-out or account deletion (device only). Imported events: as any event (P2) |
+| Where | Device `EncryptedPreferences` (sealed under the Keystore key); imported events in `events` |
+| Note | Unlike Bakaláři (P11a), EduPage issues no refresh token, so the password is kept (owner decision, November 2026). The integration follows the protocol EduPage's web app uses; EduPage has published no terms for third-party clients. Reassess if it does |
 
 ### P12. Usage statistics and crash reports (optional)
 

@@ -316,7 +316,7 @@ internal fun appDestinations(
     ) {
         OnboardingScreen(
             onFinished = {
-                navController.navigate(Screen.Home.route) {
+                navController.navigate(Screen.Calendar.route) {
                     popUpTo(Screen.Onboarding.route) { inclusive = true }
                 }
             },
@@ -398,10 +398,11 @@ internal fun appDestinations(
             onOpenChat = {
                 tabSwitcher.select(BottomNavDestination.CHAT)
             },
-            // The empty week's action: the same form the calendar opens, with no date
-            // preset, so the form starts from its own default.
-            onAddEvent = {
-                navController.navigate(Screen.AddEvent.createRoute())
+            // A week tile opens the calendar's Day view on its day (redesign, November
+            // 2026, variant A): the request first, then the tab, which answers it.
+            onOpenDay = { date ->
+                CalendarDayRequests.open(date)
+                tabSwitcher.select(BottomNavDestination.CALENDAR)
             },
             onOpenUnassignedRecords = {
                 navController.navigate(Screen.UnassignedRecords.route)
@@ -571,7 +572,7 @@ internal fun appDestinations(
             },
             onSignOut = {
                 navController.navigate(Screen.Auth.route) {
-                    popUpTo(Screen.Home.route) { inclusive = true }
+                    popUpTo(Screen.Calendar.route) { inclusive = true }
                 }
             },
             syncViewModel = syncViewModel

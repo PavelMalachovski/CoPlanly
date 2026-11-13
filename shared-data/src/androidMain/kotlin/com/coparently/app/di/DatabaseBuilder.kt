@@ -58,6 +58,7 @@ fun coPlanlyDatabaseBuilder(
             encryptedDatabase.openHelperFactory(name)?.let { openHelperFactory(it) }
         }
         .addMigrations(*DatabaseMigrations.ALL_MIGRATIONS)
+        // From 47 on, the migrations written in common code, which the iPhone runs too.
         .addMigrations(*COMMON_MIGRATIONS)
         // The migration chain starts at 5->6 and is complete up to the current version;
         // installs older than schema v5 have no upgrade path (a v3 install crashed with

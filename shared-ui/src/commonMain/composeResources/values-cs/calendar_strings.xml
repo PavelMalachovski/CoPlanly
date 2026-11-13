@@ -84,7 +84,6 @@
         <item quantity="other">%1$d čeká na vaši odpověď</item>
     </plurals>
     <string name="calendar_change_requests_review">Zkontrolovat</string>
-    <string name="calendar_change_view_mode">Změnit zobrazení nebo přejít na datum</string>
     <string name="calendar_jump_to_date">Přejít na datum…</string>
 
     <!-- Noun phrase, not "X změnil(a)" — Czech inflects that verb for gender and a name cannot
@@ -113,4 +112,27 @@
     <string name="mini_month_mark_swap_day">nabízený k výměně</string>
     <string name="mini_month_marked_day">%1$s, %2$s: %3$s.</string>
     <string name="mini_month_marked_day_no_custody">%1$s: %2$s.</string>
+
+    <!-- The calendar's header and Today card (redesign, November 2026). -->
+    <string name="calendar_heading">Váš rodinný kalendář</string>
+    <string name="calendar_together_for">Společně pro %1$s</string>
+    <string name="calendar_names_and">a</string>
+    <string name="calendar_previous_period">Předchozí období</string>
+    <string name="calendar_next_period">Další období</string>
+    <string name="calendar_today_card_title">Dnes · %1$s</string>
+    <string name="calendar_today_card_open">Otevřít dnešek v zobrazení dne</string>
+    <string name="calendar_today_card_nothing_more">Dnes už nic dalšího</string>
+    <string name="calendar_today_card_event">%1$s – %2$s</string>
+    <plurals name="calendar_today_card_children_with_you">
+        <item quantity="one">%1$s je s vámi</item>
+        <item quantity="few">%1$s jsou s vámi</item>
+        <item quantity="many">%1$s jsou s vámi</item>
+        <item quantity="other">%1$s jsou s vámi</item>
+    </plurals>
+    <plurals name="calendar_today_card_children_with_parent">
+        <item quantity="one">%1$s – u rodiče %2$s</item>
+        <item quantity="few">%1$s – u rodiče %2$s</item>
+        <item quantity="many">%1$s – u rodiče %2$s</item>
+        <item quantity="other">%1$s – u rodiče %2$s</item>
+    </plurals>
 </resources>

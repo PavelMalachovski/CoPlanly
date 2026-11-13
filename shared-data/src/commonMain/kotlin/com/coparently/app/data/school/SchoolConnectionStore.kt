@@ -35,21 +35,42 @@ import kotlinx.serialization.json.putJsonObject
  * @property student The child as the school describes them, to match its events.
  * @property tokens The latest token pair. **Never a password.**
  * @property ledger What the connection has imported, by event id; see `SchoolImportRecord`.
+ * @property edupage The password and session an EduPage connection signs in with, or null for a
+ *   Bakaláři one. A record with this set is stored under its own key prefix; [tokens] is blank then.
  */
 data class StoredSchoolConnection(
     val connection: SchoolConnection,
     val ownerUid: String,
     val student: SchoolStudent,
     val tokens: BakalariTokens,
-    val ledger: Map<String, SchoolImportRecord> = emptyMap()
+    val ledger: Map<String, SchoolImportRecord> = emptyMap(),
+    val edupage: EdupageSecrets? = null
 ) {
     /** The connection's id. */
     val id: String get() = connection.id
 }
 
 /**
+ * What an EduPage sign-in needs and the school never gives back as a token: the parent's password,
+ * kept (sealed) because EduPage's session cannot be refreshed without it, the session's cookies, the
+ * child's id there and the device token the app registered, if any.
+ *
+ * [toString] prints the student id alone, so a log line or a crash report never carries the
+ * password or a cookie.
+ */
+data class EdupageSecrets(
+    val password: String,
+    val cookies: Map<String, String>,
+    val studentId: String,
+    val deviceToken: String? = null
+) {
+    override fun toString() = "EdupageSecrets(studentId=$studentId)"
+}
+
+/**
  * The school connections, sealed in [SecurePreferences] (SEC-5) under
- * [PreferenceKeys.SCHOOL_CONNECTION_PREFIX] — one key per connection.
+ * [PreferenceKeys.SCHOOL_CONNECTION_PREFIX] — one key per Bakaláři connection — and
+ * [PreferenceKeys.EDUPAGE_CONNECTION_PREFIX] for EduPage's, written by [EdupageConnectionCodec].
  *
  * **Scoped to the signed-in account, in the style of `TodayWidgetNames`**: every record names its
  * owner's uid, and every read takes the uid and refuses a record written for anybody else. The
@@ -77,21 +98,30 @@ class SchoolConnectionStore(
 
     /** The connections of [uid], in the order they were made. */
     fun all(uid: String): List<StoredSchoolConnection> = monitor.locked {
-        preferences.keysWithPrefix(PreferenceKeys.SCHOOL_CONNECTION_PREFIX)
+        val bakalari = preferences.keysWithPrefix(PreferenceKeys.SCHOOL_CONNECTION_PREFIX)
             .mapNotNull { key -> preferences.getString(key)?.let(SchoolConnectionCodec::decode) }
+        val edupage = preferences.keysWithPrefix(PreferenceKeys.EDUPAGE_CONNECTION_PREFIX)
+            .mapNotNull { key -> preferences.getString(key)?.let(EdupageConnectionCodec::decode) }
+        (bakalari + edupage)
             .filter { it.ownerUid == uid }
             .sortedBy { it.connection.id }
     }
 
     /** The connection [id] of [uid], or null — also for one that belongs to another account. */
     fun get(uid: String, id: String): StoredSchoolConnection? = monitor.locked {
-        preferences.getString(key(id))?.let(SchoolConnectionCodec::decode)?.takeIf { it.ownerUid == uid }
+        val bakalari = preferences.getString(key(id))?.let(SchoolConnectionCodec::decode)
+        val found = bakalari ?: preferences.getString(edupageKey(id))?.let(EdupageConnectionCodec::decode)
+        found?.takeIf { it.ownerUid == uid }
     }
 
     /** Stores [connection], replacing one with the same id. */
     fun put(connection: StoredSchoolConnection) {
         monitor.locked {
-            preferences.putString(key(connection.id), SchoolConnectionCodec.encode(connection))
+            if (connection.edupage != null) {
+                preferences.putString(edupageKey(connection.id), EdupageConnectionCodec.encode(connection))
+            } else {
+                preferences.putString(key(connection.id), SchoolConnectionCodec.encode(connection))
+            }
             version.value++
         }
     }
@@ -115,6 +145,7 @@ class SchoolConnectionStore(
         monitor.locked {
             if (get(uid, id) != null) {
                 preferences.remove(key(id))
+                preferences.remove(edupageKey(id))
                 version.value++
             }
         }
@@ -124,11 +155,14 @@ class SchoolConnectionStore(
     fun clearAll() {
         monitor.locked {
             preferences.removeWithPrefix(PreferenceKeys.SCHOOL_CONNECTION_PREFIX)
+            preferences.removeWithPrefix(PreferenceKeys.EDUPAGE_CONNECTION_PREFIX)
             version.value++
         }
     }
 
     private fun key(id: String) = PreferenceKeys.SCHOOL_CONNECTION_PREFIX + id
+
+    private fun edupageKey(id: String) = PreferenceKeys.EDUPAGE_CONNECTION_PREFIX + id
 }
 
 /**
@@ -220,7 +254,7 @@ object SchoolConnectionCodec {
         )
     }
 
-    private fun readLedger(ledger: JsonObject?): Map<String, SchoolImportRecord> =
+    internal fun readLedger(ledger: JsonObject?): Map<String, SchoolImportRecord> =
         ledger.orEmpty().mapNotNull { (eventId, value) ->
             val parts = value.textOrNull()?.split('|') ?: return@mapNotNull null
             if (parts.size != LEDGER_PARTS) return@mapNotNull null

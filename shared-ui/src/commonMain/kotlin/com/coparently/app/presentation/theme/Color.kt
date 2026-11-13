@@ -25,13 +25,14 @@ object CoPlanlyColors {
      * week/day used to tint at 0.03f, which over [DarkSurface] is about one RGB step and made
      * custody invisible. Read it through `ParentColors.custodyTintAlpha`, which picks the theme.
      *
-     * **Raised from 0.14 in October 2026, on the owner's word that the colours looked dull.** At
-     * 0.14, and with the light-theme hue washed over the dark surface, a pink day read as murky
-     * maroon and an orange one as brown. What sits on the wash is held to AA on it by
+     * **Raised from 0.14 to 0.20 in October 2026 and lowered to 0.14 again in the November 2026
+     * redesign**, when the ground went lavender and the cards white: the light theme's wash is
+     * softer now, and the dark theme keeps its own alpha (it was the dark theme's murky maroon
+     * the October raise answered). What sits on the wash is held to AA on it by
      * `ParentColorsTest` — the day number, a holiday's red number, an event block's title, the
      * colour's own text — for every preset and every hue a parent can pick.
      */
-    const val CUSTODY_TINT_ALPHA_LIGHT = 0.20f
+    const val CUSTODY_TINT_ALPHA_LIGHT = 0.14f
 
     /**
      * The same in the dark theme, stronger because the same alpha over a near-black surface shows
@@ -50,7 +51,7 @@ object CoPlanlyColors {
      * week/day columns both draw it, and two copies is how they drifted apart last time. It moved
      * with the custody wash (October 2026) and keeps the same three-fifths of it.
      */
-    const val PROPOSAL_TINT_ALPHA_LIGHT = 0.12f
+    const val PROPOSAL_TINT_ALPHA_LIGHT = 0.08f
 
     /** The proposal wash in the dark theme; see [PROPOSAL_TINT_ALPHA_LIGHT]. */
     const val PROPOSAL_TINT_ALPHA_DARK = 0.18f
@@ -159,13 +160,19 @@ object CoPlanlyColors {
     // Light theme colors - subtle indigo-tinted neutrals for a modern tonal look.
     // LightBackground and DarkBackground are mirrored by hand as `@color/window_background` in
     // res/values and res/values-night (UX-13): the window a cold start paints before Compose.
-    val LightBackground = Color(0xFFFCFBFF)
+    val LightBackground = Color(0xFFF5F2FC) // the lavender ground (November 2026 redesign)
+
+    /** The light ground's lower end: [AppGround] fades from [LightBackground] down to this. */
+    val LightGroundEnd = Color(0xFFEEE9FA)
     val LightSurface = Color(0xFFFFFFFF)
     val LightOnSurface = Color(0xFF1B1B21) // 15.9:1 on white - text-grade in light theme
     val LightOnBackground = Color(0xFF1B1B21)
 
     // Dark theme colors - tinted dark neutrals instead of pure gray
-    val DarkBackground = Color(0xFF131318)
+    val DarkBackground = Color(0xFF16141F)
+
+    /** The dark ground's lower end, the partner of [LightGroundEnd]. */
+    val DarkGroundEnd = Color(0xFF100F18)
     val DarkSurface = Color(0xFF1B1B21)
 
     // 14.33:1 on DarkBackground, 13.26:1 on DarkSurface - text-grade in dark theme

@@ -242,6 +242,36 @@ class HomeWeekTest {
         assertTrue(agenda.events.isEmpty())
     }
 
+    @Test
+    fun `the day tiles are seven days from today with their parent and a mark for events`() {
+        val today = now.date
+        val days = HomeWeek.daysOf(
+            events = listOf(
+                event("today", now),
+                event("third-day", LocalDateTime(2026, 8, 23, 9, 0))
+            ),
+            today = today,
+            userId = "uid-mom",
+            custodyFor = { date -> if (date.day % 2 == 0) "mom" else "dad" }
+        )
+
+        assertEquals(7, days.size)
+        assertEquals(today, days.first().date)
+        assertEquals(LocalDate(2026, 8, 27), days.last().date)
+        assertEquals(listOf(true, false, true, false, false, false, false), days.map { it.hasEvents })
+        assertEquals("dad", days.first().dayParent)
+        assertEquals("mom", days[1].dayParent)
+    }
+
+    @Test
+    fun `a co-parent's private event marks no day tile`() {
+        val private = event("theirs", now).copy(isPrivate = true, createdByFirebaseUid = "uid-dad")
+        val days = HomeWeek.daysOf(listOf(private), now.date, "uid-mom") { null }
+
+        assertTrue(days.none { it.hasEvents })
+        assertNull(days.first().dayParent)
+    }
+
     private fun event(id: String, start: LocalDateTime) = Event(
         id = id,
         title = id,

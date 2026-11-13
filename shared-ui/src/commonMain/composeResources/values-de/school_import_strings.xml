@@ -62,6 +62,7 @@
     <string name="school_connect_family_unnamed">Familie %1$d</string>
     <string name="school_connect_child_label">Welches Kind ist das?</string>
     <string name="school_connect_no_children">Diese Familie hat noch keine Kinderdaten. Füge das Kind in den Einstellungen unter „Informationen zum Kind“ hinzu und verbinde dann erneut.</string>
+    <string name="school_connect_edupage_no_pupils">Dieses EduPage-Konto führt keine Schülerin und keinen Schüler auf, daher gibt es nichts zu verbinden. Melde dich mit einem Eltern- oder Schülerkonto an oder gehe zurück und versuche eine andere Anmeldung.</string>
     <string name="school_connect_continue">Weiter</string>
     <string name="school_connect_confirm_label">Was importiert wird</string>
     <string name="school_connect_confirm_events">Schulveranstaltungen für die Klasse des Kindes, für das Kind selbst und für die ganze Schule, für die nächsten 90 Tage</string>
@@ -70,4 +71,13 @@
     <string name="school_connect_confirm_shared">Sie werden normale Termine dieser Familie zu %1$s, und der andere Elternteil sieht sie auch.</string>
     <string name="school_connect_confirm_not_imported">Noten, Hausaufgaben und einzelne Unterrichtsstunden werden nicht importiert.</string>
     <string name="school_connect_save">Verbinden und importieren</string>
+    <string name="school_system_title">Welches System nutzt die Schule?</string>
+    <string name="school_system_bakalari">Bakaláři</string>
+    <string name="school_system_edupage">EduPage</string>
+    <string name="school_edupage_address_label">Adresse der Schule (optional)</string>
+    <string name="school_edupage_address_hint">Nur wenn die Anmeldung Ihre Schule nicht findet, z. B. zsx.edupage.org</string>
+    <string name="school_edupage_second_factor">Dieses Konto verlangt eine zweite Bestätigung. Bestätigen Sie die Anmeldung in der EduPage-App oder per E-Mail und versuchen Sie es erneut.</string>
+    <string name="school_edupage_password_kept">CoPlanly speichert dieses Passwort verschlüsselt auf diesem Telefon, damit sich der Import jeden Tag anmelden kann. Es wird nur an EduPage gesendet.</string>
+    <string name="school_edupage_captcha">EduPage verlangt ein CAPTCHA. Melden Sie sich einmal auf der EduPage-Website an und versuchen Sie es erneut.</string>
+    <string name="school_edupage_address_invalid">Das ist keine EduPage-Adresse. Sie sollte so aussehen: zsx.edupage.org.</string>
 </resources>

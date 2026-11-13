@@ -41,7 +41,9 @@ import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.rememberUiTextResolver
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
 import com.coparently.app.resources.journal_delete
@@ -112,18 +114,12 @@ fun JournalEditorScreen(
     val leave = rememberDiscardGuard(dirty = state.hasUnsavedEdits && !state.saving, onLeave = onNavigateUp)
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         // A back gesture over unsaved edits shrinks the form before it asks (D-11).
         modifier = Modifier.then(leave.backPreview),
         topBar = { EditorTopBar(isNew = state.isNew, onNavigateUp = leave) },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        bottomBar = {
-            StickyActionBar(
-                label = stringResource(Res.string.journal_save),
-                onClick = viewModel::save,
-                enabled = state.canSave,
-                busy = state.saving
-            )
-        }
+        bottomBar = { SaveBar(state.canSave, state.saving, viewModel::save) }
     ) { padding ->
         EditorForm(
             state = state,
@@ -133,6 +129,16 @@ fun JournalEditorScreen(
             modifier = Modifier.padding(padding)
         )
     }
+}
+
+@Composable
+private fun SaveBar(canSave: Boolean, saving: Boolean, onSave: () -> Unit) {
+    StickyActionBar(
+        label = stringResource(Res.string.journal_save),
+        onClick = onSave,
+        enabled = canSave,
+        busy = saving
+    )
 }
 
 /**
@@ -210,6 +216,7 @@ private fun EditorForm(
 @Composable
 private fun EditorTopBar(isNew: Boolean, onNavigateUp: () -> Unit) {
     TopAppBar(
+        colors = screenTopAppBarColors(),
         title = {
             Text(
                 stringResource(if (isNew) Res.string.journal_editor_new_title else Res.string.journal_editor_edit_title)

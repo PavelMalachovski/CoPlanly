@@ -34,6 +34,7 @@ import com.coparently.app.presentation.navigation.LocalTabSwitcher
 import com.coparently.app.presentation.navigation.Screen
 import com.coparently.app.presentation.platform.ProvideIosShell
 import com.coparently.app.presentation.theme.CoPlanlyTheme
+import com.coparently.app.presentation.theme.appGround
 import platform.UIKit.UIViewController
 
 /**
@@ -139,6 +140,9 @@ internal class ScreenController(
 private fun ScreenFrame(shell: ShellEnvironment, content: @Composable () -> Unit) {
     val offline by shell.connectivity.isOffline.collectAsState()
     Scaffold(
+        // The app's ground behind every hosted screen, whose own Scaffold is transparent over it, as
+        // Android's root Scaffold paints it once (the tester redesign, November 2026).
+        modifier = Modifier.appGround(),
         topBar = { ConnectivityBanner(offline = offline) },
         snackbarHost = { SnackbarHost(shell.messages.hostState) },
         containerColor = Color.Transparent,

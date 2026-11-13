@@ -9,15 +9,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -29,6 +28,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -36,6 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -50,6 +51,7 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import com.coparently.app.data.requests.minuteTicks
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.CustodyHistory
@@ -60,8 +62,12 @@ import com.coparently.app.domain.custody.SwapSides
 import com.coparently.app.domain.custody.receiverOf
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.holidays.Holiday
+import com.coparently.app.domain.home.HomeWeek
 import com.coparently.app.domain.time.IsoText
+import com.coparently.app.domain.time.wallClockNow
+import com.coparently.app.presentation.calendar.components.CalendarGridCard
 import com.coparently.app.presentation.calendar.components.CalendarHeader
+import com.coparently.app.presentation.calendar.components.CalendarMonthBar
 import com.coparently.app.presentation.calendar.components.ChangeRequestBanner
 import com.coparently.app.presentation.calendar.components.CustodyChangedBanner
 import com.coparently.app.presentation.calendar.components.CustodyLegend
@@ -73,6 +79,9 @@ import com.coparently.app.presentation.calendar.components.DaySwapStripState
 import com.coparently.app.presentation.calendar.components.EventTypeFilterSheet
 import com.coparently.app.presentation.calendar.components.SwapSheetActions
 import com.coparently.app.presentation.calendar.components.SwapSheetOffer
+import com.coparently.app.presentation.calendar.components.TodayCard
+import com.coparently.app.presentation.calendar.components.TodayModel
+import com.coparently.app.presentation.calendar.components.steppedDay
 import com.coparently.app.presentation.changerequests.RequestsState
 import com.coparently.app.presentation.common.FamilyMemberFilterStrip
 import com.coparently.app.presentation.common.LocalDatePickerDialog
@@ -80,19 +89,22 @@ import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberToday
+import com.coparently.app.presentation.common.rememberTwoPane
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.custody.labelRes
 import com.coparently.app.presentation.event.EventOperation
 import com.coparently.app.presentation.event.EventUiState
 import com.coparently.app.presentation.event.EventViewModel
+import com.coparently.app.presentation.home.ChildrenToday
+import com.coparently.app.presentation.navigation.CalendarDayRequests
 import com.coparently.app.presentation.navigation.CalendarTabTaps
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.parentingplan.planCitationShortLine
 import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.resources.Res
-import com.coparently.app.resources.calendar_add_event
 import com.coparently.app.resources.calendar_delete_event
 import com.coparently.app.resources.calendar_dialog_cancel
 import com.coparently.app.resources.calendar_dialog_ok
@@ -263,6 +275,8 @@ fun CalendarScreen(
     // Who the grid is narrowed to. Screen state rather than ViewModel state, like the parent and
     // type filters beside it: it is a way of looking at this month, not a fact about the family.
     val familyMembers by eventViewModel.familyMembers.collectAsState()
+    // The header's avatars and "Together, for …" line: the same Room list the strip names.
+    val children by eventViewModel.children.collectAsState()
     var memberFilter by remember { mutableStateOf(emptyList<FamilyMemberRef>()) }
     // A child removed while their chip was selected must not leave the grid filtered to somebody
     // with no chip left to tap. Derived, so the selection heals itself — the same reasoning
@@ -417,6 +431,49 @@ fun CalendarScreen(
             filter = activeMemberFilter,
             family = GridCustody(getCustody, getProposedCustody, getContactWindows)
         )
+    }
+
+    // The Today card (redesign, November 2026) reads today's own events, whatever the grid has
+    // loaded, through `HomeWeek.todayOf` — the value Home's today card and the widget read.
+    LaunchedEffect(today) { eventViewModel.showTodayCardFor(today) }
+    val todayEvents by eventViewModel.todayEvents.collectAsState()
+    // A minute's tick, so the card's "next event" moves on while the screen stays open.
+    val now by produceState(wallClockNow()) { minuteTicks().collect { value = wallClockNow() } }
+    val todayModel = remember(
+        todayEvents,
+        today,
+        now,
+        parents,
+        getCustody,
+        getContactWindows,
+        familyMembers,
+        custodyModel,
+        dayOverrides
+    ) {
+        TodayModel.of(
+            agenda = HomeWeek.todayOf(
+                events = todayEvents,
+                today = today,
+                userId = parents.me?.uid.orEmpty(),
+                custodyFor = getCustody,
+                contactWindowsFor = getContactWindows
+            ),
+            childNames = familyMembers.filter { it.ref is FamilyMemberRef.Child }.map { it.name },
+            childrenApart = ChildrenToday.of(today, custodyModel, dayOverrides, familyMembers).isNotEmpty(),
+            now = now
+        )
+    }
+
+    // Whether the swap selection header stands in for the calendar's own (design item 23).
+    val swapHeaderShown = selectingSwap && viewMode == CalendarViewMode.MONTH
+
+    // The grid card's arrows: a month in Month view, a week or a day in the other two.
+    val stepPeriod: (Int) -> Unit = { step ->
+        if (viewMode == CalendarViewMode.MONTH) {
+            calendarViewModel.showMonth(if (step > 0) displayedMonth.plusMonth() else displayedMonth.minusMonth())
+        } else {
+            calendarViewModel.setSelectedDate(steppedDay(viewMode, anchorDate, step))
+        }
     }
 
     // What waits on this parent in the family on screen: change requests, day swaps (they live on
@@ -643,15 +700,33 @@ fun CalendarScreen(
             calendarViewModel.showMonth(Clock.System.todayIn(TimeZone.currentSystemDefault()).yearMonth)
         }
     }
+    // A day opened from elsewhere — Home's week tiles (redesign, November 2026) — shows that day in
+    // Day view, and Back returns to Month as from a tapped month cell (D-11): the Calendar is the
+    // back stack's root, so the default Back would leave the app. Consumed once, so the first
+    // composition in a process opens it too; declared after the tab-tap effect, so on the same
+    // frame the day wins over its reset.
+    val pendingDay by CalendarDayRequests.pending.collectAsState()
+    LaunchedEffect(pendingDay) {
+        val date = if (pendingDay != null) CalendarDayRequests.consume() else null
+        if (date != null) {
+            dayOpenedFromMonth = true
+            endSwapSelection()
+            calendarViewModel.setSelectedDate(date)
+            calendarViewModel.setViewMode(CalendarViewMode.DAY)
+        }
+    }
     // Leaving Day by any other route (the view picker, the date picker) ends the drill-down, so
-    // a Day view reached later through the picker keeps the default Back.
+    // a Day view reached later through the picker keeps the default Back. It reads the ViewModel's
+    // own value, not the collected state: on the screen's first composition the day request above
+    // has just set Day, and the collected state still says the view it was before.
     LaunchedEffect(viewMode) {
-        if (viewMode != CalendarViewMode.DAY) dayOpenedFromMonth = false
+        if (calendarViewModel.viewMode.value != CalendarViewMode.DAY) dayOpenedFromMonth = false
     }
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         topBar = {
-            if (selectingSwap && viewMode == CalendarViewMode.MONTH) {
+            if (swapHeaderShown) {
                 SwapSelectionHeader(
                     month = displayedMonth,
                     onPreviousMonth = { calendarViewModel.showMonth(displayedMonth.minusMonth()) },
@@ -660,13 +735,9 @@ fun CalendarScreen(
                 )
             } else {
                 CalendarHeader(
-                    selectedDate = anchorDate,
+                    children = children,
                     viewMode = viewMode,
                     onViewModeChange = { mode -> calendarViewModel.setViewMode(mode) },
-                    onNavigateToToday = {
-                        calendarViewModel.showMonth(Clock.System.todayIn(TimeZone.currentSystemDefault()).yearMonth)
-                    },
-                    onJumpToDate = { showDatePicker = true },
                     onFiltersClick = { showTypeFilters = true },
                     filtersActive = parentFilter != ParentFilter.BOTH ||
                         hiddenEventTypes.isNotEmpty() ||
@@ -678,9 +749,29 @@ fun CalendarScreen(
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
         },
+        // The Today card over the tab bar (redesign, November 2026). In the bottom bar's slot so
+        // the "+" floats above it rather than over it; left out on a wide window (two panes).
+        bottomBar = {
+            if (!rememberTwoPane()) {
+                TodayCard(
+                    today = todayModel,
+                    parentNames = parentNames,
+                    onOpen = {
+                        endSwapSelection()
+                        // Back from it returns to the month it was opened over, as a cell's tap does,
+                        // and keeps returning there when a cell already opened this Day view (D-11).
+                        dayOpenedFromMonth = dayOpenedFromMonth || viewMode == CalendarViewMode.MONTH
+                        calendarViewModel.setSelectedDate(today)
+                        calendarViewModel.setViewMode(CalendarViewMode.DAY)
+                    },
+                    modifier = Modifier.padding(horizontal = dims.paddingMedium, vertical = dims.paddingSmall)
+                )
+            }
+        },
         floatingActionButton = {
             Box {
-                // Red delete button - appears above the "+" button when long pressing event or dragging
+                // Red delete button - appears while an event is long-pressed or dragged. The "+" is
+                // the month bar's since 12 November 2026, so this slot holds nothing else.
                 if ((showDeleteButton && eventToDelete != null) || isDragOverDeleteButton) {
                     FloatingActionButton(
                         onClick = {
@@ -699,7 +790,6 @@ fun CalendarScreen(
                         contentColor = MaterialTheme.colorScheme.onError,
                         shape = MaterialTheme.shapes.small,
                         modifier = Modifier
-                            .offset(y = (-64).dp)
                             .graphicsLayer {
                                 scaleX = if (isDragOverDeleteButton) 1.2f else 1f
                                 scaleY = if (isDragOverDeleteButton) 1.2f else 1f
@@ -715,25 +805,6 @@ fun CalendarScreen(
                             modifier = Modifier.size(IconSizes.Standard)
                         )
                     }
-                }
-
-                // Regular "+" button. Pre-fills the day on screen: the selected day when there
-                // is one, otherwise the anchor of the current view — a null date made the form
-                // default to today even with another day highlighted.
-                FloatingActionButton(
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onAddEventClick(selectedDate ?: anchorDate, null)
-                    },
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    shape = MaterialTheme.shapes.small
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = stringResource(Res.string.calendar_add_event),
-                        modifier = Modifier.size(IconSizes.Standard)
-                    )
                 }
             }
         }
@@ -879,34 +950,15 @@ fun CalendarScreen(
                     // they always saw. Placed with the banners rather than in the Filters sheet: the
                     // question "what does Anya's week look like" is asked at a glance, and the
                     // Expenses screen answers the same question the same way.
-                    FamilyMemberFilterStrip(
-                        members = familyMembers,
-                        selected = activeMemberFilter,
-                        onToggle = { memberFilter = activeMemberFilter.toggling(it) },
-                        label = Res.string.calendar_filter_members,
-                        modifier = Modifier.padding(
-                            horizontal = dims.paddingMedium,
-                            vertical = dims.paddingSmall / 2
-                        )
-                    )
-
-                    // Whose colour is whose and what the marks mean, in every view (new-user review,
-                    // October 2026). Only with a schedule: without one the grid has no wash to explain.
-                    if (custodyModel != null) {
-                        CustodyLegend(
-                            parentNames = parentNames,
-                            showContactWindows = custodyModel?.contactWindows?.isNotEmpty() == true,
-                            showPendingSwap = viewMode == CalendarViewMode.MONTH && grid.followsFamily &&
-                                pendingSwapTo.keys.any { it.yearMonth == displayedMonth },
-                            // The visible way into a swap (SW-1): the long press alone was found
-                            // by nobody. Month only, where the grid can show the chosen days.
-                            trailing = offerSwapDay?.takeIf {
-                                viewMode == CalendarViewMode.MONTH && !selectingSwap && grid.followsFamily
-                            }?.let { { SwapDaysButton(onClick = { selectingSwap = true }) } },
-                            modifier = Modifier.padding(
-                                horizontal = dims.paddingMedium,
-                                vertical = dims.paddingSmall / 2
-                            )
+                    // A chip is 32 dp tall and Material pads its target to 48; here the row gives
+                    // up 8 of those so the grid below grows (tester feedback, 12 November 2026).
+                    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides COMPACT_CHIP_TARGET) {
+                        FamilyMemberFilterStrip(
+                            members = familyMembers,
+                            selected = activeMemberFilter,
+                            onToggle = { memberFilter = activeMemberFilter.toggling(it) },
+                            label = Res.string.calendar_filter_members,
+                            modifier = Modifier.padding(horizontal = dims.paddingMedium)
                         )
                     }
 
@@ -960,100 +1012,144 @@ fun CalendarScreen(
                 // also carried lives on the home screen's hero. Two answers to one question is
                 // what the design refresh removed elsewhere.
 
-                // Calendar content based on view mode
-                Crossfade(
-                    targetState = viewMode,
-                    animationSpec = tween(
-                        durationMillis = com.coparently.app.presentation.theme.Motion.SHORT_MS,
-                        easing = FastOutSlowInEasing
-                    ),
-                    modifier = Modifier.weight(1f)
-                ) { mode ->
-                    key(mode) {
-                        when (mode) {
-                            CalendarViewMode.DAY, CalendarViewMode.WEEK -> {
-                                DayWeekView(
-                                    selectedDate = anchorDate,
-                                    daysCount = if (mode == CalendarViewMode.DAY) 1 else 7,
-                                    events = filteredEvents,
-                                    getCustody = grid.custody,
-                                    getProposedCustody = grid.proposed,
-                                    getContactWindows = grid.windows,
-                                    parentNames = parentNames,
-                                    onDateChange = { calendarViewModel.setSelectedDate(it) },
-                                    onEventClick = { event ->
-                                        previewEventStart = event.startDateTime
-                                        previewEventId = event.id
-                                    },
-                                    onAddEventClick = { date, hour ->
-                                        onAddEventClick(date, hour)
-                                    },
-                                    onEventDragDrop = { eventId, targetDate, targetHour ->
-                                        eventViewModel.moveEvent(eventId, targetDate, targetHour)
-                                    },
-                                    onEventResize = { eventId: String, newStartTime: LocalDateTime?, newEndTime: LocalDateTime? ->
-                                        eventViewModel.resizeEvent(eventId, newStartTime, newEndTime)
-                                    },
-                                    onEventDelete = { eventId ->
-                                        deleteEventWithUndo(eventId)
-                                    },
-                                    onEventLongPressStart = { eventId ->
-                                        showDeleteButton = true
-                                        eventToDelete = eventId
-                                    },
-                                    onEventLongPressEnd = {
-                                        showDeleteButton = false
-                                        eventToDelete = null
-                                    },
-                                    onDragOverDeleteButton = { isOver ->
-                                        isDragOverDeleteButton = isOver
-                                    },
-                                    deleteTargetBounds = deleteTarget,
-                                    // A child's own band (FAM-4) is not the schedule a swap moves.
-                                    onOfferDay = offerDayFromDayView?.takeIf { grid.followsFamily },
-                                    holidays = holidays,
-                                    // FAM-5: the members the filter strip already lists, so a chip
-                                    // can say who it is about; no listener of its own.
-                                    familyMembers = familyMembers
-                                )
-                            }
-                            CalendarViewMode.MONTH -> {
-                                MonthView(
-                                    selectedMonth = displayedMonth,
-                                    selectedDate = selectedDate,
-                                    eventsByDay = eventsByDay,
-                                    getCustody = grid.custody,
-                                    getProposedCustody = grid.proposed,
-                                    getContactWindows = grid.windows,
-                                    parentNames = parentNames,
-                                    // A child's own band (FAM-4) is not the schedule a swap moves.
-                                    swapMarks = if (grid.followsFamily) swapMarksShown else emptyMap(),
-                                    swappedDates = if (grid.followsFamily) swappedDates else emptySet(),
-                                    onDayLongClick = offerSwapDay?.takeIf { grid.followsFamily },
-                                    // A finger that long-pressed and kept moving redraws the run
-                                    // from the anchor, so coming back shortens it again.
-                                    onSwapDragTo = dragSwapTo?.takeIf { grid.followsFamily },
-                                    selectingSwap = selectingSwap && grid.followsFamily,
-                                    onSwapTap = tapSwapDay,
-                                    // Selects the day and opens Day view, where an empty hour
-                                    // slot creates an event — the owner's walkthrough found the
-                                    // select-only tap a dead end: two redesign passes removed
-                                    // first the jump, then the agenda card that replaced it,
-                                    // leaving a tap with no visible outcome and no tap route to
-                                    // creating an event on a chosen day.
-                                    onDayClick = { clickedDate ->
-                                        calendarViewModel.setSelectedDate(clickedDate)
-                                        dayOpenedFromMonth = true
-                                        calendarViewModel.setViewMode(CalendarViewMode.DAY)
-                                    },
-                                    // Paging is not choosing: the new month gets today if it
-                                    // holds today, and no selection at all otherwise.
-                                    onMonthChange = { newMonth ->
-                                        calendarViewModel.showMonth(newMonth)
-                                    },
-                                    holidays = holidays,
-                                    schoolVacationDays = schoolVacationDays
-                                )
+                // The grid in its white card (redesign, November 2026): the month bar, the legend,
+                // then the view. The month title, Today and the arrows left the header for here.
+                CalendarGridCard(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = dims.paddingMedium, vertical = dims.paddingSmall / 2)
+                ) {
+                    CalendarMonthBar(
+                        selectedDate = anchorDate,
+                        onToday = {
+                            calendarViewModel.showMonth(Clock.System.todayIn(TimeZone.currentSystemDefault()).yearMonth)
+                        },
+                        // While days are chosen the selection header pages the month itself.
+                        onPrevious = { stepPeriod(-1) }.takeUnless { swapHeaderShown },
+                        onNext = { stepPeriod(1) }.takeUnless { swapHeaderShown },
+                        onJumpToDate = { showDatePicker = true },
+                        // The visible way into a swap (SW-1): the long press alone was found by
+                        // nobody. Month only, where the grid can show the chosen days; in the bar
+                        // since 12 November 2026, so the legend keeps one line.
+                        onSwapDays = offerSwapDay?.takeIf {
+                            custodyModel != null && viewMode == CalendarViewMode.MONTH && !selectingSwap &&
+                                grid.followsFamily
+                        }?.let { { selectingSwap = true } },
+                        // Pre-fills the day on screen: the selected day when there is one, otherwise
+                        // the anchor of the current view — a null date made the form default to
+                        // today even with another day highlighted.
+                        onAddEvent = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onAddEventClick(selectedDate ?: anchorDate, null)
+                        }.takeUnless { swapHeaderShown }
+                    )
+                    // Whose colour is whose and what the marks mean, in every view (new-user review,
+                    // October 2026). Only with a schedule: without one the grid has no wash to explain.
+                    if (custodyModel != null) {
+                        CustodyLegend(
+                            parentNames = parentNames,
+                            showContactWindows = custodyModel?.contactWindows?.isNotEmpty() == true,
+                            showPendingSwap = viewMode == CalendarViewMode.MONTH && grid.followsFamily &&
+                                pendingSwapTo.keys.any { it.yearMonth == displayedMonth },
+                            modifier = Modifier.padding(horizontal = dims.paddingSmall / 2)
+                        )
+                    }
+
+                    // Calendar content based on view mode
+                    Crossfade(
+                        targetState = viewMode,
+                        animationSpec = tween(
+                            durationMillis = com.coparently.app.presentation.theme.Motion.SHORT_MS,
+                            easing = FastOutSlowInEasing
+                        ),
+                        modifier = Modifier.weight(1f)
+                    ) { mode ->
+                        key(mode) {
+                            when (mode) {
+                                CalendarViewMode.DAY, CalendarViewMode.WEEK -> {
+                                    DayWeekView(
+                                        selectedDate = anchorDate,
+                                        daysCount = if (mode == CalendarViewMode.DAY) 1 else 7,
+                                        events = filteredEvents,
+                                        getCustody = grid.custody,
+                                        getProposedCustody = grid.proposed,
+                                        getContactWindows = grid.windows,
+                                        parentNames = parentNames,
+                                        onDateChange = { calendarViewModel.setSelectedDate(it) },
+                                        onEventClick = { event ->
+                                            previewEventStart = event.startDateTime
+                                            previewEventId = event.id
+                                        },
+                                        onAddEventClick = { date, hour ->
+                                            onAddEventClick(date, hour)
+                                        },
+                                        onEventDragDrop = { eventId, targetDate, targetHour ->
+                                            eventViewModel.moveEvent(eventId, targetDate, targetHour)
+                                        },
+                                        onEventResize = { eventId, newStartTime, newEndTime ->
+                                            eventViewModel.resizeEvent(eventId, newStartTime, newEndTime)
+                                        },
+                                        onEventDelete = { eventId ->
+                                            deleteEventWithUndo(eventId)
+                                        },
+                                        onEventLongPressStart = { eventId ->
+                                            showDeleteButton = true
+                                            eventToDelete = eventId
+                                        },
+                                        onEventLongPressEnd = {
+                                            showDeleteButton = false
+                                            eventToDelete = null
+                                        },
+                                        onDragOverDeleteButton = { isOver ->
+                                            isDragOverDeleteButton = isOver
+                                        },
+                                        deleteTargetBounds = deleteTarget,
+                                        // A child's own band (FAM-4) is not the schedule a swap moves.
+                                        onOfferDay = offerDayFromDayView?.takeIf { grid.followsFamily },
+                                        holidays = holidays,
+                                        // FAM-5: the members the filter strip already lists, so a chip
+                                        // can say who it is about; no listener of its own.
+                                        familyMembers = familyMembers
+                                    )
+                                }
+                                CalendarViewMode.MONTH -> {
+                                    MonthView(
+                                        selectedMonth = displayedMonth,
+                                        selectedDate = selectedDate,
+                                        eventsByDay = eventsByDay,
+                                        getCustody = grid.custody,
+                                        getProposedCustody = grid.proposed,
+                                        getContactWindows = grid.windows,
+                                        parentNames = parentNames,
+                                        // A child's own band (FAM-4) is not the schedule a swap moves.
+                                        swapMarks = if (grid.followsFamily) swapMarksShown else emptyMap(),
+                                        swappedDates = if (grid.followsFamily) swappedDates else emptySet(),
+                                        onDayLongClick = offerSwapDay?.takeIf { grid.followsFamily },
+                                        // A finger that long-pressed and kept moving redraws the run
+                                        // from the anchor, so coming back shortens it again.
+                                        onSwapDragTo = dragSwapTo?.takeIf { grid.followsFamily },
+                                        selectingSwap = selectingSwap && grid.followsFamily,
+                                        onSwapTap = tapSwapDay,
+                                        // Selects the day and opens Day view, where an empty hour
+                                        // slot creates an event — the owner's walkthrough found the
+                                        // select-only tap a dead end: two redesign passes removed
+                                        // first the jump, then the agenda card that replaced it,
+                                        // leaving a tap with no visible outcome and no tap route to
+                                        // creating an event on a chosen day.
+                                        onDayClick = { clickedDate ->
+                                            calendarViewModel.setSelectedDate(clickedDate)
+                                            dayOpenedFromMonth = true
+                                            calendarViewModel.setViewMode(CalendarViewMode.DAY)
+                                        },
+                                        // Paging is not choosing: the new month gets today if it
+                                        // holds today, and no selection at all otherwise.
+                                        onMonthChange = { newMonth ->
+                                            calendarViewModel.showMonth(newMonth)
+                                        },
+                                        holidays = holidays,
+                                        schoolVacationDays = schoolVacationDays
+                                    )
+                                }
                             }
                         }
                     }
@@ -1237,3 +1333,6 @@ private fun swapSidesOf(
     holderOf: (LocalDate) -> String?,
     offererSlot: String
 ): SwapSides = SwapSides.of(selection.toList(), holderOf, offererSlot)
+
+/** The member strip's touch target on the calendar, between a chip's 32 dp and Material's 48. */
+private val COMPACT_CHIP_TARGET = 40.dp

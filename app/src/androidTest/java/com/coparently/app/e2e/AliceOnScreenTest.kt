@@ -227,7 +227,10 @@ abstract class AliceOnScreenTest {
         composeTestRule.mainClock.autoAdvance = false
         scenario = ActivityScenario.launch(MainActivity::class.java)
         if (opensOnHome) {
-            composeTestRule.pumpUntil("Home with the tab bar", HOME_TIMEOUT_MS) { exists(tabBar) }
+            composeTestRule.pumpUntil("the tab bar", HOME_TIMEOUT_MS) { exists(tabBar) }
+            // The app opens on the Calendar since the redesign (part 2a); every test written for
+            // this base walks Home first, so it starts there, as a parent who taps the tab does.
+            openTab(BottomNavDestination.HOME)
         }
         composeTestRule.settle()
         step("before: the app is up")
@@ -308,6 +311,25 @@ abstract class AliceOnScreenTest {
         composeTestRule.settle()
     }
 
+    /**
+     * Opens the Requests inbox from Home (redesign, November 2026, variant A): through the open
+     * requests card while something waits on either parent, and through the Updates card's "See
+     * all", which opens it at History, when nothing does.
+     */
+    protected fun openRequestsFromHome() {
+        val waiting = hasText(string(R.string.home_waiting_for_coparent, "").trim(), substring = true) and
+            hasClickAction()
+        val seeAll = hasText(string(R.string.home_updates_see_all)) and hasClickAction()
+        // The dashboard first, then a bounded while for the requests to load: the card is left out
+        // until they have, so its absence at the first frame does not mean nothing waits.
+        waitFor("Home's Updates card", seeAll, HOME_TIMEOUT_MS)
+        val settleBy = SystemClock.uptimeMillis() + REQUESTS_SETTLE_MS
+        composeTestRule.pumpUntil("the open requests card, or nothing waiting", 2 * REQUESTS_SETTLE_MS) {
+            exists(waiting) || SystemClock.uptimeMillis() > settleBy
+        }
+        tap(if (composeTestRule.exists(waiting)) waiting else seeAll)
+    }
+
     /** A button labelled by [labelRes] inside the dialog on screen. */
     protected fun dialogButton(labelRes: Int): SemanticsMatcher =
         hasAnyAncestor(isDialog()) and hasText(string(labelRes)) and hasClickAction()
@@ -346,6 +368,14 @@ abstract class AliceOnScreenTest {
      * once never reached the other phone, and the run's log could not say whether it was never
      * sent (the field lost the text, or the button was disabled) or sent and lost on the way
      * ([logLocalMessages] answers that half).
+     *
+     * Send is pressed through its click action, not a touch at its centre. Typing focuses the field
+     * and opens the keyboard, and the keyboard's inset moves the composer up on the View system's
+     * own layout pass, in real time, whatever the paused Compose clock says. A touch injected while
+     * it moved missed the button: the log of one failed run read "send is enabled: true" and, after
+     * the tap, "the composer still holds the text: true" — Send's handler empties it at once, so
+     * it never ran. The action runs the button's own `onClick`, the path a tap takes, wherever the
+     * button sits; the button must be enabled, and the composer must empty, as a tap would leave it.
      */
     protected fun sendInChat(text: String) {
         composeTestRule.onAllNodes(hasSetTextAction()).onFirst().performTextInput(text)
@@ -356,8 +386,11 @@ abstract class AliceOnScreenTest {
             "chat: before the tap, the composer holds the text: ${composeTestRule.exists(typed)}, " +
                 "send is enabled: ${composeTestRule.exists(send and isEnabled())}"
         )
-        tap(send)
+        composeTestRule.onAllNodes(send and isEnabled()).onFirst()
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeTestRule.settle()
         step("chat: after the tap, the composer still holds the text: ${composeTestRule.exists(typed)}")
+        composeTestRule.pumpUntil("the composer to empty after Send", COMPOSER_EMPTIES_MS) { !exists(typed) }
     }
 
     /**
@@ -425,7 +458,13 @@ abstract class AliceOnScreenTest {
         private const val TAG = "AliceOnScreenTest"
         private const val PASSWORD = "e2e-password-1"
         private const val HOME_TIMEOUT_MS = 60_000L
+
+        /** How long Home is given to show the open requests card before "See all" is taken. */
+        private const val REQUESTS_SETTLE_MS = 5_000L
         private const val SHORT_ID_LENGTH = 6
+
+        /** How long Send's handler gets to empty the composer; it does so in the same frame. */
+        private const val COMPOSER_EMPTIES_MS = 5_000L
 
         /** Past every `WhileSubscribed(5_000)` in the app's process-lifetime singletons, with margin. */
         private const val STALE_GRAPH_LINGER_MS = 6_000L

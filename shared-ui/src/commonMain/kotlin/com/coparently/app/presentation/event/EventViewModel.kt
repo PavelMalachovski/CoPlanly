@@ -7,6 +7,7 @@ import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.error.AppError
 import com.coparently.app.domain.files.RecordPhotoKind
+import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.RecordPhotoStorage
 import com.coparently.app.domain.serialization.StoredJson
@@ -35,6 +36,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
@@ -54,6 +56,11 @@ import kotlin.time.Clock
 
 /** Keeps the parents flow warm across brief unsubscriptions (config changes). */
 private const val PARENTS_STOP_TIMEOUT_MS = 5_000L
+
+/** The last moment of a day, as the calendar's day query ends it. */
+private const val LAST_HOUR = 23
+private const val LAST_MINUTE = 59
+private const val LAST_SECOND = 59
 
 /**
  * Data class for event draft.
@@ -125,6 +132,40 @@ class EventViewModel(
      */
     val familyMembers: StateFlow<List<FamilyMember>> = familyMembersSource.observe()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(PARENTS_STOP_TIMEOUT_MS), emptyList())
+
+    /**
+     * The family's children, for the calendar header's avatars and its "Together, for …" line.
+     *
+     * The same Room list [familyMembers] names its children from, read for the whole record
+     * (the avatar draws from it), so no second source of who the children are.
+     */
+    val children: StateFlow<List<ChildInfo>> = familyMembersSource.observeChildren()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(PARENTS_STOP_TIMEOUT_MS), emptyList())
+
+    /** The day the calendar's Today card describes; null until the screen names it. */
+    private val todayCardDay = MutableStateFlow<LocalDate?>(null)
+
+    /**
+     * Every event touching the Today card's day, whatever range the grid has loaded.
+     *
+     * Its own query, because the grid's ([events]) follows the month, week or day on screen and
+     * the card is about today wherever the parent has paged. A failed read shows no events
+     * rather than ending the flow: the grid's own query reports errors.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val todayEvents: StateFlow<List<Event>> = todayCardDay
+        .filterNotNull()
+        .flatMapLatest { day ->
+            eventUseCases.getEvents
+                .getByDateRange(day.atTime(0, 0), day.atTime(LAST_HOUR, LAST_MINUTE, LAST_SECOND))
+                .catch { emit(emptyList()) }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(PARENTS_STOP_TIMEOUT_MS), emptyList())
+
+    /** Names the day the calendar's Today card describes; the screen calls it as the day turns. */
+    fun showTodayCardFor(day: LocalDate) {
+        todayCardDay.value = day
+    }
 
     private val _uiState = MutableStateFlow<EventUiState>(EventUiState.Loading)
     val uiState: StateFlow<EventUiState> = _uiState.asStateFlow()

@@ -74,7 +74,9 @@ import com.coparently.app.presentation.settings.GridSwatch
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.country_label
 import com.coparently.app.resources.onboarding_back
@@ -189,6 +191,7 @@ fun OnboardingScreen(
     }
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         topBar = { OnboardingTopBar(state = uiState) },
         bottomBar = {
             OnboardingBottomBar(
@@ -228,7 +231,10 @@ private class ScheduleStepState(
 @Composable
 private fun OnboardingTopBar(state: OnboardingUiState) {
     Column {
-        TopAppBar(title = { Text(stringResource(Res.string.onboarding_title)) })
+        TopAppBar(
+            colors = screenTopAppBarColors(),
+            title = { Text(stringResource(Res.string.onboarding_title)) }
+        )
         LinearProgressIndicator(
             progress = { state.displayIndex.toFloat() / state.stepCount },
             modifier = Modifier.fillMaxWidth()

@@ -48,6 +48,13 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    `Card { Text }` for one, and don't pass an action that does nothing). Home,
    Settings, Expenses and Chat all render through these — do not reintroduce
    `Card { ListItem { … } }` per row, which is what the audit called "double surfaces".
+   **Since the November 2026 redesign (part 1) cards are `large` and white on a lavender ground**:
+   `SectionGroup` and `InlineBanner` take `MaterialTheme.shapes.large`, a `SectionGroup` carries a
+   1 dp `outlineVariant` border, `surfaceContainer` is white in the light theme, and the ground is
+   `theme/AppGround.kt` — a vertical gradient from `background` to `LightGroundEnd` (dark partner
+   `DarkGroundEnd`) drawn once by `NavGraph`'s root Scaffold. Every screen's Scaffold takes
+   `containerColor = ScreenContainerColor` (transparent) so the ground shows through; a new
+   screen does the same. The light custody wash is 0.14 (proposal 0.08) on that ground.
    **Five more sit beside them in `presentation/common/`** (October 2026 audit, D-15/D-16), each
    the one anatomy for something screens used to draw their own way:
    - `StickyActionBar` is a form's pinned primary action. It has a minimum height, not a fixed
@@ -90,7 +97,7 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
 
    **Corners, spacing, emphasis and buttons come from the theme too** (week 5, D-19/D-20):
    - A corner is `MaterialTheme.shapes` (8/12/16/24/32), `CoPlanlyCorners` (`Mark` 2, `Tag` 4,
-     `Pill`) or `chatBubbleShape`, all in `theme/Shape.kt`. detekt's `ForbiddenImport` refuses
+     `Cell` 10 — a month tile, November 2026 — and `Pill`) or `chatBubbleShape`, all in `theme/Shape.kt`. detekt's `ForbiddenImport` refuses
      `RoundedCornerShape` outside `presentation/theme/` — pick a step, or add one there with its
      reason.
    - A padding, a `spacedBy` gap or a spacer on the 4 dp grid names a `theme/Spacing.kt` step
@@ -112,7 +119,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
 3. **Colours come from `MaterialTheme.colorScheme`, not literal hex.** The prototype was
    authored in dark and its palette *is* `DarkColorScheme`, so every value has a role
    (`#1F1F25` = `surfaceContainer`, `#C2C1FF` = `primary`, …). Using roles is what keeps
-   light theme working on the redesigned screens.
+   light theme working on the redesigned screens. Every screen's `TopAppBar` takes
+   `screenTopAppBarColors()` (`theme/AppGround.kt`): transparent over the ground at rest,
+   `surfaceContainer` once content scrolls under it — never an opaque `surface` band.
 4. **Settings is five labelled groups** — Sync, App, Chat, Privacy and data, Account, in that
    order (design audit, 27 October 2026, M6: App had grown to eleven rows; the pause before sending
    is Chat's, telemetry, health, AI and the data sources are Privacy and data's, and My details sits
@@ -128,33 +137,64 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    "What {name} has shared"), Only mine — with the stickers at the bottom. It reuses Settings' dialogs (`FamilyKindDialog`, `SplitRatioDialog`) rather than
    drawing its own, and its money figures come from `home/MonthMoney`, the one computation Home's
    tile reads too.
-5. **Calendar header is one row**: title (which *is* the Month/Week/Day picker), Today,
-   Filters, gear. What waits on this parent's answer is an inline banner over the grid
+5. **Calendar header is three rows** (redesign, November 2026; `components/CalendarHeader.kt`):
+   the brand row (`BrandHeader`: wordmark, the children's avatars, gear), "Your family calendar"
+   with "Together, for Emma and Leo" under it (left out with no children and from font scale
+   1.3), then the Month/Week/Day segmented control and Filters. The header and the member strip
+   are tight on purpose (tester feedback, 12 November 2026): `titleMediumEmphasized` over
+   `bodySmall`, 4 dp gaps, and the strip's chips at a 40 dp target (`LocalMinimumInteractiveComponentSize` around it in `CalendarScreen`), so the grid
+   gets the height. The month title, Today, the
+   arrows, the swap button and the "+" for a new event head the grid's own white card in one row
+   (`CalendarMonthBar` in `CalendarGridCard`, the legend under them on the full width; the title
+   steps its size down before it ellipsises, and from font scale 1.3 takes a line of its own above
+   the actions); tapping the title opens "Jump to
+   date". **The "+" is the bar's, not a floating button** (tester feedback, 12 November 2026): once
+   the six rows reached the card's bottom a floating "+" covered the last row's cells. The Scaffold's
+   floating slot holds only the red delete button a long press or a drag brings up. The Today card
+   (`TodayCard`, built through `HomeWeek.todayOf` like the widget's) sits in the
+   Scaffold's bottom bar slot, and is left out on two panes. What waits on this parent's answer is an inline banner over the grid
    (`components/CalendarBanners.kt`), not a badged glyph, and its number is the one Home's
-   **Requests** row shows (item 40 of "Things that are easy to get wrong"). School vacation is neither a banner (it
+   open requests card shows (item 40 of "Things that are easy to get wrong"). School vacation is neither a banner (it
    changed the grid's height between months) nor the old teal strip: since MON-13 it is a thin
    neutral line along each vacation day's bottom edge (`DayCellFill.schoolVacation`, theme
    `outline`, no height). Month
-   cells carry event **dots**, tapping a day selects it **and opens Day view** (an owner
+   cells are **rounded tiles** (`CoPlanlyCorners.Cell`, a 3 dp gap) that **carry event pills**
+   (November 2026 redesign, `MonthCellPills.kt`, `CellPills.kt`): one pill — the `surface`, a 3 dp mark in the
+   event's colour, the title on one line, ellipsised — and "+n" for the rest (`pillsFor`, one
+   whatever the cell's height), the cell's description still naming the events; they replaced the
+   dots. **A pill is drawn only where its line fits** under the 22 dp day number (its own 13 sp
+   line), and the six rows split the card's height equally with no floor, so the last row is never
+   cut short; a cell too short for it draws a 4 dp bar in the mark's colour instead — never a title cut
+   in half, which is what the first UI tour of the redesign showed. Tapping a day selects it **and opens Day view** (an owner
    decision from the Aug 2026 walkthrough — a select-only tap left no route to creating an
    event on a chosen day; an empty hour slot in Day view is that route), and
    the grid fills its screen. **Back from a Day view opened that way returns to Month** (D-11);
    a Day view chosen in the title's picker keeps the default Back. Day view's header carries
    **"Swap this day"** beside the date (D-10), the visible twin of the month cell's long-press.
    The member filter is **one scrolling row, label first** (`FamilyMemberFilterStrip`) and stays
-   with the banners over the grid on purpose, not in Filters. **Every tap on the Calendar tab opens
+   with the banners over the grid on purpose, not in Filters. **Every tap on the Calendar tab (the start screen) opens
    Month on today** (`navigation/CalendarTabTaps`, tester feedback, October 2026), from another
    tab and from the tab itself; a restored Day view on another month read as a broken calendar. The month title omits the current
    year. In Day and Week view **a drag deletes only when it ends over the red delete button**
-   (its bounds, via a file-private local in `DayWeekView`), never over a screen region. *(Aug 2026, second pass: the `DayAgendaCard` no longer sits
-   under the grid — it renders on Home as the "today" card (`HomeWeek.todayOf`), fed by the
-   same `DayAgendaCard` composable so the two surfaces cannot drift. Month paging is snapped
-   by `MonthView`'s own nestedScroll settle — one 500 ms tween, identical in both
+   (its bounds, via a file-private local in `DayWeekView`), never over a screen region. **Today's agenda is the Calendar's `TodayCard`** (November 2026
+   redesign), built from `HomeWeek.todayOf`, the value the widget reads too; Home shows no today
+   agenda, and `DayAgendaCard` survives only in the screenshots and previews. Month paging is
+   snapped by `MonthView`'s own nestedScroll settle — one 500 ms tween, identical in both
    directions — with `calendarScrollPaged = false`; don't hand snapping back to the library,
-   whose spring read differently per direction.)*
+   whose spring read differently per direction. **A Day view opened from Home's week tiles**
+   (`CalendarDayRequests`) **returns to Month on Back** too, as from a month cell (D-11): the
+   Calendar is the back stack's root, so the default Back would leave the app.
+   **Home is variant A** (redesign, November 2026; `home/HomeSection.kt` decides the order):
+   the brand header, then **Updates** (`UpdatesCard`: `HomeFeed.items`, at most five rows, a
+   status disc each — `updateMark` — and "See all" to the inbox's History; empty, "Nothing new from
+   Bob" inside the card), **Open requests** (`OpenRequestsCard`, the Requests row's counts; left out
+   when nothing waits on either parent), **This week** (`WeekTiles`: seven tiles from today in each
+   day's custody wash, `HomeWeek.daysOf`, today ringed, a dot on a day with events; a tap opens Day
+   view on it through `navigation/CalendarDayRequests`), the **next handover** (`HandoverCard`), and
+   the expenses and chat tiles (`StatTiles`). The handover hero and the week list are gone.
 6. **There is no weekly-summary screen any more** (commit `340af30` removed the screen, its
    ViewModel, the route and the strings; this line used to say it had "exactly one entry point").
-   Home's seven-day card is the surviving surface — don't add a summary route back, and don't
+   Home's week tiles (`WeekTiles`) are the surviving surface — don't add a summary route back, and don't
    resurrect the unlabelled `view_list` action in the calendar header either.
 7. **The Chat tab renders the thread in place** when there is exactly one conversation
    (`ConversationsScreen` composes `ChatScreen` with `onBack = null`). Do not "fix" this by
@@ -192,7 +232,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     holiday tint, the proposal preview, the swap arrows, the long press. That is the line — a
     pattern crosses the month boundary, a thing you would answer does not. The school-vacation
     line (MON-13) is a pattern too and crosses into borrowed days at the same scale; it is a line,
-    never a fill or a hue.
+    never a fill or a hue. **Since the November 2026 redesign a cell is a tile** with a 3 dp gap;
+    the band still runs edge to edge as a row of tiles, and the handover diagonal stays inside its
+    tile. An event pill on a borrowed day is dimmed like the dot it replaced.
 
 11. **Motion has one vocabulary** (September 2026 audit, `docs/AUDIT-2026-09.md` §4).
     `presentation/theme/Motion.kt` holds the only durations — `SHORT_MS` 150 (fades, crossfades),
@@ -277,7 +319,7 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     read `FamilySwitcherViewModel`, observed off the signed-in Room row. Don't give Settings its
     own copy of the family list again — two sources for "which family is on screen" is how they
     come to disagree. With one co-parent the chip renders nothing. It is deliberately not on the
-    Calendar header (item 5's fixed four). It is not on Chat either — the original reason (chat
+    Calendar header (item 5). It is not on Chat either — the original reason (chat
     followed the first co-parent, whatever the switcher said) is fixed, and what remains is a
     layout call: the tab renders the thread in place (item 7) and its header already names the
     co-parent. **The chip and each dialog row carry a dot — never a count — when a family *not* on
@@ -369,7 +411,7 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     nothing loses contrast; `ContrastScreenshots` renders three components at high contrast. The
     parent colours, the weekend grey and the holiday reds are the app's own tokens and do not
     change with the level; they are held to AA by `ParentColorsTest` in both themes.
-18. **The "Today" widget is Home's today card on the home screen, never a second opinion**
+18. **The "Today" widget is the Calendar's today card on the home screen, never a second opinion**
     (October 2026 audit, week 6; `presentation/widget/`). A Glance 1.1.1 widget: whose day it is,
     the day's contact windows, the next handover and today's events. The compact layout counts the
     events (from font scale 1.3 it keeps three lines, `compactAtLargeText`, since a widget cannot
@@ -379,9 +421,12 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     `CustodyResolver` over the same Room rows Home reads, so swaps, contact windows and private
     events follow Home's rules. Don't give the widget a rule of its own. **One wording**:
     `TodayWidgetText` uses the app's string for every line it shares with Home ("Today with
-    Alex", the hero's handover sentence, the card's contact window and empty day), names parents
+    Alex", the handover sentence, the card's contact window and empty day), names parents
     through `ParentNames` and colours them from the family's palette. `widget_strings.xml` holds
-    only what the app never says. **Room and nothing else**: the co-parent's name lives in
+    only what the app never says. **One accepted divergence** (redesign, November 2026): Home's
+    handover card reads "Handover in N days" over "date · Goes to …" (`HandoverCard`), while the
+    widget keeps the former hero's one sentence ("Handover to you in 4 days",
+    `home_handover_hero_*`), which a widget line has the room for and the card splits in two. **Room and nothing else**: the co-parent's name lives in
     Firestore alone, so the app remembers the parents for the widget while `MainActivity` is
     started (`TodayWidgetRefresher.followParents` → `TodayWidgetNames`, in `EncryptedPreferences`,
     cleared with them and refused for another uid). Never attach `ParentsSource` from a widget
@@ -422,9 +467,8 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     `ReadablePaneTest` measures both widths. The UI tour's `light-en-100-wide` variant (a
     1280 × 800 dp display) shows it next to the rail.
     **The tabs go to two panes from 840 dp** (release audit R-8, week 8; `common/TwoPane.kt`,
-    `rememberTwoPane()` off the window width, as the rail is). Home puts what the parent acts on
-    now — the handover, today, what waits on them — beside what they read after — the
-    week, the co-parent's changes, the month's figures; Expenses puts the month's summary and
+    `rememberTwoPane()` off the window width, as the rail is). Home puts Updates, the open requests
+    and the handover beside this week's tiles and the month's figures (`homeSections`); Expenses puts the month's summary and
     where the money went beside its expenses, with no List/Analytics switch; Chat puts the list
     beside the open thread when there is more than one, and caps a single thread at 840 dp
     (`WideColumn`). The pair is at most 1200 dp, centred. Deliberately not
@@ -440,10 +484,11 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     the owner's decision to make first.
 21. **The second new-user audit (24 October 2026) fixed these; keep them** (each with its test):
     - **Home asks one thing per visit** (`HomeAskQueue.nextThisVisit`): what already waited beside
-      the first ask waits for the next visit, on the Requests row; an ask that arrives during the
+      the first ask waits for the next visit, on the open requests card; an ask that arrives during the
       visit is asked. Two dialogs in a row on opening the app read as pressure.
-    - **A request is called "Requests" everywhere** — Home, the inbox, the calendar's banner and
-      Home's dialog — and the banner counts "waiting for your answer", as the row does.
+    - **A request is called "Requests" everywhere** — the inbox, the calendar's banner and Home's
+      dialog (Home's card says "Open requests") — and the banner counts "waiting for your answer",
+      as Home's card does.
     - **A swap says whom the days go to** (`home_dialog_swap_goes_to_*`), and nothing about a
       schedule says "the child": a family with two read it as wrong.
     - **A schedule is described from its dated start, and the presets named by weekdays start on a
@@ -466,7 +511,7 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
       never from the offerer's: Home's dialog and the inbox card read the one rule, and an unknown
       slot says "proposes swapping", never a direction it cannot know.
     - **The reader is "you"** (H4): `ParentNames.isReader`/`labelOrYou` word every line that would
-      otherwise name the reader to themselves — Home's hero and week, the today card and widget, the
+      otherwise name the reader to themselves — Home's handover card, the today card and widget, the
       calendar's swap strip, expenses' rows and shares.
     - **A parent answers through `AnswerButtons`** (`common/AnswerButtons.kt`, M1): outlined Decline,
       filled Accept, stacked from font scale 1.3, a text "Later" under them on a dialog. Home's three
@@ -481,8 +526,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
       decision, 28 October 2026, reversing H2's neutral hour grid). There is no named band over the
       week's columns any more: the legend above the grid names the colours, and a second strip of
       names repeated it. Event titles wrap to the lines their block has room for (`titleLinesFor`).
-    - **Home's activity offers Review only while a request waits** (M2), and says how it ended once
-      answered; the handover hero carries no Review chip (M3).
+    - **Home offers Review only while a request waits** (M2; since November 2026 on the open
+      requests card, which Home leaves out when nothing waits); the handover card carries no Review
+      chip (M3).
     - **Expenses shows one currency's summary at a time** with chips (M7), a row says how it divides
       only when that differs from the agreement (`dividesAsAgreed`), and the analytics are bars in
       the primary colour, never a pie (M8).
@@ -497,7 +543,8 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
       (`receiverOf`), and the bar, the review sheet, the grid's marks, the push and the answer card
       all read it; a day nobody is recorded for is left out and counted, never guessed.
     - **The way in is visible**: an icon-only "⇄" (`SwapDaysButton`, "Swap days" for TalkBack and on
-      a long press, owner decision) at the end of the legend row opens selection mode empty; the long
+      a long press, owner decision) in the month bar, before the "+" (12 November 2026; it ended the
+      legend's row before) opens selection mode empty; the long
       press stays. While choosing, the calendar header is `SwapSelectionHeader` (close, title, month
       arrows), **a tap only chooses** — a borrowed day pages to its month and is chosen there
       (`SwapTap`), never opens Day view — and the selection is `rememberSaveable` across paging and
@@ -507,8 +554,11 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
       dashed while waiting, and "→ L"/"→ you" in words (the co-parent's initial: a cell is too narrow
       for a name, and its description says it in full). They replaced the grey arrows; in-month
       cells only. `ParentColorsTest` holds the day number on the hatch to AA.
-    - **The sheet shows both sides and the result** (`DaySwapSheet` over `DaySwapSheetContent`):
-      "You give Lana", "You take", the mini months, "Send to Lana"; after sending, a snackbar says it
+    - **The sheet shows both sides, compactly, and the result** (`DaySwapSheet` over
+      `DaySwapSheetContent`, opening partly expanded so the grid stays in view): a title that counts
+      the days, one row per way from `swapSheetRows` ("Fri 13, Sat 14 Nov → Lana", "→ you"; the given
+      days first), "Add a note" and "Answer by …" chips that open their fields in place, and a pinned
+      "Send to Lana" — no mini months (the inbox card and Home's pop-up keep them); after sending, a snackbar says it
       went and offers Withdraw for exactly that group (`CalendarViewModel.swapSent`).
     - **The push names the sender and the dates**: `datesToYou`/`datesToSender` (ISO dates, from the
       addressee's side, bounded at 160 in `firestore.rules`) and `actorName` ride the existing swap
@@ -519,7 +569,8 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
       "Accept swap"/"Accept", and "Answer day by day" (two waiting days or more) switches to
       `SwapDayAnswers` in their place. A part-answer leaves the rest waiting, and the card then shows
       and decides only those (`DaySwapGroup.waitingOn`).
-    Home's hero and its children's lines say "you" too (`handoverHeadline`, `ChildrenTodayLines`).
+    Home's handover card and its children's lines say "you" too (`HandoverCard`'s `handoverGoesTo`,
+    `ChildrenTodayLines`).
 
 ## UX/UI overhaul (July 2026 design review) — implemented, keep consistent
 
@@ -531,7 +582,15 @@ When touching the UI, keep these invariants:
    or more it is a rail instead** (`NavigationLayout`: a tablet, an unfolded foldable, a phone on
    its side; October 2026 audit, week 5), with the same destinations and badge. It shows only on
    those routes (`BottomNavDestination.topLevelRoutes`); detail screens hide it and keep
-   an up-arrow. **Expenses is not a tab either since October 2026** (new-user review): it is a
+   an up-arrow. **The app opens on Calendar, and Calendar is the back stack's root** (redesign,
+   part 2a, November 2026): `startDestinationFor` answers `Screen.Calendar.route`, `navigateToTab`
+   and the post-onboarding and sign-out navigations pop to it, so Back from any tab lands on the
+   Calendar and from the Calendar leaves the app. What Home used to put first — what waits for
+   this parent — is **the Home tab's badge** (`RequestsBadgeViewModel`, `rememberHomeRequestsCount`
+   beside the Chat badge in `NavGraph`, the `home_requests_badge` plural): exactly the count Home's
+   Open requests card shows waiting on this parent, `inbox.waitingOnMe.count`, and nothing while it
+   is loading. Home stays a tab,
+   declared as before. **Expenses is not a tab either since October 2026** (new-user review): it is a
    detail screen opened from the Family tab's money card and Home's month tile, with an up-arrow,
    and a money push opens Family and then Expenses so Back lands on the tab. **Settings is NOT a tab** — it opens from a gear action in each top-level
    screen's top bar and is a detail screen (`onNavigateUp = popBackStack`, bottom bar
@@ -656,7 +715,8 @@ When touching the UI, keep these invariants:
    phone.
 3. **Calendar**: month view is a classic grid from the 1st with horizontal month paging
    (kizitonwose `HorizontalCalendar`); day/week use `HorizontalPager` with fling physics.
-   Event chips are single-line (`softWrap = false` + ellipsis). School vacation is a thin
+   Event chips are single-line (`softWrap = false` + ellipsis), and so is a month cell's event
+   pill (one pill and "+n", design refresh item 5). School vacation is a thin
    neutral line along the cell's bottom edge (theme `outline`, 2 dp, no height), never a
    full-cell fill (it used to drown custody colors) and never a hue (teal is the calendar friend).
 4. **Custody coloring** must go through the unified lookup in `CalendarScreen`
@@ -688,8 +748,9 @@ When touching the UI, keep these invariants:
    `ParentColors.custodyTintAlpha`, 20 % light and 30 % dark (it was 14 % in both, which read as
    maroon and brown on the dark surface), with the proposal wash at three-fifths of it. The dark
    theme washes `ParentColor.darkWash`, the dark fill capped at luminance 0.30, so a yellow parent
-   does not wash a day number out; a month cell's event dot sits in a ring of the day's base so it
-   keeps 3:1 on its own parent's wash. `ParentColorsTest` holds what sits on the wash to AA — don't
+   does not wash a day number out; a month cell's event pill is the opaque `surface`, so its
+   title and its 3 dp mark are held against the surface (`ParentColorsTest`), and the mini month's
+   event dot sits in a ring of the day's base so it keeps 3:1 on its own parent's wash. `ParentColorsTest` holds what sits on the wash to AA — don't
    raise an alpha without it.
 7. **Notification permission** is requested contextually via
    `rememberNotificationPermissionRequester()` (push toggle, reminder selection, and once in
@@ -911,7 +972,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   attachment stays off the server while its upload fails and arrives after the outbox retry, the
   co-parent's download matches its bytes, a stranger's is refused, and a vault document opens for
   the co-parent, who cannot delete it, while the uploader's delete is a tombstone. And **record
-  photos** (`TwoParentRecordPhotosTest`, L-4): all four kinds under the family's path, the
+  photos** (`TwoParentRecordPhotosTest`, L-4): all five kinds under the family's path, the
   co-parent's digest-checked download, a stranger refused, either parent deleting, no overwrite,
   and a photo taken before pairing moved into the family by the real `onFamilyCreated`. Each
   `EmulatorParent` has `files`, `cache`, `no_backup` and preference names of its own
@@ -1706,7 +1767,7 @@ domain/    — models, repository interfaces, use cases, holidays, ReminderSched
              record and the school import's plan — in shared/, but for the event use cases with
              EventValidator, ErrorHandler, ActivityAnnouncer and FamilyDocumentRepository
              (shared-data/) and MessageTemplate (shared-ui/); none left in app/
-data/      — Room (v46 + migrations), Firestore/Google/HTTP clients, repository impls, sync — in
+data/      — Room (v47 + migrations), Firestore/Google/HTTP clients, repository impls, sync — in
              shared-data/ (above). In app/ only what stays on purpose, each for its reason: every
              Worker and WorkManager scheduler (WorkManager); the notifications and the reminder
              alarms (data/notification/, RequestNotices, PushNotifier: the notification manager,
@@ -2909,8 +2970,14 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    `commonMain` against `SQLiteConnection`** (`connection.execSQL(…)`, never
    `SupportSQLiteDatabase`) and added by both platforms' builders: Android runs it through
    SQLCipher's open helper, in Room's compatibility mode, which `ConnectionMigrationOnSqlCipherTest`
-   proves on the emulators. A column's stored text is fixed: a date column goes through
-   `Converters` (`IsoText`), never `kotlinx.datetime`'s own `toString()`.
+   proves on the emulators. **47 is the first** (`MIGRATION_46_47`, a child's portrait,
+   `child_info.photo`): `data/local/CommonMigrations.kt` holds it in `COMMON_MIGRATIONS`, which
+   `coPlanlyDatabaseBuilder` adds after the legacy chain and `IosDatabase.kt` adds alone — a new one
+   joins that array. `MigrationTestHelper.runMigrationsAndValidate`'s support-SQLite path calls
+   `migrate(SupportSQLiteDatabase)`, which a common migration cannot override, so
+   `CoPlanlyDatabaseMigrationTest` opens such a step through Room itself
+   (`migration46To47_givesEveryChildAnEmptyPortrait`). A column's stored text is fixed: a date
+   column goes through `Converters` (`IsoText`), never `kotlinx.datetime`'s own `toString()`.
 2. **Event editing must preserve fields.** `AddEditEventScreen` keeps a snapshot of the
    loaded event and uses `copy()`. Never rebuild an `Event` from scratch on save —
    that wipes `sharedWith`/`permissions`/`createdByFirebaseUid` (this was a real bug).
@@ -3151,7 +3218,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     the conversation as `{uid: epochMillis}` maps — one write per event — and the ticks and
     unread badge are derived from them by `ChatReadState`, never stored per message.
     Message times are stored the same way: `Message.sentAtMillis`, epoch millis (Room
-    schema v13, since superseded — the database is at v46), not a naive `LocalDateTime`, so two
+    schema v13, since superseded — the database is at v47), not a naive `LocalDateTime`, so two
     parents in different time zones agree
     on what a mark means and on when a message was sent. The Firestore field keeps its name
     (`timestamp`) and the read path still accepts a legacy ISO string, so a co-parent on an
@@ -3951,10 +4018,9 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     phone's clock (`domain/export/RecordJournal.kt`). Don't add a sync path, a backup or an outbox
     column.
 
-35. **The school import talks from the phone to the school, keeps no password, and never deletes
-    by absence** (MON-8, September 2026; Bakaláři now. EduPage's greyed "Coming soon" row was
-    removed before the first release (owner decision, September 2026); EduPage returns as a row
-    only when its import exists). `data/school/bakalari/` is the client (`/api/login`
+35. **The school import talks from the phone to the school, keeps no Bakaláři password, and never
+    deletes by absence** (MON-8, September 2026; Bakaláři first, EduPage the second source since
+    November 2026, below). `data/school/bakalari/` is the client (`/api/login`
     with `client_id=ANDR`, `/api/3/timetable/actual`, `/api/3/events`, the school directory at
     `sluzby.bakalari.cz`), parsed by hand over a JSON tree (kotlinx.serialization's `JsonElement`
     since MON-24, read as leniently as Gson's tree was) — no reflected DTO, so R8 has nothing to
@@ -4010,6 +4076,39 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     Nothing here reaches our servers except the imported events themselves, which sync like any
     shared event. What a live school server answers is unverified until `docs/DEVICE-CHECKLIST.md`
     §3.18 is run.
+    **EduPage is the second source** (November 2026; design
+    `docs/superpowers/specs/2026-11-12-edupage-import-design.md`), behind the `SchoolSource` seam, in
+    `shared-data/`'s `data/school/edupage/` (`EdupageClient`, `EdupageSource`, three parsers over a
+    JSON tree, as Bakaláři's). It reads the timetable (`curentttGetData`) and the timeline (events,
+    tests, homework) for the child; EduPage has no API, so the protocol is inferred from the
+    open-source `edupage-api` 0.13.3 and **no real answer has been recorded** until
+    `docs/DEVICE-CHECKLIST.md` §3.36 is run. Six things not to undo.
+    - **The password is stored, the one exception to "used once and dropped"** (owner decision):
+      EduPage has no refresh token, only a session cookie that expires, so the connection keeps the
+      password (`EdupageSecrets`: password, cookies, studentId, device token), sealed in
+      `EncryptedPreferences` like every connection, signed in with once a day and whenever the
+      cookie is refused. It goes only to `edupage.org` and `*.edupage.org` (`originOf` and the
+      redirect rule refuse any other host), is never logged, and goes with the connection
+      (disconnect, sign-out, account switch, deletion). A Bakaláři connection still stores none.
+      The privacy policy, P11b, DATA-SAFETY and DPIA R16 say so; change them with this.
+    - **Its own key prefix**, `school_edupage_connection_`, so an older build (which reads
+      `school_connection_`) never tries Bakaláři's refresh against an EduPage record; the store's
+      `clearAll()` and the `EncryptedPreferences.clear()` exemption cover both prefixes.
+    - **Ids name the child, not the login**: `"edupage|" + host + "|" + studentId + "|" + kind + "|"
+      + key` hashed like Bakaláři's, because one login lists several children and each parent has
+      their own login for the same child. Kinds are `event`, `hours`, `dayoff` and the new `task`
+      (a test or homework, a dated all-day event "Subject: title", keyed on EduPage's item id).
+    - **A pupil's own timeline entry is matched by name or class** (`user_meno`, whitespace and case
+      folded) or whole school; anything else is not the child's and is dropped.
+    - **A second factor is not handled by the app**: `EdupageException.SecondFactor` says "approve
+      the sign-in in EduPage, then try again"; the app never sees the code, and the cookies it was
+      given are kept for the retry. A captcha is refused the same plain way.
+    - **Hidden in release**: the connect screen's EduPage row follows `AppBuildValues.edupageImport`
+      (`BuildConfig.EDUPAGE_IMPORT`, `COPLANLY_EDUPAGE_IMPORT`, default on in debug, off in
+      release) until the device check is run; turning it on in release is its own pull request.
+      The R8 probe runs the client and parsers on `CannedEngine` (`HttpImportProbe`, the case
+      "EduPage sign-in, timetable and timeline through the minified Ktor pipeline", required by
+      `check-r8-probe.js`).
 
 36. **AI assist is a server-side callable, off until configured, and never sees more than it
     needs** (MON-12, September 2026, owner decisions; `functions/ai-assist.js`, `aiAssist` in
@@ -4665,17 +4764,24 @@ below hold what it fixed in place.
      identifier (L-13).
 8. **A record's photo is stored under its family's path, read only by the family's two parents,
    and never reached by a download URL** (L-4, September 2026; MON-23's shape, item 31). Medical,
-   pet, receipt and event photos live at `{prefix}/{owner}/{recordId}/{random}.jpg`
+   a child's portrait, pet, receipt and event photos live at `{prefix}/{owner}/{recordId}/{random}.jpg`
    (`domain/files/RecordPhotoPaths`), `{owner}` the record's family id, or `solo_{uid}` while the
    uploader has no co-parent. One interface, `RecordPhotoStorage` (`FirebaseImageStorage`), for
-   all four. Seven things not to undo.
+   all five. **The portrait** (`RecordPhotoKind.CHILD`, `child_photos/`, November 2026) is the
+   record's single `photo` field (schema 47; a top-level Firestore key both writers write, read
+   through `ChildInfoPhotos.decodePortrait`, which an older build's `set()` drops — declared in the
+   wire contract). It is **not health data**: no consent gate, and `HealthConsentManager`'s
+   withdrawal leaves it. In `functions/record-photos.js` a collection maps to a list of layouts, so
+   `child_info` has two (`medicalPhotos`, `photo`) for the sweep, `AUTHORED_FILES` and the move.
+   Seven things not to undo.
    - **The gate is the path.** `storage.rules` lets the two uids of a family id read, create and
      delete (`isOneOfPair`), and the uploader alone a `solo_` path. **Both parents may delete** a
      family photo (either may edit the record); nothing may be overwritten (`resource == null`); a
      create stamps `uploader` and `sha256`, is an image and is under 10 MB (`RecordPhotoPolicy`,
      pinned by `RecordPhotoTest`). The flat layouts from before L-4 match no block.
    - **No download URL, ever.** The record's existing field (`imageUrl`, `receiptUrl`, the entries
-     of `medicalPhotos`/`photos` — names kept, no schema bump) holds a `RecordPhotoCodec` string,
+     of `medicalPhotos`/`photos` — names kept, no schema bump; the portrait's `photo` is the one
+     new field) holds a `RecordPhotoCodec` string,
      `ph1|path|contentType|size|sha256`, never Gson. A screen draws it through `AppImage` (the image
      seam, `presentation/platform/PlatformImages.kt`, MON-24 phase 2), whose Android half is Coil 2
      with `RecordPhotoFetcher` (registered by `CoPlanlyApplication` as `ImageLoaderFactory`), which

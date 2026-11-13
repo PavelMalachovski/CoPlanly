@@ -131,9 +131,11 @@ decide what each of you may read. **Legal basis:** performance of our contract w
 - **Expenses** — amounts, currencies, categories, and optional receipt photos. (Earlier test
   builds also let you set a monthly budget per category. This version no longer creates, shows
   or syncs budgets; any an earlier build saved stay in your account until you delete it.)
-- **Records about your child** — name, date of birth, school and activity details, emergency
-  contacts, and a medical profile: allergies, medications, conditions, blood group,
-  vaccinations, doctors' notes and photographs you attach to them.
+- **Records about your child** — name, date of birth, an optional photo of your child, school and
+  activity details, emergency contacts, and a medical profile: allergies, medications, conditions,
+  blood group, vaccinations, doctors' notes and photographs you attach to them. **A photo of your
+  child is not health data**: it is not covered by the consent the medical details need, and
+  withdrawing that consent does not remove it. Only you and your co-parent see it.
 - **Records about a pet**, in the same shape.
 - **Messages** between you and your co-parent, and the **photos and PDF files** either of you
   sends in them. A file sent in a message stays in the thread like the message itself: neither of
@@ -153,8 +155,8 @@ export can list the files a message carried by name and fingerprint (the files t
 never put into an export). Files are stored in Cloud Storage under your family, and only the two
 parents of that family can download them; we never create a public link to one.
 
-**Photographs attached to a record** — an event's photo, a receipt, and the photographs on a
-child's medical notes or a pet's record — are stored the same way: in Cloud Storage under your
+**Photographs attached to a record** — an event's photo, a receipt, a photo of your child, and
+the photographs on a child's medical notes or a pet's record — are stored the same way: in Cloud Storage under your
 family, with their size, type and SHA-256 fingerprint, downloadable by the two parents of that
 family only, and never through a public link. **A guest, a family friend or a professional
 never sees them**, even where they can read the record itself. A photograph you add before you
@@ -355,6 +357,36 @@ and the times your child is at school appear in the family calendar. It works li
 performance of our contract with you (Art. 6(1)(b)) — you asked for the import; the school's own
 processing of your child's data in Bakaláři is the school's, under its own privacy notice.
 
+### Your child's school system (EduPage), if you connect it
+
+You can connect your child's **EduPage** account (Settings → Sync) so that the lesson times, the
+school's events, tests and homework appear in the family calendar. EduPage works differently from
+Bakaláři in one way that matters to you:
+
+- **Your phone keeps your EduPage password, encrypted, and nowhere else.** EduPage gives the app no
+  long-lived token, so to sign in again each day the app needs the password. It is stored on your
+  phone only, encrypted with a key held by the phone's secure storage, and it never reaches our
+  servers. It is sent only to EduPage's own servers (`edupage.org` and the school's address under
+  it), and to nobody else.
+- Your phone also keeps EduPage's session cookie, the school's address, your username and your
+  child's name and class as EduPage shows them. **Disconnecting the school, signing out or
+  deleting your account removes the password and all of it from the phone.** If you change the
+  password in EduPage, the app asks for the new one.
+- If your account asks for a second confirmation, the app asks you to approve the sign-in in
+  EduPage and try again. It never sees or stores the confirmation.
+- From EduPage the app reads **only** your child's timetable for the next four weeks and the
+  timeline entries meant for your child, their class or the whole school: events, tests and
+  homework with a date, and days without lessons. It keeps the first lesson's start and the last
+  one's end for each school day, and the title of each entry. It does **not** keep or import
+  grades, absences or messages: EduPage sends messages in the same timeline answer, and the phone
+  discards them.
+- What it imports becomes **ordinary events in the family you chose**, about the child you chose
+  — visible to your co-parent like any event you enter yourself, and kept and deleted like them.
+
+**Why:** so both parents see the school's calendar without retyping it. **Legal basis:**
+performance of our contract with you (Art. 6(1)(b)) — you asked for the import; the school's own
+processing of your child's data in EduPage is the school's, under its own privacy notice.
+
 ### Writing help (AI), if you turn it on
 
 CoPlanly can offer two kinds of **writing help** from an AI model. Both are **optional and off
@@ -502,8 +534,8 @@ within which a claim arising from the family's affairs can generally still be br
 - deletes the deadlines of every request you sent or were asked to answer, with what was recorded
   about them (when a request was received and opened, its reminders, a last chance, "no answer") —
   for your co-parent too, since each of these names you both;
-- deletes the photographs attached to those records — event photos, receipts, and medical and
-  pet photographs — any photograph you added before you linked a co-parent, and the family
+- deletes the photographs attached to those records — event photos, receipts, photos of a child,
+  and medical and pet photographs — any photograph you added before you linked a co-parent, and the family
   documents you added. A photograph you added to a record your co-parent created stays with that
   record;
 - **keeps the message thread with your co-parent for 30 days, then deletes it** — messages and

@@ -41,7 +41,8 @@ service firebase.storage {
 
     // ---- L-4: record photographs ------------------------------------------------------------
     //
-    // A child's medical photos, a pet's photos, an expense's receipt and an event's photo, at
+    // A child's medical photos and portrait, a pet's photos, an expense's receipt and an event's
+    // photo, at
     // `{prefix}/{owner}/{recordId}/{objectName}` — `{objectName}` a fresh random name per upload,
     // so replacing a photo is a new object plus a delete of the old one. `{owner}` is the record's
     // family, or `solo_{uid}` while the uploader has no co-parent: then only the uploader may read,
@@ -71,6 +72,14 @@ service firebase.storage {
     }
 
     match /medical_photos/{owner}/{recordId}/{objectName} {
+      allow get: if isRecordPhotoOwner(owner);
+      allow create: if isRecordPhotoOwner(owner) && isAcceptableRecordPhoto();
+      allow delete: if isRecordPhotoOwner(owner);
+    }
+
+    // A child's portrait (`RecordPhotoKind.CHILD`, the record's `photo` field): the same rules
+    // as a medical photo, but not health data, so no consent gate sits behind it in the app.
+    match /child_photos/{owner}/{recordId}/{objectName} {
       allow get: if isRecordPhotoOwner(owner);
       allow create: if isRecordPhotoOwner(owner) && isAcceptableRecordPhoto();
       allow delete: if isRecordPhotoOwner(owner);

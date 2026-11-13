@@ -38,8 +38,10 @@ import com.coparently.app.presentation.common.AccountAvatar
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.labelLargeEmphasized
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
 import com.coparently.app.resources.friend_profile_blood_group
@@ -98,8 +100,10 @@ fun FriendProfileScreen(
     }
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         topBar = {
             TopAppBar(
+                colors = screenTopAppBarColors(),
                 title = { Text(stringResource(Res.string.friend_profile_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {

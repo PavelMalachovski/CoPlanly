@@ -124,6 +124,7 @@ import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.ParentColor
 import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.calendar_feed_settings_description
@@ -402,6 +403,7 @@ fun SettingsScreen(
     }
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             val backLabel = stringResource(Res.string.settings_back)

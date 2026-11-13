@@ -83,7 +83,7 @@ invocation is yours.
 | **MON-4** | **Built**, `Event.updatedAt`'s compared instant included (schema 39, `39.json` committed); left: the deploy in 💻 | P1 | — |
 | **MON-5** | The plan ships; swapping in the Ministry's own wording needs the form itself | P1 | S |
 | **MON-6b** | Contact windows ship (schema 36), on the grid and on Home's today card; left: verifying the mixed-version path on two phones | P2 | S |
-| **MON-8** | Bakaláři import **built**; EduPage waits for one real capture from a parent account | P2 | L |
+| **MON-8** | Bakaláři import **built**; EduPage **built behind a release flag**, waits for one real run (`DEVICE-CHECKLIST.md` §3.36) | P2 | L |
 | **MON-11** | Payments (MVP 3) — the entitlement model; MON-1 is decided (per family, 129 CZK / 1,190 CZK, 14-day trial from pairing). Cancelling is designed in `docs/DESIGN-stickers-and-subscription.md` §2 (tester feedback, 21 October 2026) | P2 | L |
 | **MON-12** | **Server half built** (September 2026): the `aiAssist` callable — reply suggestion and month summary, Claude on Vertex AI in an EU region, consent-gated, quota'd, off until configured; left: the Android client behind its flag, the owner's Vertex set-up and retention check, counsel on ROPA P15 | P3 | M |
 | **MON-13** | The tables, Germany's Länder, Slovakia's kraje and sourced school vacations (Slovakia nationwide and per kraj, Austria nationwide, Germany per Land) are done — left: Austria's per-Land breaks (not final in the source), Slovakia's half-year day (not in the dataset), and whether Austria's patron-saint days are drawn at all | P2 | M |
@@ -152,7 +152,7 @@ invocation is yours.
 | **CQ-18** | Cross-time-zone chat on two phones — **what is drawn only** | The logic now runs end to end in CI (`e2e` job, `TwoParentChatTest`: UTC+14 and UTC−11, unread → DELIVERED → READ). Left for the phones: the badge and ticks as rendered, the displayed times, and the push. |
 | **MON-1** | ~~Price, unit and free tier~~ **Decided 2026-09-30** — see MON-1 | Left: the Play merchant account and the tax set-up before MON-11 ships. |
 | **MON-9** | Distribution: mediators, Cochem courts, OSPOD, NGOs | Phone calls and meetings. A session can draft the material; it cannot make the call. |
-| **MON-8 (input)** | A Bakaláři login to run `DEVICE-CHECKLIST.md` §3.18; one EduPage capture (timetable, children, one event) | Bakaláři was built from published samples; EduPage has none anywhere. |
+| **MON-8 (input)** | A Bakaláři login to run `DEVICE-CHECKLIST.md` §3.18; an EduPage parent login to run §3.36 and record the real answers | Bakaláři was built from published samples; EduPage has none anywhere. |
 
 ### If you want a shortlist of what to hand a session next
 
@@ -1764,7 +1764,7 @@ What it took, and the choices worth knowing:
 proposal each way — is covered by the rules suite and the unit tests but has not been run on two
 devices.
 
-### MON-8 · **Bakaláři BUILT (September 2026), EduPage open** · P2 · L · Bakaláři / EduPage school import
+### MON-8 · **Bakaláři BUILT (September 2026), EduPage built behind a flag (November 2026)** · P2 · L · Bakaláři / EduPage school import
 
 **Bakaláři is built** (owner decisions of 25 September 2026): the parent signs in on the phone,
 which talks to the school's Bakaláři API v3 directly; the password is used once and never stored,
@@ -1779,7 +1779,16 @@ are deliberately not imported. It was written against the API's published sample
 real account has been tried**; `DEVICE-CHECKLIST.md` §3.18 is the first contact. The research is
 summarised in the PR; the legal side is in `docs/legal/` (privacy policy, P11a, DPIA R16).
 
-**EduPage is still open**, deliberately. It has no API: every client reverse-engineers the web app
+**EduPage is built (November 2026) behind the `COPLANLY_EDUPAGE_IMPORT` release flag**, as the
+second source behind a `SchoolSource` seam: owner decisions were to store the password encrypted on
+the phone (EduPage has no refresh token), ids per child (`edupage|host|studentId|kind|key`), a
+separate key prefix and a `task` kind for tests and homework; a second factor is "approve in EduPage,
+try again". It was written against `edupage-api` 0.13.3's protocol description, so **nothing has been
+recorded live**: `DEVICE-CHECKLIST.md` §3.36 is the first contact and replaces the inferred fixtures
+with real ones; only then is the flag turned on in release. CLAUDE.md item 35 and `docs/legal/`
+(P11b, DPIA R16) hold the rules. What follows is why it was open.
+
+**EduPage was open until then**, deliberately. It has no API: every client reverse-engineers the web app
 (an RPC login with a form fallback, captcha, two-factor, a `PHPSESSID` session with no refresh
 token, `curentttGetData` for the timetable, timeline items for events, and a server-side
 "switch child" for parents), and **not one captured response exists in any public source**. It is

@@ -129,13 +129,14 @@ function junit(run, required) {
 
 /**
  * Probe cases that are not stored models but call sites the minified build must run, each a label
- * `HttpImportProbe` reports (MON-24 fix round): both imports' HTTP clients and parsers, and the one
+ * `HttpImportProbe` reports (MON-24 fix round): the three imports' HTTP clients and parsers, and the one
  * `FirestoreWriteProbe` reports (Task 8a): the values GitLive's encoder hands the SDK. Required
  * like a stored model, so a case that stops running fails here rather than vanishing.
  */
 const REQUIRED_CALL_SITES = [
   'Google Calendar events.list page through GoogleCalendarApi',
   'Bakalari sign-in and events through BakalariClient',
+  'EduPage sign-in, timetable and timeline through the minified Ktor pipeline',
   // `FirestoreWriteProbe` (MON-24 phase 2, Task 8a): a write's values through GitLive's encoder.
   'Firestore write values through GitLiveFirestoreClient and the GitLive encoder',
 ];

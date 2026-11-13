@@ -46,7 +46,9 @@ import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
 import com.coparently.app.resources.journal_add
@@ -103,8 +105,10 @@ fun JournalListScreen(
     }
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         topBar = {
             TopAppBar(
+                colors = screenTopAppBarColors(),
                 title = { Text(stringResource(Res.string.journal_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {

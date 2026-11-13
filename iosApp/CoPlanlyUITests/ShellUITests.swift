@@ -61,7 +61,7 @@ final class ShellUITests: XCTestCase {
         step("Settings", after: ["Family"]) { try self.settings() }
         step("cancelled back swipe over a Compose bar", after: ["Settings"]) { try self.cancelledSwipeOverComposeBar() }
         step("a tab tap pops two screens", after: ["Settings"]) { try self.tabTapPopsTwo() }
-        step("a form with its own bar shows one bar", after: ["Home"]) { try self.composeBarSheet() }
+        step("a form with its own bar shows one bar", after: ["Calendar and Chat tabs"]) { try self.composeBarSheet() }
         step("sign out, and sign in to fresh tabs", after: ["Settings"]) {
             try self.signOutAndIn(email: email, password: password)
         }
@@ -201,18 +201,19 @@ final class ShellUITests: XCTestCase {
     }
 
     private func composeBarSheet() throws {
-        try goToHomeRoot()
+        // The calendar's month bar carries "Add event" since the tester redesign (November 2026),
+        // which took the empty week's action off Home: the Calendar tab, whose header is Compose's.
+        try goToCalendarRoot()
         press(try element(labelled: "Add event", in: app.buttons))
         try require(app.staticTexts["New event"].waitForExistence(timeout: timeout), "The event form did not open")
         sleep(1)
-        // The form draws its own bar; the sheet's navigation bar stays hidden over it. Home's own
-        // bar, behind the sheet, is the only one there.
-        let others = app.navigationBars.matching(NSPredicate(format: "identifier != %@", "Home"))
-        try require(others.count == 0, "Two bars in the event form's sheet")
+        // The form draws its own bar; the sheet's navigation bar stays hidden over it, as the
+        // calendar's is behind it: no system bar at all.
+        try require(app.navigationBars.count == 0, "A system bar in the event form's sheet")
         shot("10-event-form-sheet")
         press(try element(labelled: "Cancel", in: app.buttons))
         try require(app.staticTexts["New event"].waitForNonExistence(timeout: timeout), "Cancel did not close the event form")
-        try require(app.navigationBars["Home"].waitForExistence(timeout: timeout), "Home is not back after the event form")
+        try require(app.navigationBars.count == 0, "A system bar over the calendar after the event form")
     }
 
     private func signOutAndIn(email: String, password: String) throws {
@@ -247,6 +248,13 @@ final class ShellUITests: XCTestCase {
         home.tap()
         if !app.navigationBars["Home"].waitForExistence(timeout: 3) { home.tap() }
         try require(app.navigationBars["Home"].waitForExistence(timeout: timeout), "Home's first screen is missing")
+    }
+
+    /// The Calendar tab, which draws its own Compose header: no system bar over it.
+    private func goToCalendarRoot() throws {
+        let calendar = app.tabBars.firstMatch.buttons["Calendar"]
+        calendar.tap()
+        try require(calendar.waitForExistence(timeout: timeout) && calendar.isSelected, "The Calendar tab did not select")
     }
 
     /// Opens Data sources from Settings: a screen that draws its own Compose bar, pushed with the

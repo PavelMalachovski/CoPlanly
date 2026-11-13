@@ -162,6 +162,8 @@ class ConflictResolver {
         // anywhere. It is the eighth place this field has to be carried, and the only one that
         // is not a map.
         if (!childInfo.medicalPhotosJson.isNullOrBlank() && childInfo.medicalPhotosJson != "[]") count++
+        // The portrait counts for the same reason (schema 47).
+        if (!childInfo.photo.isNullOrBlank()) count++
         // Guests count for the same reason photographs do, and it matters more: a version
         // holding a grant and one holding none must not score equal, or a grandparent's access
         // is revoked by a conflict nobody sees rather than by a parent deciding to revoke it.

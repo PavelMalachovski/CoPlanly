@@ -21,17 +21,21 @@ import kotlinx.io.IOException
  * @property method GET, or POST for the Bakaláři sign-in.
  * @property url The address, exactly as it is sent.
  * @property headers The headers the client sets itself.
- * @property form An `application/x-www-form-urlencoded` body (already encoded), or null for none.
+ * @property form A body (already encoded), or null for none: `application/x-www-form-urlencoded`
+ *   unless [formType] says otherwise.
+ * @property formType The type [form] is sent as; EduPage's timetable call sends JSON.
  */
 internal class Outgoing(
     val method: HttpMethod,
     val url: String,
     val headers: List<Pair<String, String>> = emptyList(),
-    val form: String? = null
+    val form: String? = null,
+    val formType: ContentType = ContentType.Application.FormUrlEncoded
 )
 
 /**
- * The last answer a request got, after the redirects [Redirects] says to follow.
+ * The last answer a request got, after the redirects [Redirects] says to follow, or the one answer
+ * [sendOnce] got.
  *
  * @property status The HTTP status.
  * @property body The body as text.
@@ -98,7 +102,8 @@ internal enum class Redirects {
             method = if (keepsMethod) current.method else HttpMethod.Get,
             url = target.toString(),
             headers = headers,
-            form = current.form.takeIf { keepsMethod }
+            form = current.form.takeIf { keepsMethod },
+            formType = current.formType
         )
     }
 
@@ -143,10 +148,32 @@ internal enum class Redirects {
  * @throws IOException when the server cannot be reached, the whole-call limit passes ("timeout",
  *   as OkHttp's `InterruptedIOException` said), or OkHttp's follow-up limit is passed.
  */
-internal suspend fun HttpClient.send(outgoing: Outgoing, redirects: Redirects): Answer {
-    val callMillis = attributes.getOrNull(CALL_TIMEOUT_MILLIS) ?: return followingRedirects(outgoing, redirects)
+internal suspend fun HttpClient.send(outgoing: Outgoing, redirects: Redirects): Answer =
+    withinCallLimit { followingRedirects(outgoing, redirects) }
+
+/**
+ * Sends [outgoing] once and returns its answer, a redirect included: nothing is followed. For a
+ * client that follows redirects itself, as the EduPage client does to carry its session cookies
+ * from host to host. The engine's own `User-Agent` is sent. The client's whole-call limit covers
+ * this one request, as [send] applies it to a whole chain.
+ *
+ * @throws IOException when the server cannot be reached or the whole-call limit passes.
+ */
+internal suspend fun HttpClient.sendOnce(outgoing: Outgoing): Answer = withinCallLimit {
+    val response = request {
+        method = outgoing.method
+        url(outgoing.url)
+        outgoing.headers.forEach { (name, value) -> header(name, value) }
+        outgoing.form?.let { setBody(TextContent(it, outgoing.formType)) }
+    }
+    Answer(response.status.value, response.bodyAsText(), response.headers)
+}
+
+/** [block] under the client's whole-call limit, on the engine's dispatcher; see [send]. */
+private suspend fun HttpClient.withinCallLimit(block: suspend () -> Answer): Answer {
+    val callMillis = attributes.getOrNull(CALL_TIMEOUT_MILLIS) ?: return block()
     return withContext(engine.dispatcher) {
-        withTimeoutOrNull(callMillis) { followingRedirects(outgoing, redirects) }
+        withTimeoutOrNull(callMillis) { block() }
     } ?: throw IOException("timeout")
 }
 
@@ -159,7 +186,7 @@ private suspend fun HttpClient.followingRedirects(outgoing: Outgoing, redirects:
             url(current.url)
             current.headers.forEach { (name, value) -> header(name, value) }
             redirects.userAgent?.let { header(HttpHeaders.UserAgent, it) }
-            current.form?.let { setBody(TextContent(it, ContentType.Application.FormUrlEncoded)) }
+            current.form?.let { setBody(TextContent(it, current.formType)) }
         }
         val status = response.status.value
         val target = response.headers[HttpHeaders.Location]

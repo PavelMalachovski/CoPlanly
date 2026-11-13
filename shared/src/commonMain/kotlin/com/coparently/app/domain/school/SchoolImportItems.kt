@@ -1,5 +1,6 @@
 package com.coparently.app.domain.school
 
+import com.coparently.app.domain.events.AllDayEvent
 import com.coparently.app.domain.files.toHex
 import com.coparently.app.domain.platform.Sha256
 import com.coparently.app.domain.text.Utf8
@@ -62,9 +63,26 @@ internal object SchoolImportIds {
     private const val PREFIX = "school-"
     private const val HASH_LENGTH = 32
 
-    /** The id of the event of [kind] under [key]. */
-    fun of(target: SchoolImportTarget, kind: SchoolImportKind, key: String): String =
-        PREFIX + sha256Hex("bakalari|${target.baseUrl}|${target.username}|${kind.stored}|$key").take(HASH_LENGTH)
+    /**
+     * The id of the event of [kind] under [key]. Bakaláři's names the server address and the
+     * login, as it always has. EduPage's names the school's host and the pupil, never the login,
+     * so two parents connecting the same child de-duplicate.
+     */
+    fun of(target: SchoolImportTarget, kind: SchoolImportKind, key: String): String {
+        val identity = when (target.system) {
+            SchoolSystem.BAKALARI -> "bakalari|${target.baseUrl}|${target.username}"
+            SchoolSystem.EDUPAGE -> "edupage|${hostOf(target.baseUrl)}|${target.studentKey}"
+        }
+        return PREFIX + sha256Hex("$identity|${kind.stored}|$key").take(HASH_LENGTH)
+    }
+
+    /** The lower-case host of [address] without scheme, credentials, port or path; [address] if none. */
+    private fun hostOf(address: String): String {
+        val afterScheme = address.substringAfter("://", address)
+        val authority = afterScheme.substringBefore('/').substringBefore('?').substringBefore('#')
+        val host = authority.substringAfterLast('@').substringBefore(':').lowercase()
+        return host.ifEmpty { address }
+    }
 
     /** The id of [date]'s school-hours event. */
     fun hours(target: SchoolImportTarget, date: LocalDate): String =
@@ -98,7 +116,7 @@ internal object SchoolImportItems {
 
     /** Everything the school's data asks for, one item per id. */
     fun all(input: SchoolImportInput): List<ImportItem> =
-        (events(input) + hours(input) + daysOff(input)).distinctBy { it.id }
+        (events(input) + hours(input) + daysOff(input) + tasks(input)).distinctBy { it.id }
 
     /** The fetched days from today on, inside the window, one per date, in order. */
     fun daysInWindow(input: SchoolImportInput): List<SchoolDay> {
@@ -128,6 +146,26 @@ internal object SchoolImportItems {
                     )
                 }
             }
+    }
+
+    /** Each task due from today to the end of the window, as an all-day event on its date. */
+    fun tasks(input: SchoolImportInput): List<ImportItem> {
+        val end = windowEnd(input)
+        return input.tasks.mapNotNull { task ->
+            val title = task.title.trim().take(SchoolImportPlanner.MAX_TITLE_LENGTH)
+            if (title.isEmpty() || task.date < input.today || task.date >= end) return@mapNotNull null
+            ImportItem(
+                id = SchoolImportIds.of(input.target, SchoolImportKind.TASK, task.id),
+                kind = SchoolImportKind.TASK,
+                lastDate = task.date,
+                fields = ImportFields(
+                    title = title,
+                    description = task.description?.trim()?.ifBlank { null },
+                    start = task.date.atStartOfDay(),
+                    end = task.date.atTime(AllDayEvent.LAST_MINUTE)
+                )
+            )
+        }
     }
 
     /**

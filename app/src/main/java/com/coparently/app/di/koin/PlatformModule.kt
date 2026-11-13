@@ -11,6 +11,8 @@ import com.coparently.app.data.platform.Connectivity
 import com.coparently.app.data.platform.CrashReporter
 import com.coparently.app.data.platform.DeviceRegion
 import com.coparently.app.data.platform.SecurePreferences
+import com.coparently.app.presentation.platform.AppBuildValues
+import com.coparently.app.presentation.platform.androidBuildValues
 import com.coparently.app.utils.NetworkMonitor
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
@@ -30,4 +32,6 @@ val platformModule = module {
     single<Analytics> { get<AnalyticsManager>() }
     single<Connectivity> { get<NetworkMonitor>() }
     single<DeviceRegion> { AndroidDeviceRegion(androidContext()) }
+    // What the build says, for a ViewModel that decides on it (the school import's EduPage flag).
+    single<AppBuildValues> { androidBuildValues() }
 }

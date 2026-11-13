@@ -36,7 +36,9 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.placeOf
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.childinfo_add_child_button
 import com.coparently.app.resources.childinfo_back
@@ -105,8 +107,10 @@ fun ChildInfoScreen(
     val children = (uiState as? ChildInfoUiState.Success)?.childInfoList.orEmpty()
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         topBar = {
             TopAppBar(
+                colors = screenTopAppBarColors(),
                 title = { Text(stringResource(Res.string.childinfo_screen_title)) },
                 navigationIcon = {
                     IconButton(onClick = {
@@ -240,7 +244,8 @@ internal fun ChildInfoContent(
     childInfo: ChildInfo,
     onEditClick: (String) -> Unit,
     onInviteGuest: () -> Unit,
-    onRevokeGuest: (String) -> Unit
+    onRevokeGuest: (String) -> Unit,
+    portrait: (@Composable () -> Unit)? = null
 ) {
     val haptic = LocalHapticFeedback.current
     val onRowClick: () -> Unit = {
@@ -254,6 +259,7 @@ internal fun ChildInfoContent(
             .padding(Spacing.L),
         verticalArrangement = Arrangement.spacedBy(Spacing.L)
     ) {
+        if (portrait != null) item { portrait() }
         item { BasicInfoGroup(childInfo = childInfo, onClick = onRowClick) }
 
         if (childInfo.medications.isNotEmpty()) {

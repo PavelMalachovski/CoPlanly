@@ -46,7 +46,9 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberUiTextResolver
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
 import com.coparently.app.resources.professional_empty
@@ -106,6 +108,7 @@ fun ProfessionalsScreen(
     }
 
     Scaffold(
+        containerColor = ScreenContainerColor,
         topBar = { ProfessionalsTopBar(onNavigateUp) },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
@@ -149,6 +152,7 @@ fun ProfessionalsScreen(
 @Composable
 private fun ProfessionalsTopBar(onNavigateUp: () -> Unit) {
     TopAppBar(
+        colors = screenTopAppBarColors(),
         title = { Text(stringResource(Res.string.professional_section_title)) },
         navigationIcon = {
             IconButton(onClick = onNavigateUp) {

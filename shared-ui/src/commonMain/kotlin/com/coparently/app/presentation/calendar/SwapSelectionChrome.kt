@@ -26,6 +26,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.day_swap_choose_title
 import com.coparently.app.resources.day_swap_close_selection
@@ -84,6 +85,7 @@ internal fun SwapSelectionHeader(
 ) {
     BackHandler(onBack = onClose)
     TopAppBar(
+        colors = screenTopAppBarColors(),
         navigationIcon = {
             IconButton(onClick = onClose) {
                 Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.day_swap_close_selection))

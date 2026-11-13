@@ -65,6 +65,7 @@
     <string name="school_connect_family_unnamed">Family %1$d</string>
     <string name="school_connect_child_label">Which child is this?</string>
     <string name="school_connect_no_children">This family has no child records yet. Add the child under Child information in Settings, then connect again.</string>
+    <string name="school_connect_edupage_no_pupils">This EduPage account does not list any pupil, so there is nothing to connect. Sign in with a parent or pupil account, or go back and try another login.</string>
     <string name="school_connect_continue">Continue</string>
     <string name="school_connect_confirm_label">What will be imported</string>
     <string name="school_connect_confirm_events">School events for the child’s class, for the child and for the whole school, for the next 90 days</string>
@@ -73,4 +74,13 @@
     <string name="school_connect_confirm_shared">They become ordinary events of this family about %1$s, and your co-parent sees them too.</string>
     <string name="school_connect_confirm_not_imported">Grades, homework and individual lessons are not imported.</string>
     <string name="school_connect_save">Connect and import</string>
+    <string name="school_system_title">Which system does the school use?</string>
+    <string name="school_system_bakalari">Bakaláři</string>
+    <string name="school_system_edupage">EduPage</string>
+    <string name="school_edupage_address_label">School address (optional)</string>
+    <string name="school_edupage_address_hint">Only if sign-in cannot find your school, e.g. zsx.edupage.org</string>
+    <string name="school_edupage_second_factor">This account asks for a second confirmation. Approve the sign-in in the EduPage app or e-mail, then try again.</string>
+    <string name="school_edupage_password_kept">CoPlanly keeps this password on this phone, encrypted, so the import can sign in each day. It is sent only to EduPage.</string>
+    <string name="school_edupage_captcha">EduPage asks for a CAPTCHA. Sign in once on the EduPage website, then try again.</string>
+    <string name="school_edupage_address_invalid">This is not an EduPage address. It should look like zsx.edupage.org.</string>
 </resources>

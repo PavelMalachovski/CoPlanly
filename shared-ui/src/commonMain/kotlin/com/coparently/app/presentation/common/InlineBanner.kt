@@ -54,7 +54,7 @@ fun InlineBanner(
     val colours = bannerColours(tone)
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
+        shape = MaterialTheme.shapes.large,
         color = colours.container
     ) {
         Row(

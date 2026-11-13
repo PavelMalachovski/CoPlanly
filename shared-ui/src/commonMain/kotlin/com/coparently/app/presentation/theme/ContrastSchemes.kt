@@ -18,7 +18,7 @@ internal val LightMediumContrastColorScheme: ColorScheme = LightColorScheme.copy
     onSurfaceVariant = Color(0xFF43424B),
     error = Color(0xFF8C000B),
     outline = Color(0xFF5F5E68),
-    outlineVariant = Color(0xFF7C7984)
+    outlineVariant = Color(0xFF7C7985)
 )
 
 /**
@@ -27,6 +27,7 @@ internal val LightMediumContrastColorScheme: ColorScheme = LightColorScheme.copy
  */
 internal val LightHighContrastColorScheme: ColorScheme = LightColorScheme.copy(
     primary = Color(0xFF1629C2),
+    onPrimaryContainer = Color(0xFF251B6C),
     secondary = Color(0xFF404256),
     tertiary = Color(0xFF014D37),
     onBackground = Color(0xFF000000),
@@ -34,7 +35,7 @@ internal val LightHighContrastColorScheme: ColorScheme = LightColorScheme.copy(
     onSurfaceVariant = Color(0xFF24232C),
     error = Color(0xFF8C000B),
     outline = Color(0xFF43424B),
-    outlineVariant = Color(0xFF605E67),
+    outlineVariant = Color(0xFF615D69),
     inverseOnSurface = Color(0xFFFFFFFF)
 )
 
@@ -54,7 +55,7 @@ internal val DarkMediumContrastColorScheme: ColorScheme = DarkColorScheme.copy(
     error = Color(0xFFFFD8D2),
     onError = Color(0xFF5B0000),
     outline = Color(0xFFB6B4BF),
-    outlineVariant = Color(0xFF94939D),
+    outlineVariant = Color(0xFF9691A6),
     inversePrimary = Color(0xFF433EDC)
 )
 
@@ -79,7 +80,7 @@ internal val DarkHighContrastColorScheme: ColorScheme = DarkColorScheme.copy(
     onError = Color(0xFF000000),
     onErrorContainer = Color(0xFFFFFFFF),
     outline = Color(0xFFE1DFEB),
-    outlineVariant = Color(0xFFB6B4BF),
+    outlineVariant = Color(0xFFB8B3C9),
     inverseOnSurface = Color(0xFF000000),
     inversePrimary = Color(0xFF433EDC)
 )

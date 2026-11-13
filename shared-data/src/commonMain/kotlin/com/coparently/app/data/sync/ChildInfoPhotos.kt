@@ -1,7 +1,8 @@
 package com.coparently.app.data.sync
 
 /**
- * The medical photographs on a child-info document, read from the wire.
+ * The photographs on a child-info document — the medical photographs and the portrait — read from
+ * the wire.
  *
  * A pure helper for the same reason [ChildInfoAudience] is one: the child document is built and
  * read in **seven** places — `ChildInfoRepositoryImpl`'s four mappers and `SyncService`'s upload
@@ -33,4 +34,16 @@ object ChildInfoPhotos {
         ?.mapNotNull { it as? String }
         ?.filter { it.isNotBlank() }
         .orEmpty()
+
+    /**
+     * The portrait reference on a document (`photo`, schema 47), or null for none.
+     *
+     * The same three ordinary cases as [decode], each read as "no portrait": the key is absent
+     * (every document an older build wrote, and every one before the field existed), the value is
+     * not a string, or the string is blank. Like [decode], a non-blank string is kept whatever it
+     * holds; the screens decide what is a reference (`RecordPhotoCodec`).
+     *
+     * @param value The document's `photo` field, however Firestore deserialised it.
+     */
+    fun decodePortrait(value: Any?): String? = (value as? String)?.takeIf { it.isNotBlank() }
 }

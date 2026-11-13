@@ -824,6 +824,12 @@ the tap actually landing on that screen.
       `medical_photos/<childId>/…` or `pet_photos/<petId>/…` paths.
 - [ ] §7 needs the same four kinds of photo on the throwaway account.
 
+- [ ] **A child's portrait (part 5b):** on one phone open a child's screen, "Add a photo", pick one
+      (a 120 dp portrait appears, with "Only you and {co-parent} see this photo"). On the other
+      phone it shows in the calendar and Home headers and on the child's filter chip. "Change
+      photo" replaces it; "Remove photo" returns the initial. A guest of the child sees the
+      initial only.
+
 ### 3.11 Seasonal schedules and holiday fairness (MON-14, MON-20) · 1P, proposal check 2P
 
 > **[CI e2e]** `OnScreenAgreementsTest` runs the **2P proposal check's** mechanism on one real screen: B proposes a one-day layer, the proposal pops up on A's Home naming B, A accepts, and today's month cell then says "With B" on A's grid while B's phone holds the decision. The phone still adds the editor itself, the band's colour, B's grid, and everything above the 2P line.
@@ -2124,7 +2130,7 @@ requests they had already accepted or declined, and the co-parent's words on an 
 for an answer.
 
 > **[CI]** The rules are unit tests — `RequestHistoryTest`, `RequestInboxTest`, `InboxItemsTest`,
-> `RequestsRowTextTest`, `HomeFeedTest`, `RequestsSourceTest` and `ChangeRequestWithdrawTest` — and
+> `HomeFeedTest`, `RequestsSourceTest` and `ChangeRequestWithdrawTest` — and
 > the screens render in the screenshot matrix (`requests_*`). A withdrawn swap and a withdrawn custody
 > proposal run between two phones against the real rules in `TwoParentCustodyTest`. What a phone adds
 > is the two phones answering each other live, the cards and the buttons as drawn.
@@ -2174,7 +2180,7 @@ for an answer.
   arrive on the next open rather than live.
 - **If it fails:** tag `ChangeRequestViewModel`, `HomeViewModel`, `CustodyModelRepository`;
   `presentation/changerequests/`, `domain/changerequests/`, `domain/custody/DayOverrideTransition.kt`,
-  `presentation/home/RequestsRow.kt`, `presentation/home/HomeFeed.kt`.
+  `presentation/home/RequestsRowState.kt`, `presentation/home/HomeFeed.kt`.
 
 
 ### 5.9 Deadlines, reminders and the last chance (phase 3a) · 2P, 1P + a second account fallback
@@ -2362,6 +2368,70 @@ the check reads A's side). Push notifications on for A.
   `data/chat/DepartedThreadSource.kt`, `presentation/chat/DepartedThreadNotice.kt`,
   `retainOrDeleteConversations` and `sweepRetainedConversationsImpl` in `functions/index.js`,
   `firebase functions:log --only deleteAccount,sweepRetentionLimits`.
+
+### 3.35 The app opens on the Calendar; Home carries a badge · 1P, badge check 2P
+
+Redesign part 2a (CLAUDE.md "UX overhaul" item 1). Pinned by `StartDestinationTest` and
+`RequestsBadgeViewModelTest`; `MainNavigationSmokeTest` walks the cold start and Back. What is left is
+the real launch and the badge as drawn.
+
+- [ ] **Cold start lands on Calendar.** Kill the app and open it from the launcher: the Calendar tab
+      is selected and the month shows. A push or an invitation link still opens its own screen
+      over it.
+- [ ] **Back exits.** From Calendar press Back: the app closes. From Home or Chat or Family press
+      Back once: Calendar; once more: the app closes.
+- [ ] **Home badge matches the Requests row** (2P). Bob sends Alice a change request: the Home tab
+      shows a badge with the number Home's **Requests** row shows (a proposed expense split counts,
+      the calendar banner does not); TalkBack reads "1 request waiting for your answer"; answering
+      it clears the badge. On a tablet the rail shows the same badge.
+- [ ] **Back from a day opened on Home returns to Month.** On Home tap a day of the week tiles: the
+      Calendar opens that day in Day view. Press Back: the Calendar shows Month (not the app
+      closing); Back once more closes the app. The same from a month cell. A Day view chosen in
+      the title's picker keeps the default Back.
+- **If it fails:** `startDestinationFor` and `navigateToTab` in `presentation/navigation/`,
+  `RequestsBadgeViewModel`, `rememberHomeRequestsCount` in `NavGraph.kt`; for Back from a day,
+  `CalendarDayRequests` and `dayOpenedFromMonth` in `CalendarScreen.kt`.
+
+### 3.36 The EduPage school import · 1P, sharing check 2P
+
+EduPage import (design `docs/superpowers/specs/2026-11-12-edupage-import-design.md`). The client, the
+three parsers and the store are JVM-tested against **inferred** answers (the open-source
+`edupage-api` 0.13.3's description of the protocol, `EdupageFixtures`); **no real EduPage account has
+answered the app yet**, so this section is the first contact. Needs a parent's EduPage login (Zuzana's
+school) and a build with the row switched on: a debug build, or release with
+`-PCOPLANLY_EDUPAGE_IMPORT=true` (`BuildConfig.EDUPAGE_IMPORT`; the row is hidden in release otherwise).
+
+- [ ] Settings → Sync → Connect a school → EduPage. Leave the school's address empty (the sign-in goes
+      through `login1.edupage.org`) or type the school's `https://<school>.edupage.org`.
+- [ ] A **wrong** password: a plain "wrong username or password", nothing stored. Then the right one:
+      the screen names the school and each child with class.
+- [ ] Choose the child (and, with two families, the family). Confirm. Within a minute the calendar
+      shows, on each school day of the next four weeks, one event from the first lesson's start to
+      the last lesson's end: **compare three days with the EduPage app**, one with a substitution.
+- [ ] School events for the child's class and for the whole school appear; another class's do not.
+      A test (písomka) and a homework with a date appear as all-day events titled "Subject: title".
+- [ ] Update now twice: no duplicates. Delete one imported event, Update now: it does not come back.
+- [ ] On the co-parent's phone: the imported events (hours, events, tests, homework) are there,
+      tagged with the child.
+- [ ] Two children on one EduPage login: connect both; each child's events carry that child and a
+      second parent's own login for the same child makes no duplicate (the ids name the child).
+- [ ] **Record the real answers.** With a debug build and a proxy or `adb logcat` that shows
+      responses, save the sign-in page, the `userhome(...)` object, `curentttGetData` and the
+      timeline answer (names, ids and school redacted) and replace the inferred ones in
+      `EdupageFixtures` and `EdupageParsersTest`; list the timeline item types seen
+      (`typ`) and fix `EdupageTimelineParser`'s three sets if they differ.
+- [ ] **Change the password on EduPage**, then Update now: the row says it needs the password again;
+      entering the new one resumes the import, nothing duplicated.
+- [ ] **A second-factor account** (approval in the EduPage app or an e-mailed code): the app says
+      to approve the sign-in in EduPage and try again; after approving, the retry connects. Note
+      whether EduPage asks again on every new session.
+- [ ] Disconnect: the connection and the stored password go, the imported events stay. Sign out and
+      back in, and delete an account: no EduPage connection or password is remembered.
+- [ ] Airplane mode, Update now: an error line, nothing lost. The password is sent only to
+      `*.edupage.org` (a proxy log shows no other host).
+- **If it fails:** `data/school/edupage/` (`shared-data/`: client, parsers, source),
+  `data/school/SchoolConnectionStore`, `domain/school/`, `presentation/school/`. Capture the failing
+  answer (redacted) as a fixture with a test.
 
 ---
 

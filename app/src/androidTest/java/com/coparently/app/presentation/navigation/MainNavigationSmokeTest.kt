@@ -1,5 +1,6 @@
 package com.coparently.app.presentation.navigation
 
+import android.os.SystemClock
 import androidx.annotation.StringRes
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -13,6 +14,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
+import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -28,6 +30,7 @@ import com.coparently.app.testing.settle
 import org.jetbrains.compose.resources.StringResource
 import org.junit.After
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -63,14 +66,15 @@ class MainNavigationSmokeTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
     private val bottomBar = hasTestTag(BOTTOM_BAR_TEST_TAG)
     private val settingsButton = hasContentDescription(string(R.string.nav_settings)) and hasClickAction()
-    private val viewModeTitle = hasContentDescription(string(R.string.calendar_change_view_mode))
+    // The calendar's header heading, drawn in every view (redesign, part 2b).
+    private val viewModeTitle = hasText(string(R.string.calendar_heading))
 
     @Before
     fun launchSignedIn() {
         session.signIn()
         composeTestRule.mainClock.autoAdvance = false
         scenario = ActivityScenario.launch(MainActivity::class.java)
-        composeTestRule.pumpUntil("Home with the bottom bar") { exists(settingsButton) && exists(bottomBar) }
+        composeTestRule.pumpUntil("the start screen with the bottom bar") { exists(settingsButton) && exists(bottomBar) }
         composeTestRule.settle()
     }
 
@@ -82,7 +86,8 @@ class MainNavigationSmokeTest {
 
     @Test
     fun everyTopLevelScreen_opens_andTheBottomBarShowsOnlyOnTabs() {
-        tab(BottomNavDestination.HOME).assertIsSelected()
+        // The app opens on the Calendar (redesign, part 2a).
+        tab(BottomNavDestination.CALENDAR).assertIsSelected()
         composeTestRule.onNode(bottomBar).assertIsDisplayed()
 
         for (destination in listOf(
@@ -104,7 +109,9 @@ class MainNavigationSmokeTest {
         )
         for (mode in views) {
             chooseCalendarView(mode)
-            composeTestRule.onNode(viewModeTitle).assertIsDisplayed()
+            composeTestRule.onAllNodes(hasText(string(mode)) and hasClickAction() and isMenuItem())
+                .onFirst()
+                .assertIsSelected()
             composeTestRule.onNode(bottomBar).assertIsDisplayed()
         }
 
@@ -117,7 +124,46 @@ class MainNavigationSmokeTest {
     }
 
     @Test
+    fun coldStart_landsOnTheCalendar_andBackLeavesTheApp() {
+        tab(BottomNavDestination.CALENDAR).assertIsSelected()
+        // Calendar is the back stack's root: a tab visited from it unwinds to it, then Back exits.
+        openTab(BottomNavDestination.HOME)
+        scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        composeTestRule.pumpUntil("the Calendar again after Back from Home") {
+            exists(bottomBar) && exists(viewModeTitle)
+        }
+        composeTestRule.settle()
+        // The app's half: on the root nothing in the app may take the Back — no screen's
+        // BackHandler (Day view's, the swap selection's) and not the NavHost's, which is enabled
+        // only while the back stack holds more than the root.
+        scenario.onActivity {
+            assertFalse(
+                "nothing in the app intercepts Back on the Calendar, the root",
+                it.onBackPressedDispatcher.hasEnabledCallbacks()
+            )
+            it.onBackPressedDispatcher.onBackPressed()
+        }
+        // The platform's half, which is not synchronous: MainActivity is its task's root
+        // (singleTask), so Activity.onBackPressed asks the system (onBackPressedOnTaskRoot), which
+        // posts finish() back on API 29-30 and moves a launcher task to the back from API 31.
+        // Either way the activity leaves the foreground; wait for that in real time — the OS
+        // lifecycle runs on the main looper, not on the paused Compose clock.
+        assertTrue("Back on the Calendar, the root, leaves the app", awaitActivityLeftForeground())
+    }
+
+    /** Polls, in real time, until [scenario]'s activity is stopped or destroyed. */
+    private fun awaitActivityLeftForeground(): Boolean {
+        val deadline = SystemClock.uptimeMillis() + LEAVE_TIMEOUT_MILLIS
+        while (SystemClock.uptimeMillis() < deadline) {
+            if (!scenario.state.isAtLeast(Lifecycle.State.STARTED)) return true
+            SystemClock.sleep(LEAVE_POLL_MILLIS)
+        }
+        return !scenario.state.isAtLeast(Lifecycle.State.STARTED)
+    }
+
+    @Test
     fun mainScreens_iconOnlyControls_haveALabelAndA48dpTarget() {
+        openTab(BottomNavDestination.HOME)
         composeTestRule.assertIconOnlyControlsAreAccessible("Home")
         openTab(BottomNavDestination.CALENDAR)
         composeTestRule.assertIconOnlyControlsAreAccessible("Calendar (month)")
@@ -171,8 +217,7 @@ class MainNavigationSmokeTest {
     }
 
     private fun chooseCalendarView(@StringRes mode: Int) {
-        composeTestRule.onNode(viewModeTitle).performClick()
-        composeTestRule.settle()
+        // The header's segmented Month/Week/Day control (redesign, part 2b).
         composeTestRule.onAllNodes(hasText(string(mode)) and hasClickAction() and isMenuItem()).onFirst().performClick()
         composeTestRule.settle()
     }
@@ -184,7 +229,7 @@ class MainNavigationSmokeTest {
         composeTestRule.settle()
     }
 
-    /** A dropdown entry, as opposed to the same word elsewhere on screen: it sits outside the bar. */
+    /** A control outside the bottom bar, as opposed to the same word in it. */
     private fun isMenuItem(): SemanticsMatcher = !hasAnyAncestor(bottomBar)
 
     private fun string(@StringRes id: Int): String = context.getString(id)
@@ -192,4 +237,9 @@ class MainNavigationSmokeTest {
     /** A tab's label (`Res`, since the bar moved to `:shared-ui`), read as the app's `R.string` of its key. */
     private fun string(resource: StringResource): String =
         string(context.resources.getIdentifier(resource.key, "string", context.packageName))
+
+    private companion object {
+        const val LEAVE_TIMEOUT_MILLIS = 10_000L
+        const val LEAVE_POLL_MILLIS = 50L
+    }
 }

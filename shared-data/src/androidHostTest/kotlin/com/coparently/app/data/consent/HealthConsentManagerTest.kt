@@ -81,6 +81,23 @@ class HealthConsentManagerTest {
     }
 
     @Test
+    fun `withdrawing keeps the child's portrait, which is not health data`() = runTest {
+        coEvery { userRepository.getCurrentUserId() } returns ME
+        val mine = child("mine", createdBy = ME, photos = listOf(PHOTO)).copy(photo = PORTRAIT)
+        every { childInfoRepository.getAllChildInfoInEveryFamily() } returns flowOf(listOf(mine))
+
+        assertEquals(HealthConsentWithdrawal.WITHDRAWN, manager.withdraw())
+
+        val saved = slot<ChildInfo>()
+        coVerify(exactly = 1) { childInfoRepository.upsertChildInfo(capture(saved)) }
+        assertEquals(PORTRAIT, saved.captured.photo)
+        assertTrue(saved.captured.medicalPhotos.isEmpty())
+        coVerify(exactly = 0) { photoStorage.delete(PORTRAIT, any()) }
+        // A portrait alone is not health data: a record holding nothing else is not written.
+        assertEquals(false, mine.withoutHealthData().hasHealthData())
+    }
+
+    @Test
     fun `a photo that cannot be deleted stops the withdrawal and keeps the consent`() = runTest {
         coEvery { userRepository.getCurrentUserId() } returns ME
         val mine = child("mine", createdBy = ME, photos = listOf(PHOTO, OTHER_PHOTO))
@@ -133,6 +150,7 @@ class HealthConsentManagerTest {
         const val FAMILY = "alice__bob"
         val PHOTO = "ph1|medical_photos/alice__bob/mine/1.jpg|image/jpeg|100|" + "1".repeat(64)
         val OTHER_PHOTO = "ph1|medical_photos/alice__bob/mine/2.jpg|image/jpeg|100|" + "2".repeat(64)
+        val PORTRAIT = "ph1|child_photos/alice__bob/mine/p.jpg|image/jpeg|100|" + "3".repeat(64)
         val CREATED: LocalDateTime = LocalDateTime(2026, 5, 1, 9, 0)
     }
 }

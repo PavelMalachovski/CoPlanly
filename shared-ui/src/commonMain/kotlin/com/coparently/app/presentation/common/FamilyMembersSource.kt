@@ -1,6 +1,7 @@
 package com.coparently.app.presentation.common
 
 import com.coparently.app.domain.family.FamilyMemberRef
+import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.PetRepository
 import kotlinx.coroutines.flow.Flow
@@ -12,10 +13,12 @@ import kotlinx.coroutines.flow.distinctUntilChanged
  *
  * @property ref What a record stores to point at them.
  * @property name What a parent calls them.
+ * @property child The child's record, for the portrait a chip leads with; null for a pet.
  */
 data class FamilyMember(
     val ref: FamilyMemberRef,
-    val name: String
+    val name: String,
+    val child: ChildInfo? = null
 )
 
 /**
@@ -57,10 +60,16 @@ class FamilyMembersSource(
         childInfoRepository.getAllChildInfo(),
         petRepository.getAllPets()
     ) { children, pets ->
-        children.map { FamilyMember(FamilyMemberRef.Child(it.id), it.childName) } +
+        children.map { FamilyMember(FamilyMemberRef.Child(it.id), it.childName, it) } +
             pets.map { FamilyMember(FamilyMemberRef.Pet(it.id), it.name) }
     }
         // Room re-emits a whole table when any column of any row moves, and a medical note or a
         // vaccination date renames nobody.
         .distinctUntilChanged()
+
+    /**
+     * The children alone, as whole records, in the order [observe] names them: the list the
+     * calendar header draws its avatars from. Cold for the reason [observe] is.
+     */
+    fun observeChildren(): Flow<List<ChildInfo>> = childInfoRepository.getAllChildInfo()
 }

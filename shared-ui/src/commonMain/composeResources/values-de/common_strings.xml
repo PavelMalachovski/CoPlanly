@@ -56,4 +56,6 @@
     <string name="common_discard_changes_message">Deine Änderungen hier sind noch nicht gespeichert. Wenn du jetzt gehst, gehen sie verloren.</string>
     <string name="common_expanded">Ausgeklappt</string>
     <string name="common_collapsed">Eingeklappt</string>
+    <string name="children_avatars_more">+%1$d</string>
+    <string name="children_avatars_description">Kinder: %1$s</string>
 </resources>

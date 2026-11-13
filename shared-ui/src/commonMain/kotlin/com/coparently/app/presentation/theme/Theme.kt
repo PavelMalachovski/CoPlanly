@@ -19,8 +19,8 @@ import androidx.compose.ui.graphics.Color
 val LightColorScheme = lightColorScheme(
     primary = CoPlanlyColors.BrandPrimary,
     onPrimary = Color.White,
-    primaryContainer = CoPlanlyColors.BrandPrimaryContainer,
-    onPrimaryContainer = CoPlanlyColors.BrandOnPrimaryContainer,
+    primaryContainer = Color(0xFFE4DEFA),
+    onPrimaryContainer = Color(0xFF2A1F70),
     // Neutral, NOT Mom-pink — see CoPlanlyColors.NeutralSecondary. Feeds generic
     // Material selected states (FilterChips); parent pink/blue is applied directly.
     secondary = CoPlanlyColors.NeutralSecondary,
@@ -45,7 +45,7 @@ val LightColorScheme = lightColorScheme(
     errorContainer = Color(0xFFFFDAD6),
     onErrorContainer = Color(0xFF410002),
     outline = Color(0xFF777680),
-    outlineVariant = Color(0xFFC8C5D0),
+    outlineVariant = Color(0xFFECE8F6),
     scrim = Color.Black,
     inverseSurface = CoPlanlyColors.DarkSurface,
     inverseOnSurface = CoPlanlyColors.DarkOnSurface,
@@ -53,10 +53,11 @@ val LightColorScheme = lightColorScheme(
     surfaceDim = Color(0xFFDCD9E0),
     surfaceBright = CoPlanlyColors.LightBackground,
     surfaceContainerLowest = Color.White,
-    surfaceContainerLow = Color(0xFFF6F4FA),
-    surfaceContainer = Color(0xFFF0EEF5),
-    surfaceContainerHigh = Color(0xFFEBE8F0),
-    surfaceContainerHighest = Color(0xFFE5E2EA)
+    surfaceContainerLow = Color(0xFFF1EEFA),
+    // White cards on the lavender ground (November 2026 redesign).
+    surfaceContainer = Color.White,
+    surfaceContainerHigh = Color(0xFFEAE6F6),
+    surfaceContainerHighest = Color(0xFFE3DFF1)
 )
 
 /**
@@ -68,7 +69,7 @@ val LightColorScheme = lightColorScheme(
 val DarkColorScheme = darkColorScheme(
     primary = Color(0xFFC2C1FF),
     onPrimary = Color(0xFF201F60),
-    primaryContainer = Color(0xFF373678),
+    primaryContainer = Color(0xFF3A3470),
     onPrimaryContainer = CoPlanlyColors.BrandPrimaryContainer,
     // Neutral, NOT Mom-pink — see CoPlanlyColors.NeutralSecondary.
     secondary = CoPlanlyColors.NeutralSecondaryDark,
@@ -91,7 +92,7 @@ val DarkColorScheme = darkColorScheme(
     errorContainer = Color(0xFF93000A),
     onErrorContainer = Color(0xFFFFDAD6),
     outline = Color(0xFF918F9A),
-    outlineVariant = Color(0xFF47464F),
+    outlineVariant = Color(0xFF3A3648),
     scrim = Color.Black,
     inverseSurface = CoPlanlyColors.LightSurface,
     inverseOnSurface = CoPlanlyColors.LightOnSurface,
@@ -99,8 +100,8 @@ val DarkColorScheme = darkColorScheme(
     surfaceDim = CoPlanlyColors.DarkBackground,
     surfaceBright = Color(0xFF39383F),
     surfaceContainerLowest = Color(0xFF0E0E13),
-    surfaceContainerLow = CoPlanlyColors.DarkSurface,
-    surfaceContainer = Color(0xFF1F1F25),
+    surfaceContainerLow = Color(0xFF1B1926),
+    surfaceContainer = Color(0xFF211E2C),
     surfaceContainerHigh = Color(0xFF29292F),
     surfaceContainerHighest = Color(0xFF34333A)
 )

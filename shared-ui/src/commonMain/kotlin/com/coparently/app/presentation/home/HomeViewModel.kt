@@ -15,7 +15,9 @@ import com.coparently.app.domain.expenses.CurrencyBalance
 import com.coparently.app.domain.expenses.calculateExpenseBalancesByCurrency
 import com.coparently.app.domain.home.HomeWeek
 import com.coparently.app.domain.home.TodayAgenda
+import com.coparently.app.domain.home.WeekDay
 import com.coparently.app.domain.home.WeekEntry
+import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Expense
@@ -148,6 +150,8 @@ sealed interface HomeUiState {
      * @property childrenToday Each child with the parent they are with today, on a day the
      *   children are not all with the same one (FAM-4) — empty on every other day and in every
      *   family without two children and an override, so the hero stays the one family sentence.
+     * @property weekDays The seven day tiles from today (redesign, November 2026): whose day each
+     *   is and whether it has events, through the same custody lookup as [week].
      */
     data class Dashboard(
         val partner: PartnerSummary?,
@@ -161,7 +165,8 @@ sealed interface HomeUiState {
         val awaitingSwaps: List<DaySwapGroup> = emptyList(),
         val awaitingRequestIds: List<String> = emptyList(),
         val childrenToday: List<ChildWithParent> = emptyList(),
-        val requests: RequestsRowState = RequestsRowState()
+        val requests: RequestsRowState = RequestsRowState(),
+        val weekDays: List<WeekDay> = emptyList()
     ) : HomeUiState
 }
 
@@ -415,12 +420,18 @@ class HomeViewModel(
                 now = wallClockNow(),
                 userId = userId,
                 custodyFor = resolve
+            ),
+            days = HomeWeek.daysOf(
+                events = events,
+                today = Clock.System.todayIn(TimeZone.currentSystemDefault()),
+                userId = userId,
+                custodyFor = resolve
             )
         )
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
-        AgendaSections(EMPTY_TODAY, emptyList())
+        AgendaSections(EMPTY_TODAY, emptyList(), emptyList())
     )
 
     /**
@@ -443,6 +454,13 @@ class HomeViewModel(
      */
     val parents: StateFlow<Parents> = homeIdentityDependencies.parentsSource.observe()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), Parents())
+
+    /**
+     * The family's children, for the brand header's avatars (redesign, November 2026). The same
+     * Room list the calendar header reads, through the same source.
+     */
+    val children: StateFlow<List<ChildInfo>> = homeIdentityDependencies.familyMembersSource.observeChildren()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
     /**
      * uid -> slot, needed to attribute who paid what. Empty until the profiles load.
@@ -559,14 +577,13 @@ class HomeViewModel(
         initialValue = emptyList()
     )
 
-    /** What the Requests row says, or nothing while the family's requests are still loading. */
+    /** What Home's Open requests card counts, or nothing while the family's requests are still loading. */
     private val requestsRow: StateFlow<RequestsRowState> = requests
         .map { state ->
             val ready = state as? RequestsState.Ready ?: return@map RequestsRowState()
             RequestsRowState(
                 waitingOnMe = ready.inbox.waitingOnMe.count,
-                waitingOnThem = ready.inbox.waitingOnThem.count,
-                latestAnswer = RequestsRowText.latestAnswer(ready.inbox.history, ready.scope, wallClockNow())
+                waitingOnThem = ready.inbox.waitingOnThem.count
             )
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), RequestsRowState())
@@ -628,7 +645,8 @@ class HomeViewModel(
             awaitingSwaps = swaps,
             awaitingRequestIds = requestIds,
             childrenToday = children,
-            requests = row
+            requests = row,
+            weekDays = sections.days
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), EMPTY_DASHBOARD)
 
@@ -690,8 +708,9 @@ class HomeViewModel(
             unreadCount = 0
         )
 
-        // Three, then "All requests and answers": five ran Home to a third screen (UX audit M3).
-        const val MAX_ITEMS = 3
+        // At most five Updates rows, then "See all" (redesign, November 2026, variant A): the feed
+        // leads the page now, and the week list it used to share the length with is seven tiles.
+        const val MAX_ITEMS = 5
         const val STOP_TIMEOUT_MS = 5000L
 
         /**
@@ -710,5 +729,6 @@ class HomeViewModel(
  */
 private data class AgendaSections(
     val today: TodayAgenda,
-    val week: List<WeekEntry>
+    val week: List<WeekEntry>,
+    val days: List<WeekDay>
 )

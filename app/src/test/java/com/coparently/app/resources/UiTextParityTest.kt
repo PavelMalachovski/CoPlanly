@@ -76,12 +76,11 @@ class UiTextParityTest(private val language: String) {
         )
         add(
             UiText.Res(
-                Res.string.home_requests_answer_accepted,
-                listOf(UiText.Res(Res.string.home_requests_day_yesterday), "Pavel")
+                Res.string.sync_google_signed_in_as,
+                listOf(UiText.Res(Res.string.parent_label_coparent))
             ) to android.getString(
-                R.string.home_requests_answer_accepted,
-                android.getString(R.string.home_requests_day_yesterday),
-                "Pavel"
+                R.string.sync_google_signed_in_as,
+                android.getString(R.string.parent_label_coparent)
             )
         )
         add(
@@ -94,8 +93,8 @@ class UiTextParityTest(private val language: String) {
                     android.getQuantityString(R.plurals.request_left_days, count, count)
             )
             add(
-                UiText.Plural(Res.plurals.home_requests_waiting_on_them, count, listOf(count, "Pavel")) to
-                    android.getQuantityString(R.plurals.home_requests_waiting_on_them, count, count, "Pavel")
+                UiText.Plural(Res.plurals.day_swap_inbox_offered_by_you_days, count, listOf(count, "Pavel")) to
+                    android.getQuantityString(R.plurals.day_swap_inbox_offered_by_you_days, count, count, "Pavel")
             )
             val window = listOf(count, UiText.Date(DAY), UiText.Date(LATER))
             add(

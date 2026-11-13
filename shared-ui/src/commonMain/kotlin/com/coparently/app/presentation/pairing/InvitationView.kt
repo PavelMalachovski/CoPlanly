@@ -31,6 +31,7 @@ import com.coparently.app.presentation.common.HeroIcon
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.StickyActionBar
+import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.pairing_invitation_fact_agree
@@ -75,6 +76,7 @@ fun InvitationView(
 ) {
     BackHandler { onAnswer(false) }
     Scaffold(
+        containerColor = ScreenContainerColor,
         modifier = modifier.fillMaxSize(),
         bottomBar = {
             StickyActionBar(

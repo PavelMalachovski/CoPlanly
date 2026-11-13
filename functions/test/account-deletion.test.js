@@ -794,6 +794,8 @@ describe('deleteAccountDataImpl', () => {
           `event_images/${fam}/ev-alice/`,
           `event_images/solo_${ALICE}/`,
           `event_images/solo_${ALICE}/ev-alice/`,
+          `child_photos/solo_${ALICE}/`,
+          `child_photos/solo_${ALICE}/ch-1/`,
           `medical_photos/solo_${ALICE}/`,
           `medical_photos/solo_${ALICE}/ch-1/`,
           `pet_photos/${fam}/pet-1/`,
@@ -806,8 +808,8 @@ describe('deleteAccountDataImpl', () => {
             'the co-parent\'s event photo was deleted');
         assert.ok(!bucket.deletedPrefixes.includes(`event_images/solo_${BOB}/`),
             'the co-parent\'s own folder was deleted');
-        // Four personal folders, and the folders of four records.
-        assert.strictEqual(result.storage, 8);
+        // Five personal folders, and the folders of four records.
+        assert.strictEqual(result.storage, 9);
         assert.strictEqual(result.chat_attachments, 0);
       });
 

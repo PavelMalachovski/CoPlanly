@@ -56,4 +56,6 @@
     <string name="common_discard_changes_message">Изменения не сохранены. Если уйти сейчас, они пропадут.</string>
     <string name="common_expanded">Развёрнуто</string>
     <string name="common_collapsed">Свёрнуто</string>
+    <string name="children_avatars_more">+%1$d</string>
+    <string name="children_avatars_description">Дети: %1$s</string>
 </resources>

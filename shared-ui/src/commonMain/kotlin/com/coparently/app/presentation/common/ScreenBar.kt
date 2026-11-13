@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.coparently.app.presentation.theme.screenTopAppBarColors
 
 /**
  * One action in a screen's top bar: an icon button on Android, a bar button item on the iPhone.
@@ -137,6 +138,8 @@ fun AppTopBar(bar: ScreenBar) {
         return
     }
     TopAppBar(
+        // Transparent at rest over the app's ground, as every screen's bar (November 2026 redesign).
+        colors = screenTopAppBarColors(),
         title = { BarTitle(bar) },
         navigationIcon = { BarLeadingButton(bar.leading) },
         actions = {

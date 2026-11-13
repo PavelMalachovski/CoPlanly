@@ -91,6 +91,8 @@ object IosApp {
             termsUrl = config.termsUrl,
             supportEmail = config.supportEmail,
             pairingWebLink = PAIRING_WEB_LINK,
+            // The EduPage import is not offered on the iPhone yet (as `platformUiModule` binds it).
+            edupageImport = false,
         )
     }
 

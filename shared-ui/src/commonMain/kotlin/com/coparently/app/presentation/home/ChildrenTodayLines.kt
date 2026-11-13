@@ -2,11 +2,16 @@ package com.coparently.app.presentation.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
+import com.coparently.app.presentation.common.ChildAvatar
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.home_child_with_parent_today
 import com.coparently.app.resources.home_child_with_parent_today_you
@@ -29,21 +34,27 @@ internal fun ChildrenTodayLines(children: List<ChildWithParent>, parentNames: Pa
     if (children.isEmpty()) return
     Column(verticalArrangement = Arrangement.spacedBy(LINE_SPACING)) {
         children.forEach { child ->
-            Text(
-                // "Emma is with you today" when the child is with the reader (owner request, 28
-                // October 2026), the other parent's name otherwise.
-                text = if (parentNames.isReader(child.slot)) {
-                    stringResource(Res.string.home_child_with_parent_today_you, child.childName)
-                } else {
-                    stringResource(
-                        Res.string.home_child_with_parent_today,
-                        child.childName,
-                        parentNames.labelFor(child.slot)
-                    )
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                child.child?.let { ChildAvatar(it, IconSizes.Standard) }
+                Text(
+                    // "Emma is with you today" when the child is with the reader (owner request, 28
+                    // October 2026), the other parent's name otherwise.
+                    text = if (parentNames.isReader(child.slot)) {
+                        stringResource(Res.string.home_child_with_parent_today_you, child.childName)
+                    } else {
+                        stringResource(
+                            Res.string.home_child_with_parent_today,
+                            child.childName,
+                            parentNames.labelFor(child.slot)
+                        )
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
     }
 }

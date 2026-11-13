@@ -67,7 +67,6 @@
         <item quantity="other">%1$d warten auf deine Antwort</item>
     </plurals>
     <string name="calendar_change_requests_review">Prüfen</string>
-    <string name="calendar_change_view_mode">Ansicht wechseln oder zu einem Datum springen</string>
     <string name="calendar_jump_to_date">Zu Datum springen…</string>
 
     <string name="calendar_custody_changed_by">%1$s hat den Betreuungsplan geändert</string>
@@ -94,4 +93,23 @@
     <string name="mini_month_mark_swap_day">im Tausch angeboten</string>
     <string name="mini_month_marked_day">%1$s, %2$s: %3$s.</string>
     <string name="mini_month_marked_day_no_custody">%1$s: %2$s.</string>
+
+    <!-- The calendar's header and Today card (redesign, November 2026). -->
+    <string name="calendar_heading">Dein Familienkalender</string>
+    <string name="calendar_together_for">Gemeinsam für %1$s</string>
+    <string name="calendar_names_and">und</string>
+    <string name="calendar_previous_period">Vorheriger Zeitraum</string>
+    <string name="calendar_next_period">Nächster Zeitraum</string>
+    <string name="calendar_today_card_title">Heute · %1$s</string>
+    <string name="calendar_today_card_open">Heute in der Tagesansicht öffnen</string>
+    <string name="calendar_today_card_nothing_more">Heute nichts mehr</string>
+    <string name="calendar_today_card_event">%1$s – %2$s</string>
+    <plurals name="calendar_today_card_children_with_you">
+        <item quantity="one">%1$s ist bei dir</item>
+        <item quantity="other">%1$s sind bei dir</item>
+    </plurals>
+    <plurals name="calendar_today_card_children_with_parent">
+        <item quantity="one">%1$s ist bei %2$s</item>
+        <item quantity="other">%1$s sind bei %2$s</item>
+    </plurals>
 </resources>

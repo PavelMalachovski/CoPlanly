@@ -16,9 +16,9 @@ import java.time.LocalDate
 
 @LightDarkPreviews
 @Composable
-private fun HandoverHeroPreview() {
+private fun HandoverCardPreview() {
     PreviewWrapper {
-        HandoverHero(
+        HandoverCard(
             info = HandoverInfo(
                 date = LocalDate.now().plusDays(1).toKotlinLocalDate(),
                 daysUntil = 1L,

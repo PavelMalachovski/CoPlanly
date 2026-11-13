@@ -1,5 +1,6 @@
 package com.coparently.app.data.local
 
+import androidx.room.Room
 import androidx.room.testing.MigrationTestHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -1219,6 +1220,68 @@ class CoPlanlyDatabaseMigrationTest {
         }
     }
 
+    /**
+     * 46-to-47 gives a child a portrait (schema 47): every stored child comes through untouched,
+     * medical photos included, and has no portrait.
+     *
+     * **The first migration written in common code** (`CommonMigrations.kt`, against
+     * `SQLiteConnection`), so it is run the way the app runs it rather than through
+     * `runMigrationsAndValidate`, whose support-SQLite path calls `migrate(SupportSQLiteDatabase)`,
+     * which a common migration cannot override: the file is written at 46 from `46.json`, then
+     * opened by Room itself with the production chain, which hands the migration a connection over
+     * the open helper (as on SQLCipher, `ConnectionMigrationOnSqlCipherTest`) and validates the
+     * migrated table against the compiled schema before the first query returns. So it does not
+     * wait for `47.json`; the Regenerate workflow exports that for the schema check.
+     */
+    @Test
+    fun migration46To47_givesEveryChildAnEmptyPortrait() {
+        val db = helper.createDatabase(TEST_DB, VERSION_46)
+        db.execSQL(
+            """
+            INSERT INTO child_info (id, childName, dateOfBirth, medicationsJson, activitiesJson,
+                                    allergiesJson, medicalNotes, emergencyContactsJson,
+                                    schoolInfoJson, medicalProfileJson, medicalPhotosJson,
+                                    guestsJson, createdAt, updatedAt, updatedAtMillis,
+                                    createdByFirebaseUid, lastModifiedBy, syncedToFirestore,
+                                    deletedAtMillis, familyId)
+            VALUES ('c1', 'Emma', '2019-03-02T00:00:00', '[]', '[]', '["peanuts"]', NULL, '[]',
+                    NULL, '{}', '["ph1|medical_photos/alice__bob/c1/m.jpg|image/jpeg|10|abc"]',
+                    '{}', '2026-08-01T09:00:00', '2026-08-01T09:00:00', 1785574800000, 'alice',
+                    'alice', 1, NULL, 'alice__bob')
+            """.trimIndent()
+        )
+        db.close()
+
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val migrated = Room.databaseBuilder(context, CoPlanlyDatabase::class.java, TEST_DB)
+            .addMigrations(*DatabaseMigrations.ALL_MIGRATIONS)
+            .addMigrations(*COMMON_MIGRATIONS)
+            .build()
+        try {
+            val writable = migrated.openHelper.writableDatabase
+            assertEquals(VERSION_47, writable.version)
+            writable.query("SELECT childName, allergiesJson, medicalPhotosJson, familyId, photo FROM child_info")
+                .use {
+                    assertTrue(it.moveToFirst())
+                    assertEquals("Emma", it.getString(0))
+                    assertEquals("[\"peanuts\"]", it.getString(1))
+                    assertTrue(it.getString(2).contains("medical_photos/alice__bob/c1/m.jpg"))
+                    assertEquals("alice__bob", it.getString(3))
+                    assertTrue("no child had a portrait before the column", it.isNull(4))
+                }
+            writable.execSQL(
+                "UPDATE child_info SET photo = 'ph1|child_photos/alice__bob/c1/p.jpg|image/jpeg|10|abc' " +
+                    "WHERE id = 'c1'"
+            )
+            writable.query("SELECT photo FROM child_info WHERE id = 'c1'").use {
+                assertTrue(it.moveToFirst())
+                assertEquals("ph1|child_photos/alice__bob/c1/p.jpg|image/jpeg|10|abc", it.getString(0))
+            }
+        } finally {
+            migrated.close()
+        }
+    }
+
     private companion object {
         const val TEST_DB = "coplanly-migration-test.db"
         const val VERSION_11 = 11
@@ -1247,6 +1310,7 @@ class CoPlanlyDatabaseMigrationTest {
         const val VERSION_44 = 44
         const val VERSION_45 = 45
         const val VERSION_46 = 46
+        const val VERSION_47 = 47
 
         /** 2026-08-01T12:00:00 at UTC+05:30, i.e. 06:30:00Z. */
         const val NOON_AT_PLUS_FIVE_THIRTY_MILLIS = 1_785_565_800_000L
