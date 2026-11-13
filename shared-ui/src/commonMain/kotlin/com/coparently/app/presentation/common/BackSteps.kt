@@ -67,19 +67,22 @@ val LocalBackSteps: ProvidableCompositionLocal<BackSteps?> = staticCompositionLo
  * `BackHandler` (androidx.activity's on Android, so Android is unchanged), and, where the shell
  * provides [LocalBackSteps], a step its back button and edge swipe ask first.
  *
- * @param enabled Whether the step is there to undo now.
+ * @param enabled Whether the `BackHandler` answers Back now.
+ * @param stepEnabled Whether the shell's step is there to undo now; [enabled] unless a screen's
+ *   handler stays on when Back would only leave it (Connect school answers every Back itself, and
+ *   on its first step that means leaving, which the iPhone's swipe should then do).
  * @param onBack Undoes the step.
  */
 // `ExperimentalComposeUiApi`: Compose Multiplatform's common `BackHandler`.
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun ScreenBackStep(enabled: Boolean = true, onBack: () -> Unit) {
+fun ScreenBackStep(enabled: Boolean = true, stepEnabled: Boolean = enabled, onBack: () -> Unit) {
     BackHandler(enabled = enabled, onBack = onBack)
     val steps = LocalBackSteps.current
     if (steps != null) {
-        val step = remember(steps) { BackStep(enabled, onBack) }
+        val step = remember(steps) { BackStep(stepEnabled, onBack) }
         SideEffect {
-            step.enabled = enabled
+            step.enabled = stepEnabled
             step.onBack = onBack
         }
         DisposableEffect(steps, step) {

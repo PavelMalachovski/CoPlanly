@@ -461,6 +461,15 @@ private suspend fun saveEdupage(
 }
 
 /** The step before [current], or null when there is none and the screen should close. */
+/**
+ * Whether [ConnectSchoolViewModel.back] would stay on the screen in this state: an earlier step to
+ * return to, or work under way, which a back waits out. False when back would close the screen.
+ *
+ * @param edupageImport Whether the build offers EduPage, as the ViewModel's build values say.
+ */
+fun ConnectSchoolUiState.hasInnerStep(edupageImport: Boolean): Boolean =
+    isBusy || previousStep(this, edupageImport) != null
+
 private fun previousStep(current: ConnectSchoolUiState, edupageImport: Boolean): ConnectStep? = when (current.step) {
     ConnectStep.SYSTEM -> null
     ConnectStep.TOWN -> ConnectStep.SYSTEM.takeIf { edupageImport }

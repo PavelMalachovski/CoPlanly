@@ -47,6 +47,20 @@ class BackStepsTest {
     }
 
     @Test
+    fun `a step disabled again lets back through`() {
+        val steps = BackSteps()
+        var ran = 0
+        val step = BackStep(enabled = true) { ran++ }
+        steps.register(step)
+        assertTrue(steps.handle())
+
+        step.enabled = false
+        assertFalse(steps.hasEnabledStep)
+        assertFalse(steps.handle())
+        assertEquals(1, ran)
+    }
+
+    @Test
     fun `hasEnabledStep follows enabled`() {
         val steps = BackSteps()
         val step = BackStep(enabled = false) { }

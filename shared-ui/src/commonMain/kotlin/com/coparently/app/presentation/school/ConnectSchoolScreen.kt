@@ -52,6 +52,7 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.platform.LocalAppBuildValues
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.screenTopAppBarColors
@@ -127,7 +128,9 @@ fun ConnectSchoolScreen(
     LaunchedEffect(state.done) {
         if (state.done) onDone()
     }
-    ScreenBackStep(onBack = goBack)
+    // Android's Back stays this screen's on every step, as before; the iPhone's shell asks it only
+    // while there is an earlier step or work under way, so on the first step its swipe just leaves.
+    ScreenBackStep(stepEnabled = state.hasInnerStep(LocalAppBuildValues.current.edupageImport), onBack = goBack)
 
     Scaffold(
         containerColor = ScreenContainerColor,
