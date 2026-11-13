@@ -755,8 +755,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   degrades gracefully if it is missing (see the conditional apply in `app/build.gradle.kts`).
 - **GitHub CI runs on every pull request, and on every push to `main`** — a push to a
   feature branch with no PR open is not built (`.github/workflows/ci.yml`, added
-  August 2026 — this line used to say there was none). Sixteen jobs that test (this line used to
-  say fourteen, before `shared` and `shared-ios`; thirteen, before `web`; eleven before `upgrade` and `r8-runtime`; ten before detekt left the lint job; eight before `screenshots`
+  August 2026 — this line used to say there was none). Seventeen jobs that test (this line used to
+  say sixteen, before `ios-app`; fourteen, before `shared` and `shared-ios`; thirteen, before `web`; eleven before `upgrade` and `r8-runtime`; ten before detekt left the lint job; eight before `screenshots`
   and `e2e`; seven before `instrumented`), plus `report`, which only reads them (below): `changes` (a cheap gate,
   below), four Android ones — `build-test` (`assembleDebug` + `testDebugUnitTest` in a
   single invocation), `static` (`lint`, which since the final review of phases 1–2 also analyses the three shared
@@ -772,7 +772,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   alias, `single<I> { get<Impl>() }`, has no entry of its own: were R8 to merge an interface into
   its one implementer, the alias would replace the definition it asks for and the minified app would
   overflow the stack at launch, and nothing else starts the graph in a minified build) —
-  plus the shared modules' two, `shared` and `shared-ios` (below), Cloud Functions, `web` (below), the
+  plus the shared modules' two, `shared` and `shared-ios` (below), the iPhone app's `ios-app` (below), Cloud Functions, `web` (below), the
   Firestore rules suite against the emulator, and `invariants` (`node tools/check-invariants.js`, no
   dependencies and no Android SDK: locale completeness, format-argument agreement across the
   five locales, the four-way push-type agreement item 15 states, that no production code imports
@@ -1129,8 +1129,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   which moved with it to `shared-ui/src/androidHostTest/` (slice 9b), and the moved ViewModels' and
   shared state's (Task 10, commonTest and `androidHostTest`) — and compiles
   `:shared-ui:compileKotlinIosSimulatorArm64`, its iOS klib with `Res`, the theme, the common
-  components and the ViewModels, and `compileTestKotlinIosSimulatorArm64`, its commonTest (nothing
-  runs that on the simulator yet: the test executable would need `shared-data`'s Firebase pods); the strings' parity tests run in the app, in `build-test`. **`shared-ios`** runs `:shared:iosSimulatorArm64Test`,
+  components and the ViewModels, and `compileTestKotlinIosSimulatorArm64`, its commonTest (run on
+  the simulator since MON-24 phase 3, Task 5, by the `ios-app` job, whose test executable links the
+  Firebase frameworks `shared-data`'s pods build, `gatherFirebaseFrameworksForTests` in
+  `shared-ui/build.gradle.kts`); the strings' parity tests run in the app, in `build-test`. **`shared-ios`** runs `:shared:iosSimulatorArm64Test`,
   `:shared-data:iosSimulatorArm64Test` and `:shared-ui:linkDebugFrameworkIosSimulatorArm64` (the
   iPhone app's one framework, `Shared`, static, exporting `:shared` and `:shared-data`, which make
   none of their own since Task 9)
@@ -1156,6 +1158,29 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `shared-ui/src` (the other
   modules' `detektBaseline` is disabled: detekt's baseline task replaces the file's findings with
   its own run's, so a second writer would erase the first's).
+- **The `ios-app` job builds and runs the iPhone app** ("iPhone app — build and launch (macOS)",
+  MON-24 phase 3, November 2026), gated on `changes`' ninth output, `ios`: whatever runs `shared`,
+  any path under `iosApp/`, and the write gate's inputs (`tools/ios/`, `wire/current/`,
+  `firestore.rules`, `functions/`, `tools/e2e/pairing-smoke.js`). It is not draft-gated. On a
+  GitHub-hosted `macos-latest` runner it uses the image's Xcode (26.6 in November 2026, above the
+  26.4 Kotlin 2.4.21 names; Kotlin warns and it works) and a simulator `iosApp/scripts/simulator.sh
+  pick` chooses at run time (an "iPhone 16" if the image has one, else the first iPhone on the newest
+  iOS: an iPhone 17 Pro on iOS 26.5 so far). It generates the project with XcodeGen, builds the app
+  and its UI tests (`build-for-testing`), launches the app and fails unless it still runs 20 seconds
+  later (artifact `ios-launch`), then, on fresh Firebase emulators, seeds a paired family
+  (`tools/ios/seed-shell-family.js`) and runs the XCUITest walk of the native shell
+  (`iosApp/CoPlanlyUITests/`: the tabs, Family → Expenses → the Add expense sheet, a back swipe
+  completed and one let go of, a tab tap popping two screens, a dirty sheet swiped down asking
+  "Discard changes?", sign-out to fresh tabs; artifact `ios-shell`), and finally, on emulators
+  again, `:shared-data:iosSimulatorArm64Test` and `:shared-ui:iosSimulatorArm64Test` on the same
+  booted simulator (`COPLANLY_SIMULATOR_UDID`, so the Keychain tests run; check run "iPhone tests on
+  the emulators", `require_tests`) with the write gate: `IosWriteGateTest` writes every kind of
+  shared record through the iPhone data layer and `tools/ios/check-ios-writes.js` reads each back
+  from the Firestore emulator and compares its keys and types with what Android writes. A step then
+  fails the job if any emulator test skipped itself or the write gate did not report that it ran.
+  Its timeout is 180 minutes, for a cold Firebase pods build (77 minutes once). It restores the
+  pods' cache `shared-ios` saves and never saves it; it gets no secret, and CI never has a
+  `GoogleService-Info.plist`, so it never offers Google and never reaches the real project.
 - **The `web` job tests what a court and an iPhone see** ("Web — verification page and calendar
   feed", September 2026; check run "Web — verify page and ICS", artefact `junit-web`). `web-tests/`
   is its own small package (Playwright and Mozilla's `ical.js`), deliberately **not** under `web/`,
@@ -1266,7 +1291,7 @@ end of Task 11; returning them to `internal` is carried to phase 3 (ROADMAP MON-
   `ScreenshotFixtures`) so an image does not change with the calendar — keep it that way, or the
   suite can never move to verify.
 - **A pull request runs only the jobs its diff can affect** (September 2026). The `changes` job
-  pipes `git diff --name-only` into `tools/ci-changes.js`, which decides eight outputs and is tested
+  pipes `git diff --name-only` into `tools/ci-changes.js`, which decides nine outputs (the ninth, `ios`, gates `ios-app`) and is tested
   by `tools/test/ci-changes.test.js` in `invariants`: docs/functions/rules only → no Android job;
   a screen-only change (`presentation/` outside `common/`, `res/`, `app/src/test/`) → no e2e
   (`common/` stays in because the e2e parents construct `ParentsSource`); nothing the screenshots
@@ -1663,9 +1688,20 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              (presentation/), the one composable a shell sets as its content. androidMain holds
              the Android halves of its expects (the system bars, contrast, motion, the window,
              LocalizedDates' java.time code, currencyFormat); iosMain the iPhone's, with
-             ProvideIosShell and the stand-ins. Its Koin modules are uiModules and
+             ProvideIosShell and the stand-ins, and, since MON-24 phase 3, the iPhone app's
+             Kotlin side (ios/: IosApp, the start and the sign-in's halves; ios/shell/: the
+             native shell). Its Koin modules are uiModules and
              platformUiModule, which appModules includes. It makes the iPhone's one framework,
              Shared (static, exporting shared/ and shared-data/)
+iosApp/    — the iPhone app (MON-24 phase 3, part A, November 2026): an Xcode project generated by
+             XcodeGen from project.yml (the .xcodeproj is not committed), a thin Swift shell
+             (AppDelegate and SceneDelegate, which start IosApp and show its root view controller,
+             and GoogleSignInBridge, Google's sheet behind a Kotlin interface), the Info.plist,
+             the icon, the XCUITest walk (CoPlanlyUITests/) and CI's simulator script
+             (scripts/simulator.sh). Links Shared and the Firebase iOS SDK 11.8.0 and Google
+             Sign-In 9.2.0 through Swift Package Manager. No GoogleService-Info.plist is
+             committed: without one it runs against the Firebase emulators. iosApp/README.md
+             says how to run it
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler, the export's
              record and the school import's plan — in shared/, but for the event use cases with
              EventValidator, ErrorHandler, ActivityAnnouncer and FamilyDocumentRepository
@@ -1702,6 +1738,16 @@ utils/     — in shared-ui/ (the date and money seams, SwapDays, MonthTitle, �
              (the owner's language rule on Android), NetworkMonitor, SwapDateList (the push's
              locale overloads), Extensions and PreviewHelpers, which stay in app/
 ```
+
+**Where an iPhone path lives** (MON-24 phase 3, November 2026). The iPhone app's Swift and project
+files are under `iosApp/` (above); its Kotlin side is `:shared-ui`'s
+`shared-ui/src/iosMain/kotlin/com/coparently/app/ios/` (`IosApp`, the start, the Google sheet's
+`IosCredentialSignIn`, the wordings) and `…/ios/shell/` (the native shell: the tab bar, a
+navigation controller per tab mirroring the shared back stack, native bars, form sheets), with the
+iPhone halves of the seams in each module's `iosMain` (`shared-data/src/iosMain/`,
+`shared-ui/src/iosMain/`) and their tests in `iosTest`. A new iPhone screen is a shared screen; the
+shell only hosts it. `iosApp/README.md` says how to run it, and the owner's check of part A is
+`docs/superpowers/plans/2026-11-10-iphone-phase-3a-owner-check.md`.
 
 **Where a `domain/…` path in this file lives** (MON-24 phase 1, November 2026). The domain moved
 to the shared module with every package unchanged, so a path this file writes as
@@ -2036,12 +2082,20 @@ receipt rules are unchanged. It is bound in `exportDataModule`; the e2e parent b
 takes** (Task 8j; `di/koin/PlatformDataModule.ios.kt`): GitLive's default instances, the app's
 directories, the database on the bundled driver and its fifteen DAOs, the Keychain's store, the
 no-op telemetry, the network monitor and the two HTTP clients, and, for what the iPhone does not
-have yet, the stand-ins in `di/koin/IosUnavailable.kt` — nobody signed in, no push, no Google
+have yet, the stand-ins in `di/koin/IosUnavailable.kt` — then nobody signed in, no push, no Google
 Calendar, no Cloud Storage (every bucket call an `IOException`), nothing picked, no background job or
 notice, no verification address, and no wording (a pairing's thread title and a school import's
-titles are stored data a co-parent reads, so no English stand-in is written; asking throws). A
+titles are stored data a co-parent reads, so no English stand-in is written; asking threw). A
 Koin `verify()` of `dataModules` with exactly those types resolves (run once on the JVM in this
-task; the iPhone has no `koin-test`). Phase 3's app replaces each stand-in. Every `data/…`
+task; the iPhone has no `koin-test`). Phase 3's app replaces each stand-in, and its part A
+(November 2026) replaced these: the sign-in (`IosFirebaseAuth`, `IosAccountSwitch`,
+`IosAccountTraces`, Task 5), the sync (`ForegroundSyncRunner` in place of `NoSyncRequests`), the
+wordings (`IosPairingWording` and `IosSchoolImportWordings`, bound in `:shared-ui`'s
+`platformUiModule`, in place of `NoWording`) and the push queue (`FirestorePushQueue`, the
+`PushDevice` and `PushQueue` half of `NoPush`), all three in Task 6. `NoPush` remains only as
+`PushRegistration` (the push switch; the phone holds no token until phase 4), and
+`NoAccountDeletion` until in-app deletion (part B; required before the App Store). ROADMAP MON-24
+lists what still stands in. Every `data/…`
 path this history does not name as moved is under `app/src/main/java/com/coparently/app/` (the
 third exception at the top of this note).
 
@@ -2624,9 +2678,10 @@ so the server-first, wipe-after order is the service's own, unchanged), and its 
 through `Analytics`, as `data/platform/AnalyticsEvents.kt`'s `logNotificationsToggled` and
 `logThemeChanged`, the event names and parameters `AnalyticsManager`'s functions of those names
 wrote (they left it). The iPhone's `platformDataModule` binds `NoPush` (one object for `PushDevice`
-and `PushRegistration`, as `FcmService` is on Android, so phase 3 replaces them together: the switch
-reads off, turning it on fails, nothing to detach) and `NoAccountDeletion` (it fails and wipes
-nothing).
+and `PushRegistration`, as `FcmService` is on Android: the switch reads off, turning it on fails,
+nothing to detach; since phase 3's Task 6 `PushDevice` is `FirestorePushQueue` and `NoPush` answers
+`PushRegistration` alone, until phase 4 registers a token) and `NoAccountDeletion` (it fails and
+wipes nothing).
 Both ViewModel tests (MockK) run in `androidHostTest`, the push mock now a `PushRegistration`. Then
 **pairing and onboarding**: `PairingViewModel` (in `pairingUiModule`; its log lines through
 `logger`, the accepted invitation's event through `Analytics` as `logInvitationAccepted`, which left
@@ -3367,8 +3422,13 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     that process — and only text that was read and cannot be decoded is replaced, as Android's
     unopenable file is. `SecurePreferencesContractTest` (and its Android copy, `EncryptedPreferencesContractTest`)
     hold the two to one contract — change a behaviour in both. On the iOS simulator the contract
-    runs over an in-memory store: a test binary with no app host has no Keychain (`errSecNotAvailable`),
-    so `KeychainSecurePreferencesTest` is `@Ignore`d until the iPhone app's XCTest host runs it.
+    runs over an in-memory store everywhere (`SealedSecurePreferencesContractTest`), and over the
+    real Keychain in `KeychainSecurePreferencesTest`, which is no longer `@Ignore`d (MON-24 phase 3,
+    Task 5): the `ios-app` job runs it on the simulator it booted (`COPLANLY_SIMULATOR_UDID`), from a
+    test binary with simulated Keychain entitlements (`gradle/ios-test-entitlements.plist`).
+    Elsewhere (`shared-ios`, a Mac without the variable) `shared-data/build.gradle.kts` leaves it
+    out of the run, because a binary spawned `--standalone` has no Keychain (`errSecNotAvailable`)
+    and a test that passed there would claim a Keychain nobody exercised.
 21. **A parenting plan is two halves and a derived agreement, and neither half may write the
     other** (MON-5, Aug 2026, schema 34). `parenting_plans/{familyId}` holds `answers`,
     `agreedTo`, `catalogueVersions` and `updatedAt` as maps keyed by uid, and `firestore.rules`

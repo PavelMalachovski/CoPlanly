@@ -38,9 +38,12 @@ interface GoogleIdTokenSource {
  * the Firebase sign-in `AuthViewModel` makes next with the ID token (`IosFirebaseAuth`), since the
  * shared seams carry the ID token alone.
  *
- * Saved passwords are iOS's autofill, which the sign-in fields' content types ask for, so there is
- * no button for them ([offersSavedPasswords] is false), [savedPassword] fails as [NoSavedPassword]
- * and [offerToSave] leaves the offer to the system.
+ * Saved passwords are iOS's autofill, so there is no button for them ([offersSavedPasswords] is
+ * false), [savedPassword] fails as [NoSavedPassword] and [offerToSave] leaves the offer to the
+ * system. What makes iOS offer the Keychain's passwords is the fields' keyboard types
+ * (`KeyboardType.Email` and `KeyboardType.Password`), which Compose Multiplatform 1.9.3 turns into
+ * the e-mail and password text content types. It ignores the fields' `ContentType` semantics on iOS
+ * (CMP-7154), so `NewPassword` on sign-up is not honoured there yet; Android's autofill reads them.
  */
 class IosCredentialSignIn(private val google: GoogleIdTokenSource) : CredentialSignIn {
 

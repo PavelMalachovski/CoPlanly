@@ -7,6 +7,18 @@
 > `runs-on` at `[self-hosted, macOS, ARM64, coplanly]` and restore its fork guard and
 > `IOS_RUNNER_READY` condition (see the job's history in `.github/workflows/ci.yml`), after steps
 > 1–8 below.
+>
+> **The iPhone app's job, `ios-app`** (MON-24 phase 3, November 2026), runs on the same hosted
+> `macos-latest` image: it generates the Xcode project with XcodeGen, builds the app and its UI
+> tests with the image's Xcode (26.6 in November 2026, above the 26.4 the project's Kotlin names;
+> it warns and works), launches the app on a simulator picked at run time (an iPhone 17 Pro on
+> iOS 26.5 so far, the image having no iPhone 16), runs the shell's XCUITest walk and the shared
+> modules' iOS tests on the Firebase emulators (Keychain tests included, on the booted simulator),
+> and checks the iPhone's writes against Android's (the write gate). `iosApp/README.md` "In CI"
+> describes it step by step. It has no `if:` for forks and needs no runner of its own; were it ever
+> moved here, it would need the same approval setting (step 3), an Xcode 26 (the app is built with
+> the iOS 26 SDK), XcodeGen (`brew install xcodegen`), Node 22, a JDK 21 for the emulators and
+> CocoaPods, and up to three hours for a cold Firebase pods build.
 
 The iPhone work (MON-24, `docs/superpowers/specs/2026-10-27-iphone-app-design.md` §9.3) builds and
 tests on the owner's Mac, registered with GitHub as a **self-hosted runner**. Linux jobs stay on

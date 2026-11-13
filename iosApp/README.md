@@ -7,12 +7,14 @@ and the data layer are the Kotlin Multiplatform modules', compiled into one stat
 | Path | What it is |
 | --- | --- |
 | `project.yml` | The Xcode project, for [XcodeGen](https://github.com/yonaskolb/XcodeGen). The generated `CoPlanly.xcodeproj/` is not committed. |
-| `CoPlanly/AppDelegate.swift` | The entry point: reads the configuration, calls `IosApp.shared.start(config:)` and shows `IosApp.shared.rootViewController()` (`shared-ui/src/iosMain/kotlin/com/coparently/app/ios/`). |
+| `CoPlanly/AppDelegate.swift` | The entry point: reads the configuration and calls `IosApp.shared.start(config:google:)` with the Google sheet's bridge (`shared-ui/src/iosMain/kotlin/com/coparently/app/ios/`). |
+| `CoPlanly/SceneDelegate.swift` | The window: shows `IosApp.shared.rootViewController()`, the native shell, and hands Google's sign-in answers (`openURLContexts`) to Google Sign-In. |
 | `CoPlanly/GoogleSignInBridge.swift` | Google's sign-in sheet (Google Sign-In for iOS 9.2.0) for the shared sign-in screen; see "Google sign-in" below. |
 | `CoPlanly/Info.plist` | Bundle `app.coplanly`, display name CoPlanly, iPhone only, portrait only, iOS 17.0 and later. |
 | `CoPlanly/CoPlanly.entitlements` | Empty for now; push and sign-in add theirs. |
 | `CoPlanly/Assets.xcassets` | The icon (made from the Android launcher icon by `tools/generate-ios-icon.py`; never edit the PNG by hand) and the indigo accent colour. |
-| `scripts/simulator.sh` | CI's simulator steps (the `ios-app` job). |
+| `CoPlanlyUITests/` | The XCUITest walk of the native shell (`ShellUITests.swift`), run in CI on the emulators. |
+| `scripts/simulator.sh` | CI's simulator steps (the `ios-app` job): pick, launch and the shell's walk. |
 
 ## Running it on your Mac
 
@@ -88,15 +90,38 @@ it, the screen offers e-mail alone (CI and the emulators never offer Google). On
    (`GoogleSignInBridge.available`): a `CLIENT_ID`, and its reversed id among the app's URL schemes.
    With either missing it offers no Google, rather than letting Google Sign-In stop the app.
 
-Saved passwords are iOS's own: the e-mail and password fields carry the content types iOS autofill
-reads, so the keyboard offers the Keychain's passwords; there is no separate button for them.
+Saved passwords are iOS's own: the e-mail and password fields carry the e-mail and password
+keyboard types, which Compose Multiplatform turns into the text content types iOS autofill reads, so
+the keyboard offers the Keychain's passwords; there is no separate button for them. The fields'
+`ContentType` semantics do not reach iOS in Compose Multiplatform 1.9.3 (CMP-7154), so `NewPassword`
+on sign-up is not honoured there yet.
+
+Signing out of the app does not sign out of Google Sign-In's own session (`GIDSignIn.signOut` is not
+called), as Android keeps its credential state too: the next "Continue with Google" may offer the
+same Google account at once.
 
 ## In CI
 
 The `ios-app` job ("iPhone app — build and launch (macOS)" in `.github/workflows/ci.yml`) runs on
-`macos-latest` whenever the shared modules' jobs run and on any change under `iosApp/`
-(`tools/ci-changes.js`, the `ios` output). It generates the project, builds it with `xcodebuild`
-for a simulator it picks at run time (an "iPhone 16" when the image has one), launches the app,
-fails unless it is still running 20 seconds later, and uploads a screenshot and the app's logs as
-the `ios-launch` artifact. No emulator runs there, so the app's Firestore listeners fail quietly;
-the job checks that the app starts and draws, not that it syncs.
+`macos-latest` whenever the shared modules' jobs run, on any change under `iosApp/`, and on the
+write gate's inputs (`tools/ios/`, `wire/current/`, `firestore.rules`, `functions/`;
+`tools/ci-changes.js`, the `ios` output). It uses the image's Xcode (26.6 in November 2026, above
+the 26.4 Kotlin 2.4.21 names; it warns and works) and a simulator it picks at run time: an
+"iPhone 16" when the image has one, else the first iPhone on the newest iOS (an iPhone 17 Pro on
+iOS 26.5 so far). Then, in order:
+
+1. It generates the project and builds the app and the UI tests (`build-for-testing`).
+2. It launches the app, fails unless it is still running 20 seconds later, and uploads a screenshot
+   and the app's logs as the `ios-launch` artifact.
+3. On fresh Firebase emulators it seeds a paired family (`tools/ios/seed-shell-family.js`) and runs
+   the XCUITest walk (`CoPlanlyUITests`): sign-in by e-mail, the tabs, Family → Expenses → the Add
+   expense sheet, a back swipe completed and one let go of, a tab tap popping two screens, a sheet
+   with edits swiped down asking "Discard changes?", and sign-out to fresh tabs. Its screenshots
+   are the `ios-shell` artifact.
+4. On emulators again, the shared modules' iOS tests run on the same booted simulator (the
+   Keychain tests included), with the write gate (`IosWriteGateTest` and
+   `tools/ios/check-ios-writes.js`, which compares every document the iPhone wrote with what
+   Android writes). No test may skip itself for want of the emulators.
+
+CI never has a `GoogleService-Info.plist`, so it never offers Google sign-in and never reaches the
+real project.

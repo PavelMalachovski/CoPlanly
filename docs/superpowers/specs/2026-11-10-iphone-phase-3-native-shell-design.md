@@ -169,7 +169,11 @@ Three things follow.
 - **What the whole app shares is provided to every screen host.** The theme, the platform
   capabilities, the parent palette, the family on screen, the app-wide messages and the
   ViewModels that Android scopes to the activity come from one owner held by the shell, so the
-  four tabs do not each get their own copy.
+  four tabs do not each get their own copy. *(As built in part A: the ViewModels that decide the
+  start destination and the offline line (`AuthStateViewModel`, `SyncViewModel`,
+  `ConnectivityViewModel`) live as long as the shell; the parent palette's, the family view's and
+  the Chat badge's are scoped to the signed-in session and cleared at sign-out, stricter than
+  Android's activity scope, so nothing of one account reaches the next.)*
 
 Deep links arm as on Android: the shell switches the family first, then opens the target
 (CLAUDE.md item 15).
@@ -303,6 +307,21 @@ simulator in front of them; nothing is swapped quietly.
 5. **A form sheet with edits** refusing a swipe and asking first (§5.4).
 6. **Memory and speed** with four tabs alive and a stack three deep, each screen its own Compose
    host.
+
+**Where part A stands** (13 November 2026). Part A is built and its CI is green (run 43316189630:
+the `ios-app` job's XCUITest walk of 15 steps on an iPhone 17 Pro simulator, iOS 26.5, against the
+Firebase emulators). None of the six points is decided yet: what CI proved is below, and the rest
+of each answer comes from the owner's run of
+`docs/superpowers/plans/2026-11-10-iphone-phase-3a-owner-check.md` (the item named beside each).
+
+| Point | What CI and the walk proved | What the owner's run answers |
+| --- | --- | --- |
+| 1. The stack host | `StackMirrorTest` (16 cases: several pops, a different root, a cancelled swipe, a push during a transition). On the simulator: the edge swipe pops Expenses and the shared stack follows; a swipe let go of leaves Expenses, and Data sources under its own Compose bar, with one bar and the count of cancelled transitions up; a tap on the selected tab pops two screens; sign-out ends the tabs and signing in opens fresh ones. | How the back button, the swipe and the tab re-tap feel, and state surviving tab switches by hand (2.4, 2.5, 2.10). |
+| 2. Large titles | Home, Family and Settings show the system's large title. It does not collapse: the scroll view the first try needs was not built in part A, so the title is set to show always. | Whether a fixed large title is acceptable, or part B builds the first try or the fallback (2.2). |
+| 3. The edge of the bars | Nothing: each screen pads its content below the bar, so no content scrolls under the glass and the soft edge has nothing to blur. | Whether that is acceptable, or part B runs the content under the bars with point 2's scroll view (2.3). |
+| 4. The keyboard | Only that the walk's sign-in completes with the keyboard up. | The form sheet and the chat thread (2.7, 2.8). |
+| 5. A form sheet with edits | Add expense opens as a page sheet; a swipe down over an edit asks "Discard changes?", "Keep editing" keeps it, Close asks again, Discard closes; a form with its own Compose bar shows one bar. | How it feels (2.6). |
+| 6. Memory and speed | Nothing measured. | The gauges with four tabs and a stack three deep (2.9). |
 
 ## 8. Tests and CI
 
