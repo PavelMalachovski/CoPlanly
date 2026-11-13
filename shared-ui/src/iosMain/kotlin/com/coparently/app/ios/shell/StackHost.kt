@@ -100,8 +100,13 @@ internal class StackHost(
         delegate = navigationDelegate
     }
 
+    /** Whether the screen a view controller shows has an inner step its back undoes first. */
+    private val stepPendingOn: (UIViewController) -> Boolean = { controller ->
+        screens.values.firstOrNull { it.viewController === controller }?.backSteps?.hasEnabledStep == true
+    }
+
     /** The edge swipe back over every pushed screen, a Compose bar's included ([EdgeSwipeBack]). */
-    private val edgeSwipe = EdgeSwipeBack(navigation, ::stepPendingOn)
+    private val edgeSwipe = EdgeSwipeBack(navigation, stepPendingOn)
     private var sheetEdgeSwipe: EdgeSwipeBack? = null
 
     /** Each entry's screen, by entry id, while the entry is on the stack. */
@@ -220,7 +225,7 @@ internal class StackHost(
             if (controllers.size > 1) sheetNavigation.setViewControllers(controllers, animated = false)
             // UIKit need not call `willShow` for a presented navigation controller's first screen.
             sheetNavigation.applyBar(screens.values)
-            sheetEdgeSwipe = EdgeSwipeBack(sheetNavigation, ::stepPendingOn)
+            sheetEdgeSwipe = EdgeSwipeBack(sheetNavigation, stepPendingOn)
             sheetMoving = true
             navigation.presentViewController(sheetNavigation, animated) { transitionEnded() }
         } else if (!sameControllers(existing.viewControllers, controllers)) {
@@ -292,10 +297,6 @@ internal class StackHost(
         if (form == null) sheet = null
         return (main + inSheet).filterNotNull()
     }
-
-    /** Whether the screen [controller] shows has an inner step its back undoes first. */
-    private fun stepPendingOn(controller: UIViewController): Boolean =
-        screens.values.firstOrNull { it.viewController === controller }?.backSteps?.hasEnabledStep == true
 
     private fun idOf(controller: Any?): String? =
         screens.entries.firstOrNull { it.value.viewController === controller }?.key
