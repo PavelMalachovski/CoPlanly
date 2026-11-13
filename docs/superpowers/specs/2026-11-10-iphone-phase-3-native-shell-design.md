@@ -260,7 +260,9 @@ runs for real:
 Everything else stays a stand-in until phase 4, and each row, button or switch that leads to one
 is hidden. Two are drawn today and get their check in part A: the event form's Reminder row (no
 reminder fires on iPhone until phase 4; a new event still carries the default reminder, which the
-co-parent's Android phone acts on) and Settings' delete-account row (until part B).
+co-parent's Android phone acts on) and Settings' delete-account row, which calls
+`NoAccountDeletion` (it fails with a message and deletes nothing until part B; before the App Store
+it needs real deletion or an `AccountDeletion.available` flag gating the row).
 
 **Before the iPhone writes to the real project.** The wire fixtures hold what the mappers produce.
 They do not hold what GitLive's iOS encoder then sends, or what the rules make of it: no test has

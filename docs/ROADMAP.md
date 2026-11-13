@@ -2816,8 +2816,11 @@ notes list each file):
 - **The iPhone's stand-ins, which phase 3 and 4 replace.** In `:shared-data`'s
   `di/koin/IosUnavailable.kt` and `platformDataModule`: `NoAccountDeletion` (an account can be
   created on the iPhone since phase 3's Task 5, so **in-app account deletion on the iPhone is
-  required before the App Store**; spec §5.6 puts it in part B, and Settings' row stays hidden
-  until then), `NoPush` (now the push switch and sign-out's detach alone, `PushRegistration`: the
+  required before the App Store**; spec §5.6 puts it in part B. Settings' delete-account row is
+  **not** hidden: `SettingsScreen` draws it unconditionally, and on the iPhone it calls
+  `NoAccountDeletion`, which fails with a message and deletes nothing. Before the App Store it
+  needs either real deletion on iOS or an `AccountDeletion.available` flag (default true, false in
+  `NoAccountDeletion`) gating the row, Android unchanged), `NoPush` (now the push switch and sign-out's detach alone, `PushRegistration`: the
   phone holds no push token until phase 4), `NoGoogleCalendar`, `NoStorageBucket`,
   `NoPickedFiles`, `NoRecordPhotoStorage`, `NoReceiptText`, `NoRecordFiles`,
   `NoEventReminders`, `NoRequestClockJobs`, `NoRequestClockNotices`, `NoSchoolImportJob`,
@@ -2835,6 +2838,29 @@ notes list each file):
   `IosPairingWording` and `IosSchoolImportWordings` (the shared strings, in `:shared-ui`), and
   `NoPush`'s queue half by `FirestorePushQueue` (`PushDevice` and `PushQueue`: the co-parent is
   told, as on Android); in Task 9 `NoCredentialSignIn` by `IosCredentialSignIn` (Google's sheet).
+- **Still owed from part A** (the final review of part A, November 2026; each is part B's):
+  - **Blocker: a hidden Chat tab keeps marking messages read.** On the iPhone the four tabs'
+    compositions stay alive in hidden view controllers (`StackHost`'s lifecycle stays RESUMED), so
+    with one co-parent a Chat tab that was opened and then left keeps marking the co-parent's new
+    messages READ (`ChatScreen`'s `onThreadOpened` never gets its `onThreadClosed`), unlike Android,
+    where `navigateToTab` disposes the entry. Fix before any real family uses the iPhone build: the
+    tab lifecycle from selection and foreground, or the shell closing the thread when its tab hides.
+    That needs an owner ruling if it changes Android.
+  - `EdgeSwipeBack` pops past a screen's own `BackHandler` steps (ConnectSchool, CustodySetup's
+    sections, Chat search): refuse the swipe while an enabled `BackHandler` exists.
+  - Google Sign-In's SDK session is not signed out on app sign-out or on a fresh install, so a
+    shared phone may preselect the previous account.
+  - `IosApp.start` should check its double-start guard first.
+  - `CFBundleLocalizations` against `AppLanguageRule`: with Slovak then Czech the screens are in
+    English and the system chrome in Czech.
+  - Commit `Package.resolved` from the owner's Mac.
+  - An unknown path gives `ios=false` in `tools/ci-changes.js`, against "an unfamiliar path runs
+    everything".
+  - The write gate's minors, before the iPhone writes to real families: non-empty attachments, and
+    a delete that is not recorded.
+  - The recurring `LocalDatePickerDialogTest` `DeadSystemException` on the API 35 16 KB leg
+    deserves its own investigation.
+  - Android autofill now reads the sign-in fields' `ContentType` hints (Task 9); the owner may veto.
 - **From the data-layer move** (Task 8, and "Carried into the data-layer move" below): the sign-in's
   ID-token-only path through GitLive (Android passes no access token; GitLive's iOS side needs
   both); `getToken()` of the FCM and APNs token on a phone with a real project; GitLive's iOS

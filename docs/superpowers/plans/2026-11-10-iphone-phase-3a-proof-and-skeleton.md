@@ -20,6 +20,7 @@
 - **No new server code and no rule changes.** If the gate finds a rules mismatch, stop and report it.
 - **No string in a composable or a Swift file that a parent reads** without a key in all five `composeResources/values*/` files (CLAUDE.md "Localization").
 - **Nothing on iPhone may lead to a stand-in** (design item 8): a row, button or switch whose capability is still `No…` stays hidden.
+  *[Correction, final review: Settings' delete-account row is not hidden. `SettingsScreen` draws it unconditionally and on the iPhone it calls `NoAccountDeletion`, which fails with a message and deletes nothing; it needs an `AccountDeletion.available` flag or real deletion before the App Store (ROADMAP MON-24). The event form's Reminder row is drawn too (`NoEventReminders`).]*
 - English only in the repository; KDoc on public declarations; Conventional Commits; every commit ends with the session's two attribution lines. No model identifiers anywhere.
 - **No Gradle in the cloud session**: Google Maven is unreachable. Every task's verification is CI (`git push`, then read the run), plus `node tools/check-invariants.js` and `node --test tools/test/*.test.js` locally. A task is done only when its CI run is green.
 

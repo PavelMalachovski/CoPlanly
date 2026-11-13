@@ -2082,19 +2082,25 @@ receipt rules are unchanged. It is bound in `exportDataModule`; the e2e parent b
 takes** (Task 8j; `di/koin/PlatformDataModule.ios.kt`): GitLive's default instances, the app's
 directories, the database on the bundled driver and its fifteen DAOs, the Keychain's store, the
 no-op telemetry, the network monitor and the two HTTP clients, and, for what the iPhone does not
-have yet, the stand-ins in `di/koin/IosUnavailable.kt` — then nobody signed in, no push, no Google
-Calendar, no Cloud Storage (every bucket call an `IOException`), nothing picked, no background job or
-notice, no verification address, and no wording (a pairing's thread title and a school import's
-titles are stored data a co-parent reads, so no English stand-in is written; asking threw). A
-Koin `verify()` of `dataModules` with exactly those types resolves (run once on the JVM in this
-task; the iPhone has no `koin-test`). Phase 3's app replaces each stand-in, and its part A
+have yet, the stand-ins in `di/koin/IosUnavailable.kt`. At Task 8j these were: nobody signed in, no
+push, no Google Calendar, no Cloud Storage (every bucket call an `IOException`), nothing picked, no
+background job or notice, no verification address, and no wording (a pairing's thread title and a
+school import's titles are stored data a co-parent reads, so no English stand-in is written; asking
+threw). A Koin `verify()` of `dataModules` with exactly those types resolves (run once on the JVM in
+this task; the iPhone has no `koin-test`). Phase 3's app replaces each stand-in, and its part A
 (November 2026) replaced these: the sign-in (`IosFirebaseAuth`, `IosAccountSwitch`,
 `IosAccountTraces`, Task 5), the sync (`ForegroundSyncRunner` in place of `NoSyncRequests`), the
 wordings (`IosPairingWording` and `IosSchoolImportWordings`, bound in `:shared-ui`'s
 `platformUiModule`, in place of `NoWording`) and the push queue (`FirestorePushQueue`, the
-`PushDevice` and `PushQueue` half of `NoPush`), all three in Task 6. `NoPush` remains only as
-`PushRegistration` (the push switch; the phone holds no token until phase 4), and
-`NoAccountDeletion` until in-app deletion (part B; required before the App Store). ROADMAP MON-24
+`PushDevice` and `PushQueue` half of `NoPush`), all three in Task 6, and the credential sheet
+(`IosCredentialSignIn` in place of `NoCredentialSignIn`, Task 9). Still stand-ins on the iPhone:
+`NoPush` as `PushRegistration` alone (the push switch; the phone holds no token until phase 4),
+`NoAccountDeletion` (it fails with a message and deletes nothing; Settings' row is still drawn;
+in-app deletion is part B and required before the App Store), `NoEventReminders`,
+`NoRequestClockJobs`, `NoRequestClockNotices`, `NoSchoolImportJob`, `NoSupportReminderJob`,
+`NoGoogleCalendar`, `NoStorageBucket`, `NoPickedFiles`, `NoRecordPhotoStorage`, `NoReceiptText`,
+`NoRecordFiles`, `NoExportVerifyAddress`, and in `:shared-ui` `NoSpeechDictation`, `NoAiAssist`,
+`NoInviteQrCodes` and the platform interfaces' `No…` objects in `IosPlatform.kt`. ROADMAP MON-24
 lists what still stands in. Every `data/…`
 path this history does not name as moved is under `app/src/main/java/com/coparently/app/` (the
 third exception at the top of this note).
