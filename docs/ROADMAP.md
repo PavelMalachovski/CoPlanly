@@ -2848,13 +2848,6 @@ notes list each file):
   `NoPush`'s queue half by `FirestorePushQueue` (`PushDevice` and `PushQueue`: the co-parent is
   told, as on Android); in Task 9 `NoCredentialSignIn` by `IosCredentialSignIn` (Google's sheet).
 - **Still owed from part A** (the final review of part A, November 2026; each is part B's):
-  - **Blocker: a hidden Chat tab keeps marking messages read.** On the iPhone the four tabs'
-    compositions stay alive in hidden view controllers (`StackHost`'s lifecycle stays RESUMED), so
-    with one co-parent a Chat tab that was opened and then left keeps marking the co-parent's new
-    messages READ (`ChatScreen`'s `onThreadOpened` never gets its `onThreadClosed`), unlike Android,
-    where `navigateToTab` disposes the entry. Fix before any real family uses the iPhone build: the
-    tab lifecycle from selection and foreground, or the shell closing the thread when its tab hides.
-    That needs an owner ruling if it changes Android.
   - `EdgeSwipeBack` pops past a screen's own `BackHandler` steps (ConnectSchool, CustodySetup's
     sections, Chat search): refuse the swipe while an enabled `BackHandler` exists.
   - Google Sign-In's SDK session is not signed out on app sign-out or on a fresh install, so a

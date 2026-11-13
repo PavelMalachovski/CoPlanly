@@ -52,6 +52,7 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.presentation.common.ScreenBackStep
+import com.coparently.app.presentation.common.WhileScreenVisible
 import com.coparently.app.presentation.common.rememberMicrophonePermissionRequester
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.valueOrNull
@@ -206,15 +207,10 @@ fun ChatScreen(
     // separately via `composerText` above.
     var composerSeeds by remember { mutableStateOf(0) }
 
-    // DisposableEffect, not LaunchedEffect: the "thread is open" signal that gates the
-    // read/delivered marks must clear when this composable leaves — see
-    // ChatViewModel.onThreadClosed. A configuration change disposes and recomposes this
-    // screen while the same ChatViewModel instance survives, and onDispose is what closes
-    // that window.
+    ChatThreadOpenEffect(conversationId, viewModel)
     DisposableEffect(conversationId) {
-        viewModel.onThreadOpened(conversationId)
         searchViewModel.onThreadShown(conversationId)
-        onDispose { viewModel.onThreadClosed() }
+        onDispose { }
     }
 
     LaunchedEffect(searchViewModel) {
@@ -649,4 +645,26 @@ fun ChatThreadHeader(title: String, messages: List<Message>, currentUserId: Stri
             )
         }
     }
+}
+
+/**
+ * Keeps [conversationId] open in [viewModel] while the thread is what the parent sees: the "thread
+ * is open" signal that gates the read and delivered marks ([ChatViewModel.onThreadOpened]) must
+ * clear the moment the thread is not seen ([ChatViewModel.onThreadClosed]). On Android that is when
+ * the screen leaves composition (a configuration change disposes and recomposes it while the same
+ * ViewModel survives, and the closing is what ends that window); on the iPhone it is also when the
+ * shell hides the screen ([com.coparently.app.presentation.common.LocalScreenVisible]): another tab
+ * selected, a screen pushed over it, the app in the background. The thread opens again when it is
+ * shown again. Public for the app's `ChatScreenVisibilityTest`.
+ *
+ * @param conversationId The thread on screen.
+ * @param viewModel The chat's ViewModel, which writes the marks.
+ */
+@Composable
+fun ChatThreadOpenEffect(conversationId: String, viewModel: ChatViewModel) {
+    WhileScreenVisible(
+        key = conversationId,
+        onVisible = { viewModel.onThreadOpened(conversationId) },
+        onHidden = { viewModel.onThreadClosed() }
+    )
 }

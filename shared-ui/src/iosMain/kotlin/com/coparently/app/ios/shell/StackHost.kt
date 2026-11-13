@@ -61,7 +61,12 @@ import platform.darwin.NSObject
  * (Settings' sign-out navigates to the sign-in screen) is not mirrored: [onRootFlowRequested] hands
  * the route to the shell, which ends the tabs and shows the root flow from that route.
  *
+ * **A screen knows whether it is seen.** After each mirror and each finished push or pop the host
+ * writes the entries on top — the stack's, and the sheet's while one is up — into [visibility],
+ * which each screen reads as `LocalScreenVisible` ([ScreenController]).
+ *
  * @property startRoute The route the stack starts on: a tab's first screen, or a root-flow screen.
+ * @property visibility Which of the stack's screens are seen, the shell's answer for this stack.
  * @property session The owner of the ViewModels this session's screens share (the palette's, the
  *   family view's), which ends with the tabs or the root flow it was made for.
  * @property onTabRootReached The root flow's way out: a screen there navigated to a tab's first
@@ -73,6 +78,7 @@ internal class StackHost(
     private val shell: ShellEnvironment,
     private val session: ViewModelStoreOwner,
     val startRoute: String,
+    private val visibility: StackVisibility,
     private val onTabRootReached: (() -> Unit)? = null,
     private val onRootFlowRequested: ((String) -> Unit)? = null
 ) {
@@ -166,7 +172,10 @@ internal class StackHost(
     private fun sync() {
         if (disposed || moving()) return
         mirror()
-        if (!disposed) applyBars()
+        if (!disposed) {
+            applyBars()
+            showTops()
+        }
     }
 
     /** Makes UIKit's stacks hold the shared back stack's entries; see [sync]. */
@@ -252,6 +261,12 @@ internal class StackHost(
         sheet?.navigationOrNull?.applyBar(screens.values)
     }
 
+    /** Writes the entries UIKit shows on top, the stack's and the sheet's, into [visibility]. */
+    private fun showTops() {
+        val sheetTop = sheet?.navigationOrNull?.takeIf { it.presentingViewController != null }?.topViewController
+        visibility.topIds = listOfNotNull(idOf(navigation.topViewController), idOf(sheetTop)).toSet()
+    }
+
     /**
      * A transition was cancelled (a back swipe let go of): once UIKit has let go of it, the stacks
      * are reconciled and the bar set again for the screen that stayed, which `willShow` changed for
@@ -317,7 +332,8 @@ internal class StackHost(
             shell = shell,
             session = session,
             nativeBar = route in NATIVE_BAR_ROUTES,
-            sheetGuard = form?.guard
+            sheetGuard = form?.guard,
+            visible = visibility.of(entry.id)
         )
     }
 
@@ -351,7 +367,9 @@ internal class StackHost(
             didShowViewController: UIViewController,
             animated: Boolean
         ) {
-            // On the next turn of the main loop, once UIKit has let go of the transition.
+            // The screen shown is seen from now; the rest follows once UIKit has let go of the
+            // transition, on the next turn of the main loop.
+            showTops()
             scope.launch { uikitMoved() }
         }
     }

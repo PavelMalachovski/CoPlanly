@@ -10,6 +10,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
@@ -31,6 +32,7 @@ import com.coparently.app.presentation.common.ConnectivityBanner
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.LocalBackSteps
 import com.coparently.app.presentation.common.LocalBarHost
+import com.coparently.app.presentation.common.LocalScreenVisible
 import com.coparently.app.presentation.common.LocalSheetGuard
 import com.coparently.app.presentation.common.SheetGuard
 import com.coparently.app.presentation.navigation.AppDestination
@@ -63,6 +65,8 @@ import platform.UIKit.UIViewController
  * @property nativeBar Whether the screen describes its bar to the navigation bar ([LocalBarHost]);
  *   otherwise it draws its own Compose bar and the navigation bar is hidden over it.
  * @property sheetGuard The sheet the screen is the first screen of, or null.
+ * @property visible Whether the screen is seen now, provided as [LocalScreenVisible]: a hidden tab's
+ *   screen stays composed here, where Android would have disposed it.
  */
 internal class ScreenController(
     val entry: NavBackStackEntry,
@@ -70,7 +74,8 @@ internal class ScreenController(
     private val shell: ShellEnvironment,
     private val session: ViewModelStoreOwner,
     val nativeBar: Boolean,
-    private val sheetGuard: SheetGuard?
+    private val sheetGuard: SheetGuard?,
+    private val visible: State<Boolean>
 ) {
     /** The screen's inner steps, which the shell's back asks before it pops the screen. */
     val backSteps = BackSteps()
@@ -110,7 +115,8 @@ internal class ScreenController(
             CompositionLocalProvider(
                 LocalBarHost provides bars.takeIf { nativeBar },
                 LocalSheetGuard provides sheetGuard,
-                LocalBackSteps provides backSteps
+                LocalBackSteps provides backSteps,
+                LocalScreenVisible provides visible
             ) {
                 // The bar's back button follows whether a step waits: its own while one does.
                 if (nativeBar) {

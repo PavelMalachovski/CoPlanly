@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.coparently.app.domain.telemetry.TelemetryConsent
+import com.coparently.app.ios.IosLifecycle
 import com.coparently.app.presentation.changerequests.RequestsBadgeViewModel
 import com.coparently.app.presentation.chat.ChatViewModel
 import com.coparently.app.presentation.common.AppMessages
@@ -61,6 +62,9 @@ internal interface ShellEnvironment {
     val connectivity: ConnectivityViewModel
     val messages: AppMessages
     val tabSwitcher: TabSwitcher
+
+    /** Which hosted screens the parent sees now (`LocalScreenVisible`). */
+    val visibility: ShellVisibility
 
     /** A tab's screen navigated to [route], one of the screens before the app proper: show them. */
     fun showRootFlow(route: String)
@@ -129,6 +133,7 @@ internal class NativeShell(
     override val connectivity: ConnectivityViewModel = shellViewModel(store)
     override val messages: AppMessages = AppMessages(scope, SnackbarHostState())
     override val tabSwitcher: TabSwitcher get() = this
+    override val visibility: ShellVisibility = ShellVisibility()
 
     private var flow: StackHost? = null
     private var tabs: TabShell? = null
@@ -141,6 +146,9 @@ internal class NativeShell(
 
     /** Starts following the start destination. Call once. */
     fun start() {
+        scope.launch {
+            IosLifecycle.foreground.collect { visibility.foreground = it }
+        }
         scope.launch {
             combine(
                 authStateViewModel.isLoading,
@@ -190,7 +198,7 @@ internal class NativeShell(
         tabs = null
         val newSession = ShellSession()
         session = newSession
-        val host = StackHost(this, newSession.owner, route, onTabRootReached = {
+        val host = StackHost(this, newSession.owner, route, visibility.stack(tab = null), onTabRootReached = {
             // Onboarding finished at Home: the tabs, now rather than after the next decision.
             scope.launch {
                 tabsReached = true
@@ -266,15 +274,27 @@ internal class NativeShell(
  * waiting for this parent's answer (the tester redesign, November 2026, as Android's bar); the tabs
  * open on the Calendar, Android's start screen since that redesign; a tap on the Calendar tab is
  * counted for `CalendarTabTaps`, a second tap on a selected tab pops it to its first screen (UIKit's
- * own), which its host mirrors into its shared controller.
+ * own), which its host mirrors into its shared controller. The selected tab is the shell's
+ * [ShellVisibility.selectedStack], so a hidden tab's screens know they are not seen.
  */
-internal class TabShell(shell: ShellEnvironment, session: ShellSession, badges: TabBadgeSources) {
+internal class TabShell(
+    private val shell: ShellEnvironment,
+    session: ShellSession,
+    badges: TabBadgeSources
+) {
 
     private val scope: CoroutineScope = MainScope()
     private val hosts: List<StackHost> = BottomNavDestination.entries.map { tab ->
-        StackHost(shell, session.owner, tab.route, onRootFlowRequested = shell::showRootFlow)
+        StackHost(
+            shell,
+            session.owner,
+            tab.route,
+            shell.visibility.stack(tab = tab.route),
+            onRootFlowRequested = shell::showRootFlow
+        )
     }
     private val tabDelegate = TabDelegate { selected ->
+        hosts.firstOrNull { it.navigation === selected }?.let { shell.visibility.selectedStack = it.startRoute }
         if (selected === host(BottomNavDestination.CALENDAR).navigation) CalendarTabTaps.tap()
     }
 
@@ -312,6 +332,8 @@ internal class TabShell(shell: ShellEnvironment, session: ShellSession, badges: 
     /** Shows [tab] as it was left. */
     fun select(tab: BottomNavDestination) {
         controller.selectedIndex = tab.ordinal.toULong()
+        // A selection made in code reaches no delegate.
+        shell.visibility.selectedStack = tab.route
     }
 
     /** Shows [tab] at its first screen. */
