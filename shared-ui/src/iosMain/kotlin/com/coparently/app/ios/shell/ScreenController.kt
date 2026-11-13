@@ -68,6 +68,7 @@ import platform.UIKit.UIViewController
  * @property visible Whether the screen is seen now, provided as [LocalScreenVisible]: a hidden tab's
  *   screen stays composed here, where Android would have disposed it.
  */
+@Suppress("LongParameterList") // the entry, what it draws, and what the stack and the shell share with it
 internal class ScreenController(
     val entry: NavBackStackEntry,
     private val destination: AppDestination,

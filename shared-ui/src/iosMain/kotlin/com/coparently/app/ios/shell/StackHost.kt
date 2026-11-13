@@ -174,7 +174,7 @@ internal class StackHost(
         mirror()
         if (!disposed) {
             applyBars()
-            showTops()
+            visibility.topIds = topIds(navigation, sheet?.navigationOrNull, screens)
         }
     }
 
@@ -259,12 +259,6 @@ internal class StackHost(
     private fun applyBars() {
         navigation.applyBar(screens.values)
         sheet?.navigationOrNull?.applyBar(screens.values)
-    }
-
-    /** Writes the entries UIKit shows on top, the stack's and the sheet's, into [visibility]. */
-    private fun showTops() {
-        val sheetTop = sheet?.navigationOrNull?.takeIf { it.presentingViewController != null }?.topViewController
-        visibility.topIds = listOfNotNull(idOf(navigation.topViewController), idOf(sheetTop)).toSet()
     }
 
     /**
@@ -369,7 +363,7 @@ internal class StackHost(
         ) {
             // The screen shown is seen from now; the rest follows once UIKit has let go of the
             // transition, on the next turn of the main loop.
-            showTops()
+            visibility.topIds = topIds(navigation, sheet?.navigationOrNull, screens)
             scope.launch { uikitMoved() }
         }
     }
@@ -410,6 +404,20 @@ private fun UINavigationController.applyBar(screens: Collection<ScreenController
     val top = topViewController ?: return
     val nativeBar = screens.firstOrNull { it.viewController === top }?.nativeBar ?: return
     if (isNavigationBarHidden() == nativeBar) setNavigationBarHidden(!nativeBar, animated = false)
+}
+
+/**
+ * The entry ids UIKit shows on top: [navigation]'s top screen, and [sheet]'s while it is presented
+ * over it, which leaves the screen under it in view; [screens] are the stack's, by entry id.
+ */
+private fun topIds(
+    navigation: UINavigationController,
+    sheet: UINavigationController?,
+    screens: Map<String, ScreenController>
+): Set<String> {
+    val sheetTop = sheet?.takeIf { it.presentingViewController != null }?.topViewController
+    val tops = listOfNotNull(navigation.topViewController, sheetTop)
+    return screens.filterValues { screen -> tops.any { it === screen.viewController } }.keys
 }
 
 /**
