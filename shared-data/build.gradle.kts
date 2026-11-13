@@ -141,17 +141,28 @@ kotlin {
         version = "1.0"
         summary = "CoPlanly's shared data layer"
         homepage = "https://github.com/PavelMalachovski/CoPlanly"
-        ios.deploymentTarget = "15.0"
+        ios.deploymentTarget = "17.0"
         noPodspec()
         framework {
             baseName = "SharedData"
             isStatic = false
         }
-        listOf("FirebaseCore", "FirebaseFirestore", "FirebaseFirestoreInternal", "FirebaseFunctions").forEach { name ->
+        listOf("FirebaseCore", "FirebaseFirestore", "FirebaseFirestoreInternal", "FirebaseFunctions", "FirebaseAuth").forEach { name ->
             pod(name) {
                 version = firebaseIosVersion
                 linkOnly = true
             }
+        }
+    }
+
+    // The simulator test executable carries simulated Keychain entitlements: Firebase Auth keeps
+    // the signed-in user in the Keychain and fails a sign-in it cannot save, and a bare process the
+    // simulator spawns has no Keychain without them (`IosFirebaseAuthEmulatorTest`; GitLive's own
+    // iOS tests do the same). The test binary only: the app's entitlements are Xcode's.
+    iosSimulatorArm64 {
+        testRuns.configureEach {
+            val entitlements = rootDir.resolve("gradle/ios-test-entitlements.plist").absolutePath
+            executionSource.binary.linkerOpts("-sectcreate", "__TEXT", "__entitlements", entitlements)
         }
     }
 
@@ -217,6 +228,9 @@ kotlin {
             implementation("androidx.sqlite:sqlite-bundled:2.5.2")
             // Callables on the iPhone (`IosCallableFunctions`), in the functions' region.
             implementation("dev.gitlive:firebase-functions:$gitliveVersion")
+            // Signing in on the iPhone (`IosFirebaseAuth`, MON-24 phase 3, Task 5): the e-mail path
+            // and, from Task 9, Google's. Its pod is in the list above.
+            implementation("dev.gitlive:firebase-auth:$gitliveVersion")
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
@@ -299,6 +313,35 @@ ksp {
 // too and writes the one file for every module (app/build.gradle.kts).
 tasks.named("detektBaseline") {
     enabled = false
+}
+
+// The emulator tests' variables (`AuthEmulator`, iosTest, and the write gate's output file,
+// `IosWriteGateTest`), handed to the simulator's test process: `simctl spawn` passes only
+// `SIMCTL_CHILD_`-prefixed variables, without the prefix. Read from the environment Gradle runs in
+// (CI exports them inside `firebase emulators:exec`); tracked, so the tests run again when they
+// change. The tests' output is shown, so CI can see they reached the emulator rather than skipping
+// themselves.
+tasks.withType<org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeSimulatorTest>().configureEach {
+    listOf("COPLANLY_EMULATOR_HOST", "COPLANLY_REQUIRE_EMULATORS", "COPLANLY_GATE_OUTPUT").forEach { name ->
+        providers.environmentVariable(name).orNull?.let { environment("SIMCTL_CHILD_$name", it) }
+    }
+    // On a booted simulator, when CI names one: Kotlin spawns the tests `--standalone` by default,
+    // outside a booted device's services, and the Keychain (which Firebase Auth saves the signed-in
+    // user to) answers errSecNotAvailable there. `ios-app` boots the simulator it launched the app on.
+    val udid = providers.environmentVariable("COPLANLY_SIMULATOR_UDID").orNull
+    if (udid != null) {
+        device.set(udid)
+        standalone.set(false)
+    } else {
+        // Standalone, the Keychain's own contract cannot run (errSecNotAvailable): it is left out
+        // of the run rather than reported as passed (`KeychainSecurePreferencesTest`).
+        filter.excludeTestsMatching("*KeychainSecurePreferencesTest*")
+    }
+    testLogging {
+        events("failed")
+        showStandardStreams = true
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
 }
 
 // Failures print their message and stack in the CI log, as the app's unit tests do.

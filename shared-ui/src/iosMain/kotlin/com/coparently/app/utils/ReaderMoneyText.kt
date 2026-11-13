@@ -6,13 +6,11 @@ import platform.Foundation.NSNumber
 import platform.Foundation.NSNumberFormatter
 import platform.Foundation.NSNumberFormatterCurrencyStyle
 import platform.Foundation.NSNumberFormatterPercentStyle
-import platform.Foundation.currentLocale
 
 /**
- * Foundation's currency style in the phone's current locale; the amount read as an
+ * Foundation's currency style in [readerLocale] (the owner's language rule); the amount read as an
  * `NSDecimalNumber` in the POSIX locale (a point, never the phone's comma), so no binary rounding
- * touches it. Which locale the iPhone app's own language choice sets is phase 3's to decide, as for
- * the dates.
+ * touches it.
  */
 actual object ReaderMoneyText {
 
@@ -32,7 +30,7 @@ actual object ReaderMoneyText {
 
     actual fun percent(fraction: Double): String {
         val formatter = NSNumberFormatter().apply {
-            locale = NSLocale.currentLocale
+            locale = readerLocale()
             numberStyle = NSNumberFormatterPercentStyle
             maximumFractionDigits = 0u
         }
@@ -40,7 +38,7 @@ actual object ReaderMoneyText {
     }
 
     private fun currencyFormatter(currency: String) = NSNumberFormatter().apply {
-        locale = NSLocale.currentLocale
+        locale = readerLocale()
         numberStyle = NSNumberFormatterCurrencyStyle
         currencyCode = currency
     }

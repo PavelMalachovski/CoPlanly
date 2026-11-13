@@ -132,6 +132,19 @@ internal fun NavHostController.navigateToTab(destination: BottomNavDestination) 
 }
 
 /**
+ * [navigateToTab] without restoring the tab's saved state: the tab at its first screen. What
+ * settle-up's thread always did (`restoreState = false`), behind [TabSwitcher.selectFresh] since
+ * MON-24 phase 3.
+ */
+internal fun NavHostController.navigateToTabFresh(destination: BottomNavDestination) {
+    navigate(destination.navRoute) {
+        popUpTo(Screen.Calendar.route) { saveState = true }
+        launchSingleTop = true
+        restoreState = false
+    }
+}
+
+/**
  * Which navigation the window gets: the bottom bar on a phone held upright, and a rail down the
  * start edge from Material's medium width, 600 dp — a tablet, an unfolded foldable, a phone on its
  * side (docs/AUDIT-2026-10-design.md §4). A bar stretched across a tablet puts four targets a

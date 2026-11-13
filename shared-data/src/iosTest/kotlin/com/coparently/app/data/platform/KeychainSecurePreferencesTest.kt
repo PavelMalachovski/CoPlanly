@@ -1,6 +1,5 @@
 package com.coparently.app.data.platform
 
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -8,16 +7,17 @@ import kotlin.test.assertEquals
  * [SecurePreferencesContractTest] over the real Keychain (MON-24 phase 2, Task 6), on an item of the
  * test's own, never the app's.
  *
- * **Ignored until phase 3, on purpose.** The Keychain exists only for a process an app hosts: the
- * Kotlin/Native test binary `iosSimulatorArm64Test` spawns on the simulator has none, and every
- * Keychain call there answers `errSecNotAvailable` (−25291) — an entitlement would not change that.
- * These cases run once the iPhone app's XCTest host exists (ROADMAP MON-24, before phase 3). Until
- * then the contract still runs under Kotlin/Native through the real code path:
- * `SealedSecurePreferencesContractTest` and `SealedSecurePreferencesTest` (commonTest) drive
- * `SealedSecurePreferences` and `PreferenceBlobCodec` over an in-memory store on the simulator too.
- * A test that passed by returning early on −25291 would claim a Keychain nobody exercised.
+ * **Only on a booted simulator** (MON-24 phase 3, Task 5). Kotlin spawns a simulator test binary
+ * `--standalone` by default, outside a booted device's services, and every Keychain call there
+ * answers `errSecNotAvailable` (−25291). The `ios-app` CI job runs this module's tests on the
+ * simulator it booted (`COPLANLY_SIMULATOR_UDID`), from a binary carrying simulated Keychain
+ * entitlements (`gradle/ios-test-entitlements.plist`), where Firebase Auth saves its user too; there
+ * these cases run. Elsewhere (`shared-ios`, a laptop without the variable)
+ * `shared-data/build.gradle.kts` leaves the class out of the run rather than letting it return
+ * early: a test that passed on −25291 would claim a Keychain nobody exercised. The contract also
+ * runs everywhere over an in-memory store (`SealedSecurePreferencesContractTest`). What only a phone
+ * shows — the item surviving a relaunch and readable after the first unlock — stays a device check.
  */
-@Ignore
 class KeychainSecurePreferencesTest : SecurePreferencesContractTest() {
 
     private val storage = KeychainTextStore(service = "app.coplanly.test.preferences", account = "contract")

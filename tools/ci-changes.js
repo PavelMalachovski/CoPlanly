@@ -8,12 +8,12 @@
  * With `--event` it decides something else: not which jobs the paths need but whether the expensive
  * emulator jobs may run at all (below). With `--none` it prints the answer for "run nothing".
  *
- * It prints eight `key=value` lines: `android`, `e2e`, `screenshots`, `upgrade`, `matrix` (the
+ * It prints `key=value` lines: `android`, `e2e`, `screenshots`, `upgrade`, `matrix` (the
  * emulator legs as a JSON array for the `instrumented` job's `strategy.matrix.include`),
  * `r8runtime` (the minified build run on an emulator, `r8-runtime`), `web` (the verification
  * page in a browser and the calendar feed through an RFC 5545 parser, `web`) and `shared` (the
  * Kotlin Multiplatform modules' own tests and iOS compile, `shared` on Linux and `shared-ios` on
- * macOS). With
+ * macOS), and it prints a ninth, `ios` (the iPhone app built and launched on a simulator, `ios-app`). With
  * `--all` it
  * prints the answer for "run everything", which is what a push to `main`, a manual run, or a diff
  * that could not be computed gets.
@@ -25,11 +25,26 @@
  */
 'use strict';
 
-/** Paths that never need an Android build: docs, the server side, the rules and their tests. */
-const NON_ANDROID = /^(docs\/|functions\/|firestore-tests\/|web-tests\/|\.cursor\/|[^/]*\.md$|.*\.rules(\.simple)?$|firestore\.indexes\.json$|firebase\.json$|\.gitignore$|LICENSE$)/;
+/**
+ * The iPhone app's own project (MON-24 phase 3): the XcodeGen spec, the Swift entry point, its
+ * plist, entitlements and assets. Nothing Android reads it, so it is on every skip list below and
+ * runs only the `ios-app` job.
+ */
+const IOS_APP = /^iosApp\//;
+
+/**
+ * What the iPhone's write gate (MON-24 phase 3, Task 7) is held to, beside the shared modules it
+ * runs: its checker, the Android shapes it compares with (`wire/current/`), the rules the iPhone's
+ * writes must pass and the Cloud Functions it pairs through — and the pairing smoke's helpers, which
+ * seed the native shell's UI test (Task 8). A change to any of them runs `ios-app`.
+ */
+const IOS_GATE_INPUTS = /^(tools\/ios\/|tools\/test\/check-ios-writes\.test\.js$|tools\/e2e\/pairing-smoke\.js$|app\/src\/test\/resources\/wire\/current\/|firestore\.rules$|functions\/)/;
+
+/** Paths that never need an Android build: docs, the server side, the rules and their tests, the iPhone app. */
+const NON_ANDROID = /^(docs\/|iosApp\/|functions\/|firestore-tests\/|web-tests\/|\.cursor\/|[^/]*\.md$|.*\.rules(\.simple)?$|firestore\.indexes\.json$|firebase\.json$|\.gitignore$|LICENSE$)/;
 
 /** Paths the two-parent e2e job can never be affected by. */
-const NON_E2E = /^(docs\/|web-tests\/|\.cursor\/|[^/]*\.md$|\.gitignore$|LICENSE$)/;
+const NON_E2E = /^(docs\/|iosApp\/|web-tests\/|\.cursor\/|[^/]*\.md$|\.gitignore$|LICENSE$)/;
 
 /**
  * Android paths that are UI only, so the e2e job — the data layer against the real backend —
@@ -135,7 +150,7 @@ const UPGRADE_INPUTS = new RegExp(
  * `app/src/main/java/` as a whole is here because what reaches the stored data lives in the
  * directories [UPGRADE_INPUTS] names; a new package that stores something belongs there.
  */
-const UPGRADE_UNAFFECTED = /^(docs\/|functions\/|firestore-tests\/|web\/|web-tests\/|\.cursor\/|[^/]*\.md$|.*\.rules(\.simple)?$|firestore\.indexes\.json$|firebase\.json$|\.gitignore$|LICENSE$|app\/src\/main\/java\/|app\/src\/main\/res\/|app\/src\/test\/|app\/src\/androidTest\/|app\/src\/debug\/|tools\/(test\/|e2e\/|(check-e2e-coverage|check-invariants|check-koin-aliases|check-r8-mapping|ci-changes|ci-report|manual-test-plan|mocha-ci-reporter|screenshot-gallery|wrap-legal-page)\.js$|generate-[^/]+\.py$|with-screen-recording\.sh$))/;
+const UPGRADE_UNAFFECTED = /^(docs\/|iosApp\/|functions\/|firestore-tests\/|web\/|web-tests\/|\.cursor\/|[^/]*\.md$|.*\.rules(\.simple)?$|firestore\.indexes\.json$|firebase\.json$|\.gitignore$|LICENSE$|app\/src\/main\/java\/|app\/src\/main\/res\/|app\/src\/test\/|app\/src\/androidTest\/|app\/src\/debug\/|tools\/(test\/|e2e\/|(check-e2e-coverage|check-invariants|check-koin-aliases|check-r8-mapping|ci-changes|ci-report|manual-test-plan|mocha-ci-reporter|screenshot-gallery|wrap-legal-page)\.js$|generate-[^/]+\.py$|with-screen-recording\.sh$))/;
 
 /**
  * Android paths the R8 runtime probe (`r8-runtime` job) cannot be affected by: nothing in them is
@@ -156,7 +171,7 @@ const NON_R8_RUNTIME = /^(app\/src\/main\/res\/|app\/src\/test\/|app\/src\/andro
  * `firestore-tests/` (whose lock file pins the Firebase CLI it starts the emulators with), the
  * workflow, and any path this file does not know.
  */
-const NON_WEB = /^(docs\/|\.cursor\/|[^/]*\.md$|\.gitignore$|LICENSE$|app\/|shared(-data|-ui)?\/|build\.gradle\.kts$|settings\.gradle\.kts$|gradle\.properties$|gradle\/|gradlew(\.bat)?$)/;
+const NON_WEB = /^(docs\/|iosApp\/|\.cursor\/|[^/]*\.md$|\.gitignore$|LICENSE$|app\/|shared(-data|-ui)?\/|build\.gradle\.kts$|settings\.gradle\.kts$|gradle\.properties$|gradle\/|gradlew(\.bat)?$)/;
 
 /**
  * Paths no CI job reads: the UI tour's request file, its workflow and its scripts. The tour is a
@@ -236,12 +251,12 @@ function formatEvent(decision) {
 
 /** The answer for "run everything". */
 function everything() {
-  return { android: true, e2e: true, screenshots: true, upgrade: true, matrix: FULL_MATRIX, r8runtime: true, web: true, shared: true };
+  return { android: true, e2e: true, screenshots: true, upgrade: true, matrix: FULL_MATRIX, r8runtime: true, web: true, shared: true, ios: true };
 }
 
 /** The answer for a diff no job reads. */
 function nothing() {
-  return { android: false, e2e: false, screenshots: false, upgrade: false, matrix: [LEG_30], r8runtime: false, web: false, shared: false };
+  return { android: false, e2e: false, screenshots: false, upgrade: false, matrix: [LEG_30], r8runtime: false, web: false, shared: false, ios: false };
 }
 
 /**
@@ -266,7 +281,10 @@ function decide(paths) {
   const web = changed.some((p) => !NON_WEB.test(p));
   // Every `:shared-ui` path, screens and strings included: the iPhone compiles them.
   const shared = build || kept.some((p) => /^shared-ui\//.test(p));
-  return { android, e2e, screenshots, upgrade, matrix: fullMatrix ? FULL_MATRIX : [LEG_30], r8runtime, web, shared };
+  // The iPhone app links the shared modules' framework, so it runs whenever they do, and on its own project.
+  // And on what the write gate is held to.
+  const ios = shared || kept.some((p) => IOS_APP.test(p) || IOS_GATE_INPUTS.test(p));
+  return { android, e2e, screenshots, upgrade, matrix: fullMatrix ? FULL_MATRIX : [LEG_30], r8runtime, web, shared, ios };
 }
 
 /** The `$GITHUB_OUTPUT` lines for a decision. */
@@ -280,6 +298,7 @@ function format(decision) {
     `r8runtime=${decision.r8runtime}`,
     `web=${decision.web}`,
     `shared=${decision.shared}`,
+    `ios=${decision.ios}`,
   ].join('\n') + '\n';
 }
 
@@ -304,7 +323,7 @@ if (require.main === module) {
     process.stderr.write(
       `android=${decision.android} e2e=${decision.e2e} screenshots=${decision.screenshots} ` +
         `upgrade=${decision.upgrade} ` +
-        `emulators=[${legs}] r8runtime=${decision.r8runtime} web=${decision.web} shared=${decision.shared}\n`,
+        `emulators=[${legs}] r8runtime=${decision.r8runtime} web=${decision.web} shared=${decision.shared} ios=${decision.ios}\n`,
     );
   }
 }

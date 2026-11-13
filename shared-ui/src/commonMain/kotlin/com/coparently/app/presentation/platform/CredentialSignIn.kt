@@ -8,10 +8,19 @@ import androidx.compose.runtime.staticCompositionLocalOf
  *
  * On Android it is Credential Manager, which hosts its sheets on the Activity, so the shell holds
  * the Activity (`AndroidCredentialSignIn` in the app, provided by `MainActivity`) and the ViewModel
- * is handed this on every call and never keeps it. The iPhone has no sign-in yet, so it is not
- * [available] there and the sign-in screen offers neither Google nor a saved password.
+ * is handed this on every call and never keeps it. On the iPhone it is Google's sign-in alone
+ * (`IosCredentialSignIn`, MON-24 phase 3, Task 9), [available] only where the app carries Google's
+ * configuration; saved passwords are iOS's own autofill there, filling the fields, so the iPhone
+ * does not [offersSavedPasswords].
  */
 interface CredentialSignIn : PlatformCapability {
+
+    /**
+     * Whether the sign-in screen offers the phone's saved passwords as a button of their own: on
+     * Android whenever the sheets are [available], which is what the screen read before this
+     * existed; on the iPhone never, because the system's autofill offers them in the fields.
+     */
+    val offersSavedPasswords: Boolean get() = available
 
     /** Runs Google's sign-in and answers its id token, or the failure the sheet ended with. */
     suspend fun googleIdToken(): Result<String>

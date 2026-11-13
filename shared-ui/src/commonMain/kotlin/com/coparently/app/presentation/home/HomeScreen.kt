@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
@@ -47,12 +48,17 @@ import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.expenses.CurrencyBalance
 import com.coparently.app.presentation.changerequests.ChangeRequestViewModel
+import com.coparently.app.presentation.common.AppTopBar
+import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.BrandHeader
 import com.coparently.app.presentation.common.FamilySwitcherChip
+import com.coparently.app.presentation.common.LocalBarHost
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.ScreenBar
 import com.coparently.app.presentation.common.TwoPanes
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
+import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.common.rememberTwoPane
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.components.SkeletonBox
@@ -72,6 +78,9 @@ import com.coparently.app.resources.home_section_this_week
 import com.coparently.app.resources.home_stat_open_chat
 import com.coparently.app.resources.home_stat_unread_count
 import com.coparently.app.resources.home_updates_title
+import com.coparently.app.resources.nav_home
+import com.coparently.app.resources.nav_settings
+import com.coparently.app.utils.ReaderDateText
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import org.jetbrains.compose.resources.pluralStringResource
@@ -172,12 +181,35 @@ fun HomeScreen(
         containerColor = ScreenContainerColor,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            // The wordmark header, as on the Calendar (redesign, November 2026, variant A), with
-            // the family switcher under it: it draws nothing with one family (M-8).
-            Column(modifier = Modifier.padding(horizontal = Spacing.L, vertical = Spacing.S)) {
-                BrandHeader(children = children, onSettingsClick = onOpenSettings)
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    FamilySwitcherChip()
+            if (LocalBarHost.current != null) {
+                // On the iPhone the shell's navigation bar shows Home's title, its date, the gear and
+                // the family switcher (MON-24 phase 3, part A); the wordmark header below is Android's
+                // until part B decides how the redesign's header meets the native bar.
+                AppTopBar(
+                    ScreenBar(
+                        title = stringResource(Res.string.nav_home),
+                        largeTitle = true,
+                        subtitle = ReaderDateText.date(rememberToday().value, "EEEEMMMMd"),
+                        actions = listOf(
+                            BarAction(
+                                label = stringResource(Res.string.nav_settings),
+                                icon = Icons.Default.Settings,
+                                sfSymbol = "gearshape",
+                                onClick = onOpenSettings
+                            )
+                        ),
+                        // Only with two families or more (M-8); nothing at all with one.
+                        trailingContent = { FamilySwitcherChip() }
+                    )
+                )
+            } else {
+                // The wordmark header, as on the Calendar (redesign, November 2026, variant A), with
+                // the family switcher under it: it draws nothing with one family (M-8).
+                Column(modifier = Modifier.padding(horizontal = Spacing.L, vertical = Spacing.S)) {
+                    BrandHeader(children = children, onSettingsClick = onOpenSettings)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        FamilySwitcherChip()
+                    }
                 }
             }
         }

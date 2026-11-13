@@ -24,6 +24,7 @@ import platform.CoreFoundation.kCFTypeDictionaryValueCallBacks
 import platform.Foundation.CFBridgingRelease
 import platform.Foundation.CFBridgingRetain
 import platform.Foundation.NSData
+import platform.Foundation.NSUserDefaults
 import platform.Foundation.create
 import platform.Security.SecItemAdd
 import platform.Security.SecItemCopyMatching
@@ -145,8 +146,25 @@ class KeychainTextStore(
 class KeychainException(operation: String, val status: Int) :
     IllegalStateException("Keychain $operation failed: OSStatus $status")
 
-/** The app's [SecurePreferences] on the iPhone: one Keychain item (see [KeychainTextStore]). */
+/**
+ * The app's [SecurePreferences] on the iPhone: one Keychain item (see [KeychainTextStore]). The
+ * Keychain outlives an uninstall, so what an earlier install left in that item is deleted on the
+ * first launch of this one, before the Koin graph builds this store: by `clearPreviousInstall`
+ * (`data/session/PreviousInstall.kt`), which the app's launch calls, together with Firebase Auth's
+ * saved session and under the same install marker.
+ */
 fun keychainSecurePreferences(): SecurePreferences = SealedSecurePreferences(KeychainTextStore())
+
+/** The install marker in `NSUserDefaults`, which iOS deletes with the app (the Keychain it does not). */
+internal object UserDefaultsInstallMarker : InstallMarker {
+    private const val KEY = "coplanly.installed"
+
+    override fun isSet(): Boolean = NSUserDefaults.standardUserDefaults.boolForKey(KEY)
+
+    override fun set() {
+        NSUserDefaults.standardUserDefaults.setBool(true, forKey = KEY)
+    }
+}
 
 private fun ByteArray.toNSData(): NSData =
     if (isEmpty()) NSData() else usePinned { NSData.create(bytes = it.addressOf(0), length = size.convert()) }

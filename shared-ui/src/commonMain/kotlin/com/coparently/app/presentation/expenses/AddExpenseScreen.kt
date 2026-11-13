@@ -17,7 +17,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PhotoCamera
@@ -30,7 +29,6 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -46,7 +44,6 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -70,6 +67,8 @@ import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.receipts.ReceiptScan
+import com.coparently.app.presentation.common.AppTopBar
+import com.coparently.app.presentation.common.BarLeading
 import com.coparently.app.presentation.common.DatePickerField
 import com.coparently.app.presentation.common.FamilyMemberChips
 import com.coparently.app.presentation.common.FamilyMemberRefListSaver
@@ -77,6 +76,7 @@ import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.LocalDateSaver
+import com.coparently.app.presentation.common.ScreenBar
 import com.coparently.app.presentation.common.SideBySideOrStacked
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.asString
@@ -96,7 +96,6 @@ import com.coparently.app.presentation.platform.LocalPlatformImages
 import com.coparently.app.presentation.theme.CoPlanlyShapes
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.budgets_back
 import com.coparently.app.resources.expense_add_title
@@ -340,20 +339,18 @@ fun AddExpenseScreen(
         // A back gesture over unsaved edits shrinks the form before it asks (D-11).
         modifier = Modifier.then(leave.backPreview),
         topBar = {
-            TopAppBar(
-                colors = screenTopAppBarColors(),
-                title = {
-                    Text(
-                        stringResource(
-                            if (expenseId == null) Res.string.expense_add_title else Res.string.expense_edit_title
-                        )
+            // The form's Save stays the StickyActionBar below on Android, so no primary action here.
+            AppTopBar(
+                ScreenBar(
+                    title = stringResource(
+                        if (expenseId == null) Res.string.expense_add_title else Res.string.expense_edit_title
+                    ),
+                    leading = BarLeading.Back(
+                        label = stringResource(Res.string.budgets_back),
+                        onClick = leave,
+                        enabled = !isSaving
                     )
-                },
-                navigationIcon = {
-                    IconButton(onClick = leave, enabled = !isSaving) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(Res.string.budgets_back))
-                    }
-                }
+                )
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },

@@ -97,7 +97,7 @@ invocation is yours.
 | **MON-20** | **Built** (read-only card in custody settings, pure calculator); left: a look on a phone | P2 | — |
 | **MON-21** | **Built** (a proposal from an agreed plan answer, citing it; rules and rules tests); left: the rules deploy and a look on two phones — see the 👁 table | P2 | — |
 | **MON-22** | **Built** (schema 41, PR #101): a local-only journal and an opt-in export section; left: the device check (DEVICE-CHECKLIST §6) | P2 | — |
-| **MON-24** | The iPhone app: one Kotlin codebase (Compose Multiplatform), iOS-adapted on the iPhone, full parity. **Phases 1 and 2 built** (the domain in `:shared`; the data layer in `:shared-data`, the UI in `:shared-ui` and a thin Android shell; wire and stored bytes unchanged; on one branch, merged after the Android release); next: phase 3, the iPhone shell. Design: `docs/superpowers/specs/2026-10-27-iphone-app-design.md` | P1 | L |
+| **MON-24** | The iPhone app: one Kotlin codebase (Compose Multiplatform), iOS-adapted on the iPhone, full parity. **Phases 1 and 2 built** (the domain in `:shared`; the data layer in `:shared-data`, the UI in `:shared-ui` and a thin Android shell; wire and stored bytes unchanged; on one branch, merged after the Android release). **Phase 3's part A built and CI-proven** (the Xcode project, the native shell, sign-in by e-mail and Google, the foreground sync, the write gate), awaiting the owner's check on their Mac; next: phase 3's part B. Design: `docs/superpowers/specs/2026-10-27-iphone-app-design.md` | P1 | L |
 | **MON-25** | Request clocks' on-time steps (deadline notice, end) move to a scheduled Cloud Function, for both platforms; needed by MON-24 before an iPhone build reaches a user (planned before phase 2, which went ahead without it by owner decision, 1 November 2026). Needs its own design pass | P1 | L |
 | **REL-4 (drafting)** | Done as far as the code can answer: every placeholder left is a fact only the owner has, listed at the top of each document. The deletion page and the privacy link in the app are written | P0 | S |
 | **L-4 (photos)** | **Built** (family-keyed Storage paths, no download URLs, pre-pairing photos moved by the server, legacy purge callable; rules, functions, unit and e2e tests); left: `firebase deploy --only storage`, the functions deploy, `purgeLegacyPhotoPaths` once, and DEVICE-CHECKLIST §3.10 on two phones | P0 | S |
@@ -2676,7 +2676,7 @@ period or deletes them); no attachment of files to an entry; no backup — an en
 journal alone would be the way to add one, and it is a product decision, not a default. Needs
 `41.json` from the Regenerate workflow before its migration test can run.
 
-### MON-24 · **PHASES 1–2 BUILT** · P1 · L · CoPlanly for iPhone
+### MON-24 · **PHASES 1–2 BUILT; PHASE 3 PART A BUILT, AWAITING THE OWNER'S CHECK** · P1 · L · CoPlanly for iPhone
 
 **Where:** ☁️ cloud for the shared Kotlin and the job definitions; ⚙️ the iOS build and simulator
 jobs on a GitHub-hosted macOS runner; 💻 the iPhone, TestFlight and App Store review.
@@ -2815,27 +2815,61 @@ notes list each file):
   `rememberAccessDate`. No app source or test names them at `edff7f71`. Return each to `internal`,
   in one sweep; none has a detekt baseline entry. (`PLAY_STORE_URL` and `playStoreUrlFor` stay
   public for the app's `PairingLinkTest`.)
-- **`IosSignInStandInsTest`** (`shared-ui`'s `iosTest`) is compiled by the `shared` job but never
-  run: no job runs `:shared-ui:iosSimulatorArm64Test`, whose test executable would need
-  `shared-data`'s Firebase pods. Run it once the iPhone app's test host links them.
+- ~~**`IosSignInStandInsTest`** (`shared-ui`'s `iosTest`) is compiled by the `shared` job but never
+  run.~~ Runs since phase 3's Task 5: the `ios-app` job runs `:shared-ui:iosSimulatorArm64Test`, its
+  test executable linking the Firebase frameworks `shared-data`'s pods build
+  (`gatherFirebaseFrameworksForTests` in `shared-ui/build.gradle.kts`).
 - **Kover's gap under AGP 9**: the coverage figure counts the app's unit tests alone, because Kover
   0.9.x does not recognise AGP 9.3's Android KMP library target; the `unit` variant is wired for the
   shared modules (CI hygiene, below).
 - **The iPhone's stand-ins, which phase 3 and 4 replace.** In `:shared-data`'s
-  `di/koin/IosUnavailable.kt` and `platformDataModule`: `NoSignedInUser`, `NoAuthSession`,
-  `NoAccountSignIn`, `NoAccountSwitch`, `NoAccountDeletion`, `NoAccountTraces`, `NoPush` (one object
-  for `PushDevice` and `PushRegistration`, replaced together), `NoGoogleCalendar`, `NoStorageBucket`,
-  `NoPickedFiles`, `NoRecordPhotoStorage`, `NoReceiptText`, `NoRecordFiles`, `NoSyncRequests`,
+  `di/koin/IosUnavailable.kt` and `platformDataModule`: `NoAccountDeletion` (an account can be
+  created on the iPhone since phase 3's Task 5, so **in-app account deletion on the iPhone is
+  required before the App Store**; spec §5.6 puts it in part B. Settings' delete-account row is
+  **not** hidden: `SettingsScreen` draws it unconditionally, and on the iPhone it calls
+  `NoAccountDeletion`, which fails with a message and deletes nothing. Before the App Store it
+  needs either real deletion on iOS or an `AccountDeletion.available` flag (default true, false in
+  `NoAccountDeletion`) gating the row, Android unchanged), `NoPush` (now the push switch and sign-out's detach alone, `PushRegistration`: the
+  phone holds no push token until phase 4), `NoGoogleCalendar`, `NoStorageBucket`,
+  `NoPickedFiles`, `NoRecordPhotoStorage`, `NoReceiptText`, `NoRecordFiles`,
   `NoEventReminders`, `NoRequestClockJobs`, `NoRequestClockNotices`, `NoSchoolImportJob`,
-  `NoSupportReminderJob`, `NoExportVerifyAddress` and `NoWording` (which throws: a pairing's thread
-  title and a school import's titles are stored data, so no English stand-in is written). In
+  `NoSupportReminderJob` and `NoExportVerifyAddress`. In
   `:shared-ui`: `NoSpeechDictation`, `NoAiAssist` with `AiAssistAvailability(false)`,
-  `NoAuthErrors` and `NoInviteQrCodes` (`di/koin/IosUiUnavailable.kt`), and in
+  and `NoInviteQrCodes` (`di/koin/IosUiUnavailable.kt`), and in
   `presentation/platform/IosPlatform.kt` the platform interfaces' (`NoShareSheet`, `NoFilePicker`,
   `NoCameraCapture`, `NoQrScanner`, `NoDictation`, `NoPermissions`, `NoOpenUrl`, `NoClipboard`,
-  `NoImages`, `NoQrCodes`, `NoAppLanguages`) with `NoCredentialSignIn` and `NoGoogleCalendarSignIn`,
+  `NoImages`, `NoQrCodes`, `NoAppLanguages`) with `NoGoogleCalendarSignIn`,
   which `ProvideIosShell` provides. Each says it is unavailable, and the screens hide what it
-  stands for.
+  stands for. The sign-in's (`NoSignedInUser`, `NoAuthSession`, `NoAccountSignIn`,
+  `NoAccountSwitch`, `NoAccountTraces`, `NoAuthErrors`) were replaced in phase 3's Task 5 by
+  `IosFirebaseAuth`, `IosAccountSwitch`, `IosAccountTraces` and `IosAuthErrors`; in Task 6
+  `NoSyncRequests` by `ForegroundSyncRunner` (a sync while the app is open), `NoWording` by
+  `IosPairingWording` and `IosSchoolImportWordings` (the shared strings, in `:shared-ui`), and
+  `NoPush`'s queue half by `FirestorePushQueue` (`PushDevice` and `PushQueue`: the co-parent is
+  told, as on Android); in Task 9 `NoCredentialSignIn` by `IosCredentialSignIn` (Google's sheet).
+- **Still owed from part A** (the final review of part A, November 2026; each is part B's):
+  - **Blocker: a hidden Chat tab keeps marking messages read.** On the iPhone the four tabs'
+    compositions stay alive in hidden view controllers (`StackHost`'s lifecycle stays RESUMED), so
+    with one co-parent a Chat tab that was opened and then left keeps marking the co-parent's new
+    messages READ (`ChatScreen`'s `onThreadOpened` never gets its `onThreadClosed`), unlike Android,
+    where `navigateToTab` disposes the entry. Fix before any real family uses the iPhone build: the
+    tab lifecycle from selection and foreground, or the shell closing the thread when its tab hides.
+    That needs an owner ruling if it changes Android.
+  - `EdgeSwipeBack` pops past a screen's own `BackHandler` steps (ConnectSchool, CustodySetup's
+    sections, Chat search): refuse the swipe while an enabled `BackHandler` exists.
+  - Google Sign-In's SDK session is not signed out on app sign-out or on a fresh install, so a
+    shared phone may preselect the previous account.
+  - `IosApp.start` should check its double-start guard first.
+  - `CFBundleLocalizations` against `AppLanguageRule`: with Slovak then Czech the screens are in
+    English and the system chrome in Czech.
+  - Commit `Package.resolved` from the owner's Mac.
+  - An unknown path gives `ios=false` in `tools/ci-changes.js`, against "an unfamiliar path runs
+    everything".
+  - The write gate's minors, before the iPhone writes to real families: non-empty attachments, and
+    a delete that is not recorded.
+  - The recurring `LocalDatePickerDialogTest` `DeadSystemException` on the API 35 16 KB leg
+    deserves its own investigation.
+  - Android autofill now reads the sign-in fields' `ContentType` hints (Task 9); the owner may veto.
 - **From the data-layer move** (Task 8, and "Carried into the data-layer move" below): the sign-in's
   ID-token-only path through GitLive (Android passes no access token; GitLive's iOS side needs
   both); `getToken()` of the FCM and APNs token on a phone with a real project; GitLive's iOS
@@ -2884,13 +2918,56 @@ resolve higher.
 2. **The toolchain:** Kotlin 2.4 is done (Task 13; Xcode up to 26.4). A **stable Kotlin 2.5** is
    needed before the App Store submission (phase 6), for Xcode 27 and the SDK App Store Connect will
    require (toolchain, below).
-3. **Once the iPhone app's test host exists:** `KeychainSecurePreferencesTest` app-hosted,
-   `IosDatabaseTest` on a real iPhone and the device checks of the toolchain list below.
+3. **Once the iPhone app's test host exists:** ~~`KeychainSecurePreferencesTest` app-hosted~~
+   (runs since phase 3's Task 5 on the simulator `ios-app` boots, with simulated Keychain
+   entitlements), `IosDatabaseTest` on a real iPhone and the device checks of the toolchain list below.
 4. **Before any iPhone build reaches a user:** the privacy documents describe the iPhone's storage
    (toolchain, below), and MON-25 has moved the request clocks' on-time steps to the server (spec
    §9.2), since the iPhone schedules none of them.
 5. **Phase 3's own first step is the spike of spec §5.2** (native or Compose navigation bars inside
    a tab), then the shell, the adaptive controls and the theme (spec §6).
+
+**Phase 3, part A — proof and skeleton: built and CI-proven, awaiting the owner's device check**
+(November 2026; spec `docs/superpowers/specs/2026-11-10-iphone-phase-3-native-shell-design.md`,
+plan `docs/superpowers/plans/2026-11-10-iphone-phase-3a-proof-and-skeleton.md`). The owner chose
+"everything native" without the spike (spec §2), so start condition 5's spike was not run. What it
+built, task by task:
+
+- **The final review's three iPhone fixes** (Task 1): a reinstall starts clean (a first-launch
+  marker outside the Keychain clears the sealed store and signs Firebase out), wall-clock dates are
+  built and printed on UTC, and the owner's language rule has an iPhone half.
+- **Destinations as data and bars as descriptions** (Tasks 2 and 3): `AppDestination` and its
+  catalogue, `ScreenBar` and `LocalBarHost`; Android draws exactly what it drew (470 screenshots,
+  0 changed).
+- **The Xcode project and the `ios-app` CI job** (Task 4): `iosApp/`, XcodeGen, Firebase iOS 11.8.0
+  through Swift Package Manager, the static `Shared` framework built by Xcode's build phase.
+- **Signing in by e-mail** (Task 5) through GitLive's Firebase Auth, with the account switch's wipe;
+  **what a signed-in iPhone needs** (Task 6): the chat mirror, the profile synchronizer, the
+  foreground sync (`ForegroundSyncRunner`), the wordings and the push queue.
+- **The write gate** (Task 7): on the emulators with the real rules, the iPhone data layer writes
+  every kind of shared record and push, and `tools/ios/check-ios-writes.js` compares each document
+  with what Android writes — green, 37 documents, 0 differences.
+- **The native shell** (Task 8): a `UITabBarController` with four tabs, a `UINavigationController`
+  per tab mirroring the shared back stack (`StackMirror`), native bars on Home, Family, Expenses,
+  Add expense and Settings, form routes as page sheets that ask "Discard changes?" over edits, and
+  an XCUITest walk in CI. The palette's, the family view's and the Chat badge's ViewModels are scoped
+  to the signed-in session and cleared at sign-out, stricter than Android.
+- **Google sign-in** (Task 9): Google Sign-In for iOS 9.2.0 behind a Kotlin interface, offered only
+  with a bundled `GoogleService-Info.plist` and its URL scheme.
+
+Last green run: 43316189630 (`0dbc7ed9`): every job, the walk's 15 steps, 619 iPhone emulator tests
+and the write gate. **The spec's §7 is not answered yet.** For each open point the spec records
+what CI proved (§7, "Where part A stands"), and the rest comes from the owner's run of
+`docs/superpowers/plans/2026-11-10-iphone-phase-3a-owner-check.md`: the stack host's feel (§7.1);
+whether the large title, which part A shows always and does not collapse, is acceptable or part B
+builds the first try or the fallback (§7.2); whether content must run under the bars (§7.3, nothing
+of it built); the keyboard in a sheet and in the chat thread (§7.4); the sheet with edits (§7.5);
+memory and speed (§7.6); the real Google sheet, Keychain autofill, a reinstall, a time-zone change
+and a second account. Part B is planned from those answers.
+
+Still owed from part A, beyond the stand-ins listed above: **in-app account deletion on the iPhone
+before the App Store** (`NoAccountDeletion`; spec §5.6 puts it in part B), and the minor findings
+the task reviews deferred to the final review of part A.
 
 **Phase 1's stay list** — the domain files still under `app/src/main/java/com/coparently/app/domain/`,
 each with what keeps it there. Phase 2 moves them with Hilt's replacement and the data layer, or
@@ -2995,8 +3072,9 @@ bytes are identical on Android). Kept as the record of each step; what phase 2 l
   plain `SharedPreferences` (the account-switch guard, the install referrer), `Base64` and the
   Keystore in `EncryptionManager`, the PDF writer, ML Kit, dictation and the Credential Manager.
   The contract and the store run under Kotlin/Native on the simulator over an in-memory store;
-  `KeychainSecurePreferencesTest` is `@Ignore`d, because a test binary with no app host has no
-  Keychain (every call answers `errSecNotAvailable`, −25291), and runs before phase 3 (below).
+  `KeychainSecurePreferencesTest` runs over the real Keychain since phase 3's Task 5, in `ios-app` on
+  a booted simulator (a standalone test binary has no Keychain: every call answers
+  `errSecNotAvailable`, −25291, so `shared-ios` leaves it out of its run).
 - ~~**Room on Kotlin Multiplatform**~~ **Done (phase 2, Task 7, November 2026)**: the database is
   in `:shared-data` on Room 2.7.2 for Kotlin Multiplatform — the entities, DAOs, `Converters` and
   `CoPlanlyDatabase` (with `@ConstructedBy`) in `commonMain`, Room's processor run there for
@@ -3407,7 +3485,8 @@ platform caches; they do not fail the link. So:
    Kotlin 2.4.21, KSP 2.3.13, kotlinx-serialization 1.12.0, and Ktor 3.6.1, whose OkHttp 5.5 needed
    compileSdk 37 (CLAUDE.md, toolchain). The shared modules' Android target is AGP's Android KMP
    library plugin, their JVM tests `androidHostTest`. And once the iPhone app's XCTest host
-   exists: run `KeychainSecurePreferencesTest` app-hosted (un-`@Ignore` it), and check on a phone that
+   exists: ~~run `KeychainSecurePreferencesTest` app-hosted (un-`@Ignore` it)~~ (runs since phase 3's
+   Task 5, on a booted simulator in `ios-app`), and check on a phone that
    the preference item survives a relaunch and is readable after the first unlock.
    On the same host, run `IosDatabaseTest` on a real iPhone, where its read-back of the
    protection class runs (the simulator reports none), and check on a phone that the database file

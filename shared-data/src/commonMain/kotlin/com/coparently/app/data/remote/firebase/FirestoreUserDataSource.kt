@@ -24,18 +24,33 @@ class FirestoreUserDataSource(
         }
 
         return try {
-            // Use DEFAULT source - tries server first, automatically falls back to cache if offline
-            val snapshot = firestore.get(DocumentPath(usersCollection, uid))
-
-            logger.d(
-                "FirestoreUserDataSource",
-                "Got user from ${if (snapshot.isFromCache) "cache" else "server"}: $uid"
-            )
-            snapshot.data
+            readUserOrThrow(uid)
         } catch (e: Exception) {
             logger.e("FirestoreUserDataSource", "Failed to get user", e)
             null
         }
+    }
+
+    /**
+     * One read of `users/{uid}`, as [getUserById] makes it, that tells a missing document apart
+     * from a read that failed: the document's fields, null when there is no such document, and
+     * the failure thrown when the read itself did not succeed.
+     *
+     * [getUserById] answers null for both, which is right for a caller that only shows what it
+     * finds. A caller that *writes* from what it read must not take a failed read for an empty
+     * document: `UserRepositoryImpl.ensureProfile` once seeded the local profile, and merged a name
+     * guessed from the e-mail address over the stored one, from a read that had failed right after
+     * a sign-in on the iPhone.
+     */
+    suspend fun readUserOrThrow(uid: String): Map<String, Any?>? {
+        // Use DEFAULT source - tries server first, automatically falls back to cache if offline
+        val snapshot = firestore.get(DocumentPath(usersCollection, uid))
+
+        logger.d(
+            "FirestoreUserDataSource",
+            "Got user from ${if (snapshot.isFromCache) "cache" else "server"}: $uid"
+        )
+        return snapshot.data
     }
 
     /**

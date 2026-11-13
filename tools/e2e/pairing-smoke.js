@@ -214,7 +214,13 @@ async function main() {
       `(${slots[alice.uid].stringValue}/${slots[bob.uid].stringValue}).`);
 }
 
-main().catch((error) => {
-  console.error(`Pairing smoke FAILED: ${error.message}`);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(`Pairing smoke FAILED: ${error.message}`);
+    process.exit(1);
+  });
+}
+
+// The helpers the iPhone shell's UI test seeds its family with (tools/ios/seed-shell-family.js), so
+// both write the shapes the app writes from one place.
+module.exports = {call, toFields, signUp, writeInvitation, adminGet, functionsHost, DOCS, PROJECT};

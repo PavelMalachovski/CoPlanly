@@ -39,7 +39,8 @@ internal const val READABLE_PANE_TEST_TAG = "readable_pane"
  * One wrapper at the navigation graph, not a cap in each of thirty-eight screens. Every detail
  * screen brings its own Scaffold, and a cap inside each would be thirty-eight chances to put it on
  * the wrong container, or to forget it in the next screen. The tabs stay `composable`: Home, the
- * calendar, chat and expenses use the whole window, beside the rail.
+ * calendar, chat and the Family tab use the whole window, beside the rail, as Expenses does
+ * ([addDestination]).
  *
  * The parameters are navigation's own, with its defaults: a null transition falls back to the
  * NavHost's, and a pop transition defaults to its push.
@@ -65,6 +66,38 @@ internal fun NavGraphBuilder.pane(
         popExitTransition = popExitTransition
     ) { entry ->
         ReadablePane { content(entry) }
+    }
+}
+
+/**
+ * Declares [destination] the way its kind is drawn on Android (MON-24 phase 3): a tab root and
+ * Expenses, design item 19's exception, take the whole window through [composable]; every other
+ * destination is a [pane], one readable column, but for the loading spinner, which has always been
+ * centred in the whole window. A destination that names no transitions takes the NavHost's push.
+ */
+internal fun NavGraphBuilder.addDestination(destination: AppDestination) {
+    val transitions = destination.transitions
+    val fillsWindow = destination.kind == DestinationKind.TAB_ROOT ||
+        destination.kind == DestinationKind.FULL_WIDTH_PUSH ||
+        destination.route == Screen.Loading.route
+    if (fillsWindow) {
+        composable(
+            route = destination.route,
+            arguments = destination.arguments,
+            enterTransition = transitions?.enter,
+            exitTransition = transitions?.exit,
+            popEnterTransition = transitions?.popEnter,
+            popExitTransition = transitions?.popExit
+        ) { entry -> destination.content(entry) }
+    } else {
+        pane(
+            route = destination.route,
+            arguments = destination.arguments,
+            enterTransition = transitions?.enter,
+            exitTransition = transitions?.exit,
+            popEnterTransition = transitions?.popEnter,
+            popExitTransition = transitions?.popExit
+        ) { entry -> destination.content(entry) }
     }
 }
 

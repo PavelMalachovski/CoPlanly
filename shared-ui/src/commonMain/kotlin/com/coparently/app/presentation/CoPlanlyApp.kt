@@ -42,17 +42,48 @@ import org.koin.compose.viewmodel.koinViewModel
  * hands back, and the splash's `AuthStateViewModel` and `TelemetryConsentViewModel`, which
  * [NavGraph] reads.
  *
+ * The theme and the app-wide locals are [AppProviders]'s, which the iPhone's shell also wraps each
+ * hosted screen in.
+ *
  * @param launch What this launch hands the navigation graph.
  * @param darkTheme The parent's theme choice, or null to follow the system's.
  */
 @Composable
 fun CoPlanlyApp(launch: AppLaunch, darkTheme: Boolean?) {
+    val syncViewModel: SyncViewModel = koinViewModel()
+
+    AppProviders(darkTheme = darkTheme) {
+        val navController = rememberNavController()
+        NavGraph(
+            navController = navController,
+            syncViewModel = syncViewModel,
+            pendingInviteCodes = launch.inviteCodes,
+            pendingChatOpen = launch.chatOpen,
+            pendingDestinationOpen = launch.destinationOpen
+        )
+    }
+}
+
+/**
+ * The theme and the app-wide locals every screen is drawn in (MON-24 phase 3): [CoPlanlyTheme]
+ * with the app's background [Surface], the family's parent colours ([LocalParentPalette]), the
+ * family on screen ([LocalFamilyView]), the snackbars that outlive their screen
+ * ([LocalAppMessages]) and the signed-in uid the record photos are drawn for
+ * ([LocalPhotoViewerUid]). [CoPlanlyApp] wraps the navigation graph in it; the iPhone's native
+ * shell wraps each screen it hosts in the same, without composing the graph.
+ *
+ * Like [CoPlanlyApp], it is composed inside the shell's platform providers.
+ *
+ * @param darkTheme The parent's theme choice, or null to follow the system's.
+ * @param content What is drawn in the theme and the locals.
+ */
+@Composable
+fun AppProviders(darkTheme: Boolean?, content: @Composable () -> Unit) {
     val systemDarkTheme = isSystemInDarkTheme()
 
     // Use saved preference or fall back to system default
     val useDarkTheme = darkTheme ?: systemDarkTheme
 
-    val syncViewModel: SyncViewModel = koinViewModel()
     val parentPaletteViewModel: ParentPaletteViewModel = koinViewModel()
     val familyViewViewModel: FamilyViewViewModel = koinViewModel()
     val signedInUser: SignedInUser = koinInject()
@@ -74,7 +105,6 @@ fun CoPlanlyApp(launch: AppLaunch, darkTheme: Boolean?) {
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
-            val navController = rememberNavController()
             // Snackbars that outlive the screen that raised them (D-25), shown by the navigation
             // graph's root Scaffold.
             val appMessages = rememberAppMessages()
@@ -85,13 +115,7 @@ fun CoPlanlyApp(launch: AppLaunch, darkTheme: Boolean?) {
                 LocalAppMessages provides appMessages,
                 LocalPhotoViewerUid provides photoViewerUid
             ) {
-                NavGraph(
-                    navController = navController,
-                    syncViewModel = syncViewModel,
-                    pendingInviteCodes = launch.inviteCodes,
-                    pendingChatOpen = launch.chatOpen,
-                    pendingDestinationOpen = launch.destinationOpen
-                )
+                content()
             }
         }
     }

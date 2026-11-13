@@ -24,9 +24,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.contentType
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -208,7 +211,10 @@ fun AuthScreen(
                                 contentDescription = null
                             )
                         },
-                        modifier = Modifier.fillMaxWidth(),
+                        // The autofill hint, which both platforms' autofill read (Task 9).
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics { contentType = ContentType.EmailAddress },
                         enabled = !uiState.isLoading,
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(
@@ -253,7 +259,16 @@ fun AuthScreen(
                         } else {
                             PasswordVisualTransformation()
                         },
-                        modifier = Modifier.fillMaxWidth(),
+                        // A new account's password is a new one, so autofill can offer to make one.
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics {
+                                contentType = if (uiState.isSignInMode) {
+                                    ContentType.Password
+                                } else {
+                                    ContentType.NewPassword
+                                }
+                            },
                         enabled = !uiState.isLoading,
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(
@@ -385,7 +400,7 @@ fun AuthScreen(
                     // nonsense. Deliberately a button rather than a sheet that opens with the
                     // screen - the system UI stays behind an explicit request, which matters
                     // most right after a deliberate sign-out.
-                    if (uiState.isSignInMode && credentials.available) {
+                    if (uiState.isSignInMode && credentials.offersSavedPasswords) {
                         TextButton(
                             onClick = {
                                 coroutineScope.launch { viewModel.signInWithSavedPassword(credentials) }

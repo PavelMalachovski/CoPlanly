@@ -78,6 +78,16 @@ captures/
 
 # Google Services (e.g. APIs or Firebase)
 google-services.json
+# The iPhone app's (MON-24 phase 3): the real project's configuration is dropped into
+# iosApp/CoPlanly/ on the owner's Mac and never committed.
+GoogleService-Info.plist
+iosApp/**/GoogleService-Info.plist
+
+# The iPhone app's generated Xcode project (XcodeGen writes it from iosApp/project.yml) and
+# xcodebuild's derived data, as CI and iosApp/README.md place it.
+iosApp/CoPlanly.xcodeproj/
+iosApp/build/
+xcuserdata/
 
 # Note: strings.xml files are tracked. Secrets are NOT stored in them —
 # the OAuth client secret is injected via BuildConfig (GOOGLE_CLIENT_SECRET

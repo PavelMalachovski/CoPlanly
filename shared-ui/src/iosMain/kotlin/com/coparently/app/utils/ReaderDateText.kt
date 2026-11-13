@@ -17,15 +17,16 @@ import platform.Foundation.NSDateFormatterMediumStyle
 import platform.Foundation.NSDateFormatterNoStyle
 import platform.Foundation.NSDateFormatterShortStyle
 import platform.Foundation.NSDateFormatterStyle
-import platform.Foundation.NSLocale
-import platform.Foundation.currentLocale
+import platform.Foundation.NSTimeZone
+import platform.Foundation.timeZoneWithName
 import kotlin.time.Instant
 
 /**
- * Foundation's wording in the phone's current locale, on the Gregorian calendar `java.time`'s ISO
- * dates use on Android (as `rememberReaderDates` does): a skeleton is a date format template, which
- * Foundation orders, punctuates and declines for the language itself. Which locale the iPhone app's
- * own language choice sets is phase 3's to decide.
+ * Foundation's wording in [readerLocale] (the owner's language rule), on the Gregorian calendar
+ * `java.time`'s ISO dates use on Android (as `rememberReaderDates` does): a skeleton is a date
+ * format template, which Foundation orders, punctuates and declines for the language itself. Dates
+ * and times here are zone-less wall clocks, so every formatter and the calendar run in UTC: the
+ * phone's zone, and a daylight-saving gap in it, never shifts what was written.
  */
 actual object ReaderDateText {
 
@@ -53,8 +54,12 @@ actual object ReaderDateText {
         return fixedPattern(if (is24Hour) PATTERN_24_HOUR else PATTERN_12_HOUR).stringFromDate(instant)
     }
 
-    actual fun dateWithTime(dateTime: LocalDateTime, skeleton: String, separator: String): String =
-        date(dateTime.date, skeleton) + separator + time(dateTime)
+    actual fun dateWithTime(
+        dateTime: LocalDateTime,
+        skeleton: String,
+        separator: String,
+        is24Hour: Boolean
+    ): String = date(dateTime.date, skeleton) + separator + time(dateTime, is24Hour)
 
     actual fun hour(hour: Int, is24Hour: Boolean): String =
         if (is24Hour) {
@@ -99,31 +104,44 @@ actual fun readerFullDate(date: LocalDate): String = styledDate(date, NSDateForm
 private fun styledDate(date: LocalDate, style: NSDateFormatterStyle): String {
     val instant = nsDate(LocalDateTime(date, LocalTime(0, 0))) ?: return date.toString()
     val formatter = NSDateFormatter().apply {
-        locale = NSLocale.currentLocale
+        locale = readerLocale()
         calendar = gregorian
+        timeZone = utc
         dateStyle = style
         timeStyle = NSDateFormatterNoStyle
     }
     return formatter.stringFromDate(instant)
 }
 
-/** The calendar `java.time`'s ISO dates are on. */
-private val gregorian = NSCalendar(calendarIdentifier = NSCalendarIdentifierGregorian)
+/** Wall clocks carry no zone, so they are read and written in UTC. */
+private val utc = NSTimeZone.timeZoneWithName("UTC")!!
 
-/** [dateTime] as the moment it names in the phone's zone, on the Gregorian calendar. */
+/** The calendar `java.time`'s ISO dates are on. */
+private val gregorian = NSCalendar(calendarIdentifier = NSCalendarIdentifierGregorian).apply { timeZone = utc }
+
+/** [dateTime] as the moment it names in UTC, on the Gregorian calendar. */
 private fun nsDate(dateTime: LocalDateTime): NSDate? = gregorian.dateFromComponents(dateTime.toNSDateComponents())
 
-/** A formatter for [skeleton] in the reader's locale: Foundation's own order for the fields. */
+/**
+ * A formatter for [skeleton] in the reader's locale: Foundation's own order for the fields. In UTC,
+ * as [nsDate] writes the wall clock: a formatter left on the phone's zone moved every time by the
+ * zone's offset, and a date to the day before west of Greenwich.
+ */
 private fun formatter(skeleton: String): NSDateFormatter = NSDateFormatter().apply {
-    locale = NSLocale.currentLocale
+    locale = readerLocale()
     calendar = gregorian
+    timeZone = utc
     setLocalizedDateFormatFromTemplate(skeleton)
 }
 
-/** A formatter for a fixed [pattern], with the reader's month, weekday and day-period words. */
+/**
+ * A formatter for a fixed [pattern], with the reader's month, weekday and day-period words; in UTC,
+ * for [formatter]'s reason.
+ */
 private fun fixedPattern(pattern: String): NSDateFormatter = NSDateFormatter().apply {
-    locale = NSLocale.currentLocale
+    locale = readerLocale()
     calendar = gregorian
+    timeZone = utc
     dateFormat = pattern
 }
 
@@ -132,6 +150,6 @@ private fun fixedPattern(pattern: String): NSDateFormatter = NSDateFormatter().a
  * template) is `H` or `k`.
  */
 internal actual fun languageUses24Hour(): Boolean {
-    val pattern = NSDateFormatter.dateFormatFromTemplate("j", 0u, NSLocale.currentLocale) ?: return true
+    val pattern = NSDateFormatter.dateFormatFromTemplate("j", 0u, readerLocale()) ?: return true
     return pattern.contains('H') || pattern.contains('k')
 }

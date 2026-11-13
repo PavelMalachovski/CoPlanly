@@ -54,7 +54,12 @@ expect object ReaderDateText {
      * [dateTime]'s date for [skeleton], then [separator], then its time on the reader's clock:
      * "Wed, Sep 2 · 3:30 PM", "st 2. 9. · 15:30".
      */
-    fun dateWithTime(dateTime: LocalDateTime, skeleton: String, separator: String = " · "): String
+    fun dateWithTime(
+        dateTime: LocalDateTime,
+        skeleton: String,
+        separator: String = " · ",
+        is24Hour: Boolean = ClockFormat.is24Hour
+    ): String
 
     /**
      * The label of one hour row in the Day and Week views' gutter (L-7): the bare two-digit hour on

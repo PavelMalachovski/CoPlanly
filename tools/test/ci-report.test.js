@@ -73,6 +73,7 @@ test('suite labels', () => {
   assert.equal(report.suiteLabel('junit-web'), 'Web (verify page, calendar feed)');
   assert.equal(report.suiteLabel('junit-shared'), 'Shared module (JVM)');
   assert.equal(report.suiteLabel('junit-shared-ios'), 'Shared module (iOS simulator)');
+  assert.equal(report.suiteLabel('junit-ios-emulators'), 'iPhone tests on the emulators');
 });
 
 test('collect reads junit-* and coverage-report directories', () => {

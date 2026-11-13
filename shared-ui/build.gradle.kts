@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.nio.file.Files
 
 // The UI both apps run (MON-24 phase 2; docs/superpowers/plans/
 // 2026-11-01-iphone-phase-2-multiplatform-app.md, Task 9 onwards), on Compose Multiplatform. It
@@ -27,6 +28,82 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
     id("io.gitlab.arturbosch.detekt")
     id("org.jetbrains.kotlinx.kover")
+}
+
+/**
+ * The Firebase iOS frameworks this module's simulator test executable links (MON-24 phase 3, Task 5):
+ * the pods `:shared-data` declares `linkOnly` (its `cocoapods { }` list; move the two together).
+ *
+ * `:shared-data` links them into its own test executable through the Kotlin CocoaPods plugin, which
+ * this module cannot apply: the plugin refuses `embedAndSignAppleFrameworkForXcode`, the task the
+ * iPhone app's Xcode build calls, in a project with pod dependencies. So the frameworks `:shared-data`'s
+ * pods build for the simulator are gathered in one folder ([gatherFirebaseFrameworks]) and linked
+ * from there, with the options the plugin gives `:shared-data`'s executable: `-F` and `-framework`
+ * for each pod, and the folder as the executable's run path so the simulator finds them.
+ */
+val firebaseTestFrameworks = listOf(
+    "FirebaseCore",
+    "FirebaseFirestore",
+    "FirebaseFirestoreInternal",
+    "FirebaseFunctions",
+    "FirebaseAuth",
+)
+
+/** Where [gatherFirebaseFrameworks] puts them: links to the frameworks `:shared-data`'s pods built. */
+val firebaseTestFrameworksDir: File = layout.buildDirectory.dir("firebase-frameworks/iphonesimulator").get().asFile
+
+/**
+ * Links every framework `:shared-data`'s simulator pod builds made into [firebaseTestFrameworksDir].
+ * It reads where they are from the build settings the CocoaPods plugin records for each pod
+ * (`shared-data/build/cocoapods/buildSettings/build-settings-<target>-<pod>.properties`: the pod's
+ * `CONFIGURATION_BUILD_DIR` and its `FRAMEWORK_SEARCH_PATHS`), the files the plugin itself reads to
+ * link `:shared-data`'s executable, so the frameworks are the very ones that link there. Fails with
+ * what it found when a framework of [firebaseTestFrameworks] is missing.
+ */
+val gatherFirebaseFrameworks = tasks.register("gatherFirebaseFrameworksForTests") {
+    val settingsDir = rootDir.resolve("shared-data/build/cocoapods/buildSettings")
+    val target = firebaseTestFrameworksDir
+    val wanted = firebaseTestFrameworks
+    dependsOn(
+        project(":shared-data").tasks.matching {
+            it.name.startsWith("podBuild") && it.name.contains("simulator", ignoreCase = true)
+        }
+    )
+    // No declared output, so it runs whenever the link does: the links point outside this build
+    // directory, at frameworks a pod build may replace in place.
+    doLast {
+        target.deleteRecursively()
+        target.mkdirs()
+        val settings = settingsDir.listFiles { file ->
+            file.name.startsWith("build-settings-") && file.name.contains("simulator", ignoreCase = true)
+        }.orEmpty()
+        if (settings.isEmpty()) {
+            val found = settingsDir.list()?.toList()
+            throw GradleException("No simulator pod build settings in $settingsDir: $found")
+        }
+        val quoted = Regex("\"([^\"]*)\"|(\\S+)")
+        val folders = settings.flatMap { file ->
+            val values = file.readLines().associate { line ->
+                line.substringBefore('=') to line.substringAfter('=', "")
+            }
+            val searchPaths = quoted.findAll(values["FRAMEWORK_SEARCH_PATHS"].orEmpty())
+                .map { it.groupValues[1].ifEmpty { it.groupValues[2] } }
+                .filterNot { it.contains("$(") }
+            listOfNotNull(values["CONFIGURATION_BUILD_DIR"]?.trim()?.trim('"')) + searchPaths
+        }.toSet()
+        folders.map(::File).filter { it.isDirectory }.forEach { folder ->
+            val frameworks = folder.listFiles { file -> file.isDirectory && file.name.endsWith(".framework") }
+            frameworks.orEmpty().forEach { framework ->
+                val link = File(target, framework.name)
+                if (!link.exists()) Files.createSymbolicLink(link.toPath(), framework.toPath())
+            }
+        }
+        val missing = wanted.filterNot { File(target, "$it.framework").exists() }
+        if (missing.isNotEmpty()) {
+            val read = settings.map { it.name }
+            throw GradleException("Firebase frameworks $missing not found in $folders (settings: $read)")
+        }
+    }
 }
 
 kotlin {
@@ -66,6 +143,22 @@ kotlin {
             isStatic = true
             export(project(":shared"))
             export(project(":shared-data"))
+        }
+    }
+
+    // The simulator test executable (MON-24 phase 3, Task 5: this module's iOS tests run on the
+    // simulator from then on, in `ios-app`) links the Firebase frameworks `:shared-data`'s pods build
+    // (see [gatherFirebaseFrameworks]) and carries the simulated Keychain entitlements
+    // `:shared-data`'s does, for the emulator sign-in in `IosAuthErrorsTest`.
+    iosSimulatorArm64 {
+        testRuns.configureEach {
+            val binary = executionSource.binary
+            val folder = firebaseTestFrameworksDir.absolutePath
+            val entitlements = rootDir.resolve("gradle/ios-test-entitlements.plist").absolutePath
+            binary.linkerOpts("-F$folder", "-rpath", folder)
+            firebaseTestFrameworks.forEach { binary.linkerOpts("-framework", it) }
+            binary.linkerOpts("-sectcreate", "__TEXT", "__entitlements", entitlements)
+            binary.linkTaskProvider.configure { dependsOn(gatherFirebaseFrameworks) }
         }
     }
 
@@ -164,12 +257,27 @@ kotlin {
             // `WindowCompat`, for the system bars (`Theme.android.kt`). The app's version.
             implementation("androidx.core:core-ktx:1.13.1")
         }
+        iosMain.dependencies {
+            // The iPhone app's entry point (`ios/IosFirebase.kt`, MON-24 phase 3) points Functions
+            // at the emulators before the graph reads it. `:shared-data` reaches Functions through
+            // an `implementation` of its own, so this module names it too, at `:shared-data`'s
+            // `gitliveVersion`: move the two together.
+            implementation("dev.gitlive:firebase-functions:2.7.0")
+            // Auth, which `IosFirebase` points at the emulators too and whose exceptions
+            // `IosAuthErrors` reads (Task 5). The same version, for the same reason.
+            implementation("dev.gitlive:firebase-auth:2.7.0")
+            // The native shell (Task 8) drives each stack's lifecycle and hands each screen its
+            // owners itself, as `NavHost` does on Android: the versions the graph already resolves
+            // through navigation-compose 2.9.2 and Compose Multiplatform 1.9.3.
+            implementation("org.jetbrains.androidx.lifecycle:lifecycle-runtime:2.9.6")
+            implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.9.6")
+        }
         commonTest.dependencies {
             implementation(kotlin("test"))
             // The ViewModels' and the shared state's tests (Task 10), at the app's versions:
-            // `runTest` and `Dispatchers.setMain`, and Turbine for their flows. They run on the JVM;
-            // CI compiles them for iOS, and nothing runs them on the simulator yet (the test
-            // executable would need shared-data's Firebase pods).
+            // `runTest` and `Dispatchers.setMain`, and Turbine for their flows. They run on the JVM,
+            // and on the simulator in `ios-app` since Task 5 of phase 3 (the test executable links
+            // shared-data's Firebase pods, see [gatherFirebaseFrameworks]).
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
             implementation("app.cash.turbine:turbine:1.2.0")
         }
@@ -234,6 +342,26 @@ dependencies {
 // and writes the one file for every module (app/build.gradle.kts).
 tasks.named("detektBaseline") {
     enabled = false
+}
+
+// The emulator test's two variables, handed to the simulator's test process as `:shared-data` hands
+// them (see its build file): `simctl spawn` passes only `SIMCTL_CHILD_`-prefixed variables.
+tasks.withType<org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeSimulatorTest>().configureEach {
+    listOf("COPLANLY_EMULATOR_HOST", "COPLANLY_REQUIRE_EMULATORS").forEach { name ->
+        providers.environmentVariable(name).orNull?.let { environment("SIMCTL_CHILD_$name", it) }
+    }
+    // On a booted simulator, when CI names one: Kotlin spawns the tests `--standalone` by default,
+    // outside a booted device's services, and the Keychain (which Firebase Auth saves the signed-in
+    // user to) answers errSecNotAvailable there. `ios-app` boots the simulator it launched the app on.
+    providers.environmentVariable("COPLANLY_SIMULATOR_UDID").orNull?.let { udid ->
+        device.set(udid)
+        standalone.set(false)
+    }
+    testLogging {
+        events("failed")
+        showStandardStreams = true
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
 }
 
 // Failures print their message and stack in the CI log, as the app's unit tests do.

@@ -39,8 +39,10 @@ import com.coparently.app.data.remote.firebase.AccountSignIn
 import com.coparently.app.data.remote.firebase.AuthSession
 import com.coparently.app.data.remote.firebase.CallableFunctions
 import com.coparently.app.data.remote.firebase.FirestoreClient
+import com.coparently.app.data.remote.firebase.FirestorePushQueue
 import com.coparently.app.data.remote.firebase.GitLiveFirestoreClient
 import com.coparently.app.data.remote.firebase.IosCallableFunctions
+import com.coparently.app.data.remote.firebase.IosFirebaseAuth
 import com.coparently.app.data.remote.firebase.PushDevice
 import com.coparently.app.data.remote.firebase.PushQueue
 import com.coparently.app.data.remote.firebase.PushRegistration
@@ -49,25 +51,34 @@ import com.coparently.app.data.remote.google.CredentialProvider
 import com.coparently.app.data.remote.google.GoogleCalendarAccount
 import com.coparently.app.data.remote.google.GoogleCalendarApi
 import com.coparently.app.data.remote.google.GoogleCalendarConnectionSource
-import com.coparently.app.data.repository.PairingWording
 import com.coparently.app.data.requests.RequestClockNotices
 import com.coparently.app.data.school.SchoolImportScheduler
-import com.coparently.app.data.school.SchoolImportWordings
 import com.coparently.app.data.school.bakalari.BakalariClient
 import com.coparently.app.data.school.bakalari.BakalariSchoolDirectory
 import com.coparently.app.data.school.edupage.EdupageClient
 import com.coparently.app.data.session.AccountConsistency
 import com.coparently.app.data.session.AccountDeletion
 import com.coparently.app.data.session.AccountTraces
+import com.coparently.app.data.session.IosAccountSwitch
+import com.coparently.app.data.session.IosAccountTraces
+import com.coparently.app.data.session.LastSignedInUid
+import com.coparently.app.data.session.UserDefaultsLastSignedInUid
 import com.coparently.app.data.support.SupportReminderScheduler
+import com.coparently.app.data.sync.ForegroundSyncRunner
+import com.coparently.app.data.sync.GoogleCalendarAutoImport
 import com.coparently.app.data.sync.SyncRequester
+import com.coparently.app.data.sync.SyncService
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.notification.RequestClockScheduler
 import com.coparently.app.domain.receipts.ReceiptTextRecognizer
 import com.coparently.app.domain.repository.RecordPhotoStorage
 import dev.gitlive.firebase.Firebase
+import dev.gitlive.firebase.auth.auth
 import dev.gitlive.firebase.firestore.firestore
 import dev.gitlive.firebase.functions.functions
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import org.koin.core.module.Module
 import org.koin.dsl.module
 
@@ -75,13 +86,19 @@ import org.koin.dsl.module
  * Everything [dataModules] takes from the platform, as the iPhone has it today (MON-24 phase 2;
  * the seams since Task 8j): GitLive's default Firestore and Functions instances, the app's own
  * directories, the Room database on the bundled driver with its DAOs, the Keychain's sealed
- * preference store, the no-op telemetry, the network monitor and the two HTTP clients — and, for
- * what the iPhone does not have yet (sign-in, push, Cloud Storage, a file picker, Google Calendar,
- * background jobs, notifications and its own wording), the stand-ins in `IosUnavailable.kt`, which
- * answer as a phone with nothing of the kind would. So the whole graph resolves.
+ * preference store, the no-op telemetry, the network monitor and the two HTTP clients; since phase
+ * 3's Task 5, GitLive's Auth ([IosFirebaseAuth]: who is signed in, the session and the e-mail
+ * sign-in), the account switch's wipe ([IosAccountSwitch]) and sign-out's traces
+ * ([IosAccountTraces]) — since Task 6, the push queue ([FirestorePushQueue]) and the sync while the
+ * app is open ([ForegroundSyncRunner]) — and, for what the iPhone does not have yet (a push token,
+ * account deletion, Cloud Storage, a file picker, Google Calendar, background jobs and
+ * notifications), the stand-ins in `IosUnavailable.kt`, which answer as a phone with nothing of the
+ * kind would. The two wordings the data layer writes into stored data read the app's strings, so
+ * `:shared-ui`'s `platformUiModule` binds them (`IosPairingWording`, `IosSchoolImportWordings`); the
+ * graph resolves with both modules, as `IosApp.start` builds it.
  *
- * Nothing builds this graph on the iPhone yet: the app that configures Firebase first
- * (`FirebaseApp.configure()`) comes in phase 3, and replaces each stand-in with the real one.
+ * The iPhone app's `IosApp.start` builds this graph after `IosFirebase` has configured Firebase,
+ * and phase 3 replaces each remaining stand-in with the real one.
  */
 actual val platformDataModule: Module = module {
     single<FirestoreClient> { GitLiveFirestoreClient(Firebase.firestore) }
@@ -118,27 +135,51 @@ actual val platformDataModule: Module = module {
     // own with the same timeouts (Android shares one named client; nothing on the iPhone needs that).
     single { BakalariSchoolDirectory(httpClient(HttpTimeouts.SCHOOL)) }
 
-    single<SignedInUser> { NoSignedInUser }
-    single<AuthSession> { NoAuthSession }
-    // One stand-in under all three types, as `FcmService` is on Android: replaced together.
-    single<PushDevice> { NoPush }
+    // One object under the three types, as `FirebaseAuthService` is on Android.
+    single { IosFirebaseAuth(Firebase.auth) }
+    single<SignedInUser> { get<IosFirebaseAuth>() }
+    single<AuthSession> { get<IosFirebaseAuth>() }
+    single<AccountSignIn> { get<IosFirebaseAuth>() }
+    single { IosAccountTraces(get()) }
+    single<AccountTraces> { get<IosAccountTraces>() }
+    single<LastSignedInUid> { UserDefaultsLastSignedInUid }
+    single<AccountConsistency> {
+        IosAccountSwitch(
+            database = get(),
+            auth = get(),
+            preferences = get(),
+            reminders = get(),
+            clocks = get(),
+            traces = get(),
+            lastUid = get(),
+        )
+    }
+    // The co-parent is told through the queue, as `FcmService` tells them on Android; this phone
+    // holds no push token yet, so the switch and sign-out's detach are still `NoPush` (phase 4
+    // replaces it with the token's registration and unregistration together).
+    single { FirestorePushQueue(get(), get()) }
+    single<PushDevice> { get<FirestorePushQueue>() }
     single<PushQueue> { get<PushDevice>() }
     single<PushRegistration> { NoPush }
-    single<AccountSignIn> { NoAccountSignIn }
-    single<AccountConsistency> { NoAccountSwitch }
     single<AccountDeletion> { NoAccountDeletion }
-    single<AccountTraces> { NoAccountTraces }
     single<ReminderScheduler> { NoEventReminders }
     single<RequestClockScheduler> { NoRequestClockJobs }
     single<RequestClockNotices> { NoRequestClockNotices }
     single<SchoolImportScheduler> { NoSchoolImportJob }
     single<SupportReminderScheduler> { NoSupportReminderJob }
-    single<SyncRequester> { NoSyncRequests }
+    // A sync while the app is open, one at a time, with the Google import after each (Task 6;
+    // the iPhone has no background job until phase 4). The lambdas resolve at run time, so the
+    // sync's own need of a `SyncRequester` (the pairing transition asks for one) is no cycle.
+    single<SyncRequester> {
+        ForegroundSyncRunner(
+            sync = { get<SyncService>().performFullSync() },
+            afterSync = { get<GoogleCalendarAutoImport>().importIfDue() },
+            scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+        )
+    }
     single<GoogleCalendarAccount> { NoGoogleCalendar }
     single<GoogleCalendarConnectionSource> { NoGoogleCalendar }
     single<CredentialProvider> { NoGoogleCalendar }
-    single<PairingWording> { NoWording }
-    single<SchoolImportWordings> { NoWording }
     single<StorageBucket> { NoStorageBucket }
     single<RecordPhotoStorage> { NoRecordPhotoStorage }
     single<ReceiptTextRecognizer> { NoReceiptText }

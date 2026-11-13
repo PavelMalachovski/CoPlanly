@@ -102,8 +102,38 @@ class AuthStateViewModel(
      *
      * A failure is treated the same way, and deliberately not surfaced: this decides a
      * navigation route, and there is no screen yet on which to show an error about it.
+     *
+     * **A "yes" from the row is confirmed with the server before the wizard runs.** The row's
+     * onboarding marker is a copy of `users/{uid}.onboardingCompletedAt`, and a row seeded while
+     * that document could not be read carries none: the iPhone's shell walk signed its seeded
+     * parent, who had finished onboarding, back in to the wizard that way. So when the row says
+     * the wizard is owed, [UserRepository.ensureProfile] reads the document once more (it fills a
+     * blank marker from it) and the row is asked again; when that cannot finish in
+     * [ONBOARDING_CONFIRM_TIMEOUT_MILLIS], the row's answer stands. A brand-new account still
+     * gets the wizard: its document holds no marker either.
      */
     private suspend fun resolveOnboarding(uid: String): Boolean = try {
+        val fromRow = onboardingFromRow(uid) ?: false
+        if (!fromRow) {
+            false
+        } else {
+            withTimeoutOrNull(ONBOARDING_CONFIRM_TIMEOUT_MILLIS) { userRepository.ensureProfile() }
+            onboardingFromRow(uid) ?: true
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (
+        @Suppress("TooGenericExceptionCaught") e: Exception
+    ) {
+        logger.e(TAG, "Failed to decide whether onboarding is needed", e)
+        false
+    }
+
+    /**
+     * What the account's Room row and its own records say: whether [uid] still owes the wizard,
+     * or null when the row did not arrive within [ONBOARDING_LOAD_TIMEOUT_MILLIS].
+     */
+    private suspend fun onboardingFromRow(uid: String): Boolean? =
         withTimeoutOrNull(ONBOARDING_LOAD_TIMEOUT_MILLIS) {
             val account = userRepository.observeUserById(uid).first { it != null }
             // Only records this account created are evidence that it has been through the
@@ -118,15 +148,7 @@ class AuthStateViewModel(
             val hasPets = petRepository.getAllPetsInEveryFamily().first()
                 .any { OnboardingState.isOwnRecord(uid, it.createdByFirebaseUid) }
             OnboardingState.isNeeded(account, hasChildInfo, hasPets)
-        } ?: false
-    } catch (e: CancellationException) {
-        throw e
-    } catch (
-        @Suppress("TooGenericExceptionCaught") e: Exception
-    ) {
-        logger.e(TAG, "Failed to decide whether onboarding is needed", e)
-        false
-    }
+        }
 
     /**
      * Refreshes the authentication state.
@@ -169,5 +191,8 @@ class AuthStateViewModel(
 
         /** Same value `ProfileViewModel`'s own wait for the signed-in user's row uses. */
         const val ONBOARDING_LOAD_TIMEOUT_MILLIS = 5000L
+
+        /** How long [resolveOnboarding] lets the server confirm a row that says the wizard is owed. */
+        const val ONBOARDING_CONFIRM_TIMEOUT_MILLIS = 5000L
     }
 }

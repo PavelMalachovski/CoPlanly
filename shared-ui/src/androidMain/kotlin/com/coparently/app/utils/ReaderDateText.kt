@@ -35,8 +35,12 @@ actual object ReaderDateText {
     actual fun time(dateTime: LocalDateTime, is24Hour: Boolean): String =
         dateTime.toJavaLocalDateTime().format(shortTime(is24Hour = is24Hour))
 
-    actual fun dateWithTime(dateTime: LocalDateTime, skeleton: String, separator: String): String =
-        dateTime.format(dateWithTime(skeleton, separator))
+    actual fun dateWithTime(
+        dateTime: LocalDateTime,
+        skeleton: String,
+        separator: String,
+        is24Hour: Boolean
+    ): String = date(dateTime.date, skeleton) + separator + time(dateTime, is24Hour)
 
     actual fun hour(hour: Int, is24Hour: Boolean): String = hourLabel(hour, is24Hour = is24Hour)
 

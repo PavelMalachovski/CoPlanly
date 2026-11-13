@@ -22,13 +22,16 @@ import kotlin.math.roundToLong
  * }
  * ```
  *
- * A name is at most [NAME_MAX] characters with no `<` or `>`; amounts are rounded to cents. The
+ * A name is at most [MAX_NAME_LENGTH] characters with no `<` or `>`; amounts are rounded to cents. The
  * key names are pinned by `MonthReviewCalculatorTest` — change them only with the server.
  */
 object MonthStatsWire {
 
-    /** The longest name the server accepts. */
-    const val NAME_MAX = 60
+    /**
+     * The longest name the server accepts. Not `NAME_MAX`: the iPhone framework's header exports
+     * this, and `NAME_MAX` is a macro of the iOS SDK's `<sys/syslimits.h>`, which broke the header.
+     */
+    const val MAX_NAME_LENGTH = 60
 
     private const val CENTS = 100.0
 
@@ -79,9 +82,9 @@ object MonthStatsWire {
         )
     }
 
-    /** A name as the server accepts it: no angle brackets, at most [NAME_MAX] characters. */
+    /** A name as the server accepts it: no angle brackets, at most [MAX_NAME_LENGTH] characters. */
     private fun clean(name: String): String =
-        name.replace("<", "").replace(">", "").trim().take(NAME_MAX)
+        name.replace("<", "").replace(">", "").trim().take(MAX_NAME_LENGTH)
 
     private fun cents(amount: Double): Double = (amount * CENTS).roundToLong() / CENTS
 }

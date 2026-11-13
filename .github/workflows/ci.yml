@@ -89,7 +89,9 @@ jobs:
   #    build files and this workflow. A change in `shared/` or `shared-data/` counts as the build
   #    does for everything else (the app compiles them); in `shared-ui/`, its strings
   #    (`composeResources/`), screens (`presentation/`) and tests count as the app's `res/`,
-  #    `presentation/` and tests they stand for, and the rest of it as the build.
+  #    `presentation/` and tests they stand for, and the rest of it as the build;
+  #  * the iPhone app (`ios-app`) runs whenever the shared jobs do, and on `iosApp/**`, its own
+  #    project, which runs no other job.
   #
   # The build files and `.github/workflows/**` run everything: editing this file is exactly when
   # you want to see the build it describes. A push to `main` and a manual run always run everything
@@ -120,6 +122,9 @@ jobs:
       # `shared-ui/**`), the build files and the workflow. A path in any of them is also an Android
       # path for every output above (a `shared-ui/` string or screen as the app path it stands for).
       shared: ${{ steps.filter.outputs.shared }}
+      # The `ios-app` job: whatever runs the shared jobs, and the iPhone app's own project
+      # (`iosApp/**`), which no Android job reads.
+      ios: ${{ steps.filter.outputs.ios }}
       # The four emulator jobs (`instrumented`, `e2e`, `upgrade`, `r8-runtime`) may run: false on a
       # draft pull request without the `full-ci` label. ANDed into each of them beside its path
       # gate; true for a ready pull request, a push to `main` and a manual run.
@@ -360,12 +365,8 @@ jobs:
 
       # The three shared modules hold nearly all the code, and their Android target is AGP 9's
       # KMP library, whose main code `lint` alone did not analyse (it ran only their host tests'
-      # analysis): NewApi, the per-pull-request guard for minSdk 26, saw none of it. Their main
-      # lint tasks are named here so the job fails if one stops existing.
-      # Temporary, until a run shows the shared modules' main code reached: what `lint` runs.
-      - name: Show what lint analyses
-        run: ./gradlew lint --dry-run --console=plain | grep -i lint || true
-
+      # analysis): NewApi, the per-pull-request guard for minSdk 26, saw none of it. The app's
+      # `lint {}` sets checkDependencies, so its report covers their main code too.
       - name: Android lint
         run: ./gradlew lint
 
@@ -2219,6 +2220,320 @@ jobs:
           # A job that died before writing results must not publish a green check.
           require_tests: true
 
+  # The iPhone app built and launched (MON-24 phase 3): XcodeGen writes the Xcode project from
+  # `iosApp/project.yml`, `xcodebuild` builds it for a simulator — its first build phase runs
+  # `:shared-ui:embedAndSignAppleFrameworkForXcode`, the same Gradle call the owner's Xcode makes,
+  # and Swift Package Manager brings the Firebase iOS SDK 11.8.0 the static `Shared` framework links
+  # against — and `iosApp/scripts/simulator.sh` installs it, launches it, fails unless it is still
+  # running 20 s later, and saves a screenshot as the `ios-launch` artifact.
+  #
+  # No `GoogleService-Info.plist` exists in CI (and none is ever committed), so the app runs on its
+  # emulator configuration, `demo-coplanly` on 127.0.0.1, and no emulator runs here: its Firestore
+  # listeners fail quietly and it must stay alive regardless. It never reaches production.
+  #
+  # The simulator is chosen at run time from what the image has, "iPhone 16" when it exists, and
+  # the Xcode is the image's default, as `shared-ios`'s is (the "Xcode" step prints both).
+  #
+  # Then the iPhone tests that need the Firebase emulators (Task 5: the e-mail sign-in, the account
+  # switch and `:shared-ui`'s simulator tests, which run nowhere else), inside `firebase
+  # emulators:exec` on project `demo-coplanly`, as the `e2e` and `web` jobs run theirs: Node 22 and the
+  # Firebase CLI `firestore-tests/` pins, the emulators on JDK 21 through FIREBASE_JAVA_HOME, Gradle
+  # on 17. The test executables link the Firebase pods `:shared-data` builds through CocoaPods, as in
+  # `shared-ios`, whose pod cache this job restores. Published as the check run "iPhone tests on the
+  # emulators". Still no secret: nothing here reaches a real project.
+  #
+  # 120 minutes: the app's build and launch took about 30 in Task 4, and a run whose pods missed the
+  # cache builds them cold (about 20, see `shared-ios`) before linking two test executables (each
+  # several minutes, `:shared-ui`'s with Compose Multiplatform and skiko).
+  ios-app:
+    name: iPhone app — build and launch (macOS)
+    needs: changes
+    if: needs.changes.outputs.ios == 'true'
+    runs-on: macos-latest
+    # 180 since the native shell's UI test (MON-24 phase 3, Task 8) joined the job: when the
+    # Firebase pods' cache misses (a new Xcode on the image), the emulator tests' step builds them
+    # cold, which took 77 minutes for Firestore's alone on 11 November 2026, and 120 ended the job
+    # before its tests had run.
+    timeout-minutes: 180
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21 (Firebase emulators)
+        id: jdk21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+
+      - name: Set up JDK 17 (Gradle)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            functions/package-lock.json
+            firestore-tests/package-lock.json
+
+      # `functions/` is what the Functions emulator loads; `firestore-tests/` pins the Firebase CLI
+      # the rules, e2e and web jobs run their emulators on.
+      - name: Install the Cloud Functions and the Firebase CLI
+        run: |
+          npm ci --prefix functions
+          npm ci --prefix firestore-tests
+
+      # The Firestore and Storage emulators are jars the CLI downloads on first use, as in `rules`.
+      - name: Cache the Firebase emulators
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ hashFiles('firestore-tests/package-lock.json') }}
+
+      # No `cache-encryption-key`, unlike the other Gradle jobs: this job builds third-party Swift
+      # packages, so it gets no secret. Its one Gradle call runs inside `xcodebuild`, where the
+      # configuration cache gains little across runs.
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # As in `shared-ios`: the Kotlin/Native compiler and its dependencies.
+      - name: Cache Kotlin/Native
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('build.gradle.kts') }}
+
+      # As in `shared-ios`: Gradle configures every project, and `:app` and the shared modules apply
+      # the Android plugin, which fails configuration without an SDK location.
+      - name: Set up the Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Xcode
+        id: xcode
+        run: |
+          xcodebuild -version
+          xcrun simctl list runtimes available
+          echo "version=$(xcodebuild -version | tr '\n' ' ' | tr -s ' ' | sed 's/ *$//' | tr ' ' '-')" >> "$GITHUB_OUTPUT"
+
+      # As in `shared-ios`: the test executables link the Firebase pods `:shared-data` builds.
+      - name: CocoaPods
+        run: |
+          pod --version || sudo gem install cocoapods
+          pod --version
+
+      # The same key as `shared-ios`, from the same lines of `shared-data/build.gradle.kts`.
+      - name: Firebase pods' spec
+        id: podspec
+        run: |
+          grep -E 'val firebaseIosVersion =|ios\.deploymentTarget =|listOf\("Firebase' shared-data/build.gradle.kts > "$RUNNER_TEMP/firebase-pods.txt"
+          cat "$RUNNER_TEMP/firebase-pods.txt"
+          echo "hash=$(shasum -a 256 "$RUNNER_TEMP/firebase-pods.txt" | cut -c1-16)" >> "$GITHUB_OUTPUT"
+
+      # Restore only: `shared-ios` saves this key, and two jobs saving it would race. On a miss the
+      # pods build cold in the test step below.
+      - name: Restore the Firebase pods
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/Library/Caches/CocoaPods
+            ~/.cocoapods
+            ~/Library/Developer/Xcode/DerivedData
+            shared-data/build/cocoapods
+          key: pods-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ steps.podspec.outputs.hash }}
+          restore-keys: |
+            pods-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-
+            pods-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: XcodeGen
+        run: |
+          brew install xcodegen
+          xcodegen --version
+
+      - name: Generate the Xcode project
+        run: cd iosApp && xcodegen generate
+
+      - name: Pick a simulator
+        id: simulator
+        run: echo "udid=$(iosApp/scripts/simulator.sh pick)" >> "$GITHUB_OUTPUT"
+
+      # The Firebase iOS SDK's sources and binary frameworks, as Swift Package Manager resolves them
+      # under the derived data path. Keyed on the project spec, which pins the version.
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: iosApp/build/SourcePackages
+          key: spm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('iosApp/project.yml') }}
+
+      - name: Build the app
+        env:
+          UDID: ${{ steps.simulator.outputs.udid }}
+        run: |
+          set -o pipefail
+          mkdir -p iosApp/build
+          xcodebuild \
+            -project iosApp/CoPlanly.xcodeproj \
+            -scheme CoPlanly \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=$UDID" \
+            -derivedDataPath iosApp/build \
+            build-for-testing 2>&1 | tee iosApp/build/xcodebuild.log
+
+      - name: Launch it on the simulator
+        env:
+          UDID: ${{ steps.simulator.outputs.udid }}
+        run: |
+          iosApp/scripts/simulator.sh launch "$UDID" \
+            iosApp/build/Build/Products/Debug-iphonesimulator/CoPlanly.app iosApp/build/launch
+
+      # The native shell (MON-24 phase 3, Task 8): CoPlanlyUITests signs in by e-mail as a parent of a
+      # family seeded on fresh emulators (tools/ios/seed-shell-family.js), walks Home, Family, Expenses,
+      # the Add expense sheet and Settings with a screenshot of each, and checks the shell's review
+      # points: a back swipe, one let go of, a tab tap popping two screens, and a sheet with an edit
+      # swiped down asking "Discard changes?". The screenshots are the `ios-shell` artifact. Before the
+      # emulator tests, on emulators of its own, so a shell failure shows without waiting for them.
+      - name: The native shell on the emulators (XCUITest)
+        id: shell-test
+        env:
+          FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
+          UDID: ${{ steps.simulator.outputs.udid }}
+        run: |
+          set -o pipefail
+          export PATH="$FIREBASE_JAVA_HOME/bin:$PATH"
+          firestore-tests/node_modules/.bin/firebase emulators:exec \
+            --only auth,firestore,functions,storage \
+            --project demo-coplanly \
+            "iosApp/scripts/simulator.sh shell-test $UDID iosApp/build/shell" \
+            2>&1 | tee "$RUNNER_TEMP/shell-test.log"
+
+      # The simulator hands a test process only `SIMCTL_CHILD_`-prefixed variables, without the
+      # prefix: both forms are exported here, and the two modules' build files also forward the plain
+      # names that way (`KotlinNativeSimulatorTest`), so the tests read COPLANLY_EMULATOR_HOST
+      # either way. `--continue` runs `:shared-ui`'s tests even when `:shared-data`'s fail, and
+      # `--rerun` runs each even when Gradle's cache holds a result: the write gate must write.
+      #
+      # The write gate (MON-24 phase 3, Task 7) is two halves in one emulator session. The tests
+      # include `IosWriteGateTest`, whose two iPhone data layers write every kind of shared record and
+      # list each document written in COPLANLY_GATE_OUTPUT; then, before the emulators stop,
+      # `tools/ios/check-ios-writes.js` reads each of those documents back from the Firestore emulator
+      # (loopback only) and compares its keys and Firestore types with what Android writes
+      # (`wire/current/`, or a literal shape from the shared writer). Both must pass; the checker
+      # runs even when the tests failed, so its findings are in the same log.
+      - name: iPhone tests on the emulators
+        id: emulator-tests
+        env:
+          FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
+          COPLANLY_EMULATOR_HOST: 127.0.0.1
+          COPLANLY_REQUIRE_EMULATORS: '1'
+          COPLANLY_GATE_OUTPUT: ${{ github.workspace }}/build/ios-gate/written.txt
+          SIMCTL_CHILD_COPLANLY_EMULATOR_HOST: 127.0.0.1
+          SIMCTL_CHILD_COPLANLY_REQUIRE_EMULATORS: '1'
+          SIMCTL_CHILD_COPLANLY_GATE_OUTPUT: ${{ github.workspace }}/build/ios-gate/written.txt
+          # The simulator the app was launched on, still booted: the tests run there rather than
+          # `--standalone`, where no Keychain is available (see the modules' build files).
+          COPLANLY_SIMULATOR_UDID: ${{ steps.simulator.outputs.udid }}
+        run: |
+          set -o pipefail
+          export PATH="$FIREBASE_JAVA_HOME/bin:$PATH"
+          rm -f "$COPLANLY_GATE_OUTPUT"
+          firestore-tests/node_modules/.bin/firebase emulators:exec \
+            --only auth,firestore,functions,storage \
+            --project demo-coplanly \
+            './gradlew --continue :shared-data:iosSimulatorArm64Test --rerun :shared-ui:iosSimulatorArm64Test --rerun; tests=$?; node tools/ios/check-ios-writes.js --emulator 127.0.0.1:8080 --fixtures app/src/test/resources/wire/current --written "$COPLANLY_GATE_OUTPUT"; checker=$?; echo "tests: $tests, write gate checker: $checker"; [ "$tests" -eq 0 ] && [ "$checker" -eq 0 ]' \
+            2>&1 | tee "$RUNNER_TEMP/emulator-tests.log"
+
+      # A test that finds no emulator host returns at once, so a run where the variables never
+      # reached the simulator would pass by testing nothing: every emulator test prints what it did
+      # (`AuthEmulator` in shared-data's iosTest), and none may have skipped.
+      - name: The emulator tests reached the emulators
+        if: always() && steps.emulator-tests.outcome != 'skipped'
+        run: |
+          shopt -s nullglob
+          sources=("$RUNNER_TEMP/emulator-tests.log" shared-data/build/test-results/iosSimulatorArm64Test/*.xml shared-ui/build/test-results/iosSimulatorArm64Test/*.xml)
+          if grep -h "COPLANLY_EMULATOR_TEST_SKIPPED" "${sources[@]}"; then
+            echo "::error::An emulator test skipped itself: the emulator host did not reach the simulator."
+            exit 1
+          fi
+          ran=$(grep -ho "COPLANLY_EMULATOR_TEST_RAN [a-z ]*" "${sources[@]}" | sort -u)
+          echo "$ran"
+          if [ -z "$ran" ]; then
+            echo "::error::No emulator test reported that it ran."
+            exit 1
+          fi
+          if ! grep -q "COPLANLY_EMULATOR_TEST_RAN write gate" <<< "$ran"; then
+            echo "::error::The write gate (IosWriteGateTest) did not report that it ran."
+            exit 1
+          fi
+
+      - name: Upload the shell's screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-shell
+          path: |
+            iosApp/build/shell/shots/
+            iosApp/build/shell/shell.xcresult
+            ${{ runner.temp }}/shell-test.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload the launch screenshot and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-launch
+          path: iosApp/build/launch/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload the emulator tests' reports and log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-ios-emulators
+          path: |
+            shared-data/build/reports/
+            shared-ui/build/reports/
+            build/ios-gate/
+            ${{ runner.temp }}/emulator-tests.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload test results (JUnit XML)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-ios-emulators
+          path: shared-*/build/test-results/iosSimulatorArm64Test/*.xml
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Publish test check run
+        if: always()
+        uses: mikepenz/action-junit-report@v6
+        with:
+          check_name: iPhone tests on the emulators
+          report_paths: shared-*/build/test-results/iosSimulatorArm64Test/*.xml
+          detailed_summary: true
+          # A job that died before writing results must not publish a green check.
+          require_tests: true
+
+      - name: Upload the build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-log
+          path: iosApp/build/xcodebuild.log
+          if-no-files-found: ignore
+          retention-days: 14
+
   # One sticky comment per pull request, edited on every run, saying what CI found — so a result
   # can be read without opening a log, by a person or by an assistant reading the PR through the
   # API (the comment also carries the facts as JSON in an HTML comment; see tools/ci-report.js).
@@ -2230,7 +2545,7 @@ jobs:
   # `main` there is no pull request: the summary goes to the run's job summary only.
   report:
     name: CI report
-    needs: [changes, build-test, static, detekt, release, r8-runtime, screenshots, instrumented, e2e, upgrade, invariants, functions, web, rules, shared, shared-ios]
+    needs: [changes, build-test, static, detekt, release, r8-runtime, screenshots, instrumented, e2e, upgrade, invariants, functions, web, rules, shared, shared-ios, ios-app]
     # Not for the run an unrelated label starts: it built nothing and would replace the real run's
     # comment with an empty one.
     if: always() && needs.changes.outputs.unrelated_label != 'true'
