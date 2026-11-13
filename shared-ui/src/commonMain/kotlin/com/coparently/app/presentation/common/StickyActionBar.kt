@@ -32,7 +32,9 @@ import com.coparently.app.presentation.theme.Spacing
  *
  * Where a shell draws the bars ([shellDrawsBars], the iPhone) it draws nothing: the screen puts
  * the same action in its bar instead, as a `BarAction(primary = true, …)` with this label and
- * `enabled = enabled && !busy` (MON-24 phase 3, part B).
+ * `enabled = enabled && !busy` (MON-24 phase 3, part B; `FormTopBar` does it). Its [notice] and
+ * the [busy] spinner go with it, so a screen that passes a notice draws the same line in its body
+ * under a host, where the bar would have shown it (the event form does).
  *
  * @param label What the button does, e.g. "Save event"
  * @param onClick The action

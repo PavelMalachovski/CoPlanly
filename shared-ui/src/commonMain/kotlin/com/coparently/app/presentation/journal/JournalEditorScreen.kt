@@ -9,19 +9,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -33,6 +29,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.common.ConfirmationDialog
+import com.coparently.app.presentation.common.FormSave
+import com.coparently.app.presentation.common.FormTopBar
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
@@ -43,7 +41,6 @@ import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
 import com.coparently.app.resources.journal_delete
@@ -117,7 +114,18 @@ fun JournalEditorScreen(
         containerColor = ScreenContainerColor,
         // A back gesture over unsaved edits shrinks the form before it asks (D-11).
         modifier = Modifier.then(leave.backPreview),
-        topBar = { EditorTopBar(isNew = state.isNew, onNavigateUp = leave) },
+        topBar = {
+            EditorTopBar(
+                isNew = state.isNew,
+                onNavigateUp = leave,
+                save = FormSave(
+                    label = stringResource(Res.string.journal_save),
+                    onClick = viewModel::save,
+                    // Exactly when the sticky button is: enabled && !busy.
+                    enabled = state.canSave && !state.saving
+                )
+            )
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = { SaveBar(state.canSave, state.saving, viewModel::save) }
     ) { padding ->
@@ -211,25 +219,19 @@ private fun EditorForm(
     }
 }
 
-/** The title says whether this is a new entry, and the arrow goes back without saving. */
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * The title says whether this is a new entry, and the arrow goes back without saving. On the
+ * iPhone the form is a sheet: a cross that leaves the same way, and [save] in the bar.
+ */
 @Composable
-private fun EditorTopBar(isNew: Boolean, onNavigateUp: () -> Unit) {
-    TopAppBar(
-        colors = screenTopAppBarColors(),
-        title = {
-            Text(
-                stringResource(if (isNew) Res.string.journal_editor_new_title else Res.string.journal_editor_edit_title)
-            )
-        },
-        navigationIcon = {
-            IconButton(onClick = onNavigateUp) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(Res.string.common_back)
-                )
-            }
-        }
+private fun EditorTopBar(isNew: Boolean, onNavigateUp: () -> Unit, save: FormSave) {
+    FormTopBar(
+        title = stringResource(
+            if (isNew) Res.string.journal_editor_new_title else Res.string.journal_editor_edit_title
+        ),
+        backLabel = stringResource(Res.string.common_back),
+        onLeave = onNavigateUp,
+        save = save
     )
 }
 

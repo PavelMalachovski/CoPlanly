@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,19 +15,22 @@ import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.*
 import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.childinfo.components.*
+import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.DatePickerField
+import com.coparently.app.presentation.common.FormSave
+import com.coparently.app.presentation.common.FormTopBar
 import com.coparently.app.presentation.common.MedicalProfileEditor
 import com.coparently.app.presentation.common.PhotoOwner
 import com.coparently.app.presentation.common.field
 import com.coparently.app.presentation.common.rememberDiscardGuard
+import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.consent.HealthConsentDialog
 import com.coparently.app.presentation.consent.HealthConsentViewModel
 import com.coparently.app.presentation.consent.LockedMedicalSection
 import com.coparently.app.presentation.platform.LocalFilePicker
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.child_photo_delete_failed
 import com.coparently.app.resources.child_photo_save_first
@@ -225,41 +227,90 @@ fun AddEditChildInfoScreen(
         )
     }
 
+    // The form's save, shared by its button at the end (Android) and the iPhone's bar.
+    val saveChild: () -> Unit = {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        if (childName.isNotBlank()) {
+            isSaving = true
+            // Preserve sync/ownership fields of the loaded child when editing;
+            // rebuilding from defaults would wipe createdByFirebaseUid/medicalProfile
+            // (the same trap AddEditEventScreen avoids for Event via existingEvent).
+            val isNewChild = childInfoId == null || childInfoId == "new"
+            val base = currentChildInfo.takeIf { !isNewChild }
+            val now = wallClockNow()
+            val resolvedId = base?.id ?: childInfoId?.takeIf { it != "new" }
+                ?: newChildId()
+            val childInfo = (
+                base ?: ChildInfo(
+                    id = resolvedId,
+                    childName = childName,
+                    dateOfBirth = dateOfBirth,
+                    createdAt = now,
+                    updatedAt = now
+                )
+                ).copy(
+                childName = childName,
+                dateOfBirth = dateOfBirth,
+                medications = medications,
+                activities = activities,
+                allergies = allergies,
+                medicalNotes = medicalNotes.ifBlank { null },
+                emergencyContacts = emergencyContacts,
+                schoolInfo = schoolInfo,
+                medicalProfile = medicalProfile,
+                updatedAt = now
+            )
+            viewModel.upsertChildInfoWithPhotos(
+                childInfo = childInfo,
+                isNewChild = isNewChild,
+                newPhotoUris = pickedPhotos,
+                removedPhotoUrls = removedPhotos
+            )
+        }
+    }
+
     Scaffold(
         containerColor = ScreenContainerColor,
         // A back gesture over unsaved edits shrinks the form before it asks (D-11).
         modifier = Modifier.then(leave.backPreview),
         topBar = {
-            TopAppBar(
-                colors = screenTopAppBarColors(),
-                title = {
-                    Text(
-                        if (childInfoId == "new") {
-                            stringResource(Res.string.childinfo_title_add)
-                        } else {
-                            stringResource(Res.string.childinfo_title_edit)
-                        }
-                    )
+            val canDelete = childInfoId != null && childInfoId != "new" && currentChildInfo != null
+            val deleteLabel = stringResource(Res.string.childinfo_delete_action)
+            FormTopBar(
+                title = if (childInfoId == "new") {
+                    stringResource(Res.string.childinfo_title_add)
+                } else {
+                    stringResource(Res.string.childinfo_title_edit)
                 },
-                navigationIcon = {
-                    IconButton(onClick = leave) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(Res.string.childinfo_back)
-                        )
-                    }
-                },
-                actions = {
+                backLabel = stringResource(Res.string.childinfo_back),
+                onLeave = leave,
+                save = FormSave(
+                    label = if (childInfoId == "new") {
+                        stringResource(Res.string.childinfo_add_child_button)
+                    } else {
+                        stringResource(Res.string.childinfo_save_changes)
+                    },
+                    onClick = saveChild,
+                    // Exactly when the form's own button is.
+                    enabled = childName.isNotBlank() && !isSaving
+                ),
+                shellActions = listOfNotNull(
+                    BarAction(
+                        label = deleteLabel,
+                        icon = Icons.Default.Delete,
+                        sfSymbol = "trash",
+                        onClick = { showDeleteConfirm = true }
+                    ).takeIf { canDelete }
+                ),
+                androidActions = {
                     // `deleteChildInfo` has existed on the ViewModel since the feature shipped
                     // and had no caller: with one child a mis-added record was tolerable, with
                     // several it is a row nobody can remove. Same anatomy as the pet editor's.
-                    if (childInfoId != null && childInfoId != "new" && currentChildInfo != null) {
+                    if (canDelete) {
                         IconButton(onClick = { showDeleteConfirm = true }) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
-                                contentDescription = stringResource(
-                                    Res.string.childinfo_delete_action
-                                ),
+                                contentDescription = deleteLabel,
                                 tint = MaterialTheme.colorScheme.error
                             )
                         }
@@ -573,66 +624,29 @@ fun AddEditChildInfoScreen(
                 }
             }
 
-            // Save Button
-            Button(
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    if (childName.isNotBlank()) {
-                        isSaving = true
-                        // Preserve sync/ownership fields of the loaded child when editing;
-                        // rebuilding from defaults would wipe createdByFirebaseUid/medicalProfile
-                        // (the same trap AddEditEventScreen avoids for Event via existingEvent).
-                        val isNewChild = childInfoId == null || childInfoId == "new"
-                        val base = currentChildInfo.takeIf { !isNewChild }
-                        val now = wallClockNow()
-                        val resolvedId = base?.id ?: childInfoId?.takeIf { it != "new" }
-                            ?: newChildId()
-                        val childInfo = (
-                            base ?: ChildInfo(
-                                id = resolvedId,
-                                childName = childName,
-                                dateOfBirth = dateOfBirth,
-                                createdAt = now,
-                                updatedAt = now
-                            )
-                            ).copy(
-                            childName = childName,
-                            dateOfBirth = dateOfBirth,
-                            medications = medications,
-                            activities = activities,
-                            allergies = allergies,
-                            medicalNotes = medicalNotes.ifBlank { null },
-                            emergencyContacts = emergencyContacts,
-                            schoolInfo = schoolInfo,
-                            medicalProfile = medicalProfile,
-                            updatedAt = now
+            // Save Button. On the iPhone Save is the bar's (FormTopBar), so the form draws none.
+            if (!shellDrawsBars()) {
+                Button(
+                    onClick = saveChild,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = childName.isNotBlank() && !isSaving
+                ) {
+                    if (isSaving) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
                         )
-                        viewModel.upsertChildInfoWithPhotos(
-                            childInfo = childInfo,
-                            isNewChild = isNewChild,
-                            newPhotoUris = pickedPhotos,
-                            removedPhotoUrls = removedPhotos
-                        )
+                        Spacer(modifier = Modifier.width(Spacing.S))
                     }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = childName.isNotBlank() && !isSaving
-            ) {
-                if (isSaving) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary
+                    Text(
+                        if (childInfoId == "new") {
+                            stringResource(Res.string.childinfo_add_child_button)
+                        } else {
+                            stringResource(Res.string.childinfo_save_changes)
+                        }
                     )
-                    Spacer(modifier = Modifier.width(Spacing.S))
                 }
-                Text(
-                    if (childInfoId == "new") {
-                        stringResource(Res.string.childinfo_add_child_button)
-                    } else {
-                        stringResource(Res.string.childinfo_save_changes)
-                    }
-                )
             }
 
             // Bottom spacing

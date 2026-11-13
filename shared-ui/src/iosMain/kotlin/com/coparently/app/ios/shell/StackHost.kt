@@ -387,7 +387,14 @@ internal class StackHost(
             Screen.Expenses.route,
             Screen.AddExpense.route,
             Screen.EditExpense.route,
-            Screen.Settings.route
+            Screen.Settings.route,
+            // Every other form (MON-24 phase 3, part B, Task 4): a sheet with Save in its bar.
+            Screen.AddEvent.route,
+            Screen.EditEvent.route,
+            Screen.RequestChange.route,
+            Screen.JournalEditor.route,
+            Screen.EditChildInfo.route,
+            Screen.EditPet.route
         )
 
         /** Whether two lists hold the same view controllers, in order. */

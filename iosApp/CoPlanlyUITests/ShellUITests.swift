@@ -8,9 +8,9 @@ import XCTest
 /// way it does what the shell's review is about: a back swipe, a back swipe let go of (over native
 /// bars and over a screen that draws its own bar, each checked to have begun and been cancelled), a
 /// second tap on the selected tab popping two screens, a sheet holding an edit swiped down, which
-/// must ask "Discard changes?" and stay open on "Keep editing", a form that draws its own bar shown
-/// with exactly one bar, and a sign-out reaching the sign-in screen with no tabs, then a sign-in
-/// landing on fresh tabs.
+/// must ask "Discard changes?" and stay open on "Keep editing", the event form as a sheet with Save in
+/// its bar (disabled until the event has a title), and a sign-out reaching the sign-in screen with no
+/// tabs, then a sign-in landing on fresh tabs.
 ///
 /// **One run reports every problem.** The walk is a list of steps. A step that fails records its
 /// reason, a screenshot and the app's accessibility hierarchy, and the walk goes on; each step starts
@@ -62,7 +62,10 @@ final class ShellUITests: XCTestCase {
         step("Settings", after: ["Family"]) { try self.settings() }
         step("cancelled back swipe over a Compose bar", after: ["Settings"]) { try self.cancelledSwipeOverComposeBar() }
         step("a tab tap pops two screens", after: ["Settings"]) { try self.tabTapPopsTwo() }
-        step("a form with its own bar shows one bar", after: ["Calendar and Chat tabs"]) { try self.composeBarSheet() }
+        step("New event is a sheet with Save in its bar", after: ["Calendar and Chat tabs"]) { try self.eventFormSheet() }
+        step("a new event swiped down closes without asking", after: ["New event is a sheet with Save in its bar"]) {
+            try self.newEventSwipeDown()
+        }
         step("sign out, and sign in to fresh tabs", after: ["Settings"]) {
             try self.signOutAndIn(email: email, password: password)
         }
@@ -229,20 +232,44 @@ final class ShellUITests: XCTestCase {
         shot("08-family-again")
     }
 
-    private func composeBarSheet() throws {
-        // The calendar's month bar carries "Add event" since the tester redesign (November 2026),
-        // which took the empty week's action off Home: the Calendar tab, whose header is Compose's.
+    /// The event form, opened from the calendar's month bar, is a sheet whose bar carries a cross
+    /// and Save (MON-24 phase 3, part B): Save is disabled until the event has a title, and no second
+    /// Save is drawn under the form.
+    private func eventFormSheet() throws {
         try goToCalendarRoot()
         press(try element(labelled: "Add event", in: app.buttons))
-        try require(app.staticTexts["New event"].waitForExistence(timeout: timeout), "The event form did not open")
-        sleep(1)
-        // The form draws its own bar; the sheet's navigation bar stays hidden over it, as the
-        // calendar's is behind it: no system bar at all.
-        try require(app.navigationBars.count == 0, "A system bar in the event form's sheet")
+        let sheetBar = app.navigationBars["New event"]
+        try require(sheetBar.waitForExistence(timeout: timeout), "The event form did not open as a sheet")
+        try require(app.navigationBars.count == 1, "More than one bar over the event form")
+        let save = sheetBar.buttons["Save event"]
+        try require(save.waitForExistence(timeout: timeout), "The sheet's bar carries no Save")
+        try require(!save.isEnabled, "Save was enabled on an event with no title")
+        let saves = app.buttons.matching(NSPredicate(format: "label == %@", "Save event"))
+        try require(saves.count == 1, "A second Save was drawn under the form")
+        try require(sheetBar.buttons["Close"].exists, "The sheet's bar has no close button")
         shot("10-event-form-sheet")
-        press(try element(labelled: "Cancel", in: app.buttons))
-        try require(app.staticTexts["New event"].waitForNonExistence(timeout: timeout), "Cancel did not close the event form")
+        try type("Shell event", into: field(labelled: "Event title"))
+        dismissKeyboard()
+        try require(waitUntilEnabled(save), "Save stayed disabled once the event had a title")
+        shot("10b-event-form-with-title")
+    }
+
+    /// A new event asks nothing when it is left: its draft is kept as the parent types and comes
+    /// back on the next "+" (CLAUDE.md design item 16), so a swipe down closes the sheet at once.
+    private func newEventSwipeDown() throws {
+        let sheetBar = app.navigationBars["New event"]
+        if !sheetBar.exists { try eventFormSheet() }
+        swipeSheetDown(from: sheetBar)
+        try require(sheetBar.waitForNonExistence(timeout: timeout), "A swipe down did not close the new event's sheet")
+        try require(!app.staticTexts["Discard changes?"].exists, "A new event asked before closing")
         try require(app.navigationBars.count == 0, "A system bar over the calendar after the event form")
+        try require(app.tabBars.firstMatch.buttons["Calendar"].isSelected, "The calendar was not under the sheet")
+    }
+
+    /// Whether [button] becomes enabled within the step timeout.
+    private func waitUntilEnabled(_ button: XCUIElement) -> Bool {
+        let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: button)
+        return XCTWaiter().wait(for: [enabled], timeout: timeout) == .completed
     }
 
     private func signOutAndIn(email: String, password: String) throws {

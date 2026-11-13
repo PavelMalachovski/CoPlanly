@@ -12,26 +12,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -42,6 +39,8 @@ import com.coparently.app.domain.changerequests.RequestCap
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.AnswerByField
 import com.coparently.app.presentation.common.AnswerByPickSaver
+import com.coparently.app.presentation.common.FormSave
+import com.coparently.app.presentation.common.FormTopBar
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.LocalDateSaver
 import com.coparently.app.presentation.common.LocalTimeSaver
@@ -49,12 +48,12 @@ import com.coparently.app.presentation.common.NullableLocalTimeSaver
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberAnswerByOffer
 import com.coparently.app.presentation.common.rememberParentNames
+import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.components.TimePickerDialog
 import com.coparently.app.presentation.event.plusHour
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.change_request_back
 import com.coparently.app.resources.change_request_cancel
@@ -101,20 +100,25 @@ fun RequestChangeScreen(
         if (uiState is RequestChangeUiState.Saved) onBack()
     }
 
+    // The form's Send, once a form is drawn, for the iPhone's bar to call (the form rule of MON-24
+    // phase 3, part B); Android draws the form's own button and leaves this null.
+    var send by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val onSendReady = remember { { ready: (() -> Unit)? -> send = ready } }
+    val inShellBar = shellDrawsBars()
+
     Scaffold(
         containerColor = ScreenContainerColor,
         topBar = {
-            TopAppBar(
-                colors = screenTopAppBarColors(),
-                title = { Text(stringResource(Res.string.change_request_form_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            stringResource(Res.string.change_request_back)
-                        )
-                    }
-                }
+            FormTopBar(
+                title = stringResource(Res.string.change_request_form_title),
+                backLabel = stringResource(Res.string.change_request_back),
+                onLeave = onBack,
+                save = FormSave(
+                    label = stringResource(Res.string.change_request_send),
+                    onClick = { send?.invoke() },
+                    // Exactly when the form's own button is: drawn, and not sending.
+                    enabled = send != null && uiState is RequestChangeUiState.Ready
+                )
             )
         }
     ) { padding ->
@@ -159,7 +163,8 @@ fun RequestChangeScreen(
                     onSubmit = { start, end, note, answerBy ->
                         viewModel.submit(event, start, end, note, answerBy)
                     },
-                    modifier = Modifier.padding(padding)
+                    modifier = Modifier.padding(padding),
+                    barSend = onSendReady.takeIf { inShellBar }
                 )
             }
 
@@ -176,7 +181,8 @@ private fun RequestChangeForm(
     isSending: Boolean,
     coParentName: String,
     onSubmit: (LocalDateTime, LocalDateTime?, String?, AnswerByPick) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    barSend: (((() -> Unit)?) -> Unit)? = null
 ) {
     // Saveable, so a rotation keeps what the parent proposed and wrote (D-11's rule). Each field is
     // kept as its ISO text (`DateTimeSavers`), never Java-serialised into the Bundle.
@@ -201,6 +207,19 @@ private fun RequestChangeForm(
     var showDatePicker by remember { mutableStateOf(false) }
     var showStartTimePicker by remember { mutableStateOf(false) }
     var showEndTimePicker by remember { mutableStateOf(false) }
+
+    val submit: () -> Unit = {
+        val end = proposedEndTime?.let { LocalDateTime(proposedDate, it) }
+        onSubmit(proposedStart, end, note, answerBy)
+    }
+    // Where the bar carries Send (the iPhone), it calls this form's latest submit.
+    if (barSend != null) {
+        val latestSubmit by rememberUpdatedState(submit)
+        DisposableEffect(barSend) {
+            barSend { latestSubmit() }
+            onDispose { barSend(null) }
+        }
+    }
 
     Column(
         modifier = modifier
@@ -294,21 +313,21 @@ private fun RequestChangeForm(
 
         Spacer(modifier = Modifier.height(Spacing.S))
 
-        Button(
-            onClick = {
-                val end = proposedEndTime?.let { LocalDateTime(proposedDate, it) }
-                onSubmit(proposedStart, end, note, answerBy)
-            },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !isSending
-        ) {
-            if (isSending) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    strokeWidth = 2.dp
-                )
-            } else {
-                Text(stringResource(Res.string.change_request_send))
+        // On the iPhone Send is the bar's (FormTopBar), so the form draws no button of its own.
+        if (barSend == null) {
+            Button(
+                onClick = submit,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isSending
+            ) {
+                if (isSending) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text(stringResource(Res.string.change_request_send))
+                }
             }
         }
     }
