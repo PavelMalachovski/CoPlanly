@@ -14,6 +14,7 @@ import androidx.compose.ui.window.ComposeUIViewController
 import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.BarHost
 import com.coparently.app.presentation.common.BarLeading
+import com.coparently.app.presentation.common.BarMenuItem
 import com.coparently.app.presentation.common.ScreenBar
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.Foundation.NSSelectorFromString
@@ -23,6 +24,9 @@ import platform.UIKit.UIBarButtonItem
 import platform.UIKit.UIBarButtonItemStyle
 import platform.UIKit.UIBarButtonSystemItem
 import platform.UIKit.UIColor
+import platform.UIKit.UIMenu
+import platform.UIKit.UIMenuElementAttributesDestructive
+import platform.UIKit.UIMenuElementAttributesDisabled
 import platform.UIKit.UINavigationItemLargeTitleDisplayMode
 import platform.UIKit.UIViewController
 import platform.UIKit.accessibilityLabel
@@ -35,8 +39,10 @@ import platform.darwin.dispatch_get_main_queue
 /**
  * The navigation bar of one hosted screen, drawn by UIKit from the screen's [ScreenBar] (MON-24
  * phase 3, spec §5.3): the title (large on a tab's first screen and on Settings), the system back
- * button or a close button, the actions as bar buttons with SF Symbols, and the family switcher chip
- * as a bar button whose custom view is a Compose host of its own.
+ * button or a close button, the actions as bar buttons with SF Symbols (a form's primary action as
+ * its label, an action with a menu as a `UIMenu`), the family switcher chip as a bar button whose
+ * custom view is a Compose host of its own, and a screen's title composable as the title view,
+ * hosted the same way.
  *
  * Idempotent: a bar whose visible part is the one already drawn changes no item, so a screen that
  * composes again (every time it re-enters the window) does not rebuild or re-animate its buttons.
@@ -46,7 +52,7 @@ import platform.darwin.dispatch_get_main_queue
  *
  * @property largeTitle Whether this screen shows a large title whatever its bar says (Settings).
  * @property sheetRoot Whether the screen is a sheet's first screen, whose back is a close button.
- * @property chipFrame Wraps the chip in the providers the screen is composed in.
+ * @property chipFrame Wraps the chip and the title view in the providers the screen is composed in.
  */
 internal class NativeBars(
     private val largeTitle: Boolean,
@@ -63,9 +69,10 @@ internal class NativeBars(
     /** The visible part of the bar drawn now; a bar with the same one draws nothing new. */
     private var drawn: VisibleBar? = null
 
-    private var chip: UIViewController? = null
-    private var chipWidth: NSLayoutConstraint? = null
-    private var chipHeight: NSLayoutConstraint? = null
+    private var chip: BarComposition? = null
+
+    /** The host of the screen's title composable, while its bar has one. */
+    private var titleView: BarComposition? = null
 
     override fun show(bar: ScreenBar) {
         current = bar
@@ -85,12 +92,14 @@ internal class NativeBars(
      */
     fun screenAppeared(visible: Boolean) {
         screenVisible = visible
-        chip?.let { forwardAppearance(it, visible) }
+        chip?.let { forwardAppearance(it.controller, visible) }
+        titleView?.let { forwardAppearance(it.controller, visible) }
     }
 
-    /** Lets go of the chip's host: the screen has left its stack. */
+    /** Lets go of the chip's and the title view's hosts: the screen has left its stack. */
     fun release() {
         chip = null
+        titleView = null
     }
 
     private fun forwardAppearance(host: UIViewController, visible: Boolean) {
@@ -111,11 +120,31 @@ internal class NativeBars(
         // `subtitle` is iOS 26's; on an older iPhone the line is left out.
         if (item.respondsToSelector(NSSelectorFromString("setSubtitle:"))) item.subtitle = bar.subtitle
         drawLeading(bar.leading)
+        drawTitleView(hasContent = bar.titleContent != null)
         item.rightBarButtonItems = buildList {
             // UIKit draws the first right item at the edge: the last action, as Android does.
             bar.actions.indices.reversed().forEach { add(actionItem(it, bar.actions[it])) }
             if (bar.trailingContent != null) add(chipItem())
         }
+    }
+
+    /**
+     * The title composable as the navigation item's title view, rebuilt only when it appears or
+     * goes: the host draws the latest bar's title content whatever else changed.
+     */
+    private fun drawTitleView(hasContent: Boolean) {
+        val item = viewController.navigationItem
+        if (!hasContent) {
+            if (titleView != null) {
+                item.titleView = null
+                titleView = null
+            }
+            return
+        }
+        if (titleView != null) return
+        val created = BarComposition { current?.titleContent?.invoke() }
+        titleView = created
+        item.titleView = created.controller.view
     }
 
     private fun drawLeading(leading: BarLeading) {
@@ -156,9 +185,12 @@ internal class NativeBars(
     }
 
     private fun actionItem(index: Int, action: BarAction): UIBarButtonItem {
+        val menu = action.menu
+        if (menu != null) return menuItem(index, action, menu)
         val uiAction = UIAction.actionWithTitle(
             title = action.label,
-            image = SfSymbols.image(action.sfSymbol),
+            // A form's primary action reads as its word (Save), as iOS forms do; the rest as symbols.
+            image = if (action.primary) null else SfSymbols.image(action.sfSymbol),
             identifier = null
         ) { _ -> current?.actions?.getOrNull(index)?.onClick?.invoke() }
         return UIBarButtonItem(primaryAction = uiAction).apply {
@@ -173,49 +205,93 @@ internal class NativeBars(
     }
 
     /**
+     * An action whose tap opens its [menu] as a `UIMenu`: each entry a `UIAction` calling the
+     * latest bar's entry at the same place, a destructive one marked so, a disabled one dimmed.
+     */
+    private fun menuItem(index: Int, action: BarAction, menu: List<BarMenuItem>): UIBarButtonItem {
+        val entries = menu.mapIndexed { entry, menuItem ->
+            UIAction.actionWithTitle(
+                title = menuItem.label,
+                image = menuItem.sfSymbol?.let { SfSymbols.image(it) },
+                identifier = null
+            ) { _ -> current?.actions?.getOrNull(index)?.menu?.getOrNull(entry)?.onClick?.invoke() }.apply {
+                var flags = 0uL
+                if (menuItem.destructive) flags = flags or UIMenuElementAttributesDestructive
+                if (!menuItem.enabled) flags = flags or UIMenuElementAttributesDisabled
+                attributes = flags
+            }
+        }
+        return UIBarButtonItem().apply {
+            image = SfSymbols.image(action.sfSymbol)
+            // With a menu and no primary action, a tap opens the menu.
+            this.menu = UIMenu.menuWithTitle(title = "", children = entries)
+            setEnabled(action.enabled)
+            accessibilityLabel = action.label
+        }
+    }
+
+    /**
      * The family switcher chip: a bar button whose custom view is a Compose host, a child of the
      * screen's view controller, drawing the latest bar's trailing content. Its size follows what
      * the chip draws, which is nothing with one family.
      */
-    // A transparent Compose host (`opaque`) is still experimental in Compose Multiplatform 1.9.3, and
     // `NSSelectorFromString` is Kotlin/Native's C interop.
-    @OptIn(ExperimentalComposeUiApi::class, ExperimentalForeignApi::class)
+    @OptIn(ExperimentalForeignApi::class)
     private fun chipItem(): UIBarButtonItem {
-        val host = chip ?: ComposeUIViewController(configure = { opaque = false }) {
-            chipFrame {
-                val density = LocalDensity.current
-                Box(
-                    Modifier
-                        .wrapContentSize(unbounded = true)
-                        .onSizeChanged { size ->
-                            with(density) { resizeChip(size.width.toDp().value, size.height.toDp().value) }
-                        }
-                ) {
-                    current?.trailingContent?.invoke()
-                }
-            }
-        }.also { created ->
-            created.view.backgroundColor = UIColor.clearColor
-            created.view.translatesAutoresizingMaskIntoConstraints = false
-            chipWidth = created.view.widthAnchor.constraintEqualToConstant(MIN_CHIP_SIDE).apply { active = true }
-            chipHeight = created.view.heightAnchor.constraintEqualToConstant(MIN_CHIP_SIDE).apply { active = true }
-            chip = created
-            // Once the bar has put the chip in the window: the next turn of the main loop.
-            dispatch_async(dispatch_get_main_queue()) {
-                if (screenVisible && chip === created) forwardAppearance(created, true)
-            }
-        }
-        return UIBarButtonItem(customView = host.view).apply {
+        val host = chip ?: BarComposition { current?.trailingContent?.invoke() }.also { chip = it }
+        return UIBarButtonItem(customView = host.controller.view).apply {
             // iOS 26 sets each bar button on glass; the chip draws its own pill, and nothing at all
             // with one family, where an empty glass circle would stand in the bar.
             if (respondsToSelector(NSSelectorFromString("setHidesSharedBackground:"))) hidesSharedBackground = true
         }
     }
 
-    /** Sizes the chip's host to what the chip draws, in points; never zero, see [MIN_CHIP_SIDE]. */
-    private fun resizeChip(width: Float, height: Float) {
-        chipWidth?.constant = width.toDouble().coerceAtLeast(MIN_CHIP_SIDE)
-        chipHeight?.constant = height.toDouble().coerceAtLeast(MIN_CHIP_SIDE)
+    /**
+     * A Compose host in the navigation bar (the chip, the title view): a transparent view sized to
+     * what [content] draws, composed in the screen's providers. It is no child of the screen's view
+     * controller, so its appearance follows [screenAppeared], starting once the bar has put it in
+     * the window.
+     */
+    // A transparent Compose host (`opaque`) is still experimental in Compose Multiplatform 1.9.3.
+    @OptIn(ExperimentalComposeUiApi::class)
+    private inner class BarComposition(content: @Composable () -> Unit) {
+
+        private var width: NSLayoutConstraint? = null
+        private var height: NSLayoutConstraint? = null
+
+        val controller: UIViewController = ComposeUIViewController(configure = { opaque = false }) {
+            chipFrame {
+                val density = LocalDensity.current
+                Box(
+                    Modifier
+                        .wrapContentSize(unbounded = true)
+                        .onSizeChanged { size ->
+                            with(density) { resize(size.width.toDp().value, size.height.toDp().value) }
+                        }
+                ) {
+                    content()
+                }
+            }
+        }
+
+        init {
+            controller.view.backgroundColor = UIColor.clearColor
+            controller.view.translatesAutoresizingMaskIntoConstraints = false
+            width = controller.view.widthAnchor.constraintEqualToConstant(MIN_CHIP_SIDE).apply { active = true }
+            height = controller.view.heightAnchor.constraintEqualToConstant(MIN_CHIP_SIDE).apply { active = true }
+            // Once the bar has put the host in the window: the next turn of the main loop.
+            dispatch_async(dispatch_get_main_queue()) {
+                if (screenVisible && isShown()) forwardAppearance(controller, true)
+            }
+        }
+
+        private fun isShown(): Boolean = chip === this || titleView === this
+
+        /** Sizes the host to what it draws, in points; never zero, see [MIN_CHIP_SIDE]. */
+        private fun resize(width: Float, height: Float) {
+            this.width?.constant = width.toDouble().coerceAtLeast(MIN_CHIP_SIDE)
+            this.height?.constant = height.toDouble().coerceAtLeast(MIN_CHIP_SIDE)
+        }
     }
 
     private companion object {
@@ -236,7 +312,8 @@ private data class VisibleBar(
     val subtitle: String?,
     val leading: VisibleLeading,
     val actions: List<VisibleAction>,
-    val trailing: Boolean
+    val trailing: Boolean,
+    val titleContent: Boolean
 ) {
     companion object {
         fun of(bar: ScreenBar) = VisibleBar(
@@ -248,10 +325,18 @@ private data class VisibleBar(
                 is BarLeading.Back -> VisibleLeading(LeadingKind.BACK, leading.label, leading.enabled)
                 is BarLeading.Close -> VisibleLeading(LeadingKind.CLOSE, leading.label, leading.enabled)
             },
-            actions = bar.actions.map {
-                VisibleAction(it.label, it.sfSymbol, it.enabled, it.primary, it.dot)
+            actions = bar.actions.map { action ->
+                VisibleAction(
+                    label = action.label,
+                    sfSymbol = action.sfSymbol,
+                    enabled = action.enabled,
+                    primary = action.primary,
+                    dot = action.dot,
+                    menu = action.menu?.map { VisibleMenuItem(it.label, it.sfSymbol, it.destructive, it.enabled) }
+                )
             },
-            trailing = bar.trailingContent != null
+            trailing = bar.trailingContent != null,
+            titleContent = bar.titleContent != null
         )
     }
 }
@@ -268,5 +353,14 @@ private data class VisibleAction(
     val sfSymbol: String,
     val enabled: Boolean,
     val primary: Boolean,
-    val dot: Boolean
+    val dot: Boolean,
+    val menu: List<VisibleMenuItem>?
+)
+
+/** The visible part of a [BarMenuItem]: a changed label, symbol or flag redraws the menu. */
+private data class VisibleMenuItem(
+    val label: String,
+    val sfSymbol: String?,
+    val destructive: Boolean,
+    val enabled: Boolean
 )

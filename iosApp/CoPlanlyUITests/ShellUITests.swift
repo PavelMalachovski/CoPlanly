@@ -135,7 +135,15 @@ final class ShellUITests: XCTestCase {
     private func addExpenseSheet() throws {
         try goToExpenses()
         press(try element(labelled: "Add expense", in: app.buttons))
-        try require(app.navigationBars["Add expense"].waitForExistence(timeout: timeout), "The form did not open as a sheet")
+        let sheetBar = app.navigationBars["Add expense"]
+        try require(sheetBar.waitForExistence(timeout: timeout), "The form did not open as a sheet")
+        // The form's Save is the sheet bar's, not a button pinned under the form, and an empty
+        // form cannot be saved.
+        let save = sheetBar.buttons["Save expense"]
+        try require(save.waitForExistence(timeout: timeout), "The sheet's bar carries no Save")
+        try require(!save.isEnabled, "Save was enabled on an empty form")
+        let saves = app.buttons.matching(NSPredicate(format: "label == %@", "Save expense"))
+        try require(saves.count == 1, "A second Save was drawn under the form")
         shot("04-add-expense-sheet")
     }
 
@@ -157,7 +165,7 @@ final class ShellUITests: XCTestCase {
         try require(!question.exists, "Keep editing left the question up")
         try require(sheetBar.exists, "Keep editing closed the sheet")
         // The close button asks too; Discard leaves the form and the sheet.
-        sheetBar.buttons.firstMatch.tap()
+        closeButton(of: sheetBar).tap()
         try require(question.waitForExistence(timeout: timeout), "Closing over edits did not ask")
         press(try element(labelled: "Discard", in: app.buttons))
         try require(app.navigationBars["Expenses"].waitForExistence(timeout: timeout), "Discard did not close the sheet")
@@ -282,7 +290,7 @@ final class ShellUITests: XCTestCase {
         let sheetBar = app.navigationBars["Add expense"]
         if question.exists { pressIfThere("Discard") }
         if sheetBar.exists {
-            sheetBar.buttons.firstMatch.tap()
+            closeButton(of: sheetBar).tap()
             if question.waitForExistence(timeout: 3) { pressIfThere("Discard") }
             _ = sheetBar.waitForNonExistence(timeout: timeout)
         }
@@ -304,6 +312,12 @@ final class ShellUITests: XCTestCase {
     private func openExpenses() throws {
         press(try element(containing: "This month"))
         try require(app.navigationBars["Expenses"].waitForExistence(timeout: timeout), "Expenses did not open")
+    }
+
+    /// The cross at the start of a sheet's bar (its Save sits at the other end).
+    private func closeButton(of bar: XCUIElement) -> XCUIElement {
+        let close = bar.buttons["Close"]
+        return close.exists ? close : bar.buttons.firstMatch
     }
 
     /// Presses the button labelled [label] when one is on screen, and nothing otherwise.

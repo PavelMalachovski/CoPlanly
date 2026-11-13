@@ -1,26 +1,52 @@
 package com.coparently.app.presentation.common
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.coparently.app.presentation.theme.screenTopAppBarColors
+
+/**
+ * One entry of a bar action's menu: a `DropdownMenuItem` on Android, a `UIAction` of the item's
+ * `UIMenu` on the iPhone.
+ *
+ * @property label What the entry does, already resolved in the reader's language
+ * @property sfSymbol The SF Symbol the iPhone draws beside the label, or null for none
+ * @property onClick The entry's action
+ * @property destructive Whether the entry destroys something: drawn in the error colour on
+ *   Android and as a destructive element on the iPhone
+ * @property enabled Whether the entry can be chosen now
+ */
+data class BarMenuItem(
+    val label: String,
+    val sfSymbol: String?,
+    val onClick: () -> Unit,
+    val destructive: Boolean = false,
+    val enabled: Boolean = true
+)
 
 /**
  * One action in a screen's top bar: an icon button on Android, a bar button item on the iPhone.
@@ -34,6 +60,8 @@ import com.coparently.app.presentation.theme.screenTopAppBarColors
  * @property primary A form's primary action (Save). Android keeps a form's `StickyActionBar` and
  *   passes no primary action to the bar; the iPhone's host draws it as the bar's prominent item
  * @property dot Whether something waits behind the action: a dot, never a count (design item 13)
+ * @property menu When not null, a tap opens these entries instead of running [onClick]: a
+ *   `DropdownMenu` under the icon on Android, the item's `UIMenu` on the iPhone
  */
 data class BarAction(
     val label: String,
@@ -42,7 +70,8 @@ data class BarAction(
     val onClick: () -> Unit,
     val enabled: Boolean = true,
     val primary: Boolean = false,
-    val dot: Boolean = false
+    val dot: Boolean = false,
+    val menu: List<BarMenuItem>? = null
 )
 
 /** What sits at the start of a screen's top bar. */
@@ -82,6 +111,9 @@ sealed interface BarLeading {
  * @property leading What sits at the bar's start
  * @property actions The bar's actions, in the order they are drawn
  * @property trailingContent A composable drawn before [actions]: the family switcher chip
+ * @property titleContent A composable drawn in place of [title]'s text (a chat thread's header):
+ *   Android draws it in the bar's title slot, the iPhone as the navigation item's title view.
+ *   [title] still names the screen (the iPhone's back button and accessibility)
  */
 data class ScreenBar(
     val title: String,
@@ -89,7 +121,8 @@ data class ScreenBar(
     val subtitle: String? = null,
     val leading: BarLeading = BarLeading.None,
     val actions: List<BarAction> = emptyList(),
-    val trailingContent: (@Composable () -> Unit)? = null
+    val trailingContent: (@Composable () -> Unit)? = null,
+    val titleContent: (@Composable () -> Unit)? = null
 )
 
 /**
@@ -97,8 +130,9 @@ data class ScreenBar(
  *
  * [show] is called when the screen's bar first composes and then only when something the host
  * would draw changes: the title, the subtitle, [ScreenBar.largeTitle], the leading's kind, label or
- * `enabled`, an action's label, icon, SF Symbol, `enabled`, `primary` or `dot`, the actions' order,
- * or whether there is trailing content. A recomposition that changes none of them hands the host
+ * `enabled`, an action's label, icon, SF Symbol, `enabled`, `primary`, `dot` or menu (its entries'
+ * labels, symbols, `destructive` and `enabled`), the actions' order, or whether there is trailing
+ * content or title content. A recomposition that changes none of them hands the host
  * nothing, however fresh the screen's lambdas are, so a host may rebuild its bar on every call.
  *
  * The bar the host holds stays live: its `onClick`s and its trailing content always run the
@@ -121,6 +155,15 @@ fun interface BarHost {
  * composes one provide a value that means nothing.
  */
 val LocalBarHost: ProvidableCompositionLocal<BarHost?> = staticCompositionLocalOf { null }
+
+/**
+ * Whether a shell draws this screen's bars itself (the iPhone's), so the screen draws no bar of
+ * its own: no Material top bar, no `StickyActionBar`, no floating button the bar carries instead.
+ * Every iPhone-only branch of a shared screen asks this, never a platform check, so a test can
+ * take either branch by providing a [LocalBarHost].
+ */
+@Composable
+fun shellDrawsBars(): Boolean = LocalBarHost.current != null
 
 /**
  * A screen's top bar. With no [LocalBarHost] it draws the Material `TopAppBar` the screens drew
@@ -152,11 +195,16 @@ fun AppTopBar(bar: ScreenBar) {
 @Composable
 private fun BarTitle(bar: ScreenBar) {
     val subtitle = bar.subtitle
+    val titleContent = bar.titleContent
     if (subtitle == null) {
-        Text(bar.title)
+        if (titleContent != null) titleContent() else Text(bar.title)
     } else {
         Column {
-            Text(text = bar.title, style = MaterialTheme.typography.titleLarge)
+            if (titleContent != null) {
+                titleContent()
+            } else {
+                Text(text = bar.title, style = MaterialTheme.typography.titleLarge)
+            }
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
@@ -181,14 +229,52 @@ private fun BarLeadingButton(leading: BarLeading) {
 
 @Composable
 private fun BarActionButton(action: BarAction) {
+    val menu = action.menu
+    if (menu != null) {
+        BarMenuButton(action, menu)
+        return
+    }
     IconButton(onClick = action.onClick, enabled = action.enabled) {
-        if (action.dot) {
-            BadgedBox(badge = { Badge() }) {
-                Icon(imageVector = action.icon, contentDescription = action.label)
+        BarActionIcon(action)
+    }
+}
+
+@Composable
+private fun BarMenuButton(action: BarAction, menu: List<BarMenuItem>) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { expanded = true }, enabled = action.enabled) {
+            BarActionIcon(action)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            menu.forEach { item ->
+                DropdownMenuItem(
+                    text = { Text(item.label) },
+                    onClick = {
+                        expanded = false
+                        item.onClick()
+                    },
+                    enabled = item.enabled,
+                    // A destructive entry in the error colour, as the app's destructive rows are.
+                    colors = if (item.destructive) {
+                        MenuDefaults.itemColors(textColor = MaterialTheme.colorScheme.error)
+                    } else {
+                        MenuDefaults.itemColors()
+                    }
+                )
             }
-        } else {
+        }
+    }
+}
+
+@Composable
+private fun BarActionIcon(action: BarAction) {
+    if (action.dot) {
+        BadgedBox(badge = { Badge() }) {
             Icon(imageVector = action.icon, contentDescription = action.label)
         }
+    } else {
+        Icon(imageVector = action.icon, contentDescription = action.label)
     }
 }
 
@@ -219,13 +305,17 @@ private fun ScreenBar.visibleOnly(): ScreenBar = copy(
         is BarLeading.Back -> current.copy(onClick = NoClick)
         is BarLeading.Close -> current.copy(onClick = NoClick)
     },
-    actions = actions.map { it.copy(onClick = NoClick) },
-    trailingContent = trailingContent?.let { NoContent }
+    actions = actions.map { action ->
+        action.copy(onClick = NoClick, menu = action.menu?.map { it.copy(onClick = NoClick) })
+    },
+    trailingContent = trailingContent?.let { NoContent },
+    titleContent = titleContent?.let { NoContent }
 )
 
 /** This visible bar with lambdas that run [latest]'s, whose visible part is this one's. */
 private fun ScreenBar.delegatingTo(latest: State<ScreenBar>): ScreenBar {
     val content: @Composable () -> Unit = { latest.value.trailingContent?.invoke() }
+    val title: @Composable () -> Unit = { latest.value.titleContent?.invoke() }
     return copy(
         leading = when (val current = leading) {
             BarLeading.None -> current
@@ -233,9 +323,17 @@ private fun ScreenBar.delegatingTo(latest: State<ScreenBar>): ScreenBar {
             is BarLeading.Close -> current.copy(onClick = { latest.value.leading.click() })
         },
         actions = actions.mapIndexed { index, action ->
-            action.copy(onClick = { latest.value.actions.getOrNull(index)?.onClick?.invoke() })
+            action.copy(
+                onClick = { latest.value.actions.getOrNull(index)?.onClick?.invoke() },
+                menu = action.menu?.mapIndexed { entry, item ->
+                    item.copy(
+                        onClick = { latest.value.actions.getOrNull(index)?.menu?.getOrNull(entry)?.onClick?.invoke() }
+                    )
+                }
+            )
         },
-        trailingContent = trailingContent?.let { content }
+        trailingContent = trailingContent?.let { content },
+        titleContent = titleContent?.let { title }
     )
 }
 

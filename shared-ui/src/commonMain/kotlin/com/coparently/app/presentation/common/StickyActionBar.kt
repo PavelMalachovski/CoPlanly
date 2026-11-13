@@ -30,6 +30,10 @@ import com.coparently.app.presentation.theme.Spacing
  * It needs no keyboard handling of its own: the root NavHost resizes every screen above the
  * keyboard (D-9), so the bar rises with it.
  *
+ * Where a shell draws the bars ([shellDrawsBars], the iPhone) it draws nothing: the screen puts
+ * the same action in its bar instead, as a `BarAction(primary = true, …)` with this label and
+ * `enabled = enabled && !busy` (MON-24 phase 3, part B).
+ *
  * @param label What the button does, e.g. "Save event"
  * @param onClick The action
  * @param modifier Modifier for the bar
@@ -47,6 +51,7 @@ fun StickyActionBar(
     busy: Boolean = false,
     notice: (@Composable () -> Unit)? = null
 ) {
+    if (shellDrawsBars()) return
     Surface(modifier = modifier, shadowElevation = 8.dp) {
         Column(
             modifier = Modifier

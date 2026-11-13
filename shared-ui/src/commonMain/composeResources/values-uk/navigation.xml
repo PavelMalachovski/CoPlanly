@@ -15,4 +15,6 @@
         <item quantity="many">%1$d запитів чекають на вашу відповідь</item>
         <item quantity="other">%1$d запиту чекають на вашу відповідь</item>
     </plurals>
+    <!-- The cross that closes a form opened as a sheet (the iPhone's form rule). -->
+    <string name="form_close">Закрити</string>
 </resources>
