@@ -173,7 +173,7 @@ fun RequestChangeScreen(
     }
 }
 
-@Suppress("LongMethod") // Compose form: fields + three picker dialogs
+@Suppress("LongMethod", "LongParameterList") // Compose form: fields, three picker dialogs, and its Send
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RequestChangeForm(

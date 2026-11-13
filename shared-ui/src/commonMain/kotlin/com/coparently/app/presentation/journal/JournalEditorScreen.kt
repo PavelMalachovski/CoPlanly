@@ -114,18 +114,7 @@ fun JournalEditorScreen(
         containerColor = ScreenContainerColor,
         // A back gesture over unsaved edits shrinks the form before it asks (D-11).
         modifier = Modifier.then(leave.backPreview),
-        topBar = {
-            EditorTopBar(
-                isNew = state.isNew,
-                onNavigateUp = leave,
-                save = FormSave(
-                    label = stringResource(Res.string.journal_save),
-                    onClick = viewModel::save,
-                    // Exactly when the sticky button is: enabled && !busy.
-                    enabled = state.canSave && !state.saving
-                )
-            )
-        },
+        topBar = { EditorTopBar(state.isNew, leave, state.canSave && !state.saving, viewModel::save) },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = { SaveBar(state.canSave, state.saving, viewModel::save) }
     ) { padding ->
@@ -221,17 +210,18 @@ private fun EditorForm(
 
 /**
  * The title says whether this is a new entry, and the arrow goes back without saving. On the
- * iPhone the form is a sheet: a cross that leaves the same way, and [save] in the bar.
+ * iPhone the form is a sheet: a cross that leaves the same way, and Save in the bar while [canSave].
  */
 @Composable
-private fun EditorTopBar(isNew: Boolean, onNavigateUp: () -> Unit, save: FormSave) {
+private fun EditorTopBar(isNew: Boolean, onNavigateUp: () -> Unit, canSave: Boolean, onSave: () -> Unit) {
     FormTopBar(
         title = stringResource(
             if (isNew) Res.string.journal_editor_new_title else Res.string.journal_editor_edit_title
         ),
         backLabel = stringResource(Res.string.common_back),
         onLeave = onNavigateUp,
-        save = save
+        // Exactly when the sticky button is: enabled && !busy.
+        save = FormSave(label = stringResource(Res.string.journal_save), onClick = onSave, enabled = canSave)
     )
 }
 
