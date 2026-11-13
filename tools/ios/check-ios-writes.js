@@ -343,6 +343,9 @@ const RULES = {
   child_info: () => ({
     fixture: 'child_info/repository-save.json',
     keyedMaps: { guests: 'keyed by the guest\'s uid' },
+    // The portrait (schema 47): toFirestoreMap writes the key always, null for a child with none,
+    // as Android does; the fixture's child has one, and the iPhone has no Cloud Storage to add one.
+    replace: { photo: oneOf(NULL, STRING) },
     mayBeEmpty: {
       guests: 'a guest is granted through the guest callable by a third account; ChildInfoGuests.encode is shared code',
       medicalPhotos: NO_STORAGE,
