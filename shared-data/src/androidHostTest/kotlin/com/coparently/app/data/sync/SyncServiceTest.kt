@@ -962,6 +962,21 @@ class SyncServiceTest {
     }
 
     @Test
+    fun `syncUserData completes a blank onboarding marker from the server`() = runTest {
+        // A row seeded while the profile could not be read lacks the marker the server holds; left
+        // blank, the next start walks a parent who finished onboarding through the wizard again.
+        pairWith(partnerId = BOB)
+        coEvery { firestoreUserDataSource.getUserById(ALICE) } returns
+            mapOf("role" to "mom", "onboardingCompletedAt" to "2026-11-01T09:00:00")
+
+        syncService.performFullSync()
+
+        val rows = mutableListOf<UserEntity>()
+        coVerify { userDao.updateUser(capture(rows)) }
+        assertEquals("2026-11-01T09:00:00", rows.last().onboardingCompletedAt)
+    }
+
+    @Test
     fun `syncUserData hands the migrator the incoming role`() = runTest {
         // Alice's local row says "mom"; the remote document already says "dad". The migrator,
         // not this test, decides whether that is a real change — this only pins that the

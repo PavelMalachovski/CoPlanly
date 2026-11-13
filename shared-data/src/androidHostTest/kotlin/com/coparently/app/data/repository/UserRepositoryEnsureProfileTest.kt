@@ -55,6 +55,12 @@ class UserRepositoryEnsureProfileTest {
 
         coEvery { firestoreUserDataSource.updateUser(any(), any()) } returns Result.success(Unit)
         coEvery { userDao.getUserById(any()) } returns null
+        // The tests below stub `getUserById` for what the document holds (null: no document);
+        // `ensureProfile` reads through `readUserOrThrow`, which answers the same unless a test
+        // makes it throw (a read that failed).
+        coEvery { firestoreUserDataSource.readUserOrThrow(any()) } coAnswers {
+            firestoreUserDataSource.getUserById(firstArg())
+        }
 
         repository = UserRepositoryImpl(
             userDao,
@@ -201,9 +207,9 @@ class UserRepositoryEnsureProfileTest {
     }
 
     @Test
-    fun `does not downgrade a stored name when the profile read fails`() = runTest {
-        // A failed read is indistinguishable from a missing document at the data source,
-        // so the local row is the fallback that keeps a real name from being demoted.
+    fun `does not downgrade a stored name when there is no profile document`() = runTest {
+        // With no document to read, the local row is the fallback that keeps a real name from
+        // being demoted to the email local part.
         signedIn(displayName = null, email = "alice@example.com")
         coEvery { firestoreUserDataSource.getUserById(UID) } returns null
         coEvery { userDao.getUserById(UID) } returns localRow(name = "Alice Novak")
@@ -211,6 +217,71 @@ class UserRepositoryEnsureProfileTest {
         repository.ensureProfile()
 
         assertEquals("Alice Novak", capturedRemotePatch()["name"])
+    }
+
+    @Test
+    fun `a failed profile read is tried again before anything is written`() = runTest {
+        // Right after a sign-in the first read can fail on a client still connecting.
+        signedIn(displayName = null, email = "alice@example.com")
+        coEvery { firestoreUserDataSource.readUserOrThrow(UID) } throws
+            IllegalStateException("offline") andThen
+            mapOf("name" to "Alice", "onboardingCompletedAt" to "2026-11-01T09:00:00")
+
+        repository.ensureProfile()
+
+        coVerify(exactly = 2) { firestoreUserDataSource.readUserOrThrow(UID) }
+        val row = slot<UserEntity>()
+        coVerify { userDao.insertUser(capture(row)) }
+        assertEquals("Alice", row.captured.name)
+        assertEquals("2026-11-01T09:00:00", row.captured.onboardingCompletedAt)
+        // The stored name is the one used, so nothing about it is merged back.
+        coVerify(exactly = 0) { firestoreUserDataSource.updateUser(UID, match { "name" in it.keys }) }
+    }
+
+    @Test
+    fun `a profile that cannot be read is never merged into`() = runTest {
+        // What the iPhone's shell walk met: every read of the seeded parent's document failed in
+        // the first session, and a merge then renamed "Alice" to the email local part.
+        signedIn(displayName = null, email = "alice-1234@example.com")
+        coEvery { firestoreUserDataSource.readUserOrThrow(UID) } throws IllegalStateException("offline")
+
+        repository.ensureProfile()
+
+        coVerify(exactly = 5) { firestoreUserDataSource.readUserOrThrow(UID) }
+        coVerify(exactly = 0) { firestoreUserDataSource.updateUser(any(), any()) }
+        // The local row is still made, so the session works; the next read completes it.
+        val row = slot<UserEntity>()
+        coVerify { userDao.insertUser(capture(row)) }
+        assertNull(row.captured.onboardingCompletedAt)
+    }
+
+    @Test
+    fun `an existing row without the onboarding marker takes the server's`() = runTest {
+        // A row seeded while the document could not be read: the next session's read completes it,
+        // or the next start walks a parent who finished onboarding through the wizard again.
+        signedIn(displayName = null, email = "alice@example.com")
+        coEvery { firestoreUserDataSource.getUserById(UID) } returns
+            mapOf("name" to "Alice", "onboardingCompletedAt" to "2026-11-01T09:00:00")
+        coEvery { userDao.getUserById(UID) } returns localRow(name = "alice")
+
+        repository.ensureProfile()
+
+        val row = slot<UserEntity>()
+        coVerify { userDao.insertUser(capture(row)) }
+        assertEquals("Alice", row.captured.name)
+        assertEquals("2026-11-01T09:00:00", row.captured.onboardingCompletedAt)
+    }
+
+    @Test
+    fun `an onboarding marker the row already holds is kept`() = runTest {
+        signedIn(displayName = "Alice", email = "alice@example.com")
+        coEvery { firestoreUserDataSource.getUserById(UID) } returns mapOf("name" to "Alice")
+        coEvery { userDao.getUserById(UID) } returns
+            localRow(name = "Alice").copy(onboardingCompletedAt = "2026-10-01T09:00:00")
+
+        repository.ensureProfile()
+
+        coVerify(exactly = 0) { userDao.insertUser(any()) }
     }
 
     @Test

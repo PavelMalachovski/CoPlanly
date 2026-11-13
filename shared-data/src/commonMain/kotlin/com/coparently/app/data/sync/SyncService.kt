@@ -875,7 +875,12 @@ class SyncService(
                 // way `ParentSlotMigrator.reslotIfSlotChanged` rejects a blank incoming role,
                 // so a document with `role: ""` cannot get stamped onto new records and then
                 // permanently block a real re-stamp of them.
-                role = (remoteUserData["role"] as? String)?.takeIf { it.isNotBlank() } ?: currentUser.role
+                role = (remoteUserData["role"] as? String)?.takeIf { it.isNotBlank() } ?: currentUser.role,
+                // The onboarding marker only moves from blank to set, and the server holds it. A
+                // row seeded while the profile could not be read lacks it, and left blank it walks
+                // a parent who finished onboarding through the wizard again at the next start.
+                onboardingCompletedAt = currentUser.onboardingCompletedAt?.takeIf { it.isNotBlank() }
+                    ?: (remoteUserData["onboardingCompletedAt"] as? String)?.takeIf { it.isNotBlank() }
             )
             userDao.updateUser(updatedUser)
 

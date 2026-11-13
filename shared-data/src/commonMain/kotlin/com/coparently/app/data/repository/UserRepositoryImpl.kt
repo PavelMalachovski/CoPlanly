@@ -22,6 +22,7 @@ import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.serialization.StoredJson
 import com.coparently.app.domain.time.IsoText
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -118,17 +119,20 @@ class UserRepositoryImpl(
             val account = firebaseAuthService.getCurrentAccount() ?: return
             val uid = account.uid
 
-            // Null here means either "no document" or "the read failed"; both are safe,
-            // because every write below is a merge and the name resolution falls back to
-            // the local row rather than to a guess.
+            // Null here means "no document" — or, when [remoteRead] says so, that the document
+            // could not be read even after the retries in [readRemoteProfile]. The two are not
+            // alike: an unread document may well hold a name and an onboarding marker, so
+            // nothing is merged into it on a guess (below), and a local row seeded without it is
+            // completed by the next read that succeeds ([writeLocalProfile], `SyncService`).
             //
             // `providers` covers the gap the other two can't: a real, non-anonymous session
             // (Google, in practice) whose account record predates linking the provider
             // reports nothing at the top level but carries the name/email/photo here. See
             // ProfileIdentity's class doc for why this is a fallback and not a competing
             // source.
+            val remoteRead = readRemoteProfile(uid)
             val snapshot = ProfileSnapshot(
-                remote = firestoreUserDataSource.getUserById(uid),
+                remote = remoteRead.data,
                 local = userDao.getUserById(uid),
                 providers = account.providers
             )
@@ -162,7 +166,15 @@ class UserRepositoryImpl(
                 )
             )
 
-            writeRemoteProfile(uid, remote, identity)
+            // Never a merge into a document this session could not read: the name above is then
+            // at best the local row's and at worst the e-mail address's local part, and merging
+            // it would overwrite the name the document holds (the iPhone's shell walk once
+            // renamed its seeded parent this way). The next session writes what is missing.
+            if (remoteRead.succeeded) {
+                writeRemoteProfile(uid, remote, identity)
+            } else {
+                logger.w(TAG, "The profile document could not be read; nothing merged into it")
+            }
             writeLocalProfile(uid, remote, local, identity)
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
@@ -171,6 +183,38 @@ class UserRepositoryImpl(
         ) {
             logger.e(TAG, "Failed to ensure the user profile", e)
         }
+    }
+
+    /**
+     * What one [ensureProfile] read of `users/{uid}` found: the document's fields ([data], null
+     * when there is no such document or it could not be read) and whether the read [succeeded].
+     */
+    private class RemoteProfileRead(val data: Map<String, Any?>?, val succeeded: Boolean)
+
+    /**
+     * Reads `users/{uid}` for [ensureProfile], trying again a few times when the read itself fails.
+     *
+     * The read runs the moment a session starts, and right after a sign-in it can fail on a client
+     * that has not finished connecting: on the iPhone's shell walk it failed for a whole first
+     * session, and a failed read used to count as an empty document — the local row was seeded
+     * without the onboarding marker, so the next sign-in walked a parent who had finished
+     * onboarding through it again. A missing document is an answer and is not retried: a new
+     * account's profile must not wait on it.
+     */
+    private suspend fun readRemoteProfile(uid: String): RemoteProfileRead {
+        for (attempt in 1..PROFILE_READ_ATTEMPTS) {
+            try {
+                return RemoteProfileRead(firestoreUserDataSource.readUserOrThrow(uid), succeeded = true)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Exception
+            ) {
+                logger.w(TAG, "Profile read $attempt of $PROFILE_READ_ATTEMPTS failed: ${e.message}")
+                if (attempt < PROFILE_READ_ATTEMPTS) delay(PROFILE_READ_RETRY_MILLIS * attempt)
+            }
+        }
+        return RemoteProfileRead(data = null, succeeded = false)
     }
 
     /**
@@ -349,7 +393,12 @@ class UserRepositoryImpl(
         val updated = local?.copy(
             name = identity.name,
             email = identity.email,
-            profilePhotoUrl = identity.photoUrl ?: local.profilePhotoUrl
+            profilePhotoUrl = identity.photoUrl ?: local.profilePhotoUrl,
+            // The onboarding marker only ever moves from blank to set, and the server holds it: a
+            // row seeded while the document could not be read lacks it, and keeping that blank
+            // would walk a parent who has finished onboarding through it again at the next start.
+            onboardingCompletedAt = local.onboardingCompletedAt?.nonBlank()
+                ?: remote?.string("onboardingCompletedAt")
         ) ?: UserEntity(
             id = uid,
             email = identity.email,
@@ -711,6 +760,12 @@ class UserRepositoryImpl(
         /** Same defaults [toUser] applies to a Firestore document that omits them. */
         const val DEFAULT_ROLE = "mom"
         const val DEFAULT_COLOR_CODE = "#FF4081"
+
+        /** How many times [ensureProfile] reads `users/{uid}` before writing without it. */
+        const val PROFILE_READ_ATTEMPTS = 5
+
+        /** The pause after the first failed read; each later one waits that much longer. */
+        const val PROFILE_READ_RETRY_MILLIS = 1_000L
 
         /** `users/{uid}.healthDataConsent` and its two keys; `firestore.rules` bounds the shape. */
         const val HEALTH_CONSENT_KEY = "healthDataConsent"

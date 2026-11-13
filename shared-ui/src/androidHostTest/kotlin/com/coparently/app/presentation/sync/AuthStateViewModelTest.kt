@@ -13,11 +13,14 @@ import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.domain.repository.UserRepository
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -88,6 +91,9 @@ class AuthStateViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
+        // The server's confirmation of a row that says the wizard is owed; by default it changes
+        // nothing, as for a brand-new account whose document holds no marker either.
+        coEvery { userRepository.ensureProfile() } returns Unit
     }
 
     @After
@@ -164,6 +170,53 @@ class AuthStateViewModelTest {
         advanceUntilIdle()
 
         assertEquals(false, vm.needsOnboarding.value)
+    }
+
+    @Test
+    fun `a row without the marker is confirmed with the server before the wizard runs`() = runTest(dispatcher) {
+        // The iPhone's shell walk: the row was seeded while `users/{uid}` could not be read, so it
+        // lacks the marker the server holds; the parent finished onboarding long ago.
+        coEvery { firebaseAuthService.awaitSignedInUid() } returns "u1"
+        val row = MutableStateFlow<User?>(namedAccount)
+        every { userRepository.observeUserById("u1") } returns row
+        stubRecords()
+        coEvery { userRepository.ensureProfile() } answers {
+            row.value = namedAccount.copy(onboardingCompletedAt = "2026-11-01T09:00:00")
+        }
+
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        assertEquals(false, vm.needsOnboarding.value)
+        assertFalse(vm.isLoading.value)
+    }
+
+    @Test
+    fun `a row that already has the marker asks the server nothing`() = runTest(dispatcher) {
+        coEvery { firebaseAuthService.awaitSignedInUid() } returns "u1"
+        every { userRepository.observeUserById("u1") } returns
+            flowOf(namedAccount.copy(onboardingCompletedAt = "2026-11-01T09:00:00"))
+        stubRecords()
+
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        assertEquals(false, vm.needsOnboarding.value)
+        coVerify(exactly = 0) { userRepository.ensureProfile() }
+    }
+
+    @Test
+    fun `a server that cannot confirm in time leaves the row's answer standing`() = runTest(dispatcher) {
+        coEvery { firebaseAuthService.awaitSignedInUid() } returns "u1"
+        every { userRepository.observeUserById("u1") } returns flowOf(namedAccount)
+        stubRecords()
+        coEvery { userRepository.ensureProfile() } coAnswers { delay(60_000) }
+
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        assertEquals(true, vm.needsOnboarding.value)
+        assertFalse(vm.isLoading.value)
     }
 
     @Test
