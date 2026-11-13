@@ -36,9 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import com.coparently.app.data.family.FamilyOption
@@ -49,6 +47,7 @@ import com.coparently.app.presentation.common.ErrorState
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.ListSkeleton
+import com.coparently.app.presentation.common.ScreenBackStep
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.StickyActionBar
@@ -114,9 +113,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * @param onDone Called once the connection is saved (or signed in again).
  * @param viewModel Screen state.
  */
-// `ExperimentalComposeUiApi`: Compose Multiplatform's common `BackHandler` (androidx.activity's on
-// Android, as before).
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConnectSchoolScreen(
     onNavigateUp: () -> Unit,
@@ -130,7 +127,7 @@ fun ConnectSchoolScreen(
     LaunchedEffect(state.done) {
         if (state.done) onDone()
     }
-    BackHandler(onBack = goBack)
+    ScreenBackStep(onBack = goBack)
 
     Scaffold(
         containerColor = ScreenContainerColor,

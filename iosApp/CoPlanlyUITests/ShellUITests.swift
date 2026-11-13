@@ -58,6 +58,7 @@ final class ShellUITests: XCTestCase {
         step("Add expense sheet", after: ["Expenses"]) { try self.addExpenseSheet() }
         step("swipe down over an edit asks", after: ["Add expense sheet"]) { try self.dirtySwipeDown() }
         step("Keep editing stays, Discard leaves", after: ["swipe down over an edit asks"]) { try self.keepEditing() }
+        step("back undoes a screen's inner step", after: ["Family"]) { try self.innerBackStep() }
         step("Settings", after: ["Family"]) { try self.settings() }
         step("cancelled back swipe over a Compose bar", after: ["Settings"]) { try self.cancelledSwipeOverComposeBar() }
         step("a tab tap pops two screens", after: ["Settings"]) { try self.tabTapPopsTwo() }
@@ -169,6 +170,26 @@ final class ShellUITests: XCTestCase {
         try require(question.waitForExistence(timeout: timeout), "Closing over edits did not ask")
         press(try element(labelled: "Discard", in: app.buttons))
         try require(app.navigationBars["Expenses"].waitForExistence(timeout: timeout), "Discard did not close the sheet")
+    }
+
+    /// Custody setup with one of its parts open: the edge swipe is refused rather than leaving the
+    /// screen with the part half-closed, Back returns to the overview, and from the overview the
+    /// swipe leaves. The screen draws its own Compose bar, so its back is the bar's arrow.
+    private func innerBackStep() throws {
+        try openCustodySetup()
+        press(try element(containing: "Contact windows"))
+        try require(waitForNoLabel(containing: "Main schedule"), "Contact windows did not open over the overview")
+        shot("13-custody-part-open")
+        swipeBack(to: 0.85)
+        sleep(2)
+        try require(!app.navigationBars["Family"].exists, "The edge swipe left custody setup with a part open")
+        try require(!labelExists(containing: "Main schedule"), "The edge swipe closed the part it should have left alone")
+        press(try element(labelled: "Back", in: app.buttons))
+        try require(element(labelledContaining: "Main schedule").waitForExistence(timeout: timeout), "Back did not return to the overview")
+        try require(!app.navigationBars["Family"].exists, "Back left custody setup instead of closing the part")
+        shot("14-custody-overview-after-back")
+        swipeBack(to: 0.85)
+        try require(app.navigationBars["Family"].waitForExistence(timeout: timeout), "The edge swipe from the overview did not leave custody setup")
     }
 
     private func settings() throws {
@@ -303,6 +324,20 @@ final class ShellUITests: XCTestCase {
         try require(app.navigationBars["Family"].waitForExistence(timeout: timeout), "The Family tab's first screen is missing")
     }
 
+    /// Opens custody setup from the Family tab's agreements: a screen with its own Compose bar.
+    private func openCustodySetup() throws {
+        try goToFamilyRoot()
+        let row = try element(containing: "Custody schedule")
+        let screenBottom = app.windows.firstMatch.frame.maxY - 120
+        for _ in 0..<6 where row.frame.maxY > screenBottom {
+            app.swipeUp()
+        }
+        sleep(1)
+        press(row)
+        if !app.navigationBars["Family"].waitForNonExistence(timeout: 3) { press(row) }
+        try require(element(labelledContaining: "Main schedule").waitForExistence(timeout: timeout), "Custody setup did not open at its overview")
+    }
+
     private func goToExpenses() throws {
         if app.navigationBars["Expenses"].exists && !app.navigationBars["Add expense"].exists { return }
         try goToFamilyRoot()
@@ -427,6 +462,20 @@ final class ShellUITests: XCTestCase {
         let exact = query.matching(NSPredicate(format: "label == %@", label)).firstMatch
         if exact.waitForExistence(timeout: 10) { return exact }
         return try element(containing: label)
+    }
+
+    /// The first element whose label holds [text], found or not.
+    private func element(labelledContaining text: String) -> XCUIElement {
+        app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
+    }
+
+    private func labelExists(containing text: String) -> Bool {
+        element(labelledContaining: text).exists
+    }
+
+    /// Whether nothing on screen reads [text] within the step timeout.
+    private func waitForNoLabel(containing text: String) -> Bool {
+        element(labelledContaining: text).waitForNonExistence(timeout: timeout)
     }
 
     private func element(containing text: String) throws -> XCUIElement {

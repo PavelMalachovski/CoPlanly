@@ -37,9 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
@@ -53,6 +51,7 @@ import com.coparently.app.domain.chat.ToneNudge
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
+import com.coparently.app.presentation.common.ScreenBackStep
 import com.coparently.app.presentation.common.rememberMicrophonePermissionRequester
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.valueOrNull
@@ -115,9 +114,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * @param dictationViewModel Voice dictation into the composer — on the phone only, and drawn only
  *   where the phone can recognise speech on the device (see `OnDeviceSpeechDictation`)
  */
-// `ExperimentalComposeUiApi`: Compose Multiplatform's common `BackHandler` (androidx.activity's on
-// Android, as before).
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 // One callback per navigation target this screen offers; the body is the thread scaffold, which
 // only reads as one screen when it is written as one — including its kept-thread shape, where the
@@ -242,7 +239,7 @@ fun ChatScreen(
     }
 
     // Back closes search first, and only then leaves the thread.
-    BackHandler(enabled = searching) { searchViewModel.close() }
+    ScreenBackStep(enabled = searching) { searchViewModel.close() }
 
     // The lexical second look (MON-19): part of "Pause before sending", so only for a parent who
     // asked for it. Computed while rendering and dropped with the frame — never stored, logged or

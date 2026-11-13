@@ -41,9 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -85,6 +83,7 @@ import com.coparently.app.presentation.calendar.components.steppedDay
 import com.coparently.app.presentation.changerequests.RequestsState
 import com.coparently.app.presentation.common.FamilyMemberFilterStrip
 import com.coparently.app.presentation.common.LocalDatePickerDialog
+import com.coparently.app.presentation.common.ScreenBackStep
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
@@ -205,9 +204,7 @@ internal fun queryRangeFor(
  * event dots. School vacation, a banner in that review, is a neutral line along each vacation
  * day's bottom edge since MON-13 (the banner changed the grid's height between months).
  */
-// `ExperimentalComposeUiApi`: Compose Multiplatform's common `BackHandler` (androidx.activity's on
-// Android, as before).
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 // Three view modes, filters, holidays and custody all key off the same date state; splitting the
 // body would hand each half the other's state rather than removing any of the branching.
@@ -682,7 +679,7 @@ fun CalendarScreen(
     // Back from a day opened by tapping a month cell returns to that month instead of leaving the
     // tab (docs/AUDIT-2026-10-design.md D-11): the tap reads as drilling in, so Back has to read
     // as coming back out. A Day view reached through the view picker keeps the default Back.
-    BackHandler(enabled = viewMode == CalendarViewMode.DAY && dayOpenedFromMonth) {
+    ScreenBackStep(enabled = viewMode == CalendarViewMode.DAY && dayOpenedFromMonth) {
         dayOpenedFromMonth = false
         calendarViewModel.setViewMode(CalendarViewMode.MONTH)
     }

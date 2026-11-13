@@ -15,6 +15,7 @@ import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.BarHost
 import com.coparently.app.presentation.common.BarLeading
 import com.coparently.app.presentation.common.BarMenuItem
+import com.coparently.app.presentation.common.BackSteps
 import com.coparently.app.presentation.common.ScreenBar
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.Foundation.NSSelectorFromString
@@ -52,11 +53,15 @@ import platform.darwin.dispatch_get_main_queue
  *
  * @property largeTitle Whether this screen shows a large title whatever its bar says (Settings).
  * @property sheetRoot Whether the screen is a sheet's first screen, whose back is a close button.
+ * @property backSteps The screen's inner steps ([BackSteps]): while one is enabled the back button
+ *   undoes it rather than leaving the screen, so the system back button gives way to one of the
+ *   shell's own that asks them first.
  * @property chipFrame Wraps the chip and the title view in the providers the screen is composed in.
  */
 internal class NativeBars(
     private val largeTitle: Boolean,
     private val sheetRoot: Boolean,
+    private val backSteps: BackSteps,
     private val chipFrame: @Composable (content: @Composable () -> Unit) -> Unit
 ) : BarHost {
 
@@ -80,6 +85,19 @@ internal class NativeBars(
         if (visible == drawn) return
         drawn = visible
         draw(bar)
+    }
+
+    /** Whether the screen has an inner step its back undoes first, as last told ([stepPending]). */
+    private var stepPending = false
+
+    /**
+     * Whether the screen has an inner step its back undoes first. While it has, a back button of the
+     * shell's own stands in for the system one, which UIKit would answer by popping the screen.
+     */
+    fun stepPending(pending: Boolean) {
+        if (stepPending == pending) return
+        stepPending = pending
+        current?.let { drawLeading(it.leading) }
     }
 
     /** Whether the screen is on screen now, as its view controller last appeared or disappeared. */
@@ -157,6 +175,11 @@ internal class NativeBars(
             is BarLeading.Back -> if (sheetRoot) {
                 // A sheet has no screen to go back to: its way out is the close button.
                 item.leftBarButtonItem = closeItem(leading.label, leading.enabled)
+            } else if (stepPending) {
+                // UIKit's own back button pops the screen with no word to ask first: while a step
+                // waits, a button of the shell's own, drawn as the back chevron, undoes it instead.
+                item.hidesBackButton = false
+                item.leftBarButtonItem = backItem(leading.label, leading.enabled)
             } else {
                 item.leftBarButtonItem = null
                 item.hidesBackButton = !leading.enabled
@@ -176,9 +199,22 @@ internal class NativeBars(
         }
     }
 
+    private fun backItem(label: String, enabled: Boolean): UIBarButtonItem {
+        val action = UIAction.actionWithTitle(
+            title = label,
+            image = SfSymbols.image(BACK_SYMBOL),
+            identifier = null
+        ) { _ -> clickLeading() }
+        return UIBarButtonItem(primaryAction = action).apply {
+            setEnabled(enabled)
+            accessibilityLabel = label
+        }
+    }
+
+    /** The leading item was tapped: a back undoes the screen's inner step first, if it has one. */
     private fun clickLeading() {
         when (val leading = current?.leading) {
-            is BarLeading.Back -> leading.onClick()
+            is BarLeading.Back -> if (!backSteps.handle()) leading.onClick()
             is BarLeading.Close -> leading.onClick()
             BarLeading.None, null -> Unit
         }
@@ -300,6 +336,9 @@ internal class NativeBars(
          * frame, so it would never measure the chip again once a second family arrived.
          */
         const val MIN_CHIP_SIDE = 1.0
+
+        /** The system back button's chevron, which the shell's own back button draws. */
+        const val BACK_SYMBOL = "chevron.backward"
     }
 }
 

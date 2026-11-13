@@ -1,8 +1,3 @@
-// `ExperimentalComposeUiApi`: Compose Multiplatform's common `BackHandler` (androidx.activity's on
-// Android, as before), opted in for the file so the screen's own annotations, which the detekt
-// baseline keys an entry on, stay as they were.
-@file:OptIn(ExperimentalComposeUiApi::class)
-
 package com.coparently.app.presentation.custody
 
 import androidx.compose.animation.AnimatedVisibility
@@ -59,9 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -76,6 +69,7 @@ import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.ScreenBackStep
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
@@ -163,7 +157,7 @@ fun CustodySetupScreen(
     val answerByCap by viewModel.answerByCap.collectAsState()
     var answerBy by rememberSaveable(stateSaver = AnswerByPickSaver) { mutableStateOf(AnswerByPick.DEFAULT) }
     // Scoped to one child (FAM-4), Back returns to the family schedule rather than leaving.
-    BackHandler(enabled = childScope != null) { viewModel.editSchedule(null) }
+    ScreenBackStep(enabled = childScope != null) { viewModel.editSchedule(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Show error snackbar
@@ -197,7 +191,7 @@ fun CustodySetupScreen(
         openSeasonal = layersState.planReference != null
     )
     val shown = if (childScope != null) CustodySection.PATTERN else section
-    BackHandler(enabled = childScope == null && section != null) { section = null }
+    ScreenBackStep(enabled = childScope == null && section != null) { section = null }
 
     Scaffold(
         containerColor = ScreenContainerColor,

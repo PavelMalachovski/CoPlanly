@@ -19,12 +19,11 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.saveable.Saver
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import com.coparently.app.presentation.common.ScreenBackStep
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
@@ -73,9 +72,7 @@ fun SwapDaysButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
  * and the month with arrows either side, so paging while choosing needs no swipe. Back closes it
  * too.
  */
-// `ExperimentalComposeUiApi`: Compose Multiplatform's common `BackHandler` (androidx.activity's on
-// Android, as before).
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SwapSelectionHeader(
     month: YearMonth,
@@ -83,7 +80,7 @@ internal fun SwapSelectionHeader(
     onNextMonth: () -> Unit,
     onClose: () -> Unit
 ) {
-    BackHandler(onBack = onClose)
+    ScreenBackStep(onBack = onClose)
     TopAppBar(
         colors = screenTopAppBarColors(),
         navigationIcon = {

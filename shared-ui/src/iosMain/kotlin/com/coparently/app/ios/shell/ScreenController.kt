@@ -9,9 +9,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -24,8 +26,10 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.LocalOwnersProvider
 import com.coparently.app.presentation.AppProviders
+import com.coparently.app.presentation.common.BackSteps
 import com.coparently.app.presentation.common.ConnectivityBanner
 import com.coparently.app.presentation.common.LocalAppMessages
+import com.coparently.app.presentation.common.LocalBackSteps
 import com.coparently.app.presentation.common.LocalBarHost
 import com.coparently.app.presentation.common.LocalSheetGuard
 import com.coparently.app.presentation.common.SheetGuard
@@ -50,7 +54,9 @@ import platform.UIKit.UIViewController
  * navigation bar, and the messages that outlive a screen show at its bottom.
  *
  * UIKit's own back (the button and the edge swipe) is the back here: Compose's back gesture is off,
- * so the two never both answer one swipe.
+ * so the two never both answer one swipe. A screen's inner steps ([backSteps], provided as
+ * [LocalBackSteps]) come first: the bar's back button undoes the latest one, and the edge swipe is
+ * refused while one is enabled.
  *
  * @property entry The back-stack entry this screen draws.
  * @property session The owner of the ViewModels the session's screens share, which ends with them.
@@ -66,10 +72,14 @@ internal class ScreenController(
     val nativeBar: Boolean,
     private val sheetGuard: SheetGuard?
 ) {
+    /** The screen's inner steps, which the shell's back asks before it pops the screen. */
+    val backSteps = BackSteps()
+
     private val bars = NativeBars(
         // Settings is the one pushed screen whose title is large, as iOS's own Settings app shows it.
         largeTitle = entry.destination.route == Screen.Settings.route,
         sheetRoot = sheetGuard != null,
+        backSteps = backSteps,
         // The chip's ViewModel is the screen's, as on Android, where the chip is in the screen. The
         // theme alone, without the app's background surface, so the bar shows around the chip.
         chipFrame = { content ->
@@ -99,8 +109,15 @@ internal class ScreenController(
         Shared {
             CompositionLocalProvider(
                 LocalBarHost provides bars.takeIf { nativeBar },
-                LocalSheetGuard provides sheetGuard
+                LocalSheetGuard provides sheetGuard,
+                LocalBackSteps provides backSteps
             ) {
+                // The bar's back button follows whether a step waits: its own while one does.
+                if (nativeBar) {
+                    LaunchedEffect(Unit) {
+                        snapshotFlow { backSteps.hasEnabledStep }.collect { bars.stepPending(it) }
+                    }
+                }
                 ScreenFrame(shell) {
                     WhileAlive(entry) {
                         entry.LocalOwnersProvider(rememberSaveableStateHolder()) { destination.content(entry) }

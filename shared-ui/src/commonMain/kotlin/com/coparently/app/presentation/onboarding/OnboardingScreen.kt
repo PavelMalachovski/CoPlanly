@@ -44,14 +44,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.common.CountryPicker
 import com.coparently.app.presentation.common.STACK_CONTROLS_FONT_SCALE
+import com.coparently.app.presentation.common.ScreenBackStep
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
@@ -142,9 +141,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * @param viewModel Wizard state and mutations
  * @param scheduleViewModel The schedule step's form and its never-proposing save
  */
-// `ExperimentalComposeUiApi`: Compose Multiplatform's common `BackHandler` (androidx.activity's on
-// Android, as before).
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OnboardingScreen(
     onFinished: () -> Unit,
@@ -168,7 +165,7 @@ fun OnboardingScreen(
 
     // The wizard is the start destination, so an unhandled back press would close the app from
     // step 2. Inside the wizard, back means "the previous question".
-    BackHandler(enabled = !uiState.isFirstStep) { viewModel.back() }
+    ScreenBackStep(enabled = !uiState.isFirstStep) { viewModel.back() }
 
     // On the schedule step the primary button saves the form (which only ever activates) or, over
     // a schedule the pair already shares, confirms it and writes nothing.
