@@ -142,7 +142,8 @@ actual val platformDataModule: Module = module {
     single<SignedInUser> { get<IosFirebaseAuth>() }
     single<AuthSession> { get<IosFirebaseAuth>() }
     single<AccountSignIn> { get<IosFirebaseAuth>() }
-    single { IosAccountTraces(get()) }
+    // The provider session is the app's Google bridge, which `IosApp.start` binds (`iosAppModule`).
+    single { IosAccountTraces(get(), get()) }
     single<AccountTraces> { get<IosAccountTraces>() }
     single<LastSignedInUid> { UserDefaultsLastSignedInUid }
     single<AccountConsistency> {

@@ -6,6 +6,7 @@ import com.coparently.app.data.platform.StoredText
 import com.coparently.app.data.session.AccountSwitchFixture
 import com.coparently.app.data.session.AccountSwitchFixture.Companion.ORDINARY_KEY
 import com.coparently.app.data.session.AccountSwitchFixture.Companion.SCHOOL_KEY
+import com.coparently.app.data.session.SignInProviderSession
 import com.coparently.app.data.session.previousInstallCleanup
 import dev.gitlive.firebase.auth.FirebaseAuthInvalidCredentialsException
 import kotlinx.coroutines.flow.first
@@ -141,18 +142,22 @@ class IosFirebaseAuthEmulatorTest {
             val store = KeychainTextStore(service = "app.coplanly.test.previous-install", account = "reinstall")
             store.write("the previous install's preferences")
             val marker = FreshMarker()
+            var googleSignOuts = 0
+            val google = SignInProviderSession { googleSignOuts++ }
 
-            previousInstallCleanup(marker, store, firebase).clearIfFirstLaunch()
+            previousInstallCleanup(marker, store, firebase, google).clearIfFirstLaunch()
 
             assertNull(firebase.currentUser)
+            assertEquals(1, googleSignOuts, "Google Sign-In's session ends with the previous install's")
             assertNull(auth.awaitSignedInUid())
             assertEquals(StoredText.Absent, store.read())
             assertTrue(marker.set)
 
             // The second launch of the same install leaves the next account signed in.
             assertTrue(auth.createAccountWithEmail(newEmail(), PASSWORD).isSuccess)
-            previousInstallCleanup(marker, store, firebase).clearIfFirstLaunch()
+            previousInstallCleanup(marker, store, firebase, google).clearIfFirstLaunch()
             assertNotNull(firebase.currentUser)
+            assertEquals(1, googleSignOuts, "a later launch leaves Google's session alone")
         }
 
     /** An install marker as a fresh install finds it: unset. */

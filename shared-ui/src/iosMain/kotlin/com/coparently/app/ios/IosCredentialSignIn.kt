@@ -30,6 +30,14 @@ interface GoogleIdTokenSource {
     fun requestIdToken(
         completion: (idToken: String?, accessToken: String?, cancelled: Boolean, error: String?) -> Unit
     )
+
+    /**
+     * Ends Google Sign-In's own session on this phone (`GIDSignIn.sharedInstance.signOut()`), so the
+     * sheet does not offer the previous parent's account first: called when the app signs out
+     * (`IosAccountTraces.clearAfterSignOut`) and on the first launch after an install
+     * (`clearPreviousInstall`). Does nothing when there is no session or no client id.
+     */
+    fun signOut()
 }
 
 /**

@@ -114,6 +114,18 @@ watch_app() {
   done
 }
 
+# Stops the watch_app loop running as <pid> and whatever it is running (its `sleep` or `sample`),
+# which would otherwise outlive it: a killed subshell's children are handed to launchd and keep
+# running. The loop is stopped first so it cannot start another child between the two kills.
+stop_watcher() {
+  local pid=$1
+  kill -STOP "$pid" 2>/dev/null || true
+  pkill -P "$pid" 2>/dev/null || true
+  kill "$pid" 2>/dev/null || true
+  kill -CONT "$pid" 2>/dev/null || true
+  wait "$pid" 2>/dev/null || true
+}
+
 # Prints the main thread of the newest sample watch_app took, if any.
 show_samples() {
   local out=$1 newest
@@ -149,8 +161,7 @@ shell_test() {
     -derivedDataPath iosApp/build \
     -only-testing:CoPlanlyUITests \
     -resultBundlePath "$out/shell.xcresult" || status=$?
-  kill "$watcher" 2>/dev/null || true
-  wait "$watcher" 2>/dev/null || true
+  stop_watcher "$watcher"
   if [ "$status" -ne 0 ]; then show_samples "$out"; fi
   mkdir -p "$out/shots"
   xcrun xcresulttool export attachments --path "$out/shell.xcresult" --output-path "$out/shots" || true

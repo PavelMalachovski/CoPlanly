@@ -292,6 +292,12 @@ final class ShellUITests: XCTestCase {
     }
 
     /// The month the calendar opens on, as its bar titles it: this month's name, in English.
+    ///
+    /// Two assumptions, both true of CI's simulator: the app speaks English (the simulator's
+    /// language, so the shared `calendarMonthTitle` names the month as `en` does, with no year for
+    /// the current one), and the walk does not run across midnight at a month's end, when the app
+    /// and this test could read two different months. The test's clock is the simulator's, as the
+    /// app's is.
     private var calendarMonthTitle: String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en")
@@ -348,11 +354,15 @@ final class ShellUITests: XCTestCase {
         let open = app.buttons.matching(NSPredicate(format: "label == %@", "Add a description")).firstMatch
         if open.waitForExistence(timeout: 5) { press(open) }
         let description = try field(labelled: "Description (optional)")
-        try type("Keyboard check", into: description)
+        let text = "Keyboard check"
+        try type(text, into: description)
         try require(app.keyboards.firstMatch.waitForExistence(timeout: timeout), "No keyboard over the description")
         shot("18-event-description-keyboard")
         try require(isClearOfKeyboard(description), "The description field is under the keyboard")
         try require(sheetBar.buttons["Save event"].exists, "The sheet's Save left its bar while typing")
+        // What was typed is deleted again: a new event's draft is kept as the parent types (CLAUDE.md
+        // design item 16), and a check's words must not come back on the next "+".
+        app.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: text.count))
         // The description's return closes the keyboard; a new event then closes without asking.
         dismissKeyboard()
         swipeSheetDown(from: sheetBar)
@@ -432,6 +442,13 @@ final class ShellUITests: XCTestCase {
         try require(app.staticTexts["Welcome back!"].waitForExistence(timeout: 120), "Signing out did not reach the sign-in screen")
         try require(!app.tabBars.firstMatch.exists, "The tab bar is still there on the sign-in screen")
         shot("11-signed-out")
+        // The sign-out ran to its end, not only to the screen change: the session is gone from the
+        // Keychain too, so a relaunch opens on the sign-in screen again (Settings signs out through
+        // the shell's own session state, which outlives the Settings screen it was started from).
+        app.terminate()
+        app.launch()
+        try require(app.staticTexts["Welcome back!"].waitForExistence(timeout: 120), "A relaunch after signing out was still signed in")
+        try require(!app.tabBars.firstMatch.exists, "A relaunch after signing out showed the tabs")
         try signIn(email: email, password: password)
         // Fresh tabs: the Family tab opens at its first screen, not at the Settings it was left on.
         app.tabBars.firstMatch.buttons["Family"].tap()

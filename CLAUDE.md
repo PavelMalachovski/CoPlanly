@@ -1226,7 +1226,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
 - **The `ios-app` job builds and runs the iPhone app** ("iPhone app — build and launch (macOS)",
   MON-24 phase 3, November 2026), gated on `changes`' ninth output, `ios`: whatever runs `shared`,
   any path under `iosApp/`, and the write gate's inputs (`tools/ios/`, `wire/current/`,
-  `firestore.rules`, `functions/`, `tools/e2e/pairing-smoke.js`). It is not draft-gated. On a
+  `firestore.rules`, `functions/`, `tools/e2e/pairing-smoke.js`), and any path `NON_IOS` does not
+  name, as an unfamiliar path runs every job (part B, Task 12). It is not draft-gated. On a
   GitHub-hosted `macos-latest` runner it uses the image's Xcode (26.6 in November 2026, above the
   26.4 Kotlin 2.4.21 names; Kotlin warns and it works) and a simulator `iosApp/scripts/simulator.sh
   pick` chooses at run time (an "iPhone 16" if the image has one, else the first iPhone on the newest
@@ -2476,7 +2477,9 @@ platform says otherwise; on the iPhone, since MON-24 phase 3's Task 9, the shell
 provides `IosCredentialSignIn`: Google's sheet through the app's `GoogleSignInBridge.swift`,
 available only with a bundled `GoogleService-Info.plist`, and never a saved-password button, which
 iOS autofill replaces; the access token the iOS credential needs beside the ID token waits in
-`shared-data`'s iOS `GoogleAccessTokens` for the matching ID token, used once); the legal notice draws the terms clause and the two
+`shared-data`'s iOS `GoogleAccessTokens` for the matching ID token, used once; Google Sign-In's own
+session ends with ours, on sign-out and on the first launch after an install,
+`SignInProviderSession`, part B's Task 12); the legal notice draws the terms clause and the two
 links only while their address is set and the phone opens links (`AppBuildValues`, `OpenUrl`), so the
 app's `PrivacyPolicyLink` and `TermsOfServiceLink` are gone. The profile's dates are
 `readerMediumDate` and its picker the kotlinx `LocalDatePickerDialog` with the child records' labels

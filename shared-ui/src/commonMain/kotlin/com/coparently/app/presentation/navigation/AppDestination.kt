@@ -35,6 +35,7 @@ import com.coparently.app.presentation.common.animations.slideInFromLeft
 import com.coparently.app.presentation.common.animations.slideInFromRight
 import com.coparently.app.presentation.common.animations.slideOutToLeft
 import com.coparently.app.presentation.common.animations.slideOutToRight
+import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.consent.TelemetryConsentScreen
 import com.coparently.app.presentation.documents.FamilyDocumentsScreen
 import com.coparently.app.presentation.event.AddEditEventScreen
@@ -56,6 +57,7 @@ import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.navigation_loading
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * How a shell presents a destination (MON-24 phase 3). Android draws every kind in its one
@@ -554,6 +556,12 @@ internal fun appDestinations(
         route = Screen.Settings.route,
         transitions = DestinationTransitions.PUSH
     ) {
+        // On the iPhone, sign-out runs on the shell's own session state (the one deciding the start
+        // destination, which outlives this screen): a Settings-scoped copy was cleared with the
+        // screen the sign-out navigates away from, cutting its steps short, and the shell never
+        // heard that the account had gone. Android keeps the entry's own, as it always had.
+        val sessionState: AuthStateViewModel =
+            if (shellDrawsBars()) authStateViewModel else koinViewModel()
         SettingsScreen(
             // Reached via the gear action in the top-level top bars — it opens as
             // a detail screen, so it gets a back arrow.
@@ -575,7 +583,8 @@ internal fun appDestinations(
                     popUpTo(Screen.Calendar.route) { inclusive = true }
                 }
             },
-            syncViewModel = syncViewModel
+            syncViewModel = syncViewModel,
+            authStateViewModel = sessionState
         )
     },
 

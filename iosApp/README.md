@@ -97,9 +97,10 @@ the keyboard offers the Keychain's passwords; there is no separate button for th
 `ContentType` semantics do not reach iOS in Compose Multiplatform 1.9.3 (CMP-7154), so `NewPassword`
 on sign-up is not honoured there yet.
 
-Signing out of the app does not sign out of Google Sign-In's own session (`GIDSignIn.signOut` is not
-called), as Android keeps its credential state too: the next "Continue with Google" may offer the
-same Google account at once.
+Signing out of the app also ends Google Sign-In's own session (`GoogleSignInBridge.signOut`, which
+calls `GIDSignIn.signOut`), and so does the first launch after an install, since the Keychain where
+Google Sign-In keeps it survives an uninstall: on a shared phone the next "Continue with Google"
+asks for an account rather than offering the previous parent's (part B, Task 12).
 
 ## In CI
 

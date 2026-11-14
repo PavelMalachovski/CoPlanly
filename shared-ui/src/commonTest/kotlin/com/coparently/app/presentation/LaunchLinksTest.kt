@@ -100,4 +100,26 @@ class LaunchLinksTest {
         assertNull(LaunchLinks.parse("coplanly:pair?code=4F7K2M"))
         assertNull(LaunchLinks.parse("://pair"))
     }
+
+    @Test
+    fun `a port is not part of the host - as android Uri reads it`() {
+        assertEquals(LaunchLink.Pair("4F7K2M"), LaunchLinks.parse("coplanly://pair:80?code=4F7K2M"))
+        assertEquals(LaunchLink.Pair("4F7K2M"), LaunchLinks.parse("coplanly://pair:?code=4F7K2M"))
+        assertEquals(
+            LaunchLink.Chat(familyId = null, conversationId = null),
+            LaunchLinks.parse("coplanly://user@chat:443")
+        )
+    }
+
+    @Test
+    fun `a colon not followed by digits alone stays in the host`() {
+        assertNull(LaunchLinks.parse("coplanly://pair:x?code=4F7K2M"))
+        assertNull(LaunchLinks.parse("coplanly://pair:8a?code=4F7K2M"))
+    }
+
+    @Test
+    fun `the host is percent-decoded and ends at a backslash`() {
+        assertEquals(LaunchLink.Pair("4F7K2M"), LaunchLinks.parse("coplanly://p%61ir?code=4F7K2M"))
+        assertEquals(LaunchLink.Pair(""), LaunchLinks.parse("coplanly://pair\\x"))
+    }
 }

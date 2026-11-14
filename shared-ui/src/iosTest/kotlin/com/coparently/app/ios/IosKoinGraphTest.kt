@@ -53,6 +53,7 @@ import com.coparently.app.data.session.AccountTraces
 import com.coparently.app.data.session.IosAccountTraces
 import com.coparently.app.data.session.LastSignedInUid
 import com.coparently.app.data.session.SessionProfileSynchronizer
+import com.coparently.app.data.session.SignInProviderSession
 import com.coparently.app.data.support.SupportReminderScheduler
 import com.coparently.app.data.sync.GoogleCalendarAutoImport
 import com.coparently.app.data.sync.SyncRequester
@@ -103,7 +104,7 @@ class IosKoinGraphTest {
                 ?: "127.0.0.1"
         )
         val koin = startKoin {
-            modules(dataModules + platformDataModule + uiModules + platformUiModule + iosAppModule)
+            modules(dataModules + platformDataModule + uiModules + platformUiModule + iosAppModule(NoGoogle))
         }.koin
         try {
             val missing = SEAMS.mapNotNull { type ->
@@ -142,6 +143,19 @@ class IosKoinGraphTest {
             // what IosApp.startSession starts, and what its sync runs
             ChatMirror::class, SessionProfileSynchronizer::class, SyncService::class,
             GoogleCalendarAutoImport::class, PairingRepository::class,
+            // iosAppModule
+            SignInProviderSession::class,
         )
+
+        /** Google's sheet as a phone without a `GoogleService-Info.plist` has it: unavailable. */
+        object NoGoogle : GoogleIdTokenSource {
+            override val available: Boolean = false
+
+            override fun requestIdToken(
+                completion: (idToken: String?, accessToken: String?, cancelled: Boolean, error: String?) -> Unit
+            ) = completion(null, null, false, "no Google here")
+
+            override fun signOut() = Unit
+        }
     }
 }

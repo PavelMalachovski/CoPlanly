@@ -2847,19 +2847,16 @@ notes list each file):
 - **Still owed from part A** (the final review of part A, November 2026; each is part B's):
   - `EdgeSwipeBack` pops past a screen's own `BackHandler` steps (ConnectSchool, CustodySetup's
     sections, Chat search): refuse the swipe while an enabled `BackHandler` exists.
-  - Google Sign-In's SDK session is not signed out on app sign-out or on a fresh install, so a
-    shared phone may preselect the previous account.
-  - `IosApp.start` should check its double-start guard first.
-  - `CFBundleLocalizations` against `AppLanguageRule`: with Slovak then Czech the screens are in
-    English and the system chrome in Czech.
   - Commit `Package.resolved` from the owner's Mac.
-  - An unknown path gives `ios=false` in `tools/ci-changes.js`, against "an unfamiliar path runs
-    everything".
-  - The write gate's minors, before the iPhone writes to real families: non-empty attachments, and
-    a delete that is not recorded.
   - The recurring `LocalDatePickerDialogTest` `DeadSystemException` on the API 35 16 KB leg
     deserves its own investigation.
   - Android autofill now reads the sign-in fields' `ContentType` hints (Task 9); the owner may veto.
+  - `CFBundleLocalizations` now lists exactly `AppLanguageRule.SHIPPED` (part B, Task 12), but iOS
+    matches the phone's whole language list against it: with Slovak then Czech the screens are in
+    English and the system chrome in Czech. Only a per-app language choice on iOS can align them.
+  - After a deletion whose local wipe throws, the phone stays signed in as a deleted account
+    (Android has the same shape); and a new sign-in after a deletion is not yet verified on the
+    iPhone.
 - **From the data-layer move** (Task 8, and "Carried into the data-layer move" below): the sign-in's
   ID-token-only path through GitLive (Android passes no access token; GitLive's iOS side needs
   both); `getToken()` of the FCM and APNs token on a phone with a real project; GitLive's iOS

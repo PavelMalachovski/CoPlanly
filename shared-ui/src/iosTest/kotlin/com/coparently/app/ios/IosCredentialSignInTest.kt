@@ -1,10 +1,17 @@
 package com.coparently.app.ios
 
+import com.coparently.app.data.platform.IosAppDirectories
 import com.coparently.app.data.remote.firebase.GoogleAccessTokens
+import com.coparently.app.data.session.AccountTraces
+import com.coparently.app.data.session.IosAccountTraces
+import com.coparently.app.data.session.SignInProviderSession
+import com.coparently.app.di.koin.platformDataModule
 import com.coparently.app.presentation.auth.AuthError
 import com.coparently.app.presentation.auth.IosAuthErrors
 import com.coparently.app.presentation.auth.NoSavedPassword
 import kotlinx.coroutines.test.runTest
+import org.koin.core.context.startKoin
+import org.koin.core.context.stopKoin
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -97,6 +104,30 @@ class IosCredentialSignInTest {
         assertEquals(AuthError.NoSavedPassword, IosAuthErrors.fromSavedPassword(failure))
     }
 
+    @Test
+    fun `every app sign-out ends Google's session once`() = runTest {
+        val google = FakeSource(Answer())
+        // The graph's sign-out half as `IosApp.start` builds it: the traces and the app's module.
+        val koin = startKoin { modules(platformDataModule + iosAppModule(google)) }.koin
+        try {
+            val traces = koin.get<AccountTraces>()
+
+            traces.clearAfterSignOut()
+            assertEquals(1, google.signOuts)
+            traces.clearAfterSignOut()
+            assertEquals(2, google.signOuts)
+        } finally {
+            stopKoin()
+        }
+    }
+
+    @Test
+    fun `a sign-out goes on when Google's session cannot be ended`() = runTest {
+        val traces = IosAccountTraces(IosAppDirectories(), SignInProviderSession { error("Keychain locked") })
+
+        traces.clearAfterSignOut()
+    }
+
     /** What the fake sheet answers. */
     private data class Answer(
         val idToken: String? = null,
@@ -107,9 +138,16 @@ class IosCredentialSignInTest {
 
     /** A Google sheet that answers [answer] at once, as the Swift bridge answers on the main queue. */
     private class FakeSource(private val answer: Answer, override val available: Boolean = true) : GoogleIdTokenSource {
+        /** How many times Google's session was ended. */
+        var signOuts = 0
+
         override fun requestIdToken(
             completion: (idToken: String?, accessToken: String?, cancelled: Boolean, error: String?) -> Unit
         ) = completion(answer.idToken, answer.accessToken, answer.cancelled, answer.error)
+
+        override fun signOut() {
+            signOuts++
+        }
     }
 
     private companion object {

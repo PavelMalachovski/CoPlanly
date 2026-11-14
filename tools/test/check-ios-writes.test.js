@@ -270,3 +270,48 @@ function restFieldsOf(value, text) {
   };
   return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, restOf(v, k)]));
 }
+
+test('a deleted event is held to the tombstone fixture, its revision too (part B, Task 12)', () => {
+  const cursor = { serverUpdatedAt: { timestampValue: '2026-11-11T07:00:00Z' } };
+  const tombstoneFields = { deletedAtMillis: i(1778000000000), deletedBy: s('uidA') };
+  // The gate's deletion: a repository save (members, a reminder) with the tombstone merged in.
+  const deleted = storedFixture('events/repository-save.json', Object.assign({}, cursor, tombstoneFields));
+  assert.deepEqual(compareDocument(ruleFor('events', deleted, FIXTURES).shape, deleted), []);
+  const asText = storedFixture('events/repository-save.json',
+    Object.assign({}, cursor, tombstoneFields, { deletedAtMillis: s('1778000000000') }));
+  assert.deepEqual(compareDocument(ruleFor('events', asText, FIXTURES).shape, asText), [
+    'deletedAtMillis: integer expected, string found',
+  ]);
+  const saved = storedFixture('events/repository-save.json', cursor);
+  assert.deepEqual(compareDocument(ruleFor('events', saved, FIXTURES).shape, saved), []);
+
+  const recordedAt = { recordedAt: { timestampValue: '2026-11-11T07:00:00Z' } };
+  const revisionOf = (eventFile, kind) => storedFixture('event_versions/updated.json', Object.assign({
+    kind: s(kind),
+    event: map(storedFixture(eventFile).fields),
+  }, recordedAt));
+  const deletion = storedFixture('event_versions/updated.json', Object.assign({
+    kind: s('deleted'),
+    event: map(storedFixture('events/repository-save.json', tombstoneFields).fields),
+  }, recordedAt));
+  assert.deepEqual(compareDocument(ruleFor('event_versions', deletion, FIXTURES).shape, deletion), []);
+  const deletionWithoutTombstone = revisionOf('events/repository-save.json', 'deleted');
+  assert.deepEqual(
+    compareDocument(ruleFor('event_versions', deletionWithoutTombstone, FIXTURES).shape, deletionWithoutTombstone),
+    ['event.deletedAtMillis: missing (integer expected)', 'event.deletedBy: missing (string expected)'],
+  );
+  const creation = revisionOf('events/repository-save.json', 'created');
+  assert.deepEqual(compareDocument(ruleFor('event_versions', creation, FIXTURES).shape, creation), []);
+});
+
+test('a text message\'s attachments are compared, and an empty list no longer passes (part B, Task 12)', () => {
+  const message = storedFixture('messages/text.json');
+  const shape = ruleFor('messages', message, FIXTURES).shape;
+  assert.deepEqual(compareDocument(shape, message), []);
+  assert.deepEqual(compareDocument(shape, storedFixture('messages/text.json', { attachments: arr() })), [
+    'attachments: empty, so the fixture\'s elements are not compared',
+  ]);
+  assert.deepEqual(compareDocument(shape, storedFixture('messages/text.json', { attachments: arr(i(1)) })), [
+    'attachments[0]: string expected, integer found',
+  ]);
+});

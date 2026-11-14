@@ -325,10 +325,11 @@ private fun ConversationList(
 }
 
 /**
- * The conversation list's bar as the iPhone's navigation bar draws it: the tab's large title, the
- * new-conversation "+" (`plus`, only while there are conversations, as the floating button; not
- * tappable again while one is opening, which the button showed as its spinner) and the gear
- * (`gearshape`). The "+" comes last, so the iPhone draws it at the bar's edge.
+ * The conversation list's bar as the iPhone's navigation bar draws it: the tab's large title, then
+ * its actions in the order they are listed, the gear (`gearshape`) and the new-conversation "+"
+ * (`plus`, only while there are conversations, as the floating button; not tappable again while
+ * one is opening, which the button showed as its spinner). The "+" comes last, so the iPhone draws
+ * it at the bar's edge.
  *
  * @param showAdd Whether there are conversations, so the "+" is offered
  * @param isOpening Whether a conversation is being opened

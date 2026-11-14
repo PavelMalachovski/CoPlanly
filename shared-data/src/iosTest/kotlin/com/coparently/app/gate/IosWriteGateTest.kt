@@ -9,6 +9,7 @@ import com.coparently.app.data.remote.firebase.runOnMainRunLoop
 import com.coparently.app.data.repository.PatternSubmission
 import com.coparently.app.data.repository.SwapOfferer
 import com.coparently.app.data.sync.EventDocument
+import com.coparently.app.data.sync.Tombstone
 import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.RequestDeadlineId
@@ -157,6 +158,7 @@ private class GateScenario(
     suspend fun play() {
         pair()
         step("events") { events() }
+        step("event delete") { eventDelete() }
         step("expense") { expense() }
         step("child") { child() }
         step("pet") { pet() }
@@ -206,6 +208,31 @@ private class GateScenario(
         val toBob = written.pushes.filter { it.data["targetUserId"] == bob.uid }
             .map { (it.data["data"] as? Map<*, *>)?.get(PushPayload.TYPE) }
         expectThat(PushPayload.EVENT_IMPORTANT in toBob) { "no event_important push was queued for Bob: $toBob" }
+    }
+
+    /**
+     * A shared event deleted on Alice's phone (part B, Task 12): the document stays as a tombstone
+     * (`Tombstone.fields` merged in by `update()`, CLAUDE.md item 14), Bob reads it as one, and the
+     * deletion's revision (`EventVersionKind.DELETED`) reaches him with the tombstone in its event.
+     * Not announced: the deletion's chat card is the activity cards' writer, which the message step
+     * holds already.
+     */
+    private suspend fun eventDelete() {
+        val event = newEvent("Swimming", important = false)
+        alice.eventRepository.insertEvent(event)
+        alice.eventRepository.deleteEvent(event, announce = false)
+        val document = checkNotNull(bob.eventDataSource.getEventById(event.id)) { "Bob cannot read the deleted event" }
+        expectThat(Tombstone.isDeleted(document) && document[Tombstone.DELETED_BY] == alice.uid) {
+            "Bob read no tombstone of Alice's deletion: $document"
+        }
+        alice.eventVersionRecorder.flush(alice.uid)
+        val undelivered = alice.eventVersionRecorder.undelivered(alice.uid)
+        expectThat(undelivered.isEmpty()) { "the deletion's revision stayed in Alice's outbox: $undelivered" }
+        val deletion = bob.eventVersionDataSource.readableBy(bob.uid)
+            .filter { !it.recordedByServer && it.eventId == event.id && it.kind == EventVersionKind.DELETED }
+        expectThat(deletion.size == 1 && Tombstone.isDeleted(deletion.single().snapshot)) {
+            "Bob reads no single deletion revision of the event: $deletion"
+        }
     }
 
     /** Bob's read of event [id], through `EventDocument.toEntity`, against Alice's row. */
@@ -346,7 +373,12 @@ private class GateScenario(
             conversationId = conversationId,
             senderId = alice.uid,
             senderName = alice.name,
-            content = "Pick-up moved to 17:30"
+            content = "Pick-up moved to 17:30",
+            // A reference with no upload (part B, Task 12): it names another message's file, so the
+            // attachment gate (`ChatAttachmentOutbox.ensureUploaded`, which keeps only references
+            // stored under their own message) uploads nothing, and the iPhone, with no Cloud
+            // Storage yet, still writes a non-empty list for the checker to compare.
+            attachments = listOf(ATTACHMENT_REFERENCE)
         )
         alice.messageRepository.sendMessage(message)
         val bobs = withTimeout(GatePhone.WAIT_MS) {
@@ -531,5 +563,9 @@ private class GateScenario(
         const val BIRTH_YEAR = 2019
         const val PET_BIRTH_YEAR = 2021
         const val VACCINATION_YEAR = 2026
+
+        /** A `ChatAttachmentCodec` reference to a file stored under another thread's message. */
+        const val ATTACHMENT_REFERENCE = "att1|chat_attachments/another-thread/another-message/receipt.pdf|" +
+            "application/pdf|1024|0000000000000000000000000000000000000000000000000000000000000000|receipt.pdf"
     }
 }

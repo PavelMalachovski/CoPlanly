@@ -54,7 +54,7 @@ internal class AccountSwitchFixture(signedInUser: SignedInUser, lastUid: String?
     val lastSignedInUid = MemoryLastSignedInUid(lastUid)
 
     /** The traces under [directories]. */
-    val traces = IosAccountTraces(directories)
+    val traces = IosAccountTraces(directories, SignInProviderSession.None)
 
     /** The check under test. */
     val accountSwitch = IosAccountSwitch(

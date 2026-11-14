@@ -40,6 +40,17 @@ const IOS_APP = /^iosApp\//;
  */
 const IOS_GATE_INPUTS = /^(tools\/ios\/|tools\/test\/check-ios-writes\.test\.js$|tools\/e2e\/pairing-smoke\.js$|app\/src\/test\/resources\/wire\/current\/|firestore\.rules$|functions\/)/;
 
+/**
+ * Paths the `ios-app` job is known not to read (part B, Task 12): docs, the Android app (but for the
+ * `wire/current/` fixtures, which [IOS_GATE_INPUTS] names), the web pages and their tests, the
+ * scripts under `tools/` other than the gate's, the non-workflow files under `.github/`, the index
+ * file and the old permissive rules. Any other path runs it, as an unfamiliar path runs every job:
+ * the shared modules and the build through `shared`, the project and the gate's inputs by name, and
+ * whatever this file does not know (`firebase.json` and `firestore-tests/`' lock file among them,
+ * since the job starts the emulators from them).
+ */
+const NON_IOS = /^(docs\/|\.cursor\/|[^/]*\.md$|\.gitignore$|LICENSE$|app\/|web\/|web-tests\/|tools\/|\.github\/(?!workflows\/)|firestore\.indexes\.json$|firestore\.rules\.simple$)/;
+
 /** Paths that never need an Android build: docs, the server side, the rules and their tests, the iPhone app. */
 const NON_ANDROID = /^(docs\/|iosApp\/|functions\/|firestore-tests\/|web-tests\/|\.cursor\/|[^/]*\.md$|.*\.rules(\.simple)?$|firestore\.indexes\.json$|firebase\.json$|\.gitignore$|LICENSE$)/;
 
@@ -282,8 +293,8 @@ function decide(paths) {
   // Every `:shared-ui` path, screens and strings included: the iPhone compiles them.
   const shared = build || kept.some((p) => /^shared-ui\//.test(p));
   // The iPhone app links the shared modules' framework, so it runs whenever they do, and on its own project.
-  // And on what the write gate is held to.
-  const ios = shared || kept.some((p) => IOS_APP.test(p) || IOS_GATE_INPUTS.test(p));
+  // And on what the write gate is held to, and on any path it is not known to skip.
+  const ios = shared || kept.some((p) => IOS_APP.test(p) || IOS_GATE_INPUTS.test(p) || !NON_IOS.test(p));
   return { android, e2e, screenshots, upgrade, matrix: fullMatrix ? FULL_MATRIX : [LEG_30], r8runtime, web, shared, ios };
 }
 

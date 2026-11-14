@@ -535,6 +535,8 @@ private fun MaterialChatBar(
     if (searchQuery != null) {
         AppTopBar(
             ScreenBar(
+                // Never drawn on Android, where the search field (titleContent) takes its place; a
+                // bar needs a title all the same, and the iPhone names the screen with it.
                 title = stringResource(Res.string.chat_search),
                 leading = BarLeading.Back(
                     label = stringResource(Res.string.chat_search_close),

@@ -58,6 +58,19 @@ final class GoogleSignInBridge: NSObject, GoogleIdTokenSource {
         }
     }
 
+    /// Ends Google Sign-In's own session (the account it keeps in the Keychain and offers first), when
+    /// the app signs out and on the first launch after an install, so a shared phone does not preselect
+    /// the previous parent's account. Google Sign-In is used on the main thread; a call from elsewhere
+    /// is handed to it. Nothing to end without a client id: the sheet never ran.
+    func signOut() {
+        guard clientId != nil else { return }
+        if Thread.isMainThread {
+            GIDSignIn.sharedInstance.signOut()
+        } else {
+            DispatchQueue.main.async { GIDSignIn.sharedInstance.signOut() }
+        }
+    }
+
     /// The URL Google's sheet returns through, handed on by the scene (`SceneDelegate`).
     @MainActor
     static func handle(_ url: URL) -> Bool {

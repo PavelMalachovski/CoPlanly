@@ -460,7 +460,6 @@ private suspend fun saveEdupage(
     return accounts.connectEdupage(signIn, pupil, childId, current.familyId)
 }
 
-/** The step before [current], or null when there is none and the screen should close. */
 /**
  * Whether [ConnectSchoolViewModel.back] would stay on the screen in this state: an earlier step to
  * return to, or work under way, which a back waits out. False when back would close the screen.
@@ -470,6 +469,7 @@ private suspend fun saveEdupage(
 fun ConnectSchoolUiState.hasInnerStep(edupageImport: Boolean): Boolean =
     isBusy || previousStep(this, edupageImport) != null
 
+/** The step before [current], or null when there is none and the screen should close. */
 private fun previousStep(current: ConnectSchoolUiState, edupageImport: Boolean): ConnectStep? = when (current.step) {
     ConnectStep.SYSTEM -> null
     ConnectStep.TOWN -> ConnectStep.SYSTEM.takeIf { edupageImport }

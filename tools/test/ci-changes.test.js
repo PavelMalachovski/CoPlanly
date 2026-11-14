@@ -503,12 +503,23 @@ test('the iPhone app job runs whenever the shared jobs do', () => {
   assert.equal(everything().ios, true);
 });
 
+test('an unfamiliar path runs the iPhone app job too (part B, Task 12)', () => {
+  for (const path of ['somewhere-new/thing.txt', 'firebase.json', 'firestore-tests/package-lock.json', 'Makefile']) {
+    assert.equal(decide([path]).ios, true, path);
+  }
+});
+
 test('the iPhone app job skips what the app cannot read', () => {
   for (const path of [
     'docs/x.md',
     'CLAUDE.md',
     'app/src/main/java/com/coparently/app/presentation/MainActivity.kt',
     'app/src/main/res/values/colors.xml',
+    'web/index.html',
+    'web-tests/verify-page.spec.js',
+    'tools/check-invariants.js',
+    '.github/regenerate-request',
+    'firestore.indexes.json',
   ]) {
     assert.equal(decide([path]).ios, false, path);
   }

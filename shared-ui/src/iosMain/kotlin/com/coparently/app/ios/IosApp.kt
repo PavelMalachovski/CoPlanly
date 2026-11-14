@@ -5,6 +5,7 @@ import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.PushDestination
 import com.coparently.app.data.session.SessionProfileSynchronizer
+import com.coparently.app.data.session.SignInProviderSession
 import com.coparently.app.data.session.clearPreviousInstall
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.di.koin.dataModules
@@ -21,6 +22,7 @@ import com.coparently.app.presentation.navigation.PendingDestinationOpen
 import com.coparently.app.presentation.navigation.PendingInviteCodes
 import com.coparently.app.presentation.platform.AppBuildValues
 import com.coparently.app.presentation.platform.CredentialSignIn
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -64,6 +66,9 @@ object IosApp {
     /** Where a link's family switch runs, for the life of the process. */
     private val scope = MainScope()
 
+    /** Claimed first thing by [start], so a second call runs nothing. */
+    private val started = StartOnce("IosApp.start runs once per process")
+
     /** Set by [start]; what the shell's platform values are built from. */
     private var buildValues: AppBuildValues? = null
 
@@ -78,24 +83,28 @@ object IosApp {
 
     /**
      * Starts Firebase ([IosFirebase]), clears what an earlier install left in the Keychain on the
-     * first launch after an install (`clearPreviousInstall`: the sealed preferences and Firebase
-     * Auth's session, which an uninstall does not delete on the iPhone), then starts the Koin graph
-     * the shared code reads: the data layer's and the UI's modules with the iPhone's platform
-     * halves, and [iosAppModule]. Then it starts what runs for the whole session ([startSession]).
-     * All before the first screen.
+     * first launch after an install (`clearPreviousInstall`: the sealed preferences, Firebase Auth's
+     * session and Google Sign-In's, which an uninstall does not delete on the iPhone), then starts
+     * the Koin graph the shared code reads: the data layer's and the UI's modules with the iPhone's
+     * platform halves, and [iosAppModule]. Then it starts what runs for the whole session
+     * ([startSession]). All before the first screen.
+     *
+     * The once-per-process guard is claimed before any of it, so a second call changes nothing,
+     * even after a first call that failed part-way: Firebase and Koin refuse to start twice.
      *
      * @param google Google's sign-in sheet, which the app's Swift side runs (`GoogleSignInBridge`);
-     *   the sign-in screen offers it only where it is available ([IosCredentialSignIn]).
+     *   the sign-in screen offers it only where it is available ([IosCredentialSignIn]), and its
+     *   session ends with ours ([SignInProviderSession]).
      * @throws IllegalStateException when called a second time.
      */
     @Throws(Throwable::class)
     fun start(config: IosAppConfig, google: GoogleIdTokenSource) {
-        check(buildValues == null) { "IosApp.start runs once per process" }
+        started.claim()
         IosFirebase.configure(config)
         // After Firebase, which the sign-out needs; before Koin builds the preference store.
-        clearPreviousInstall()
+        clearPreviousInstall(google.session())
         val koin = startKoin {
-            modules(dataModules + platformDataModule + uiModules + platformUiModule + iosAppModule)
+            modules(dataModules + platformDataModule + uiModules + platformUiModule + iosAppModule(google))
         }.koin
         startSession(koin)
         this.koin = koin
@@ -158,31 +167,51 @@ object IosApp {
      * A chat link that names a family switches to it first, and is armed only once the switch has
      * landed (CLAUDE.md item 15), as Android's `MainActivity.readLaunchIntent` does: a thread opened
      * while the other family still shows would be read against the wrong co-parent.
-     * [SelectedFamilySource.select] refuses a family the account is not in, so such a link opens on
-     * the family already showing; a switch that fails does too.
+     * [SelectedFamilySource.select] defers a family this phone does not know yet (it remembers the
+     * request for a minute and applies it once the family arrives, CLAUDE.md item 39), so such a
+     * link opens on the family already showing until then; a family the account is not in never
+     * arrives, and a switch that fails opens on the family showing too.
      *
      * @return whether [url] was one of the app's links; false leaves it to nobody.
      */
     fun openUrl(url: String): Boolean {
         val link = LaunchLinks.parse(url) ?: return false
-        val familyId = (link as? LaunchLink.Chat)?.familyId
         val families = koin?.get<SelectedFamilySource>()
-        if (familyId == null || families == null) {
+        if ((link as? LaunchLink.Chat)?.familyId == null || families == null) {
             pendingLinks.arm(link)
-            return true
-        }
-        scope.launch {
-            runCatching {
-                if (families.selected()?.familyId != familyId) families.select(familyId)
-            }.onFailure {
-                logger.w(TAG, "Could not switch to the family a link named", it)
-            }
-            pendingLinks.arm(link)
+        } else {
+            scope.launch { openLink(link, { familyId -> families.showFamily(familyId) }, pendingLinks::arm) }
         }
         return true
     }
 
     private const val TAG = "IosApp"
+
+    /**
+     * [openUrl]'s order, apart for its test: a chat link that names a family is armed only once
+     * [switchTo] has returned for that family (or failed, which is logged); any other link is armed
+     * at once.
+     */
+    internal suspend fun openLink(link: LaunchLink, switchTo: suspend (String) -> Unit, arm: (LaunchLink) -> Unit) {
+        val familyId = (link as? LaunchLink.Chat)?.familyId
+        if (familyId != null) {
+            try {
+                switchTo(familyId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Exception
+            ) {
+                logger.w(TAG, "Could not switch to the family a link named", e)
+            }
+        }
+        arm(link)
+    }
+
+    /** Shows [familyId] unless it already shows. */
+    private suspend fun SelectedFamilySource.showFamily(familyId: String) {
+        if (selected()?.familyId != familyId) select(familyId)
+    }
 
     /**
      * Which pairing link an invitation carries: the hosted `web/pair/` page, as the Android build's
@@ -192,12 +221,32 @@ object IosApp {
 }
 
 /**
- * The iPhone app's own definitions, beside the shared modules. Empty so far: the sign-in (Task 5)
- * and the sync, push queue and wordings (Task 6) went into the platform modules, where the shared
- * graph asks for them, the native shell (Task 8) resolves what it needs itself, and Google's sheet
- * (Task 9) is handed to [IosApp.start] and reaches the screens through the shell.
+ * The iPhone app's own definitions, beside the shared modules: Google Sign-In's session
+ * ([SignInProviderSession]), which sign-out ends (`IosAccountTraces`, part B, Task 12). The sign-in
+ * (Task 5) and the sync, push queue and wordings (Task 6) went into the platform modules, where the
+ * shared graph asks for them, the native shell (Task 8) resolves what it needs itself, and Google's
+ * sheet (Task 9) is handed to [IosApp.start] and reaches the screens through the shell.
  */
-internal val iosAppModule: Module = module { }
+internal fun iosAppModule(google: GoogleIdTokenSource): Module = module {
+    single<SignInProviderSession> { google.session() }
+}
+
+/** [google]'s own session, as the data layer ends it. */
+internal fun GoogleIdTokenSource.session(): SignInProviderSession = SignInProviderSession { signOut() }
+
+/**
+ * A guard that lets one caller through and refuses every later one, claimed before the guarded work
+ * so a first run that fails part-way still refuses the next ([IosApp.start]).
+ */
+internal class StartOnce(private val refusal: String) {
+    private var claimed = false
+
+    /** Lets the first call through; every later one throws [IllegalStateException] with [refusal]. */
+    fun claim() {
+        check(!claimed) { refusal }
+        claimed = true
+    }
+}
 
 /**
  * What a launch hands the shell on the iPhone: the pending holders `MainActivity` keeps on Android,
