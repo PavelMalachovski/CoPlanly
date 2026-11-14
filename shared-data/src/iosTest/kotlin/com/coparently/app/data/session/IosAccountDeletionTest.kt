@@ -44,7 +44,8 @@ import kotlin.time.Duration.Companion.minutes
  * - With the server reached, the account is gone from the Auth emulator, every Room table is empty,
  *   the sealed store holds nothing but the per-uid slot markers `clear()` keeps by design on both
  *   platforms (both school connections included in what goes), the account's files are removed, the
- *   reminders and request clocks are cancelled and nobody is signed in on the phone.
+ *   reminders and request clocks are cancelled, Google Sign-In's session is ended and nobody is
+ *   signed in on the phone.
  * - With the Functions emulator unreachable (the same production [IosCallableFunctions], pointed at
  *   a port nothing listens on), the deletion fails and nothing on the phone is deleted: the event row,
  *   the preferences, the files and the session are all still there, to be tried again.
@@ -72,6 +73,7 @@ class IosAccountDeletionTest {
                 assertEquals(1, phone.fixture.reminders.cancelledAll)
                 assertEquals(1, phone.fixture.clocks.cancelledAll)
                 assertNull(phone.auth.getCurrentUid(), "The phone is still signed in")
+                assertEquals(1, phone.fixture.providerSignOuts, "Google Sign-In's session was not ended")
                 assertTrue(
                     phone.auth.signInWithEmail(phone.email, PASSWORD).isFailure,
                     "The Auth emulator still has the account"
@@ -100,6 +102,7 @@ class IosAccountDeletionTest {
                 assertEquals(0, phone.fixture.reminders.cancelledAll)
                 assertEquals(0, phone.fixture.clocks.cancelledAll)
                 assertEquals(uid, phone.auth.getCurrentUid(), "The phone was signed out")
+                assertEquals(0, phone.fixture.providerSignOuts, "Google Sign-In's session was ended")
             } finally {
                 phone.auth.signOutCompletely()
                 phone.close()

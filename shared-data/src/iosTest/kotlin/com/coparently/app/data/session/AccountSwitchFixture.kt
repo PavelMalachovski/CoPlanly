@@ -53,8 +53,12 @@ internal class AccountSwitchFixture(signedInUser: SignedInUser, lastUid: String?
     /** The last account seen, in memory. */
     val lastSignedInUid = MemoryLastSignedInUid(lastUid)
 
-    /** The traces under [directories]. */
-    val traces = IosAccountTraces(directories, SignInProviderSession.None)
+    /** How many times the sign-in provider's own session was ended. */
+    var providerSignOuts = 0
+        private set
+
+    /** The traces under [directories]; their provider session counts [providerSignOuts]. */
+    val traces = IosAccountTraces(directories, SignInProviderSession { providerSignOuts++ })
 
     /** The check under test. */
     val accountSwitch = IosAccountSwitch(

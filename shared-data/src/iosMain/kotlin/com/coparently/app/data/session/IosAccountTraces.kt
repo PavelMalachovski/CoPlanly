@@ -21,14 +21,17 @@ import platform.Foundation.NSFileManager
  *   cached file goes, and so does Google Sign-In's own session ([providerSession]), so the next
  *   parent on a shared phone is not offered the previous one's Google account.
  * - [clearAccount] — an account switch clears the database, so the outbox's files belong to
- *   messages that no longer exist; they go too.
+ *   messages that no longer exist; they go too. Google's session is left alone: the next account
+ *   has just signed in, perhaps through it.
+ * - [clearAfterDeletion] — what [clearAccount] removes, and Google Sign-In's session as sign-out
+ *   ends it: a deleted account is not offered first to the next parent on a shared phone either.
  *
  * Android also cancels the notifications on screen. The iPhone posts none yet (no push, no local
  * notification); the task that makes it post one adds their removal here. Best effort: a folder
  * that cannot be deleted is logged by name, never by its files' names, and never stops a sign-out.
  *
  * @property directories the app's folders: [AppDirectories.cache] and [AppDirectories.files]
- * @property providerSession the sign-in provider's own session, ended on sign-out
+ * @property providerSession the sign-in provider's own session, ended on sign-out and deletion
  */
 class IosAccountTraces(
     private val directories: AppDirectories,
@@ -56,6 +59,15 @@ class IosAccountTraces(
             CACHE_DIRECTORIES.forEach { delete(Path(directories.cache, it)) }
             delete(Path(directories.files, ChatAttachmentOutbox.OUTBOX_DIRECTORY))
         }
+    }
+
+    /**
+     * What an account deletion removes: everything [clearAccount] does, then Google Sign-In's own
+     * session, as [clearAfterSignOut] ends it; best effort, like every step here.
+     */
+    suspend fun clearAfterDeletion() {
+        clearAccount()
+        endProviderSession()
     }
 
     private fun delete(directory: Path) {

@@ -13,6 +13,7 @@ import com.coparently.app.domain.notification.RequestClockScheduler
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 
 /**
@@ -35,10 +36,14 @@ import kotlinx.coroutines.withContext
  * The wipe is Android's: the push registration detached, every row, the event reminders and the
  * request clocks' jobs, the sealed preference store and both school connections' keys (which its
  * `clear()` keeps, CLAUDE.md item 35), and the account's files outside the database — the strong
- * [IosAccountTraces.clearAccount], the chat outbox included, as Android's `DeviceTraces.clearAccount`,
- * because the messages those files belong to are gone with the rows. Then, unlike Android, this
- * phone's Firebase Auth session is ended ([AuthSession.signOutCompletely]): the iOS SDK keeps the
- * deleted user in the Keychain until it is told otherwise, and the next screen is the sign-in.
+ * [IosAccountTraces.clearAfterDeletion], the chat outbox included, as Android's
+ * `DeviceTraces.clearAccount`, because the messages those files belong to are gone with the rows,
+ * and Google Sign-In's own session, as sign-out ends it, so a shared phone does not offer the next
+ * parent the deleted account's Google account first. Then, unlike Android, this phone's Firebase
+ * Auth session is ended ([AuthSession.signOutCompletely]): the iOS SDK keeps the deleted user in the
+ * Keychain until it is told otherwise, and the next screen is the sign-in. Once the server has
+ * succeeded it is ended in a `finally`, so a wipe that throws never leaves the phone signed in as a
+ * deleted user (the failure is still returned).
  *
  * @property functions the callables, in `FUNCTIONS_REGION`
  * @property database the rows to clear
@@ -65,11 +70,20 @@ class IosAccountDeletion(
      * Deletes the account and wipes this phone.
      *
      * @return success once the server has erased the account and the local data is clear; the
-     *   callable's failure otherwise, with nothing deleted here.
+     *   callable's failure otherwise, with nothing deleted here; a wipe that fails after the server
+     *   succeeded is returned as a failure too, with the phone's session ended all the same.
      */
     override suspend fun deleteAccount(): Result<Unit> = try {
         functions.call(CALLABLE, emptyMap())
-        wipeLocalData()
+        try {
+            wipeLocalData()
+        } finally {
+            // The server deleted the Auth user; this phone still holds its session until told. Ended
+            // even when the wipe threw, so the phone is never left signed in as a deleted account,
+            // whose retry would call the callable as a user that no longer exists. Not cancellable:
+            // the server has already succeeded, whatever happens to this call now.
+            withContext(NonCancellable) { authSession.signOutCompletely() }
+        }
         Result.success(Unit)
     } catch (e: CancellationException) {
         // Structured cancellation must keep unwinding: a cancelled call is not a failed deletion,
@@ -95,10 +109,10 @@ class IosAccountDeletion(
         // account's school tokens and passwords have no business staying on the phone.
         preferences.removeWithPrefix(PreferenceKeys.SCHOOL_CONNECTION_PREFIX)
         preferences.removeWithPrefix(PreferenceKeys.EDUPAGE_CONNECTION_PREFIX)
-        // The plain copies of the account's files, the chat outbox's included.
-        traces.clearAccount()
-        // The server deleted the Auth user; this phone still holds its session until told.
-        authSession.signOutCompletely()
+        // The plain copies of the account's files, the chat outbox's included, and Google Sign-In's
+        // own session, as sign-out ends it, so the next parent on a shared phone is not offered the
+        // deleted account's Google account first.
+        traces.clearAfterDeletion()
     }
 
     private companion object {

@@ -60,6 +60,7 @@ class IosAccountSwitchTest {
         assertEquals(1, phone.clocks.cancelledAll)
         phone.traceFiles.forEach { assertFalse(phone.exists(it), "$it is still there") }
         assertEquals("next", phone.lastSignedInUid.get())
+        assertEquals(0, phone.providerSignOuts, "A switch ended the new account's Google session")
     }
 
     /**
@@ -135,6 +136,18 @@ class IosAccountSwitchTest {
         val (outbox, caches) = phone.traceFiles.partition { "/files/" in it }
         caches.forEach { assertFalse(phone.exists(it), "$it is still there") }
         outbox.forEach { assertTrue(phone.exists(it), "$it was removed") }
+        assertEquals(1, phone.providerSignOuts)
+    }
+
+    @Test
+    fun `a deletion removes every file and ends the provider session`() = runBlocking {
+        val phone = fixture(lastUid = null)
+        phone.fillWithThePreviousAccount()
+
+        phone.traces.clearAfterDeletion()
+
+        phone.traceFiles.forEach { assertFalse(phone.exists(it), "$it is still there") }
+        assertEquals(1, phone.providerSignOuts)
     }
 
     private suspend fun assertKept(phone: AccountSwitchFixture) {
