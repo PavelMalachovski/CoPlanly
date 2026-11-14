@@ -104,6 +104,27 @@ launch() {
   echo "::group::launch-small.jpg (base64)"; base64 -i "$out/launch-small.jpg"; echo "::endgroup::"
 }
 
+# Samples the running app for a second every 20 seconds, keeping the last two samples in <out-dir>.
+watch_app() {
+  local out=$1 n=0 pid
+  while sleep 20; do
+    pid=$(pgrep -nx CoPlanly) || continue
+    sample "$pid" 1 -mayDie -file "$out/sample-$((n % 2)).txt" > /dev/null 2>&1 || true
+    n=$((n + 1))
+  done
+}
+
+# Prints the main thread of the newest sample watch_app took, if any.
+show_samples() {
+  local out=$1 newest
+  newest=$(ls -t "$out"/sample-*.txt 2>/dev/null | head -n 1) || true
+  [ -n "$newest" ] || return 0
+  echo "::group::the app's main thread, last sampled while the walk ran"
+  sed -n '/com.apple.main-thread/,/^ *[0-9]* Thread_/p' "$newest" | head -c 40000
+  echo
+  echo "::endgroup::"
+}
+
 shell_test() {
   local udid=$1 out=$2 seed status=0
   mkdir -p "$out"
@@ -116,6 +137,11 @@ shell_test() {
   TEST_RUNNER_COPLANLY_UITEST_PASSWORD=$(node -e 'console.log(JSON.parse(process.argv[1]).password)' "$seed")
   echo "Seeded family; signing in as $TEST_RUNNER_COPLANLY_UITEST_EMAIL"
   rm -rf "$out/shell.xcresult"
+  # While the walk runs, the app's threads are sampled now and then, so a walk that fails because
+  # the app's main thread stopped answering ("main thread busy") says where it was busy.
+  local watcher
+  watch_app "$out" &
+  watcher=$!
   xcodebuild test-without-building \
     -project iosApp/CoPlanly.xcodeproj \
     -scheme CoPlanly \
@@ -123,6 +149,9 @@ shell_test() {
     -derivedDataPath iosApp/build \
     -only-testing:CoPlanlyUITests \
     -resultBundlePath "$out/shell.xcresult" || status=$?
+  kill "$watcher" 2>/dev/null || true
+  wait "$watcher" 2>/dev/null || true
+  if [ "$status" -ne 0 ]; then show_samples "$out"; fi
   mkdir -p "$out/shots"
   xcrun xcresulttool export attachments --path "$out/shell.xcresult" --output-path "$out/shots" || true
   # A crash the walk met, as the test recorded it, and the app's own lines from the system log: what
