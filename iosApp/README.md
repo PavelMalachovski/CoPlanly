@@ -13,8 +13,8 @@ and the data layer are the Kotlin Multiplatform modules', compiled into one stat
 | `CoPlanly/Info.plist` | Bundle `app.coplanly`, display name CoPlanly, iPhone only, portrait only, iOS 17.0 and later. |
 | `CoPlanly/CoPlanly.entitlements` | Empty for now; push and sign-in add theirs. |
 | `CoPlanly/Assets.xcassets` | The icon (made from the Android launcher icon by `tools/generate-ios-icon.py`; never edit the PNG by hand) and the indigo accent colour. |
-| `CoPlanlyUITests/` | The XCUITest walk of the native shell (`ShellUITests.swift`), run in CI on the emulators. |
-| `scripts/simulator.sh` | CI's simulator steps (the `ios-app` job): pick, launch and the shell's walk. |
+| `CoPlanlyUITests/` | The XCUITest walk of the native shell (`ShellUITests.testShellWalk`) and the tour of every screen (`testTour`), run in CI on the emulators. |
+| `scripts/simulator.sh` | CI's simulator steps (the `ios-app` job): pick, launch, the shell's walk and the tour. |
 
 ## Running it on your Mac
 
@@ -118,12 +118,26 @@ iOS 26.5 so far). Then, in order:
 3. On fresh Firebase emulators it seeds a paired family (`tools/ios/seed-shell-family.js`) and runs
    the XCUITest walk (`CoPlanlyUITests`): sign-in by e-mail, the tabs, Family → Expenses → the Add
    expense sheet, a back swipe completed and one let go of, a tab tap popping two screens, a sheet
-   with edits swiped down asking "Discard changes?", and sign-out to fresh tabs. Its screenshots
-   are the `ios-shell` artifact.
-4. On emulators again, the shared modules' iOS tests run on the same booted simulator (the
+   with edits swiped down asking "Discard changes?", sign-out to fresh tabs, a `coplanly://pair`
+   link and, last, deleting the account. Its screenshots are the `ios-shell` artifact.
+4. **The tour** (part B, Task 13), on emulators of its own: the seed with `--tour` adds an event
+   today with a change request about it, a child, a pet, an expense and a vault document's index
+   row; `ShellUITests.testTour` signs in, visits every destination it can reach from that family,
+   and saves a screenshot named `tour-<route>` for each. A destination it cannot reach is written
+   to `tour.txt` with the reason, as the Android UI tour does; it fails only when the app crashes
+   or does not launch, and even then the next step runs (the job fails at its end instead). The
+   screenshots, `manifest.json` (from `xcrun xcresulttool export attachments`) and `tour.txt` are
+   the `ios-tour` artifact. To read it against the app's destinations, compare `tour.txt` with
+   `AppDestinationCatalog.all` (`shared-ui/.../navigation/AppDestination.kt`); every route is on
+   it, reached or skipped.
+5. On emulators again, the shared modules' iOS tests run on the same booted simulator (the
    Keychain tests included), with the write gate (`IosWriteGateTest` and
    `tools/ios/check-ios-writes.js`, which compares every document the iPhone wrote with what
    Android writes). No test may skip itself for want of the emulators.
 
 CI never has a `GoogleService-Info.plist`, so it never offers Google sign-in and never reaches the
 real project.
+
+To run the tour on your Mac: start the emulators as above, then, from the repository's root,
+`iosApp/scripts/simulator.sh tour <simulator udid> iosApp/build/tour` after a `build-for-testing`
+into `iosApp/build` (the commands are in the `ios-app` job's "Build the app" step).

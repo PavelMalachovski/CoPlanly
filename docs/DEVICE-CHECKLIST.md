@@ -2475,6 +2475,42 @@ New event's description and the Chat tab's composer and checks each stays above 
   controller's `onFocusBehavior`), `onboarding/OnboardingScreen.kt` (`:shared-ui`), and the shell's
   `NO_BAR_ROUTES` (`ios/shell/StackHost.kt`).
 
+### 3.39 What part B left to an iPhone · 1P, iPhone, the chat check needs the co-parent's phone
+
+MON-24 phase 3, part B (Tasks 3, 4, 6, 7, 8, 11 and 12). The `ios-app` job's walk proves most of the
+shell's mechanics on the emulators (artifact `ios-shell`), and its tour saves a screenshot of each
+screen it reaches (artifact `ios-tour`). What only a person can judge, or what the walk does not
+reach:
+
+- [ ] **A hidden Chat tab reads nothing** (Task 3). Open the thread with the co-parent, then go to
+      another tab. Have the co-parent send a message from their phone. Their phone keeps it
+      unticked as read until you open the Chat tab again; then it turns read. Go to another tab and
+      back: the thread keeps the messages it showed, not only the newest page.
+- [ ] **Every form asks before it drops an edit** (Task 4). The walk asks on Add expense only. On
+      Edit expense, Edit event, a child's and a pet's editor and a journal entry (each form that
+      keeps an edit, design item 16), change something and swipe the sheet down: each asks "Discard changes?", "Keep editing" keeps the
+      edit and Discard closes the sheet. A new event closes without asking (design item 16).
+- [ ] **Save beside the back button** (Task 6). On a pushed screen with a primary action (the
+      custody schedule's parts, My details, Connect school), the action sits at the bar's trailing edge with
+      the system back chevron at the leading edge. It is disabled while the form is invalid or
+      saving.
+- [ ] **Chat search in the title view** (Task 7). In the thread, tap the magnifying glass: the
+      search field takes the bar's title. Type: results appear and step with the arrows. Cancel
+      returns the co-parent's name. With a co-parent whose name is long ("Alexandra-Margarethe"),
+      the title is cut with an ellipsis and does not push the bar's buttons off.
+- [ ] **No hang** (Task 8). The walk once saw the app's main thread stop answering for 30 seconds,
+      and that was not reproduced. While you check the rest, note any moment the app stops
+      responding, with what was on screen.
+- [ ] **Sign out, delete, sign in again** (Tasks 11 and 12). Settings → Sign out of app, then sign in
+      again: the tabs open at their first screens. Then, with a **test account**, Settings → Delete
+      account and both confirmations: the sign-in screen, no tabs. Sign up with a fresh account: no
+      trace of the deleted one, and "Continue with Google" (with a real project) asks for an account
+      rather than offering the deleted one's.
+- **If it fails:** `ios/shell/ShellVisibility.kt` and `common/ScreenVisibility.kt` (the hidden tab),
+  `ios/shell/FormSheet.kt` and `common/DiscardGuard.kt` (the sheets), `ios/shell/NativeBars.kt` (the
+  bar's buttons and title view), `ios/shell/StackHost.kt`, and `data/session/IosAccountDeletion.kt`
+  with `SignInProviderSession.kt` (`shared-data`'s `iosMain`).
+
 ---
 
 ## After the session

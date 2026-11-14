@@ -1237,7 +1237,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   (`tools/ios/seed-shell-family.js`) and runs the XCUITest walk of the native shell
   (`iosApp/CoPlanlyUITests/`: the tabs, Family → Expenses → the Add expense sheet, a back swipe
   completed and one let go of, a tab tap popping two screens, a dirty sheet swiped down asking
-  "Discard changes?", sign-out to fresh tabs; artifact `ios-shell`), and finally, on emulators
+  "Discard changes?", sign-out to fresh tabs; artifact `ios-shell`), then the tour on a family of its
+  own (`ShellUITests.testTour`: a screenshot per destination it reaches and a reason for each it
+  skips, artifact `ios-tour`; `continue-on-error`, so a crash in it fails the job at the end and the
+  emulator tests still run), and finally, on emulators
   again, `:shared-data:iosSimulatorArm64Test` and `:shared-ui:iosSimulatorArm64Test` on the same
   booted simulator (`COPLANLY_SIMULATOR_UDID`, so the Keychain tests run; check run "iPhone tests on
   the emulators", `require_tests`) with the write gate: `IosWriteGateTest` writes every kind of
@@ -1814,6 +1817,34 @@ iPhone halves of the seams in each module's `iosMain` (`shared-data/src/iosMain/
 `shared-ui/src/iosMain/`) and their tests in `iosTest`. A new iPhone screen is a shared screen; the
 shell only hosts it. `iosApp/README.md` says how to run it, and the owner's check of part A is
 `docs/superpowers/plans/2026-11-10-iphone-phase-3a-owner-check.md`.
+**Part B's shapes** (November 2026; owner's check
+`docs/superpowers/plans/2026-11-13-iphone-phase-3b-owner-check.md`), each provided by the iPhone's
+shell alone, so Android reads a null and behaves as before:
+- **`shellDrawsBars()`** (`common/ScreenBar.kt`, `LocalBarHost.current != null`) is how a shared
+  screen asks "does a shell draw my bars?". It is every iPhone-only branch, never a platform check,
+  so a Robolectric test takes either branch by providing a host.
+- **`BackSteps`** (`common/BackSteps.kt`, `LocalBackSteps`, `ScreenBackStep`) are a screen's inner
+  steps (an open section, a search, a wizard's step, a selection). The bar's back button runs the
+  newest enabled one first, and the edge swipe is refused while one is enabled.
+- **`LocalScreenVisible`** (`common/ScreenVisibility.kt`) is true only while the screen's tab is
+  selected, it is on top of its stack and the app is in the foreground. The chat thread marks
+  messages read only while it is visible, because a hidden tab's screens stay composed.
+- **`LaunchLinks`** (`presentation/LaunchLinks.kt`) reads a `coplanly://` link (`pair`, `guest`,
+  `chat`) the way Android's `MainActivity` does. `IosApp.openUrl` arms it, and the shell switches
+  the family before it opens a chat link (item 15).
+- **`IosAccountDeletion`** (`shared-data`'s `iosMain`, `data/session/`) calls the `deleteAccount`
+  callable, then runs Android's local wipe, then ends the session. Settings' `onAccountDeleted` is
+  wired on the iPhone to the shell's `refreshAuthState`, which shows the sign-in screen.
+- **`SignInProviderSession`** ends Google Sign-In's own session on sign-out and on the first launch
+  after an install.
+- **`StartOnce`** refuses a second `IosApp.start`.
+- **`StackHost`** ends a disposed stack's back-stack entries one second after their screens
+  (`ENTRIES_END_AFTER_MS`), so a sign-out does not end an entry UIKit is still drawing.
+- **The iPhone tour** is `ShellUITests.testTour`, the `ios-app` job's step after the walk, on a
+  family seeded with `tools/ios/seed-shell-family.js --tour`. It saves a screenshot per route it
+  reaches (artifact `ios-tour`) and records each route it cannot reach in `tour.txt` with the
+  reason, as the Android UI tour does. It fails only on a crash or a failed launch. A new
+  destination is added to its `tourRoutes`, which mirrors `AppDestinationCatalog.all`.
 
 **Where a `domain/…` path in this file lives** (MON-24 phase 1, November 2026). The domain moved
 to the shared module with every package unchanged, so a path this file writes as
