@@ -34,6 +34,7 @@ import com.coparently.app.presentation.changerequests.swapAcceptLabel
 import com.coparently.app.presentation.changerequests.swapOfferHeading
 import com.coparently.app.presentation.common.AnswerButtons
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.WhenScreenVisible
 import com.coparently.app.presentation.custody.custodyDiffDescription
 import com.coparently.app.presentation.parentingplan.planCitationLine
 import com.coparently.app.presentation.theme.Spacing
@@ -220,7 +221,7 @@ private fun ProposalDialog(
     actions: AwaitingActions
 ) {
     // Shown is opened (spec §4.5): once per proposal, however often the dialog recomposes.
-    LaunchedEffect(ask.proposal.proposedAt) { actions.onProposalSeen() }
+    WhenScreenVisible(ask.proposal.proposedAt) { actions.onProposalSeen() }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(Res.string.custody_proposal_inbox_title)) },
@@ -282,7 +283,7 @@ private fun SplitDialog(
     actions: AwaitingActions
 ) {
     // Shown is opened (spec §4.5): once per proposal, however often the dialog recomposes.
-    LaunchedEffect(ask.proposal.proposedAtMillis) { actions.onSplitSeen() }
+    WhenScreenVisible(ask.proposal.proposedAtMillis) { actions.onSplitSeen() }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(Res.string.expenses_split_proposal_title)) },
@@ -341,7 +342,7 @@ private fun SwapDialog(
 ) {
     val myUid = parentNames.parents.me?.uid
     // Shown is opened (spec §4.5): once per offer, however often the dialog recomposes.
-    LaunchedEffect(swapGroup.revision) { actions.onSwapSeen(swapGroup) }
+    WhenScreenVisible(swapGroup.revision) { actions.onSwapSeen(swapGroup) }
     // The days still waiting on this parent (a part-answered offer shows and decides only those),
     // and the per-day mode in place of the main buttons (board SW-6).
     val shown = myUid?.let { swapGroup.waitingOn(it) } ?: swapGroup

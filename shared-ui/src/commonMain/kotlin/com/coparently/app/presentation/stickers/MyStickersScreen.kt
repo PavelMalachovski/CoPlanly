@@ -16,7 +16,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,6 +29,7 @@ import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.WhenScreenVisible
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
@@ -69,7 +69,8 @@ fun MyStickersScreen(
     val roleFailed by viewModel.roleSaveFailed.collectAsState()
     var editingRole by rememberSaveable { mutableStateOf(false) }
 
-    LaunchedEffect(received) {
+    // Only while the shelf is seen: on the iPhone a hidden tab keeps it composed (MON-24 phase 3).
+    WhenScreenVisible(received) {
         received.filter { it.seenAtMillis == null }.forEach(viewModel::markSeen)
     }
 

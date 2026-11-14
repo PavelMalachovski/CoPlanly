@@ -2,6 +2,7 @@ package com.coparently.app.presentation.common
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -66,5 +67,32 @@ fun WhileScreenVisible(key: Any?, onVisible: () -> Unit, onHidden: () -> Unit) {
             following.cancel()
             if (open) hidden()
         }
+    }
+}
+
+/**
+ * Runs [action] when the screen is seen: once for each [key] while visible ([LocalScreenVisible]),
+ * and once more each time the screen is shown again. With no [LocalScreenVisible] it is
+ * `LaunchedEffect(key) { action() }`, so Android behaves exactly as it did.
+ *
+ * For what the other parent is told this parent has seen — a sticker's "seen", a request clock's
+ * first opening (CLAUDE.md items 42 and 47): on the iPhone a hidden tab's screens stay composed, and
+ * a plain `LaunchedEffect` would record a look at something that was never on screen (MON-24 phase
+ * 3, part B, final review). [action] must be safe to run again, as those marks are: each writes
+ * only what is not recorded yet.
+ *
+ * @param key What restarts the effect, as a `LaunchedEffect`'s key.
+ * @param action What the screen records on being seen.
+ */
+@Composable
+fun WhenScreenVisible(key: Any?, action: () -> Unit) {
+    val visibility = LocalScreenVisible.current
+    if (visibility == null) {
+        LaunchedEffect(key) { action() }
+        return
+    }
+    val current by rememberUpdatedState(action)
+    LaunchedEffect(key, visibility) {
+        snapshotFlow { visibility.value }.collect { visible -> if (visible) current() }
     }
 }

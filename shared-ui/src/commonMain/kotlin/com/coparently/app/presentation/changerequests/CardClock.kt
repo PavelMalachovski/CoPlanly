@@ -16,7 +16,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
@@ -30,6 +29,7 @@ import com.coparently.app.domain.changerequests.TimedRequest
 import com.coparently.app.presentation.common.BannerTone
 import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.common.WhenScreenVisible
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
@@ -161,7 +161,7 @@ fun CardClockChip() {
 @Composable
 fun CardClockDetails() {
     val clock = LocalCardClock.current ?: return
-    clock.onSeen?.let { seen -> LaunchedEffect(clock.timed.clock.id) { seen() } }
+    clock.onSeen?.let { seen -> WhenScreenVisible(clock.timed.clock.id) { seen() } }
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.XS)) {
         when (clock.role) {
             ClockRole.RESPONDER -> ResponderRows(clock)
