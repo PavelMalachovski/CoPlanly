@@ -60,7 +60,7 @@ final class ShellUITests: XCTestCase {
         step("Keep editing stays, Discard leaves", after: ["swipe down over an edit asks"]) { try self.keepEditing() }
         step("back undoes a screen's inner step", after: ["Family"]) { try self.innerBackStep() }
         step("Settings", after: ["Family"]) { try self.settings() }
-        step("cancelled back swipe over a Compose bar", after: ["Settings"]) { try self.cancelledSwipeOverComposeBar() }
+        step("cancelled back swipe over a sub-screen", after: ["Settings"]) { try self.cancelledSwipeOverSubScreen() }
         step("a tab tap pops two screens", after: ["Settings"]) { try self.tabTapPopsTwo() }
         step("New event is a sheet with Save in its bar", after: ["Calendar and Chat tabs"]) { try self.eventFormSheet() }
         step("a new event swiped down closes without asking", after: ["New event is a sheet with Save in its bar"]) {
@@ -177,7 +177,7 @@ final class ShellUITests: XCTestCase {
 
     /// Custody setup with one of its parts open: the edge swipe is refused rather than leaving the
     /// screen with the part half-closed, Back returns to the overview, and from the overview the
-    /// swipe leaves. The screen draws its own Compose bar, so its back is the bar's arrow.
+    /// swipe leaves. While a part is open its back is the shell's own button labelled Back.
     private func innerBackStep() throws {
         try openCustodySetup()
         press(try element(containing: "Contact windows"))
@@ -202,16 +202,17 @@ final class ShellUITests: XCTestCase {
         shot("06-settings")
     }
 
-    private func cancelledSwipeOverComposeBar() throws {
+    private func cancelledSwipeOverSubScreen() throws {
         if !app.navigationBars["Settings"].exists { try settings() }
         try openDataSources()
         let before = cancelledTransitions()
         swipeBackAndLetGo(at: 0.2)
         sleep(1)
-        shot("09-compose-bar-after-cancelled-swipe")
-        // Data sources stays, with its own bar alone: the system bar is not left in Settings' state.
+        shot("09-sub-screen-after-cancelled-swipe")
+        // Data sources stays, under its own system bar: the bar is not left in Settings' state.
         try require(!app.navigationBars["Settings"].exists, "A cancelled back swipe popped Data sources")
-        try require(app.navigationBars.count == 0, "Two bars after a cancelled swipe: the system bar over a Compose bar")
+        try require(app.navigationBars[dataSourcesTitle].exists, "A cancelled back swipe left the bar in Settings' state")
+        try require(app.navigationBars.count == 1, "Two bars after a cancelled swipe")
         let counted = Result { try requireCancelledTransition(after: before) }
         // A swipe that goes back brings Settings with its native bar.
         swipeBack(to: 0.85)
@@ -222,7 +223,7 @@ final class ShellUITests: XCTestCase {
     private func tabTapPopsTwo() throws {
         if !app.navigationBars["Settings"].exists { try settings() }
         try openDataSources()
-        shot("07-compose-bar-screen")
+        shot("07-sub-screen")
         app.tabBars.firstMatch.buttons["Family"].tap()
         try require(app.navigationBars["Family"].waitForExistence(timeout: timeout), "The tab tap did not pop to Family")
         // The shared stack followed: Expenses opens and its back returns to Family.
@@ -313,10 +314,12 @@ final class ShellUITests: XCTestCase {
         try require(calendar.waitForExistence(timeout: timeout) && calendar.isSelected, "The Calendar tab did not select")
     }
 
-    /// Opens Data sources from Settings: a screen that draws its own Compose bar, pushed with the
-    /// system bar hidden.
+    /// Data sources' title, which its system bar shows (MON-24 phase 3, part B, Task 6).
+    private let dataSourcesTitle = "Data sources and licences"
+
+    /// Opens Data sources from Settings: a sub-screen under its own system bar, with the back button.
     private func openDataSources() throws {
-        let dataSources = try element(containing: "Data sources and licences")
+        let dataSources = try element(containing: dataSourcesTitle)
         let screenBottom = app.windows.firstMatch.frame.maxY - 120
         for _ in 0..<6 where dataSources.frame.maxY > screenBottom {
             app.swipeUp()
@@ -328,7 +331,7 @@ final class ShellUITests: XCTestCase {
         if !app.navigationBars["Settings"].waitForNonExistence(timeout: 3) { press(dataSources) }
         sleep(2)
         try require(!app.navigationBars["Settings"].exists, "Data sources did not open over Settings")
-        try require(app.navigationBars.count == 0, "Two bars: the system bar over a Compose bar")
+        try require(app.navigationBars[dataSourcesTitle].waitForExistence(timeout: timeout), "Data sources has no system bar")
     }
 
     /// The Family tab at its first screen, whatever an earlier step left: a question, a sheet, a
@@ -351,7 +354,7 @@ final class ShellUITests: XCTestCase {
         try require(app.navigationBars["Family"].waitForExistence(timeout: timeout), "The Family tab's first screen is missing")
     }
 
-    /// Opens custody setup from the Family tab's agreements: a screen with its own Compose bar.
+    /// Opens custody setup from the Family tab's agreements, under its own system bar.
     private func openCustodySetup() throws {
         try goToFamilyRoot()
         let row = try element(containing: "Custody schedule")

@@ -134,7 +134,6 @@ abstract class PushedBarsHarness {
         )
     }
 
-
     companion object {
         /** A node with neither text nor a content description. */
         val Unlabelled = SemanticsMatcher("has neither text nor a content description") {
@@ -143,6 +142,7 @@ abstract class PushedBarsHarness {
 
         /** The fixtures' day. */
         val DAY = LocalDate(2026, 5, 13)
+
         /** The fixtures' moment. */
         val NOW = LocalDateTime(2026, 5, 1, 9, 0)
 
