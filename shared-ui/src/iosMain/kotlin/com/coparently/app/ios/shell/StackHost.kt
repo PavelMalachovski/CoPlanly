@@ -430,7 +430,12 @@ internal class StackHost(
             Screen.SchoolImport.route,
             Screen.SchoolConnect.route,
             Screen.CalendarFeed.route,
-            Screen.DataSources.route
+            Screen.DataSources.route,
+            // Chat (Task 7): the tab's list with a large title and its "+", and a thread whose
+            // header is the title view, with search and the overflow menu as bar buttons; the tab
+            // that renders its one thread in place shows the thread's bar.
+            Screen.Conversations.route,
+            Screen.Chat.route
         )
 
         /** Whether two lists hold the same view controllers, in order. */

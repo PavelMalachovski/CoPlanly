@@ -1,6 +1,7 @@
 package com.coparently.app.ios.shell
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -10,6 +11,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
 import com.coparently.app.presentation.common.BackSteps
 import com.coparently.app.presentation.common.BarAction
@@ -18,6 +20,7 @@ import com.coparently.app.presentation.common.BarLeading
 import com.coparently.app.presentation.common.BarMenuItem
 import com.coparently.app.presentation.common.ScreenBar
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.useContents
 import platform.Foundation.NSSelectorFromString
 import platform.UIKit.NSLayoutConstraint
 import platform.UIKit.UIAction
@@ -28,7 +31,9 @@ import platform.UIKit.UIColor
 import platform.UIKit.UIMenu
 import platform.UIKit.UIMenuElementAttributesDestructive
 import platform.UIKit.UIMenuElementAttributesDisabled
+import platform.UIKit.UILayoutPriorityDefaultHigh
 import platform.UIKit.UINavigationItemLargeTitleDisplayMode
+import platform.UIKit.UIScreen
 import platform.UIKit.UIViewController
 import platform.UIKit.accessibilityLabel
 import platform.UIKit.beginAppearanceTransition
@@ -160,7 +165,7 @@ internal class NativeBars(
             return
         }
         if (titleView != null) return
-        val created = BarComposition { current?.titleContent?.invoke() }
+        val created = BarComposition(maxWidth = titleViewMaxWidth()) { current?.titleContent?.invoke() }
         titleView = created
         item.titleView = created.controller.view
     }
@@ -286,14 +291,30 @@ internal class NativeBars(
     }
 
     /**
+     * The widest the title view may draw, in points: the screen's width less room for the leading
+     * item and two bar buttons on each side, so a long title (a co-parent's name in a chat thread's
+     * header) ends in its ellipsis rather than running under the buttons.
+     */
+    // `useContents` reads a C struct: Kotlin/Native's C interop.
+    @OptIn(ExperimentalForeignApi::class)
+    private fun titleViewMaxWidth(): Double {
+        val screenWidth = UIScreen.mainScreen.bounds.useContents { size.width }
+        return (screenWidth - 2 * TITLE_VIEW_SIDE_ROOM).coerceAtLeast(MIN_HOST_SIDE)
+    }
+
+    /**
      * A Compose host in the navigation bar (the chip, the title view): a transparent view sized to
      * what [content] draws, composed in the screen's providers. It is no child of the screen's view
      * controller, so its appearance follows [screenAppeared], starting once the bar has put it in
      * the window.
+     *
+     * @param maxWidth The widest [content] may draw, in points, or null for no limit (the chip).
+     *   With a limit the host's width also gives way to the bar's buttons (a constraint below
+     *   required), so the title view is narrowed rather than drawn over them.
      */
     // A transparent Compose host (`opaque`) is still experimental in Compose Multiplatform 1.9.3.
     @OptIn(ExperimentalComposeUiApi::class)
-    private inner class BarComposition(content: @Composable () -> Unit) {
+    private inner class BarComposition(maxWidth: Double? = null, content: @Composable () -> Unit) {
 
         private var width: NSLayoutConstraint? = null
         private var height: NSLayoutConstraint? = null
@@ -304,6 +325,7 @@ internal class NativeBars(
                 Box(
                     Modifier
                         .wrapContentSize(unbounded = true)
+                        .then(if (maxWidth != null) Modifier.widthIn(max = maxWidth.dp) else Modifier)
                         .onSizeChanged { size ->
                             with(density) { resize(size.width.toDp().value, size.height.toDp().value) }
                         }
@@ -316,8 +338,13 @@ internal class NativeBars(
         init {
             controller.view.backgroundColor = UIColor.clearColor
             controller.view.translatesAutoresizingMaskIntoConstraints = false
-            width = controller.view.widthAnchor.constraintEqualToConstant(MIN_CHIP_SIDE).apply { active = true }
-            height = controller.view.heightAnchor.constraintEqualToConstant(MIN_CHIP_SIDE).apply { active = true }
+            width = controller.view.widthAnchor.constraintEqualToConstant(MIN_HOST_SIDE).apply {
+                // A priority is set before the constraint is active: UIKit refuses to move one
+                // between required and optional once it is.
+                if (maxWidth != null) priority = UILayoutPriorityDefaultHigh
+                active = true
+            }
+            height = controller.view.heightAnchor.constraintEqualToConstant(MIN_HOST_SIDE).apply { active = true }
             // Once the bar has put the host in the window: the next turn of the main loop.
             dispatch_async(dispatch_get_main_queue()) {
                 if (screenVisible && isShown()) forwardAppearance(controller, true)
@@ -326,19 +353,26 @@ internal class NativeBars(
 
         private fun isShown(): Boolean = chip === this || titleView === this
 
-        /** Sizes the host to what it draws, in points; never zero, see [MIN_CHIP_SIDE]. */
+        /** Sizes the host to what it draws, in points; never zero, see [MIN_HOST_SIDE]. */
         private fun resize(width: Float, height: Float) {
-            this.width?.constant = width.toDouble().coerceAtLeast(MIN_CHIP_SIDE)
-            this.height?.constant = height.toDouble().coerceAtLeast(MIN_CHIP_SIDE)
+            this.width?.constant = width.toDouble().coerceAtLeast(MIN_HOST_SIDE)
+            this.height?.constant = height.toDouble().coerceAtLeast(MIN_HOST_SIDE)
         }
     }
 
     private companion object {
         /**
-         * The smallest side the chip's host keeps, in points: a Compose host with no area draws no
-         * frame, so it would never measure the chip again once a second family arrived.
+         * The smallest side a bar's Compose host (the chip's, the title view's) keeps, in points: a
+         * host with no area draws no frame, so it would never measure its content again, as the
+         * chip, empty with one family, must once a second family arrives.
          */
-        const val MIN_CHIP_SIDE = 1.0
+        const val MIN_HOST_SIDE = 1.0
+
+        /**
+         * The room kept on each side of the title view, in points: the leading item or two bar
+         * buttons (about 44 points each) with the bar's margins.
+         */
+        const val TITLE_VIEW_SIDE_ROOM = 100.0
 
         /** The system back button's chevron, which the shell's own back button draws. */
         const val BACK_SYMBOL = "chevron.backward"

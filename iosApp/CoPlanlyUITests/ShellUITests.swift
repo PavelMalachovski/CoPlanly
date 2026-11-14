@@ -7,7 +7,8 @@ import XCTest
 /// saving a screenshot of each as an attachment, which CI exports as the `ios-shell` artifact. On the
 /// way it does what the shell's review is about: a back swipe, a back swipe let go of (over native
 /// bars and over a screen that draws its own bar, each checked to have begun and been cancelled), a
-/// second tap on the selected tab popping two screens, a sheet holding an edit swiped down, which
+/// second tap on the selected tab popping two screens, the Chat tab's thread under the system bar with
+/// its overflow menu opening and closing, a sheet holding an edit swiped down, which
 /// must ask "Discard changes?" and stay open on "Keep editing", the event form as a sheet with Save in
 /// its bar (disabled until the event has a title), and a sign-out reaching the sign-in screen with no
 /// tabs, then a sign-in landing on fresh tabs.
@@ -51,6 +52,7 @@ final class ShellUITests: XCTestCase {
         step("sign in") { try self.signIn(email: email, password: password) }
         step("Home", after: ["sign in"]) { try self.home() }
         step("Calendar and Chat tabs", after: ["sign in"]) { try self.otherTabs() }
+        step("Chat thread's bar and overflow menu", after: ["Calendar and Chat tabs"]) { try self.chatThreadBar() }
         step("Family", after: ["sign in"]) { try self.family() }
         step("Expenses", after: ["Family"]) { try self.expenses() }
         step("back swipe", after: ["Expenses"]) { try self.backSwipe() }
@@ -104,6 +106,29 @@ final class ShellUITests: XCTestCase {
         try require(tabs.buttons["Calendar"].isSelected, "The Calendar tab did not select")
         tabs.buttons["Chat"].tap()
         try require(tabs.buttons["Chat"].isSelected, "The Chat tab did not select")
+    }
+
+    /// The Chat tab renders the family's one thread in place under the system bar (MON-24 phase 3,
+    /// part B, Task 7): the co-parent's name in the bar's title view, and the overflow menu, which
+    /// opens and closes.
+    private func chatThreadBar() throws {
+        let chat = app.tabBars.firstMatch.buttons["Chat"]
+        chat.tap()
+        try require(chat.isSelected, "The Chat tab did not select")
+        let bar = app.navigationBars.firstMatch
+        let name = bar.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "Bob")).firstMatch
+        let named = name.waitForExistence(timeout: 60) || app.navigationBars["Bob"].exists
+        shot("15-chat-thread")
+        try require(named, "The thread's bar does not show the co-parent's name")
+        let more = bar.buttons["More actions"]
+        try require(more.waitForExistence(timeout: timeout), "The thread's bar has no overflow button")
+        more.tap()
+        let block = app.buttons.matching(NSPredicate(format: "label == %@", "Block and stop sharing")).firstMatch
+        try require(block.waitForExistence(timeout: timeout), "The overflow menu did not open")
+        shot("16-chat-overflow")
+        // A tap outside a menu dismisses it, and does nothing else.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)).tap()
+        try require(block.waitForNonExistence(timeout: timeout), "The overflow menu did not close")
     }
 
     private func family() throws {

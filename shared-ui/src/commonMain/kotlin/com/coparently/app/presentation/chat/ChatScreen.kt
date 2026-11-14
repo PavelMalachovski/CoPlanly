@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -51,10 +52,16 @@ import com.coparently.app.domain.chat.ToneNudge
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
+import com.coparently.app.presentation.common.AppTopBar
+import com.coparently.app.presentation.common.BarAction
+import com.coparently.app.presentation.common.BarLeading
+import com.coparently.app.presentation.common.BarMenuItem
 import com.coparently.app.presentation.common.ScreenBackStep
+import com.coparently.app.presentation.common.ScreenBar
 import com.coparently.app.presentation.common.WhileScreenVisible
 import com.coparently.app.presentation.common.rememberMicrophonePermissionRequester
 import com.coparently.app.presentation.common.rememberParentNames
+import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.common.valueOrNull
 import com.coparently.app.presentation.platform.LocalDictation
 import com.coparently.app.presentation.theme.Motion
@@ -65,6 +72,7 @@ import com.coparently.app.resources.Res
 import com.coparently.app.resources.chat_back
 import com.coparently.app.resources.chat_failed_to_send
 import com.coparently.app.resources.chat_header_synced
+import com.coparently.app.resources.chat_more_actions
 import com.coparently.app.resources.chat_no_upcoming_events
 import com.coparently.app.resources.chat_nudge_words
 import com.coparently.app.resources.chat_pick_event_to_reschedule
@@ -245,10 +253,17 @@ fun ChatScreen(
         if (pauseBeforeSending) ToneCheck.check(composerText, nudgeWords) else ToneNudge()
     }
 
+    // A blank (not null) title means this row was mirrored locally before any successful
+    // `ensureConversation` set it — `?:` alone never catches that.
+    val threadTitle = conversation?.title?.takeIf { it.isNotBlank() }
+        ?: departed?.departedName?.takeIf { it.isNotBlank() }
+        ?: stringResource(Res.string.chat_title_fallback)
+
     Scaffold(
         containerColor = ScreenContainerColor,
         topBar = {
             ChatTopBar(
+                title = threadTitle,
                 searchQuery = searchQuery.takeIf { searching },
                 onSearchQueryChange = searchViewModel::onQueryChange,
                 onOpenSearch = { searchViewModel.open(conversationId) },
@@ -257,12 +272,7 @@ fun ChatScreen(
                 onOpenSettings = onOpenSettings,
                 onBlock = onBlock.takeIf { departed == null }
             ) {
-                // A blank (not null) title means this row was mirrored locally before any
-                // successful `ensureConversation` set it — `?:` alone never catches that.
-                val title = conversation?.title?.takeIf { it.isNotBlank() }
-                    ?: departed?.departedName?.takeIf { it.isNotBlank() }
-                    ?: stringResource(Res.string.chat_title_fallback)
-                ChatThreadHeader(title = title, messages = messages, currentUserId = currentUserId)
+                ChatThreadHeader(title = threadTitle, messages = messages, currentUserId = currentUserId)
             }
         }
     ) { padding ->
@@ -450,6 +460,12 @@ fun ChatScreen(
  * Search is an action of the thread header, beside its identity, and it searches what this phone
  * holds of this one conversation.
  *
+ * Where a shell draws the bars (the iPhone, MON-24 phase 3, part B) the bar is described to it
+ * instead ([ChatShellBar]); Android draws the Material bar it always drew, its overflow included.
+ * Public for the app's `ChatBarsTest`.
+ *
+ * @param title The thread's name: the co-parent's, or the fallback; the iPhone's bar names the
+ *   screen with it (its back button's label on a screen pushed over it, and VoiceOver)
  * @param searchQuery The query while search is open, or null while it is not
  * @param onSearchQueryChange Called on every edit of the query
  * @param onOpenSearch Opens search over this thread
@@ -463,7 +479,8 @@ fun ChatScreen(
 @Composable
 // One callback per action the bar offers, plus the identity slot; the same shape as ChatScreen's.
 @Suppress("LongParameterList")
-private fun ChatTopBar(
+fun ChatTopBar(
+    title: String,
     searchQuery: String?,
     onSearchQueryChange: (String) -> Unit,
     onOpenSearch: () -> Unit,
@@ -473,6 +490,19 @@ private fun ChatTopBar(
     onBlock: (() -> Unit)?,
     header: @Composable () -> Unit
 ) {
+    if (shellDrawsBars()) {
+        ChatShellBar(
+            title = title,
+            searchQuery = searchQuery,
+            onSearchQueryChange = onSearchQueryChange,
+            onOpenSearch = onOpenSearch,
+            onCloseSearch = onCloseSearch,
+            onBack = onBack,
+            menu = chatOverflowEntries(onOpenSettings = onOpenSettings, onBlock = onBlock),
+            header = header
+        )
+        return
+    }
     if (searchQuery != null) {
         TopAppBar(
             colors = screenTopAppBarColors(),
@@ -520,6 +550,78 @@ private fun ChatTopBar(
                 ChatOverflowMenu(onOpenSettings = onOpenSettings, onBlock = onBlock)
             }
         }
+    )
+}
+
+/**
+ * The thread's bar as the iPhone's navigation bar draws it: the header ([ChatThreadHeader]: the
+ * initial, the name and whether this parent's messages left the phone) as the title view, search
+ * (`magnifyingglass`) and the overflow (`ellipsis.circle`) as a menu holding today's entries in
+ * today's order; or, while search is open, the search field as the title view with a close button
+ * that ends the search (the system back does the same, through the screen's back step).
+ *
+ * @param title The thread's name
+ * @param searchQuery The query while search is open, or null while it is not
+ * @param onSearchQueryChange Called on every edit of the query
+ * @param onOpenSearch Opens search over this thread
+ * @param onCloseSearch Closes search and returns to the thread
+ * @param onBack Up navigation, or null when the thread is the Chat tab itself
+ * @param menu The overflow's entries; the overflow is left out when there are none, as on Android
+ * @param header The thread's identity line
+ */
+@Composable
+// One callback per action the bar offers, as ChatTopBar's.
+@Suppress("LongParameterList")
+private fun ChatShellBar(
+    title: String,
+    searchQuery: String?,
+    onSearchQueryChange: (String) -> Unit,
+    onOpenSearch: () -> Unit,
+    onCloseSearch: () -> Unit,
+    onBack: (() -> Unit)?,
+    menu: List<BarMenuItem>,
+    header: @Composable () -> Unit
+) {
+    if (searchQuery != null) {
+        AppTopBar(
+            ScreenBar(
+                title = stringResource(Res.string.chat_search),
+                leading = BarLeading.Close(
+                    label = stringResource(Res.string.chat_search_close),
+                    onClick = onCloseSearch
+                ),
+                titleContent = {
+                    ChatSearchField(
+                        query = searchQuery,
+                        onQueryChange = onSearchQueryChange,
+                        onClear = { onSearchQueryChange("") }
+                    )
+                }
+            )
+        )
+        return
+    }
+    val backLabel = stringResource(Res.string.chat_back)
+    val search = BarAction(
+        label = stringResource(Res.string.chat_search),
+        icon = Icons.Default.Search,
+        sfSymbol = "magnifyingglass",
+        onClick = onOpenSearch
+    )
+    val overflow = BarAction(
+        label = stringResource(Res.string.chat_more_actions),
+        icon = Icons.Default.MoreVert,
+        sfSymbol = "ellipsis.circle",
+        onClick = {},
+        menu = menu
+    ).takeIf { menu.isNotEmpty() }
+    AppTopBar(
+        ScreenBar(
+            title = title,
+            leading = onBack?.let { BarLeading.Back(label = backLabel, onClick = it) } ?: BarLeading.None,
+            actions = listOfNotNull(search, overflow),
+            titleContent = header
+        )
     )
 }
 
