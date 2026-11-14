@@ -64,8 +64,10 @@ import com.coparently.app.domain.home.HomeWeek
 import com.coparently.app.domain.time.IsoText
 import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.calendar.components.CalendarGridCard
-import com.coparently.app.presentation.calendar.components.CalendarHeader
 import com.coparently.app.presentation.calendar.components.CalendarMonthBar
+import com.coparently.app.presentation.calendar.components.CalendarTopBar
+import com.coparently.app.presentation.calendar.components.CalendarTopBarActions
+import com.coparently.app.presentation.calendar.components.CalendarTopBarState
 import com.coparently.app.presentation.calendar.components.ChangeRequestBanner
 import com.coparently.app.presentation.calendar.components.CustodyChangedBanner
 import com.coparently.app.presentation.calendar.components.CustodyLegend
@@ -75,6 +77,7 @@ import com.coparently.app.presentation.calendar.components.DaySwapStrip
 import com.coparently.app.presentation.calendar.components.DaySwapStripActions
 import com.coparently.app.presentation.calendar.components.DaySwapStripState
 import com.coparently.app.presentation.calendar.components.EventTypeFilterSheet
+import com.coparently.app.presentation.calendar.components.SwapSelectionBarActions
 import com.coparently.app.presentation.calendar.components.SwapSheetActions
 import com.coparently.app.presentation.calendar.components.SwapSheetOffer
 import com.coparently.app.presentation.calendar.components.TodayCard
@@ -720,28 +723,44 @@ fun CalendarScreen(
         if (calendarViewModel.viewMode.value != CalendarViewMode.DAY) dayOpenedFromMonth = false
     }
 
+    val showToday = {
+        calendarViewModel.showMonth(Clock.System.todayIn(TimeZone.currentSystemDefault()).yearMonth)
+    }
+    // Pre-fills the day on screen: the selected day when there is one, otherwise the anchor of the
+    // current view — a null date made the form default to today even with another day highlighted.
+    val addEventOnScreenDay = {
+        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        onAddEventClick(selectedDate ?: anchorDate, null)
+    }
+
     Scaffold(
         containerColor = ScreenContainerColor,
         topBar = {
-            if (swapHeaderShown) {
-                SwapSelectionHeader(
-                    month = displayedMonth,
+            // The header, or the swap selection's; on the iPhone the month, Today, Filters, the gear
+            // and "+" are the navigation bar's (MON-24 phase 3, part B).
+            CalendarTopBar(
+                state = CalendarTopBarState(
+                    children = children,
+                    viewMode = viewMode,
+                    titleDate = anchorDate,
+                    filtersActive = parentFilter != ParentFilter.BOTH ||
+                        hiddenEventTypes.isNotEmpty() ||
+                        !showHolidays,
+                    swapMonth = displayedMonth.takeIf { swapHeaderShown }
+                ),
+                actions = CalendarTopBarActions(
+                    onViewModeChange = { mode -> calendarViewModel.setViewMode(mode) },
+                    onFilters = { showTypeFilters = true },
+                    onSettings = onSettingsClick,
+                    onToday = showToday,
+                    onAddEvent = addEventOnScreenDay
+                ),
+                swapActions = SwapSelectionBarActions(
                     onPreviousMonth = { calendarViewModel.showMonth(displayedMonth.minusMonth()) },
                     onNextMonth = { calendarViewModel.showMonth(displayedMonth.plusMonth()) },
                     onClose = ::endSwapSelection
                 )
-            } else {
-                CalendarHeader(
-                    children = children,
-                    viewMode = viewMode,
-                    onViewModeChange = { mode -> calendarViewModel.setViewMode(mode) },
-                    onFiltersClick = { showTypeFilters = true },
-                    filtersActive = parentFilter != ParentFilter.BOTH ||
-                        hiddenEventTypes.isNotEmpty() ||
-                        !showHolidays,
-                    onSettingsClick = onSettingsClick
-                )
-            }
+            )
         },
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
@@ -1018,9 +1037,7 @@ fun CalendarScreen(
                 ) {
                     CalendarMonthBar(
                         selectedDate = anchorDate,
-                        onToday = {
-                            calendarViewModel.showMonth(Clock.System.todayIn(TimeZone.currentSystemDefault()).yearMonth)
-                        },
+                        onToday = showToday,
                         // While days are chosen the selection header pages the month itself.
                         onPrevious = { stepPeriod(-1) }.takeUnless { swapHeaderShown },
                         onNext = { stepPeriod(1) }.takeUnless { swapHeaderShown },
@@ -1032,13 +1049,8 @@ fun CalendarScreen(
                             custodyModel != null && viewMode == CalendarViewMode.MONTH && !selectingSwap &&
                                 grid.followsFamily
                         }?.let { { selectingSwap = true } },
-                        // Pre-fills the day on screen: the selected day when there is one, otherwise
-                        // the anchor of the current view — a null date made the form default to
-                        // today even with another day highlighted.
-                        onAddEvent = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onAddEventClick(selectedDate ?: anchorDate, null)
-                        }.takeUnless { swapHeaderShown }
+                        // Drawn here on Android; the iPhone's bar carries it (CalendarTopBar).
+                        onAddEvent = addEventOnScreenDay.takeUnless { swapHeaderShown }
                     )
                     // Whose colour is whose and what the marks mean, in every view (new-user review,
                     // October 2026). Only with a schedule: without one the grid has no wash to explain.

@@ -378,8 +378,8 @@ internal class StackHost(
         /**
          * The routes whose screens describe their bar (`AppTopBar`) in part A: the tabs' first
          * screens Home and Family, the path Family → Expenses → Add expense, and Settings. Every
-         * other screen draws its own Compose bar, with the navigation bar hidden over it; Calendar's
-         * and Chat's first screens keep their Compose headers until part B.
+         * other screen draws its own Compose bar, with the navigation bar hidden over it. Part B adds
+         * the rest, task by task, the Chat and Calendar tabs' first screens included.
          */
         val NATIVE_BAR_ROUTES = setOf(
             Screen.Home.route,
@@ -435,7 +435,11 @@ internal class StackHost(
             // header is the title view, with search and the overflow menu as bar buttons; the tab
             // that renders its one thread in place shows the thread's bar.
             Screen.Conversations.route,
-            Screen.Chat.route
+            Screen.Chat.route,
+            // The calendar (Task 8): the month as the bar's title, Today, Filters, the gear and "+"
+            // as its buttons, the Month/Week/Day control under it; the swap selection's close and
+            // arrows while days are chosen.
+            Screen.Calendar.route
         )
 
         /** Whether two lists hold the same view controllers, in order. */

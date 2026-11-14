@@ -23,7 +23,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import com.coparently.app.presentation.common.AppTopBar
+import com.coparently.app.presentation.common.BarAction
+import com.coparently.app.presentation.common.BarLeading
 import com.coparently.app.presentation.common.ScreenBackStep
+import com.coparently.app.presentation.common.ScreenBar
+import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
@@ -71,6 +76,10 @@ fun SwapDaysButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
  * The calendar's top bar while days are being chosen (board SW-2): close, "Choose days to swap",
  * and the month with arrows either side, so paging while choosing needs no swipe. Back closes it
  * too.
+ *
+ * Where a shell draws the bars (the iPhone, MON-24 phase 3, part B) the same content goes to its
+ * bar: the title, a close button (`xmark`) and the two arrows (`chevron.left`, `chevron.right`); the
+ * grid card's title already names the month.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,6 +90,10 @@ internal fun SwapSelectionHeader(
     onClose: () -> Unit
 ) {
     ScreenBackStep(onBack = onClose)
+    if (shellDrawsBars()) {
+        SwapSelectionShellBar(onPreviousMonth = onPreviousMonth, onNextMonth = onNextMonth, onClose = onClose)
+        return
+    }
     TopAppBar(
         colors = screenTopAppBarColors(),
         navigationIcon = {
@@ -115,5 +128,33 @@ internal fun SwapSelectionHeader(
                 )
             }
         }
+    )
+}
+
+/** [SwapSelectionHeader]'s content as the iPhone's navigation bar draws it. */
+@Composable
+private fun SwapSelectionShellBar(onPreviousMonth: () -> Unit, onNextMonth: () -> Unit, onClose: () -> Unit) {
+    AppTopBar(
+        ScreenBar(
+            title = stringResource(Res.string.day_swap_choose_title),
+            leading = BarLeading.Close(
+                label = stringResource(Res.string.day_swap_close_selection),
+                onClick = onClose
+            ),
+            actions = listOf(
+                BarAction(
+                    label = stringResource(Res.string.day_swap_previous_month),
+                    icon = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                    sfSymbol = "chevron.left",
+                    onClick = onPreviousMonth
+                ),
+                BarAction(
+                    label = stringResource(Res.string.day_swap_next_month),
+                    icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    sfSymbol = "chevron.right",
+                    onClick = onNextMonth
+                )
+            )
+        )
     )
 }

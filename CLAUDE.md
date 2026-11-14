@@ -150,7 +150,11 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    the actions); tapping the title opens "Jump to
    date". **The "+" is the bar's, not a floating button** (tester feedback, 12 November 2026): once
    the six rows reached the card's bottom a floating "+" covered the last row's cells. The Scaffold's
-   floating slot holds only the red delete button a long press or a drag brings up. The Today card
+   floating slot holds only the red delete button a long press or a drag brings up. **On the iPhone the
+   bar is the system's** (MON-24 phase 3, part B; `components/CalendarTopBar.kt`): the month is its
+   title, Today, Filters, the gear and "+" its buttons, the brand row and heading are not drawn, the
+   Month/Week/Day control stays under it and the card's month bar drops Today and "+"; while days
+   are chosen, `SwapSelectionHeader`'s close and arrows. Android draws every row as before. The Today card
    (`TodayCard`, built through `HomeWeek.todayOf` like the widget's) sits in the
    Scaffold's bottom bar slot, and is left out on two panes. What waits on this parent's answer is an inline banner over the grid
    (`components/CalendarBanners.kt`), not a badged glyph, and its number is the one Home's

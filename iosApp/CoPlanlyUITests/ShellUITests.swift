@@ -53,6 +53,7 @@ final class ShellUITests: XCTestCase {
         step("Home", after: ["sign in"]) { try self.home() }
         step("Calendar and Chat tabs", after: ["sign in"]) { try self.otherTabs() }
         step("Chat thread's bar and overflow menu", after: ["Calendar and Chat tabs"]) { try self.chatThreadBar() }
+        step("Calendar's bar shows the month and its actions", after: ["Calendar and Chat tabs"]) { try self.calendarBar() }
         step("Family", after: ["sign in"]) { try self.family() }
         step("Expenses", after: ["Family"]) { try self.expenses() }
         step("back swipe", after: ["Expenses"]) { try self.backSwipe() }
@@ -258,7 +259,30 @@ final class ShellUITests: XCTestCase {
         shot("08-family-again")
     }
 
-    /// The event form, opened from the calendar's month bar, is a sheet whose bar carries a cross
+    /// The Calendar tab's system bar (MON-24 phase 3, part B, Task 8): titled with the month on
+    /// screen, this month at first, with Today, Filters, Settings and "+" as its buttons; the brand
+    /// row and its heading are not drawn, and the Month/Week/Day control stays under the bar.
+    private func calendarBar() throws {
+        try goToCalendarRoot()
+        let bar = app.navigationBars[calendarMonthTitle]
+        try require(bar.waitForExistence(timeout: 60), "The calendar's bar is not titled \(calendarMonthTitle)")
+        shot("17-calendar-bar")
+        for label in ["Today", "Filters", "Settings", "Add event"] {
+            try require(bar.buttons[label].exists, "The calendar's bar has no \(label) button")
+        }
+        try require(!labelExists(containing: "Your family calendar"), "The calendar still draws its heading under the bar")
+        try require(element(labelledContaining: "Week").exists, "The Month/Week/Day control is missing under the bar")
+    }
+
+    /// The month the calendar opens on, as its bar titles it: this month's name, in English.
+    private var calendarMonthTitle: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en")
+        formatter.dateFormat = "LLLL"
+        return formatter.string(from: Date())
+    }
+
+    /// The event form, opened from the calendar's bar, is a sheet whose bar carries a cross
     /// and Save (MON-24 phase 3, part B): Save is disabled until the event has a title, and no second
     /// Save is drawn under the form.
     private func eventFormSheet() throws {
@@ -266,7 +290,9 @@ final class ShellUITests: XCTestCase {
         press(try element(labelled: "Add event", in: app.buttons))
         let sheetBar = app.navigationBars["New event"]
         try require(sheetBar.waitForExistence(timeout: timeout), "The event form did not open as a sheet")
-        try require(app.navigationBars.count == 1, "More than one bar over the event form")
+        // The calendar's own bar may still be in the hierarchy under the sheet; nothing else may be.
+        let underSheet = app.navigationBars[calendarMonthTitle].exists ? 1 : 0
+        try require(app.navigationBars.count - underSheet == 1, "More than one bar over the event form")
         let save = sheetBar.buttons["Save event"]
         try require(save.waitForExistence(timeout: timeout), "The sheet's bar carries no Save")
         try require(!save.isEnabled, "Save was enabled on an event with no title")
@@ -288,7 +314,8 @@ final class ShellUITests: XCTestCase {
         swipeSheetDown(from: sheetBar)
         try require(sheetBar.waitForNonExistence(timeout: timeout), "A swipe down did not close the new event's sheet")
         try require(!app.staticTexts["Discard changes?"].exists, "A new event asked before closing")
-        try require(app.navigationBars.count == 0, "A system bar over the calendar after the event form")
+        try require(app.navigationBars[calendarMonthTitle].waitForExistence(timeout: timeout), "The calendar's bar did not come back after the event form")
+        try require(app.navigationBars.count == 1, "A second bar over the calendar after the event form")
         try require(app.tabBars.firstMatch.buttons["Calendar"].isSelected, "The calendar was not under the sheet")
     }
 
@@ -332,7 +359,7 @@ final class ShellUITests: XCTestCase {
         try require(app.navigationBars["Home"].waitForExistence(timeout: timeout), "Home's first screen is missing")
     }
 
-    /// The Calendar tab, which draws its own Compose header: no system bar over it.
+    /// The Calendar tab's first screen, under its system bar (MON-24 phase 3, part B, Task 8).
     private func goToCalendarRoot() throws {
         let calendar = app.tabBars.firstMatch.buttons["Calendar"]
         calendar.tap()

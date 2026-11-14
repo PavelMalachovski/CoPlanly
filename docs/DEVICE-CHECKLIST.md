@@ -2433,6 +2433,30 @@ school) and a build with the row switched on: a debug build, or release with
   `data/school/SchoolConnectionStore`, `domain/school/`, `presentation/school/`. Capture the failing
   answer (redacted) as a fixture with a test.
 
+### 3.37 The calendar's bar on an iPhone · 1P, iPhone, swap check needs a custody schedule
+
+MON-24 phase 3, part B, Task 8. `CalendarBarsTest` holds what the bar is handed and that Android
+draws every header row as before; the `ios-app` job's walk opens the Calendar tab and finds the month
+as the bar's title with Today, Filters, Settings and "+" (artifact `ios-shell`, `17-calendar-bar`).
+The walk's family has no custody schedule, so the swap selection's bar is not walked. What is left:
+
+- [ ] **The bar reads as the board.** Calendar tab: the month ("November", or "November 2027"
+      outside this year) is the bar's inline title; Today, Filters, the gear and "+" are its buttons,
+      "+" at the edge; no "coplanly." wordmark and no "Your family calendar" lines; Month/Week/Day
+      sits under the bar, above the grid card, and nothing is drawn under the bar's glass.
+- [ ] **Each button.** Page to another month, tap Today: this month. Filters opens the sheet; with a
+      filter on, its symbol is filled. The gear opens Settings. "+" opens New event on the selected
+      day. The card's own title still opens "Jump to date…"; its arrows page, and the card draws no
+      Today chip and no "+".
+- [ ] **Week and Day view.** The bar's title follows the week's or the day's month.
+- [ ] **Swap selection** (a family with a schedule). Tap "⇄" on the card: the bar becomes "Choose
+      days to swap" with a close button and the two chevrons, which page the month; the close button
+      ends the selection and the month bar returns. VoiceOver reads "Stop choosing
+      days", "Previous month", "Next month".
+- **If it fails:** `presentation/calendar/components/CalendarTopBar.kt`, `CalendarHeader.kt`,
+  `CalendarMonthBar.kt`, `calendar/SwapSelectionChrome.kt` (`:shared-ui`), and the shell's
+  `NATIVE_BAR_ROUTES` (`ios/shell/StackHost.kt`).
+
 ---
 
 ## After the session
