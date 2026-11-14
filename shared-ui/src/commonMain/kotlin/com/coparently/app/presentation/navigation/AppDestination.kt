@@ -1310,8 +1310,10 @@ private fun SettingsDestination(
     // screen the sign-out navigates away from, cutting its steps short, and the shell never
     // heard that the account had gone. The shell then shows the sign-in itself, once the
     // sign-out has ended the session, so this screen navigates nowhere: a second switch of the
-    // root racing the shell's own is what the walk's first run of this met. Android keeps the
-    // entry's own and its navigation, as it always had.
+    // root racing the shell's own is what the walk's first run of this met. A deletion ends the
+    // session without the shell's state hearing of it (IosAccountDeletion signs out underneath),
+    // so once it has succeeded the shell's state is asked again, and finds nobody signed in.
+    // Android keeps the entry's own and its navigation, for both, as it always had.
     val shellDecides = shellDrawsBars()
     val sessionState: AuthStateViewModel = if (shellDecides) authStateViewModel else koinViewModel()
     SettingsScreen(
@@ -1337,6 +1339,7 @@ private fun SettingsDestination(
                 }
             }
         },
+        onAccountDeleted = if (shellDecides) authStateViewModel::refreshAuthState else null,
         syncViewModel = syncViewModel,
         authStateViewModel = sessionState
     )
