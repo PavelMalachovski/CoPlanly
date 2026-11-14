@@ -23,7 +23,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -37,14 +36,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.model.CustodyModel
+import com.coparently.app.presentation.common.AppTopBar
+import com.coparently.app.presentation.common.BarLeading
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.Parents
+import com.coparently.app.presentation.common.ScreenBar
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.labelMediumEmphasized
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.custody_conflict_body
 import com.coparently.app.resources.custody_conflict_keep_local
@@ -112,9 +113,10 @@ fun CustodyConflictScreen(
     Scaffold(
         containerColor = ScreenContainerColor,
         topBar = {
-            TopAppBar(
-                colors = screenTopAppBarColors(),
-                title = { Text(stringResource(Res.string.custody_conflict_title)) }
+            // No way back: the conflict is answered here (see `CustodyConflictEffects`). On the
+            // iPhone the bar hides the system back button, and its edge swipe with it.
+            AppTopBar(
+                ScreenBar(title = stringResource(Res.string.custody_conflict_title), leading = BarLeading.None)
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }

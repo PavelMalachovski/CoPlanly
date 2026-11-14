@@ -77,7 +77,10 @@ data class BarAction(
 /** What sits at the start of a screen's top bar. */
 sealed interface BarLeading {
 
-    /** Nothing: a tab's root screen. */
+    /**
+     * Nothing: a tab's root screen, or a pushed screen that offers no way back (the custody
+     * conflict), over which the iPhone hides its system back button and edge swipe.
+     */
     data object None : BarLeading
 
     /**

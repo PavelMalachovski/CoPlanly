@@ -169,8 +169,11 @@ internal class NativeBars(
         val item = viewController.navigationItem
         when (leading) {
             BarLeading.None -> {
+                // Nothing at the start: a stack's first screen has no back button anyway, and a
+                // pushed screen that offers no way back (the custody conflict) hides UIKit's, which
+                // also refuses the edge swipe (`EdgeSwipeBack`).
                 item.leftBarButtonItem = null
-                item.hidesBackButton = false
+                item.hidesBackButton = true
             }
             is BarLeading.Back -> if (sheetRoot) {
                 // A sheet has no screen to go back to: its way out is the close button.

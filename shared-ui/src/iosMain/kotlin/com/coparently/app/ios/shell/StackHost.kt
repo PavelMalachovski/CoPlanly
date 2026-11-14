@@ -409,7 +409,28 @@ internal class StackHost(
             Screen.UnassignedRecords.route,
             Screen.MonthReview.route,
             Screen.Export.route,
-            Screen.Support.route
+            Screen.Support.route,
+            // Agreements, people, sign-in links and Settings' sub-screens (Task 6): the system bar,
+            // with a pinned primary action (Save, Connect, Send for approval) as its bar button.
+            Screen.ChangeRequests.route,
+            Screen.ParentingPlan.route,
+            Screen.CustodySetup.route,
+            Screen.CustodyConflict.route,
+            Screen.Pairing.route,
+            Screen.Professionals.route,
+            Screen.ProfessionalCalendar.route,
+            Screen.ProfessionalPlan.route,
+            Screen.Friends.route,
+            Screen.FriendDetail.route,
+            Screen.FriendProfile.route,
+            Screen.FriendCalendar.route,
+            Screen.GuestAccept.route,
+            Screen.MyProfile.route,
+            Screen.CoParentProfile.route,
+            Screen.SchoolImport.route,
+            Screen.SchoolConnect.route,
+            Screen.CalendarFeed.route,
+            Screen.DataSources.route
         )
 
         /** Whether two lists hold the same view controllers, in order. */

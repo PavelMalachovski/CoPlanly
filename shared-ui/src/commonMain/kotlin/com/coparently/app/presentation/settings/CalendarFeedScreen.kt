@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddLink
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Link
@@ -24,7 +23,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -38,6 +36,7 @@ import com.coparently.app.domain.feed.CalendarFeedLink
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ExpandableDetails
 import com.coparently.app.presentation.common.GroupLabel
+import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
@@ -47,7 +46,6 @@ import com.coparently.app.presentation.platform.LocalSensitiveClipboard
 import com.coparently.app.presentation.platform.LocalShareSheet
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.calendar_feed_copy
 import com.coparently.app.resources.calendar_feed_create
@@ -118,17 +116,10 @@ fun CalendarFeedScreen(
         containerColor = ScreenContainerColor,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                colors = screenTopAppBarColors(),
-                title = { Text(stringResource(Res.string.calendar_feed_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateUp) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(Res.string.common_back)
-                        )
-                    }
-                }
+            PushedTopBar(
+                title = stringResource(Res.string.calendar_feed_title),
+                backLabel = stringResource(Res.string.common_back),
+                onBack = onNavigateUp
             )
         }
     ) { padding ->

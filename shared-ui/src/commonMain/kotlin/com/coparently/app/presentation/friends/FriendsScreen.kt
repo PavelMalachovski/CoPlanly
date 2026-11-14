@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Diversity3
@@ -17,12 +16,10 @@ import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -34,11 +31,11 @@ import com.coparently.app.domain.friends.CalendarFriendGrant
 import com.coparently.app.domain.friends.FriendAccessDuration
 import com.coparently.app.presentation.common.AccountAvatar
 import com.coparently.app.presentation.common.EmptyState
+import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
 import com.coparently.app.resources.friend_access_several
@@ -160,17 +157,10 @@ fun FriendsScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FriendsTopBar(onNavigateUp: () -> Unit) {
-    TopAppBar(
-        colors = screenTopAppBarColors(),
-        title = { Text(stringResource(Res.string.friend_section_title)) },
-        navigationIcon = {
-            IconButton(onClick = onNavigateUp) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(Res.string.common_back)
-                )
-            }
-        }
+    PushedTopBar(
+        title = stringResource(Res.string.friend_section_title),
+        backLabel = stringResource(Res.string.common_back),
+        onBack = onNavigateUp
     )
 }
 

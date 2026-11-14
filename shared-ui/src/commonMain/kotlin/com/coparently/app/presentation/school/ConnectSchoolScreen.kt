@@ -9,7 +9,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.EditNote
@@ -20,15 +19,12 @@ import androidx.compose.material.icons.filled.LocationCity
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -44,9 +40,11 @@ import com.coparently.app.domain.school.SchoolSystem
 import com.coparently.app.presentation.common.BannerTone
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ErrorState
+import com.coparently.app.presentation.common.FormSave
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.ListSkeleton
+import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.ScreenBackStep
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
@@ -55,7 +53,6 @@ import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.platform.LocalAppBuildValues
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.presentation.theme.titleMediumEmphasized
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
@@ -99,6 +96,7 @@ import com.coparently.app.resources.school_edupage_password_kept
 import com.coparently.app.resources.school_system_bakalari
 import com.coparently.app.resources.school_system_edupage
 import com.coparently.app.resources.school_system_title
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -132,39 +130,28 @@ fun ConnectSchoolScreen(
     // while there is an earlier step or work under way, so on the first step its swipe just leaves.
     ScreenBackStep(stepEnabled = state.hasInnerStep(LocalAppBuildValues.current.edupageImport), onBack = goBack)
 
+    val primary = stepAction(
+        state = state,
+        passwordEntered = password.isNotEmpty(),
+        onSignIn = {
+            viewModel.signIn(password)
+            password = ""
+        },
+        viewModel = viewModel
+    )
+
     Scaffold(
         containerColor = ScreenContainerColor,
-        topBar = {
-            TopAppBar(
-                colors = screenTopAppBarColors(),
-                title = {
-                    val title = if (state.reconnecting) {
-                        Res.string.school_connect_reconnect_title
-                    } else {
-                        Res.string.school_connect_title
-                    }
-                    Text(stringResource(title))
-                },
-                navigationIcon = {
-                    IconButton(onClick = goBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(Res.string.common_back)
-                        )
-                    }
-                }
-            )
-        },
+        topBar = { ConnectTopBar(state = state, primary = primary, onBack = goBack) },
         bottomBar = {
-            PrimaryAction(
-                state = state,
-                passwordEntered = password.isNotEmpty(),
-                onSignIn = {
-                    viewModel.signIn(password)
-                    password = ""
-                },
-                viewModel = viewModel
-            )
+            primary?.let { action ->
+                StickyActionBar(
+                    label = stringResource(action.label),
+                    onClick = action.onClick,
+                    enabled = action.enabled,
+                    busy = action.busy
+                )
+            }
         }
     ) { padding ->
         StepContent(
@@ -225,50 +212,68 @@ private fun StepContent(
     }
 }
 
-/** The step's one primary action, pinned at the bottom; nothing on the two list steps. */
+/**
+ * The bar: the flow's title, the up arrow that runs the step's back, and, on the iPhone, the
+ * step's [primary] action, which its bar carries instead of the pinned button (the form rule).
+ */
 @Composable
-private fun PrimaryAction(
+private fun ConnectTopBar(state: ConnectSchoolUiState, primary: StepAction?, onBack: () -> Unit) {
+    val title = if (state.reconnecting) Res.string.school_connect_reconnect_title else Res.string.school_connect_title
+    val primaryLabel = primary?.let { stringResource(it.label) }
+    PushedTopBar(
+        title = stringResource(title),
+        backLabel = stringResource(Res.string.common_back),
+        onBack = onBack,
+        save = primary?.let { action ->
+            FormSave(label = primaryLabel.orEmpty(), onClick = action.onClick, enabled = action.enabled && !action.busy)
+        }
+    )
+}
+
+/**
+ * A step's one primary action: its label, what it does, whether it can be pressed and whether it
+ * is running.
+ */
+private data class StepAction(
+    val label: StringResource,
+    val onClick: () -> Unit,
+    val enabled: Boolean = true,
+    val busy: Boolean = false
+)
+
+/**
+ * The step's one primary action, pinned at the bottom (on the iPhone, in the bar); none on the
+ * list steps.
+ */
+private fun stepAction(
     state: ConnectSchoolUiState,
     passwordEntered: Boolean,
     onSignIn: () -> Unit,
     viewModel: ConnectSchoolViewModel
-) {
-    when (state.step) {
-        ConnectStep.SYSTEM, ConnectStep.TOWN, ConnectStep.SCHOOL -> Unit
-        ConnectStep.MANUAL -> StickyActionBar(
-            label = stringResource(Res.string.school_connect_url_check),
-            onClick = viewModel::checkManualUrl,
-            enabled = state.manualUrl.isNotBlank(),
-            busy = state.isBusy
-        )
-        ConnectStep.EDUPAGE_CREDENTIALS -> StickyActionBar(
-            label = stringResource(Res.string.school_connect_sign_in),
-            onClick = onSignIn,
-            enabled = !state.isLoading && state.username.isNotBlank() && passwordEntered,
-            busy = state.isBusy
-        )
-        ConnectStep.EDUPAGE_CHILD -> StickyActionBar(
-            label = stringResource(Res.string.school_connect_continue),
-            onClick = viewModel::toConfirm,
-            enabled = state.canContinue
-        )
-        ConnectStep.CREDENTIALS -> StickyActionBar(
-            label = stringResource(Res.string.school_connect_sign_in),
-            onClick = onSignIn,
-            enabled = !state.isLoading && state.username.isNotBlank() && passwordEntered,
-            busy = state.isBusy
-        )
-        ConnectStep.CHOOSE -> StickyActionBar(
-            label = stringResource(Res.string.school_connect_continue),
-            onClick = viewModel::toConfirm,
-            enabled = state.canContinue
-        )
-        ConnectStep.CONFIRM -> StickyActionBar(
-            label = stringResource(Res.string.school_connect_save),
-            onClick = viewModel::connect,
-            busy = state.isBusy
-        )
-    }
+): StepAction? = when (state.step) {
+    ConnectStep.SYSTEM, ConnectStep.TOWN, ConnectStep.SCHOOL -> null
+    ConnectStep.MANUAL -> StepAction(
+        label = Res.string.school_connect_url_check,
+        onClick = viewModel::checkManualUrl,
+        enabled = state.manualUrl.isNotBlank(),
+        busy = state.isBusy
+    )
+    ConnectStep.EDUPAGE_CREDENTIALS, ConnectStep.CREDENTIALS -> StepAction(
+        label = Res.string.school_connect_sign_in,
+        onClick = onSignIn,
+        enabled = !state.isLoading && state.username.isNotBlank() && passwordEntered,
+        busy = state.isBusy
+    )
+    ConnectStep.EDUPAGE_CHILD, ConnectStep.CHOOSE -> StepAction(
+        label = Res.string.school_connect_continue,
+        onClick = viewModel::toConfirm,
+        enabled = state.canContinue
+    )
+    ConnectStep.CONFIRM -> StepAction(
+        label = Res.string.school_connect_save,
+        onClick = viewModel::connect,
+        busy = state.isBusy
+    )
 }
 
 /** A scrolling step with the error, if any, first. */

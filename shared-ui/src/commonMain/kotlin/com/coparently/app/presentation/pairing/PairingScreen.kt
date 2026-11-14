@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PersonAdd
@@ -24,7 +23,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -34,7 +32,6 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -51,6 +48,7 @@ import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.model.activeInviteOrNull
 import com.coparently.app.presentation.common.ConfirmationDialog
+import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.SignedInAsRow
@@ -69,7 +67,6 @@ import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.labelLargeEmphasized
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.pairing_add_another_description
 import com.coparently.app.resources.pairing_add_another_title
@@ -386,17 +383,10 @@ private fun PairingTopBar(state: PairingState, partnerOnScreen: PartnerSummary?,
         (partnerOnScreen ?: paired.partner)?.name?.takeIf { it.isNotBlank() }
             ?: stringResource(Res.string.parent_label_coparent)
     } ?: stringResource(Res.string.pairing_screen_title)
-    TopAppBar(
-        colors = screenTopAppBarColors(),
-        title = { Text(title) },
-        navigationIcon = {
-            IconButton(onClick = onNavigateBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(Res.string.pairing_back)
-                )
-            }
-        }
+    PushedTopBar(
+        title = title,
+        backLabel = stringResource(Res.string.pairing_back),
+        onBack = onNavigateBack
     )
 }
 

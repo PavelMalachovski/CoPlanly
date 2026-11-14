@@ -10,19 +10,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -41,13 +36,14 @@ import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.model.User
 import com.coparently.app.presentation.common.DatePickerField
 import com.coparently.app.presentation.common.ErrorState
+import com.coparently.app.presentation.common.FormSave
 import com.coparently.app.presentation.common.LocalDatePickerDialog
+import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.childinfo_cancel
 import com.coparently.app.resources.childinfo_ok
@@ -115,21 +111,23 @@ fun ProfileScreen(
     }
 
     val person = if (editable) uiState.me else uiState.coParent
+    val onSave = {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        viewModel.save()
+    }
+    // The bottom Save, which the iPhone's bar carries instead (the form rule), the arrow kept.
+    val save = FormSave(
+        label = stringResource(Res.string.profile_save),
+        onClick = onSave,
+        enabled = !uiState.isSaving
+    ).takeIf { editable && person != null }
 
     Scaffold(
         containerColor = ScreenContainerColor,
-        topBar = { ProfileTopBar(editable = editable, onNavigateUp = onNavigateUp) },
+        topBar = { ProfileTopBar(editable = editable, onNavigateUp = onNavigateUp, save = save) },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
-            if (editable && person != null) {
-                ProfileSaveBar(
-                    isSaving = uiState.isSaving,
-                    onSave = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        viewModel.save()
-                    }
-                )
-            }
+            if (save != null) ProfileSaveBar(isSaving = uiState.isSaving, onSave = onSave)
         }
     ) { paddingValues ->
         ProfileContent(
@@ -142,23 +140,17 @@ fun ProfileScreen(
     }
 }
 
-/** The top bar: a fixed title per mode, and a back arrow — no other actions. */
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * The top bar: a fixed title per mode and a back arrow; on the iPhone also [save], the editable
+ * mode's Save, as the bar's primary action.
+ */
 @Composable
-private fun ProfileTopBar(editable: Boolean, onNavigateUp: () -> Unit) {
-    TopAppBar(
-        colors = screenTopAppBarColors(),
-        title = {
-            Text(stringResource(if (editable) Res.string.profile_my_title else Res.string.profile_coparent_title))
-        },
-        navigationIcon = {
-            IconButton(onClick = onNavigateUp) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(Res.string.common_back)
-                )
-            }
-        }
+private fun ProfileTopBar(editable: Boolean, onNavigateUp: () -> Unit, save: FormSave?) {
+    PushedTopBar(
+        title = stringResource(if (editable) Res.string.profile_my_title else Res.string.profile_coparent_title),
+        backLabel = stringResource(Res.string.common_back),
+        onBack = onNavigateUp,
+        save = save
     )
 }
 
