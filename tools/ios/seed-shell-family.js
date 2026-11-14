@@ -102,8 +102,11 @@ const TOUR_EVENT_TITLE = 'Tour dentist';
  * effort: a refused write is reported and the next is written.
  *
  * The simulator runs on this host, so "today" here is the simulator's today too.
+ *
+ * @param {string} aliceSlot Alice's parent slot in the family ("mom" or "dad"), which an event's
+ *     `parentOwner` names as `EventRepositoryImpl` does for the creator's own event.
  */
-async function seedTourRecords(alice, bob) {
+async function seedTourRecords(alice, bob, aliceSlot) {
   const familyId = [alice.uid, bob.uid].sort().join('__');
   const audience = [alice.uid, bob.uid];
   const now = new Date();
@@ -121,7 +124,7 @@ async function seedTourRecords(alice, bob) {
       acceptance: 'NOT_REQUIRED', acceptedAt: '', acceptedBy: '', createdAt: created,
       createdByFirebaseUid: alice.uid, description: '', endDateTime: day(0, 19), eventType: 'activity',
       familyId, forMembers: [], friendParticipates: '', id: eventId, imageUrl: '', isImportant: false,
-      isRecurring: false, lastModifiedBy: alice.uid, parentOwner: 'mom', permissions: 'read_write',
+      isRecurring: false, lastModifiedBy: alice.uid, parentOwner: aliceSlot, permissions: 'read_write',
       pickupConfirmedAt: '', pickupConfirmedBy: '', recurrenceEndDate: '', recurrencePattern: '',
       reminderMinutes: null, sharedWith: audience, startDateTime: day(0, 18), title: TOUR_EVENT_TITLE,
       updatedAt: created,
@@ -195,7 +198,11 @@ async function main() {
   if (!accepted.result || accepted.result.partnerId !== alice.uid) {
     throw new Error(`acceptPairingInvitation returned ${JSON.stringify(accepted)}`);
   }
-  if (process.argv.includes('--tour')) await seedTourRecords(alice, bob);
+  if (process.argv.includes('--tour')) {
+    // The server assigns the slots and answers with the accepter's; the inviter holds the other.
+    const bobSlot = accepted.result.familyRole || accepted.result.role;
+    await seedTourRecords(alice, bob, bobSlot === 'mom' ? 'dad' : 'mom');
+  }
   process.stdout.write(JSON.stringify({email: alice.email, password: PASSWORD}) + '\n');
 }
 

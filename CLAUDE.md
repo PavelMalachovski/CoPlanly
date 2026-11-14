@@ -1239,8 +1239,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   completed and one let go of, a tab tap popping two screens, a dirty sheet swiped down asking
   "Discard changes?", sign-out to fresh tabs; artifact `ios-shell`), then the tour on a family of its
   own (`ShellUITests.testTour`: a screenshot per destination it reaches and a reason for each it
-  skips, artifact `ios-tour`; `continue-on-error`, so a crash in it fails the job at the end and the
-  emulator tests still run), and finally, on emulators
+  skips, artifact `ios-tour`; `continue-on-error`, so the emulator tests still run, and only a crash
+  or a failed launch fails the job, at its end, through the `tour-crashed` marker `simulator.sh tour`
+  writes for testTour's own two failure texts; a timeout or a failed seed is a notice), and
+  finally, on emulators
   again, `:shared-data:iosSimulatorArm64Test` and `:shared-ui:iosSimulatorArm64Test` on the same
   booted simulator (`COPLANLY_SIMULATOR_UDID`, so the Keychain tests run; check run "iPhone tests on
   the emulators", `require_tests`) with the write gate: `IosWriteGateTest` writes every kind of
@@ -1843,7 +1845,9 @@ shell alone, so Android reads a null and behaves as before:
 - **The iPhone tour** is `ShellUITests.testTour`, the `ios-app` job's step after the walk, on a
   family seeded with `tools/ios/seed-shell-family.js --tour`. It saves a screenshot per route it
   reaches (artifact `ios-tour`) and records each route it cannot reach in `tour.txt` with the
-  reason, as the Android UI tour does. It fails only on a crash or a failed launch. A new
+  reason, as the Android UI tour does. Only a crash or a failed launch fails the job (the
+  `tour-crashed` marker); its step's other failures, a timeout or the seed, are a notice, and the
+  tour stops visiting after 35 minutes so it always writes its summary. A new
   destination is added to its `tourRoutes`, which mirrors `AppDestinationCatalog.all`.
 
 **Where a `domain/…` path in this file lives** (MON-24 phase 1, November 2026). The domain moved

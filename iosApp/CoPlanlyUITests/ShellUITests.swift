@@ -112,7 +112,8 @@ final class ShellUITests: XCTestCase {
     private func signIn(email: String, password: String) throws {
         // The sign-in screen's own text, before its fields: Compose draws the screen first.
         _ = app.staticTexts["Welcome back!"].waitForExistence(timeout: 120)
-        shot("00-sign-in")
+        // The tour shoots this screen as `tour-auth`; its artifact holds `tour-` shots alone.
+        if !touring { shot("00-sign-in") }
         try type(email, into: field(labelled: "Email address"))
         try type(password, into: field(labelled: "Password"))
         dismissKeyboard()
@@ -756,12 +757,20 @@ final class ShellUITests: XCTestCase {
     /// The destinations during which the app stopped running.
     private var tourCrashes: [String] = []
 
+    /// When the tour stops visiting: the visits left are skipped with that reason, so the tour
+    /// always reaches its summary inside CI's step limit (50 minutes) even when every visit misses.
+    private var tourDeadline = Date.distantFuture
+
+    /// The tour's own time budget, from its first visit.
+    private let tourBudget: TimeInterval = 35 * 60
+
     /// The title of the event `tools/ios/seed-shell-family.js --tour` writes for today.
     private let tourEventTitle = "Tour dentist"
 
     /// Every route of `AppDestinationCatalog.all` (shared-ui's `navigation/AppDestination.kt`), in
     /// its order. Keep the two lists alike: a route the tour has no way to is reported as such, so
-    /// a new destination shows in `tour.txt` the day it is added.
+    /// a new destination shows in `tour.txt` the day it is added. A route holds no space, which
+    /// `simulator.sh`'s `tour.txt` grep (`COPLANLY_TOUR [^ ]+: `) relies on.
     private let tourRoutes = [
         "loading", "privacy_consent", "onboarding", "auth", "home", "calendar",
         "add_event?date={date}&hour={hour}", "edit_event/{eventId}", "contacts",
@@ -815,12 +824,15 @@ final class ShellUITests: XCTestCase {
 
         app.launchEnvironment["COPLANLY_EMULATOR_HOST"] = "127.0.0.1"
         app.launch()
+        // The two failure texts below are what `simulator.sh tour` looks for to tell a crash or a
+        // failed launch from any other failure of the step (a timeout, the seed): keep them alike.
         guard app.wait(for: .runningForeground, timeout: 60) else {
             XCTFail("The app did not launch")
             return
         }
 
         touring = true
+        tourDeadline = Date().addingTimeInterval(tourBudget)
         tourVisit("auth") {
             try self.require(self.app.staticTexts["Welcome back!"].waitForExistence(timeout: 120), "The sign-in screen did not show")
         }
@@ -971,6 +983,12 @@ final class ShellUITests: XCTestCase {
     /// Runs one visit to [route]: back to a known place, [reach], a screenshot, then nothing more.
     /// A visit that throws, or during which XCUITest recorded an issue, is skipped with the reason.
     private func tourVisit(_ route: String, _ reach: () throws -> Void) {
+        if Date() > tourDeadline {
+            let outcome = "skipped: the tour's \(Int(tourBudget / 60)) minutes ran out before this visit"
+            print("COPLANLY_TOUR_VISIT \(route): \(outcome)")
+            tourOutcomes.append((route, outcome))
+            return
+        }
         tourIssue = nil
         var outcome = "reached"
         XCTContext.runActivity(named: "tour \(route)") { _ in
@@ -1081,7 +1099,17 @@ final class ShellUITests: XCTestCase {
     /// Taps the button labelled [label] (or else whatever reads it) and requires a form sheet: a
     /// bar with a Close button over the screen.
     private func tourOpenSheet(labelled label: String) throws {
-        try tourOpenSheet(target: try element(labelled: label, in: app.buttons), what: label)
+        try tourOpenSheet(target: try tourButton(label), what: label)
+    }
+
+    /// The button labelled [label], or else whatever reads it, with shorter waits than the walk's
+    /// `element(labelled:in:)`: a miss in the tour costs seconds, not most of a minute.
+    private func tourButton(_ label: String) throws -> XCUIElement {
+        let exact = app.buttons.matching(NSPredicate(format: "label == %@", label)).firstMatch
+        if exact.waitForExistence(timeout: 8) { return exact }
+        let loose = element(labelledContaining: label)
+        try require(loose.waitForExistence(timeout: 2), "Nothing on screen reads \"\(label)\"")
+        return loose
     }
 
     /// Taps what reads [text], scrolled onto the screen, and requires a form sheet.
@@ -1109,8 +1137,9 @@ final class ShellUITests: XCTestCase {
     private func tourScrolledTo(_ text: String) throws -> XCUIElement {
         let match = element(labelledContaining: text)
         let bottom = app.windows.firstMatch.frame.maxY - 120
-        for _ in 0..<10 {
-            if match.waitForExistence(timeout: 3) && !match.frame.isEmpty && match.frame.maxY <= bottom {
+        for attempt in 0..<6 {
+            // The screen's first frame may take a moment; after a swipe the list is already there.
+            if match.waitForExistence(timeout: attempt == 0 ? 8 : 1) && !match.frame.isEmpty && match.frame.maxY <= bottom {
                 sleep(1)
                 return match
             }
@@ -1140,7 +1169,7 @@ final class ShellUITests: XCTestCase {
     /// card's under it), or nil when nothing does.
     private func tourTopmost(containing text: String) -> XCUIElement? {
         let matches = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", text))
-        guard matches.firstMatch.waitForExistence(timeout: 30) else { return nil }
+        guard matches.firstMatch.waitForExistence(timeout: 15) else { return nil }
         var best: XCUIElement?
         for index in 0..<min(matches.count, 12) {
             let candidate = matches.element(boundBy: index)

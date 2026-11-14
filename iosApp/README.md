@@ -124,8 +124,11 @@ iOS 26.5 so far). Then, in order:
    today with a change request about it, a child, a pet, an expense and a vault document's index
    row; `ShellUITests.testTour` signs in, visits every destination it can reach from that family,
    and saves a screenshot named `tour-<route>` for each. A destination it cannot reach is written
-   to `tour.txt` with the reason, as the Android UI tour does; it fails only when the app crashes
-   or does not launch, and even then the next step runs (the job fails at its end instead). The
+   to `tour.txt` with the reason, as the Android UI tour does. Only a crash or a failed launch fails
+   the job: `simulator.sh tour` then writes `tour-crashed` with the tour's own failure lines, and
+   the job's last step fails on it. Any other failure of the step (its 50-minute limit, the seed)
+   leaves a notice, and the next step runs either way. The tour stops visiting after 35 minutes, so
+   it always writes its summary. The
    screenshots, `manifest.json` (from `xcrun xcresulttool export attachments`) and `tour.txt` are
    the `ios-tour` artifact. To read it against the app's destinations, compare `tour.txt` with
    `AppDestinationCatalog.all` (`shared-ui/.../navigation/AppDestination.kt`); every route is on

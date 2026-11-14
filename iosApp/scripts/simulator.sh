@@ -23,7 +23,10 @@
 #       Task 13): seeds the family with the records the tour opens (`--tour`), runs `testTour`,
 #       keeps <out-dir>/tour.xcresult, exports its screenshots to <out-dir>/shots and writes the
 #       tour's own lines (`COPLANLY_TOUR …`: every destination it reached or skipped, with the
-#       reason) to <out-dir>/tour.txt. Fails only when the tour does: a crash or a failed launch.
+#       reason) to <out-dir>/tour.txt. When the tour itself failed because the app crashed or did
+#       not launch (its own failure texts in the log), it also writes <out-dir>/tour-crashed with
+#       those lines: that marker, not this command's exit status, is what fails the CI job, since a
+#       step timeout or a failed seed fails this command too and is no crash.
 set -euo pipefail
 
 BUNDLE_ID=app.coplanly
@@ -189,6 +192,11 @@ ui_test() {
   # The tour's own record of every destination, reached or skipped with the reason, for a reader
   # of the artifact: its summary, or, when it never got there, the lines it printed as it went.
   if [ "$name" = tour ]; then
+    rm -f "$out/tour-crashed"
+    # testTour's two XCTFail texts, the only failures that count against the app.
+    grep -E "The app stopped running while the tour visited|The app did not launch" \
+      "$out/xcodebuild-$name.log" > "$out/tour-crashed" 2>/dev/null || rm -f "$out/tour-crashed"
+    # A route holds no space (testTour's tourRoutes), so "[^ ]+" is the whole route.
     grep -E "COPLANLY_TOUR [^ ]+: |COPLANLY_TOUR_SUMMARY reached" "$out/xcodebuild-$name.log" > "$out/tour.txt" 2>/dev/null ||
       grep "COPLANLY_TOUR_VISIT" "$out/xcodebuild-$name.log" > "$out/tour.txt" 2>/dev/null || true
     echo "::group::the tour's destinations"; cat "$out/tour.txt"; echo "::endgroup::"
