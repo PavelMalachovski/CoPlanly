@@ -2855,9 +2855,10 @@ notes list each file):
   - `CFBundleLocalizations` now lists exactly `AppLanguageRule.SHIPPED` (part B, Task 12), but iOS
     matches the phone's whole language list against it: with Slovak then Czech the screens are in
     English and the system chrome in Czech. Only a per-app language choice on iOS can align them.
-  - After a deletion whose local wipe throws, the phone stays signed in as a deleted account
-    (Android has the same shape); and a new sign-in after a deletion is not yet verified on the
-    iPhone.
+  - ~~After a deletion whose local wipe throws, the phone stays signed in as a deleted account
+    (Android has the same shape)~~: the iPhone ends the session in a `finally` once the server has
+    succeeded, and ends Google Sign-In's session with the wipe (part B's final review; Android
+    keeps its shape). A new sign-in after a deletion is not yet verified on the iPhone.
 - **From the data-layer move** (Task 8, and "Carried into the data-layer move" below): the sign-in's
   ID-token-only path through GitLive (Android passes no access token; GitLive's iOS side needs
   both); `getToken()` of the FCM and APNs token on a phone with a real project; GitLive's iOS
@@ -2967,7 +2968,8 @@ and does what it did. What it built, task by task:
   Onboarding's later steps and the swap selection first, and the edge swipe is refused while a
   step is open. This closes part A's `EdgeSwipeBack` finding.
 - **A hidden tab stops reading the chat** (Task 3): `LocalScreenVisible`. This closes part A's
-  known wrong read marks.
+  known wrong read marks. The final review extended it (`WhenScreenVisible`) to stickers' "seen"
+  and a request clock's first opening, from the inbox's cards and Home's pop-ups.
 - **Every form is a sheet with its Save in the bar** (Task 4): the six remaining form routes.
 - **The family's, agreements', people's, sign-in links' and Settings' pushed screens** (Tasks 5
   and 6), **Chat** (Task 7: the co-parent's name as the title view, search in the bar, the overflow
@@ -2984,7 +2986,10 @@ and does what it did. What it built, task by task:
 - **The iPhone tour** (Task 13): `ShellUITests.testTour` in the `ios-app` job, on a family seeded
   with `seed-shell-family.js --tour`. It saves a screenshot per destination it reaches (artifact
   `ios-tour`) and gives a reason for each it skips. The spec's §8 asked for a tour run by request;
-  the plan put it in every `ios-app` run instead, in its own step after the walk.
+  the plan put it in every `ios-app` run instead, and the final review kept that, because the owner
+  check reads the `ios-tour` artifact of the branch's own run. It runs last, after the emulator
+  tests and the write gate, so a slow run loses the tour and never the write gate, and the job's
+  limit is 240 minutes for a cold pods build, the walk, the emulator tests and the tour's 50.
 
 **Still stand-ins on the iPhone after part B** (each hides what it stands for):
 - **Phase 4** (pushes, reminders and background jobs): `NoPush` as `PushRegistration`,

@@ -1237,19 +1237,22 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   (`tools/ios/seed-shell-family.js`) and runs the XCUITest walk of the native shell
   (`iosApp/CoPlanlyUITests/`: the tabs, Family → Expenses → the Add expense sheet, a back swipe
   completed and one let go of, a tab tap popping two screens, a dirty sheet swiped down asking
-  "Discard changes?", sign-out to fresh tabs; artifact `ios-shell`), then the tour on a family of its
-  own (`ShellUITests.testTour`: a screenshot per destination it reaches and a reason for each it
-  skips, artifact `ios-tour`; `continue-on-error`, so the emulator tests still run, and only a crash
-  or a failed launch fails the job, at its end, through the `tour-crashed` marker `simulator.sh tour`
-  writes for testTour's own two failure texts; a timeout or a failed seed is a notice), and
-  finally, on emulators
-  again, `:shared-data:iosSimulatorArm64Test` and `:shared-ui:iosSimulatorArm64Test` on the same
-  booted simulator (`COPLANLY_SIMULATOR_UDID`, so the Keychain tests run; check run "iPhone tests on
-  the emulators", `require_tests`) with the write gate: `IosWriteGateTest` writes every kind of
-  shared record through the iPhone data layer and `tools/ios/check-ios-writes.js` reads each back
-  from the Firestore emulator and compares its keys and types with what Android writes. A step then
-  fails the job if any emulator test skipped itself or the write gate did not report that it ran.
-  Its timeout is 180 minutes, for a cold Firebase pods build (77 minutes once). It restores the
+  "Discard changes?", sign-out to fresh tabs; artifact `ios-shell`), then, on emulators again,
+  `:shared-data:iosSimulatorArm64Test` and `:shared-ui:iosSimulatorArm64Test` on the same booted
+  simulator (`COPLANLY_SIMULATOR_UDID`, so the Keychain tests run; check run "iPhone tests on the
+  emulators", `require_tests`) with the write gate: `IosWriteGateTest` writes every kind of shared
+  record through the iPhone data layer and `tools/ios/check-ios-writes.js` reads each back from the
+  Firestore emulator and compares its keys and types with what Android writes. A step then fails the
+  job if any emulator test skipped itself or the write gate did not report that it ran. **Last comes
+  the tour**, on a family of its own (`ShellUITests.testTour`: a screenshot per destination it
+  reaches and a reason for each it skips, artifact `ios-tour`, with the `tour-crashed` marker;
+  `continue-on-error` and a 50-minute step limit, and only a crash or a failed launch fails the job,
+  at its end, through the `tour-crashed` marker `simulator.sh tour` writes for testTour's own two
+  failure texts; a timeout or a failed seed is a notice). It runs after the write gate so a slow run
+  loses the tour, never the gate, and on every run, not by request as part B's spec §8 asked,
+  because the owner check reads the branch's own `ios-tour` artifact (ROADMAP MON-24).
+  Its timeout is 240 minutes, for a cold Firebase pods build (77 minutes once), the walk, the
+  emulator tests and the tour. It restores the
   pods' cache `shared-ios` saves and never saves it; it gets no secret, and CI never has a
   `GoogleService-Info.plist`, so it never offers Google and never reaches the real project.
 - **The `web` job tests what a court and an iPhone see** ("Web — verification page and calendar
@@ -1830,19 +1833,28 @@ shell alone, so Android reads a null and behaves as before:
   newest enabled one first, and the edge swipe is refused while one is enabled.
 - **`LocalScreenVisible`** (`common/ScreenVisibility.kt`) is true only while the screen's tab is
   selected, it is on top of its stack and the app is in the foreground. The chat thread marks
-  messages read only while it is visible, because a hidden tab's screens stay composed.
+  messages read only while it is visible, because a hidden tab's screens stay composed, and
+  everything else the other parent is told this parent has seen goes through `WhenScreenVisible`
+  (`LaunchedEffect(key)` without a host): stickers' "seen" and a request clock's first opening on
+  the inbox's cards and Home's three pop-ups. A new such mark uses it too.
+- **A sheet or dialog opened from a screen with native bars takes the host away**
+  (`CompositionLocalProvider(LocalBarHost provides null)`, as `InvitationDialog` and
+  `DaySwapSheetContent` do) when it draws a `StickyActionBar` or another bar-suppressed component:
+  its content inherits the screen's locals, and under a host that bar draws nothing.
 - **`LaunchLinks`** (`presentation/LaunchLinks.kt`) reads a `coplanly://` link (`pair`, `guest`,
   `chat`) the way Android's `MainActivity` does. `IosApp.openUrl` arms it, and the shell switches
   the family before it opens a chat link (item 15).
 - **`IosAccountDeletion`** (`shared-data`'s `iosMain`, `data/session/`) calls the `deleteAccount`
-  callable, then runs Android's local wipe, then ends the session. Settings' `onAccountDeleted` is
+  callable, then runs Android's local wipe (ending Google Sign-In's session too,
+  `IosAccountTraces.clearAfterDeletion`), then ends the session — in a `finally` once the server
+  has succeeded, so a wipe that throws never leaves the phone signed in as a deleted user. Settings' `onAccountDeleted` is
   wired on the iPhone to the shell's `refreshAuthState`, which shows the sign-in screen.
-- **`SignInProviderSession`** ends Google Sign-In's own session on sign-out and on the first launch
-  after an install.
+- **`SignInProviderSession`** ends Google Sign-In's own session on sign-out, on account deletion and
+  on the first launch after an install.
 - **`StartOnce`** refuses a second `IosApp.start`.
 - **`StackHost`** ends a disposed stack's back-stack entries one second after their screens
   (`ENTRIES_END_AFTER_MS`), so a sign-out does not end an entry UIKit is still drawing.
-- **The iPhone tour** is `ShellUITests.testTour`, the `ios-app` job's step after the walk, on a
+- **The iPhone tour** is `ShellUITests.testTour`, the `ios-app` job's last step, after the write gate, on a
   family seeded with `tools/ios/seed-shell-family.js --tour`. It saves a screenshot per route it
   reaches (artifact `ios-tour`) and records each route it cannot reach in `tour.txt` with the
   reason, as the Android UI tour does. Only a crash or a failed launch fails the job (the

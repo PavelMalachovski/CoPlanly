@@ -2240,11 +2240,13 @@ jobs:
   # Firebase CLI `firestore-tests/` pins, the emulators on JDK 21 through FIREBASE_JAVA_HOME, Gradle
   # on 17. The test executables link the Firebase pods `:shared-data` builds through CocoaPods, as in
   # `shared-ios`, whose pod cache this job restores. Published as the check run "iPhone tests on the
-  # emulators". Still no secret: nothing here reaches a real project.
+  # emulators". Still no secret: nothing here reaches a real project. Last, the iPhone tour (part
+  # B, Task 13), after the write gate, so it is the step a slow run loses.
   #
-  # 120 minutes: the app's build and launch took about 30 in Task 4, and a run whose pods missed the
-  # cache builds them cold (about 20, see `shared-ios`) before linking two test executables (each
-  # several minutes, `:shared-ui`'s with Compose Multiplatform and skiko).
+  # The limit was 120 minutes once: the app's build and launch took about 30 in Task 4, and a run
+  # whose pods missed the cache builds them cold (about 20, see `shared-ios`) before linking two
+  # test executables (each several minutes, `:shared-ui`'s with Compose Multiplatform and skiko).
+  # It is 240 now; see `timeout-minutes` below.
   ios-app:
     name: iPhone app — build and launch (macOS)
     needs: changes
@@ -2253,8 +2255,9 @@ jobs:
     # 180 since the native shell's UI test (MON-24 phase 3, Task 8) joined the job: when the
     # Firebase pods' cache misses (a new Xcode on the image), the emulator tests' step builds them
     # cold, which took 77 minutes for Firestore's alone on 11 November 2026, and 120 ended the job
-    # before its tests had run.
-    timeout-minutes: 180
+    # before its tests had run. 240 since the iPhone tour (part B, Task 13) joined it, last, with a
+    # step limit of 50: a cold pods build, the walk and the emulator tests, plus the tour.
+    timeout-minutes: 240
     permissions:
       contents: read
       checks: write
@@ -2413,33 +2416,6 @@ jobs:
             "iosApp/scripts/simulator.sh shell-test $UDID iosApp/build/shell" \
             2>&1 | tee "$RUNNER_TEMP/shell-test.log"
 
-      # The iPhone tour (MON-24 phase 3, part B, Task 13): `ShellUITests.testTour`, on emulators of
-      # its own and a family seeded with the records a screen needs first (`seed-shell-family.js
-      # --tour`), visits every destination it can reach from that family and saves a screenshot
-      # named after each route, as the Android UI tour does; a destination it cannot reach is
-      # written to its log (`tour.txt`) with the reason, never a failure. Only a crash or a failed
-      # launch fails the job, through "The iPhone tour ran" at its end, which reads the marker
-      # `simulator.sh tour` writes for those two; a timeout or a failed seed leaves a notice. The
-      # step is `continue-on-error`, so the emulator tests below run whatever it does, and the tour
-      # bounds its own visits (35 minutes) to finish inside the step's limit. Its own account, since
-      # the walk ends by deleting the one it signed in as. The `ios-tour` artifact.
-      - name: The iPhone tour on the emulators (XCUITest)
-        id: tour
-        if: ${{ !cancelled() && steps.shell-test.outcome != 'skipped' }}
-        continue-on-error: true
-        timeout-minutes: 50
-        env:
-          FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
-          UDID: ${{ steps.simulator.outputs.udid }}
-        run: |
-          set -o pipefail
-          export PATH="$FIREBASE_JAVA_HOME/bin:$PATH"
-          firestore-tests/node_modules/.bin/firebase emulators:exec \
-            --only auth,firestore,functions,storage \
-            --project demo-coplanly \
-            "iosApp/scripts/simulator.sh tour $UDID iosApp/build/tour" \
-            2>&1 | tee "$RUNNER_TEMP/tour.log"
-
       # The simulator hands a test process only `SIMCTL_CHILD_`-prefixed variables, without the
       # prefix: both forms are exported here, and the two modules' build files also forward the plain
       # names that way (`KotlinNativeSimulatorTest`), so the tests read COPLANLY_EMULATOR_HOST
@@ -2499,6 +2475,36 @@ jobs:
             exit 1
           fi
 
+      # The iPhone tour (MON-24 phase 3, part B, Task 13): `ShellUITests.testTour`, on emulators of
+      # its own and a family seeded with the records a screen needs first (`seed-shell-family.js
+      # --tour`), visits every destination it can reach from that family and saves a screenshot
+      # named after each route, as the Android UI tour does; a destination it cannot reach is
+      # written to its log (`tour.txt`) with the reason, never a failure. Only a crash or a failed
+      # launch fails the job, through "The iPhone tour ran" at its end, which reads the marker
+      # `simulator.sh tour` writes for those two; a timeout or a failed seed leaves a notice. The
+      # step is `continue-on-error` and bounds its own visits (35 minutes) to finish inside its
+      # limit. Its own account, since the walk ends by deleting the one it signed in as. The
+      # `ios-tour` artifact. It runs last, after the emulator tests and the write gate (part B's
+      # final review), so a slow run that reaches the job's limit loses the tour, never the write
+      # gate; and on every run, not by request as the spec's §8 asked, because the owner check
+      # reads the `ios-tour` artifact of the branch's own run (ROADMAP MON-24).
+      - name: The iPhone tour on the emulators (XCUITest)
+        id: tour
+        if: ${{ !cancelled() && steps.shell-test.outcome != 'skipped' }}
+        continue-on-error: true
+        timeout-minutes: 50
+        env:
+          FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
+          UDID: ${{ steps.simulator.outputs.udid }}
+        run: |
+          set -o pipefail
+          export PATH="$FIREBASE_JAVA_HOME/bin:$PATH"
+          firestore-tests/node_modules/.bin/firebase emulators:exec \
+            --only auth,firestore,functions,storage \
+            --project demo-coplanly \
+            "iosApp/scripts/simulator.sh tour $UDID iosApp/build/tour" \
+            2>&1 | tee "$RUNNER_TEMP/tour.log"
+
       - name: Upload the shell's screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -2522,6 +2528,7 @@ jobs:
           path: |
             iosApp/build/tour/shots/
             iosApp/build/tour/tour.txt
+            iosApp/build/tour/tour-crashed
             ${{ runner.temp }}/tour.log
           if-no-files-found: ignore
           retention-days: 14
@@ -2567,8 +2574,8 @@ jobs:
           # A job that died before writing results must not publish a green check.
           require_tests: true
 
-      # The tour runs with `continue-on-error` so the emulator tests run whatever it does. This is
-      # where a crash or a failed launch, and nothing else, fails the job: `simulator.sh tour`
+      # The tour runs with `continue-on-error`, so its uploads and the steps after it run whatever it
+      # does. This is where a crash or a failed launch, and nothing else, fails the job: `simulator.sh tour`
       # writes `tour-crashed` only for testTour's own two failure texts. Any other failure of the
       # step (its time limit, the seed, the build) is a notice.
       - name: The iPhone tour ran

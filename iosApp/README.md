@@ -120,23 +120,23 @@ iOS 26.5 so far). Then, in order:
    expense sheet, a back swipe completed and one let go of, a tab tap popping two screens, a sheet
    with edits swiped down asking "Discard changes?", sign-out to fresh tabs, a `coplanly://pair`
    link and, last, deleting the account. Its screenshots are the `ios-shell` artifact.
-4. **The tour** (part B, Task 13), on emulators of its own: the seed with `--tour` adds an event
+4. On emulators again, the shared modules' iOS tests run on the same booted simulator (the
+   Keychain tests included), with the write gate (`IosWriteGateTest` and
+   `tools/ios/check-ios-writes.js`, which compares every document the iPhone wrote with what
+   Android writes). No test may skip itself for want of the emulators.
+5. **The tour** (part B, Task 13), last, on emulators of its own, so a run that reaches the job's
+   240-minute limit loses the tour and never the write gate: the seed with `--tour` adds an event
    today with a change request about it, a child, a pet, an expense and a vault document's index
    row; `ShellUITests.testTour` signs in, visits every destination it can reach from that family,
    and saves a screenshot named `tour-<route>` for each. A destination it cannot reach is written
    to `tour.txt` with the reason, as the Android UI tour does. Only a crash or a failed launch fails
    the job: `simulator.sh tour` then writes `tour-crashed` with the tour's own failure lines, and
    the job's last step fails on it. Any other failure of the step (its 50-minute limit, the seed)
-   leaves a notice, and the next step runs either way. The tour stops visiting after 35 minutes, so
-   it always writes its summary. The
-   screenshots, `manifest.json` (from `xcrun xcresulttool export attachments`) and `tour.txt` are
+   leaves a notice, and the uploads after it run either way. The tour stops visiting after 35
+   minutes, so it always writes its summary. The screenshots, `manifest.json` (from `xcrun xcresulttool export attachments`) and `tour.txt` are
    the `ios-tour` artifact. To read it against the app's destinations, compare `tour.txt` with
    `AppDestinationCatalog.all` (`shared-ui/.../navigation/AppDestination.kt`); every route is on
    it, reached or skipped.
-5. On emulators again, the shared modules' iOS tests run on the same booted simulator (the
-   Keychain tests included), with the write gate (`IosWriteGateTest` and
-   `tools/ios/check-ios-writes.js`, which compares every document the iPhone wrote with what
-   Android writes). No test may skip itself for want of the emulators.
 
 CI never has a `GoogleService-Info.plist`, so it never offers Google sign-in and never reaches the
 real project.

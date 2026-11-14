@@ -340,8 +340,11 @@ and content stays padded below the bars, so points 2 and 3 are still the owner's
 | 6. Memory and speed | Nothing measured. A 30-second main-thread hang was seen once during the walk and not reproduced; the walk now samples the app's threads. | The gauges with every screen reachable, and whether the hang recurs. |
 
 The iPhone tour of §8 is built differently from what §8 asked for. It is `ShellUITests.testTour` in
-every `ios-app` run, in its own step after the walk, not a run by request pushed to a branch of its
-own. Its screenshots are the `ios-tour` artifact.
+every `ios-app` run, not a run by request pushed to a branch of its own. Its screenshots are the
+`ios-tour` artifact. The final review of part B kept it on every run, because the owner check reads
+the `ios-tour` artifact of the branch's own run, and moved it to the job's last step, after the
+emulator tests and the write gate, with the job's limit raised from 180 to 240 minutes: a slow run
+then loses the tour, never the write gate.
 
 ## 8. Tests and CI
 
