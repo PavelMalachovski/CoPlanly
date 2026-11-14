@@ -34,6 +34,7 @@ import platform.UIKit.UIViewController
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.experimental.ExperimentalNativeApi
 import kotlin.native.setUnhandledExceptionHook
+import kotlin.native.terminateWithUnhandledException
 
 /**
  * What the iPhone app's own build hands the shared code at launch (MON-24 phase 3), read by its
@@ -198,7 +199,8 @@ object IosApp {
      * Writes an exception nothing caught to the system log (`NSLog`) before Kotlin/Native ends the
      * process, as it would anyway: the shared logger prints to standard output, which a simulator's
      * system log and a phone's crash report do not keep, so a crash otherwise leaves only native
-     * frames to read. The process still terminates once the hook returns.
+     * frames to read. It then ends the process as Kotlin/Native would without a hook: a hook that
+     * returned would keep the app running past the failure.
      */
     @OptIn(ExperimentalNativeApi::class)
     private fun reportUncaughtExceptions() {
@@ -209,6 +211,7 @@ object IosApp {
             "CoPlanly uncaught exception: ${failure.stackTraceToString()}".lineSequence()
                 .filter { it.isNotBlank() }
                 .forEach { line -> NSLog(line.take(LOG_LINE_LIMIT).replace("%", "%%")) }
+            terminateWithUnhandledException(failure)
         }
     }
 

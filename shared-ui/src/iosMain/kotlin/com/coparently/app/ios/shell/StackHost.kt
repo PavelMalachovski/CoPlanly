@@ -153,8 +153,19 @@ internal class StackHost(
         navigation.setViewControllers(emptyList<UIViewController>(), animated = false)
         screens.values.forEach { it.release() }
         screens.clear()
-        lifecycleOwner.destroy()
-        store.clear()
+        // The screens' compositions end only when UIKit lets their controllers go, a turn of the
+        // main loop or more later, and their coroutines, cancelled, still finish then: destroying the
+        // entries at once let one of them read an entry's ViewModels after the entry was destroyed
+        // ("You cannot access the NavBackStackEntry's ViewModels after the NavBackStackEntry is
+        // destroyed"), an uncaught exception that ended the app on a sign-out. So the entries end a
+        // moment after their screens.
+        val finisher = MainScope()
+        finisher.launch {
+            delay(ENTRIES_END_AFTER_MS)
+            lifecycleOwner.destroy()
+            store.clear()
+            finisher.cancel()
+        }
     }
 
     /** The shared back stack's screen entries, bottom first (the graph's own entry left out). */
@@ -369,6 +380,9 @@ internal class StackHost(
     }
 
     internal companion object {
+        /** How long a disposed stack's entries outlive its screens; see [dispose]. */
+        private const val ENTRIES_END_AFTER_MS = 1_000L
+
         /** A frame's time, how often a cancelled transition is checked for having let go. */
         private const val FRAME_MILLIS = 16L
 
