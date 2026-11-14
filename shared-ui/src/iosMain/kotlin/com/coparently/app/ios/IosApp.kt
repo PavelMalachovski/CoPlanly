@@ -191,6 +191,9 @@ object IosApp {
 
     private const val TAG = "IosApp"
 
+    /** The longest line [reportUncaughtExceptions] writes; the system log keeps about a kilobyte. */
+    private const val LOG_LINE_LIMIT = 800
+
     /**
      * Writes an exception nothing caught to the system log (`NSLog`) before Kotlin/Native ends the
      * process, as it would anyway: the shared logger prints to standard output, which a simulator's
@@ -200,9 +203,12 @@ object IosApp {
     @OptIn(ExperimentalNativeApi::class)
     private fun reportUncaughtExceptions() {
         setUnhandledExceptionHook { failure ->
-            // The type and message first, alone: the system log may cut a long line.
-            NSLog("CoPlanly uncaught exception: %@ (cause: %@)", failure.toString(), failure.cause.toString())
-            NSLog("CoPlanly uncaught exception's trace: %@", failure.stackTraceToString())
+            // The text is the format itself, its percent signs doubled: a Kotlin string handed to
+            // NSLog's variadic arguments is no NSString, and `%@` over one crashed the process. One
+            // line at a time, since the system log may cut a long one.
+            "CoPlanly uncaught exception: ${failure.stackTraceToString()}".lineSequence()
+                .filter { it.isNotBlank() }
+                .forEach { line -> NSLog(line.take(LOG_LINE_LIMIT).replace("%", "%%")) }
         }
     }
 
