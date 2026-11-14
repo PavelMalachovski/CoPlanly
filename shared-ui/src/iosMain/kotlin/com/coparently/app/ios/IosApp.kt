@@ -22,7 +22,6 @@ import com.coparently.app.presentation.navigation.PendingDestinationOpen
 import com.coparently.app.presentation.navigation.PendingInviteCodes
 import com.coparently.app.presentation.platform.AppBuildValues
 import com.coparently.app.presentation.platform.CredentialSignIn
-import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -31,6 +30,7 @@ import org.koin.core.context.startKoin
 import org.koin.core.module.Module
 import org.koin.dsl.module
 import platform.UIKit.UIViewController
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * What the iPhone app's own build hands the shared code at launch (MON-24 phase 3), read by its
