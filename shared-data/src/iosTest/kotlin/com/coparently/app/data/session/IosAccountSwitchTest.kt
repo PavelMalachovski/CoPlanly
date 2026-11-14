@@ -2,6 +2,7 @@ package com.coparently.app.data.session
 
 import com.coparently.app.data.remote.firebase.SignedInAccount
 import com.coparently.app.data.remote.firebase.SignedInUser
+import com.coparently.app.data.session.AccountSwitchFixture.Companion.EDUPAGE_KEY
 import com.coparently.app.data.session.AccountSwitchFixture.Companion.ORDINARY_KEY
 import com.coparently.app.data.session.AccountSwitchFixture.Companion.SCHOOL_KEY
 import com.coparently.app.data.session.AccountSwitchFixture.Companion.SLOT_MARKER_KEY
@@ -53,6 +54,7 @@ class IosAccountSwitchTest {
         assertEquals(emptyList<String>(), phone.database.userDao().getAllUsers().first().map { it.id })
         assertNull(phone.preferences.getString(ORDINARY_KEY))
         assertNull(phone.preferences.getString(SCHOOL_KEY))
+        assertNull(phone.preferences.getString(EDUPAGE_KEY))
         assertEquals("mom", phone.preferences.getString(SLOT_MARKER_KEY))
         assertEquals(1, phone.reminders.cancelledAll)
         assertEquals(1, phone.clocks.cancelledAll)

@@ -2158,10 +2158,11 @@ this task; the iPhone has no `koin-test`). Phase 3's app replaces each stand-in,
 wordings (`IosPairingWording` and `IosSchoolImportWordings`, bound in `:shared-ui`'s
 `platformUiModule`, in place of `NoWording`) and the push queue (`FirestorePushQueue`, the
 `PushDevice` and `PushQueue` half of `NoPush`), all three in Task 6, and the credential sheet
-(`IosCredentialSignIn` in place of `NoCredentialSignIn`, Task 9). Still stand-ins on the iPhone:
+(`IosCredentialSignIn` in place of `NoCredentialSignIn`, Task 9); part B replaced
+`NoAccountDeletion` with `IosAccountDeletion` (the `deleteAccount` callable, then the wipe Android's
+`AccountDeletionService` does, then the session's end; Task 11). Still stand-ins on the iPhone:
 `NoPush` as `PushRegistration` alone (the push switch; the phone holds no token until phase 4),
-`NoAccountDeletion` (it fails with a message and deletes nothing; Settings' row is still drawn;
-in-app deletion is part B and required before the App Store), `NoEventReminders`,
+`NoEventReminders`,
 `NoRequestClockJobs`, `NoRequestClockNotices`, `NoSchoolImportJob`, `NoSupportReminderJob`,
 `NoGoogleCalendar`, `NoStorageBucket`, `NoPickedFiles`, `NoRecordPhotoStorage`, `NoReceiptText`,
 `NoRecordFiles`, `NoExportVerifyAddress`, and in `:shared-ui` `NoSpeechDictation`, `NoAiAssist`,
@@ -2751,8 +2752,8 @@ through `Analytics`, as `data/platform/AnalyticsEvents.kt`'s `logNotificationsTo
 wrote (they left it). The iPhone's `platformDataModule` binds `NoPush` (one object for `PushDevice`
 and `PushRegistration`, as `FcmService` is on Android: the switch reads off, turning it on fails,
 nothing to detach; since phase 3's Task 6 `PushDevice` is `FirestorePushQueue` and `NoPush` answers
-`PushRegistration` alone, until phase 4 registers a token) and `NoAccountDeletion` (it fails and
-wipes nothing).
+`PushRegistration` alone, until phase 4 registers a token) and `NoAccountDeletion` (it failed and
+wiped nothing, until part B's `IosAccountDeletion`).
 Both ViewModel tests (MockK) run in `androidHostTest`, the push mock now a `PushRegistration`. Then
 **pairing and onboarding**: `PairingViewModel` (in `pairingUiModule`; its log lines through
 `logger`, the accepted invitation's event through `Analytics` as `logInvitationAccepted`, which left

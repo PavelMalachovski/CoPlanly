@@ -13,7 +13,8 @@ import XCTest
 /// its bar (disabled until the event has a title), New event's description and the chat composer
 /// staying above the keyboard, a `coplanly://pair` link reaching the pairing screen with its code, and
 /// a sign-out reaching the sign-in screen with no tabs, then a
-/// sign-in landing on fresh tabs.
+/// sign-in landing on fresh tabs, and last, deleting the account from Settings, which reaches the
+/// sign-in screen.
 ///
 /// **One run reports every problem.** The walk is a list of steps. A step that fails records its
 /// reason, a screenshot and the app's accessibility hierarchy, and the walk goes on; each step starts
@@ -83,6 +84,11 @@ final class ShellUITests: XCTestCase {
         step("the chat composer stays above the keyboard", after: ["Calendar and Chat tabs"]) {
             try self.chatComposerAboveKeyboard()
         }
+        // After everything, on purpose: deleting the account erases the seeded parent the walk signed
+        // in as, so no step could sign in again after it. It relaunches the app first, which closes
+        // the composer's keyboard and keeps the session. The seeded family is used by nothing after
+        // the walk: the emulator tests that follow in CI run on fresh emulators of their own.
+        step("delete the account and reach sign-in", after: ["sign in"]) { try self.deleteAccount() }
 
         print("COPLANLY_SHELL_WALK_SUMMARY_BEGIN")
         outcomes.forEach { print("COPLANLY_STEP \($0.name): \($0.outcome)") }
@@ -432,6 +438,37 @@ final class ShellUITests: XCTestCase {
         try require(app.navigationBars["Family"].waitForExistence(timeout: timeout), "The Family tab did not open at its first screen")
         try require(!app.navigationBars["Settings"].exists, "The Family tab kept the signed-out session's Settings")
         shot("12-fresh-tabs")
+    }
+
+    /// Settings → Delete account → both confirmations (MON-24 phase 3, part B, Task 11): the
+    /// `deleteAccount` callable erases the account on the emulators, the phone is wiped and signed
+    /// out, and the app shows the sign-in screen with no tabs. The labels are the shared strings in
+    /// English.
+    private func deleteAccount() throws {
+        app.terminate()
+        app.launch()
+        try require(app.tabBars.firstMatch.buttons["Family"].waitForExistence(timeout: 120), "No tab bar after relaunching")
+        try settings()
+        let row = try element(labelled: "Delete account", in: app.buttons)
+        let screenBottom = app.windows.firstMatch.frame.maxY - 120
+        for _ in 0..<12 where row.frame.maxY > screenBottom {
+            app.swipeUp()
+        }
+        sleep(1)
+        press(row)
+        try require(element(labelledContaining: "Delete this account?").waitForExistence(timeout: timeout), "No first confirmation")
+        shot("20-delete-account-question")
+        // The confirmation's button reads as the row does; it is the last one drawn.
+        let named = app.buttons.matching(NSPredicate(format: "label == %@", "Delete account"))
+        sleep(1)
+        press(named.element(boundBy: max(named.count - 1, 0)))
+        let permanently = app.buttons.matching(NSPredicate(format: "label == %@", "Delete permanently")).firstMatch
+        try require(permanently.waitForExistence(timeout: timeout), "No final confirmation")
+        shot("21-delete-account-final-question")
+        press(permanently)
+        try require(app.staticTexts["Welcome back!"].waitForExistence(timeout: 120), "Deleting the account did not reach the sign-in screen")
+        try require(!app.tabBars.firstMatch.exists, "The tab bar is still there after deleting the account")
+        shot("22-account-deleted")
     }
 
     // MARK: - Getting to a known place

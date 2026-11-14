@@ -2823,13 +2823,10 @@ notes list each file):
   0.9.x does not recognise AGP 9.3's Android KMP library target; the `unit` variant is wired for the
   shared modules (CI hygiene, below).
 - **The iPhone's stand-ins, which phase 3 and 4 replace.** In `:shared-data`'s
-  `di/koin/IosUnavailable.kt` and `platformDataModule`: `NoAccountDeletion` (an account can be
-  created on the iPhone since phase 3's Task 5, so **in-app account deletion on the iPhone is
-  required before the App Store**; spec §5.6 puts it in part B. Settings' delete-account row is
-  **not** hidden: `SettingsScreen` draws it unconditionally, and on the iPhone it calls
-  `NoAccountDeletion`, which fails with a message and deletes nothing. Before the App Store it
-  needs either real deletion on iOS or an `AccountDeletion.available` flag (default true, false in
-  `NoAccountDeletion`) gating the row, Android unchanged), `NoPush` (now the push switch and sign-out's detach alone, `PushRegistration`: the
+  `di/koin/IosUnavailable.kt` and `platformDataModule`: ~~`NoAccountDeletion`~~ (replaced in part
+  B's Task 11 by `IosAccountDeletion`: the `deleteAccount` callable, then the wipe Android's
+  `AccountDeletionService` does and the session's end; Settings' row now deletes the account on the
+  iPhone, held by `IosAccountDeletionTest` on the emulators and the walk's last step), `NoPush` (now the push switch and sign-out's detach alone, `PushRegistration`: the
   phone holds no push token until phase 4), `NoGoogleCalendar`, `NoStorageBucket`,
   `NoPickedFiles`, `NoRecordPhotoStorage`, `NoReceiptText`, `NoRecordFiles`,
   `NoEventReminders`, `NoRequestClockJobs`, `NoRequestClockNotices`, `NoSchoolImportJob`,
@@ -2958,9 +2955,9 @@ of it built); the keyboard in a sheet and in the chat thread (§7.4); the sheet 
 memory and speed (§7.6); the real Google sheet, Keychain autofill, a reinstall, a time-zone change
 and a second account. Part B is planned from those answers.
 
-Still owed from part A, beyond the stand-ins listed above: **in-app account deletion on the iPhone
-before the App Store** (`NoAccountDeletion`; spec §5.6 puts it in part B), and the minor findings
-the task reviews deferred to the final review of part A.
+Still owed from part A, beyond the stand-ins listed above: ~~in-app account deletion on the iPhone
+before the App Store~~ (done in part B's Task 11, `IosAccountDeletion`), and the minor findings the
+task reviews deferred to the final review of part A.
 
 **Phase 1's stay list** — the domain files still under `app/src/main/java/com/coparently/app/domain/`,
 each with what keeps it there. Phase 2 moves them with Hilt's replacement and the data layer, or

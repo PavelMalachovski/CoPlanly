@@ -59,6 +59,7 @@ import com.coparently.app.data.school.edupage.EdupageClient
 import com.coparently.app.data.session.AccountConsistency
 import com.coparently.app.data.session.AccountDeletion
 import com.coparently.app.data.session.AccountTraces
+import com.coparently.app.data.session.IosAccountDeletion
 import com.coparently.app.data.session.IosAccountSwitch
 import com.coparently.app.data.session.IosAccountTraces
 import com.coparently.app.data.session.LastSignedInUid
@@ -83,19 +84,20 @@ import org.koin.core.module.Module
 import org.koin.dsl.module
 
 /**
- * Everything [dataModules] takes from the platform, as the iPhone has it today (MON-24 phase 2;
- * the seams since Task 8j): GitLive's default Firestore and Functions instances, the app's own
+ * Everything [dataModules] takes from the platform, as the iPhone has it today (MON-24 phase 2; the
+ * seams since Task 8j): GitLive's default Firestore and Functions instances, the app's own
  * directories, the Room database on the bundled driver with its DAOs, the Keychain's sealed
  * preference store, the no-op telemetry, the network monitor and the two HTTP clients; since phase
  * 3's Task 5, GitLive's Auth ([IosFirebaseAuth]: who is signed in, the session and the e-mail
  * sign-in), the account switch's wipe ([IosAccountSwitch]) and sign-out's traces
  * ([IosAccountTraces]) — since Task 6, the push queue ([FirestorePushQueue]) and the sync while the
- * app is open ([ForegroundSyncRunner]) — and, for what the iPhone does not have yet (a push token,
- * account deletion, Cloud Storage, a file picker, Google Calendar, background jobs and
- * notifications), the stand-ins in `IosUnavailable.kt`, which answer as a phone with nothing of the
- * kind would. The two wordings the data layer writes into stored data read the app's strings, so
- * `:shared-ui`'s `platformUiModule` binds them (`IosPairingWording`, `IosSchoolImportWordings`); the
- * graph resolves with both modules, as `IosApp.start` builds it.
+ * app is open ([ForegroundSyncRunner]), since part B's Task 11 account deletion
+ * ([IosAccountDeletion]) — and, for what the iPhone does not have yet (a push token, Cloud Storage,
+ * a file picker, Google Calendar, background jobs and notifications), the stand-ins in
+ * `IosUnavailable.kt`, which answer as a phone with nothing of the kind would. The two wordings the
+ * data layer writes into stored data read the app's strings, so `:shared-ui`'s `platformUiModule`
+ * binds them (`IosPairingWording`, `IosSchoolImportWordings`); the graph resolves with both
+ * modules, as `IosApp.start` builds it.
  *
  * The iPhone app's `IosApp.start` builds this graph after `IosFirebase` has configured Firebase,
  * and phase 3 replaces each remaining stand-in with the real one.
@@ -161,7 +163,19 @@ actual val platformDataModule: Module = module {
     single<PushDevice> { get<FirestorePushQueue>() }
     single<PushQueue> { get<PushDevice>() }
     single<PushRegistration> { NoPush }
-    single<AccountDeletion> { NoAccountDeletion }
+    // The `deleteAccount` callable, then this phone's wipe and the session's end (part B, Task 11).
+    single<AccountDeletion> {
+        IosAccountDeletion(
+            functions = get(),
+            database = get(),
+            preferences = get(),
+            push = get(),
+            reminders = get(),
+            clocks = get(),
+            traces = get(),
+            authSession = get(),
+        )
+    }
     single<ReminderScheduler> { NoEventReminders }
     single<RequestClockScheduler> { NoRequestClockJobs }
     single<RequestClockNotices> { NoRequestClockNotices }
