@@ -81,9 +81,10 @@ it, the screen offers e-mail alone (CI and the emulators never offer Google). On
    "iOS client" for bundle `app.coplanly` exists (create one if not), and download the file again.
 2. **Put it in `iosApp/CoPlanly/`** and run `xcodegen generate`, as for "The real project" above.
    Never commit it.
-3. **The URL scheme registers itself.** The build phase "Register Google's URL scheme" reads
+3. **The URL scheme registers itself.** The build phase "Register the app's URL schemes" reads
    `REVERSED_CLIENT_ID` from that file and adds it to the built app's `CFBundleURLTypes`, which
-   Google's sheet returns through. To use another scheme, set the target's build setting
+   Google's sheet returns through, after the app's own `coplanly` scheme, which every build
+   registers for the `coplanly://pair`, `guest` and `chat` links. To use another scheme, set the target's build setting
    `COPLANLY_GOOGLE_URL_SCHEME` locally (Xcode → the CoPlanly target → Build Settings, or an
    uncommitted `.xcconfig`); it is blank in `project.yml` and must stay so.
 4. Run the app and sign in with Google. The app checks both halves at launch

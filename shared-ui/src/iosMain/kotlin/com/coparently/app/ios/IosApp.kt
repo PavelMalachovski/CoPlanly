@@ -1,6 +1,9 @@
 package com.coparently.app.ios
 
 import com.coparently.app.data.chat.ChatMirror
+import com.coparently.app.data.family.SelectedFamilySource
+import com.coparently.app.data.platform.logger
+import com.coparently.app.data.remote.firebase.PushDestination
 import com.coparently.app.data.session.SessionProfileSynchronizer
 import com.coparently.app.data.session.clearPreviousInstall
 import com.coparently.app.data.sync.SyncRequester
@@ -10,12 +13,17 @@ import com.coparently.app.di.koin.platformUiModule
 import com.coparently.app.di.koin.uiModules
 import com.coparently.app.ios.shell.NativeShell
 import com.coparently.app.presentation.AppLaunch
+import com.coparently.app.presentation.LaunchLink
+import com.coparently.app.presentation.LaunchLinks
+import com.coparently.app.presentation.navigation.PendingChatLink
 import com.coparently.app.presentation.navigation.PendingChatOpen
 import com.coparently.app.presentation.navigation.PendingDestinationOpen
 import com.coparently.app.presentation.navigation.PendingInviteCodes
 import com.coparently.app.presentation.platform.AppBuildValues
 import com.coparently.app.presentation.platform.CredentialSignIn
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import org.koin.core.Koin
 import org.koin.core.context.startKoin
 import org.koin.core.module.Module
@@ -46,9 +54,16 @@ data class IosAppConfig(
  * calls: [start] once, then [rootViewController] for the window.
  *
  * The root is the native shell (Task 8): UIKit's tab and navigation bars around the shared screens,
- * each screen its own Compose view controller ([NativeShell]).
+ * each screen its own Compose view controller ([NativeShell]). A `coplanly://` link the app is
+ * opened with reaches [openUrl], which arms it for the shell (part B, Task 10).
  */
 object IosApp {
+    /** The links waiting for the shell to open them, filled by [openUrl]. */
+    private val pendingLinks = IosLaunch()
+
+    /** Where a link's family switch runs, for the life of the process. */
+    private val scope = MainScope()
+
     /** Set by [start]; what the shell's platform values are built from. */
     private var buildValues: AppBuildValues? = null
 
@@ -123,12 +138,51 @@ object IosApp {
      */
     fun rootViewController(): UIViewController {
         val values = checkNotNull(buildValues) { "IosApp.start must run before rootViewController" }
-        val current = shell ?: NativeShell(checkNotNull(koin), values, checkNotNull(credentialSignIn)).also {
+        val current = shell ?: NativeShell(
+            checkNotNull(koin),
+            values,
+            checkNotNull(credentialSignIn),
+            pendingLinks.launch
+        ).also {
             shell = it
             it.start()
         }
         return current.root
     }
+
+    /**
+     * Opens a link the app was handed (the scene's `openURLContexts` and its connection options,
+     * after Google's sign-in has had its turn): a `coplanly://pair`, `guest` or `chat` link
+     * ([LaunchLinks]), armed for the shell, which opens it once the tabs show a signed-in account.
+     *
+     * A chat link that names a family switches to it first, and is armed only once the switch has
+     * landed (CLAUDE.md item 15), as Android's `MainActivity.readLaunchIntent` does: a thread opened
+     * while the other family still shows would be read against the wrong co-parent.
+     * [SelectedFamilySource.select] refuses a family the account is not in, so such a link opens on
+     * the family already showing; a switch that fails does too.
+     *
+     * @return whether [url] was one of the app's links; false leaves it to nobody.
+     */
+    fun openUrl(url: String): Boolean {
+        val link = LaunchLinks.parse(url) ?: return false
+        val familyId = (link as? LaunchLink.Chat)?.familyId
+        val families = koin?.get<SelectedFamilySource>()
+        if (familyId == null || families == null) {
+            pendingLinks.arm(link)
+            return true
+        }
+        scope.launch {
+            runCatching {
+                if (families.selected()?.familyId != familyId) families.select(familyId)
+            }.onFailure {
+                logger.w(TAG, "Could not switch to the family a link named", it)
+            }
+            pendingLinks.arm(link)
+        }
+        return true
+    }
+
+    private const val TAG = "IosApp"
 
     /**
      * Which pairing link an invitation carries: the hosted `web/pair/` page, as the Android build's
@@ -145,21 +199,37 @@ object IosApp {
  */
 internal val iosAppModule: Module = module { }
 
-/** What a launch hands the navigation graph on the iPhone. */
-internal object IosLaunch {
-    /**
-     * A launch with nothing pending: no invitation code, no chat link and no push's screen. The
-     * iPhone reads none of those in part A; the shell arms them in part B, after the family switch
-     * (CLAUDE.md item 15).
-     */
-    fun none(): AppLaunch = AppLaunch(
+/**
+ * What a launch hands the shell on the iPhone: the pending holders `MainActivity` keeps on Android,
+ * in the same shape and with the same meaning ([AppLaunch]). [IosApp.openUrl] fills them ([arm]),
+ * and the shell clears each once it has opened it. A push's screen is never armed yet: the iPhone
+ * receives no push until phase 4.
+ */
+internal class IosLaunch {
+    /** A pairing code; empty for a link with none, as on Android. */
+    private val pairing = MutableStateFlow<String?>(null)
+    private val guest = MutableStateFlow<String?>(null)
+    private val chat = MutableStateFlow<PendingChatLink?>(null)
+    private val destination = MutableStateFlow<PushDestination?>(null)
+
+    /** The holders, as the shell reads and clears them. */
+    val launch: AppLaunch = AppLaunch(
         inviteCodes = PendingInviteCodes(
-            pairing = MutableStateFlow(null),
-            onPairingConsumed = {},
-            guest = MutableStateFlow(null),
-            onGuestConsumed = {},
+            pairing = pairing,
+            onPairingConsumed = { pairing.value = null },
+            guest = guest,
+            onGuestConsumed = { guest.value = null },
         ),
-        chatOpen = PendingChatOpen(link = MutableStateFlow(null), onConsumed = {}),
-        destinationOpen = PendingDestinationOpen(destination = MutableStateFlow(null), onConsumed = {}),
+        chatOpen = PendingChatOpen(link = chat, onConsumed = { chat.value = null }),
+        destinationOpen = PendingDestinationOpen(destination = destination, onConsumed = { destination.value = null }),
     )
+
+    /** Arms [link]'s hand-off, replacing one of its kind still waiting. */
+    fun arm(link: LaunchLink) {
+        when (link) {
+            is LaunchLink.Pair -> pairing.value = link.code
+            is LaunchLink.Guest -> guest.value = link.code
+            is LaunchLink.Chat -> chat.value = PendingChatLink(link.conversationId)
+        }
+    }
 }

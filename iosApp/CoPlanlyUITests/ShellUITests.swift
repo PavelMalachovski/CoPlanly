@@ -11,7 +11,8 @@ import XCTest
 /// its overflow menu opening and closing, a sheet holding an edit swiped down, which
 /// must ask "Discard changes?" and stay open on "Keep editing", the event form as a sheet with Save in
 /// its bar (disabled until the event has a title), New event's description and the chat composer
-/// staying above the keyboard, and a sign-out reaching the sign-in screen with no tabs, then a
+/// staying above the keyboard, a `coplanly://pair` link reaching the pairing screen with its code, and
+/// a sign-out reaching the sign-in screen with no tabs, then a
 /// sign-in landing on fresh tabs.
 ///
 /// **One run reports every problem.** The walk is a list of steps. A step that fails records its
@@ -73,6 +74,7 @@ final class ShellUITests: XCTestCase {
         step("New event's description stays above the keyboard", after: ["New event is a sheet with Save in its bar"]) {
             try self.eventDescriptionAboveKeyboard()
         }
+        step("a coplanly://pair link opens Pairing with its code", after: ["sign in"]) { try self.pairingLink() }
         step("sign out, and sign in to fresh tabs", after: ["Settings"]) {
             try self.signOutAndIn(email: email, password: password)
         }
@@ -377,6 +379,28 @@ final class ShellUITests: XCTestCase {
         guard element.exists, keyboard.exists else { return false }
         let frame = element.frame
         return !frame.isEmpty && frame.minY >= 0 && frame.maxY <= keyboard.frame.minY
+    }
+
+    /// A `coplanly://pair` link opened while signed in reaches the pairing screen with its code
+    /// (MON-24 phase 3, part B, Task 10). The code is well formed (`InviteCodeGenerator`'s alphabet
+    /// has no 1, 0, I or O) but the emulators hold no invitation for it, so the screen's redeem answers
+    /// "No invitation matches that code." — or, where the preview could not say, asks "Link with this
+    /// invite code?" — either of which only a code that reached Pairing produces. The texts are the
+    /// shared strings in English.
+    private func pairingLink() throws {
+        try goToFamilyRoot()
+        app.open(URL(string: "coplanly://pair?code=ABC234")!)
+        let refused = element(labelledContaining: "No invitation matches that code")
+        let asked = element(labelledContaining: "Link with")
+        var reached = false
+        for _ in 0..<60 where !reached {
+            reached = refused.exists || asked.exists
+            if !reached { sleep(1) }
+        }
+        shot("16-pairing-link")
+        try require(reached, "The link did not reach the pairing screen with its code")
+        if asked.exists { pressIfThere("Cancel") }
+        try goToFamilyRoot()
     }
 
     /// Whether [button] becomes enabled within the step timeout.

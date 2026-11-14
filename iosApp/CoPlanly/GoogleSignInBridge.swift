@@ -7,8 +7,8 @@ import UIKit
 /// answer into the result `AuthViewModel` folds, and holds the access token for the Firebase sign-in.
 ///
 /// It is available only when the app carries a `GoogleService-Info.plist` with a `CLIENT_ID` and the
-/// build registered that file's `REVERSED_CLIENT_ID` as a URL scheme (the "Register Google's URL
-/// scheme" build phase, iosApp/README.md). Google Sign-In stops the app when it is asked to sign in
+/// build registered that file's `REVERSED_CLIENT_ID` as a URL scheme (the "Register the app's URL
+/// schemes" build phase, iosApp/README.md). Google Sign-In stops the app when it is asked to sign in
 /// without that scheme, so it is never asked then: the sign-in screen offers e-mail alone, as it does
 /// in CI and on the emulators, where no such file is bundled.
 ///

@@ -7,8 +7,10 @@ import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.navigation.NavOptionsBuilder
 import com.coparently.app.domain.telemetry.TelemetryConsent
 import com.coparently.app.ios.IosLifecycle
+import com.coparently.app.presentation.AppLaunch
 import com.coparently.app.presentation.changerequests.RequestsBadgeViewModel
 import com.coparently.app.presentation.chat.ChatViewModel
 import com.coparently.app.presentation.common.AppMessages
@@ -17,7 +19,9 @@ import com.coparently.app.presentation.navigation.AppDestinationCatalog
 import com.coparently.app.presentation.navigation.BottomNavDestination
 import com.coparently.app.presentation.navigation.CalendarTabTaps
 import com.coparently.app.presentation.navigation.DestinationKind
+import com.coparently.app.presentation.navigation.Screen
 import com.coparently.app.presentation.navigation.TabSwitcher
+import com.coparently.app.presentation.navigation.chatDeepLinkRoute
 import com.coparently.app.presentation.navigation.startDestinationFor
 import com.coparently.app.presentation.platform.AppBuildValues
 import com.coparently.app.presentation.platform.CredentialSignIn
@@ -28,6 +32,8 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -114,13 +120,18 @@ internal class ShellSession {
  * The telemetry question is not asked on the iPhone (spec §5.2): it collects nothing, so the start
  * destination is decided as for an answer that collects nothing, and nothing is stored.
  *
- * Deep links are not read yet in part A. When they are, the family is switched before any is armed
- * (CLAUDE.md item 15), as `MainActivity` does.
+ * **A `coplanly://` link opens once the tabs show a signed-in account** ([links], which
+ * `IosApp.openUrl` arms after any family switch the link names, CLAUDE.md item 15), and each is
+ * cleared once opened, as Android's `NavGraph` opens and clears `MainActivity`'s: a pairing or guest
+ * code pushes its screen onto the selected tab (a pairing screen already there is replaced, so a
+ * second link re-arms its question), a chat link selects the Chat tab and pushes the thread it
+ * names. A link that arrives before sign-in or during onboarding waits for the tabs.
  */
 internal class NativeShell(
     private val koin: Koin,
     override val buildValues: AppBuildValues,
-    override val credentialSignIn: CredentialSignIn
+    override val credentialSignIn: CredentialSignIn,
+    private val links: AppLaunch
 ) : ShellEnvironment, TabSwitcher {
 
     /** The window's root: a container that holds the root flow or the tabs. */
@@ -136,7 +147,14 @@ internal class NativeShell(
     override val visibility: ShellVisibility = ShellVisibility()
 
     private var flow: StackHost? = null
-    private var tabs: TabShell? = null
+
+    /** The tabs while the shell shows them, which a pending link waits for. */
+    private val shownTabs = MutableStateFlow<TabShell?>(null)
+    private var tabs: TabShell?
+        get() = shownTabs.value
+        set(value) {
+            shownTabs.value = value
+        }
     private var session: ShellSession? = null
     private var shown: UIViewController? = null
     private var cancelledTransitions = 0
@@ -159,6 +177,43 @@ internal class NativeShell(
             }.distinctUntilChanged().collect { route ->
                 tabsReached = false
                 show(route)
+            }
+        }
+        openLinks()
+    }
+
+    /** Opens each pending link once the tabs show a signed-in account; see the class's KDoc. */
+    private fun openLinks() {
+        val codes = links.inviteCodes
+        handOff(codes.pairing, codes.onPairingConsumed) { shown, code ->
+            shown.navigateOnSelected(Screen.Pairing.routeWithCode(code)) {
+                popUpTo(Screen.Pairing.route) { inclusive = true }
+            }
+        }
+        handOff(codes.guest, codes.onGuestConsumed) { shown, code ->
+            shown.navigateOnSelected(Screen.GuestAccept.routeWithCode(code))
+        }
+        handOff(links.chatOpen.link, links.chatOpen.onConsumed) { shown, link ->
+            shown.select(BottomNavDestination.CHAT)
+            // A bare link opens the tab's own first screen, the list; a thread is pushed over it.
+            if (!link.conversationId.isNullOrBlank()) {
+                shown.navigateOn(BottomNavDestination.CHAT, chatDeepLinkRoute(link.conversationId)) {
+                    launchSingleTop = true
+                }
+            }
+        }
+    }
+
+    /** Opens [pending]'s value with [open] once the tabs show a signed-in account, then [consume]s it. */
+    private fun <T : Any> handOff(pending: StateFlow<T?>, consume: () -> Unit, open: (TabShell, T) -> Unit) {
+        scope.launch {
+            combine(shownTabs, authStateViewModel.isAuthenticated, pending) { shown, signedIn, value ->
+                if (shown != null && signedIn == true) value?.let { shown to it } else null
+            }.collect { ready ->
+                if (ready != null) {
+                    open(ready.first, ready.second)
+                    consume()
+                }
             }
         }
     }
@@ -340,6 +395,17 @@ internal class TabShell(
     fun selectFresh(tab: BottomNavDestination) {
         host(tab).popToStart()
         select(tab)
+    }
+
+    /** Pushes [route] onto the selected tab's stack, with [options] as `NavController.navigate` takes them. */
+    fun navigateOnSelected(route: String, options: NavOptionsBuilder.() -> Unit = {}) {
+        val selected = hosts.getOrNull(controller.selectedIndex.toInt()) ?: host(BottomNavDestination.CALENDAR)
+        selected.navController.navigate(route, options)
+    }
+
+    /** Pushes [route] onto [tab]'s stack, with [options] as `NavController.navigate` takes them. */
+    fun navigateOn(tab: BottomNavDestination, route: String, options: NavOptionsBuilder.() -> Unit = {}) {
+        host(tab).navController.navigate(route, options)
     }
 
     /**

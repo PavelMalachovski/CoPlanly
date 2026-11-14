@@ -65,16 +65,28 @@ targets:
           cd "$SRCROOT/.."
           ./gradlew :shared-ui:embedAndSignAppleFrameworkForXcode
     postBuildScripts:
-      # Google's sign-in returns through a URL scheme, the reversed client id of the bundled
-      # GoogleService-Info.plist, which only the owner's Mac has (never committed). The scheme is the
-      # build setting COPLANLY_GOOGLE_URL_SCHEME when it is set, else read from that file when it is
-      # there; with neither (CI, the emulators) nothing is added, and GoogleSignInBridge offers no
-      # Google. It writes the built Info.plist, after Xcode has processed it and before signing.
-      - name: Register Google's URL scheme
+      # The app's URL schemes, written into the built Info.plist after Xcode has processed it and
+      # before signing. First the app's own, `coplanly`, which every build registers: the
+      # `coplanly://pair`, `guest` and `chat` links Android's manifest declares (`IosApp.openUrl`).
+      # Then Google's sign-in's, which returns through the reversed client id of the bundled
+      # GoogleService-Info.plist, which only the owner's Mac has (never committed): the build setting
+      # COPLANLY_GOOGLE_URL_SCHEME when it is set, else read from that file when it is there; with
+      # neither (CI, the emulators) Google's is not added, and GoogleSignInBridge offers no Google.
+      - name: Register the app's URL schemes
         basedOnDependencyAnalysis: false
         inputFiles:
           - "$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)"
         script: |
+          plist="${TARGET_BUILD_DIR}/${INFOPLIST_PATH}"
+          /usr/libexec/PlistBuddy -c "Delete :CFBundleURLTypes" "$plist" 2>/dev/null || true
+          /usr/libexec/PlistBuddy \
+            -c "Add :CFBundleURLTypes array" \
+            -c "Add :CFBundleURLTypes:0 dict" \
+            -c "Add :CFBundleURLTypes:0:CFBundleURLName string app.coplanly" \
+            -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" \
+            -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string coplanly" \
+            "$plist"
+          echo "Registered the coplanly URL scheme."
           scheme="${COPLANLY_GOOGLE_URL_SCHEME}"
           google="${SRCROOT}/CoPlanly/GoogleService-Info.plist"
           if [ -z "$scheme" ] && [ -f "$google" ]; then
@@ -84,14 +96,11 @@ targets:
             echo "No Google URL scheme: the app offers e-mail sign-in alone."
             exit 0
           fi
-          plist="${TARGET_BUILD_DIR}/${INFOPLIST_PATH}"
-          /usr/libexec/PlistBuddy -c "Delete :CFBundleURLTypes" "$plist" 2>/dev/null || true
           /usr/libexec/PlistBuddy \
-            -c "Add :CFBundleURLTypes array" \
-            -c "Add :CFBundleURLTypes:0 dict" \
-            -c "Add :CFBundleURLTypes:0:CFBundleURLName string google" \
-            -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" \
-            -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string $scheme" \
+            -c "Add :CFBundleURLTypes:1 dict" \
+            -c "Add :CFBundleURLTypes:1:CFBundleURLName string google" \
+            -c "Add :CFBundleURLTypes:1:CFBundleURLSchemes array" \
+            -c "Add :CFBundleURLTypes:1:CFBundleURLSchemes:0 string $scheme" \
             "$plist"
           echo "Registered Google's URL scheme."
     settings:
@@ -132,7 +141,7 @@ targets:
         COPLANLY_PRIVACY_POLICY_URL: "https://coparently-a39c9.web.app/privacy/"
         COPLANLY_TERMS_URL: "https://coparently-a39c9.web.app/terms/"
         COPLANLY_SUPPORT_EMAIL: ""
-        # Google's sign-in URL scheme (the "Register Google's URL scheme" phase). Blank: read from the
+        # Google's sign-in URL scheme (the "Register the app's URL schemes" phase). Blank: read from the
         # bundled GoogleService-Info.plist when there is one. Set it only on your own Mac; never commit
         # a value.
         COPLANLY_GOOGLE_URL_SCHEME: ""

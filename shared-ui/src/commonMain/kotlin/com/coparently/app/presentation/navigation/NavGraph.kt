@@ -309,7 +309,7 @@ internal fun PairingDeepLinkEffect(
  * throw away that answer.
  *
  * @property pairing A `coplanly://pair` code, or null when none is outstanding. Empty string
- *   means "link present, no code" — see `MainActivity.readPairingCode`.
+ *   means "link present, no code" — see `MainActivity.readLaunchLink`.
  * @property onPairingConsumed Clears [pairing] once the pairing screen has it.
  * @property guest A `coplanly://guest` code, or null when none is outstanding. Never empty: a
  *   bare guest link is ignored rather than opening an empty screen.

@@ -17,12 +17,22 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         window.rootViewController = IosApp.shared.rootViewController()
         window.makeKeyAndVisible()
         self.window = window
+        // A link the app was launched with arrives here rather than in `openURLContexts`.
+        open(connectionOptions.urlContexts)
     }
 
-    /// Hands Google's sign-in the URL its sheet returns through (`GoogleSignInBridge`).
+    /// A link opened while the app runs.
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
-        for context in URLContexts {
-            _ = GoogleSignInBridge.handle(context.url)
+        open(URLContexts)
+    }
+
+    /// Hands each URL to Google's sign-in first, which its sheet returns through
+    /// (`GoogleSignInBridge`), and to the app's own `coplanly://` links (`IosApp.openUrl`) when
+    /// Google did not take it.
+    private func open(_ contexts: Set<UIOpenURLContext>) {
+        for context in contexts {
+            if GoogleSignInBridge.handle(context.url) { continue }
+            _ = IosApp.shared.openUrl(url: context.url.absoluteString)
         }
     }
 }

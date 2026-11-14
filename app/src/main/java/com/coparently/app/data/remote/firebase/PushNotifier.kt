@@ -456,7 +456,7 @@ class PushNotifier(private val context: Context) {
         /**
          * Opens the pairing screen with no prefilled code — see
          * [MainActivity][com.coparently.app.presentation.MainActivity]'s
-         * `readPairingCode`, which treats a code-less pairing link as "land on
+         * `readLaunchLink`, which treats a code-less pairing link as "land on
          * the pairing screen with nothing pre-filled" rather than a no-op.
          */
         internal val PAIRING_DEEP_LINK = "${PairingUri.SCHEME}://${PairingUri.HOST}"
