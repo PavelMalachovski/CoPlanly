@@ -4,20 +4,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.FolderShared
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -31,6 +28,7 @@ import com.coparently.app.domain.documents.FamilyDocument
 import com.coparently.app.domain.files.SharedFilePolicy
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.LocalAppMessages
+import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.SideBySideOrStacked
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
@@ -43,7 +41,6 @@ import com.coparently.app.presentation.platform.LocalFilePicker
 import com.coparently.app.presentation.platform.LocalOpenUrl
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
 import com.coparently.app.resources.documents_add_file
@@ -103,17 +100,10 @@ fun FamilyDocumentsScreen(
         containerColor = ScreenContainerColor,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                colors = screenTopAppBarColors(),
-                title = { Text(stringResource(Res.string.documents_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateUp) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(Res.string.common_back)
-                        )
-                    }
-                }
+            PushedTopBar(
+                title = stringResource(Res.string.documents_title),
+                backLabel = stringResource(Res.string.common_back),
+                onBack = onNavigateUp
             )
         },
         bottomBar = {

@@ -4,16 +4,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChildCare
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -23,19 +19,23 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.presentation.childinfo.components.GuestInviteSheet
+import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ListSkeleton
+import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberUiTextResolver
+import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.platform.LocalShareSheet
 import com.coparently.app.presentation.theme.ScreenContainerColor
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.child_photo_delete_failed
 import com.coparently.app.resources.child_photo_upload_failed
 import com.coparently.app.resources.childinfo_back
+import com.coparently.app.resources.childinfo_edit
 import com.coparently.app.resources.childinfo_record_gone_description
 import com.coparently.app.resources.childinfo_record_gone_title
 import com.coparently.app.resources.childinfo_screen_title
@@ -143,22 +143,13 @@ fun ChildDetailScreen(
         containerColor = ScreenContainerColor,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                colors = screenTopAppBarColors(),
-                title = {
-                    Text(childInfo?.childName ?: stringResource(Res.string.childinfo_screen_title))
+            ChildDetailTopBar(
+                childInfo = childInfo,
+                onBack = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onNavigateBack()
                 },
-                navigationIcon = {
-                    IconButton(onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onNavigateBack()
-                    }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(Res.string.childinfo_back)
-                        )
-                    }
-                }
+                onEditClick = onEditClick
             )
         }
     ) { paddingValues ->
@@ -198,4 +189,29 @@ fun ChildDetailScreen(
             }
         }
     }
+}
+
+/**
+ * The child's name and the up arrow. Every row of the summary opens the editor; on the iPhone the
+ * bar also carries Edit (`pencil`), the system's way into a record's editor (MON-24 phase 3, part
+ * B), while the record is there to edit. Android's bar keeps no pencil: the rows are its way in.
+ */
+@Composable
+private fun ChildDetailTopBar(childInfo: ChildInfo?, onBack: () -> Unit, onEditClick: (String) -> Unit) {
+    val inShellBar = shellDrawsBars()
+    val editLabel = stringResource(Res.string.childinfo_edit)
+    val edit = childInfo?.takeIf { inShellBar }?.let { child ->
+        BarAction(
+            label = editLabel,
+            icon = Icons.Default.Edit,
+            sfSymbol = "pencil",
+            onClick = { onEditClick(child.id) }
+        )
+    }
+    PushedTopBar(
+        title = childInfo?.childName ?: stringResource(Res.string.childinfo_screen_title),
+        backLabel = stringResource(Res.string.childinfo_back),
+        onBack = onBack,
+        actions = listOfNotNull(edit)
+    )
 }

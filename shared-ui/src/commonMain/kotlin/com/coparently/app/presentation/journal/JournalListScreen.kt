@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
@@ -19,7 +18,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -29,8 +27,6 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -43,12 +39,14 @@ import androidx.compose.ui.Modifier
 import com.coparently.app.domain.journal.JournalEntry
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.InlineBanner
+import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.presentation.common.addBarAction
 import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
 import com.coparently.app.resources.journal_add
@@ -104,31 +102,28 @@ fun JournalListScreen(
         }
     }
 
+    // Only once there are entries. With none, the empty state carries the call to action, so a
+    // FAB would be a second button saying the same thing (as `PetsScreen` and `ChildInfoScreen`
+    // settled). On the iPhone the "+" is the bar's (MON-24 phase 3, part B).
+    val hasEntries = (state as? JournalListState.Loaded)?.entries?.isNotEmpty() == true
+    val inShellBar = shellDrawsBars()
+    val addLabel = stringResource(Res.string.journal_add)
+
     Scaffold(
         containerColor = ScreenContainerColor,
         topBar = {
-            TopAppBar(
-                colors = screenTopAppBarColors(),
-                title = { Text(stringResource(Res.string.journal_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateUp) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(Res.string.common_back)
-                        )
-                    }
-                }
+            PushedTopBar(
+                title = stringResource(Res.string.journal_title),
+                backLabel = stringResource(Res.string.common_back),
+                onBack = onNavigateUp,
+                actions = listOfNotNull(addBarAction(addLabel, onNewEntry).takeIf { inShellBar && hasEntries })
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            // Only once there are entries. With none, the empty state carries the call to action,
-            // so a FAB would be a second button saying the same thing (as `PetsScreen` and
-            // `ChildInfoScreen` settled).
-            val current = state
-            if (current is JournalListState.Loaded && current.entries.isNotEmpty()) {
+            if (hasEntries && !inShellBar) {
                 FloatingActionButton(onClick = onNewEntry) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(Res.string.journal_add))
+                    Icon(imageVector = Icons.Default.Add, contentDescription = addLabel)
                 }
             }
         }

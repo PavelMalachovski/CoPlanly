@@ -8,19 +8,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -35,6 +30,7 @@ import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.ListSkeleton
 import com.coparently.app.presentation.common.Loadable
 import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.valueOrNull
@@ -42,7 +38,6 @@ import com.coparently.app.presentation.platform.LocalOpenUrl
 import com.coparently.app.presentation.platform.OpenUrl
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.contacts_back
 import com.coparently.app.resources.contacts_call
@@ -145,21 +140,13 @@ fun ContactsScreen(
     }
 }
 
-/** The screen's title and its up arrow. */
-@OptIn(ExperimentalMaterial3Api::class)
+/** The screen's title and its up arrow; the iPhone's navigation bar shows them there. */
 @Composable
 private fun ContactsTopBar(onNavigateUp: () -> Unit) {
-    TopAppBar(
-        colors = screenTopAppBarColors(),
-        title = { Text(stringResource(Res.string.contacts_title)) },
-        navigationIcon = {
-            IconButton(onClick = onNavigateUp) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(Res.string.contacts_back)
-                )
-            }
-        }
+    PushedTopBar(
+        title = stringResource(Res.string.contacts_title),
+        backLabel = stringResource(Res.string.contacts_back),
+        onBack = onNavigateUp
     )
 }
 

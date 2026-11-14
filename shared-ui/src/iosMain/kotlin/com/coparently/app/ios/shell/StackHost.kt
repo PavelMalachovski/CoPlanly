@@ -394,7 +394,22 @@ internal class StackHost(
             Screen.RequestChange.route,
             Screen.JournalEditor.route,
             Screen.EditChildInfo.route,
-            Screen.EditPet.route
+            Screen.EditPet.route,
+            // The family's pushed screens (MON-24 phase 3, part B, Task 5): the system bar with its
+            // back button, and a list's "+" as a bar button.
+            Screen.ChildInfo.route,
+            Screen.ChildDetail.route,
+            Screen.Pets.route,
+            Screen.Contacts.route,
+            Screen.Documents.route,
+            Screen.Journal.route,
+            Screen.Stickers.route,
+            Screen.EarlierFamilies.route,
+            Screen.EarlierFamily.route,
+            Screen.UnassignedRecords.route,
+            Screen.MonthReview.route,
+            Screen.Export.route,
+            Screen.Support.route
         )
 
         /** Whether two lists hold the same view controllers, in order. */
