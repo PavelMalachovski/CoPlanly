@@ -325,6 +325,27 @@ of each answer comes from the owner's run of
 | 5. A form sheet with edits | Add expense opens as a page sheet; a swipe down over an edit asks "Discard changes?", "Keep editing" keeps it, Close asks again, Discard closes; a form with its own Compose bar shows one bar. | How it feels (2.6). |
 | 6. Memory and speed | Nothing measured. | The gauges with four tabs and a stack three deep (2.9). |
 
+**What part B changed** (November 2026; plan `docs/superpowers/plans/2026-11-13-iphone-phase-3b-every-screen.md`,
+owner's check `docs/superpowers/plans/2026-11-13-iphone-phase-3b-owner-check.md`). Part B was planned
+before the owner's answers to part A's check came in. Its plan ruled that large titles stay fixed
+and content stays padded below the bars, so points 2 and 3 are still the owner's to answer.
+
+| Point | What part B changed | What the owner's run of part B answers |
+| --- | --- | --- |
+| 1. The stack host | Every one of the 51 destinations is hosted under a system bar, except the loading screen, the telemetry question and sign-in (`NO_BAR_ROUTES`). A screen's inner steps (`BackSteps`) run before the back button pops it, and the edge swipe is refused while one is open; the walk proves it in CustodySetup. `coplanly://` links open their screens (`LaunchLinks`). A disposed stack ends its back-stack entries a second after its screens. | Back in CustodySetup, a `coplanly://` link, the swap selection, every tab (owner check §2). |
+| 2. Large titles | Unchanged: always shown, never collapsing. The calendar's title is inline, so the grid keeps its height. | Still part A's 2.2. |
+| 3. The edge of the bars | Unchanged: content padded below the bars. | Still part A's 2.3. |
+| 4. The keyboard | Taken once, by the shell's screen frame. The walk types into New event's description and the chat composer and checks each stays above the keys. | How it feels in each form sheet (owner check §2). |
+| 5. A form sheet with edits | Every form route is a sheet with its Save in the bar. The walk proves a dirty swipe down on Add expense, and that a new event closes without asking (design item 16). | A dirty swipe down on the five other forms (owner check §2). |
+| 6. Memory and speed | Nothing measured. A 30-second main-thread hang was seen once during the walk and not reproduced; the walk now samples the app's threads. | The gauges with every screen reachable, and whether the hang recurs. |
+
+The iPhone tour of §8 is built differently from what §8 asked for. It is `ShellUITests.testTour` in
+every `ios-app` run, not a run by request pushed to a branch of its own. Its screenshots are the
+`ios-tour` artifact. The final review of part B kept it on every run, because the owner check reads
+the `ios-tour` artifact of the branch's own run, and moved it to the job's last step, after the
+emulator tests and the write gate, with the job's limit raised from 180 to 240 minutes: a slow run
+then loses the tour, never the write gate.
+
 ## 8. Tests and CI
 
 - **Android is the regression test for the shared code.** Every part runs the full Android CI:

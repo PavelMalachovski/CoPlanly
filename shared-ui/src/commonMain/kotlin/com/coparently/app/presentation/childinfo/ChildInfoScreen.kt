@@ -3,7 +3,6 @@ package com.coparently.app.presentation.childinfo
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,16 +28,18 @@ import com.coparently.app.presentation.common.ErrorState
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.ListSkeleton
 import com.coparently.app.presentation.common.PhotoOwner
+import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.RecordPlaceMark
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionGroupScope
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.addBarAction
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.placeOf
+import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.childinfo_add_child_button
 import com.coparently.app.resources.childinfo_back
@@ -106,37 +107,37 @@ fun ChildInfoScreen(
     val uiState by viewModel.uiState.collectAsState()
     val children = (uiState as? ChildInfoUiState.Success)?.childInfoList.orEmpty()
 
+    // On the iPhone the "+" is the bar's (MON-24 phase 3, part B), shown exactly when the floating
+    // button would be.
+    val inShellBar = shellDrawsBars()
+    val addLabel = stringResource(Res.string.childinfo_add_child_button)
+    val addChild: () -> Unit = {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        onAddChild()
+    }
+
     Scaffold(
         containerColor = ScreenContainerColor,
         topBar = {
-            TopAppBar(
-                colors = screenTopAppBarColors(),
-                title = { Text(stringResource(Res.string.childinfo_screen_title)) },
-                navigationIcon = {
-                    IconButton(onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onNavigateBack()
-                    }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(Res.string.childinfo_back)
-                        )
-                    }
-                }
+            PushedTopBar(
+                title = stringResource(Res.string.childinfo_screen_title),
+                backLabel = stringResource(Res.string.childinfo_back),
+                onBack = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onNavigateBack()
+                },
+                actions = listOfNotNull(addBarAction(addLabel, addChild).takeIf { inShellBar && children.isNotEmpty() })
             )
         },
         floatingActionButton = {
             // Only once there is a list. With none, the empty state carries the call to action,
             // so a FAB would be a second button saying the same thing — the shape `PetsScreen`
             // already settled on.
-            if (children.isNotEmpty()) {
+            if (children.isNotEmpty() && !inShellBar) {
                 ExtendedFloatingActionButton(
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onAddChild()
-                    },
+                    onClick = addChild,
                     icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                    text = { Text(stringResource(Res.string.childinfo_add_child_button)) }
+                    text = { Text(addLabel) }
                 )
             }
         }

@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -15,18 +14,20 @@ import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.saveable.Saver
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import com.coparently.app.presentation.common.AppTopBar
+import com.coparently.app.presentation.common.BarAction
+import com.coparently.app.presentation.common.BarLeading
+import com.coparently.app.presentation.common.ScreenBackStep
+import com.coparently.app.presentation.common.ScreenBar
+import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.theme.IconSizes
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.day_swap_choose_title
 import com.coparently.app.resources.day_swap_close_selection
@@ -72,10 +73,12 @@ fun SwapDaysButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
  * The calendar's top bar while days are being chosen (board SW-2): close, "Choose days to swap",
  * and the month with arrows either side, so paging while choosing needs no swipe. Back closes it
  * too.
+ *
+ * Where a shell draws the bars (the iPhone, MON-24 phase 3, part B) the same content goes to its
+ * bar: the title, a close button (`xmark`) and the two arrows (`chevron.left`, `chevron.right`); the
+ * grid card's title already names the month.
  */
-// `ExperimentalComposeUiApi`: Compose Multiplatform's common `BackHandler` (androidx.activity's on
-// Android, as before).
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SwapSelectionHeader(
     month: YearMonth,
@@ -83,40 +86,72 @@ internal fun SwapSelectionHeader(
     onNextMonth: () -> Unit,
     onClose: () -> Unit
 ) {
-    BackHandler(onBack = onClose)
-    TopAppBar(
-        colors = screenTopAppBarColors(),
-        navigationIcon = {
-            IconButton(onClick = onClose) {
-                Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.day_swap_close_selection))
-            }
-        },
-        title = {
-            Text(
-                text = stringResource(Res.string.day_swap_choose_title),
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.semantics { heading() }
-            )
-        },
-        actions = {
-            IconButton(onClick = onPreviousMonth) {
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = stringResource(Res.string.day_swap_previous_month)
+    ScreenBackStep(onBack = onClose)
+    if (shellDrawsBars()) {
+        SwapSelectionShellBar(onPreviousMonth = onPreviousMonth, onNextMonth = onNextMonth, onClose = onClose)
+        return
+    }
+    val title = stringResource(Res.string.day_swap_choose_title)
+    AppTopBar(
+        ScreenBar(
+            title = title,
+            leading = BarLeading.Close(label = stringResource(Res.string.day_swap_close_selection), onClick = onClose),
+            titleContent = {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.semantics { heading() }
                 )
-            }
-            Text(
-                text = ReaderDateText.month(month, "MMMyyyy"),
-                style = MaterialTheme.typography.labelLarge
-            )
-            IconButton(onClick = onNextMonth) {
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = stringResource(Res.string.day_swap_next_month)
+            },
+            // The month between its arrows, which no bar action can hold.
+            trailingContent = {
+                IconButton(onClick = onPreviousMonth) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                        contentDescription = stringResource(Res.string.day_swap_previous_month)
+                    )
+                }
+                Text(
+                    text = ReaderDateText.month(month, "MMMyyyy"),
+                    style = MaterialTheme.typography.labelLarge
                 )
+                IconButton(onClick = onNextMonth) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = stringResource(Res.string.day_swap_next_month)
+                    )
+                }
             }
-        }
+        )
+    )
+}
+
+/** [SwapSelectionHeader]'s content as the iPhone's navigation bar draws it. */
+@Composable
+private fun SwapSelectionShellBar(onPreviousMonth: () -> Unit, onNextMonth: () -> Unit, onClose: () -> Unit) {
+    AppTopBar(
+        ScreenBar(
+            title = stringResource(Res.string.day_swap_choose_title),
+            leading = BarLeading.Close(
+                label = stringResource(Res.string.day_swap_close_selection),
+                onClick = onClose
+            ),
+            actions = listOf(
+                BarAction(
+                    label = stringResource(Res.string.day_swap_previous_month),
+                    icon = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                    sfSymbol = "chevron.left",
+                    onClick = onPreviousMonth
+                ),
+                BarAction(
+                    label = stringResource(Res.string.day_swap_next_month),
+                    icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    sfSymbol = "chevron.right",
+                    onClick = onNextMonth
+                )
+            )
+        )
     )
 }

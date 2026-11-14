@@ -13,8 +13,8 @@ and the data layer are the Kotlin Multiplatform modules', compiled into one stat
 | `CoPlanly/Info.plist` | Bundle `app.coplanly`, display name CoPlanly, iPhone only, portrait only, iOS 17.0 and later. |
 | `CoPlanly/CoPlanly.entitlements` | Empty for now; push and sign-in add theirs. |
 | `CoPlanly/Assets.xcassets` | The icon (made from the Android launcher icon by `tools/generate-ios-icon.py`; never edit the PNG by hand) and the indigo accent colour. |
-| `CoPlanlyUITests/` | The XCUITest walk of the native shell (`ShellUITests.swift`), run in CI on the emulators. |
-| `scripts/simulator.sh` | CI's simulator steps (the `ios-app` job): pick, launch and the shell's walk. |
+| `CoPlanlyUITests/` | The XCUITest walk of the native shell (`ShellUITests.testShellWalk`) and the tour of every screen (`testTour`), run in CI on the emulators. |
+| `scripts/simulator.sh` | CI's simulator steps (the `ios-app` job): pick, launch, the shell's walk and the tour. |
 
 ## Running it on your Mac
 
@@ -81,9 +81,10 @@ it, the screen offers e-mail alone (CI and the emulators never offer Google). On
    "iOS client" for bundle `app.coplanly` exists (create one if not), and download the file again.
 2. **Put it in `iosApp/CoPlanly/`** and run `xcodegen generate`, as for "The real project" above.
    Never commit it.
-3. **The URL scheme registers itself.** The build phase "Register Google's URL scheme" reads
+3. **The URL scheme registers itself.** The build phase "Register the app's URL schemes" reads
    `REVERSED_CLIENT_ID` from that file and adds it to the built app's `CFBundleURLTypes`, which
-   Google's sheet returns through. To use another scheme, set the target's build setting
+   Google's sheet returns through, after the app's own `coplanly` scheme, which every build
+   registers for the `coplanly://pair`, `guest` and `chat` links. To use another scheme, set the target's build setting
    `COPLANLY_GOOGLE_URL_SCHEME` locally (Xcode → the CoPlanly target → Build Settings, or an
    uncommitted `.xcconfig`); it is blank in `project.yml` and must stay so.
 4. Run the app and sign in with Google. The app checks both halves at launch
@@ -96,9 +97,10 @@ the keyboard offers the Keychain's passwords; there is no separate button for th
 `ContentType` semantics do not reach iOS in Compose Multiplatform 1.9.3 (CMP-7154), so `NewPassword`
 on sign-up is not honoured there yet.
 
-Signing out of the app does not sign out of Google Sign-In's own session (`GIDSignIn.signOut` is not
-called), as Android keeps its credential state too: the next "Continue with Google" may offer the
-same Google account at once.
+Signing out of the app also ends Google Sign-In's own session (`GoogleSignInBridge.signOut`, which
+calls `GIDSignIn.signOut`), and so does the first launch after an install, since the Keychain where
+Google Sign-In keeps it survives an uninstall: on a shared phone the next "Continue with Google"
+asks for an account rather than offering the previous parent's (part B, Task 12).
 
 ## In CI
 
@@ -116,12 +118,29 @@ iOS 26.5 so far). Then, in order:
 3. On fresh Firebase emulators it seeds a paired family (`tools/ios/seed-shell-family.js`) and runs
    the XCUITest walk (`CoPlanlyUITests`): sign-in by e-mail, the tabs, Family → Expenses → the Add
    expense sheet, a back swipe completed and one let go of, a tab tap popping two screens, a sheet
-   with edits swiped down asking "Discard changes?", and sign-out to fresh tabs. Its screenshots
-   are the `ios-shell` artifact.
+   with edits swiped down asking "Discard changes?", sign-out to fresh tabs, a `coplanly://pair`
+   link and, last, deleting the account. Its screenshots are the `ios-shell` artifact.
 4. On emulators again, the shared modules' iOS tests run on the same booted simulator (the
    Keychain tests included), with the write gate (`IosWriteGateTest` and
    `tools/ios/check-ios-writes.js`, which compares every document the iPhone wrote with what
    Android writes). No test may skip itself for want of the emulators.
+5. **The tour** (part B, Task 13), last, on emulators of its own, so a run that reaches the job's
+   240-minute limit loses the tour and never the write gate: the seed with `--tour` adds an event
+   today with a change request about it, a child, a pet, an expense and a vault document's index
+   row; `ShellUITests.testTour` signs in, visits every destination it can reach from that family,
+   and saves a screenshot named `tour-<route>` for each. A destination it cannot reach is written
+   to `tour.txt` with the reason, as the Android UI tour does. Only a crash or a failed launch fails
+   the job: `simulator.sh tour` then writes `tour-crashed` with the tour's own failure lines, and
+   the job's last step fails on it. Any other failure of the step (its 50-minute limit, the seed)
+   leaves a notice, and the uploads after it run either way. The tour stops visiting after 35
+   minutes, so it always writes its summary. The screenshots, `manifest.json` (from `xcrun xcresulttool export attachments`) and `tour.txt` are
+   the `ios-tour` artifact. To read it against the app's destinations, compare `tour.txt` with
+   `AppDestinationCatalog.all` (`shared-ui/.../navigation/AppDestination.kt`); every route is on
+   it, reached or skipped.
 
 CI never has a `GoogleService-Info.plist`, so it never offers Google sign-in and never reaches the
 real project.
+
+To run the tour on your Mac: start the emulators as above, then, from the repository's root,
+`iosApp/scripts/simulator.sh tour <simulator udid> iosApp/build/tour` after a `build-for-testing`
+into `iosApp/build` (the commands are in the `ios-app` job's "Build the app" step).

@@ -20,7 +20,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Check
@@ -57,7 +56,6 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -97,8 +95,11 @@ import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.calendar.CalendarViewModel
 import com.coparently.app.presentation.common.AnswerByField
 import com.coparently.app.presentation.common.AnswerByPickSaver
+import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.FamilyMemberChips
 import com.coparently.app.presentation.common.FamilyMemberRefListSaver
+import com.coparently.app.presentation.common.FormSave
+import com.coparently.app.presentation.common.FormTopBar
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.LocalDatePickerDialog
@@ -113,6 +114,7 @@ import com.coparently.app.presentation.common.rememberAnswerByOffer
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberRecordPhoto
+import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.components.TimePickerDialog
 import com.coparently.app.presentation.platform.AppImage
@@ -125,7 +127,6 @@ import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.labelLargeEmphasized
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.event_all_day
 import com.coparently.app.resources.event_delete
@@ -808,9 +809,53 @@ fun AddEditEventScreen(
         // A back gesture over unsaved edits shrinks the form before it asks (D-11).
         modifier = Modifier.then(leave.backPreview),
         topBar = {
-            TopAppBar(
-                colors = screenTopAppBarColors(),
-                title = {
+            val canRequestChange = eventId != null && onRequestChange != null && existingEvent?.isPrivate == false
+            val requestChange: () -> Unit = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                if (eventId != null) onRequestChange?.invoke(eventId)
+            }
+            val askToDelete: () -> Unit = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                showDeleteDialog = true
+            }
+            val requestChangeLabel = stringResource(Res.string.event_form_cd_request_change)
+            val deleteLabel = stringResource(Res.string.event_form_cd_delete_event)
+            // On the iPhone the form is a sheet: a cross, the two actions and Save in its bar
+            // (FormTopBar); on Android the bar it always drew, Save staying the sticky button.
+            FormTopBar(
+                title = if (eventId == null) {
+                    stringResource(Res.string.event_form_title_new)
+                } else {
+                    stringResource(Res.string.event_form_title_edit)
+                },
+                backLabel = stringResource(Res.string.event_form_cancel),
+                onLeave = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    leave()
+                },
+                save = FormSave(
+                    label = stringResource(Res.string.event_form_save),
+                    onClick = performSave,
+                    // Exactly when the sticky button is: enabled && !busy.
+                    enabled = isFormValid && !isDeleting && !isSaving
+                ),
+                shellActions = listOfNotNull(
+                    BarAction(
+                        label = requestChangeLabel,
+                        icon = Icons.Default.SwapHoriz,
+                        sfSymbol = "arrow.left.arrow.right",
+                        onClick = requestChange,
+                        enabled = !isDeleting && !isSaving
+                    ).takeIf { canRequestChange },
+                    BarAction(
+                        label = deleteLabel,
+                        icon = Icons.Default.Delete,
+                        sfSymbol = "trash",
+                        onClick = askToDelete,
+                        enabled = !isDeleting && !isSaving
+                    ).takeIf { eventId != null }
+                ),
+                androidTitle = {
                     Text(
                         if (eventId == null) {
                             stringResource(Res.string.event_form_title_new)
@@ -820,43 +865,20 @@ fun AddEditEventScreen(
                         style = MaterialTheme.typography.headlineSmall
                     )
                 },
-                navigationIcon = {
-                    IconButton(onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        leave()
-                    }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(Res.string.event_form_cancel)
-                        )
-                    }
-                },
-                actions = {
+                androidActions = {
                     // Propose a time change to the co-parent (only for existing shared events)
-                    if (eventId != null && onRequestChange != null && existingEvent?.isPrivate == false) {
-                        IconButton(
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onRequestChange(eventId)
-                            },
-                            enabled = !isDeleting && !isSaving
-                        ) {
+                    if (canRequestChange) {
+                        IconButton(onClick = requestChange, enabled = !isDeleting && !isSaving) {
                             Icon(
                                 imageVector = Icons.Default.SwapHoriz,
-                                contentDescription = stringResource(Res.string.event_form_cd_request_change)
+                                contentDescription = requestChangeLabel
                             )
                         }
                     }
 
                     // Delete button (only when editing existing event)
                     if (eventId != null) {
-                        IconButton(
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                showDeleteDialog = true
-                            },
-                            enabled = !isDeleting && !isSaving
-                        ) {
+                        IconButton(onClick = askToDelete, enabled = !isDeleting && !isSaving) {
                             if (isDeleting) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(24.dp),
@@ -866,7 +888,7 @@ fun AddEditEventScreen(
                             } else {
                                 Icon(
                                     imageVector = Icons.Default.Delete,
-                                    contentDescription = stringResource(Res.string.event_form_cd_delete_event),
+                                    contentDescription = deleteLabel,
                                     tint = MaterialTheme.colorScheme.error
                                 )
                             }
@@ -894,14 +916,9 @@ fun AddEditEventScreen(
                 // indefinitely. Save being merely disabled would leave no clue why - this
                 // says what's missing, next to the selector that (per showParentOwnerSelector) is
                 // showing precisely so there's something to do about it.
+                // On the iPhone the bar draws no notice: the form says it at its end instead.
                 notice = if (parentOwner == null) {
-                    {
-                        Text(
-                            text = stringResource(Res.string.event_form_owner_unknown),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
+                    { OwnerUnknownNotice() }
                 } else {
                     null
                 }
@@ -1660,6 +1677,12 @@ fun AddEditEventScreen(
                     onSelect = { answerBy = it }
                 )
             }
+
+            // Where a shell carries Save in its bar (the iPhone) there is no sticky bar to say why
+            // Save is disabled, so the form says it at its end, where that bar would have.
+            if (shellDrawsBars() && parentOwner == null) {
+                OwnerUnknownNotice()
+            }
         }
     }
 
@@ -1839,6 +1862,20 @@ private const val FULL_DATE = "yMMMMEEEEd"
 
 /** An hour later on the clock face, past midnight to the next day's hour, as `java.time`'s `plusHours(1)`. */
 internal fun LocalTime.plusHour(): LocalTime = LocalTime((hour + 1) % HOURS_PER_DAY, minute, second, nanosecond)
+
+/**
+ * Why Save is disabled while nobody owns the event: an account whose own slot never resolved
+ * (see `showParentOwnerSelector`). The sticky bar's notice on Android, the form's last line where
+ * the bar carries Save.
+ */
+@Composable
+private fun OwnerUnknownNotice() {
+    Text(
+        text = stringResource(Res.string.event_form_owner_unknown),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.error
+    )
+}
 
 /** Today in the phone's zone, what `LocalDate.now()` read. */
 private fun systemToday(): LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefault())

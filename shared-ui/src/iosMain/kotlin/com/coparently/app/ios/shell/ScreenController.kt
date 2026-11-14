@@ -4,18 +4,23 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.uikit.ComposeUIViewControllerDelegate
+import androidx.compose.ui.uikit.OnFocusBehavior
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
 import androidx.lifecycle.Lifecycle
@@ -24,9 +29,12 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.LocalOwnersProvider
 import com.coparently.app.presentation.AppProviders
+import com.coparently.app.presentation.common.BackSteps
 import com.coparently.app.presentation.common.ConnectivityBanner
 import com.coparently.app.presentation.common.LocalAppMessages
+import com.coparently.app.presentation.common.LocalBackSteps
 import com.coparently.app.presentation.common.LocalBarHost
+import com.coparently.app.presentation.common.LocalScreenVisible
 import com.coparently.app.presentation.common.LocalSheetGuard
 import com.coparently.app.presentation.common.SheetGuard
 import com.coparently.app.presentation.navigation.AppDestination
@@ -50,26 +58,36 @@ import platform.UIKit.UIViewController
  * navigation bar, and the messages that outlive a screen show at its bottom.
  *
  * UIKit's own back (the button and the edge swipe) is the back here: Compose's back gesture is off,
- * so the two never both answer one swipe.
+ * so the two never both answer one swipe. A screen's inner steps ([backSteps], provided as
+ * [LocalBackSteps]) come first: the bar's back button undoes the latest one, and the edge swipe is
+ * refused while one is enabled.
  *
  * @property entry The back-stack entry this screen draws.
  * @property session The owner of the ViewModels the session's screens share, which ends with them.
  * @property nativeBar Whether the screen describes its bar to the navigation bar ([LocalBarHost]);
  *   otherwise it draws its own Compose bar and the navigation bar is hidden over it.
  * @property sheetGuard The sheet the screen is the first screen of, or null.
+ * @property visible Whether the screen is seen now, provided as [LocalScreenVisible]: a hidden tab's
+ *   screen stays composed here, where Android would have disposed it.
  */
+@Suppress("LongParameterList") // the entry, what it draws, and what the stack and the shell share with it
 internal class ScreenController(
     val entry: NavBackStackEntry,
     private val destination: AppDestination,
     private val shell: ShellEnvironment,
     private val session: ViewModelStoreOwner,
     val nativeBar: Boolean,
-    private val sheetGuard: SheetGuard?
+    private val sheetGuard: SheetGuard?,
+    private val visible: State<Boolean>
 ) {
+    /** The screen's inner steps, which the shell's back asks before it pops the screen. */
+    val backSteps = BackSteps()
+
     private val bars = NativeBars(
         // Settings is the one pushed screen whose title is large, as iOS's own Settings app shows it.
         largeTitle = entry.destination.route == Screen.Settings.route,
         sheetRoot = sheetGuard != null,
+        backSteps = backSteps,
         // The chip's ViewModel is the screen's, as on Android, where the chip is in the screen. The
         // theme alone, without the app's background surface, so the bar shows around the chip.
         chipFrame = { content ->
@@ -89,6 +107,9 @@ internal class ScreenController(
     val viewController: UIViewController = ComposeUIViewController(
         configure = {
             enableBackGesture = false
+            // The keyboard is ScreenFrame's inset, applied once: the view is never also moved up
+            // over a focused field, which would lift it a second time (design item 14).
+            onFocusBehavior = OnFocusBehavior.DoNothing
             delegate = object : ComposeUIViewControllerDelegate {
                 override fun viewDidAppear(animated: Boolean) = bars.screenAppeared(true)
 
@@ -99,8 +120,16 @@ internal class ScreenController(
         Shared {
             CompositionLocalProvider(
                 LocalBarHost provides bars.takeIf { nativeBar },
-                LocalSheetGuard provides sheetGuard
+                LocalSheetGuard provides sheetGuard,
+                LocalBackSteps provides backSteps,
+                LocalScreenVisible provides visible
             ) {
+                // The bar's back button follows whether a step waits: its own while one does.
+                if (nativeBar) {
+                    LaunchedEffect(Unit) {
+                        snapshotFlow { backSteps.hasEnabledStep }.collect { bars.stepPending(it) }
+                    }
+                }
                 ScreenFrame(shell) {
                     WhileAlive(entry) {
                         entry.LocalOwnersProvider(rememberSaveableStateHolder()) { destination.content(entry) }
@@ -135,6 +164,12 @@ internal class ScreenController(
  * around [content]. While the line shows it takes the top inset, which [content] then does not
  * apply again; while it does not, [content] applies the top inset itself (the navigation bar's and
  * the status bar's), as Android's root Scaffold leaves it (design item 14).
+ *
+ * **The keyboard is taken here, once, for every hosted screen** (design item 14, as Android's
+ * `NavHost` takes it): [content] is laid out above the keyboard while one is up, and the keyboard's
+ * inset is consumed, so no screen applies it a second time. A screen therefore adds no
+ * `imePadding()` of its own; the chat composer's send button and a form's last field stay above
+ * the keys.
  */
 @Composable
 private fun ScreenFrame(shell: ShellEnvironment, content: @Composable () -> Unit) {
@@ -153,6 +188,7 @@ private fun ScreenFrame(shell: ShellEnvironment, content: @Composable () -> Unit
                 .fillMaxSize()
                 .padding(inner)
                 .consumeWindowInsets(inner)
+                .imePadding()
         ) {
             content()
         }

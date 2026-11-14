@@ -13,7 +13,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -31,7 +30,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -50,8 +48,11 @@ import com.coparently.app.domain.model.PetSpecies
 import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.childinfo.components.DatePickerDialog
 import com.coparently.app.presentation.childinfo.components.MedicationEditor
+import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.DatePickerField
+import com.coparently.app.presentation.common.FormSave
+import com.coparently.app.presentation.common.FormTopBar
 import com.coparently.app.presentation.common.PhotoOwner
 import com.coparently.app.presentation.common.PhotoStrip
 import com.coparently.app.presentation.common.PhotoStripStrings
@@ -59,10 +60,10 @@ import com.coparently.app.presentation.common.VaccinationListEditor
 import com.coparently.app.presentation.common.field
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.rememberDiscardGuard
+import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.platform.LocalFilePicker
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.pet_add_button
 import com.coparently.app.resources.pet_breed_label
@@ -242,36 +243,78 @@ fun AddEditPetScreen(
         )
     }
 
+    // The form's save, shared by its button at the end (Android) and the iPhone's bar.
+    val savePet: () -> Unit = {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        if (name.isNotBlank()) {
+            isSaving = true
+            val base = currentPet.takeIf { !isNewPet }
+            val now = wallClockNow()
+            val resolvedId = base?.id ?: petId?.takeIf { it != "new" }
+                ?: newPetId()
+            val pet = (
+                base ?: Pet(id = resolvedId, name = name, createdAt = now, updatedAt = now)
+                ).copy(
+                name = name,
+                species = species,
+                breed = breed.ifBlank { null },
+                dateOfBirth = dateOfBirth,
+                medications = medications,
+                vaccinations = vaccinations,
+                specialNeeds = specialNeeds.ifBlank { null },
+                feedingNotes = feedingNotes.ifBlank { null },
+                vetName = vetName.ifBlank { null },
+                vetPhone = vetPhone.ifBlank { null },
+                updatedAt = now
+            )
+            viewModel.upsertPetWithPhotos(
+                pet = pet,
+                isNewPet = isNewPet,
+                newPhotoUris = pickedPhotos,
+                removedPhotoUrls = removedPhotos
+            )
+        }
+    }
+
     Scaffold(
         containerColor = ScreenContainerColor,
         // A back gesture over unsaved edits shrinks the form before it asks (D-11).
         modifier = Modifier.then(leave.backPreview),
         topBar = {
-            TopAppBar(
-                colors = screenTopAppBarColors(),
-                title = {
-                    Text(
-                        if (isNewPet) {
-                            stringResource(Res.string.pet_title_add)
-                        } else {
-                            stringResource(Res.string.pet_title_edit)
-                        }
-                    )
+            val canDelete = !isNewPet && currentPet != null
+            val deleteLabel = stringResource(Res.string.pet_delete_confirm)
+            FormTopBar(
+                title = if (isNewPet) {
+                    stringResource(Res.string.pet_title_add)
+                } else {
+                    stringResource(Res.string.pet_title_edit)
                 },
-                navigationIcon = {
-                    IconButton(onClick = leave) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(Res.string.pets_back)
-                        )
-                    }
-                },
-                actions = {
-                    if (!isNewPet && currentPet != null) {
+                backLabel = stringResource(Res.string.pets_back),
+                onLeave = leave,
+                save = FormSave(
+                    label = if (isNewPet) {
+                        stringResource(Res.string.pet_add_button)
+                    } else {
+                        stringResource(Res.string.pet_save_changes)
+                    },
+                    onClick = savePet,
+                    // Exactly when the form's own button is.
+                    enabled = name.isNotBlank() && !isSaving
+                ),
+                shellActions = listOfNotNull(
+                    BarAction(
+                        label = deleteLabel,
+                        icon = Icons.Default.Delete,
+                        sfSymbol = "trash",
+                        onClick = { showDeleteConfirm = true }
+                    ).takeIf { canDelete }
+                ),
+                androidActions = {
+                    if (canDelete) {
                         IconButton(onClick = { showDeleteConfirm = true }) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
-                                contentDescription = stringResource(Res.string.pet_delete_confirm),
+                                contentDescription = deleteLabel,
                                 tint = MaterialTheme.colorScheme.error
                             )
                         }
@@ -393,56 +436,29 @@ fun AddEditPetScreen(
                 )
             }
 
-            Button(
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    if (name.isNotBlank()) {
-                        isSaving = true
-                        val base = currentPet.takeIf { !isNewPet }
-                        val now = wallClockNow()
-                        val resolvedId = base?.id ?: petId?.takeIf { it != "new" }
-                            ?: newPetId()
-                        val pet = (
-                            base ?: Pet(id = resolvedId, name = name, createdAt = now, updatedAt = now)
-                            ).copy(
-                            name = name,
-                            species = species,
-                            breed = breed.ifBlank { null },
-                            dateOfBirth = dateOfBirth,
-                            medications = medications,
-                            vaccinations = vaccinations,
-                            specialNeeds = specialNeeds.ifBlank { null },
-                            feedingNotes = feedingNotes.ifBlank { null },
-                            vetName = vetName.ifBlank { null },
-                            vetPhone = vetPhone.ifBlank { null },
-                            updatedAt = now
+            // On the iPhone Save is the bar's (FormTopBar), so the form draws no button.
+            if (!shellDrawsBars()) {
+                Button(
+                    onClick = savePet,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = name.isNotBlank() && !isSaving
+                ) {
+                    if (isSaving) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
                         )
-                        viewModel.upsertPetWithPhotos(
-                            pet = pet,
-                            isNewPet = isNewPet,
-                            newPhotoUris = pickedPhotos,
-                            removedPhotoUrls = removedPhotos
-                        )
+                        Spacer(modifier = Modifier.width(Spacing.S))
                     }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = name.isNotBlank() && !isSaving
-            ) {
-                if (isSaving) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary
+                    Text(
+                        if (isNewPet) {
+                            stringResource(Res.string.pet_add_button)
+                        } else {
+                            stringResource(Res.string.pet_save_changes)
+                        }
                     )
-                    Spacer(modifier = Modifier.width(Spacing.S))
                 }
-                Text(
-                    if (isNewPet) {
-                        stringResource(Res.string.pet_add_button)
-                    } else {
-                        stringResource(Res.string.pet_save_changes)
-                    }
-                )
             }
 
             Spacer(modifier = Modifier.height(Spacing.L))

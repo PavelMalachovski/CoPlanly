@@ -234,7 +234,10 @@ import org.koin.compose.viewmodel.koinViewModel
  * @param onNavigateToCalendarFeed Opens the read-only calendar links (MON-17); the row shows
  *   only while the account is in a family, since a link serves one
  * @param onNavigateToDataSources Opens the data sources and licences (MON-13's ODbL notice)
- * @param onSignOut Called after the user signs out of the app
+ * @param onSignOut Called after the user signs out of the app, and after the account is deleted
+ *   when [onAccountDeleted] is null
+ * @param onAccountDeleted Called once the account is deleted and this phone wiped, in place of
+ *   [onSignOut]; null keeps [onSignOut] for both (Android)
  * @param syncViewModel Sync operations
  * @param settingsViewModel Settings state
  * @param authStateViewModel Firebase auth state, used to sign out
@@ -253,6 +256,7 @@ fun SettingsScreen(
     onNavigateToDataSources: (() -> Unit)? = null,
     onNavigateToMyProfile: (() -> Unit)? = null,
     onSignOut: (() -> Unit)? = null,
+    onAccountDeleted: (() -> Unit)? = null,
     syncViewModel: SyncViewModel = koinViewModel(),
     settingsViewModel: SettingsViewModel = koinViewModel(),
     authStateViewModel: com.coparently.app.presentation.sync.AuthStateViewModel = koinViewModel(),
@@ -963,7 +967,7 @@ fun SettingsScreen(
                 // The server erases the account and this device is wiped; only then does the
                 // app leave the screen. On failure the account still exists and the row's
                 // error message says so, so the user can try again.
-                settingsViewModel.deleteAccount { onSignOut?.invoke() }
+                settingsViewModel.deleteAccount { (onAccountDeleted ?: onSignOut)?.invoke() }
             }
         )
     }

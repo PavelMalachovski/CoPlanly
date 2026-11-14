@@ -35,6 +35,7 @@ import com.coparently.app.presentation.common.animations.slideInFromLeft
 import com.coparently.app.presentation.common.animations.slideInFromRight
 import com.coparently.app.presentation.common.animations.slideOutToLeft
 import com.coparently.app.presentation.common.animations.slideOutToRight
+import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.consent.TelemetryConsentScreen
 import com.coparently.app.presentation.documents.FamilyDocumentsScreen
 import com.coparently.app.presentation.event.AddEditEventScreen
@@ -56,6 +57,7 @@ import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.navigation_loading
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * How a shell presents a destination (MON-24 phase 3). Android draws every kind in its one
@@ -554,29 +556,7 @@ internal fun appDestinations(
         route = Screen.Settings.route,
         transitions = DestinationTransitions.PUSH
     ) {
-        SettingsScreen(
-            // Reached via the gear action in the top-level top bars — it opens as
-            // a detail screen, so it gets a back arrow.
-            onNavigateUp = { navController.popBackStack() },
-            onNavigateToCalendarFeed = {
-                navController.navigate(Screen.CalendarFeed.route)
-            },
-            onNavigateToSchoolImport = {
-                navController.navigate(Screen.SchoolImport.route)
-            },
-            onNavigateToDataSources = {
-                navController.navigate(Screen.DataSources.route)
-            },
-            onNavigateToMyProfile = {
-                navController.navigate(Screen.MyProfile.route)
-            },
-            onSignOut = {
-                navController.navigate(Screen.Auth.route) {
-                    popUpTo(Screen.Calendar.route) { inclusive = true }
-                }
-            },
-            syncViewModel = syncViewModel
-        )
+        SettingsDestination(navController, syncViewModel, authStateViewModel)
     },
 
     // A detail screen off Settings, like Custody Setup: it is a document the two parents
@@ -1310,3 +1290,57 @@ private fun NavBackStackEntry.intArgument(key: String): Int? =
  */
 private fun NavBackStackEntry.booleanArgument(key: String): Boolean? =
     arguments?.read { if (!contains(key) || isNull(key)) false else getBoolean(key) }
+
+/**
+ * The Settings destination: [SettingsScreen] with its navigation, and the session state its sign-out
+ * runs on.
+ *
+ * @param navController Where Settings' own navigation goes.
+ * @param syncViewModel The shell's [SyncViewModel], which Settings shares with the activity.
+ * @param authStateViewModel The start destination's one source, which the iPhone signs out on.
+ */
+@Composable
+private fun SettingsDestination(
+    navController: NavHostController,
+    syncViewModel: SyncViewModel,
+    authStateViewModel: AuthStateViewModel
+) {
+    // On the iPhone, sign-out runs on the shell's own session state (the one deciding the start
+    // destination, which outlives this screen): a Settings-scoped copy was cleared with the
+    // screen the sign-out navigates away from, cutting its steps short, and the shell never
+    // heard that the account had gone. The shell then shows the sign-in itself, once the
+    // sign-out has ended the session, so this screen navigates nowhere: a second switch of the
+    // root racing the shell's own is what the walk's first run of this met. A deletion ends the
+    // session without the shell's state hearing of it (IosAccountDeletion signs out underneath),
+    // so once it has succeeded the shell's state is asked again, and finds nobody signed in.
+    // Android keeps the entry's own and its navigation, for both, as it always had.
+    val shellDecides = shellDrawsBars()
+    val sessionState: AuthStateViewModel = if (shellDecides) authStateViewModel else koinViewModel()
+    SettingsScreen(
+        // Reached via the gear action in the top-level top bars — it opens as
+        // a detail screen, so it gets a back arrow.
+        onNavigateUp = { navController.popBackStack() },
+        onNavigateToCalendarFeed = {
+            navController.navigate(Screen.CalendarFeed.route)
+        },
+        onNavigateToSchoolImport = {
+            navController.navigate(Screen.SchoolImport.route)
+        },
+        onNavigateToDataSources = {
+            navController.navigate(Screen.DataSources.route)
+        },
+        onNavigateToMyProfile = {
+            navController.navigate(Screen.MyProfile.route)
+        },
+        onSignOut = {
+            if (!shellDecides) {
+                navController.navigate(Screen.Auth.route) {
+                    popUpTo(Screen.Calendar.route) { inclusive = true }
+                }
+            }
+        },
+        onAccountDeleted = if (shellDecides) authStateViewModel::refreshAuthState else null,
+        syncViewModel = syncViewModel,
+        authStateViewModel = sessionState
+    )
+}

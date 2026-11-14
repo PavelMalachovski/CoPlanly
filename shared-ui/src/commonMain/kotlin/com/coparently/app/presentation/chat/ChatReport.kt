@@ -30,6 +30,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import com.coparently.app.domain.chat.MessageReport
 import com.coparently.app.domain.model.Message
+import com.coparently.app.presentation.common.BarMenuItem
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
@@ -196,6 +197,25 @@ internal fun ChatOverflowMenu(onOpenSettings: (() -> Unit)?, onBlock: (() -> Uni
             }
         }
     }
+}
+
+/**
+ * The overflow's entries as the iPhone's bar draws them in a menu: exactly [ChatOverflowMenu]'s, in
+ * its order and each left out where it leaves it out — Settings (`gearshape`) when the thread is the
+ * Chat tab, then "Block and stop sharing" (`nosign`), destructive as Android draws it in red. Android
+ * keeps [ChatOverflowMenu], whose entries carry icons a bar's menu does not draw.
+ *
+ * @param onOpenSettings Opens Settings, or null when the tab's own gear is elsewhere
+ * @param onBlock Opens the unpair confirmation, or null when there is nobody to block
+ */
+@Composable
+internal fun chatOverflowEntries(onOpenSettings: (() -> Unit)?, onBlock: (() -> Unit)?): List<BarMenuItem> {
+    val settingsLabel = stringResource(Res.string.nav_settings)
+    val blockLabel = stringResource(Res.string.chat_block)
+    return listOfNotNull(
+        onOpenSettings?.let { BarMenuItem(label = settingsLabel, sfSymbol = "gearshape", onClick = it) },
+        onBlock?.let { BarMenuItem(label = blockLabel, sfSymbol = "nosign", onClick = it, destructive = true) }
+    )
 }
 
 /** The overflow's red "Block and stop sharing" entry. */

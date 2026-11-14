@@ -9,7 +9,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Lock
@@ -19,8 +18,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -28,7 +25,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -53,6 +49,7 @@ import com.coparently.app.domain.parentingplan.ParentingPlanCatalogue
 import com.coparently.app.presentation.common.ExpandableDetails
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.LocalDatePickerDialog
+import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.UiText
@@ -62,7 +59,6 @@ import com.coparently.app.presentation.parentingplan.PlanStrings
 import com.coparently.app.presentation.platform.LocalShareSheet
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.export_action_created
 import com.coparently.app.resources.export_action_current
@@ -230,20 +226,12 @@ fun ExportScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ExportTopBar(onNavigateBack: () -> Unit) {
-    TopAppBar(
-        colors = screenTopAppBarColors(),
-        title = { Text(stringResource(Res.string.export_title)) },
-        navigationIcon = {
-            IconButton(onClick = onNavigateBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(Res.string.export_back)
-                )
-            }
-        }
+    PushedTopBar(
+        title = stringResource(Res.string.export_title),
+        backLabel = stringResource(Res.string.export_back),
+        onBack = onNavigateBack
     )
 }
 

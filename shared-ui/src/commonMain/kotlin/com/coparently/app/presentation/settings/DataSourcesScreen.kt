@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Gavel
@@ -16,22 +15,20 @@ import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.coparently.app.presentation.common.GroupLabel
+import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.platform.LocalOpenUrl
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
 import com.coparently.app.resources.data_sources_computed_note
@@ -173,17 +170,10 @@ fun DataSourcesScreen(onNavigateUp: () -> Unit) {
     Scaffold(
         containerColor = ScreenContainerColor,
         topBar = {
-            TopAppBar(
-                colors = screenTopAppBarColors(),
-                title = { Text(stringResource(Res.string.settings_data_sources_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateUp) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(Res.string.common_back)
-                        )
-                    }
-                }
+            PushedTopBar(
+                title = stringResource(Res.string.settings_data_sources_title),
+                backLabel = stringResource(Res.string.common_back),
+                onBack = onNavigateUp
             )
         }
     ) { padding ->

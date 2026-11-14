@@ -2433,6 +2433,92 @@ school) and a build with the row switched on: a debug build, or release with
   `data/school/SchoolConnectionStore`, `domain/school/`, `presentation/school/`. Capture the failing
   answer (redacted) as a fixture with a test.
 
+### 3.37 The calendar's bar on an iPhone · 1P, iPhone, swap check needs a custody schedule
+
+MON-24 phase 3, part B, Task 8. `CalendarBarsTest` holds what the bar is handed and that Android
+draws every header row as before; the `ios-app` job's walk opens the Calendar tab and finds the month
+as the bar's title with Today, Filters, Settings and "+" (artifact `ios-shell`, `17-calendar-bar`).
+The walk's family has no custody schedule, so the swap selection's bar is not walked. What is left:
+
+- [ ] **The bar reads as the board.** Calendar tab: the month ("November", or "November 2027"
+      outside this year) is the bar's inline title; Today, Filters, the gear and "+" are its buttons,
+      "+" at the edge; no "coplanly." wordmark and no "Your family calendar" lines; Month/Week/Day
+      sits under the bar, above the grid card, and nothing is drawn under the bar's glass.
+- [ ] **Each button.** Page to another month, tap Today: this month. Filters opens the sheet; with a
+      filter on, its symbol is filled. The gear opens Settings. "+" opens New event on the selected
+      day. The card's own title still opens "Jump to date…"; its arrows page, and the card draws no
+      Today chip and no "+".
+- [ ] **Week and Day view.** The bar's title follows the week's or the day's month.
+- [ ] **Swap selection** (a family with a schedule). Tap "⇄" on the card: the bar becomes "Choose
+      days to swap" with a close button and the two chevrons, which page the month; the close button
+      ends the selection and the month bar returns. VoiceOver reads "Stop choosing
+      days", "Previous month", "Next month".
+- **If it fails:** `presentation/calendar/components/CalendarTopBar.kt`, `CalendarHeader.kt`,
+  `CalendarMonthBar.kt`, `calendar/SwapSelectionChrome.kt` (`:shared-ui`), and the shell's
+  `NO_BAR_ROUTES` (`ios/shell/StackHost.kt`).
+
+### 3.38 Every iPhone screen under its system bar, and the keyboard · 1P, iPhone, onboarding needs a new account
+
+MON-24 phase 3, part B, Task 9. `NativeBarRoutesTest` holds that the navigation bar shows over every
+route but the loading screen, the telemetry question and sign-in; the `ios-app` job's walk types into
+New event's description and the Chat tab's composer and checks each stays above the keys (artifact
+`ios-shell`, `18-event-description-keyboard`, `19-chat-composer-keyboard`). What is left:
+
+- [ ] **Onboarding.** Sign up with a new account: the wizard's title is the system bar's, the progress
+      line and "Step 1 of 4" sit under it, and nothing is drawn under the bar's glass. From step 2 the
+      bar's back button returns to the previous step, and the edge swipe does not leave the wizard.
+- [ ] **The keyboard, once.** In a chat thread, tap the composer: the field and the send button rise
+      just above the keys, with no gap between them and the keyboard, and the thread's bar stays where
+      it was. In New event, open the description and type: the field stays in view above the keys,
+      and Save stays in the sheet's bar. Close the keyboard: the screen returns to its height.
+- **If it fails:** `ios/shell/ScreenController.kt` (`ScreenFrame`'s `imePadding()`, the view
+  controller's `onFocusBehavior`), `onboarding/OnboardingScreen.kt` (`:shared-ui`), and the shell's
+  `NO_BAR_ROUTES` (`ios/shell/StackHost.kt`).
+
+### 3.39 What part B left to an iPhone · 1P, iPhone, the chat check needs the co-parent's phone
+
+MON-24 phase 3, part B (Tasks 3, 4, 6, 7, 8, 11 and 12). The `ios-app` job's walk proves most of the
+shell's mechanics on the emulators (artifact `ios-shell`), and its tour saves a screenshot of each
+screen it reaches (artifact `ios-tour`). What only a person can judge, or what the walk does not
+reach:
+
+- [ ] **A hidden Chat tab reads nothing** (Task 3). Open the thread with the co-parent, then go to
+      another tab. Have the co-parent send a message from their phone. Their phone keeps it
+      unticked as read until you open the Chat tab again; then it turns read. Go to another tab and
+      back: the thread keeps the messages it showed, not only the newest page.
+- [ ] **Every form asks before it drops an edit** (Task 4). The walk asks on Add expense only. On
+      Edit expense, Edit event, a child's and a pet's editor and a journal entry (each form that
+      keeps an edit, design item 16), change something and swipe the sheet down: each asks "Discard changes?", "Keep editing" keeps the
+      edit and Discard closes the sheet. A new event closes without asking (design item 16).
+- [ ] **Save beside the back button** (Task 6). On a pushed screen with a primary action (the
+      custody schedule's parts, My details, Connect school), the action sits at the bar's trailing edge with
+      the system back chevron at the leading edge. It is disabled while the form is invalid or
+      saving.
+- [ ] **Chat search in the title view** (Task 7). In the thread, tap the magnifying glass: the
+      search field takes the bar's title. Type: results appear and step with the arrows. Cancel
+      returns the co-parent's name. With a co-parent whose name is long ("Alexandra-Margarethe"),
+      the title is cut with an ellipsis and does not push the bar's buttons off.
+- [ ] **A day swap from the iPhone** (Task 8; a family with a custody schedule, the co-parent's
+      phone to receive it). Tap "⇄" on the calendar card and choose two days, one of yours and one
+      of the co-parent's: each chosen day shows the stripes and "→ L"/"→ you" of whom it would go
+      to, and a tap on a chosen day unchooses it. Open the review: the sheet opens partly expanded
+      over the grid, with one row per way ("… → Lana", "… → you"), "Add a note" and "Answer by"
+      opening in place, and "Send to Lana" pinned at its bottom above the keyboard while the note
+      is typed. Send: a snackbar says it went and offers Withdraw, the days show the dashed waiting
+      mark, and the co-parent's phone gets the swap. §3.37 covers the selection's bar.
+- [ ] **No hang** (Task 8). The walk once saw the app's main thread stop answering for 30 seconds,
+      and that was not reproduced. While you check the rest, note any moment the app stops
+      responding, with what was on screen.
+- [ ] **Sign out, delete, sign in again** (Tasks 11 and 12). Settings → Sign out of app, then sign in
+      again: the tabs open at their first screens. Then, with a **test account**, Settings → Delete
+      account and both confirmations: the sign-in screen, no tabs. Sign up with a fresh account: no
+      trace of the deleted one, and "Continue with Google" (with a real project) asks for an account
+      rather than offering the deleted one's.
+- **If it fails:** `ios/shell/ShellVisibility.kt` and `common/ScreenVisibility.kt` (the hidden tab),
+  `ios/shell/FormSheet.kt` and `common/DiscardGuard.kt` (the sheets), `ios/shell/NativeBars.kt` (the
+  bar's buttons and title view), `ios/shell/StackHost.kt`, and `data/session/IosAccountDeletion.kt`
+  with `SignInProviderSession.kt` (`shared-data`'s `iosMain`).
+
 ---
 
 ## After the session

@@ -15,4 +15,6 @@
         <item quantity="one">%1$d request waiting for your answer</item>
         <item quantity="other">%1$d requests waiting for your answer</item>
     </plurals>
+    <!-- The cross that closes a form opened as a sheet (the iPhone's form rule). -->
+    <string name="form_close">Close</string>
 </resources>

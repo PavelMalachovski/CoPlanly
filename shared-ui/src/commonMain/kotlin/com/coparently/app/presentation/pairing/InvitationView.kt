@@ -18,6 +18,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -28,6 +29,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.coparently.app.presentation.common.HeroIcon
+import com.coparently.app.presentation.common.LocalBarHost
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.StickyActionBar
@@ -148,6 +150,10 @@ private fun InvitationFacts() {
 /**
  * [InvitationView] over the pairing screen, as a full-window dialog, so the screen beneath keeps
  * its state and effects while the parent decides. Back is handled by the view itself.
+ *
+ * The dialog draws its own button, so no bar host reaches it: the pairing screen's bar is the
+ * iPhone's navigation bar, under which a `StickyActionBar` would draw nothing, and the dialog
+ * would lose its one way to say yes.
  */
 @Composable
 internal fun InvitationDialog(confirmation: InviteConfirmation, onAnswer: (Boolean) -> Unit) {
@@ -155,7 +161,9 @@ internal fun InvitationDialog(confirmation: InviteConfirmation, onAnswer: (Boole
         onDismissRequest = { onAnswer(false) },
         properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)
     ) {
-        InvitationView(inviterName = confirmation.inviterName, onAnswer = onAnswer)
+        CompositionLocalProvider(LocalBarHost provides null) {
+            InvitationView(inviterName = confirmation.inviterName, onAnswer = onAnswer)
+        }
     }
 }
 

@@ -1,8 +1,3 @@
-// `ExperimentalComposeUiApi`: Compose Multiplatform's common `BackHandler` (androidx.activity's on
-// Android, as before), opted in for the file so the screen's own annotations, which the detekt
-// baseline keys an entry on, stay as they were.
-@file:OptIn(ExperimentalComposeUiApi::class)
-
 package com.coparently.app.presentation.custody
 
 import androidx.compose.animation.AnimatedVisibility
@@ -29,13 +24,11 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.RadioButton
@@ -48,7 +41,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -59,9 +51,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -73,9 +63,12 @@ import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.presentation.common.AnswerByField
 import com.coparently.app.presentation.common.AnswerByPickSaver
 import com.coparently.app.presentation.common.FamilyMember
+import com.coparently.app.presentation.common.FormSave
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.PushedTopBar
+import com.coparently.app.presentation.common.ScreenBackStep
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
@@ -91,7 +84,6 @@ import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyLargeEmphasized
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.labelMediumEmphasized
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.presentation.theme.titleMediumEmphasized
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.custody_back
@@ -163,7 +155,7 @@ fun CustodySetupScreen(
     val answerByCap by viewModel.answerByCap.collectAsState()
     var answerBy by rememberSaveable(stateSaver = AnswerByPickSaver) { mutableStateOf(AnswerByPick.DEFAULT) }
     // Scoped to one child (FAM-4), Back returns to the family schedule rather than leaving.
-    BackHandler(enabled = childScope != null) { viewModel.editSchedule(null) }
+    ScreenBackStep(enabled = childScope != null) { viewModel.editSchedule(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Show error snackbar
@@ -197,36 +189,28 @@ fun CustodySetupScreen(
         openSeasonal = layersState.planReference != null
     )
     val shown = if (childScope != null) CustodySection.PATTERN else section
-    BackHandler(enabled = childScope == null && section != null) { section = null }
+    ScreenBackStep(enabled = childScope == null && section != null) { section = null }
 
     Scaffold(
         containerColor = ScreenContainerColor,
         topBar = {
-            TopAppBar(
-                colors = screenTopAppBarColors(),
-                title = {
-                    Text(
-                        text = custodyTitle(childScope, section),
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                },
-                navigationIcon = {
-                    IconButton(
-                        // Out of a child's schedule, then out of a part, then off the screen.
-                        onClick = {
-                            if (childScope != null || section != null) {
-                                section = stepBack(childScope != null, section, viewModel)
-                            } else {
-                                onNavigateBack()
-                            }
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(Res.string.custody_back)
-                        )
+            PushedTopBar(
+                title = custodyTitle(childScope, section),
+                backLabel = stringResource(Res.string.custody_back),
+                // Out of a child's schedule, then out of a part, then off the screen.
+                onBack = {
+                    if (childScope != null || section != null) {
+                        section = stepBack(childScope != null, section, viewModel)
+                    } else {
+                        onNavigateBack()
                     }
-                }
+                },
+                // The bottom bar's button, which the iPhone's bar carries instead (the form rule).
+                save = FormSave(
+                    label = stringResource(saveLabel(proposes)),
+                    onClick = { viewModel.save(answerBy = answerBy.takeIf { proposes }) },
+                    enabled = uiState.isValid && !uiState.isLoading
+                ).takeIf { shown == CustodySection.PATTERN || shown == CustodySection.WINDOWS }
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -235,10 +219,7 @@ fun CustodySetupScreen(
             // sends nothing (the old "the Save button below saves only the pattern above").
             if (shown == CustodySection.PATTERN || shown == CustodySection.WINDOWS) {
                 StickyActionBar(
-                    // A paired family's save is a proposal (second audit: "Save" read as done).
-                    label = stringResource(
-                        if (proposes) Res.string.custody_send_for_approval else Res.string.custody_save_button
-                    ),
+                    label = stringResource(saveLabel(proposes)),
                     onClick = { viewModel.save(answerBy = answerBy.takeIf { proposes }) },
                     enabled = uiState.isValid,
                     busy = uiState.isLoading
@@ -417,6 +398,10 @@ private fun stepBack(
     viewModel.editSchedule(null)
     return section
 }
+
+/** The save's label: a paired family's save is a proposal (second audit: "Save" read as done). */
+private fun saveLabel(proposes: Boolean): StringResource =
+    if (proposes) Res.string.custody_send_for_approval else Res.string.custody_save_button
 
 /** The bar's title: the child's schedule, the open part, or the screen's own. */
 @Composable

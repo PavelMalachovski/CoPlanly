@@ -16,14 +16,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.custody.SwapSides
 import com.coparently.app.domain.custody.receiverOf
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.ScreenBackStep
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.titleSmallEmphasized
@@ -53,9 +52,6 @@ import org.jetbrains.compose.resources.stringResource
  * @param onNext Opens the review sheet; disabled while no day can be offered.
  * @param onCancel Ends the choosing; Back does the same.
  */
-// `ExperimentalComposeUiApi`: Compose Multiplatform's common `BackHandler` (androidx.activity's on
-// Android, as before).
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun DaySwapSelectionBar(
     sides: SwapSides,
@@ -64,7 +60,7 @@ fun DaySwapSelectionBar(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    BackHandler(onBack = onCancel)
+    ScreenBackStep(onBack = onCancel)
     val me = parentNames.parents.me?.slot
     Surface(
         modifier = modifier.fillMaxWidth(),

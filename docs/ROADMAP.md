@@ -97,7 +97,7 @@ invocation is yours.
 | **MON-20** | **Built** (read-only card in custody settings, pure calculator); left: a look on a phone | P2 | — |
 | **MON-21** | **Built** (a proposal from an agreed plan answer, citing it; rules and rules tests); left: the rules deploy and a look on two phones — see the 👁 table | P2 | — |
 | **MON-22** | **Built** (schema 41, PR #101): a local-only journal and an opt-in export section; left: the device check (DEVICE-CHECKLIST §6) | P2 | — |
-| **MON-24** | The iPhone app: one Kotlin codebase (Compose Multiplatform), iOS-adapted on the iPhone, full parity. **Phases 1 and 2 built** (the domain in `:shared`; the data layer in `:shared-data`, the UI in `:shared-ui` and a thin Android shell; wire and stored bytes unchanged; on one branch, merged after the Android release). **Phase 3's part A built and CI-proven** (the Xcode project, the native shell, sign-in by e-mail and Google, the foreground sync, the write gate), awaiting the owner's check on their Mac; next: phase 3's part B. Design: `docs/superpowers/specs/2026-10-27-iphone-app-design.md` | P1 | L |
+| **MON-24** | The iPhone app: one Kotlin codebase (Compose Multiplatform), iOS-adapted on the iPhone, full parity. **Phases 1 and 2 built** (the domain in `:shared`; the data layer in `:shared-data`, the UI in `:shared-ui` and a thin Android shell; wire and stored bytes unchanged; on one branch, merged after the Android release). **Phase 3's part A built and CI-proven** (the Xcode project, the native shell, sign-in by e-mail and Google, the foreground sync, the write gate), awaiting the owner's check on their Mac. **Phase 3's part B built** (every destination under a system bar, forms as sheets, inner back steps, `coplanly://` links, account deletion on the iPhone, the iPhone tour), its branch-wide CI run and the owner's check pending; next: part C (photos, pickers, Storage). Design: `docs/superpowers/specs/2026-10-27-iphone-app-design.md` | P1 | L |
 | **MON-25** | Request clocks' on-time steps (deadline notice, end) move to a scheduled Cloud Function, for both platforms; needed by MON-24 before an iPhone build reaches a user (planned before phase 2, which went ahead without it by owner decision, 1 November 2026). Needs its own design pass | P1 | L |
 | **REL-4 (drafting)** | Done as far as the code can answer: every placeholder left is a fact only the owner has, listed at the top of each document. The deletion page and the privacy link in the app are written | P0 | S |
 | **L-4 (photos)** | **Built** (family-keyed Storage paths, no download URLs, pre-pairing photos moved by the server, legacy purge callable; rules, functions, unit and e2e tests); left: `firebase deploy --only storage`, the functions deploy, `purgeLegacyPhotoPaths` once, and DEVICE-CHECKLIST §3.10 on two phones | P0 | S |
@@ -2676,7 +2676,7 @@ period or deletes them); no attachment of files to an entry; no backup — an en
 journal alone would be the way to add one, and it is a product decision, not a default. Needs
 `41.json` from the Regenerate workflow before its migration test can run.
 
-### MON-24 · **PHASES 1–2 BUILT; PHASE 3 PART A BUILT, AWAITING THE OWNER'S CHECK** · P1 · L · CoPlanly for iPhone
+### MON-24 · **PHASES 1–2 BUILT; PHASE 3 PARTS A AND B BUILT, AWAITING THE OWNER'S CHECK** · P1 · L · CoPlanly for iPhone
 
 **Where:** ☁️ cloud for the shared Kotlin and the job definitions; ⚙️ the iOS build and simulator
 jobs on a GitHub-hosted macOS runner; 💻 the iPhone, TestFlight and App Store review.
@@ -2823,13 +2823,10 @@ notes list each file):
   0.9.x does not recognise AGP 9.3's Android KMP library target; the `unit` variant is wired for the
   shared modules (CI hygiene, below).
 - **The iPhone's stand-ins, which phase 3 and 4 replace.** In `:shared-data`'s
-  `di/koin/IosUnavailable.kt` and `platformDataModule`: `NoAccountDeletion` (an account can be
-  created on the iPhone since phase 3's Task 5, so **in-app account deletion on the iPhone is
-  required before the App Store**; spec §5.6 puts it in part B. Settings' delete-account row is
-  **not** hidden: `SettingsScreen` draws it unconditionally, and on the iPhone it calls
-  `NoAccountDeletion`, which fails with a message and deletes nothing. Before the App Store it
-  needs either real deletion on iOS or an `AccountDeletion.available` flag (default true, false in
-  `NoAccountDeletion`) gating the row, Android unchanged), `NoPush` (now the push switch and sign-out's detach alone, `PushRegistration`: the
+  `di/koin/IosUnavailable.kt` and `platformDataModule`: ~~`NoAccountDeletion`~~ (replaced in part
+  B's Task 11 by `IosAccountDeletion`: the `deleteAccount` callable, then the wipe Android's
+  `AccountDeletionService` does and the session's end; Settings' row now deletes the account on the
+  iPhone, held by `IosAccountDeletionTest` on the emulators and the walk's last step), `NoPush` (now the push switch and sign-out's detach alone, `PushRegistration`: the
   phone holds no push token until phase 4), `NoGoogleCalendar`, `NoStorageBucket`,
   `NoPickedFiles`, `NoRecordPhotoStorage`, `NoReceiptText`, `NoRecordFiles`,
   `NoEventReminders`, `NoRequestClockJobs`, `NoRequestClockNotices`, `NoSchoolImportJob`,
@@ -2848,28 +2845,20 @@ notes list each file):
   `NoPush`'s queue half by `FirestorePushQueue` (`PushDevice` and `PushQueue`: the co-parent is
   told, as on Android); in Task 9 `NoCredentialSignIn` by `IosCredentialSignIn` (Google's sheet).
 - **Still owed from part A** (the final review of part A, November 2026; each is part B's):
-  - **Blocker: a hidden Chat tab keeps marking messages read.** On the iPhone the four tabs'
-    compositions stay alive in hidden view controllers (`StackHost`'s lifecycle stays RESUMED), so
-    with one co-parent a Chat tab that was opened and then left keeps marking the co-parent's new
-    messages READ (`ChatScreen`'s `onThreadOpened` never gets its `onThreadClosed`), unlike Android,
-    where `navigateToTab` disposes the entry. Fix before any real family uses the iPhone build: the
-    tab lifecycle from selection and foreground, or the shell closing the thread when its tab hides.
-    That needs an owner ruling if it changes Android.
-  - `EdgeSwipeBack` pops past a screen's own `BackHandler` steps (ConnectSchool, CustodySetup's
-    sections, Chat search): refuse the swipe while an enabled `BackHandler` exists.
-  - Google Sign-In's SDK session is not signed out on app sign-out or on a fresh install, so a
-    shared phone may preselect the previous account.
-  - `IosApp.start` should check its double-start guard first.
-  - `CFBundleLocalizations` against `AppLanguageRule`: with Slovak then Czech the screens are in
-    English and the system chrome in Czech.
+  - ~~`EdgeSwipeBack` pops past a screen's own `BackHandler` steps (ConnectSchool, CustodySetup's
+    sections, Chat search): refuse the swipe while an enabled `BackHandler` exists.~~ Done in part
+    B's Task 2 (`BackSteps`).
   - Commit `Package.resolved` from the owner's Mac.
-  - An unknown path gives `ios=false` in `tools/ci-changes.js`, against "an unfamiliar path runs
-    everything".
-  - The write gate's minors, before the iPhone writes to real families: non-empty attachments, and
-    a delete that is not recorded.
   - The recurring `LocalDatePickerDialogTest` `DeadSystemException` on the API 35 16 KB leg
     deserves its own investigation.
   - Android autofill now reads the sign-in fields' `ContentType` hints (Task 9); the owner may veto.
+  - `CFBundleLocalizations` now lists exactly `AppLanguageRule.SHIPPED` (part B, Task 12), but iOS
+    matches the phone's whole language list against it: with Slovak then Czech the screens are in
+    English and the system chrome in Czech. Only a per-app language choice on iOS can align them.
+  - ~~After a deletion whose local wipe throws, the phone stays signed in as a deleted account
+    (Android has the same shape)~~: the iPhone ends the session in a `finally` once the server has
+    succeeded, and ends Google Sign-In's session with the wipe (part B's final review; Android
+    keeps its shape). A new sign-in after a deletion is not yet verified on the iPhone.
 - **From the data-layer move** (Task 8, and "Carried into the data-layer move" below): the sign-in's
   ID-token-only path through GitLive (Android passes no access token; GitLive's iOS side needs
   both); `getToken()` of the FCM and APNs token on a phone with a real project; GitLive's iOS
@@ -2965,9 +2954,66 @@ of it built); the keyboard in a sheet and in the chat thread (§7.4); the sheet 
 memory and speed (§7.6); the real Google sheet, Keychain autofill, a reinstall, a time-zone change
 and a second account. Part B is planned from those answers.
 
-Still owed from part A, beyond the stand-ins listed above: **in-app account deletion on the iPhone
-before the App Store** (`NoAccountDeletion`; spec §5.6 puts it in part B), and the minor findings
-the task reviews deferred to the final review of part A.
+**Phase 3, part B — every screen: built, awaiting the branch-wide CI run and the owner's check**
+(November 2026; plan `docs/superpowers/plans/2026-11-13-iphone-phase-3b-every-screen.md`, owner's
+check `docs/superpowers/plans/2026-11-13-iphone-phase-3b-owner-check.md`). Planned before the
+owner's answers to part A's check were in, so large titles stay fixed and content stays padded
+below the bars (the plan's rulings); §7.2 and §7.3 are still the owner's to answer. Android draws
+and does what it did. What it built, task by task:
+
+- **The bar vocabulary** (Task 1): a title composable, a menu, a primary action; `FormTopBar`,
+  `PushedTopBar`; every iPhone-only branch is `shellDrawsBars()`.
+- **Inner back steps** (Task 2): `BackSteps`, `LocalBackSteps` and `ScreenBackStep`. The bar's back
+  button undoes CustodySetup's open part, a child's schedule, Chat search, ConnectSchool's steps,
+  Onboarding's later steps and the swap selection first, and the edge swipe is refused while a
+  step is open. This closes part A's `EdgeSwipeBack` finding.
+- **A hidden tab stops reading the chat** (Task 3): `LocalScreenVisible`. This closes part A's
+  known wrong read marks. The final review extended it (`WhenScreenVisible`) to stickers' "seen"
+  and a request clock's first opening, from the inbox's cards and Home's pop-ups.
+- **Every form is a sheet with its Save in the bar** (Task 4): the six remaining form routes.
+- **The family's, agreements', people's, sign-in links' and Settings' pushed screens** (Tasks 5
+  and 6), **Chat** (Task 7: the co-parent's name as the title view, search in the bar, the overflow
+  menu) and **the calendar** (Task 8: the month as the bar's title, Today, Filters, the gear and
+  "+").
+- **Root flows, every route native, and the keyboard taken once** (Task 9): `NO_BAR_ROUTES` is the
+  loading screen, the telemetry question and sign-in alone; the shell's screen frame takes the
+  keyboard.
+- **`coplanly://` links** (Task 10): `LaunchLinks`, the same three hosts as Android's manifest.
+- **Account deletion** (Task 11): `IosAccountDeletion`, which replaced `NoAccountDeletion`.
+- **Part A's small carried findings** (Task 12): `SignInProviderSession` (Google's own session ends
+  with ours), `StartOnce`, `CFBundleLocalizations`, and `StackHost` ending a disposed stack's
+  entries a second after its screens.
+- **The iPhone tour** (Task 13): `ShellUITests.testTour` in the `ios-app` job, on a family seeded
+  with `seed-shell-family.js --tour`. It saves a screenshot per destination it reaches (artifact
+  `ios-tour`) and gives a reason for each it skips. The spec's §8 asked for a tour run by request;
+  the plan put it in every `ios-app` run instead, and the final review kept that, because the owner
+  check reads the `ios-tour` artifact of the branch's own run. It runs last, after the emulator
+  tests and the write gate, so a slow run loses the tour and never the write gate, and the job's
+  limit is 240 minutes for a cold pods build, the walk, the emulator tests and the tour's 50.
+
+**Still stand-ins on the iPhone after part B** (each hides what it stands for):
+- **Phase 4** (pushes, reminders and background jobs): `NoPush` as `PushRegistration`,
+  `NoEventReminders`, `NoRequestClockJobs`, `NoRequestClockNotices`, `NoSchoolImportJob` and
+  `NoSupportReminderJob`.
+- **Part C** (files, photos and the export): `NoStorageBucket`, `NoPickedFiles`,
+  `NoRecordPhotoStorage`, `NoReceiptText`, `NoRecordFiles`, `NoExportVerifyAddress`, and the
+  platform's `NoShareSheet`, `NoFilePicker`, `NoCameraCapture`, `NoImages` and `NoQrCodes`.
+- **Not in parts B or C** (the parent design's later phases decide): `NoGoogleCalendar` with `NoGoogleCalendarSignIn`, `NoSpeechDictation`,
+  `NoAiAssist`, `NoInviteQrCodes`, `NoQrScanner`, `NoDictation`, `NoPermissions`, `NoOpenUrl`,
+  `NoClipboard` and `NoAppLanguages` (iOS's own Settings sets the language).
+
+**Open after part B:**
+- **The branch-wide CI run.** The owner ruled on 14 November 2026 that CI is not awaited per task.
+  The first run on the branch head, and its `ios-tour` artifact, settle Task 12's second fix and
+  the tour.
+- **Read `tour.txt` against `AppDestinationCatalog.all`**, and name every route the tour did not
+  reach in the owner's check. The check lists what the code is written to reach.
+- **The deferred review minors** go to the final review: StackHost's one-second grace is
+  time-based, the walk's typed-text clearing, the detekt and test-tightness minors.
+
+Still owed from part A, beyond the stand-ins listed above: ~~in-app account deletion on the iPhone
+before the App Store~~ (done in part B's Task 11, `IosAccountDeletion`), and the minor findings the
+task reviews deferred to the final review of part A.
 
 **Phase 1's stay list** — the domain files still under `app/src/main/java/com/coparently/app/domain/`,
 each with what keeps it there. Phase 2 moves them with Hilt's replacement and the data layer, or

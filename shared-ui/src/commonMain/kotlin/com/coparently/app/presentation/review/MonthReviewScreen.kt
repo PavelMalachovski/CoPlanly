@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -28,7 +27,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -45,6 +43,7 @@ import com.coparently.app.presentation.ai.AiAssistState
 import com.coparently.app.presentation.ai.AiConsentDialog
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
@@ -52,7 +51,6 @@ import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
 import com.coparently.app.resources.month_review_days
@@ -165,20 +163,12 @@ fun MonthReviewScreen(
 }
 
 /** The screen's title and its up arrow. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MonthReviewTopBar(onNavigateUp: () -> Unit) {
-    TopAppBar(
-        colors = screenTopAppBarColors(),
-        title = { Text(stringResource(Res.string.month_review_title)) },
-        navigationIcon = {
-            IconButton(onClick = onNavigateUp) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(Res.string.common_back)
-                )
-            }
-        }
+    PushedTopBar(
+        title = stringResource(Res.string.month_review_title),
+        backLabel = stringResource(Res.string.common_back),
+        onBack = onNavigateUp
     )
 }
 

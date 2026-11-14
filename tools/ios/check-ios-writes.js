@@ -292,22 +292,32 @@ const NO_STORAGE = 'the iPhone has no Cloud Storage yet (NoStorageBucket): no ph
 /** A rule: the fixture of this writer path, and its adjustments with their reasons. */
 const RULES = {
   // EventRepositoryImpl.insertEvent → EventDocument.fromEvent; the gate runs no sync, so every event
-  // it writes is a repository save (never `sync-upload.json`'s nulls) and none is deleted.
-  events: () => ({
+  // it writes is a repository save (never `sync-upload.json`'s nulls), or one deleted afterwards
+  // (EventRepositoryImpl.deleteEvent → FirestoreEventDataSource.tombstoneEvent: `Tombstone.fields`
+  // merged in by update()). A deleted one is the save's shape plus the two keys, typed as
+  // `tombstone.json` holds them: that fixture's event tags no member and sets no reminder, where the
+  // gate's does both.
+  events: (doc, fixtures) => ({
     fixture: 'events/repository-save.json',
     // FirestoreEventDataSource.stamped adds the change cursor, FieldValue.serverTimestamp(), to
     // every write after fromEvent built the document the fixture holds.
-    serverAdded: { serverUpdatedAt: TIMESTAMP },
+    serverAdded: Object.assign({ serverUpdatedAt: TIMESTAMP }, isTombstone(doc) ? tombstoneKeys(fixtures) : {}),
   }),
 
   // EventVersionRecorder; its `event` is the document `fromEvent` built for the same save, so it
   // is held to the repository save's fixture rather than `updated.json`'s own embedded copy (which
-  // tags no member). `recordedAt` is FieldValue.serverTimestamp(), added by the data source.
-  event_versions: (_doc, fixtures) => ({
-    fixture: 'event_versions/updated.json',
-    replace: { event: fixture(fixtures, 'events/repository-save.json') },
-    serverAdded: { recordedAt: TIMESTAMP },
-  }),
+  // tags no member) — with the tombstone's two keys for a deletion, which EventRepositoryImpl.
+  // deleteEvent records with `Tombstone.fields` added. `recordedAt` is
+  // FieldValue.serverTimestamp(), added by the data source.
+  event_versions: (doc, fixtures) => {
+    const event = fixture(fixtures, 'events/repository-save.json');
+    if (stringField(doc, 'kind') === 'deleted') Object.assign(event.fields, tombstoneKeys(fixtures));
+    return {
+      fixture: 'event_versions/updated.json',
+      replace: { event },
+      serverAdded: { recordedAt: TIMESTAMP },
+    };
+  },
 
   // Message.toFirestoreMap: a text message, or an activity card (ActivityAnnouncer).
   messages: (doc) => (stringField(doc, 'messageType') === 'ACTIVITY' ? {
@@ -321,8 +331,9 @@ const RULES = {
     // ActivityAnnouncement.toMap writes each only when the card has one.
     extraKeys: { 'activity.whenIso': STRING, 'activity.amount': STRING, 'activity.currency': STRING },
   } : {
+    // The gate's message carries one reference (to another message's file, so nothing is
+    // uploaded), and its list is compared with the fixture's element by element.
     fixture: 'messages/text.json',
-    mayBeEmpty: { attachments: NO_STORAGE },
   }),
 
   // CustodyModelRepository: a pattern write alone (the gate's second pair), or (with
@@ -438,6 +449,18 @@ function codecLists(fixtures) {
 /** A rule whose shape is [shape], derived from [writer]. */
 function literal(writer, shape) {
   return { source: `literal from ${writer}`, shape };
+}
+
+/** `Tombstone.fields`' two keys, typed as `events/tombstone.json` holds them. */
+function tombstoneKeys(fixtures) {
+  const tombstone = fixture(fixtures, 'events/tombstone.json');
+  return { deletedAtMillis: tombstone.fields.deletedAtMillis, deletedBy: tombstone.fields.deletedBy };
+}
+
+/** Whether a REST event document is a tombstone (`Tombstone.DELETED_AT_MILLIS` set). */
+function isTombstone(doc) {
+  const value = doc && doc.fields && doc.fields.deletedAtMillis;
+  return Boolean(value) && typeOf(value) !== 'null';
 }
 
 /** A REST document's text field. */

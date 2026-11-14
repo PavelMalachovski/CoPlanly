@@ -18,21 +18,39 @@ import platform.Foundation.NSFileManager
  * and the same directories under [AppDirectories]:
  * - [clearAfterSignOut] — the database survives sign-out (a returning parent keeps their history),
  *   and so does `files/chat_outbox`, which holds the files of messages still waiting to send. Every
- *   cached file goes.
+ *   cached file goes, and so does Google Sign-In's own session ([providerSession]), so the next
+ *   parent on a shared phone is not offered the previous one's Google account.
  * - [clearAccount] — an account switch clears the database, so the outbox's files belong to
- *   messages that no longer exist; they go too.
+ *   messages that no longer exist; they go too. Google's session is left alone: the next account
+ *   has just signed in, perhaps through it.
+ * - [clearAfterDeletion] — what [clearAccount] removes, and Google Sign-In's session as sign-out
+ *   ends it: a deleted account is not offered first to the next parent on a shared phone either.
  *
  * Android also cancels the notifications on screen. The iPhone posts none yet (no push, no local
  * notification); the task that makes it post one adds their removal here. Best effort: a folder
  * that cannot be deleted is logged by name, never by its files' names, and never stops a sign-out.
  *
  * @property directories the app's folders: [AppDirectories.cache] and [AppDirectories.files]
+ * @property providerSession the sign-in provider's own session, ended on sign-out and deletion
  */
-class IosAccountTraces(private val directories: AppDirectories) : AccountTraces {
+class IosAccountTraces(
+    private val directories: AppDirectories,
+    private val providerSession: SignInProviderSession,
+) : AccountTraces {
 
     /** What sign-out removes; see the class comment. */
     override suspend fun clearAfterSignOut() {
         withContext(Dispatchers.IO) { CACHE_DIRECTORIES.forEach { delete(Path(directories.cache, it)) } }
+        endProviderSession()
+    }
+
+    @Suppress("TooGenericExceptionCaught") // a provider's failure must never stop a sign-out
+    private fun endProviderSession() {
+        try {
+            providerSession.signOut()
+        } catch (failure: Exception) {
+            logger.w(TAG, "Could not end the sign-in provider's session: ${failure.message}")
+        }
     }
 
     /** What an account switch removes; see the class comment. */
@@ -41,6 +59,15 @@ class IosAccountTraces(private val directories: AppDirectories) : AccountTraces 
             CACHE_DIRECTORIES.forEach { delete(Path(directories.cache, it)) }
             delete(Path(directories.files, ChatAttachmentOutbox.OUTBOX_DIRECTORY))
         }
+    }
+
+    /**
+     * What an account deletion removes: everything [clearAccount] does, then Google Sign-In's own
+     * session, as [clearAfterSignOut] ends it; best effort, like every step here.
+     */
+    suspend fun clearAfterDeletion() {
+        clearAccount()
+        endProviderSession()
     }
 
     private fun delete(directory: Path) {

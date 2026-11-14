@@ -53,8 +53,12 @@ internal class AccountSwitchFixture(signedInUser: SignedInUser, lastUid: String?
     /** The last account seen, in memory. */
     val lastSignedInUid = MemoryLastSignedInUid(lastUid)
 
-    /** The traces under [directories]. */
-    val traces = IosAccountTraces(directories)
+    /** How many times the sign-in provider's own session was ended. */
+    var providerSignOuts = 0
+        private set
+
+    /** The traces under [directories]; their provider session counts [providerSignOuts]. */
+    val traces = IosAccountTraces(directories, SignInProviderSession { providerSignOuts++ })
 
     /** The check under test. */
     val accountSwitch = IosAccountSwitch(
@@ -76,7 +80,7 @@ internal class AccountSwitchFixture(signedInUser: SignedInUser, lastUid: String?
         "$root/files/${ChatAttachmentOutbox.OUTBOX_DIRECTORY}/message-1/photo.jpg",
     )
 
-    /** A row, ordinary preferences, a school connection, a slot marker and the trace files. */
+    /** A row, ordinary preferences, both school connections, a slot marker and the trace files. */
     suspend fun fillWithThePreviousAccount() {
         database.userDao().insertUser(
             UserEntity(
@@ -89,6 +93,7 @@ internal class AccountSwitchFixture(signedInUser: SignedInUser, lastUid: String?
         )
         preferences.putString(ORDINARY_KEY, "the previous account's")
         preferences.putString(SCHOOL_KEY, "the previous account's school tokens")
+        preferences.putString(EDUPAGE_KEY, "the previous account's EduPage password")
         preferences.putString(SLOT_MARKER_KEY, "mom")
         traceFiles.forEach(::writeFile)
     }
@@ -119,6 +124,9 @@ internal class AccountSwitchFixture(signedInUser: SignedInUser, lastUid: String?
 
         /** A school connection, which survives `clear()` and must go explicitly. */
         const val SCHOOL_KEY = PreferenceKeys.SCHOOL_CONNECTION_PREFIX + "0123456789abcdef"
+
+        /** An EduPage connection, which survives `clear()` too, under a prefix of its own. */
+        const val EDUPAGE_KEY = PreferenceKeys.EDUPAGE_CONNECTION_PREFIX + "fedcba9876543210"
 
         /** A per-uid parent-slot marker, which survives `clear()` by design on both platforms. */
         const val SLOT_MARKER_KEY = PreferenceKeys.PARENT_SLOT_MARKER_PREFIX + "previous"

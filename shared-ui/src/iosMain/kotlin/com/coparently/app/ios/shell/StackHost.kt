@@ -61,7 +61,12 @@ import platform.darwin.NSObject
  * (Settings' sign-out navigates to the sign-in screen) is not mirrored: [onRootFlowRequested] hands
  * the route to the shell, which ends the tabs and shows the root flow from that route.
  *
+ * **A screen knows whether it is seen.** After each mirror and each finished push or pop the host
+ * writes the entries on top — the stack's, and the sheet's while one is up — into [visibility],
+ * which each screen reads as `LocalScreenVisible` ([ScreenController]).
+ *
  * @property startRoute The route the stack starts on: a tab's first screen, or a root-flow screen.
+ * @property visibility Which of the stack's screens are seen, the shell's answer for this stack.
  * @property session The owner of the ViewModels this session's screens share (the palette's, the
  *   family view's), which ends with the tabs or the root flow it was made for.
  * @property onTabRootReached The root flow's way out: a screen there navigated to a tab's first
@@ -73,6 +78,7 @@ internal class StackHost(
     private val shell: ShellEnvironment,
     private val session: ViewModelStoreOwner,
     val startRoute: String,
+    private val visibility: StackVisibility,
     private val onTabRootReached: (() -> Unit)? = null,
     private val onRootFlowRequested: ((String) -> Unit)? = null
 ) {
@@ -100,8 +106,13 @@ internal class StackHost(
         delegate = navigationDelegate
     }
 
+    /** Whether the screen a view controller shows has an inner step its back undoes first. */
+    private val stepPendingOn: (UIViewController) -> Boolean = { controller ->
+        screens.values.firstOrNull { it.viewController === controller }?.backSteps?.hasEnabledStep == true
+    }
+
     /** The edge swipe back over every pushed screen, a Compose bar's included ([EdgeSwipeBack]). */
-    private val edgeSwipe = EdgeSwipeBack(navigation)
+    private val edgeSwipe = EdgeSwipeBack(navigation, stepPendingOn)
     private var sheetEdgeSwipe: EdgeSwipeBack? = null
 
     /** Each entry's screen, by entry id, while the entry is on the stack. */
@@ -142,8 +153,19 @@ internal class StackHost(
         navigation.setViewControllers(emptyList<UIViewController>(), animated = false)
         screens.values.forEach { it.release() }
         screens.clear()
-        lifecycleOwner.destroy()
-        store.clear()
+        // The screens' compositions end only when UIKit lets their controllers go, a turn of the
+        // main loop or more later, and their coroutines, cancelled, still finish then: destroying the
+        // entries at once let one of them read an entry's ViewModels after the entry was destroyed
+        // ("You cannot access the NavBackStackEntry's ViewModels after the NavBackStackEntry is
+        // destroyed"), an uncaught exception that ended the app on a sign-out. So the entries end a
+        // moment after their screens.
+        val finisher = MainScope()
+        finisher.launch {
+            delay(ENTRIES_END_AFTER_MS)
+            lifecycleOwner.destroy()
+            store.clear()
+            finisher.cancel()
+        }
     }
 
     /** The shared back stack's screen entries, bottom first (the graph's own entry left out). */
@@ -161,7 +183,10 @@ internal class StackHost(
     private fun sync() {
         if (disposed || moving()) return
         mirror()
-        if (!disposed) applyBars()
+        if (!disposed) {
+            applyBars()
+            visibility.topIds = topIds(navigation, sheet?.navigationOrNull, screens)
+        }
     }
 
     /** Makes UIKit's stacks hold the shared back stack's entries; see [sync]. */
@@ -220,7 +245,7 @@ internal class StackHost(
             if (controllers.size > 1) sheetNavigation.setViewControllers(controllers, animated = false)
             // UIKit need not call `willShow` for a presented navigation controller's first screen.
             sheetNavigation.applyBar(screens.values)
-            sheetEdgeSwipe = EdgeSwipeBack(sheetNavigation)
+            sheetEdgeSwipe = EdgeSwipeBack(sheetNavigation, stepPendingOn)
             sheetMoving = true
             navigation.presentViewController(sheetNavigation, animated) { transitionEnded() }
         } else if (!sameControllers(existing.viewControllers, controllers)) {
@@ -311,8 +336,9 @@ internal class StackHost(
             destination = destinations.getValue(route),
             shell = shell,
             session = session,
-            nativeBar = route in NATIVE_BAR_ROUTES,
-            sheetGuard = form?.guard
+            nativeBar = showsNativeBar(route),
+            sheetGuard = form?.guard,
+            visible = visibility.of(entry.id)
         )
     }
 
@@ -346,35 +372,41 @@ internal class StackHost(
             didShowViewController: UIViewController,
             animated: Boolean
         ) {
-            // On the next turn of the main loop, once UIKit has let go of the transition.
+            // The screen shown is seen from now; the rest follows once UIKit has let go of the
+            // transition, on the next turn of the main loop.
+            visibility.topIds = topIds(navigation, sheet?.navigationOrNull, screens)
             scope.launch { uikitMoved() }
         }
     }
 
-    private companion object {
+    internal companion object {
+        /** How long a disposed stack's entries outlive its screens; see [dispose]. */
+        private const val ENTRIES_END_AFTER_MS = 1_000L
+
         /** A frame's time, how often a cancelled transition is checked for having let go. */
-        const val FRAME_MILLIS = 16L
+        private const val FRAME_MILLIS = 16L
 
         /** How many frames a cancelled transition is waited for, two seconds' worth. */
-        const val SETTLE_FRAMES = 125
+        private const val SETTLE_FRAMES = 125
 
         /**
-         * The routes whose screens describe their bar (`AppTopBar`) in part A: the tabs' first
-         * screens Home and Family, the path Family → Expenses → Add expense, and Settings. Every
-         * other screen draws its own Compose bar, with the navigation bar hidden over it; Calendar's
-         * and Chat's first screens keep their Compose headers until part B.
+         * The routes whose screens draw no bar at all, over which the navigation bar is hidden: the
+         * loading screen, the telemetry question and the sign-in screen (MON-24 phase 3, part B,
+         * Task 9). Every other route describes its bar (`AppTopBar`) and the navigation bar draws it;
+         * part A began with Home, Family, Expenses and Settings, and part B converted the rest, task
+         * by task, onboarding last.
          */
-        val NATIVE_BAR_ROUTES = setOf(
-            Screen.Home.route,
-            Screen.Family.route,
-            Screen.Expenses.route,
-            Screen.AddExpense.route,
-            Screen.EditExpense.route,
-            Screen.Settings.route
+        val NO_BAR_ROUTES: Set<String> = setOf(
+            Screen.Loading.route,
+            Screen.PrivacyConsent.route,
+            Screen.Auth.route
         )
 
+        /** Whether the navigation bar shows over [route]'s screen: every route but [NO_BAR_ROUTES]. */
+        fun showsNativeBar(route: String): Boolean = route !in NO_BAR_ROUTES
+
         /** Whether two lists hold the same view controllers, in order. */
-        fun sameControllers(current: List<*>, wanted: List<UIViewController>): Boolean =
+        private fun sameControllers(current: List<*>, wanted: List<UIViewController>): Boolean =
             current.size == wanted.size && current.indices.all { current[it] === wanted[it] }
     }
 }
@@ -387,6 +419,20 @@ private fun UINavigationController.applyBar(screens: Collection<ScreenController
     val top = topViewController ?: return
     val nativeBar = screens.firstOrNull { it.viewController === top }?.nativeBar ?: return
     if (isNavigationBarHidden() == nativeBar) setNavigationBarHidden(!nativeBar, animated = false)
+}
+
+/**
+ * The entry ids UIKit shows on top: [navigation]'s top screen, and [sheet]'s while it is presented
+ * over it, which leaves the screen under it in view; [screens] are the stack's, by entry id.
+ */
+private fun topIds(
+    navigation: UINavigationController,
+    sheet: UINavigationController?,
+    screens: Map<String, ScreenController>
+): Set<String> {
+    val sheetTop = sheet?.takeIf { it.presentingViewController != null }?.topViewController
+    val tops = listOfNotNull(navigation.topViewController, sheetTop)
+    return screens.filterValues { screen -> tops.any { it === screen.viewController } }.keys
 }
 
 /**

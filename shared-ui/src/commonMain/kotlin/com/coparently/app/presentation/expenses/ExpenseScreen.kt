@@ -61,6 +61,7 @@ import com.coparently.app.domain.payments.PaymentState
 import com.coparently.app.presentation.changerequests.splitSharesText
 import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.BannerTone
+import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.BarLeading
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.FamilyMemberFilterStrip
@@ -79,6 +80,7 @@ import com.coparently.app.presentation.common.rememberFabScrollVisibility
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberTwoPane
 import com.coparently.app.presentation.common.rememberUiTextResolver
+import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.common.valueOrNull
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.payments.PaymentsViewModel
@@ -284,6 +286,11 @@ fun ExpenseScreen(
     // A month or a view that replaces the content starts at its top, so the button comes back.
     LaunchedEffect(monthOfExpenses.month, showAnalytics) { fabVisibility.show() }
 
+    // On the iPhone the "+" is the bar's (MON-24 phase 3, part B): no floating button, so no band
+    // kept clear under one either.
+    val inShellBar = shellDrawsBars()
+    val addLabel = stringResource(Res.string.expenses_add)
+
     Scaffold(
         containerColor = ScreenContainerColor,
         topBar = {
@@ -296,7 +303,19 @@ fun ExpenseScreen(
                     leading = onNavigateUp?.let { BarLeading.Back(backLabel, it) } ?: BarLeading.None,
                     // Only with two families or more (M-8). A ledger is the screen where being in
                     // the wrong family costs most: an expense is recorded against the one shown.
-                    trailingContent = { FamilySwitcherChip() }
+                    trailingContent = { FamilySwitcherChip() },
+                    actions = if (inShellBar) {
+                        listOf(
+                            BarAction(
+                                label = addLabel,
+                                icon = Icons.Default.Add,
+                                sfSymbol = "plus",
+                                onClick = onAddExpense
+                            )
+                        )
+                    } else {
+                        emptyList()
+                    }
                 )
             )
         },
@@ -304,9 +323,11 @@ fun ExpenseScreen(
         floatingActionButton = {
             // Leaves while the list moves forward (R-1): the amounts are the rows' trailing
             // column, exactly where the button floats, so something was always under it.
-            ScrollAwareFab(fabVisibility) {
-                FloatingActionButton(onClick = onAddExpense) {
-                    Icon(Icons.Default.Add, contentDescription = stringResource(Res.string.expenses_add))
+            if (!inShellBar) {
+                ScrollAwareFab(fabVisibility) {
+                    FloatingActionButton(onClick = onAddExpense) {
+                        Icon(Icons.Default.Add, contentDescription = addLabel)
+                    }
                 }
             }
         }
@@ -316,7 +337,7 @@ fun ExpenseScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .nestedScroll(fabVisibility.connection)
-                .padding(bottom = fabVisibility.clearance(FAB_CLEARANCE))
+                .padding(bottom = if (inShellBar) 0.dp else fabVisibility.clearance(FAB_CLEARANCE))
         ) {
             // The money screen is where a change to how money divides belongs. A banner, not a
             // modal: every other agreement in this app is an inline banner plus an inbox card,

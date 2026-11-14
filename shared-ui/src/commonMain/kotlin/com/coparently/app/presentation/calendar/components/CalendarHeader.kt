@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.presentation.calendar.CalendarViewMode
 import com.coparently.app.presentation.common.BrandHeader
+import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
@@ -53,6 +54,10 @@ import org.jetbrains.compose.resources.stringResource
  * grid's own card ([CalendarMonthBar]); tapping that title still opens "Jump to date". The view
  * picker became a visible segmented control, because a parent new to the app never found it in
  * the title.
+ *
+ * Where a shell draws the bars (the iPhone, MON-24 phase 3, part B) the bar carries the month, Today,
+ * Filters, the gear and "+" ([CalendarTopBar]), so the header draws only its third row, the
+ * Month/Week/Day control, under the bar; no brand row, no heading lines and no Filters button.
  *
  * @param children The family on screen's children, in display order. With none, the together
  *   line is left out.
@@ -80,8 +85,11 @@ fun CalendarHeader(
             .padding(horizontal = Spacing.L, vertical = Spacing.XS),
         verticalArrangement = Arrangement.spacedBy(Spacing.XS)
     ) {
-        BrandHeader(children = children, onSettingsClick = onSettingsClick)
-        HeadingLines(childNames = children.map { it.childName })
+        val inShellBar = shellDrawsBars()
+        if (!inShellBar) {
+            BrandHeader(children = children, onSettingsClick = onSettingsClick)
+            HeadingLines(childNames = children.map { it.childName })
+        }
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -92,8 +100,10 @@ fun CalendarHeader(
                 onViewModeChange = onViewModeChange,
                 modifier = Modifier.weight(1f, fill = false)
             )
-            Spacer(modifier = Modifier.width(Spacing.S))
-            FiltersButton(onClick = onFiltersClick, active = filtersActive)
+            if (!inShellBar) {
+                Spacer(modifier = Modifier.width(Spacing.S))
+                FiltersButton(onClick = onFiltersClick, active = filtersActive)
+            }
         }
     }
 }

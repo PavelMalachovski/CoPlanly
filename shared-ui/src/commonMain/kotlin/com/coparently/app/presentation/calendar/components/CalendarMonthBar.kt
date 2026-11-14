@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import com.coparently.app.presentation.calendar.CalendarViewMode
 import com.coparently.app.presentation.calendar.SwapDaysButton
 import com.coparently.app.presentation.common.rememberToday
+import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.Spacing
@@ -73,6 +74,9 @@ import org.jetbrains.compose.resources.stringResource
  *   swap). It closes the row since the tester redesign of 12 November 2026: a floating "+" sat on
  *   the grid's last row once the six rows reached the card's bottom. "⇄" sits before it, in one row
  *   of actions, where it used to end the legend's row and push the legend onto two lines.
+ *
+ * Where a shell draws the bars (the iPhone, MON-24 phase 3, part B) Today and "+" are the bar's
+ * ([CalendarTopBar]), so the card's row keeps the title, the arrows and "⇄" and draws neither.
  */
 @Composable
 @Suppress("LongParameterList") // the bar's actions are this component's API surface
@@ -118,15 +122,18 @@ private fun MonthBarActions(
     onSwapDays: (() -> Unit)?,
     onAddEvent: (() -> Unit)?
 ) {
-    AssistChip(
-        onClick = onToday,
-        label = {
-            Text(
-                text = stringResource(Res.string.calendar_today_button),
-                style = MaterialTheme.typography.labelMedium
-            )
-        }
-    )
+    val inShellBar = shellDrawsBars()
+    if (!inShellBar) {
+        AssistChip(
+            onClick = onToday,
+            label = {
+                Text(
+                    text = stringResource(Res.string.calendar_today_button),
+                    style = MaterialTheme.typography.labelMedium
+                )
+            }
+        )
+    }
     onPrevious?.let { onClick ->
         IconButton(onClick = onClick) {
             Icon(
@@ -146,7 +153,7 @@ private fun MonthBarActions(
         }
     }
     onSwapDays?.let { onClick -> SwapDaysButton(onClick = onClick) }
-    onAddEvent?.let { onClick ->
+    onAddEvent?.takeUnless { inShellBar }?.let { onClick ->
         FilledTonalIconButton(onClick = onClick) {
             Icon(
                 imageVector = Icons.Default.Add,
@@ -163,11 +170,7 @@ private fun MonthBarActions(
  */
 @Composable
 private fun MonthTitle(selectedDate: LocalDate, onJumpToDate: () -> Unit, modifier: Modifier) {
-    val yearMonth = selectedDate.yearMonth
-    // The month's stand-alone name, "LLLL": `java.time`'s `Month.getDisplayName(FULL_STANDALONE)`.
-    val monthName = ReaderDateText.pattern(yearMonth, "LLLL").replaceFirstChar { it.uppercase() }
-    val today by rememberToday()
-    val label = if (yearMonth.year == today.year) monthName else "$monthName ${yearMonth.year}"
+    val label = calendarMonthTitle(selectedDate)
     val style = MaterialTheme.typography.titleMedium
     // The row holds up to six actions now, so a long month name ("Сентябрь", "September 2027")
     // steps its size down before it ends in an ellipsis.
@@ -189,6 +192,19 @@ private fun MonthTitle(selectedDate: LocalDate, onJumpToDate: () -> Unit, modifi
             .wrapContentHeight(Alignment.CenterVertically)
             .semantics { heading() }
     )
+}
+
+/**
+ * The month title the grid card shows for [selectedDate]: "November", or "November 2027" outside
+ * this year. The iPhone's bar titles the calendar with it too ([CalendarTopBar]).
+ */
+@Composable
+internal fun calendarMonthTitle(selectedDate: LocalDate): String {
+    val yearMonth = selectedDate.yearMonth
+    // The month's stand-alone name, "LLLL": `java.time`'s `Month.getDisplayName(FULL_STANDALONE)`.
+    val monthName = ReaderDateText.pattern(yearMonth, "LLLL").replaceFirstChar { it.uppercase() }
+    val today by rememberToday()
+    return if (yearMonth.year == today.year) monthName else "$monthName ${yearMonth.year}"
 }
 
 /**

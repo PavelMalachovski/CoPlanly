@@ -2,6 +2,7 @@ package com.coparently.app.data.session
 
 import com.coparently.app.data.remote.firebase.SignedInAccount
 import com.coparently.app.data.remote.firebase.SignedInUser
+import com.coparently.app.data.session.AccountSwitchFixture.Companion.EDUPAGE_KEY
 import com.coparently.app.data.session.AccountSwitchFixture.Companion.ORDINARY_KEY
 import com.coparently.app.data.session.AccountSwitchFixture.Companion.SCHOOL_KEY
 import com.coparently.app.data.session.AccountSwitchFixture.Companion.SLOT_MARKER_KEY
@@ -53,11 +54,13 @@ class IosAccountSwitchTest {
         assertEquals(emptyList<String>(), phone.database.userDao().getAllUsers().first().map { it.id })
         assertNull(phone.preferences.getString(ORDINARY_KEY))
         assertNull(phone.preferences.getString(SCHOOL_KEY))
+        assertNull(phone.preferences.getString(EDUPAGE_KEY))
         assertEquals("mom", phone.preferences.getString(SLOT_MARKER_KEY))
         assertEquals(1, phone.reminders.cancelledAll)
         assertEquals(1, phone.clocks.cancelledAll)
         phone.traceFiles.forEach { assertFalse(phone.exists(it), "$it is still there") }
         assertEquals("next", phone.lastSignedInUid.get())
+        assertEquals(0, phone.providerSignOuts, "A switch ended the new account's Google session")
     }
 
     /**
@@ -133,6 +136,18 @@ class IosAccountSwitchTest {
         val (outbox, caches) = phone.traceFiles.partition { "/files/" in it }
         caches.forEach { assertFalse(phone.exists(it), "$it is still there") }
         outbox.forEach { assertTrue(phone.exists(it), "$it was removed") }
+        assertEquals(1, phone.providerSignOuts)
+    }
+
+    @Test
+    fun `a deletion removes every file and ends the provider session`() = runBlocking {
+        val phone = fixture(lastUid = null)
+        phone.fillWithThePreviousAccount()
+
+        phone.traces.clearAfterDeletion()
+
+        phone.traceFiles.forEach { assertFalse(phone.exists(it), "$it is still there") }
+        assertEquals(1, phone.providerSignOuts)
     }
 
     private suspend fun assertKept(phone: AccountSwitchFixture) {

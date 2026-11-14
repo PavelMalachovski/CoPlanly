@@ -8,17 +8,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,13 +32,13 @@ import com.coparently.app.domain.friends.CalendarFriendGrant
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ErrorState
+import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.professionals.ProfessionalDay
 import com.coparently.app.presentation.professionals.WindowPager
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
 import com.coparently.app.resources.event_all_day
@@ -89,17 +85,10 @@ fun FriendCalendarScreen(
     Scaffold(
         containerColor = ScreenContainerColor,
         topBar = {
-            TopAppBar(
-                colors = screenTopAppBarColors(),
-                title = { Text(stringResource(Res.string.friend_calendar_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateUp) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(Res.string.common_back)
-                        )
-                    }
-                }
+            PushedTopBar(
+                title = stringResource(Res.string.friend_calendar_title),
+                backLabel = stringResource(Res.string.common_back),
+                onBack = onNavigateUp
             )
         }
     ) { padding ->

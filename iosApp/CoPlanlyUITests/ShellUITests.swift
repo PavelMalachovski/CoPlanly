@@ -7,10 +7,14 @@ import XCTest
 /// saving a screenshot of each as an attachment, which CI exports as the `ios-shell` artifact. On the
 /// way it does what the shell's review is about: a back swipe, a back swipe let go of (over native
 /// bars and over a screen that draws its own bar, each checked to have begun and been cancelled), a
-/// second tap on the selected tab popping two screens, a sheet holding an edit swiped down, which
-/// must ask "Discard changes?" and stay open on "Keep editing", a form that draws its own bar shown
-/// with exactly one bar, and a sign-out reaching the sign-in screen with no tabs, then a sign-in
-/// landing on fresh tabs.
+/// second tap on the selected tab popping two screens, the Chat tab's thread under the system bar with
+/// its overflow menu opening and closing, a sheet holding an edit swiped down, which
+/// must ask "Discard changes?" and stay open on "Keep editing", the event form as a sheet with Save in
+/// its bar (disabled until the event has a title), New event's description and the chat composer
+/// staying above the keyboard, a `coplanly://pair` link reaching the pairing screen with its code, and
+/// a sign-out reaching the sign-in screen with no tabs, then a
+/// sign-in landing on fresh tabs, and last, deleting the account from Settings, which reaches the
+/// sign-in screen.
 ///
 /// **One run reports every problem.** The walk is a list of steps. A step that fails records its
 /// reason, a screenshot and the app's accessibility hierarchy, and the walk goes on; each step starts
@@ -19,6 +23,9 @@ import XCTest
 /// pass, and prints one summary line per step.
 ///
 /// The texts it looks for are the shared strings in English, the simulator's language.
+///
+/// `testTour` is the second method (MON-24 phase 3, part B, Task 13): a screenshot of every
+/// destination it can reach, in CI's own step and on a family of its own (see its KDoc).
 final class ShellUITests: XCTestCase {
     private let timeout: TimeInterval = 30
     private let app = XCUIApplication()
@@ -33,8 +40,13 @@ final class ShellUITests: XCTestCase {
         continueAfterFailure = true
     }
 
-    /// XCUITest's own issues count against the step running.
+    /// XCUITest's own issues count against the step running. While the tour runs they are the
+    /// reason its current destination is skipped instead, never a failure (see `testTour`).
     override func record(_ issue: XCTIssue) {
+        if touring {
+            if tourIssue == nil { tourIssue = issue.compactDescription }
+            return
+        }
         if stepIssue == nil { stepIssue = issue.compactDescription }
         super.record(issue)
     }
@@ -51,6 +63,8 @@ final class ShellUITests: XCTestCase {
         step("sign in") { try self.signIn(email: email, password: password) }
         step("Home", after: ["sign in"]) { try self.home() }
         step("Calendar and Chat tabs", after: ["sign in"]) { try self.otherTabs() }
+        step("Chat thread's bar and overflow menu", after: ["Calendar and Chat tabs"]) { try self.chatThreadBar() }
+        step("Calendar's bar shows the month and its actions", after: ["Calendar and Chat tabs"]) { try self.calendarBar() }
         step("Family", after: ["sign in"]) { try self.family() }
         step("Expenses", after: ["Family"]) { try self.expenses() }
         step("back swipe", after: ["Expenses"]) { try self.backSwipe() }
@@ -58,13 +72,31 @@ final class ShellUITests: XCTestCase {
         step("Add expense sheet", after: ["Expenses"]) { try self.addExpenseSheet() }
         step("swipe down over an edit asks", after: ["Add expense sheet"]) { try self.dirtySwipeDown() }
         step("Keep editing stays, Discard leaves", after: ["swipe down over an edit asks"]) { try self.keepEditing() }
+        step("back undoes a screen's inner step", after: ["Family"]) { try self.innerBackStep() }
         step("Settings", after: ["Family"]) { try self.settings() }
-        step("cancelled back swipe over a Compose bar", after: ["Settings"]) { try self.cancelledSwipeOverComposeBar() }
+        step("cancelled back swipe over a sub-screen", after: ["Settings"]) { try self.cancelledSwipeOverSubScreen() }
         step("a tab tap pops two screens", after: ["Settings"]) { try self.tabTapPopsTwo() }
-        step("a form with its own bar shows one bar", after: ["Calendar and Chat tabs"]) { try self.composeBarSheet() }
+        step("New event is a sheet with Save in its bar", after: ["Calendar and Chat tabs"]) { try self.eventFormSheet() }
+        step("a new event swiped down closes without asking", after: ["New event is a sheet with Save in its bar"]) {
+            try self.newEventSwipeDown()
+        }
+        step("New event's description stays above the keyboard", after: ["New event is a sheet with Save in its bar"]) {
+            try self.eventDescriptionAboveKeyboard()
+        }
+        step("a coplanly://pair link opens Pairing with its code", after: ["sign in"]) { try self.pairingLink() }
         step("sign out, and sign in to fresh tabs", after: ["Settings"]) {
             try self.signOutAndIn(email: email, password: password)
         }
+        // Last: the composer's field takes a return as a new line, so the keyboard it opens stays up
+        // over the tab bar, and no step could tap a tab after it.
+        step("the chat composer stays above the keyboard", after: ["Calendar and Chat tabs"]) {
+            try self.chatComposerAboveKeyboard()
+        }
+        // After everything, on purpose: deleting the account erases the seeded parent the walk signed
+        // in as, so no step could sign in again after it. It relaunches the app first, which closes
+        // the composer's keyboard and keeps the session. The seeded family is used by nothing after
+        // the walk: the emulator tests that follow in CI run on fresh emulators of their own.
+        step("delete the account and reach sign-in", after: ["sign in"]) { try self.deleteAccount() }
 
         print("COPLANLY_SHELL_WALK_SUMMARY_BEGIN")
         outcomes.forEach { print("COPLANLY_STEP \($0.name): \($0.outcome)") }
@@ -80,7 +112,8 @@ final class ShellUITests: XCTestCase {
     private func signIn(email: String, password: String) throws {
         // The sign-in screen's own text, before its fields: Compose draws the screen first.
         _ = app.staticTexts["Welcome back!"].waitForExistence(timeout: 120)
-        shot("00-sign-in")
+        // The tour shoots this screen as `tour-auth`; its artifact holds `tour-` shots alone.
+        if !touring { shot("00-sign-in") }
         try type(email, into: field(labelled: "Email address"))
         try type(password, into: field(labelled: "Password"))
         dismissKeyboard()
@@ -100,6 +133,29 @@ final class ShellUITests: XCTestCase {
         try require(tabs.buttons["Calendar"].isSelected, "The Calendar tab did not select")
         tabs.buttons["Chat"].tap()
         try require(tabs.buttons["Chat"].isSelected, "The Chat tab did not select")
+    }
+
+    /// The Chat tab renders the family's one thread in place under the system bar (MON-24 phase 3,
+    /// part B, Task 7): the co-parent's name in the bar's title view, and the overflow menu, which
+    /// opens and closes.
+    private func chatThreadBar() throws {
+        let chat = app.tabBars.firstMatch.buttons["Chat"]
+        chat.tap()
+        try require(chat.isSelected, "The Chat tab did not select")
+        let bar = app.navigationBars.firstMatch
+        let name = bar.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "Bob")).firstMatch
+        let named = name.waitForExistence(timeout: 60) || app.navigationBars["Bob"].exists
+        shot("15-chat-thread")
+        try require(named, "The thread's bar does not show the co-parent's name")
+        let more = bar.buttons["More actions"]
+        try require(more.waitForExistence(timeout: timeout), "The thread's bar has no overflow button")
+        more.tap()
+        let block = app.buttons.matching(NSPredicate(format: "label == %@", "Block and stop sharing")).firstMatch
+        try require(block.waitForExistence(timeout: timeout), "The overflow menu did not open")
+        shot("16-chat-overflow")
+        // A tap outside a menu dismisses it, and does nothing else.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)).tap()
+        try require(block.waitForNonExistence(timeout: timeout), "The overflow menu did not close")
     }
 
     private func family() throws {
@@ -135,7 +191,15 @@ final class ShellUITests: XCTestCase {
     private func addExpenseSheet() throws {
         try goToExpenses()
         press(try element(labelled: "Add expense", in: app.buttons))
-        try require(app.navigationBars["Add expense"].waitForExistence(timeout: timeout), "The form did not open as a sheet")
+        let sheetBar = app.navigationBars["Add expense"]
+        try require(sheetBar.waitForExistence(timeout: timeout), "The form did not open as a sheet")
+        // The form's Save is the sheet bar's, not a button pinned under the form, and an empty
+        // form cannot be saved.
+        let save = sheetBar.buttons["Save expense"]
+        try require(save.waitForExistence(timeout: timeout), "The sheet's bar carries no Save")
+        try require(!save.isEnabled, "Save was enabled on an empty form")
+        let saves = app.buttons.matching(NSPredicate(format: "label == %@", "Save expense"))
+        try require(saves.count == 1, "A second Save was drawn under the form")
         shot("04-add-expense-sheet")
     }
 
@@ -157,10 +221,30 @@ final class ShellUITests: XCTestCase {
         try require(!question.exists, "Keep editing left the question up")
         try require(sheetBar.exists, "Keep editing closed the sheet")
         // The close button asks too; Discard leaves the form and the sheet.
-        sheetBar.buttons.firstMatch.tap()
+        closeButton(of: sheetBar).tap()
         try require(question.waitForExistence(timeout: timeout), "Closing over edits did not ask")
         press(try element(labelled: "Discard", in: app.buttons))
         try require(app.navigationBars["Expenses"].waitForExistence(timeout: timeout), "Discard did not close the sheet")
+    }
+
+    /// Custody setup with one of its parts open: the edge swipe is refused rather than leaving the
+    /// screen with the part half-closed, Back returns to the overview, and from the overview the
+    /// swipe leaves. While a part is open its back is the shell's own button labelled Back.
+    private func innerBackStep() throws {
+        try openCustodySetup()
+        press(try element(containing: "Contact windows"))
+        try require(waitForNoLabel(containing: "Main schedule"), "Contact windows did not open over the overview")
+        shot("13-custody-part-open")
+        swipeBack(to: 0.85)
+        sleep(2)
+        try require(!app.navigationBars["Family"].exists, "The edge swipe left custody setup with a part open")
+        try require(!labelExists(containing: "Main schedule"), "The edge swipe closed the part it should have left alone")
+        press(try element(labelled: "Back", in: app.buttons))
+        try require(element(labelledContaining: "Main schedule").waitForExistence(timeout: timeout), "Back did not return to the overview")
+        try require(!app.navigationBars["Family"].exists, "Back left custody setup instead of closing the part")
+        shot("14-custody-overview-after-back")
+        swipeBack(to: 0.85)
+        try require(app.navigationBars["Family"].waitForExistence(timeout: timeout), "The edge swipe from the overview did not leave custody setup")
     }
 
     private func settings() throws {
@@ -170,16 +254,17 @@ final class ShellUITests: XCTestCase {
         shot("06-settings")
     }
 
-    private func cancelledSwipeOverComposeBar() throws {
+    private func cancelledSwipeOverSubScreen() throws {
         if !app.navigationBars["Settings"].exists { try settings() }
         try openDataSources()
         let before = cancelledTransitions()
         swipeBackAndLetGo(at: 0.2)
         sleep(1)
-        shot("09-compose-bar-after-cancelled-swipe")
-        // Data sources stays, with its own bar alone: the system bar is not left in Settings' state.
+        shot("09-sub-screen-after-cancelled-swipe")
+        // Data sources stays, under its own system bar: the bar is not left in Settings' state.
         try require(!app.navigationBars["Settings"].exists, "A cancelled back swipe popped Data sources")
-        try require(app.navigationBars.count == 0, "Two bars after a cancelled swipe: the system bar over a Compose bar")
+        try require(app.navigationBars[dataSourcesTitle].exists, "A cancelled back swipe left the bar in Settings' state")
+        try require(app.navigationBars.count == 1, "Two bars after a cancelled swipe")
         let counted = Result { try requireCancelledTransition(after: before) }
         // A swipe that goes back brings Settings with its native bar.
         swipeBack(to: 0.85)
@@ -190,7 +275,7 @@ final class ShellUITests: XCTestCase {
     private func tabTapPopsTwo() throws {
         if !app.navigationBars["Settings"].exists { try settings() }
         try openDataSources()
-        shot("07-compose-bar-screen")
+        shot("07-sub-screen")
         app.tabBars.firstMatch.buttons["Family"].tap()
         try require(app.navigationBars["Family"].waitForExistence(timeout: timeout), "The tab tap did not pop to Family")
         // The shared stack followed: Expenses opens and its back returns to Family.
@@ -200,20 +285,153 @@ final class ShellUITests: XCTestCase {
         shot("08-family-again")
     }
 
-    private func composeBarSheet() throws {
-        // The calendar's month bar carries "Add event" since the tester redesign (November 2026),
-        // which took the empty week's action off Home: the Calendar tab, whose header is Compose's.
+    /// The Calendar tab's system bar (MON-24 phase 3, part B, Task 8): titled with the month on
+    /// screen, this month at first, with Today, Filters, Settings and "+" as its buttons; the brand
+    /// row and its heading are not drawn, and the Month/Week/Day control stays under the bar.
+    private func calendarBar() throws {
+        try goToCalendarRoot()
+        let bar = app.navigationBars[calendarMonthTitle]
+        try require(bar.waitForExistence(timeout: 60), "The calendar's bar is not titled \(calendarMonthTitle)")
+        shot("17-calendar-bar")
+        for label in ["Today", "Filters", "Settings", "Add event"] {
+            try require(bar.buttons[label].exists, "The calendar's bar has no \(label) button")
+        }
+        try require(!labelExists(containing: "Your family calendar"), "The calendar still draws its heading under the bar")
+        try require(element(labelledContaining: "Week").exists, "The Month/Week/Day control is missing under the bar")
+    }
+
+    /// The month the calendar opens on, as its bar titles it: this month's name, in English.
+    ///
+    /// Two assumptions, both true of CI's simulator: the app speaks English (the simulator's
+    /// language, so the shared `calendarMonthTitle` names the month as `en` does, with no year for
+    /// the current one), and the walk does not run across midnight at a month's end, when the app
+    /// and this test could read two different months. The test's clock is the simulator's, as the
+    /// app's is.
+    private var calendarMonthTitle: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en")
+        formatter.dateFormat = "LLLL"
+        return formatter.string(from: Date())
+    }
+
+    /// The event form, opened from the calendar's bar, is a sheet whose bar carries a cross
+    /// and Save (MON-24 phase 3, part B): Save is disabled until the event has a title, and no second
+    /// Save is drawn under the form.
+    private func eventFormSheet() throws {
         try goToCalendarRoot()
         press(try element(labelled: "Add event", in: app.buttons))
-        try require(app.staticTexts["New event"].waitForExistence(timeout: timeout), "The event form did not open")
-        sleep(1)
-        // The form draws its own bar; the sheet's navigation bar stays hidden over it, as the
-        // calendar's is behind it: no system bar at all.
-        try require(app.navigationBars.count == 0, "A system bar in the event form's sheet")
+        let sheetBar = app.navigationBars["New event"]
+        try require(sheetBar.waitForExistence(timeout: timeout), "The event form did not open as a sheet")
+        // The calendar's own bar may still be in the hierarchy under the sheet; nothing else may be.
+        let underSheet = app.navigationBars[calendarMonthTitle].exists ? 1 : 0
+        try require(app.navigationBars.count - underSheet == 1, "More than one bar over the event form")
+        let save = sheetBar.buttons["Save event"]
+        try require(save.waitForExistence(timeout: timeout), "The sheet's bar carries no Save")
+        try require(!save.isEnabled, "Save was enabled on an event with no title")
+        let saves = app.buttons.matching(NSPredicate(format: "label == %@", "Save event"))
+        try require(saves.count == 1, "A second Save was drawn under the form")
+        try require(sheetBar.buttons["Close"].exists, "The sheet's bar has no close button")
         shot("10-event-form-sheet")
-        press(try element(labelled: "Cancel", in: app.buttons))
-        try require(app.staticTexts["New event"].waitForNonExistence(timeout: timeout), "Cancel did not close the event form")
-        try require(app.navigationBars.count == 0, "A system bar over the calendar after the event form")
+        try type("Shell event", into: field(labelled: "Event title"))
+        dismissKeyboard()
+        try require(waitUntilEnabled(save), "Save stayed disabled once the event had a title")
+        shot("10b-event-form-with-title")
+    }
+
+    /// A new event asks nothing when it is left: its draft is kept as the parent types and comes
+    /// back on the next "+" (CLAUDE.md design item 16), so a swipe down closes the sheet at once.
+    private func newEventSwipeDown() throws {
+        let sheetBar = app.navigationBars["New event"]
+        if !sheetBar.exists { try eventFormSheet() }
+        swipeSheetDown(from: sheetBar)
+        try require(sheetBar.waitForNonExistence(timeout: timeout), "A swipe down did not close the new event's sheet")
+        try require(!app.staticTexts["Discard changes?"].exists, "A new event asked before closing")
+        try require(app.navigationBars[calendarMonthTitle].waitForExistence(timeout: timeout), "The calendar's bar did not come back after the event form")
+        try require(app.navigationBars.count == 1, "A second bar over the calendar after the event form")
+        try require(app.tabBars.firstMatch.buttons["Calendar"].isSelected, "The calendar was not under the sheet")
+    }
+
+    /// The keyboard is taken once, by the shell's screen frame (MON-24 phase 3, part B, Task 9):
+    /// typing into New event's description leaves the field above the keys. The labels are the
+    /// shared strings in English.
+    private func eventDescriptionAboveKeyboard() throws {
+        try goToCalendarRoot()
+        press(try element(labelled: "Add event", in: app.buttons))
+        let sheetBar = app.navigationBars["New event"]
+        try require(sheetBar.waitForExistence(timeout: timeout), "The event form did not open as a sheet")
+        // A draft that already holds a description shows its field; otherwise a button opens it.
+        let open = app.buttons.matching(NSPredicate(format: "label == %@", "Add a description")).firstMatch
+        if open.waitForExistence(timeout: 5) { press(open) }
+        let description = try field(labelled: "Description (optional)")
+        let text = "Keyboard check"
+        try type(text, into: description)
+        try require(app.keyboards.firstMatch.waitForExistence(timeout: timeout), "No keyboard over the description")
+        shot("18-event-description-keyboard")
+        try require(isClearOfKeyboard(description), "The description field is under the keyboard")
+        try require(sheetBar.buttons["Save event"].exists, "The sheet's Save left its bar while typing")
+        // What was typed is deleted again: a new event's draft is kept as the parent types (CLAUDE.md
+        // design item 16), and a check's words must not come back on the next "+".
+        app.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: text.count))
+        // The description's return closes the keyboard; a new event then closes without asking.
+        dismissKeyboard()
+        swipeSheetDown(from: sheetBar)
+        try require(sheetBar.waitForNonExistence(timeout: timeout), "The event form did not close after the check")
+    }
+
+    /// The Chat tab's composer stays above the keyboard and its send button can be tapped there
+    /// (MON-24 phase 3, part B, Task 9). The labels are the shared strings in English; nothing is sent,
+    /// and what was typed is deleted again so no draft is kept.
+    private func chatComposerAboveKeyboard() throws {
+        let chat = app.tabBars.firstMatch.buttons["Chat"]
+        try require(chat.waitForExistence(timeout: timeout), "No Chat tab")
+        chat.tap()
+        try require(chat.isSelected, "The Chat tab did not select")
+        let composer = try field(labelled: "Type a message…")
+        let text = "Keyboard check"
+        try type(text, into: composer)
+        try require(app.keyboards.firstMatch.waitForExistence(timeout: timeout), "No keyboard over the composer")
+        let send = app.buttons.matching(NSPredicate(format: "label == %@", "Send")).firstMatch
+        try require(send.waitForExistence(timeout: timeout), "The composer has no send button")
+        shot("19-chat-composer-keyboard")
+        try require(isClearOfKeyboard(send), "The send button is under the keyboard")
+        app.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: text.count))
+    }
+
+    /// Whether [element] is drawn on screen and wholly above the keyboard, so a finger can reach it.
+    /// Compose's elements are not always reported hittable, so the frames decide.
+    private func isClearOfKeyboard(_ element: XCUIElement) -> Bool {
+        let keyboard = app.keyboards.firstMatch
+        guard element.exists, keyboard.exists else { return false }
+        let frame = element.frame
+        return !frame.isEmpty && frame.minY >= 0 && frame.maxY <= keyboard.frame.minY
+    }
+
+    /// A `coplanly://pair` link opened while signed in reaches the pairing screen with its code
+    /// (MON-24 phase 3, part B, Task 10). The code is well formed (`InviteCodeGenerator`'s alphabet
+    /// has no 1, 0, I or O) but the emulators hold no invitation for it, so the screen's redeem answers
+    /// "No invitation matches that code." — or, where the preview could not say, asks "Link with this
+    /// invite code?" — either of which only a code that reached Pairing produces. The texts are the
+    /// shared strings in English.
+    private func pairingLink() throws {
+        try goToFamilyRoot()
+        app.open(URL(string: "coplanly://pair?code=ABC234")!)
+        let refused = element(labelledContaining: "No invitation matches that code")
+        let asked = element(labelledContaining: "Link with")
+        var reached = false
+        for _ in 0..<60 where !reached {
+            reached = refused.exists || asked.exists
+            if !reached { sleep(1) }
+        }
+        shot("16-pairing-link")
+        try require(reached, "The link did not reach the pairing screen with its code")
+        if asked.exists { pressIfThere("Cancel") }
+        try goToFamilyRoot()
+    }
+
+    /// Whether [button] becomes enabled within the step timeout.
+    private func waitUntilEnabled(_ button: XCUIElement) -> Bool {
+        let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: button)
+        return XCTWaiter().wait(for: [enabled], timeout: timeout) == .completed
     }
 
     private func signOutAndIn(email: String, password: String) throws {
@@ -233,12 +451,50 @@ final class ShellUITests: XCTestCase {
         try require(app.staticTexts["Welcome back!"].waitForExistence(timeout: 120), "Signing out did not reach the sign-in screen")
         try require(!app.tabBars.firstMatch.exists, "The tab bar is still there on the sign-in screen")
         shot("11-signed-out")
+        // The sign-out ran to its end, not only to the screen change: the session is gone from the
+        // Keychain too, so a relaunch opens on the sign-in screen again (Settings signs out through
+        // the shell's own session state, which outlives the Settings screen it was started from).
+        app.terminate()
+        app.launch()
+        try require(app.staticTexts["Welcome back!"].waitForExistence(timeout: 120), "A relaunch after signing out was still signed in")
+        try require(!app.tabBars.firstMatch.exists, "A relaunch after signing out showed the tabs")
         try signIn(email: email, password: password)
         // Fresh tabs: the Family tab opens at its first screen, not at the Settings it was left on.
         app.tabBars.firstMatch.buttons["Family"].tap()
         try require(app.navigationBars["Family"].waitForExistence(timeout: timeout), "The Family tab did not open at its first screen")
         try require(!app.navigationBars["Settings"].exists, "The Family tab kept the signed-out session's Settings")
         shot("12-fresh-tabs")
+    }
+
+    /// Settings → Delete account → both confirmations (MON-24 phase 3, part B, Task 11): the
+    /// `deleteAccount` callable erases the account on the emulators, the phone is wiped and signed
+    /// out, and the app shows the sign-in screen with no tabs. The labels are the shared strings in
+    /// English.
+    private func deleteAccount() throws {
+        app.terminate()
+        app.launch()
+        try require(app.tabBars.firstMatch.buttons["Family"].waitForExistence(timeout: 120), "No tab bar after relaunching")
+        try settings()
+        let row = try element(labelled: "Delete account", in: app.buttons)
+        let screenBottom = app.windows.firstMatch.frame.maxY - 120
+        for _ in 0..<12 where row.frame.maxY > screenBottom {
+            app.swipeUp()
+        }
+        sleep(1)
+        press(row)
+        try require(element(labelledContaining: "Delete this account?").waitForExistence(timeout: timeout), "No first confirmation")
+        shot("20-delete-account-question")
+        // The confirmation's button reads as the row does; it is the last one drawn.
+        let named = app.buttons.matching(NSPredicate(format: "label == %@", "Delete account"))
+        sleep(1)
+        press(named.element(boundBy: max(named.count - 1, 0)))
+        let permanently = app.buttons.matching(NSPredicate(format: "label == %@", "Delete permanently")).firstMatch
+        try require(permanently.waitForExistence(timeout: timeout), "No final confirmation")
+        shot("21-delete-account-final-question")
+        press(permanently)
+        try require(app.staticTexts["Welcome back!"].waitForExistence(timeout: 120), "Deleting the account did not reach the sign-in screen")
+        try require(!app.tabBars.firstMatch.exists, "The tab bar is still there after deleting the account")
+        shot("22-account-deleted")
     }
 
     // MARK: - Getting to a known place
@@ -250,17 +506,19 @@ final class ShellUITests: XCTestCase {
         try require(app.navigationBars["Home"].waitForExistence(timeout: timeout), "Home's first screen is missing")
     }
 
-    /// The Calendar tab, which draws its own Compose header: no system bar over it.
+    /// The Calendar tab's first screen, under its system bar (MON-24 phase 3, part B, Task 8).
     private func goToCalendarRoot() throws {
         let calendar = app.tabBars.firstMatch.buttons["Calendar"]
         calendar.tap()
         try require(calendar.waitForExistence(timeout: timeout) && calendar.isSelected, "The Calendar tab did not select")
     }
 
-    /// Opens Data sources from Settings: a screen that draws its own Compose bar, pushed with the
-    /// system bar hidden.
+    /// Data sources' title, which its system bar shows (MON-24 phase 3, part B, Task 6).
+    private let dataSourcesTitle = "Data sources and licences"
+
+    /// Opens Data sources from Settings: a sub-screen under its own system bar, with the back button.
     private func openDataSources() throws {
-        let dataSources = try element(containing: "Data sources and licences")
+        let dataSources = try element(containing: dataSourcesTitle)
         let screenBottom = app.windows.firstMatch.frame.maxY - 120
         for _ in 0..<6 where dataSources.frame.maxY > screenBottom {
             app.swipeUp()
@@ -272,7 +530,7 @@ final class ShellUITests: XCTestCase {
         if !app.navigationBars["Settings"].waitForNonExistence(timeout: 3) { press(dataSources) }
         sleep(2)
         try require(!app.navigationBars["Settings"].exists, "Data sources did not open over Settings")
-        try require(app.navigationBars.count == 0, "Two bars: the system bar over a Compose bar")
+        try require(app.navigationBars[dataSourcesTitle].waitForExistence(timeout: timeout), "Data sources has no system bar")
     }
 
     /// The Family tab at its first screen, whatever an earlier step left: a question, a sheet, a
@@ -282,7 +540,7 @@ final class ShellUITests: XCTestCase {
         let sheetBar = app.navigationBars["Add expense"]
         if question.exists { pressIfThere("Discard") }
         if sheetBar.exists {
-            sheetBar.buttons.firstMatch.tap()
+            closeButton(of: sheetBar).tap()
             if question.waitForExistence(timeout: 3) { pressIfThere("Discard") }
             _ = sheetBar.waitForNonExistence(timeout: timeout)
         }
@@ -295,6 +553,20 @@ final class ShellUITests: XCTestCase {
         try require(app.navigationBars["Family"].waitForExistence(timeout: timeout), "The Family tab's first screen is missing")
     }
 
+    /// Opens custody setup from the Family tab's agreements, under its own system bar.
+    private func openCustodySetup() throws {
+        try goToFamilyRoot()
+        let row = try element(containing: "Custody schedule")
+        let screenBottom = app.windows.firstMatch.frame.maxY - 120
+        for _ in 0..<6 where row.frame.maxY > screenBottom {
+            app.swipeUp()
+        }
+        sleep(1)
+        press(row)
+        if !app.navigationBars["Family"].waitForNonExistence(timeout: 3) { press(row) }
+        try require(element(labelledContaining: "Main schedule").waitForExistence(timeout: timeout), "Custody setup did not open at its overview")
+    }
+
     private func goToExpenses() throws {
         if app.navigationBars["Expenses"].exists && !app.navigationBars["Add expense"].exists { return }
         try goToFamilyRoot()
@@ -304,6 +576,12 @@ final class ShellUITests: XCTestCase {
     private func openExpenses() throws {
         press(try element(containing: "This month"))
         try require(app.navigationBars["Expenses"].waitForExistence(timeout: timeout), "Expenses did not open")
+    }
+
+    /// The cross at the start of a sheet's bar (its Save sits at the other end).
+    private func closeButton(of bar: XCUIElement) -> XCUIElement {
+        let close = bar.buttons["Close"]
+        return close.exists ? close : bar.buttons.firstMatch
     }
 
     /// Presses the button labelled [label] when one is on screen, and nothing otherwise.
@@ -415,6 +693,20 @@ final class ShellUITests: XCTestCase {
         return try element(containing: label)
     }
 
+    /// The first element whose label holds [text], found or not.
+    private func element(labelledContaining text: String) -> XCUIElement {
+        app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
+    }
+
+    private func labelExists(containing text: String) -> Bool {
+        element(labelledContaining: text).exists
+    }
+
+    /// Whether nothing on screen reads [text] within the step timeout.
+    private func waitForNoLabel(containing text: String) -> Bool {
+        element(labelledContaining: text).waitForNonExistence(timeout: timeout)
+    }
+
     private func element(containing text: String) throws -> XCUIElement {
         let match = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label CONTAINS %@", text))
@@ -449,5 +741,442 @@ final class ShellUITests: XCTestCase {
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    // MARK: - The tour
+
+    /// Whether `testTour` is running: XCUITest's issues then skip a destination instead of failing.
+    private var touring = false
+
+    /// The first issue XCUITest recorded while the tour visited the current destination.
+    private var tourIssue: String?
+
+    /// Each destination's outcome, in the order visited: "reached" or "skipped: …".
+    private var tourOutcomes: [(route: String, outcome: String)] = []
+
+    /// The destinations during which the app stopped running.
+    private var tourCrashes: [String] = []
+
+    /// When the tour stops visiting: the visits left are skipped with that reason, so the tour
+    /// always reaches its summary inside CI's step limit (50 minutes) even when every visit misses.
+    private var tourDeadline = Date.distantFuture
+
+    /// The tour's own time budget, from its first visit.
+    private let tourBudget: TimeInterval = 35 * 60
+
+    /// The title of the event `tools/ios/seed-shell-family.js --tour` writes for today.
+    private let tourEventTitle = "Tour dentist"
+
+    /// Every route of `AppDestinationCatalog.all` (shared-ui's `navigation/AppDestination.kt`), in
+    /// its order. Keep the two lists alike: a route the tour has no way to is reported as such, so
+    /// a new destination shows in `tour.txt` the day it is added. A route holds no space, which
+    /// `simulator.sh`'s `tour.txt` grep (`COPLANLY_TOUR [^ ]+: `) relies on.
+    private let tourRoutes = [
+        "loading", "privacy_consent", "onboarding", "auth", "home", "calendar",
+        "add_event?date={date}&hour={hour}", "edit_event/{eventId}", "contacts",
+        "change_requests?eventId={eventId}&section={section}", "request_change/{eventId}", "settings",
+        "parenting_plan", "export?thread={thread}&family={family}", "month_review", "unassigned_records",
+        "family_documents?family={family}", "support", "earlier_families", "earlier_family/{familyId}",
+        "journal", "stickers", "journal_entry/{entryId}", "child_info", "child_detail/{childInfoId}",
+        "edit_child_info/{childInfoId}", "pets", "edit_pet/{petId}",
+        "pairing?code={code}&enter={enter}&unpair={unpair}", "guest_accept?code={code}", "custody_conflict",
+        "school_import", "school_connect?connectionId={connectionId}", "calendar_feed", "data_sources",
+        "friends", "friend_detail/{friendUid}", "friend_profile", "friend_calendar/{familyId}",
+        "professionals", "professional_calendar/{grantId}", "professional_plan/{grantId}",
+        "custody_setup?planQuestion={planQuestion}", "my_profile", "coparent_profile",
+        "conversations?draft={draft}", "chat/{conversationId}?draft={draft}", "family", "expenses",
+        "add_expense", "edit_expense/{expenseId}",
+    ]
+
+    /// The destinations no signed-in parent of the seeded family can reach, each with the reason.
+    private let tourUnreachable: [String: String] = [
+        "loading": "shown only until the start destination is known, a moment no tap leads to",
+        "privacy_consent": "the iPhone collects no telemetry, so the question is never asked (spec §5.2)",
+        "onboarding": "the seeded parent finished onboarding; a new account would need the wizard's own walk",
+        "unassigned_records": "its row is drawn only while records of no family wait, and every seeded record names the family",
+        "earlier_families": "its row is drawn only after a family ended, and the seeded parent has one live family",
+        "earlier_family/{familyId}": "opened from Earlier families, which the seeded parent does not have",
+        "custody_conflict": "opened only by a pairing whose two schedules disagree; the seeded pair has none",
+        "friend_detail/{friendUid}": "opened from a family friend's grant; no friend was admitted (that needs a third account and the friend callable)",
+        "friend_profile": "a family friend's own screen, for a friend's account, not a parent's",
+        "friend_calendar/{familyId}": "a family friend's view of a family, for a friend's account, not a parent's",
+        "professional_calendar/{grantId}": "a professional's view of a family, for a professional's account",
+        "professional_plan/{grantId}": "a professional's view of the plan, for a professional's account",
+        "chat/{conversationId}?draft={draft}": "with one conversation the Chat tab renders the thread in place (design item 7), shot as conversations",
+    ]
+
+    /// The tour (MON-24 phase 3, part B, Task 13): signs in as the first parent of the family
+    /// `tools/ios/seed-shell-family.js --tour` seeded on fresh emulators (an event today with a
+    /// change request about it, a child, a pet, an expense and a vault document), visits every
+    /// destination it can reach from there and attaches a screenshot named `tour-<route>` for each,
+    /// the route as `AppDestinationCatalog` writes it up to its first `/` or `?`.
+    ///
+    /// As the Android UI tour (`e2e/UiTourTest`), a destination it cannot reach is recorded with
+    /// the reason, never as a failure: a `COPLANLY_TOUR <route>: skipped: …` line, in a text
+    /// attachment and in the log, which CI keeps as `tour.txt` in the `ios-tour` artifact. Each
+    /// visit starts from a tab at its first screen, so one that fails does not take the next with
+    /// it. The tour fails only when the app does not launch or stops running during a visit (it is
+    /// launched again and the tour goes on).
+    func testTour() throws {
+        let environment = ProcessInfo.processInfo.environment
+        let email = try XCTUnwrap(environment["COPLANLY_UITEST_EMAIL"], "No seeded account was handed to the tour")
+        let password = try XCTUnwrap(environment["COPLANLY_UITEST_PASSWORD"])
+
+        app.launchEnvironment["COPLANLY_EMULATOR_HOST"] = "127.0.0.1"
+        app.launch()
+        // The two failure texts below are what `simulator.sh tour` looks for to tell a crash or a
+        // failed launch from any other failure of the step (a timeout, the seed): keep them alike.
+        guard app.wait(for: .runningForeground, timeout: 60) else {
+            XCTFail("The app did not launch")
+            return
+        }
+
+        touring = true
+        tourDeadline = Date().addingTimeInterval(tourBudget)
+        tourVisit("auth") {
+            try self.require(self.app.staticTexts["Welcome back!"].waitForExistence(timeout: 120), "The sign-in screen did not show")
+        }
+        var signedIn = true
+        do {
+            try signIn(email: email, password: password)
+        } catch {
+            signedIn = false
+            tourOutcomes.append(("sign-in", "skipped: \(error)"))
+        }
+        if signedIn { tourSignedIn() }
+        let cause = signedIn ? "the tour has no way written to it" : "signing in failed, so nothing after the sign-in screen was reached"
+        for route in tourRoutes where !tourOutcomes.contains(where: { $0.route == route }) {
+            tourOutcomes.append((route, "skipped: " + (tourUnreachable[route] ?? cause)))
+        }
+        touring = false
+
+        let lines = tourOutcomes.map { "COPLANLY_TOUR \($0.route): \($0.outcome)" }
+        print("COPLANLY_TOUR_SUMMARY_BEGIN")
+        lines.forEach { print($0) }
+        let reached = tourOutcomes.filter { $0.outcome == "reached" }.count
+        print("COPLANLY_TOUR_SUMMARY reached \(reached) of \(tourRoutes.count) destinations")
+        print("COPLANLY_TOUR_SUMMARY_END")
+        let log = XCTAttachment(string: lines.joined(separator: "\n") + "\n")
+        log.name = "tour-log"
+        log.lifetime = .keepAlways
+        add(log)
+        if !tourCrashes.isEmpty {
+            XCTFail("The app stopped running while the tour visited: " + tourCrashes.joined(separator: ", "))
+        }
+    }
+
+    /// Every visit after signing in, each from a known place. The order keeps the ones that leave
+    /// something open (the calendar's event preview, a link's screen) late.
+    private func tourSignedIn() {
+        // The four tabs.
+        tourVisit("home") { try self.tourTab("Home") }
+        tourVisit("family") { try self.tourTab("Family") }
+        tourVisit("conversations?draft={draft}") {
+            try self.tourTab("Chat")
+            _ = self.element(labelledContaining: "Bob").waitForExistence(timeout: 30)
+        }
+        tourVisit("calendar") { try self.tourTab("Calendar") }
+
+        // Home.
+        tourVisit("change_requests?eventId={eventId}&section={section}") {
+            try self.tourTab("Home")
+            try self.tourOpen(containing: "See all", from: "Home")
+        }
+
+        // The Family tab's rows.
+        let familyRows: [(String, String)] = [
+            ("expenses", "This month"),
+            ("support", "Child support"),
+            ("custody_setup?planQuestion={planQuestion}", "Custody schedule"),
+            ("parenting_plan", "Parenting plan"),
+            ("child_info", "Child information"),
+            ("pets", "Pets"),
+            ("contacts", "Contacts"),
+            ("family_documents?family={family}", "Documents"),
+            ("month_review", "Month in review"),
+            ("export?thread={thread}&family={family}", "Export the record"),
+            ("journal", "Private journal"),
+            ("pairing?code={code}&enter={enter}&unpair={unpair}", "Linked: Bob"),
+            ("coparent_profile", "What Bob has shared"),
+            ("friends", "Family friends"),
+            ("professionals", "Professionals"),
+            ("stickers", "My stickers"),
+        ]
+        for (route, row) in familyRows {
+            tourVisit(route) {
+                try self.tourTab("Family")
+                if route.hasPrefix("pairing") && !self.labelExists(containing: row) {
+                    // The co-parent row reads "Linked: Bob" under its title once the link has reached the phone.
+                    try self.tourOpen(containing: "Co-parent", from: "Family")
+                } else {
+                    try self.tourOpen(containing: row, from: "Family")
+                }
+            }
+        }
+
+        // One level further, from the Family tab.
+        tourVisit("add_expense") {
+            try self.tourFamilyRow("This month")
+            try self.tourOpenSheet(labelled: "Add expense")
+        }
+        tourVisit("edit_expense/{expenseId}") {
+            try self.tourFamilyRow("This month")
+            try self.tourOpenSheet(containing: "Swimming course")
+        }
+        tourVisit("child_detail/{childInfoId}") {
+            try self.tourFamilyRow("Child information")
+            try self.tourOpen(containing: "Emma", from: nil)
+        }
+        tourVisit("edit_child_info/{childInfoId}") {
+            try self.tourFamilyRow("Child information")
+            try self.tourOpen(containing: "Emma", from: nil)
+            try self.tourOpenSheet(labelled: "Edit")
+        }
+        tourVisit("edit_pet/{petId}") {
+            try self.tourFamilyRow("Pets")
+            try self.tourOpenSheet(containing: "Max")
+        }
+        tourVisit("journal_entry/{entryId}") {
+            try self.tourFamilyRow("Private journal")
+            try self.tourOpenSheet(labelled: "New entry")
+        }
+
+        // Settings and its screens.
+        tourVisit("settings") { try self.tourSettings() }
+        let settingsRows: [(String, String)] = [
+            ("data_sources", dataSourcesTitle),
+            ("calendar_feed", "Calendar feed for iPhone"),
+            ("school_import", "Import from Bakal"),
+            ("my_profile", "My details"),
+        ]
+        for (route, row) in settingsRows {
+            tourVisit(route) {
+                try self.tourSettings()
+                try self.tourOpen(containing: row, from: "Settings")
+            }
+        }
+        tourVisit("school_connect?connectionId={connectionId}") {
+            try self.tourSettings()
+            try self.tourOpen(containing: "Import from Bakal", from: "Settings")
+            try self.tourOpen(containing: "Connect a school", from: nil)
+        }
+
+        // The calendar's forms, from its bar and from today's event.
+        tourVisit("add_event?date={date}&hour={hour}") {
+            try self.tourTab("Calendar")
+            try self.tourOpenSheet(labelled: "Add event")
+        }
+        tourVisit("edit_event/{eventId}") { try self.tourOpenEvent() }
+        tourVisit("request_change/{eventId}") {
+            try self.tourOpenEvent()
+            try self.tourOpenSheet(labelled: "Request change")
+        }
+
+        // A link: a guest invitation's code, which the emulators do not hold.
+        tourVisit("guest_accept?code={code}") {
+            try self.tourTab("Family")
+            self.app.open(URL(string: "coplanly://guest?code=ABC234")!)
+            try self.require(self.element(labelledContaining: "Guest access").waitForExistence(timeout: 60), "The guest link did not open Guest access")
+        }
+    }
+
+    /// Runs one visit to [route]: back to a known place, [reach], a screenshot, then nothing more.
+    /// A visit that throws, or during which XCUITest recorded an issue, is skipped with the reason.
+    private func tourVisit(_ route: String, _ reach: () throws -> Void) {
+        if Date() > tourDeadline {
+            let outcome = "skipped: the tour's \(Int(tourBudget / 60)) minutes ran out before this visit"
+            print("COPLANLY_TOUR_VISIT \(route): \(outcome)")
+            tourOutcomes.append((route, outcome))
+            return
+        }
+        tourIssue = nil
+        var outcome = "reached"
+        XCTContext.runActivity(named: "tour \(route)") { _ in
+            do {
+                if route != "auth" { tourReset() }
+                try reach()
+                sleep(2)
+                if let issue = tourIssue {
+                    outcome = "skipped: \(issue)"
+                } else {
+                    shot("tour-" + tourShotName(route))
+                }
+            } catch {
+                outcome = "skipped: \(error)"
+            }
+        }
+        if app.state != .runningForeground {
+            tourCrashes.append(route)
+            outcome = "skipped: the app stopped running (state \(app.state.rawValue)) during the visit"
+            app.launch()
+            _ = app.tabBars.firstMatch.waitForExistence(timeout: 120)
+        }
+        // As it goes, for a tour that never reaches its summary (the step's time limit).
+        print("COPLANLY_TOUR_VISIT \(route): \(outcome)")
+        tourOutcomes.append((route, outcome))
+    }
+
+    /// [route] up to its first `/` or `?`: `edit_event/{eventId}` is shot as `tour-edit_event`.
+    private func tourShotName(_ route: String) -> String {
+        String(route.prefix { $0 != "/" && $0 != "?" })
+    }
+
+    /// Closes what an earlier visit left open — a question, a sheet, the event preview — so the
+    /// next starts from a tab.
+    private func tourReset() {
+        for _ in 0..<4 {
+            if app.staticTexts["Discard changes?"].exists { pressIfThere("Discard") }
+            let closes = app.navigationBars.buttons.matching(NSPredicate(format: "label == %@", "Close"))
+            // The sheet on top is the one whose cross can be touched.
+            let top = (0..<closes.count).reversed().map { closes.element(boundBy: $0) }.first { $0.isHittable }
+            guard let top else { break }
+            top.tap()
+            sleep(1)
+        }
+        if app.staticTexts["Discard changes?"].exists { pressIfThere("Discard") }
+        // The calendar's event preview is a sheet of the calendar's own: a tap on its scrim, above
+        // it, closes it.
+        if app.buttons.matching(NSPredicate(format: "label == %@", "Edit")).firstMatch.exists &&
+            app.tabBars.firstMatch.buttons["Calendar"].isSelected {
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25)).tap()
+            sleep(1)
+        }
+    }
+
+    /// Shows the tab labelled [name] at its first screen.
+    private func tourTab(_ name: String) throws {
+        let tab = app.tabBars.firstMatch.buttons[name]
+        try require(tab.waitForExistence(timeout: timeout), "No \(name) tab")
+        tab.tap()
+        sleep(1)
+        // A second tap on the selected tab pops it to its first screen.
+        tab.tap()
+        sleep(1)
+        try require(tab.isSelected, "The \(name) tab did not select")
+        if name == "Home" || name == "Family" {
+            try require(app.navigationBars[name].waitForExistence(timeout: timeout), "\(name)'s first screen is missing")
+        }
+    }
+
+    /// The Family tab's row reading [row], opened.
+    private func tourFamilyRow(_ row: String) throws {
+        try tourTab("Family")
+        try tourOpen(containing: row, from: "Family")
+    }
+
+    /// Settings, opened from the Family tab's bar.
+    private func tourSettings() throws {
+        try tourTab("Family")
+        let gear = app.navigationBars["Family"].buttons["Settings"]
+        try require(gear.waitForExistence(timeout: timeout), "The Family tab's bar has no Settings")
+        gear.tap()
+        try require(app.navigationBars["Settings"].waitForExistence(timeout: timeout), "Settings did not open")
+    }
+
+    /// Scrolls the element reading [text] onto the screen and taps it; it is reached once the bar
+    /// titled [from] has gone (a push), or, with no [from], once the screen's bar title changed.
+    private func tourOpen(containing text: String, from: String?) throws {
+        let target = try tourScrolledTo(text)
+        let bar = app.navigationBars.firstMatch
+        let before = bar.identifier
+        press(target)
+        let gone: () -> Bool = {
+            if let from { return self.app.navigationBars[from].waitForNonExistence(timeout: 4) }
+            for _ in 0..<8 {
+                if self.app.navigationBars.firstMatch.identifier != before { return true }
+                usleep(500_000)
+            }
+            return false
+        }
+        if !gone() {
+            // A tap while the list still glides after a swipe only stops it: once more.
+            sleep(1)
+            if target.exists { press(target) }
+            try require(gone(), "Tapping \"\(text)\" opened no other screen")
+        }
+    }
+
+    /// Taps the button labelled [label] (or else whatever reads it) and requires a form sheet: a
+    /// bar with a Close button over the screen.
+    private func tourOpenSheet(labelled label: String) throws {
+        try tourOpenSheet(target: try tourButton(label), what: label)
+    }
+
+    /// The button labelled [label], or else whatever reads it, with shorter waits than the walk's
+    /// `element(labelled:in:)`: a miss in the tour costs seconds, not most of a minute.
+    private func tourButton(_ label: String) throws -> XCUIElement {
+        let exact = app.buttons.matching(NSPredicate(format: "label == %@", label)).firstMatch
+        if exact.waitForExistence(timeout: 8) { return exact }
+        let loose = element(labelledContaining: label)
+        try require(loose.waitForExistence(timeout: 2), "Nothing on screen reads \"\(label)\"")
+        return loose
+    }
+
+    /// Taps what reads [text], scrolled onto the screen, and requires a form sheet.
+    private func tourOpenSheet(containing text: String) throws {
+        try tourOpenSheet(target: try tourScrolledTo(text), what: text)
+    }
+
+    /// Taps [target] and requires a new sheet: one more bar with a Close button, or a bar whose
+    /// title was not on screen before (a form over a form may hide the bar under it).
+    private func tourOpenSheet(target: XCUIElement, what: String) throws {
+        let closes = app.navigationBars.buttons.matching(NSPredicate(format: "label == %@", "Close"))
+        let closesBefore = closes.count
+        let titlesBefore = Set(app.navigationBars.allElementsBoundByIndex.map { $0.identifier })
+        press(target)
+        for _ in 0..<20 {
+            if closes.count > closesBefore { return }
+            let titles = Set(app.navigationBars.allElementsBoundByIndex.map { $0.identifier })
+            if closes.count > 0 && !titles.isSubset(of: titlesBefore) { return }
+            usleep(500_000)
+        }
+        throw StepFailure(description: "Tapping \"\(what)\" opened no form sheet")
+    }
+
+    /// The element reading [text], scrolled until it is above the tab bar.
+    private func tourScrolledTo(_ text: String) throws -> XCUIElement {
+        let match = element(labelledContaining: text)
+        let bottom = app.windows.firstMatch.frame.maxY - 120
+        for attempt in 0..<6 {
+            // The screen's first frame may take a moment; after a swipe the list is already there.
+            if match.waitForExistence(timeout: attempt == 0 ? 8 : 1) && !match.frame.isEmpty && match.frame.maxY <= bottom {
+                sleep(1)
+                return match
+            }
+            app.swipeUp()
+        }
+        try require(match.exists, "Nothing on screen reads \"\(text)\"")
+        return match
+    }
+
+    /// The edit form of today's seeded event: the month's pill opens Day view, the event's block
+    /// there its preview, and the preview's Edit the form, as a sheet.
+    private func tourOpenEvent() throws {
+        try tourTab("Calendar")
+        let edit = app.buttons.matching(NSPredicate(format: "label == %@", "Edit")).firstMatch
+        for _ in 0..<3 where !edit.exists {
+            guard let event = tourTopmost(containing: tourEventTitle) else {
+                throw StepFailure(description: "Nothing on the calendar reads \"\(tourEventTitle)\"")
+            }
+            press(event)
+            _ = edit.waitForExistence(timeout: 5)
+        }
+        try require(edit.exists, "The event's preview did not open")
+        try tourOpenSheet(target: edit, what: "Edit")
+    }
+
+    /// Of what reads [text], the element drawn highest on the screen (the grid's, not the today
+    /// card's under it), or nil when nothing does.
+    private func tourTopmost(containing text: String) -> XCUIElement? {
+        let matches = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", text))
+        guard matches.firstMatch.waitForExistence(timeout: 15) else { return nil }
+        var best: XCUIElement?
+        for index in 0..<min(matches.count, 12) {
+            let candidate = matches.element(boundBy: index)
+            let frame = candidate.frame
+            guard !frame.isEmpty, frame.minY > 0 else { continue }
+            if best == nil || frame.minY < best!.frame.minY { best = candidate }
+        }
+        return best
     }
 }

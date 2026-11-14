@@ -14,7 +14,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Payments
@@ -22,8 +21,6 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -35,7 +32,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -60,6 +56,7 @@ import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
@@ -67,7 +64,6 @@ import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_back
 import com.coparently.app.resources.payment_card_received
@@ -145,17 +141,10 @@ fun SupportScreen(onNavigateUp: () -> Unit, viewModel: SupportViewModel = koinVi
         containerColor = ScreenContainerColor,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                colors = screenTopAppBarColors(),
-                title = { Text(stringResource(Res.string.support_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateUp) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(Res.string.common_back)
-                        )
-                    }
-                }
+            PushedTopBar(
+                title = stringResource(Res.string.support_title),
+                backLabel = stringResource(Res.string.common_back),
+                onBack = onNavigateUp
             )
         }
     ) { padding ->

@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -20,7 +19,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -28,7 +26,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -64,6 +61,7 @@ import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
@@ -75,7 +73,6 @@ import com.coparently.app.presentation.parentingplan.planCitationLine
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyMediumEmphasized
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.change_request_accept
 import com.coparently.app.resources.change_request_back
@@ -300,17 +297,10 @@ private fun ShowErrorOnce(message: UiText?, onShown: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun InboxTopBar(onBack: () -> Unit) {
-    TopAppBar(
-        colors = screenTopAppBarColors(),
-        title = { Text(stringResource(Res.string.change_request_inbox_title)) },
-        navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
-                    stringResource(Res.string.change_request_back)
-                )
-            }
-        }
+    PushedTopBar(
+        title = stringResource(Res.string.change_request_inbox_title),
+        backLabel = stringResource(Res.string.change_request_back),
+        onBack = onBack
     )
 }
 

@@ -15,7 +15,6 @@ import com.coparently.app.data.remote.google.GoogleCalendarConnection
 import com.coparently.app.data.remote.google.GoogleCredential
 import com.coparently.app.data.requests.RequestClockNotices
 import com.coparently.app.data.school.SchoolImportScheduler
-import com.coparently.app.data.session.AccountDeletion
 import com.coparently.app.data.support.SupportReminderScheduler
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.export.CommunicationRecord
@@ -36,14 +35,14 @@ import kotlinx.io.files.Path
  * 8j): each answers as a phone with nothing of the kind would — no Google Calendar connected, no
  * push token, no Cloud Storage, nothing picked — or does nothing, so `platformDataModule` resolves
  * every definition of `dataModules` without promising a feature (design item 8). Each is replaced by
- * the real one as the iPhone app gains it (phase 3 and 4: the push token, account deletion, the
+ * the real one as the iPhone app gains it (phase 3 and 4: the push token, the
  * Storage SDK, the picker and the background jobs). None of them writes or reads anything.
  * The sign-in's stand-ins (`NoSignedInUser`, `NoAuthSession`, `NoAccountSignIn`, `NoAccountSwitch`,
  * `NoAccountTraces`) left in Task 5 of phase 3, for `IosFirebaseAuth`, `IosAccountSwitch` and
  * `IosAccountTraces`; in Task 6 the push queue, the sync requests and the wording left too
  * (`NoPush` kept only the push switch, `NoSyncRequests` and `NoWording` went), for
  * `FirestorePushQueue`, `ForegroundSyncRunner` and `:shared-ui`'s `IosPairingWording` and
- * `IosSchoolImportWordings`.
+ * `IosSchoolImportWordings`; in part B's Task 11 `NoAccountDeletion`, for `IosAccountDeletion`.
  */
 
 /**
@@ -68,15 +67,6 @@ internal object NoPush : PushRegistration {
 
     override suspend fun unregisterToken() = Unit
 }
-
-/**
- * No account erasure on the iPhone yet (slice 10e: Settings asks for it): the erasure fails and
- * nothing is wiped, rather than reporting an account gone. Since phase 3's Task 5 an account can be
- * created and signed in here (`IosFirebaseAuth`), so this must be replaced before the App Store: an
- * app where an account can be created must offer to delete it in the app (the App Store's rule, as
- * Google Play's). Carried to the task that brings the iPhone's account deletion.
- */
-internal val NoAccountDeletion = AccountDeletion { Result.failure(IllegalStateException(UNAVAILABLE)) }
 
 /** No background jobs yet: no event reminder is scheduled, so none is cancelled either. */
 internal object NoEventReminders : ReminderScheduler {

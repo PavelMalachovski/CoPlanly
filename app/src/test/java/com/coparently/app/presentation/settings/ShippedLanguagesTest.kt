@@ -9,6 +9,8 @@ import java.io.File
  * The languages the rule calls shipped ([AppLanguageRule.SHIPPED]) are the ones the app translates,
  * offers in Settings → Language and declares to Android 13's per-app language setting. A language
  * added to one place and not to the rule would be translated and never spoken on a phone set to it.
+ * The iPhone app's `Info.plist` declares the same list (`CFBundleLocalizations`), the languages iOS
+ * may draw its own chrome in (the permission dialogs, the system's buttons).
  */
 class ShippedLanguagesTest {
 
@@ -34,6 +36,17 @@ class ShippedLanguagesTest {
             .map { if (it == "values") AppLanguageRule.FALLBACK else it.removePrefix("values-") }
             .toSet()
         assertEquals(AppLanguageRule.SHIPPED, folders)
+    }
+
+    @Test
+    fun `the iPhone app declares exactly the shipped languages`() {
+        val plist = moduleFile("../iosApp/CoPlanly/Info.plist").readText()
+        val array = Regex("""<key>CFBundleLocalizations</key>\s*<array>(.*?)</array>""", RegexOption.DOT_MATCHES_ALL)
+            .find(plist)?.groupValues?.get(1)
+            ?: error("Info.plist declares no CFBundleLocalizations")
+        val declared = Regex("""<string>([^<]+)</string>""").findAll(array).map { it.groupValues[1].trim() }.toList()
+        assertEquals(AppLanguageRule.SHIPPED, declared.toSet())
+        assertEquals("a language is declared twice", declared.toSet().size, declared.size)
     }
 
     /** [path] under the app module, whether the tests run from the module or from the root. */

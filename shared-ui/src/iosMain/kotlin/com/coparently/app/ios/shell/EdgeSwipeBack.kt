@@ -3,6 +3,7 @@ package com.coparently.app.ios.shell
 import platform.UIKit.UIGestureRecognizer
 import platform.UIKit.UIGestureRecognizerDelegateProtocol
 import platform.UIKit.UINavigationController
+import platform.UIKit.UIViewController
 import platform.UIKit.navigationItem
 import platform.UIKit.transitionCoordinator
 import platform.darwin.NSObject
@@ -15,13 +16,19 @@ import platform.darwin.NSObject
  * screen that draws its own Compose bar, and Compose's back gesture is off in the shell, so those
  * screens had no swipe back at all. This one lets the swipe begin wherever the system would with
  * its bar showing: over a pushed screen, outside a transition, and not where the screen hid its
- * back button (a back that is disabled).
+ * back button (a back that is disabled). Nor while the screen on top has an inner step its back
+ * undoes first ([com.coparently.app.presentation.common.BackSteps]): a swipe cannot be half-run
+ * against a step, so it is refused, and the back button undoes the step.
  *
  * UIKit holds a gesture's delegate weakly, so the stack host keeps this object as long as
  * [navigation], and attaches it ([attach]) once the gesture exists.
+ *
+ * @property stepPending Whether a screen has an inner step its back undoes first.
  */
-internal class EdgeSwipeBack(private val navigation: UINavigationController) :
-    NSObject(), UIGestureRecognizerDelegateProtocol {
+internal class EdgeSwipeBack(
+    private val navigation: UINavigationController,
+    private val stepPending: (UIViewController) -> Boolean
+) : NSObject(), UIGestureRecognizerDelegateProtocol {
 
     /**
      * Becomes the gesture's delegate. The navigation controller makes its gesture with its view, so
@@ -42,5 +49,6 @@ internal class EdgeSwipeBack(private val navigation: UINavigationController) :
     override fun gestureRecognizerShouldBegin(gestureRecognizer: UIGestureRecognizer): Boolean =
         navigation.viewControllers.size > 1 &&
             navigation.transitionCoordinator == null &&
-            navigation.topViewController?.navigationItem?.hidesBackButton != true
+            navigation.topViewController?.navigationItem?.hidesBackButton != true &&
+            navigation.topViewController?.let(stepPending) != true
 }

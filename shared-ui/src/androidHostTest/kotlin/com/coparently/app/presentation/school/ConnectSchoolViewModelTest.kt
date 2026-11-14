@@ -280,6 +280,19 @@ class ConnectSchoolViewModelTest {
         coVerify(exactly = 0) { accounts.connect(any(), any(), any(), any()) }
     }
 
+    @Test
+    fun `an inner step is offered only while back would stay on the screen`() = runTest(dispatcher) {
+        val vm = signedIn()
+
+        assertTrue(vm.state.value.hasInnerStep(edupageImport = false))
+        vm.back()
+        vm.back()
+        vm.back()
+        assertEquals(ConnectStep.TOWN, vm.state.value.step)
+        assertFalse(vm.state.value.hasInnerStep(edupageImport = false))
+        assertTrue(vm.state.value.copy(isBusy = true).hasInnerStep(edupageImport = false))
+    }
+
     private fun viewModel(connectionId: String? = null) = ConnectSchoolViewModel(
         savedStateHandle = SavedStateHandle(
             connectionId?.let { mapOf(ConnectSchoolViewModel.ARG_CONNECTION_ID to it) }.orEmpty()

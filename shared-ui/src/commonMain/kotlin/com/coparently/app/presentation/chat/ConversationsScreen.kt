@@ -20,7 +20,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -29,7 +28,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -43,15 +41,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.model.Conversation
+import com.coparently.app.presentation.common.AppTopBar
+import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ListSkeleton
 import com.coparently.app.presentation.common.Loadable
+import com.coparently.app.presentation.common.ScreenBar
 import com.coparently.app.presentation.common.TwoPanes
 import com.coparently.app.presentation.common.WideColumn
+import com.coparently.app.presentation.common.addBarAction
 import com.coparently.app.presentation.common.rememberTwoPane
+import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.common.valueOrNull
 import com.coparently.app.presentation.theme.ScreenContainerColor
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.chat_coparent_link_pending
 import com.coparently.app.resources.chat_empty_description
@@ -236,27 +238,40 @@ private fun ConversationList(
 ) {
     val conversations = conversationsState.valueOrNull.orEmpty()
     val startChat = onStartChat
+    // On the iPhone the bar is the navigation bar's (MON-24 phase 3, part B), and the floating "+"
+    // is its `plus`: no floating button over the list.
+    val inShellBar = shellDrawsBars()
     Scaffold(
         containerColor = ScreenContainerColor,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                colors = screenTopAppBarColors(),
-                title = { Text(stringResource(Res.string.conversations_title)) },
-                actions = {
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = stringResource(Res.string.nav_settings)
+            if (inShellBar) {
+                ConversationsShellBar(
+                    showAdd = conversations.isNotEmpty(),
+                    isOpening = isOpening,
+                    onOpenSettings = onOpenSettings,
+                    onStartChat = startChat
+                )
+            } else {
+                AppTopBar(
+                    ScreenBar(
+                        title = stringResource(Res.string.conversations_title),
+                        actions = listOf(
+                            BarAction(
+                                label = stringResource(Res.string.nav_settings),
+                                icon = Icons.Default.Settings,
+                                sfSymbol = "gearshape",
+                                onClick = onOpenSettings
+                            )
                         )
-                    }
-                }
-            )
+                    )
+                )
+            }
         },
         floatingActionButton = {
             // Only show the FAB when there are conversations; the empty state carries
             // its own primary action, so a second entry point would be redundant.
-            if (conversations.isNotEmpty()) {
+            if (conversations.isNotEmpty() && !inShellBar) {
                 FloatingActionButton(onClick = startChat) {
                     if (isOpening) {
                         CircularProgressIndicator(
@@ -307,6 +322,43 @@ private fun ConversationList(
             }
         }
     }
+}
+
+/**
+ * The conversation list's bar as the iPhone's navigation bar draws it: the tab's large title, then
+ * its actions in the order they are listed, the gear (`gearshape`) and the new-conversation "+"
+ * (`plus`, only while there are conversations, as the floating button; not tappable again while
+ * one is opening, which the button showed as its spinner). The "+" comes last, so the iPhone draws
+ * it at the bar's edge.
+ *
+ * @param showAdd Whether there are conversations, so the "+" is offered
+ * @param isOpening Whether a conversation is being opened
+ * @param onOpenSettings Opens settings
+ * @param onStartChat Starts, or opens, the conversation with the co-parent
+ */
+@Composable
+private fun ConversationsShellBar(
+    showAdd: Boolean,
+    isOpening: Boolean,
+    onOpenSettings: () -> Unit,
+    onStartChat: () -> Unit
+) {
+    val gear = BarAction(
+        label = stringResource(Res.string.nav_settings),
+        icon = Icons.Default.Settings,
+        sfSymbol = "gearshape",
+        onClick = onOpenSettings
+    )
+    val add = addBarAction(stringResource(Res.string.chat_new_conversation), onStartChat)
+        .copy(enabled = !isOpening)
+        .takeIf { showAdd }
+    AppTopBar(
+        ScreenBar(
+            title = stringResource(Res.string.conversations_title),
+            largeTitle = true,
+            actions = listOfNotNull(gear, add)
+        )
+    )
 }
 
 /**

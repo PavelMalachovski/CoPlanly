@@ -2,6 +2,7 @@ package com.coparently.app.presentation
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
@@ -22,8 +23,6 @@ import com.coparently.app.data.remote.firebase.PushDestination
 import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.data.remote.google.CredentialAuthenticator
 import com.coparently.app.data.remote.google.CredentialManagerService
-import com.coparently.app.domain.chat.ChatUri
-import com.coparently.app.domain.guests.GuestInviteUri
 import com.coparently.app.domain.pairing.InstallReferrer
 import com.coparently.app.domain.pairing.InstallReferrerSource
 import com.coparently.app.domain.pairing.PairingUri
@@ -107,7 +106,7 @@ class MainActivity : AppCompatActivity() {
     /**
      * A pairing code carried by a `coplanly://pair` deep link, awaiting hand-off
      * to the pairing screen. `NavGraph` consumes it (setting it back to null)
-     * once it has navigated there — see [readPairingCode] for why redeeming it
+     * once it has navigated there — see [readLaunchLink] for why redeeming it
      * is never automatic.
      */
     private val _pendingPairingCode = MutableStateFlow<String?>(null)
@@ -130,7 +129,7 @@ class MainActivity : AppCompatActivity() {
      * codes are indistinguishable six-character strings, so the host the link arrived on is
      * the only thing that says which callable may redeem it. Redeeming is never automatic
      * here either — the guest confirms on the screen, for the same reason
-     * [readPairingCode] gives.
+     * [readLaunchLink] gives.
      */
     private val _pendingGuestCode = MutableStateFlow<String?>(null)
     private val pendingGuestCode: StateFlow<String?> = _pendingGuestCode
@@ -412,9 +411,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun readDeepLinks(intent: Intent?) {
-        readPairingCode(intent)
-        readGuestCode(intent)
-        readChatDeepLink(intent)
+        readLaunchLink(intent)
         readPushDestination(intent)
     }
 
@@ -431,57 +428,45 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Extracts a pairing code from a pairing link in either form — `coplanly://pair?code=…`, or
-     * `https://coparently-a39c9.web.app/pair/…` once that opens the app (see [PairingUri]).
+     * Reads the link [intent] opened the app with and arms the hand-off it names: a `coplanly://`
+     * link through [LaunchLinks.parse], which the iPhone's shell reads too, else the pairing link's
+     * web form ([readWebPairingLink]).
      *
-     * The code is only pre-filled on the pairing screen — redeeming it still
-     * needs an explicit confirmation, because a share link may have been
-     * forwarded on to someone else.
-     *
-     * A `coplanly://pair` link with no `code` (e.g. the one a pairing-status
-     * push notification opens — see [com.coparently.app.data.remote.firebase.CoPlanlyMessagingService])
-     * still needs to land on the pairing screen, just without a prefill. Empty
-     * string is used as that "link present, no code" signal rather than null,
-     * because `NavGraph`'s deep-link effect only navigates when this flow holds a non-null value;
-     * null is reserved for "no pairing link is pending" so a plain app launch
-     * does not force a navigation. `Screen.Pairing.routeWithCode` already
-     * treats null and empty identically, so the pairing screen itself sees no
-     * difference from the existing code-less navigations (e.g. the Settings
-     * menu entry).
+     * - `coplanly://pair?code=…`: the code is only pre-filled on the pairing screen — redeeming it
+     *   still needs an explicit confirmation, because a share link may have been forwarded on to
+     *   someone else. A link with no code (the one a pairing-status push opens, see
+     *   [com.coparently.app.data.remote.firebase.CoPlanlyMessagingService]) still lands on the
+     *   pairing screen, without a prefill: the empty string is that "link present, no code" signal,
+     *   because `NavGraph`'s deep-link effect only navigates when the flow holds a non-null value,
+     *   and null is reserved for "no pairing link is pending" so a plain launch forces no
+     *   navigation. `Screen.Pairing.routeWithCode` treats null and empty alike.
+     * - `coplanly://guest?code=…`: a separate hand-off from the pairing code, and that is the point.
+     *   The cost of the two paths crossing is a guest redeemed through `acceptPairingInvitation`,
+     *   which would make them a co-parent. A guest link with no code is ignored ([LaunchLinks]
+     *   answers null): no push opens a bare one, and an empty guest-accept screen with no
+     *   explanation would be worse than nothing.
+     * - `coplanly://chat` (opened by a chat-message push): the thread its `conversationId` names, or
+     *   the Chat tab's list when it names none (a manual test push, an older payload, or a
+     *   hand-typed link). The family comes from the push's extra ([readLaunchIntent]), never from
+     *   the link.
      */
-    private fun readPairingCode(intent: Intent?) {
+    private fun readLaunchLink(intent: Intent?) {
         val data = intent?.data ?: return
+        when (val link = LaunchLinks.parse(data.toString())) {
+            is LaunchLink.Pair -> _pendingPairingCode.value = link.code
+            is LaunchLink.Guest -> _pendingGuestCode.value = link.code
+            is LaunchLink.Chat -> _pendingChatLink.value = PendingChatLink(link.conversationId)
+            null -> readWebPairingLink(data)
+        }
+    }
+
+    /**
+     * Extracts a pairing code from the pairing link's web form,
+     * `https://coparently-a39c9.web.app/pair/…`, once that opens the app (see [PairingUri]),
+     * pre-filling it as a `coplanly://pair` link's code is ([readLaunchLink]).
+     */
+    private fun readWebPairingLink(data: Uri) {
         if (!PairingUri.isPairingUri(data.scheme, data.host, data.path)) return
         _pendingPairingCode.value = PairingUri.extractCode(data.toString()).orEmpty()
-    }
-
-    /**
-     * Extracts a guest code from a `coplanly://guest?code=…` intent.
-     *
-     * Deliberately a second reader rather than a `host` branch inside [readPairingCode]. The
-     * cost of the two paths crossing is not a broken screen: it is a guest redeemed through
-     * `acceptPairingInvitation`, which would make them a co-parent.
-     *
-     * Unlike the pairing link, a `coplanly://guest` link with no code is ignored. There is no
-     * push notification that opens a bare one, and a guest-accept screen with an empty field
-     * and no explanation of how they got there would be worse than nothing.
-     */
-    private fun readGuestCode(intent: Intent?) {
-        val data = intent?.data ?: return
-        if (!GuestInviteUri.isGuestUri(data.scheme, data.host)) return
-        _pendingGuestCode.value = GuestInviteUri.extractCode(data.toString()) ?: return
-    }
-
-    /**
-     * Recognises a `coplanly://chat` intent (opened by a chat-message push
-     * notification — see [com.coparently.app.data.remote.firebase.CoPlanlyMessagingService])
-     * and arms [pendingChatOpen] so `NavGraph` navigates to the specific thread, or the
-     * Chat tab's list when the link carries no `conversationId` (a manual test push, an
-     * older payload, or a hand-typed link).
-     */
-    private fun readChatDeepLink(intent: Intent?) {
-        val data = intent?.data ?: return
-        if (!ChatUri.isChatUri(data.scheme, data.host)) return
-        _pendingChatLink.value = PendingChatLink(ChatUri.extractConversationId(data.toString()))
     }
 }

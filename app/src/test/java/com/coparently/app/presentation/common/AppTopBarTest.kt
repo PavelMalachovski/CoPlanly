@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -93,6 +94,127 @@ class AppTopBarTest {
         ),
         trailingContent = { Box(Modifier.size(24.dp)) }
     )
+
+    private fun item(label: String, now: Int = 0) = BarMenuItem(
+        label = label,
+        sfSymbol = null,
+        onClick = { clicks += if (now == 0) label else "$label $now" }
+    )
+
+    /** A bar with one action that opens a menu, built afresh on each composition. */
+    private fun menuBar(first: String, now: Int, titleContent: Boolean = false) = ScreenBar(
+        title = TITLE,
+        actions = listOf(
+            BarAction(
+                label = MORE,
+                icon = Icons.Default.Add,
+                sfSymbol = "ellipsis.circle",
+                onClick = { clicks += MORE },
+                menu = listOf(item(first, now), item(SETTINGS, now))
+            )
+        ),
+        titleContent = if (titleContent) {
+            { Text(TITLE_CONTENT) }
+        } else {
+            null
+        }
+    )
+
+    @Test
+    fun `a menu action opens its items and runs the tapped one`() {
+        rule.setContent { MaterialTheme { AppTopBar(menuBar(first = REPORT, now = 0)) } }
+
+        rule.onNodeWithContentDescription(MORE).assertHasClickAction().performClick()
+        rule.onNodeWithText(REPORT).assertIsDisplayed()
+        rule.onNodeWithText(SETTINGS).assertIsDisplayed()
+        rule.onNodeWithText(REPORT).performClick()
+        rule.waitForIdle()
+
+        assertEquals("the tapped item ran once, and the action's own click never", listOf(REPORT), clicks)
+        rule.onNodeWithText(REPORT).assertDoesNotExist()
+        rule.onNodeWithText(SETTINGS).assertDoesNotExist()
+    }
+
+    @Test
+    fun `titleContent replaces the title text`() {
+        rule.setContent {
+            MaterialTheme { AppTopBar(ScreenBar(title = "Lana", titleContent = { Text("L · Lana") })) }
+        }
+
+        rule.onNodeWithText("L · Lana").assertIsDisplayed()
+        rule.onNodeWithText("Lana").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a host receives the menu and the title content and no Material bar is drawn`() {
+        val shown = mutableListOf<ScreenBar>()
+        val host = BarHost { shown += it }
+        rule.setContent {
+            MaterialTheme {
+                CompositionLocalProvider(LocalBarHost provides host) {
+                    AppTopBar(menuBar(first = REPORT, now = 0, titleContent = true))
+                }
+            }
+        }
+        rule.waitForIdle()
+
+        rule.onNodeWithText(TITLE).assertDoesNotExist()
+        rule.onNodeWithText(TITLE_CONTENT).assertDoesNotExist()
+        rule.onNodeWithContentDescription(MORE).assertDoesNotExist()
+        val held = shown.single()
+        val menu = held.actions[0].menu!!
+        assertEquals(2, menu.size)
+        assertEquals(listOf(REPORT, SETTINGS), menu.map { it.label })
+        assertNotNull(held.titleContent)
+        menu[0].onClick()
+        assertEquals(listOf(REPORT), clicks)
+    }
+
+    @Test
+    fun `a menu change alone reaches the host again`() {
+        val shown = mutableListOf<ScreenBar>()
+        val host = BarHost { shown += it }
+        val first = mutableStateOf(REPORT)
+        val tick = mutableIntStateOf(0)
+        rule.setContent {
+            val now = tick.intValue
+            CompositionLocalProvider(LocalBarHost provides host) {
+                AppTopBar(menuBar(first = first.value, now = now))
+            }
+        }
+        rule.waitForIdle()
+
+        first.value = "Report message"
+        rule.waitForIdle()
+        assertEquals("a changed menu label did not reach the host", 2, shown.size)
+        assertEquals("Report message", shown.last().actions[0].menu!![0].label)
+
+        tick.intValue = 1
+        rule.waitForIdle()
+        assertEquals("a changed menu lambda alone reached the host", 2, shown.size)
+        // The bar the host holds runs the latest lambda.
+        shown.last().actions[0].menu!![0].onClick()
+        assertEquals(listOf("Report message 1"), clicks)
+    }
+
+    @Test
+    fun `the sticky bar draws nothing under a host`() {
+        val host = BarHost { }
+        rule.setContent {
+            MaterialTheme {
+                CompositionLocalProvider(LocalBarHost provides host) { StickyActionBar("Save", {}) }
+            }
+        }
+
+        rule.onNodeWithText("Save").assertDoesNotExist()
+    }
+
+    @Test
+    fun `the sticky bar is drawn without a host`() {
+        rule.setContent { MaterialTheme { StickyActionBar("Save", {}) } }
+
+        rule.onNodeWithText("Save").assertIsDisplayed()
+    }
 
     @Test
     fun `with a host the bar goes to the host and nothing is drawn`() {
@@ -263,5 +385,8 @@ class AppTopBarTest {
         const val BACK = "Back"
         const val CLOSE = "Close"
         const val TRAILING = "trailing"
+        const val MORE = "More"
+        const val REPORT = "Report"
+        const val TITLE_CONTENT = "L · Expenses"
     }
 }

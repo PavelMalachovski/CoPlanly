@@ -18,6 +18,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddAPhoto
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.AlertDialog
@@ -68,6 +69,7 @@ import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.receipts.ReceiptScan
 import com.coparently.app.presentation.common.AppTopBar
+import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.BarLeading
 import com.coparently.app.presentation.common.DatePickerField
 import com.coparently.app.presentation.common.FamilyMemberChips
@@ -85,6 +87,7 @@ import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberRecordPhoto
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.common.rememberUiTextResolver
+import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.platform.AppImage
@@ -120,6 +123,7 @@ import com.coparently.app.resources.expense_split_override_hint
 import com.coparently.app.resources.expense_split_ratio
 import com.coparently.app.resources.expense_split_shared
 import com.coparently.app.resources.expenses_receipt_photo
+import com.coparently.app.resources.form_close
 import com.coparently.app.resources.image_viewer_open
 import com.coparently.app.resources.receipt_camera_denied
 import com.coparently.app.resources.receipt_camera_unavailable
@@ -340,16 +344,43 @@ fun AddExpenseScreen(
         modifier = Modifier.then(leave.backPreview),
         topBar = {
             // The form's Save stays the StickyActionBar below on Android, so no primary action here.
+            // On the iPhone the form is a sheet: a cross at the start and Save in the bar, the
+            // StickyActionBar drawing nothing (the form rule of MON-24 phase 3, part B).
+            val inShellBar = shellDrawsBars()
+            val saveLabel = stringResource(Res.string.expense_save)
             AppTopBar(
                 ScreenBar(
                     title = stringResource(
                         if (expenseId == null) Res.string.expense_add_title else Res.string.expense_edit_title
                     ),
-                    leading = BarLeading.Back(
-                        label = stringResource(Res.string.budgets_back),
-                        onClick = leave,
-                        enabled = !isSaving
-                    )
+                    leading = if (inShellBar) {
+                        BarLeading.Close(
+                            label = stringResource(Res.string.form_close),
+                            onClick = leave,
+                            enabled = !isSaving
+                        )
+                    } else {
+                        BarLeading.Back(
+                            label = stringResource(Res.string.budgets_back),
+                            onClick = leave,
+                            enabled = !isSaving
+                        )
+                    },
+                    actions = if (inShellBar) {
+                        listOf(
+                            BarAction(
+                                label = saveLabel,
+                                icon = Icons.Default.Check,
+                                sfSymbol = "checkmark",
+                                onClick = onSaveClick,
+                                // Exactly when the sticky button is: enabled && !busy.
+                                enabled = isFormValid && !isSaving,
+                                primary = true
+                            )
+                        )
+                    } else {
+                        emptyList()
+                    }
                 )
             )
         },

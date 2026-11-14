@@ -8,17 +8,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -31,13 +28,15 @@ import com.coparently.app.domain.model.Pet
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ErrorState
 import com.coparently.app.presentation.common.GroupLabel
+import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.addBarAction
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.labelRes
+import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.pets_add
 import com.coparently.app.resources.pets_back
@@ -69,35 +68,35 @@ fun PetsScreen(
     val haptic = LocalHapticFeedback.current
     val uiState by viewModel.uiState.collectAsState()
 
+    // On the iPhone the "+" is the bar's (MON-24 phase 3, part B), shown exactly when the floating
+    // button would be.
+    val inShellBar = shellDrawsBars()
+    val hasPets = (uiState as? PetsUiState.Success)?.pets?.isNotEmpty() == true
+    val addLabel = stringResource(Res.string.pets_add)
+    val addPet: () -> Unit = {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        onEditPet("new")
+    }
+
     Scaffold(
         containerColor = ScreenContainerColor,
         topBar = {
-            TopAppBar(
-                colors = screenTopAppBarColors(),
-                title = { Text(stringResource(Res.string.pets_screen_title)) },
-                navigationIcon = {
-                    IconButton(onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onNavigateBack()
-                    }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(Res.string.pets_back)
-                        )
-                    }
-                }
+            PushedTopBar(
+                title = stringResource(Res.string.pets_screen_title),
+                backLabel = stringResource(Res.string.pets_back),
+                onBack = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onNavigateBack()
+                },
+                actions = listOfNotNull(addBarAction(addLabel, addPet).takeIf { inShellBar && hasPets })
             )
         },
         floatingActionButton = {
-            val state = uiState
-            if (state is PetsUiState.Success && state.pets.isNotEmpty()) {
+            if (hasPets && !inShellBar) {
                 ExtendedFloatingActionButton(
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onEditPet("new")
-                    },
+                    onClick = addPet,
                     icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                    text = { Text(stringResource(Res.string.pets_add)) }
+                    text = { Text(addLabel) }
                 )
             }
         }
