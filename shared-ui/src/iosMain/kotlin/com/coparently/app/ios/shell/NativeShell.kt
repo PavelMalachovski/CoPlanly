@@ -32,8 +32,10 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -174,7 +176,14 @@ internal class NativeShell(
                 authStateViewModel.needsOnboarding
             ) { loading, signedIn, onboarding ->
                 startDestinationFor(TelemetryConsent.DENIED, loading, signedIn, onboarding)
-            }.distinctUntilChanged().collect { route ->
+            }.distinctUntilChanged().collectLatest { route ->
+                // After a sign-out or a deletion the start destination passes through Loading on
+                // its way to sign-in within the same moment (the session is already gone), and
+                // building a root flow only to dispose of it at once ended the walk's sign-out in
+                // an uncaught exception three runs in four. A Loading over a shown root waits a
+                // moment, and is never built when the next answer arrives first; the first root of
+                // a launch is shown at once, as before.
+                if (route == Screen.Loading.route && shown != null) delay(LOADING_SETTLE_MS)
                 tabsReached = false
                 show(route)
             }
@@ -316,6 +325,9 @@ internal class NativeShell(
     private companion object {
         /** The tab bar's accessibility identifier, followed by the number of cancelled transitions. */
         const val CANCELLED_TRANSITIONS = "coplanly.shell.cancelledTransitions."
+
+        /** How long a Loading over a shown root waits for the answer that replaces it. */
+        const val LOADING_SETTLE_MS = 500L
     }
 }
 
