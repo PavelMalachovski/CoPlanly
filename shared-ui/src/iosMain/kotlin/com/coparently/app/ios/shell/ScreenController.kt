@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -19,6 +20,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.uikit.ComposeUIViewControllerDelegate
+import androidx.compose.ui.uikit.OnFocusBehavior
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
 import androidx.lifecycle.Lifecycle
@@ -105,6 +107,9 @@ internal class ScreenController(
     val viewController: UIViewController = ComposeUIViewController(
         configure = {
             enableBackGesture = false
+            // The keyboard is ScreenFrame's inset, applied once: the view is never also moved up
+            // over a focused field, which would lift it a second time (design item 14).
+            onFocusBehavior = OnFocusBehavior.DoNothing
             delegate = object : ComposeUIViewControllerDelegate {
                 override fun viewDidAppear(animated: Boolean) = bars.screenAppeared(true)
 
@@ -159,6 +164,12 @@ internal class ScreenController(
  * around [content]. While the line shows it takes the top inset, which [content] then does not
  * apply again; while it does not, [content] applies the top inset itself (the navigation bar's and
  * the status bar's), as Android's root Scaffold leaves it (design item 14).
+ *
+ * **The keyboard is taken here, once, for every hosted screen** (design item 14, as Android's
+ * `NavHost` takes it): [content] is laid out above the keyboard while one is up, and the keyboard's
+ * inset is consumed, so no screen applies it a second time. A screen therefore adds no
+ * `imePadding()` of its own; the chat composer's send button and a form's last field stay above
+ * the keys.
  */
 @Composable
 private fun ScreenFrame(shell: ShellEnvironment, content: @Composable () -> Unit) {
@@ -177,6 +188,7 @@ private fun ScreenFrame(shell: ShellEnvironment, content: @Composable () -> Unit
                 .fillMaxSize()
                 .padding(inner)
                 .consumeWindowInsets(inner)
+                .imePadding()
         ) {
             content()
         }

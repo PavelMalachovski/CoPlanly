@@ -20,7 +20,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -29,7 +28,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -56,7 +54,6 @@ import com.coparently.app.presentation.common.rememberTwoPane
 import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.common.valueOrNull
 import com.coparently.app.presentation.theme.ScreenContainerColor
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.chat_coparent_link_pending
 import com.coparently.app.resources.chat_empty_description
@@ -256,17 +253,18 @@ private fun ConversationList(
                     onStartChat = startChat
                 )
             } else {
-                TopAppBar(
-                    colors = screenTopAppBarColors(),
-                    title = { Text(stringResource(Res.string.conversations_title)) },
-                    actions = {
-                        IconButton(onClick = onOpenSettings) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = stringResource(Res.string.nav_settings)
+                AppTopBar(
+                    ScreenBar(
+                        title = stringResource(Res.string.conversations_title),
+                        actions = listOf(
+                            BarAction(
+                                label = stringResource(Res.string.nav_settings),
+                                icon = Icons.Default.Settings,
+                                sfSymbol = "gearshape",
+                                onClick = onOpenSettings
                             )
-                        }
-                    }
+                        )
+                    )
                 )
             }
         },

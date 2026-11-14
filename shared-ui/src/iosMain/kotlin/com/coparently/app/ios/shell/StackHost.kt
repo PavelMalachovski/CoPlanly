@@ -325,7 +325,7 @@ internal class StackHost(
             destination = destinations.getValue(route),
             shell = shell,
             session = session,
-            nativeBar = route in NATIVE_BAR_ROUTES,
+            nativeBar = showsNativeBar(route),
             sheetGuard = form?.guard,
             visible = visibility.of(entry.id)
         )
@@ -368,82 +368,31 @@ internal class StackHost(
         }
     }
 
-    private companion object {
+    internal companion object {
         /** A frame's time, how often a cancelled transition is checked for having let go. */
-        const val FRAME_MILLIS = 16L
+        private const val FRAME_MILLIS = 16L
 
         /** How many frames a cancelled transition is waited for, two seconds' worth. */
-        const val SETTLE_FRAMES = 125
+        private const val SETTLE_FRAMES = 125
 
         /**
-         * The routes whose screens describe their bar (`AppTopBar`) in part A: the tabs' first
-         * screens Home and Family, the path Family → Expenses → Add expense, and Settings. Every
-         * other screen draws its own Compose bar, with the navigation bar hidden over it. Part B adds
-         * the rest, task by task, the Chat and Calendar tabs' first screens included.
+         * The routes whose screens draw no bar at all, over which the navigation bar is hidden: the
+         * loading screen, the telemetry question and the sign-in screen (MON-24 phase 3, part B,
+         * Task 9). Every other route describes its bar (`AppTopBar`) and the navigation bar draws it;
+         * part A began with Home, Family, Expenses and Settings, and part B converted the rest, task
+         * by task, onboarding last.
          */
-        val NATIVE_BAR_ROUTES = setOf(
-            Screen.Home.route,
-            Screen.Family.route,
-            Screen.Expenses.route,
-            Screen.AddExpense.route,
-            Screen.EditExpense.route,
-            Screen.Settings.route,
-            // Every other form (MON-24 phase 3, part B, Task 4): a sheet with Save in its bar.
-            Screen.AddEvent.route,
-            Screen.EditEvent.route,
-            Screen.RequestChange.route,
-            Screen.JournalEditor.route,
-            Screen.EditChildInfo.route,
-            Screen.EditPet.route,
-            // The family's pushed screens (MON-24 phase 3, part B, Task 5): the system bar with its
-            // back button, and a list's "+" as a bar button.
-            Screen.ChildInfo.route,
-            Screen.ChildDetail.route,
-            Screen.Pets.route,
-            Screen.Contacts.route,
-            Screen.Documents.route,
-            Screen.Journal.route,
-            Screen.Stickers.route,
-            Screen.EarlierFamilies.route,
-            Screen.EarlierFamily.route,
-            Screen.UnassignedRecords.route,
-            Screen.MonthReview.route,
-            Screen.Export.route,
-            Screen.Support.route,
-            // Agreements, people, sign-in links and Settings' sub-screens (Task 6): the system bar,
-            // with a pinned primary action (Save, Connect, Send for approval) as its bar button.
-            Screen.ChangeRequests.route,
-            Screen.ParentingPlan.route,
-            Screen.CustodySetup.route,
-            Screen.CustodyConflict.route,
-            Screen.Pairing.route,
-            Screen.Professionals.route,
-            Screen.ProfessionalCalendar.route,
-            Screen.ProfessionalPlan.route,
-            Screen.Friends.route,
-            Screen.FriendDetail.route,
-            Screen.FriendProfile.route,
-            Screen.FriendCalendar.route,
-            Screen.GuestAccept.route,
-            Screen.MyProfile.route,
-            Screen.CoParentProfile.route,
-            Screen.SchoolImport.route,
-            Screen.SchoolConnect.route,
-            Screen.CalendarFeed.route,
-            Screen.DataSources.route,
-            // Chat (Task 7): the tab's list with a large title and its "+", and a thread whose
-            // header is the title view, with search and the overflow menu as bar buttons; the tab
-            // that renders its one thread in place shows the thread's bar.
-            Screen.Conversations.route,
-            Screen.Chat.route,
-            // The calendar (Task 8): the month as the bar's title, Today, Filters, the gear and "+"
-            // as its buttons, the Month/Week/Day control under it; the swap selection's close and
-            // arrows while days are chosen.
-            Screen.Calendar.route
+        val NO_BAR_ROUTES: Set<String> = setOf(
+            Screen.Loading.route,
+            Screen.PrivacyConsent.route,
+            Screen.Auth.route
         )
 
+        /** Whether the navigation bar shows over [route]'s screen: every route but [NO_BAR_ROUTES]. */
+        fun showsNativeBar(route: String): Boolean = route !in NO_BAR_ROUTES
+
         /** Whether two lists hold the same view controllers, in order. */
-        fun sameControllers(current: List<*>, wanted: List<UIViewController>): Boolean =
+        private fun sameControllers(current: List<*>, wanted: List<UIViewController>): Boolean =
             current.size == wanted.size && current.indices.all { current[it] === wanted[it] }
     }
 }

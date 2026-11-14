@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -15,7 +14,6 @@ import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.saveable.Saver
@@ -30,7 +28,6 @@ import com.coparently.app.presentation.common.ScreenBackStep
 import com.coparently.app.presentation.common.ScreenBar
 import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.theme.IconSizes
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.day_swap_choose_title
 import com.coparently.app.resources.day_swap_close_selection
@@ -94,40 +91,40 @@ internal fun SwapSelectionHeader(
         SwapSelectionShellBar(onPreviousMonth = onPreviousMonth, onNextMonth = onNextMonth, onClose = onClose)
         return
     }
-    TopAppBar(
-        colors = screenTopAppBarColors(),
-        navigationIcon = {
-            IconButton(onClick = onClose) {
-                Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.day_swap_close_selection))
-            }
-        },
-        title = {
-            Text(
-                text = stringResource(Res.string.day_swap_choose_title),
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.semantics { heading() }
-            )
-        },
-        actions = {
-            IconButton(onClick = onPreviousMonth) {
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = stringResource(Res.string.day_swap_previous_month)
+    val title = stringResource(Res.string.day_swap_choose_title)
+    AppTopBar(
+        ScreenBar(
+            title = title,
+            leading = BarLeading.Close(label = stringResource(Res.string.day_swap_close_selection), onClick = onClose),
+            titleContent = {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.semantics { heading() }
                 )
-            }
-            Text(
-                text = ReaderDateText.month(month, "MMMyyyy"),
-                style = MaterialTheme.typography.labelLarge
-            )
-            IconButton(onClick = onNextMonth) {
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = stringResource(Res.string.day_swap_next_month)
+            },
+            // The month between its arrows, which no bar action can hold.
+            trailingContent = {
+                IconButton(onClick = onPreviousMonth) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                        contentDescription = stringResource(Res.string.day_swap_previous_month)
+                    )
+                }
+                Text(
+                    text = ReaderDateText.month(month, "MMMyyyy"),
+                    style = MaterialTheme.typography.labelLarge
                 )
+                IconButton(onClick = onNextMonth) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = stringResource(Res.string.day_swap_next_month)
+                    )
+                }
             }
-        }
+        )
     )
 }
 

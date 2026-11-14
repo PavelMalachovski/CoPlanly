@@ -10,8 +10,9 @@ import XCTest
 /// second tap on the selected tab popping two screens, the Chat tab's thread under the system bar with
 /// its overflow menu opening and closing, a sheet holding an edit swiped down, which
 /// must ask "Discard changes?" and stay open on "Keep editing", the event form as a sheet with Save in
-/// its bar (disabled until the event has a title), and a sign-out reaching the sign-in screen with no
-/// tabs, then a sign-in landing on fresh tabs.
+/// its bar (disabled until the event has a title), New event's description and the chat composer
+/// staying above the keyboard, and a sign-out reaching the sign-in screen with no tabs, then a
+/// sign-in landing on fresh tabs.
 ///
 /// **One run reports every problem.** The walk is a list of steps. A step that fails records its
 /// reason, a screenshot and the app's accessibility hierarchy, and the walk goes on; each step starts
@@ -69,8 +70,16 @@ final class ShellUITests: XCTestCase {
         step("a new event swiped down closes without asking", after: ["New event is a sheet with Save in its bar"]) {
             try self.newEventSwipeDown()
         }
+        step("New event's description stays above the keyboard", after: ["New event is a sheet with Save in its bar"]) {
+            try self.eventDescriptionAboveKeyboard()
+        }
         step("sign out, and sign in to fresh tabs", after: ["Settings"]) {
             try self.signOutAndIn(email: email, password: password)
+        }
+        // Last: the composer's field takes a return as a new line, so the keyboard it opens stays up
+        // over the tab bar, and no step could tap a tab after it.
+        step("the chat composer stays above the keyboard", after: ["Calendar and Chat tabs"]) {
+            try self.chatComposerAboveKeyboard()
         }
 
         print("COPLANLY_SHELL_WALK_SUMMARY_BEGIN")
@@ -317,6 +326,57 @@ final class ShellUITests: XCTestCase {
         try require(app.navigationBars[calendarMonthTitle].waitForExistence(timeout: timeout), "The calendar's bar did not come back after the event form")
         try require(app.navigationBars.count == 1, "A second bar over the calendar after the event form")
         try require(app.tabBars.firstMatch.buttons["Calendar"].isSelected, "The calendar was not under the sheet")
+    }
+
+    /// The keyboard is taken once, by the shell's screen frame (MON-24 phase 3, part B, Task 9):
+    /// typing into New event's description leaves the field above the keys. The labels are the
+    /// shared strings in English.
+    private func eventDescriptionAboveKeyboard() throws {
+        try goToCalendarRoot()
+        press(try element(labelled: "Add event", in: app.buttons))
+        let sheetBar = app.navigationBars["New event"]
+        try require(sheetBar.waitForExistence(timeout: timeout), "The event form did not open as a sheet")
+        // A draft that already holds a description shows its field; otherwise a button opens it.
+        let open = app.buttons.matching(NSPredicate(format: "label == %@", "Add a description")).firstMatch
+        if open.waitForExistence(timeout: 5) { press(open) }
+        let description = try field(labelled: "Description (optional)")
+        try type("Keyboard check", into: description)
+        try require(app.keyboards.firstMatch.waitForExistence(timeout: timeout), "No keyboard over the description")
+        shot("18-event-description-keyboard")
+        try require(isClearOfKeyboard(description), "The description field is under the keyboard")
+        try require(sheetBar.buttons["Save event"].exists, "The sheet's Save left its bar while typing")
+        // The description's return closes the keyboard; a new event then closes without asking.
+        dismissKeyboard()
+        swipeSheetDown(from: sheetBar)
+        try require(sheetBar.waitForNonExistence(timeout: timeout), "The event form did not close after the check")
+    }
+
+    /// The Chat tab's composer stays above the keyboard and its send button can be tapped there
+    /// (MON-24 phase 3, part B, Task 9). The labels are the shared strings in English; nothing is sent,
+    /// and what was typed is deleted again so no draft is kept.
+    private func chatComposerAboveKeyboard() throws {
+        let chat = app.tabBars.firstMatch.buttons["Chat"]
+        try require(chat.waitForExistence(timeout: timeout), "No Chat tab")
+        chat.tap()
+        try require(chat.isSelected, "The Chat tab did not select")
+        let composer = try field(labelled: "Type a message…")
+        let text = "Keyboard check"
+        try type(text, into: composer)
+        try require(app.keyboards.firstMatch.waitForExistence(timeout: timeout), "No keyboard over the composer")
+        let send = app.buttons.matching(NSPredicate(format: "label == %@", "Send")).firstMatch
+        try require(send.waitForExistence(timeout: timeout), "The composer has no send button")
+        shot("19-chat-composer-keyboard")
+        try require(isClearOfKeyboard(send), "The send button is under the keyboard")
+        app.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: text.count))
+    }
+
+    /// Whether [element] is drawn on screen and wholly above the keyboard, so a finger can reach it.
+    /// Compose's elements are not always reported hittable, so the frames decide.
+    private func isClearOfKeyboard(_ element: XCUIElement) -> Bool {
+        let keyboard = app.keyboards.firstMatch
+        guard element.exists, keyboard.exists else { return false }
+        let frame = element.frame
+        return !frame.isEmpty && frame.minY >= 0 && frame.maxY <= keyboard.frame.minY
     }
 
     /// Whether [button] becomes enabled within the step timeout.

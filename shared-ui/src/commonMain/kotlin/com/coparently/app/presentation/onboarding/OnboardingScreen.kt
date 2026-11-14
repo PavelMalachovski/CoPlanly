@@ -5,12 +5,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -35,7 +40,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -48,15 +52,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
+import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.CountryPicker
 import com.coparently.app.presentation.common.STACK_CONTROLS_FONT_SCALE
 import com.coparently.app.presentation.common.ScreenBackStep
+import com.coparently.app.presentation.common.ScreenBar
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.rememberNotificationPermissionRequester
 import com.coparently.app.presentation.common.rememberParentNames
+import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.custody.CustodyPatternActions
 import com.coparently.app.presentation.custody.CustodyPatternForm
@@ -75,7 +82,6 @@ import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.country_label
 import com.coparently.app.resources.onboarding_back
@@ -223,15 +229,21 @@ private class ScheduleStepState(
     val viewModel: CustodySetupViewModel
 )
 
-/** Title and how far along the wizard is, so no step feels open-ended. */
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Title and how far along the wizard is, so no step feels open-ended. On the iPhone the title is
+ * the navigation bar's (MON-24 phase 3, part B), whose back is the wizard's own step back
+ * ([ScreenBackStep]), and the progress under it starts below that bar, the inset the Material bar
+ * would have taken.
+ */
 @Composable
 private fun OnboardingTopBar(state: OnboardingUiState) {
-    Column {
-        TopAppBar(
-            colors = screenTopAppBarColors(),
-            title = { Text(stringResource(Res.string.onboarding_title)) }
-        )
+    val belowShellBar = if (shellDrawsBars()) {
+        Modifier.windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top))
+    } else {
+        Modifier
+    }
+    Column(modifier = belowShellBar) {
+        AppTopBar(ScreenBar(title = stringResource(Res.string.onboarding_title)))
         LinearProgressIndicator(
             progress = { state.displayIndex.toFloat() / state.stepCount },
             modifier = Modifier.fillMaxWidth()

@@ -2455,7 +2455,25 @@ The walk's family has no custody schedule, so the swap selection's bar is not wa
       days", "Previous month", "Next month".
 - **If it fails:** `presentation/calendar/components/CalendarTopBar.kt`, `CalendarHeader.kt`,
   `CalendarMonthBar.kt`, `calendar/SwapSelectionChrome.kt` (`:shared-ui`), and the shell's
-  `NATIVE_BAR_ROUTES` (`ios/shell/StackHost.kt`).
+  `NO_BAR_ROUTES` (`ios/shell/StackHost.kt`).
+
+### 3.38 Every iPhone screen under its system bar, and the keyboard · 1P, iPhone, onboarding needs a new account
+
+MON-24 phase 3, part B, Task 9. `NativeBarRoutesTest` holds that the navigation bar shows over every
+route but the loading screen, the telemetry question and sign-in; the `ios-app` job's walk types into
+New event's description and the Chat tab's composer and checks each stays above the keys (artifact
+`ios-shell`, `18-event-description-keyboard`, `19-chat-composer-keyboard`). What is left:
+
+- [ ] **Onboarding.** Sign up with a new account: the wizard's title is the system bar's, the progress
+      line and "Step 1 of 4" sit under it, and nothing is drawn under the bar's glass. From step 2 the
+      bar's back button returns to the previous step, and the edge swipe does not leave the wizard.
+- [ ] **The keyboard, once.** In a chat thread, tap the composer: the field and the send button rise
+      just above the keys, with no gap between them and the keyboard, and the thread's bar stays where
+      it was. In New event, open the description and type: the field stays in view above the keys,
+      and Save stays in the sheet's bar. Close the keyboard: the screen returns to its height.
+- **If it fails:** `ios/shell/ScreenController.kt` (`ScreenFrame`'s `imePadding()`, the view
+  controller's `onFocusBehavior`), `onboarding/OnboardingScreen.kt` (`:shared-ui`), and the shell's
+  `NO_BAR_ROUTES` (`ios/shell/StackHost.kt`).
 
 ---
 

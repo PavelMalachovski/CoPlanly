@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -26,7 +25,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -67,7 +65,6 @@ import com.coparently.app.presentation.platform.LocalDictation
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.presentation.theme.screenTopAppBarColors
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.chat_back
 import com.coparently.app.resources.chat_failed_to_send
@@ -504,6 +501,7 @@ fun ChatTopBar(
         return
     }
     MaterialChatBar(
+        title = title,
         searchQuery = searchQuery,
         onSearchQueryChange = onSearchQueryChange,
         onOpenSearch = onOpenSearch,
@@ -516,14 +514,15 @@ fun ChatTopBar(
 }
 
 /**
- * The thread's bar as Android draws it, the Material bar it always drew: [ChatTopBar]'s parameters
- * but for the title, which the header shows.
+ * The thread's bar as Android draws it, the Material bar it always drew, through [AppTopBar]:
+ * [ChatTopBar]'s parameters, the header in the title slot. Search and the overflow menu are the
+ * bar's trailing content, so the menu keeps its own anchored `DropdownMenu` after the search icon.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 // One callback per action the bar offers, as ChatTopBar's.
 @Suppress("LongParameterList")
 private fun MaterialChatBar(
+    title: String,
     searchQuery: String?,
     onSearchQueryChange: (String) -> Unit,
     onOpenSearch: () -> Unit,
@@ -534,52 +533,44 @@ private fun MaterialChatBar(
     header: @Composable () -> Unit
 ) {
     if (searchQuery != null) {
-        TopAppBar(
-            colors = screenTopAppBarColors(),
-            title = {
-                ChatSearchField(
-                    query = searchQuery,
-                    onQueryChange = onSearchQueryChange,
-                    onClear = { onSearchQueryChange("") }
-                )
-            },
-            navigationIcon = {
-                IconButton(onClick = onCloseSearch) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(Res.string.chat_search_close)
+        AppTopBar(
+            ScreenBar(
+                title = stringResource(Res.string.chat_search),
+                leading = BarLeading.Back(
+                    label = stringResource(Res.string.chat_search_close),
+                    onClick = onCloseSearch
+                ),
+                titleContent = {
+                    ChatSearchField(
+                        query = searchQuery,
+                        onQueryChange = onSearchQueryChange,
+                        onClear = { onSearchQueryChange("") }
                     )
                 }
-            }
+            )
         )
         return
     }
-    TopAppBar(
-        colors = screenTopAppBarColors(),
-        title = header,
-        navigationIcon = {
-            onBack?.let { back ->
-                IconButton(onClick = back) {
+    val backLabel = stringResource(Res.string.chat_back)
+    AppTopBar(
+        ScreenBar(
+            title = title,
+            leading = onBack?.let { BarLeading.Back(label = backLabel, onClick = it) } ?: BarLeading.None,
+            titleContent = header,
+            trailingContent = {
+                IconButton(onClick = onOpenSearch) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(Res.string.chat_back)
+                        imageVector = Icons.Default.Search,
+                        contentDescription = stringResource(Res.string.chat_search)
                     )
                 }
+                // Settings sits in the overflow menu here (UX audit M12): the thread's bar carries the
+                // co-parent's name and search, and a third icon crowded both.
+                if (onOpenSettings != null || onBlock != null) {
+                    ChatOverflowMenu(onOpenSettings = onOpenSettings, onBlock = onBlock)
+                }
             }
-        },
-        actions = {
-            IconButton(onClick = onOpenSearch) {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = stringResource(Res.string.chat_search)
-                )
-            }
-            // Settings sits in the overflow menu here (UX audit M12): the thread's bar carries the
-            // co-parent's name and search, and a third icon crowded both.
-            if (onOpenSettings != null || onBlock != null) {
-                ChatOverflowMenu(onOpenSettings = onOpenSettings, onBlock = onBlock)
-            }
-        }
+        )
     )
 }
 
