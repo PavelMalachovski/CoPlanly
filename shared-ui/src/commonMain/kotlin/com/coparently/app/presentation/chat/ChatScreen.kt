@@ -503,6 +503,36 @@ fun ChatTopBar(
         )
         return
     }
+    MaterialChatBar(
+        searchQuery = searchQuery,
+        onSearchQueryChange = onSearchQueryChange,
+        onOpenSearch = onOpenSearch,
+        onCloseSearch = onCloseSearch,
+        onBack = onBack,
+        onOpenSettings = onOpenSettings,
+        onBlock = onBlock,
+        header = header
+    )
+}
+
+/**
+ * The thread's bar as Android draws it, the Material bar it always drew: [ChatTopBar]'s parameters
+ * but for the title, which the header shows.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+// One callback per action the bar offers, as ChatTopBar's.
+@Suppress("LongParameterList")
+private fun MaterialChatBar(
+    searchQuery: String?,
+    onSearchQueryChange: (String) -> Unit,
+    onOpenSearch: () -> Unit,
+    onCloseSearch: () -> Unit,
+    onBack: (() -> Unit)?,
+    onOpenSettings: (() -> Unit)?,
+    onBlock: (() -> Unit)?,
+    header: @Composable () -> Unit
+) {
     if (searchQuery != null) {
         TopAppBar(
             colors = screenTopAppBarColors(),

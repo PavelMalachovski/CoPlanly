@@ -50,8 +50,8 @@ import com.coparently.app.presentation.common.ListSkeleton
 import com.coparently.app.presentation.common.Loadable
 import com.coparently.app.presentation.common.ScreenBar
 import com.coparently.app.presentation.common.TwoPanes
-import com.coparently.app.presentation.common.addBarAction
 import com.coparently.app.presentation.common.WideColumn
+import com.coparently.app.presentation.common.addBarAction
 import com.coparently.app.presentation.common.rememberTwoPane
 import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.common.valueOrNull

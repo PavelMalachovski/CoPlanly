@@ -28,10 +28,10 @@ import platform.UIKit.UIBarButtonItem
 import platform.UIKit.UIBarButtonItemStyle
 import platform.UIKit.UIBarButtonSystemItem
 import platform.UIKit.UIColor
+import platform.UIKit.UILayoutPriorityDefaultHigh
 import platform.UIKit.UIMenu
 import platform.UIKit.UIMenuElementAttributesDestructive
 import platform.UIKit.UIMenuElementAttributesDisabled
-import platform.UIKit.UILayoutPriorityDefaultHigh
 import platform.UIKit.UINavigationItemLargeTitleDisplayMode
 import platform.UIKit.UIScreen
 import platform.UIKit.UIViewController
