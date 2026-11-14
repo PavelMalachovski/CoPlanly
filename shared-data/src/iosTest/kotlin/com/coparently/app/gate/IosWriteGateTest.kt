@@ -220,7 +220,10 @@ private class GateScenario(
     private suspend fun eventDelete() {
         val event = newEvent("Swimming", important = false)
         alice.eventRepository.insertEvent(event)
-        alice.eventRepository.deleteEvent(event, announce = false)
+        // The stored event, as the screens delete it: the one in hand carries no family, and a
+        // record of no family is this parent's alone, so its revision would name Alice only.
+        val stored = checkNotNull(alice.eventRepository.getEventById(event.id)) { "Alice has no event to delete" }
+        alice.eventRepository.deleteEvent(stored, announce = false)
         val document = checkNotNull(bob.eventDataSource.getEventById(event.id)) { "Bob cannot read the deleted event" }
         expectThat(Tombstone.isDeleted(document) && document[Tombstone.DELETED_BY] == alice.uid) {
             "Bob read no tombstone of Alice's deletion: $document"
