@@ -559,9 +559,12 @@ internal fun appDestinations(
         // On the iPhone, sign-out runs on the shell's own session state (the one deciding the start
         // destination, which outlives this screen): a Settings-scoped copy was cleared with the
         // screen the sign-out navigates away from, cutting its steps short, and the shell never
-        // heard that the account had gone. Android keeps the entry's own, as it always had.
-        val sessionState: AuthStateViewModel =
-            if (shellDrawsBars()) authStateViewModel else koinViewModel()
+        // heard that the account had gone. The shell then shows the sign-in itself, once the
+        // sign-out has ended the session, so this screen navigates nowhere: a second switch of the
+        // root racing the shell's own is what the walk's first run of this met. Android keeps the
+        // entry's own and its navigation, as it always had.
+        val shellDecides = shellDrawsBars()
+        val sessionState: AuthStateViewModel = if (shellDecides) authStateViewModel else koinViewModel()
         SettingsScreen(
             // Reached via the gear action in the top-level top bars — it opens as
             // a detail screen, so it gets a back arrow.
@@ -579,8 +582,10 @@ internal fun appDestinations(
                 navController.navigate(Screen.MyProfile.route)
             },
             onSignOut = {
-                navController.navigate(Screen.Auth.route) {
-                    popUpTo(Screen.Calendar.route) { inclusive = true }
+                if (!shellDecides) {
+                    navController.navigate(Screen.Auth.route) {
+                        popUpTo(Screen.Calendar.route) { inclusive = true }
+                    }
                 }
             },
             syncViewModel = syncViewModel,

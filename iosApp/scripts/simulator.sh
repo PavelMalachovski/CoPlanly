@@ -132,7 +132,9 @@ show_samples() {
   newest=$(ls -t "$out"/sample-*.txt 2>/dev/null | head -n 1) || true
   [ -n "$newest" ] || return 0
   echo "::group::the app's main thread, last sampled while the walk ran"
-  sed -n '/com.apple.main-thread/,/^ *[0-9]* Thread_/p' "$newest" | head -c 40000
+  # `head` closing the pipe early must not end the script (SIGPIPE, exit 141, under pipefail)
+  # before the app's own log lines below are printed.
+  { sed -n '/com.apple.main-thread/,/^ *[0-9]* Thread_/p' "$newest" | head -c 40000; } || true
   echo
   echo "::endgroup::"
 }
