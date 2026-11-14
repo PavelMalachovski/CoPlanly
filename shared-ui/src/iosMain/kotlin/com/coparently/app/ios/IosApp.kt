@@ -29,8 +29,11 @@ import org.koin.core.Koin
 import org.koin.core.context.startKoin
 import org.koin.core.module.Module
 import org.koin.dsl.module
+import platform.Foundation.NSLog
 import platform.UIKit.UIViewController
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.experimental.ExperimentalNativeApi
+import kotlin.native.setUnhandledExceptionHook
 
 /**
  * What the iPhone app's own build hands the shared code at launch (MON-24 phase 3), read by its
@@ -100,6 +103,7 @@ object IosApp {
     @Throws(Throwable::class)
     fun start(config: IosAppConfig, google: GoogleIdTokenSource) {
         started.claim()
+        reportUncaughtExceptions()
         IosFirebase.configure(config)
         // After Firebase, which the sign-out needs; before Koin builds the preference store.
         clearPreviousInstall(google.session())
@@ -186,6 +190,21 @@ object IosApp {
     }
 
     private const val TAG = "IosApp"
+
+    /**
+     * Writes an exception nothing caught to the system log (`NSLog`) before Kotlin/Native ends the
+     * process, as it would anyway: the shared logger prints to standard output, which a simulator's
+     * system log and a phone's crash report do not keep, so a crash otherwise leaves only native
+     * frames to read. The process still terminates once the hook returns.
+     */
+    @OptIn(ExperimentalNativeApi::class)
+    private fun reportUncaughtExceptions() {
+        setUnhandledExceptionHook { failure ->
+            // The type and message first, alone: the system log may cut a long line.
+            NSLog("CoPlanly uncaught exception: %@ (cause: %@)", failure.toString(), failure.cause.toString())
+            NSLog("CoPlanly uncaught exception's trace: %@", failure.stackTraceToString())
+        }
+    }
 
     /**
      * [openUrl]'s order, apart for its test: a chat link that names a family is armed only once
