@@ -23,6 +23,9 @@ import XCTest
 /// pass, and prints one summary line per step.
 ///
 /// The texts it looks for are the shared strings in English, the simulator's language.
+///
+/// `testTour` is the second method (MON-24 phase 3, part B, Task 13): a screenshot of every
+/// destination it can reach, in CI's own step and on a family of its own (see its KDoc).
 final class ShellUITests: XCTestCase {
     private let timeout: TimeInterval = 30
     private let app = XCUIApplication()
@@ -37,8 +40,13 @@ final class ShellUITests: XCTestCase {
         continueAfterFailure = true
     }
 
-    /// XCUITest's own issues count against the step running.
+    /// XCUITest's own issues count against the step running. While the tour runs they are the
+    /// reason its current destination is skipped instead, never a failure (see `testTour`).
     override func record(_ issue: XCTIssue) {
+        if touring {
+            if tourIssue == nil { tourIssue = issue.compactDescription }
+            return
+        }
         if stepIssue == nil { stepIssue = issue.compactDescription }
         super.record(issue)
     }
@@ -732,5 +740,414 @@ final class ShellUITests: XCTestCase {
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    // MARK: - The tour
+
+    /// Whether `testTour` is running: XCUITest's issues then skip a destination instead of failing.
+    private var touring = false
+
+    /// The first issue XCUITest recorded while the tour visited the current destination.
+    private var tourIssue: String?
+
+    /// Each destination's outcome, in the order visited: "reached" or "skipped: …".
+    private var tourOutcomes: [(route: String, outcome: String)] = []
+
+    /// The destinations during which the app stopped running.
+    private var tourCrashes: [String] = []
+
+    /// The title of the event `tools/ios/seed-shell-family.js --tour` writes for today.
+    private let tourEventTitle = "Tour dentist"
+
+    /// Every route of `AppDestinationCatalog.all` (shared-ui's `navigation/AppDestination.kt`), in
+    /// its order. Keep the two lists alike: a route the tour has no way to is reported as such, so
+    /// a new destination shows in `tour.txt` the day it is added.
+    private let tourRoutes = [
+        "loading", "privacy_consent", "onboarding", "auth", "home", "calendar",
+        "add_event?date={date}&hour={hour}", "edit_event/{eventId}", "contacts",
+        "change_requests?eventId={eventId}&section={section}", "request_change/{eventId}", "settings",
+        "parenting_plan", "export?thread={thread}&family={family}", "month_review", "unassigned_records",
+        "family_documents?family={family}", "support", "earlier_families", "earlier_family/{familyId}",
+        "journal", "stickers", "journal_entry/{entryId}", "child_info", "child_detail/{childInfoId}",
+        "edit_child_info/{childInfoId}", "pets", "edit_pet/{petId}",
+        "pairing?code={code}&enter={enter}&unpair={unpair}", "guest_accept?code={code}", "custody_conflict",
+        "school_import", "school_connect?connectionId={connectionId}", "calendar_feed", "data_sources",
+        "friends", "friend_detail/{friendUid}", "friend_profile", "friend_calendar/{familyId}",
+        "professionals", "professional_calendar/{grantId}", "professional_plan/{grantId}",
+        "custody_setup?planQuestion={planQuestion}", "my_profile", "coparent_profile",
+        "conversations?draft={draft}", "chat/{conversationId}?draft={draft}", "family", "expenses",
+        "add_expense", "edit_expense/{expenseId}",
+    ]
+
+    /// The destinations no signed-in parent of the seeded family can reach, each with the reason.
+    private let tourUnreachable: [String: String] = [
+        "loading": "shown only until the start destination is known, a moment no tap leads to",
+        "privacy_consent": "the iPhone collects no telemetry, so the question is never asked (spec §5.2)",
+        "onboarding": "the seeded parent finished onboarding; a new account would need the wizard's own walk",
+        "unassigned_records": "its row is drawn only while records of no family wait, and every seeded record names the family",
+        "earlier_families": "its row is drawn only after a family ended, and the seeded parent has one live family",
+        "earlier_family/{familyId}": "opened from Earlier families, which the seeded parent does not have",
+        "custody_conflict": "opened only by a pairing whose two schedules disagree; the seeded pair has none",
+        "friend_detail/{friendUid}": "opened from a family friend's grant; no friend was admitted (that needs a third account and the friend callable)",
+        "friend_profile": "a family friend's own screen, for a friend's account, not a parent's",
+        "friend_calendar/{familyId}": "a family friend's view of a family, for a friend's account, not a parent's",
+        "professional_calendar/{grantId}": "a professional's view of a family, for a professional's account",
+        "professional_plan/{grantId}": "a professional's view of the plan, for a professional's account",
+        "chat/{conversationId}?draft={draft}": "with one conversation the Chat tab renders the thread in place (design item 7), shot as conversations",
+    ]
+
+    /// The tour (MON-24 phase 3, part B, Task 13): signs in as the first parent of the family
+    /// `tools/ios/seed-shell-family.js --tour` seeded on fresh emulators (an event today with a
+    /// change request about it, a child, a pet, an expense and a vault document), visits every
+    /// destination it can reach from there and attaches a screenshot named `tour-<route>` for each,
+    /// the route as `AppDestinationCatalog` writes it up to its first `/` or `?`.
+    ///
+    /// As the Android UI tour (`e2e/UiTourTest`), a destination it cannot reach is recorded with
+    /// the reason, never as a failure: a `COPLANLY_TOUR <route>: skipped: …` line, in a text
+    /// attachment and in the log, which CI keeps as `tour.txt` in the `ios-tour` artifact. Each
+    /// visit starts from a tab at its first screen, so one that fails does not take the next with
+    /// it. The tour fails only when the app does not launch or stops running during a visit (it is
+    /// launched again and the tour goes on).
+    func testTour() throws {
+        let environment = ProcessInfo.processInfo.environment
+        let email = try XCTUnwrap(environment["COPLANLY_UITEST_EMAIL"], "No seeded account was handed to the tour")
+        let password = try XCTUnwrap(environment["COPLANLY_UITEST_PASSWORD"])
+
+        app.launchEnvironment["COPLANLY_EMULATOR_HOST"] = "127.0.0.1"
+        app.launch()
+        guard app.wait(for: .runningForeground, timeout: 60) else {
+            XCTFail("The app did not launch")
+            return
+        }
+
+        touring = true
+        tourVisit("auth") {
+            try self.require(self.app.staticTexts["Welcome back!"].waitForExistence(timeout: 120), "The sign-in screen did not show")
+        }
+        var signedIn = true
+        do {
+            try signIn(email: email, password: password)
+        } catch {
+            signedIn = false
+            tourOutcomes.append(("sign-in", "skipped: \(error)"))
+        }
+        if signedIn { tourSignedIn() }
+        let cause = signedIn ? "the tour has no way written to it" : "signing in failed, so nothing after the sign-in screen was reached"
+        for route in tourRoutes where !tourOutcomes.contains(where: { $0.route == route }) {
+            tourOutcomes.append((route, "skipped: " + (tourUnreachable[route] ?? cause)))
+        }
+        touring = false
+
+        let lines = tourOutcomes.map { "COPLANLY_TOUR \($0.route): \($0.outcome)" }
+        print("COPLANLY_TOUR_SUMMARY_BEGIN")
+        lines.forEach { print($0) }
+        let reached = tourOutcomes.filter { $0.outcome == "reached" }.count
+        print("COPLANLY_TOUR_SUMMARY reached \(reached) of \(tourRoutes.count) destinations")
+        print("COPLANLY_TOUR_SUMMARY_END")
+        let log = XCTAttachment(string: lines.joined(separator: "\n") + "\n")
+        log.name = "tour-log"
+        log.lifetime = .keepAlways
+        add(log)
+        if !tourCrashes.isEmpty {
+            XCTFail("The app stopped running while the tour visited: " + tourCrashes.joined(separator: ", "))
+        }
+    }
+
+    /// Every visit after signing in, each from a known place. The order keeps the ones that leave
+    /// something open (the calendar's event preview, a link's screen) late.
+    private func tourSignedIn() {
+        // The four tabs.
+        tourVisit("home") { try self.tourTab("Home") }
+        tourVisit("family") { try self.tourTab("Family") }
+        tourVisit("conversations?draft={draft}") {
+            try self.tourTab("Chat")
+            _ = self.element(labelledContaining: "Bob").waitForExistence(timeout: 30)
+        }
+        tourVisit("calendar") { try self.tourTab("Calendar") }
+
+        // Home.
+        tourVisit("change_requests?eventId={eventId}&section={section}") {
+            try self.tourTab("Home")
+            try self.tourOpen(containing: "See all", from: "Home")
+        }
+
+        // The Family tab's rows.
+        let familyRows: [(String, String)] = [
+            ("expenses", "This month"),
+            ("support", "Child support"),
+            ("custody_setup?planQuestion={planQuestion}", "Custody schedule"),
+            ("parenting_plan", "Parenting plan"),
+            ("child_info", "Child information"),
+            ("pets", "Pets"),
+            ("contacts", "Contacts"),
+            ("family_documents?family={family}", "Documents"),
+            ("month_review", "Month in review"),
+            ("export?thread={thread}&family={family}", "Export the record"),
+            ("journal", "Private journal"),
+            ("pairing?code={code}&enter={enter}&unpair={unpair}", "Linked: Bob"),
+            ("coparent_profile", "What Bob has shared"),
+            ("friends", "Family friends"),
+            ("professionals", "Professionals"),
+            ("stickers", "My stickers"),
+        ]
+        for (route, row) in familyRows {
+            tourVisit(route) {
+                try self.tourTab("Family")
+                if route.hasPrefix("pairing") && !self.labelExists(containing: row) {
+                    // The co-parent row reads "Linked: Bob" under its title once the link has reached the phone.
+                    try self.tourOpen(containing: "Co-parent", from: "Family")
+                } else {
+                    try self.tourOpen(containing: row, from: "Family")
+                }
+            }
+        }
+
+        // One level further, from the Family tab.
+        tourVisit("add_expense") {
+            try self.tourFamilyRow("This month")
+            try self.tourOpenSheet(labelled: "Add expense")
+        }
+        tourVisit("edit_expense/{expenseId}") {
+            try self.tourFamilyRow("This month")
+            try self.tourOpenSheet(containing: "Swimming course")
+        }
+        tourVisit("child_detail/{childInfoId}") {
+            try self.tourFamilyRow("Child information")
+            try self.tourOpen(containing: "Emma", from: nil)
+        }
+        tourVisit("edit_child_info/{childInfoId}") {
+            try self.tourFamilyRow("Child information")
+            try self.tourOpen(containing: "Emma", from: nil)
+            try self.tourOpenSheet(labelled: "Edit")
+        }
+        tourVisit("edit_pet/{petId}") {
+            try self.tourFamilyRow("Pets")
+            try self.tourOpenSheet(containing: "Max")
+        }
+        tourVisit("journal_entry/{entryId}") {
+            try self.tourFamilyRow("Private journal")
+            try self.tourOpenSheet(labelled: "New entry")
+        }
+
+        // Settings and its screens.
+        tourVisit("settings") { try self.tourSettings() }
+        let settingsRows: [(String, String)] = [
+            ("data_sources", dataSourcesTitle),
+            ("calendar_feed", "Calendar feed for iPhone"),
+            ("school_import", "Import from Bakal"),
+            ("my_profile", "My details"),
+        ]
+        for (route, row) in settingsRows {
+            tourVisit(route) {
+                try self.tourSettings()
+                try self.tourOpen(containing: row, from: "Settings")
+            }
+        }
+        tourVisit("school_connect?connectionId={connectionId}") {
+            try self.tourSettings()
+            try self.tourOpen(containing: "Import from Bakal", from: "Settings")
+            try self.tourOpen(containing: "Connect a school", from: nil)
+        }
+
+        // The calendar's forms, from its bar and from today's event.
+        tourVisit("add_event?date={date}&hour={hour}") {
+            try self.tourTab("Calendar")
+            try self.tourOpenSheet(labelled: "Add event")
+        }
+        tourVisit("edit_event/{eventId}") { try self.tourOpenEvent() }
+        tourVisit("request_change/{eventId}") {
+            try self.tourOpenEvent()
+            try self.tourOpenSheet(labelled: "Request change")
+        }
+
+        // A link: a guest invitation's code, which the emulators do not hold.
+        tourVisit("guest_accept?code={code}") {
+            try self.tourTab("Family")
+            self.app.open(URL(string: "coplanly://guest?code=ABC234")!)
+            try self.require(self.element(labelledContaining: "Guest access").waitForExistence(timeout: 60), "The guest link did not open Guest access")
+        }
+    }
+
+    /// Runs one visit to [route]: back to a known place, [reach], a screenshot, then nothing more.
+    /// A visit that throws, or during which XCUITest recorded an issue, is skipped with the reason.
+    private func tourVisit(_ route: String, _ reach: () throws -> Void) {
+        tourIssue = nil
+        var outcome = "reached"
+        XCTContext.runActivity(named: "tour \(route)") { _ in
+            do {
+                if route != "auth" { tourReset() }
+                try reach()
+                sleep(2)
+                if let issue = tourIssue {
+                    outcome = "skipped: \(issue)"
+                } else {
+                    shot("tour-" + tourShotName(route))
+                }
+            } catch {
+                outcome = "skipped: \(error)"
+            }
+        }
+        if app.state != .runningForeground {
+            tourCrashes.append(route)
+            outcome = "skipped: the app stopped running (state \(app.state.rawValue)) during the visit"
+            app.launch()
+            _ = app.tabBars.firstMatch.waitForExistence(timeout: 120)
+        }
+        // As it goes, for a tour that never reaches its summary (the step's time limit).
+        print("COPLANLY_TOUR_VISIT \(route): \(outcome)")
+        tourOutcomes.append((route, outcome))
+    }
+
+    /// [route] up to its first `/` or `?`: `edit_event/{eventId}` is shot as `tour-edit_event`.
+    private func tourShotName(_ route: String) -> String {
+        String(route.prefix { $0 != "/" && $0 != "?" })
+    }
+
+    /// Closes what an earlier visit left open — a question, a sheet, the event preview — so the
+    /// next starts from a tab.
+    private func tourReset() {
+        for _ in 0..<4 {
+            if app.staticTexts["Discard changes?"].exists { pressIfThere("Discard") }
+            let closes = app.navigationBars.buttons.matching(NSPredicate(format: "label == %@", "Close"))
+            // The sheet on top is the one whose cross can be touched.
+            let top = (0..<closes.count).reversed().map { closes.element(boundBy: $0) }.first { $0.isHittable }
+            guard let top else { break }
+            top.tap()
+            sleep(1)
+        }
+        if app.staticTexts["Discard changes?"].exists { pressIfThere("Discard") }
+        // The calendar's event preview is a sheet of the calendar's own: a tap on its scrim, above
+        // it, closes it.
+        if app.buttons.matching(NSPredicate(format: "label == %@", "Edit")).firstMatch.exists &&
+            app.tabBars.firstMatch.buttons["Calendar"].isSelected {
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25)).tap()
+            sleep(1)
+        }
+    }
+
+    /// Shows the tab labelled [name] at its first screen.
+    private func tourTab(_ name: String) throws {
+        let tab = app.tabBars.firstMatch.buttons[name]
+        try require(tab.waitForExistence(timeout: timeout), "No \(name) tab")
+        tab.tap()
+        sleep(1)
+        // A second tap on the selected tab pops it to its first screen.
+        tab.tap()
+        sleep(1)
+        try require(tab.isSelected, "The \(name) tab did not select")
+        if name == "Home" || name == "Family" {
+            try require(app.navigationBars[name].waitForExistence(timeout: timeout), "\(name)'s first screen is missing")
+        }
+    }
+
+    /// The Family tab's row reading [row], opened.
+    private func tourFamilyRow(_ row: String) throws {
+        try tourTab("Family")
+        try tourOpen(containing: row, from: "Family")
+    }
+
+    /// Settings, opened from the Family tab's bar.
+    private func tourSettings() throws {
+        try tourTab("Family")
+        let gear = app.navigationBars["Family"].buttons["Settings"]
+        try require(gear.waitForExistence(timeout: timeout), "The Family tab's bar has no Settings")
+        gear.tap()
+        try require(app.navigationBars["Settings"].waitForExistence(timeout: timeout), "Settings did not open")
+    }
+
+    /// Scrolls the element reading [text] onto the screen and taps it; it is reached once the bar
+    /// titled [from] has gone (a push), or, with no [from], once the screen's bar title changed.
+    private func tourOpen(containing text: String, from: String?) throws {
+        let target = try tourScrolledTo(text)
+        let bar = app.navigationBars.firstMatch
+        let before = bar.identifier
+        press(target)
+        let gone: () -> Bool = {
+            if let from { return self.app.navigationBars[from].waitForNonExistence(timeout: 4) }
+            for _ in 0..<8 {
+                if self.app.navigationBars.firstMatch.identifier != before { return true }
+                usleep(500_000)
+            }
+            return false
+        }
+        if !gone() {
+            // A tap while the list still glides after a swipe only stops it: once more.
+            sleep(1)
+            if target.exists { press(target) }
+            try require(gone(), "Tapping \"\(text)\" opened no other screen")
+        }
+    }
+
+    /// Taps the button labelled [label] (or else whatever reads it) and requires a form sheet: a
+    /// bar with a Close button over the screen.
+    private func tourOpenSheet(labelled label: String) throws {
+        try tourOpenSheet(target: try element(labelled: label, in: app.buttons), what: label)
+    }
+
+    /// Taps what reads [text], scrolled onto the screen, and requires a form sheet.
+    private func tourOpenSheet(containing text: String) throws {
+        try tourOpenSheet(target: try tourScrolledTo(text), what: text)
+    }
+
+    /// Taps [target] and requires a new sheet: one more bar with a Close button, or a bar whose
+    /// title was not on screen before (a form over a form may hide the bar under it).
+    private func tourOpenSheet(target: XCUIElement, what: String) throws {
+        let closes = app.navigationBars.buttons.matching(NSPredicate(format: "label == %@", "Close"))
+        let closesBefore = closes.count
+        let titlesBefore = Set(app.navigationBars.allElementsBoundByIndex.map { $0.identifier })
+        press(target)
+        for _ in 0..<20 {
+            if closes.count > closesBefore { return }
+            let titles = Set(app.navigationBars.allElementsBoundByIndex.map { $0.identifier })
+            if closes.count > 0 && !titles.isSubset(of: titlesBefore) { return }
+            usleep(500_000)
+        }
+        throw StepFailure(description: "Tapping \"\(what)\" opened no form sheet")
+    }
+
+    /// The element reading [text], scrolled until it is above the tab bar.
+    private func tourScrolledTo(_ text: String) throws -> XCUIElement {
+        let match = element(labelledContaining: text)
+        let bottom = app.windows.firstMatch.frame.maxY - 120
+        for _ in 0..<10 {
+            if match.waitForExistence(timeout: 3) && !match.frame.isEmpty && match.frame.maxY <= bottom {
+                sleep(1)
+                return match
+            }
+            app.swipeUp()
+        }
+        try require(match.exists, "Nothing on screen reads \"\(text)\"")
+        return match
+    }
+
+    /// The edit form of today's seeded event: the month's pill opens Day view, the event's block
+    /// there its preview, and the preview's Edit the form, as a sheet.
+    private func tourOpenEvent() throws {
+        try tourTab("Calendar")
+        let edit = app.buttons.matching(NSPredicate(format: "label == %@", "Edit")).firstMatch
+        for _ in 0..<3 where !edit.exists {
+            guard let event = tourTopmost(containing: tourEventTitle) else {
+                throw StepFailure(description: "Nothing on the calendar reads \"\(tourEventTitle)\"")
+            }
+            press(event)
+            _ = edit.waitForExistence(timeout: 5)
+        }
+        try require(edit.exists, "The event's preview did not open")
+        try tourOpenSheet(target: edit, what: "Edit")
+    }
+
+    /// Of what reads [text], the element drawn highest on the screen (the grid's, not the today
+    /// card's under it), or nil when nothing does.
+    private func tourTopmost(containing text: String) -> XCUIElement? {
+        let matches = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", text))
+        guard matches.firstMatch.waitForExistence(timeout: 30) else { return nil }
+        var best: XCUIElement?
+        for index in 0..<min(matches.count, 12) {
+            let candidate = matches.element(boundBy: index)
+            let frame = candidate.frame
+            guard !frame.isEmpty, frame.minY > 0 else { continue }
+            if best == nil || frame.minY < best!.frame.minY { best = candidate }
+        }
+        return best
     }
 }

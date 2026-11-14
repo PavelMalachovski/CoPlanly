@@ -2413,6 +2413,31 @@ jobs:
             "iosApp/scripts/simulator.sh shell-test $UDID iosApp/build/shell" \
             2>&1 | tee "$RUNNER_TEMP/shell-test.log"
 
+      # The iPhone tour (MON-24 phase 3, part B, Task 13): `ShellUITests.testTour`, on emulators of
+      # its own and a family seeded with the records a screen needs first (`seed-shell-family.js
+      # --tour`), visits every destination it can reach from that family and saves a screenshot
+      # named after each route, as the Android UI tour does; a destination it cannot reach is
+      # written to its log (`tour.txt`) with the reason, never a failure. It fails only when the
+      # app crashes or does not launch, and even then the emulator tests below still run
+      # (`continue-on-error`): "The iPhone tour ran" at the end of the job fails it instead. Its own
+      # account, since the walk ends by deleting the one it signed in as. The `ios-tour` artifact.
+      - name: The iPhone tour on the emulators (XCUITest)
+        id: tour
+        if: ${{ !cancelled() && steps.shell-test.outcome != 'skipped' }}
+        continue-on-error: true
+        timeout-minutes: 45
+        env:
+          FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
+          UDID: ${{ steps.simulator.outputs.udid }}
+        run: |
+          set -o pipefail
+          export PATH="$FIREBASE_JAVA_HOME/bin:$PATH"
+          firestore-tests/node_modules/.bin/firebase emulators:exec \
+            --only auth,firestore,functions,storage \
+            --project demo-coplanly \
+            "iosApp/scripts/simulator.sh tour $UDID iosApp/build/tour" \
+            2>&1 | tee "$RUNNER_TEMP/tour.log"
+
       # The simulator hands a test process only `SIMCTL_CHILD_`-prefixed variables, without the
       # prefix: both forms are exported here, and the two modules' build files also forward the plain
       # names that way (`KotlinNativeSimulatorTest`), so the tests read COPLANLY_EMULATOR_HOST
@@ -2484,6 +2509,21 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+      # The tour's screenshots, one per route it reached, exported from its result bundle with
+      # `xcrun xcresulttool export attachments` (manifest.json names each), and tour.txt, every
+      # destination it reached or skipped with the reason.
+      - name: Upload the tour's screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-tour
+          path: |
+            iosApp/build/tour/shots/
+            iosApp/build/tour/tour.txt
+            ${{ runner.temp }}/tour.log
+          if-no-files-found: ignore
+          retention-days: 14
+
       - name: Upload the launch screenshot and logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -2524,6 +2564,14 @@ jobs:
           detailed_summary: true
           # A job that died before writing results must not publish a green check.
           require_tests: true
+
+      # The tour runs with `continue-on-error` so the emulator tests run whatever it does; this is
+      # where its failure (a crash, a failed launch) fails the job.
+      - name: The iPhone tour ran
+        if: always() && steps.tour.outcome == 'failure'
+        run: |
+          echo "::error::The iPhone tour failed: the app crashed or did not launch (see tour.log in the ios-tour artifact)."
+          exit 1
 
       - name: Upload the build log
         if: failure()

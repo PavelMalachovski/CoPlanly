@@ -16,7 +16,14 @@
 #       runs the CoPlanlyUITests target (built by `build-for-testing`) on the booted simulator
 #       signed in as its first parent, keeps the result bundle in <out-dir>/shell.xcresult and
 #       exports its screenshots to <out-dir>/shots, printing a small copy of each into the log.
-#       Fails when the test fails.
+#       Fails when the test fails. Runs `testShellWalk` alone.
+#
+#   iosApp/scripts/simulator.sh tour <udid> <out-dir>
+#       The same inside a fresh `firebase emulators:exec`, for the tour (MON-24 phase 3, part B,
+#       Task 13): seeds the family with the records the tour opens (`--tour`), runs `testTour`,
+#       keeps <out-dir>/tour.xcresult, exports its screenshots to <out-dir>/shots and writes the
+#       tour's own lines (`COPLANLY_TOUR …`: every destination it reached or skipped, with the
+#       reason) to <out-dir>/tour.txt. Fails only when the tour does: a crash or a failed launch.
 set -euo pipefail
 
 BUNDLE_ID=app.coplanly
@@ -140,17 +147,29 @@ show_samples() {
 }
 
 shell_test() {
-  local udid=$1 out=$2 seed status=0
+  ui_test "$1" "$2" shell testShellWalk yes
+}
+
+tour() {
+  ui_test "$1" "$2" tour testTour no --tour
+}
+
+# Runs one UI test method, <test>, on <udid> after seeding a family (<seed-args> passed to the
+# seed), keeping <out>/<name>.xcresult and its attachments in <out>/shots. <small-copies> "yes"
+# prints a small copy of each screenshot into the log, as the walk does; the tour has too many.
+ui_test() {
+  local udid=$1 out=$2 name=$3 test=$4 small=$5 seed status=0
+  shift 5
   mkdir -p "$out"
   out=$(cd "$out" && pwd)
-  seed=$(node tools/ios/seed-shell-family.js)
+  seed=$(node tools/ios/seed-shell-family.js "$@")
   # xcodebuild hands the test runner every TEST_RUNNER_-prefixed variable, without the prefix.
   export TEST_RUNNER_COPLANLY_UITEST_EMAIL
   export TEST_RUNNER_COPLANLY_UITEST_PASSWORD
   TEST_RUNNER_COPLANLY_UITEST_EMAIL=$(node -e 'console.log(JSON.parse(process.argv[1]).email)' "$seed")
   TEST_RUNNER_COPLANLY_UITEST_PASSWORD=$(node -e 'console.log(JSON.parse(process.argv[1]).password)' "$seed")
   echo "Seeded family; signing in as $TEST_RUNNER_COPLANLY_UITEST_EMAIL"
-  rm -rf "$out/shell.xcresult"
+  rm -rf "$out/$name.xcresult"
   # While the walk runs, the app's threads are sampled now and then, so a walk that fails because
   # the app's main thread stopped answering ("main thread busy") says where it was busy.
   local watcher
@@ -161,12 +180,19 @@ shell_test() {
     -scheme CoPlanly \
     -destination "platform=iOS Simulator,id=$udid" \
     -derivedDataPath iosApp/build \
-    -only-testing:CoPlanlyUITests \
-    -resultBundlePath "$out/shell.xcresult" || status=$?
+    -only-testing:"CoPlanlyUITests/ShellUITests/$test" \
+    -resultBundlePath "$out/$name.xcresult" 2>&1 | tee "$out/xcodebuild-$name.log" || status=$?
   stop_watcher "$watcher"
   if [ "$status" -ne 0 ]; then show_samples "$out"; fi
   mkdir -p "$out/shots"
-  xcrun xcresulttool export attachments --path "$out/shell.xcresult" --output-path "$out/shots" || true
+  xcrun xcresulttool export attachments --path "$out/$name.xcresult" --output-path "$out/shots" || true
+  # The tour's own record of every destination, reached or skipped with the reason, for a reader
+  # of the artifact: its summary, or, when it never got there, the lines it printed as it went.
+  if [ "$name" = tour ]; then
+    grep -E "COPLANLY_TOUR [^ ]+: |COPLANLY_TOUR_SUMMARY reached" "$out/xcodebuild-$name.log" > "$out/tour.txt" 2>/dev/null ||
+      grep "COPLANLY_TOUR_VISIT" "$out/xcodebuild-$name.log" > "$out/tour.txt" 2>/dev/null || true
+    echo "::group::the tour's destinations"; cat "$out/tour.txt"; echo "::endgroup::"
+  fi
   # A crash the walk met, as the test recorded it, and the app's own lines from the system log: what
   # stopped it, for a reader of the log alone.
   local crash
@@ -181,16 +207,17 @@ shell_test() {
   echo "::endgroup::"
   # A small copy of each screenshot in the log, named as the test named it, for a reader who cannot
   # download the artifact.
-  local file name
+  if [ "$small" != yes ]; then return "$status"; fi
+  local file shot
   node -e '
     const manifest = require(process.argv[1]);
     for (const test of manifest) {
       for (const a of test.attachments || []) {
         if (a.exportedFileName.endsWith(".png")) console.log(a.exportedFileName + " " + a.suggestedHumanReadableName);
       }
-    }' "$out/shots/manifest.json" 2>/dev/null | while read -r file name; do
+    }' "$out/shots/manifest.json" 2>/dev/null | while read -r file shot; do
     sips -Z 300 -s format jpeg -s formatOptions 50 "$out/shots/$file" --out "$out/shots/${file%.png}-small.jpg" > /dev/null
-    echo "::group::${name%%_*}.png small (base64)"; base64 -i "$out/shots/${file%.png}-small.jpg"; echo "::endgroup::"
+    echo "::group::${shot%%_*}.png small (base64)"; base64 -i "$out/shots/${file%.png}-small.jpg"; echo "::endgroup::"
   done
   return "$status"
 }
@@ -199,5 +226,6 @@ case "${1:-}" in
   pick) pick ;;
   launch) shift; launch "$@" ;;
   shell-test) shift; shell_test "$@" ;;
-  *) echo "usage: $0 pick | launch <udid> <app> <out-dir> | shell-test <udid> <out-dir>" >&2; exit 2 ;;
+  tour) shift; tour "$@" ;;
+  *) echo "usage: $0 pick | launch <udid> <app> <out-dir> | shell-test <udid> <out-dir> | tour <udid> <out-dir>" >&2; exit 2 ;;
 esac
