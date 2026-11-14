@@ -2498,6 +2498,14 @@ reach:
       search field takes the bar's title. Type: results appear and step with the arrows. Cancel
       returns the co-parent's name. With a co-parent whose name is long ("Alexandra-Margarethe"),
       the title is cut with an ellipsis and does not push the bar's buttons off.
+- [ ] **A day swap from the iPhone** (Task 8; a family with a custody schedule, the co-parent's
+      phone to receive it). Tap "⇄" on the calendar card and choose two days, one of yours and one
+      of the co-parent's: each chosen day shows the stripes and "→ L"/"→ you" of whom it would go
+      to, and a tap on a chosen day unchooses it. Open the review: the sheet opens partly expanded
+      over the grid, with one row per way ("… → Lana", "… → you"), "Add a note" and "Answer by"
+      opening in place, and "Send to Lana" pinned at its bottom above the keyboard while the note
+      is typed. Send: a snackbar says it went and offers Withdraw, the days show the dashed waiting
+      mark, and the co-parent's phone gets the swap. §3.37 covers the selection's bar.
 - [ ] **No hang** (Task 8). The walk once saw the app's main thread stop answering for 30 seconds,
       and that was not reproduced. While you check the rest, note any moment the app stops
       responding, with what was on screen.
