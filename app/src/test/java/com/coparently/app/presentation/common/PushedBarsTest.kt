@@ -2,9 +2,10 @@ package com.coparently.app.presentation.common
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
@@ -104,7 +105,7 @@ class PushedBarsTest {
     fun `the children list's bar goes back and adds a child`() {
         compose(withHost = true) { childInfoScreen() }
         assertBar(title = "Child information", back = "Back", actions = listOf("plus" to "Add child"))
-        rule.onAllNodes(hasText("Add child") and hasClickAction()).assertCountEquals(0)
+        assertEquals(0, extendedFabCount("Add child"))
 
         clickAction("Add child")
         assertEquals(listOf("add child"), clicks)
@@ -114,14 +115,14 @@ class PushedBarsTest {
     fun `without a host the children list keeps its arrow and its floating button`() {
         compose(withHost = false) { childInfoScreen() }
         assertAndroidBar(title = "Child information", back = "Back")
-        assertTrue(rule.onAllNodesWithText("Add child").fetchSemanticsNodes().isNotEmpty())
+        assertEquals(1, extendedFabCount("Add child"))
     }
 
     @Test
     fun `the pets list's bar goes back and adds a pet`() {
         compose(withHost = true) { petsScreen() }
         assertBar(title = "Pets", back = "Back", actions = listOf("plus" to "Add pet"))
-        rule.onAllNodes(hasText("Add pet") and hasClickAction()).assertCountEquals(0)
+        assertEquals(0, extendedFabCount("Add pet"))
 
         clickAction("Add pet")
         assertEquals(listOf("edit pet new"), clicks)
@@ -131,7 +132,7 @@ class PushedBarsTest {
     fun `without a host the pets list keeps its arrow and its floating button`() {
         compose(withHost = false) { petsScreen() }
         assertAndroidBar(title = "Pets", back = "Back")
-        assertTrue(rule.onAllNodesWithText("Add pet").fetchSemanticsNodes().isNotEmpty())
+        assertEquals(1, extendedFabCount("Add pet"))
     }
 
     @Test
@@ -284,6 +285,17 @@ class PushedBarsTest {
         assertEquals(back, (leading as BarLeading.Back).label)
         assertEquals(actions, bar.actions.map { it.sfSymbol to it.label })
         assertTrue("A pushed screen's action is not a form's Save", bar.actions.none { it.primary })
+    }
+
+    /**
+     * How many extended floating buttons labelled [label] are drawn. Material's extended button may
+     * keep its text out of the semantics tree, so a clickable node with neither text nor a
+     * description (the screen's only such node, its rows and arrow being labelled) counts as one too.
+     */
+    private fun extendedFabCount(label: String): Int {
+        val labelled = rule.onAllNodesWithText(label, useUnmergedTree = true).fetchSemanticsNodes().size
+        val unlabelled = rule.onAllNodes(hasClickAction() and Unlabelled).fetchSemanticsNodes().size
+        return maxOf(labelled, unlabelled)
     }
 
     /** Taps the bar's action labelled [label], as the iPhone's bar button does. */
@@ -471,6 +483,10 @@ class PushedBarsTest {
     // endregion
 
     private companion object {
+        val Unlabelled = SemanticsMatcher("has neither text nor a content description") {
+            SemanticsProperties.Text !in it.config && SemanticsProperties.ContentDescription !in it.config
+        }
+
         val DAY = LocalDate(2026, 5, 13)
         val NOW = LocalDateTime(2026, 5, 1, 9, 0)
 
