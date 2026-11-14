@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +49,7 @@ import com.coparently.app.domain.custody.SwapSides
 import com.coparently.app.presentation.calendar.MiniMonthModel
 import com.coparently.app.presentation.common.AnswerByField
 import com.coparently.app.presentation.common.AnswerByPickSaver
+import com.coparently.app.presentation.common.LocalBarHost
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.StickyActionBar
@@ -157,6 +159,12 @@ fun DaySwapSheet(offer: SwapSheetOffer, parentNames: ParentNames, actions: SwapS
  * **The send button is pinned under a part that scrolls.** A sheet does not scroll its content by
  * itself, and at a large font an offer once could not be sent at all (owner report, 9 November
  * 2026). Everything above the button scrolls, and a divider shows while there is more to scroll to.
+ *
+ * **No bar host reaches it.** The sheet is opened from screens whose bar is the iPhone's navigation
+ * bar (the calendar, the Requests inbox), and a sheet's content inherits their composition locals:
+ * under a host the pinned [StickyActionBar] would draw nothing, and the sheet has no bar to carry
+ * "Send to {name}" instead, so the offer could not be sent (MON-24 phase 3, part B, final review).
+ * On Android no host is provided anyway, so nothing changes there.
  */
 @Composable
 fun DaySwapSheetContent(
@@ -165,6 +173,20 @@ fun DaySwapSheetContent(
     actions: SwapSheetActions,
     modifier: Modifier = Modifier,
     onNeedRoom: () -> Unit = {}
+) {
+    CompositionLocalProvider(LocalBarHost provides null) {
+        SwapSheetLayout(offer, parentNames, actions, modifier, onNeedRoom)
+    }
+}
+
+/** [DaySwapSheetContent]'s layout: the scrolling body over the pinned bar. */
+@Composable
+private fun SwapSheetLayout(
+    offer: SwapSheetOffer,
+    parentNames: ParentNames,
+    actions: SwapSheetActions,
+    modifier: Modifier,
+    onNeedRoom: () -> Unit
 ) {
     var note by rememberSaveable { mutableStateOf("") }
     var answerBy by rememberSaveable(stateSaver = AnswerByPickSaver) { mutableStateOf(AnswerByPick.DEFAULT) }
