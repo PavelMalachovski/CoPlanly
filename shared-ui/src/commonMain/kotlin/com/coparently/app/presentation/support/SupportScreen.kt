@@ -380,7 +380,8 @@ private fun ReminderGroup(days: Int?, onChange: (Int?) -> Unit) {
                         accessibilityLabel = reminderLabel
                     )
                 },
-                onToggle = { onChange(if (days == null) SupportReminderRule.DAYS_BEFORE[1] else null) }
+                onToggle = { onChange(if (days == null) SupportReminderRule.DAYS_BEFORE[1] else null) },
+                toggled = days != null
             )
         }
         if (days != null) {

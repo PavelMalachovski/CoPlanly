@@ -13,6 +13,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.state.ToggleableState
@@ -20,6 +22,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -90,6 +93,44 @@ class NativeControlsTest {
         }
         rule.onNodeWithText(NATIVE_ROW).performClick()
         assertEquals(1, nativeToggles)
+    }
+
+    @Test
+    fun `a clickable row shows a chevron only under native controls`() {
+        var native by mutableStateOf(false)
+        rule.setContent {
+            CompositionLocalProvider(LocalNativeControls provides fake.takeIf { native }) {
+                SectionRow(title = CHEVRON_ROW, onClick = {})
+            }
+        }
+        rule.onNodeWithTag(CHEVRON_TAG, useUnmergedTree = true).assertDoesNotExist()
+        native = true
+        rule.waitForIdle()
+        rule.onNodeWithTag(CHEVRON_TAG, useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `the group divider is inset under native controls`() {
+        var native by mutableStateOf(false)
+        rule.setContent {
+            CompositionLocalProvider(LocalNativeControls provides fake.takeIf { native }) {
+                SectionGroup(modifier = Modifier.testTag(GROUP_TAG)) {
+                    Text("one")
+                    Divider()
+                    Text("two")
+                }
+            }
+        }
+        fun dividerLeftOffset(): Float {
+            val group = rule.onNodeWithTag(GROUP_TAG).getUnclippedBoundsInRoot()
+            val divider = rule.onNodeWithTag(DIVIDER_TAG, useUnmergedTree = true).getUnclippedBoundsInRoot()
+            return (divider.left - group.left).value
+        }
+        // Without native controls the divider is not tagged; it spans the group.
+        rule.onNodeWithTag(DIVIDER_TAG, useUnmergedTree = true).assertDoesNotExist()
+        native = true
+        rule.waitForIdle()
+        assertEquals(16f, dividerLeftOffset(), 0.5f)
     }
 
     @Test
@@ -463,6 +504,8 @@ class NativeControlsTest {
         val VIEW_LABELS = listOf("Month", "Week", "Day")
         const val MATERIAL_SEGMENTS = "Material segments"
         const val NATIVE_ROW = "Pause before sending"
+        const val CHEVRON_ROW = "Privacy policy"
+        const val GROUP_TAG = "group"
         const val MATERIAL_ROW = "Share usage data"
         const val DELETE_TITLE = "Delete event"
         const val DELETE_MESSAGE = "This cannot be undone."

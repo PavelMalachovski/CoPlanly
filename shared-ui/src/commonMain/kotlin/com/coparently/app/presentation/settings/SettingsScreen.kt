@@ -758,7 +758,8 @@ fun SettingsScreen(
                                     accessibilityLabel = pushLabel
                                 )
                             },
-                            onToggle = { onPushChange(!pushOn) }.takeIf { !settingsUiState.isLoading }
+                            onToggle = { onPushChange(!pushOn) }.takeIf { !settingsUiState.isLoading },
+                            toggled = pushOn
                         )
                     }
                 }
@@ -793,7 +794,8 @@ fun SettingsScreen(
                         onToggle = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             settingsViewModel.setPauseBeforeSending(!pauseBeforeSending)
-                        }
+                        },
+                        toggled = pauseBeforeSending
                     )
                 }
             }
@@ -828,7 +830,8 @@ fun SettingsScreen(
                         onToggle = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             telemetryConsentViewModel.answer(telemetryConsent != TelemetryConsent.GRANTED)
-                        }
+                        },
+                        toggled = telemetryConsent == TelemetryConsent.GRANTED
                     )
                     Divider()
                     // Beside telemetry, the other consent. It withdraws the child-health consent

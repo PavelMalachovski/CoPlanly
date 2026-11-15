@@ -17,8 +17,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -32,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -78,12 +82,14 @@ fun GroupLabel(
     text: String,
     modifier: Modifier = Modifier
 ) {
+    // Under native controls a grouped list's header: small, grey, 20 dp in (the Grouped board).
+    val native = nativeControls() != null
     Text(
         text = text.toUpperCase(Locale.current),
-        style = MaterialTheme.typography.labelMediumEmphasized,
-        color = MaterialTheme.colorScheme.primary,
+        style = if (native) MaterialTheme.typography.bodySmall else MaterialTheme.typography.labelMediumEmphasized,
+        color = if (native) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
         modifier = modifier
-            .padding(start = Spacing.XS, end = Spacing.XS, bottom = Spacing.S)
+            .padding(start = if (native) 20.dp else Spacing.XS, end = Spacing.XS, bottom = Spacing.S)
             // A heading, so TalkBack can move from group to group instead of row by row, read in
             // the case it was written: a screen reader may spell an all-caps word out letter by
             // letter (docs/AUDIT-2026-10-design.md D-17).
@@ -137,10 +143,19 @@ interface SectionGroupScope {
 private class SectionGroupScopeImpl : SectionGroupScope {
     @Composable
     override fun Divider() {
-        HorizontalDivider(
-            thickness = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-        )
+        if (nativeControls() != null) {
+            // Grouped list: a hairline inset 16 dp from the start, in the border's colour.
+            HorizontalDivider(
+                modifier = Modifier.padding(start = 16.dp).testTag(DIVIDER_TAG),
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
+        } else {
+            HorizontalDivider(
+                thickness = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+            )
+        }
     }
 }
 
@@ -175,6 +190,12 @@ private class SectionGroupScopeImpl : SectionGroupScope {
  *   under native controls ([nativeControls]), where the whole row flips the switch, as a grouped
  *   list's switch row does on the iPhone. Ignored where Material draws the row (Android), so the
  *   row's semantics and its look stay as they were; and ignored when [onClick] is given.
+ * @param toggled The switch's current state, for [onToggle]: under native controls the row then
+ *   exposes it as a toggleable switch (on or off to VoiceOver) rather than a bare button. Null
+ *   keeps the plain click.
+ *
+ * Under native controls a row with [onClick] ends in a chevron after [trailing] and is at least
+ * 50 dp high (the Grouped board); Android draws neither.
  */
 @Composable
 @Suppress("LongParameterList") // one row anatomy, expressed as one parameter list
@@ -191,16 +212,28 @@ fun SectionRow(
     leading: @Composable (() -> Unit)? = null,
     trailing: @Composable (() -> Unit)? = null,
     stackTrailingAtLargeFont: Boolean = false,
-    onToggle: (() -> Unit)? = null
+    onToggle: (() -> Unit)? = null,
+    toggled: Boolean? = null
 ) {
     val trailingBelow = stackTrailingAtLargeFont && stacksAtLargeFont()
-    val rowToggle = onToggle.takeIf { onClick == null && nativeControls() != null }
+    val native = nativeControls() != null
+    val rowToggle = onToggle.takeIf { onClick == null && native }
     Row(
         modifier = modifier
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
-            .then(if (rowToggle != null) Modifier.clickable(role = Role.Switch, onClick = rowToggle) else Modifier)
-            .defaultMinSize(minHeight = 56.dp)
+            .then(
+                when {
+                    rowToggle == null -> Modifier
+                    toggled == null -> Modifier.clickable(role = Role.Switch, onClick = rowToggle)
+                    else -> Modifier.toggleable(
+                        value = toggled,
+                        role = Role.Switch,
+                        onValueChange = { rowToggle() }
+                    )
+                }
+            )
+            .defaultMinSize(minHeight = if (native) 50.dp else 56.dp)
             .padding(horizontal = Spacing.L, vertical = Spacing.L),
         horizontalArrangement = Arrangement.spacedBy(Spacing.M),
         verticalAlignment = Alignment.CenterVertically
@@ -246,8 +279,24 @@ fun SectionRow(
             }
         }
         if (!trailingBelow) trailing?.invoke()
+        if (native && onClick != null) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                // Decorative: the row itself is the button. The tag is for tests only.
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(13.dp).testTag(CHEVRON_TAG)
+            )
+        }
     }
 }
+
+/** Test tag of the chevron a clickable [SectionRow] draws under native controls. */
+internal const val CHEVRON_TAG = "chevron"
+
+/** Test tag of the inset divider a [SectionGroup] draws under native controls. */
+internal const val DIVIDER_TAG = "group-divider"
+
 
 /**
  * A small pill-shaped chip — the refresh's replacement for unlabelled icon actions.

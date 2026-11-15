@@ -1267,7 +1267,8 @@ fun AddEditEventScreen(
                     onToggle = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         allDay = !allDay
-                    }
+                    },
+                    toggled = allDay
                 )
                 Divider()
                 EventDateTimeRow(
