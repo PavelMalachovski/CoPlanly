@@ -682,10 +682,11 @@ fun CalendarScreen(
     // Back from a day opened by tapping a month cell returns to that month instead of leaving the
     // tab (docs/AUDIT-2026-10-design.md D-11): the tap reads as drilling in, so Back has to read
     // as coming back out. A Day view reached through the view picker keeps the default Back.
-    ScreenBackStep(enabled = viewMode == CalendarViewMode.DAY && dayOpenedFromMonth) {
+    val returnToMonth: () -> Unit = {
         dayOpenedFromMonth = false
         calendarViewModel.setViewMode(CalendarViewMode.MONTH)
     }
+    ScreenBackStep(enabled = viewMode == CalendarViewMode.DAY && dayOpenedFromMonth, onBack = returnToMonth)
     // Every tap on the Calendar tab opens this month in Month view (tester feedback, 21 October
     // 2026), the tab's restored state notwithstanding. The count answered last is saved with the
     // screen, so a tap made from another tab is answered when the screen comes back.
@@ -745,7 +746,8 @@ fun CalendarScreen(
                     filtersActive = parentFilter != ParentFilter.BOTH ||
                         hiddenEventTypes.isNotEmpty() ||
                         !showHolidays,
-                    swapMonth = displayedMonth.takeIf { swapHeaderShown }
+                    swapMonth = displayedMonth.takeIf { swapHeaderShown },
+                    backStep = returnToMonth.takeIf { viewMode == CalendarViewMode.DAY && dayOpenedFromMonth }
                 ),
                 actions = CalendarTopBarActions(
                     onViewModeChange = { mode -> calendarViewModel.setViewMode(mode) },

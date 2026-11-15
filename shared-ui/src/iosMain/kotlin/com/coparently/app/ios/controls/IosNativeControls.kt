@@ -88,6 +88,7 @@ internal object IosNativeControls : NativeControls {
         onSelect: (Int) -> Unit,
         enabled: Boolean,
         background: Color,
+        accessibilityLabel: String?,
         modifier: Modifier
     ) {
         val callback by rememberUpdatedState(onSelect)
@@ -96,7 +97,7 @@ internal object IosNativeControls : NativeControls {
             modifier = modifier.fillMaxWidth().height(SEGMENTED_HEIGHT_PT.dp),
             update = { host ->
                 host.backgroundColor = uiColorOf(background)
-                updateSegmented(host.control, labels, selectedIndex, enabled)
+                updateSegmented(host.control, labels, selectedIndex, enabled, accessibilityLabel)
             },
             properties = UIKitInteropProperties(isInteractive = true, isNativeAccessibilityEnabled = true)
         )
@@ -399,14 +400,24 @@ internal fun makeSegmented(labels: List<String>, onSelect: (Int) -> Unit): UISeg
     ValueChangedSegmented(labels, onSelect)
 
 /**
- * Shows [labels], [selectedIndex] and [enabled] on [view] without reporting a selection. The
- * segments are rebuilt only when the labels differ from the ones shown.
+ * Shows [labels], [selectedIndex] and [enabled] on [view] without reporting a selection, and names
+ * it [accessibilityLabel] for VoiceOver when one is given. The segments are rebuilt only when the
+ * labels differ from the ones shown.
  */
-internal fun updateSegmented(view: UISegmentedControl, labels: List<String>, selectedIndex: Int, enabled: Boolean) {
+internal fun updateSegmented(
+    view: UISegmentedControl,
+    labels: List<String>,
+    selectedIndex: Int,
+    enabled: Boolean,
+    accessibilityLabel: String? = null
+) {
     if (view is ValueChangedSegmented && view.shown != labels) view.show(labels)
     val index = if (selectedIndex in labels.indices) selectedIndex.toLong() else UISegmentedControlNoSegment.toLong()
     if (view.selectedSegmentIndex != index) view.selectedSegmentIndex = index
     if (view.enabled != enabled) view.enabled = enabled
+    if (accessibilityLabel != null && view.accessibilityLabel != accessibilityLabel) {
+        view.accessibilityLabel = accessibilityLabel
+    }
 }
 
 /**
@@ -432,7 +443,9 @@ internal class ValueChangedSegmented(
     /** Replaces the segments with one per entry of [labels]. */
     fun show(labels: List<String>) {
         removeAllSegments()
-        labels.forEachIndexed { index, title -> insertSegmentWithTitle(title, atIndex = index.toULong(), animated = false) }
+        labels.forEachIndexed { index, title ->
+            insertSegmentWithTitle(title, atIndex = index.toULong(), animated = false)
+        }
         shown = labels
     }
 

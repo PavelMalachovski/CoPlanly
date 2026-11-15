@@ -27,7 +27,12 @@ class RecordingNativeControls : NativeControls {
     var lastSwitchChange: ((Boolean) -> Unit)? = null
 
     /** One drawn segmented control: its titles, chosen index and whether it could be used. */
-    data class SegmentedCall(val labels: List<String>, val selectedIndex: Int, val enabled: Boolean)
+    data class SegmentedCall(
+        val labels: List<String>,
+        val selectedIndex: Int,
+        val enabled: Boolean,
+        val accessibilityLabel: String? = null
+    )
 
     /** Every segmented control drawn, in the order of composition. */
     val segmented = mutableListOf<SegmentedCall>()
@@ -156,10 +161,16 @@ class RecordingNativeControls : NativeControls {
         onSelect: (Int) -> Unit,
         enabled: Boolean,
         background: Color,
+        accessibilityLabel: String?,
         modifier: Modifier
     ) {
         backgrounds += background
-        segmented += SegmentedCall(labels = labels, selectedIndex = selectedIndex, enabled = enabled)
+        segmented += SegmentedCall(
+            labels = labels,
+            selectedIndex = selectedIndex,
+            enabled = enabled,
+            accessibilityLabel = accessibilityLabel
+        )
         lastSegmentSelect = onSelect
         Box(modifier.size(200.dp, 32.dp).testTag(SEGMENTED_TAG))
     }

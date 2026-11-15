@@ -1,22 +1,10 @@
 package com.coparently.app.presentation.common
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-
-/**
- * How tall an in-screen sheet opens on the iPhone (MON-24 phase 3, part C, Task 6).
- *
- * [Medium] opens at half the screen and can be pulled up to the full height, and what lies above
- * it stays in view (the event preview, the day swap's review, over the grid they are about), and
- * can be touched where the site asks for it. [Large] opens at the full height, the system's page
- * sheet.
- */
-enum class SheetHeight {
-    /** Half the screen, pulled up to the full height; the screen above it stays in view. */
-    Medium,
-
-    /** The full height. */
-    Large
-}
+import androidx.compose.ui.Modifier
 
 /**
  * An in-screen sheet: the site's own `ModalBottomSheet` where the shell has no native controls
@@ -38,19 +26,30 @@ enum class SheetHeight {
  * @param content What the sheet holds, drawn in the iPhone's sheet
  * @param undimmed Whether the screen above a medium iPhone sheet stays usable; false dims it, as
  *   Material's scrim does. Only where the parent acts on what is above (the calendar's grid).
+ * @param scrollable Whether the iPhone's sheet scrolls [content]: true where the body is a plain
+ *   column that does not scroll itself, so a medium sheet or a large font never cuts it off. False
+ *   where the body scrolls itself (a lazy list inside a scrolling column would fail). Ignored where
+ *   Material draws the sheet, whose body is as it was.
  */
 @Composable
+@Suppress("LongParameterList") // the sheet's two bodies, how it closes and its three iPhone options
 fun AdaptiveSheet(
     onDismiss: () -> Unit,
     height: SheetHeight,
     material: @Composable () -> Unit,
     content: @Composable () -> Unit,
-    undimmed: Boolean = false
+    undimmed: Boolean = false,
+    scrollable: Boolean = false
 ) {
     val native = nativeControls()
     if (native == null) {
         material()
     } else {
-        native.Sheet(height = height, undimmed = undimmed, onDismiss = onDismiss, content = content)
+        val body: @Composable () -> Unit = if (scrollable) {
+            { Column(modifier = Modifier.verticalScroll(rememberScrollState())) { content() } }
+        } else {
+            content
+        }
+        native.Sheet(height = height, undimmed = undimmed, onDismiss = onDismiss, content = body)
     }
 }

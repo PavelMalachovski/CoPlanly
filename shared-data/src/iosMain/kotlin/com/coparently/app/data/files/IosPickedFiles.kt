@@ -4,6 +4,7 @@ package com.coparently.app.data.files
 
 import com.coparently.app.data.platform.IosAppDirectories
 import com.coparently.app.data.platform.logger
+import com.coparently.app.domain.files.SharedFilePolicy
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.io.IOException
 import kotlinx.io.RawSource
@@ -32,7 +33,9 @@ import platform.UniformTypeIdentifiers.UTType
  * A copy stays until the cache is wiped or iOS purges it: the same path is shown as a preview,
  * staged, uploaded and described by different consumers, none of which is the last one for sure.
  *
- * - [typeOf] answers from the extension, through `UTType`'s preferred MIME type.
+ * - [typeOf] answers from the extension: the types the parents may share first, from
+ *   [SharedFilePolicy]'s own table (`UTType` can answer nothing in a process without the system's
+ *   type database, a simulator's test runner among them), then `UTType`'s preferred MIME type.
  * - [displayNameOf] answers the original name, which [keep] writes beside the copy, else the path's
  *   last segment.
  * - [open] reads the file.
@@ -45,7 +48,8 @@ class IosPickedFiles(private val caches: String) : PickedFiles {
         val name = pathOf(contentUri).substringAfterLast('/')
         val extension = name.substringAfterLast('.', missingDelimiterValue = "")
         if (extension.isEmpty()) return null
-        return UTType.typeWithFilenameExtension(extension)?.preferredMIMEType
+        return SharedFilePolicy.resolveContentType(reported = null, fileName = name)
+            ?: UTType.typeWithFilenameExtension(extension)?.preferredMIMEType
     }
 
     override fun displayNameOf(contentUri: String): String? {

@@ -32,6 +32,7 @@ import platform.Vision.VNImageRequestHandler
 import platform.Vision.VNRecognizeTextRequest
 import platform.Vision.VNRecognizedText
 import platform.Vision.VNRecognizedTextObservation
+import platform.Vision.VNRequestTextRecognitionLevel
 import platform.Vision.VNRequestTextRecognitionLevelAccurate
 import platform.darwin.DISPATCH_QUEUE_PRIORITY_DEFAULT
 import platform.darwin.dispatch_async
@@ -56,8 +57,13 @@ import kotlin.coroutines.resumeWithException
  * (`IosPickedFiles.pathOf`). The work runs on a background queue; a failure is an [IOException]
  * (the expense form shows its failed-scan message and keeps the photo), and cancelling the caller
  * cancels Vision's request.
+ *
+ * @param recognitionLevel Vision's recognition level: accurate in the app; a test may ask for the
+ *   fast level, which a simulator without the accurate model can still run.
  */
-class VisionReceiptText : ReceiptTextRecognizer {
+class VisionReceiptText(
+    private val recognitionLevel: VNRequestTextRecognitionLevel = VNRequestTextRecognitionLevelAccurate
+) : ReceiptTextRecognizer {
 
     /** Vision is on every iPhone this app runs on (iOS 17). */
     override val available: Boolean = true
@@ -66,7 +72,7 @@ class VisionReceiptText : ReceiptTextRecognizer {
         val path = IosPickedFiles.pathOf(imageUri)
         if (!NSFileManager.defaultManager.fileExistsAtPath(path)) throw IOException("No image to read")
         return suspendCancellableCoroutine { continuation ->
-            val run = Recognition(path)
+            val run = Recognition(path, recognitionLevel)
             continuation.invokeOnCancellation { run.cancel() }
             dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT.toLong(), 0u)) {
                 try {
@@ -82,7 +88,10 @@ class VisionReceiptText : ReceiptTextRecognizer {
     }
 
     /** One image's recognition, which [cancel] stops from another thread. */
-    private class Recognition(private val path: String) {
+    private class Recognition(
+        private val path: String,
+        private val level: VNRequestTextRecognitionLevel
+    ) {
 
         @Volatile
         private var current: VNRecognizeTextRequest? = null
@@ -109,7 +118,7 @@ class VisionReceiptText : ReceiptTextRecognizer {
         private fun perform(image: UIImage, withLanguages: Boolean): List<VNRecognizedTextObservation>? {
             if (cancelled) throw IOException("Cancelled")
             val request = VNRecognizeTextRequest()
-            request.recognitionLevel = VNRequestTextRecognitionLevelAccurate
+            request.recognitionLevel = level
             request.usesLanguageCorrection = false
             if (withLanguages) {
                 val supported = request.supportedRecognitionLanguagesAndReturnError(null)

@@ -144,7 +144,8 @@ private fun FriendEventSheet(event: Event, grant: CalendarFriendGrant?, onDismis
                 sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
             ) { body() }
         },
-        content = body
+        content = body,
+        scrollable = true
     )
 }
 

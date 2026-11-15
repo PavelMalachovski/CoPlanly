@@ -41,6 +41,7 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.nativeControls
 import com.coparently.app.presentation.platform.LocalFileDetails
+import com.coparently.app.presentation.platform.LocalOpenUrl
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.documents_add_dialog_category_label
@@ -102,6 +103,7 @@ internal fun DocumentsBody(
     readOnly: Boolean = false
 ) {
     val documents = (list as? DocumentsList.Loaded)?.documents.orEmpty()
+    val canOpen = LocalOpenUrl.current.available
     if (list is DocumentsList.Loaded && documents.isEmpty() && !uploading) {
         EmptyState(
             icon = Icons.Default.Description,
@@ -136,7 +138,13 @@ internal fun DocumentsBody(
                                 document = document,
                                 addedBy = nameFor(document.createdByFirebaseUid),
                                 canDelete = !readOnly && document.createdByFirebaseUid == myUid,
-                                onOpen = { onOpen(document) },
+                                // Where nothing on the phone opens a file, a row offers no tap that
+                                // could only fail (design item 8), as a chat attachment does.
+                                onOpen = if (canOpen) {
+                                    { onOpen(document) }
+                                } else {
+                                    null
+                                },
                                 onDelete = { onDelete(document) }
                             )
                         }
@@ -177,7 +185,7 @@ private fun DocumentRow(
     document: FamilyDocument,
     addedBy: String,
     canDelete: Boolean,
-    onOpen: () -> Unit,
+    onOpen: (() -> Unit)?,
     onDelete: () -> Unit
 ) {
     val fileDetails = LocalFileDetails.current

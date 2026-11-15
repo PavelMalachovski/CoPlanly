@@ -1097,12 +1097,13 @@ private fun SplitSection(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            val ratioText = stringResource(
+                Res.string.expense_split_ratio,
+                effective,
+                WHOLE_PERCENT - effective
+            )
             Text(
-                text = stringResource(
-                    Res.string.expense_split_ratio,
-                    effective,
-                    WHOLE_PERCENT - effective
-                ),
+                text = ratioText,
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f)
             )
@@ -1112,6 +1113,7 @@ private fun SplitSection(
                     onOverrideChange(if (on) agreedRatio.momPercent else null)
                 },
                 enabled = enabled,
+                accessibilityLabel = ratioText,
                 background = MaterialTheme.colorScheme.background
             )
         }

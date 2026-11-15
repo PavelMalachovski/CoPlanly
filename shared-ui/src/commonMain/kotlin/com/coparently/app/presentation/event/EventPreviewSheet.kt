@@ -125,7 +125,8 @@ fun EventPreviewSheet(
             ) { body() }
         },
         content = body,
-        undimmed = undimmed
+        undimmed = undimmed,
+        scrollable = true
     )
 }
 

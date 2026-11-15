@@ -114,7 +114,8 @@ fun FriendInviteSheet(
                 sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
             ) { body() }
         },
-        content = body
+        content = body,
+        scrollable = true
     )
 }
 

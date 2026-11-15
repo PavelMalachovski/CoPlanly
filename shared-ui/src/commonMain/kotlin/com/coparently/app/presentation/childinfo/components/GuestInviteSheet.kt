@@ -65,6 +65,8 @@ import org.jetbrains.compose.resources.stringResource
  *   which leaves the code on screen to read out and no button that does nothing (design item 8).
  * @param onDismiss Closes the sheet.
  */
+// One sheet: its body and the two hosts (Material's sheet, the iPhone's) that hold it.
+@Suppress("LongMethod")
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun GuestInviteSheet(
@@ -132,7 +134,8 @@ fun GuestInviteSheet(
         material = {
             ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) { body() }
         },
-        content = body
+        content = body,
+        scrollable = true
     )
 }
 

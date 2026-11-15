@@ -885,20 +885,22 @@ private fun MidweekContactSection(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                val everyWeekText = stringResource(
+                    if (uiState.midweekEveryWeek) {
+                        Res.string.custody_midweek_every_week
+                    } else {
+                        Res.string.custody_midweek_off_week_only
+                    }
+                )
                 Text(
-                    text = stringResource(
-                        if (uiState.midweekEveryWeek) {
-                            Res.string.custody_midweek_every_week
-                        } else {
-                            Res.string.custody_midweek_off_week_only
-                        }
-                    ),
+                    text = everyWeekText,
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.weight(1f)
                 )
                 AdaptiveSwitch(
                     checked = uiState.midweekEveryWeek,
-                    onCheckedChange = onEveryWeekChange
+                    onCheckedChange = onEveryWeekChange,
+                    accessibilityLabel = everyWeekText
                 )
             }
         }

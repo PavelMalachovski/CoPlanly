@@ -32,7 +32,6 @@ import com.coparently.app.presentation.common.SheetGuard
 import com.coparently.app.presentation.common.SheetHeight
 import com.coparently.app.presentation.theme.Spacing
 import platform.UIKit.UIAdaptivePresentationControllerDelegateProtocol
-import platform.UIKit.UIColor
 import platform.UIKit.UIModalPresentationPageSheet
 import platform.UIKit.UIPresentationController
 import platform.UIKit.UISheetPresentationControllerDetent
@@ -117,9 +116,13 @@ internal class ComposeSheet(
      * pushed over it, its tab left): the sheet goes at once, without an animation that would race
      * what covers the screen, and [onDismissed] is called once, so the caller's flag is released
      * and a later open works.
+     *
+     * A sheet whose form holds edits (modal in presentation) is left up, as a swipe down over them
+     * is refused: closing it here would throw away what was typed (design item 16). It goes once
+     * the parent answers the form's own question.
      */
     fun screenHidden() {
-        if (finished) return
+        if (finished || dirty) return
         finished = true
         takeAway(animated = false)
         onDismissed()

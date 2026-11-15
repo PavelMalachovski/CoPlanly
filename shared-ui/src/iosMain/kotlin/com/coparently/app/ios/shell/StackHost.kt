@@ -19,14 +19,17 @@ import com.coparently.app.presentation.navigation.Screen
 import com.coparently.app.presentation.navigation.StackChange
 import com.coparently.app.presentation.navigation.StackMirror
 import com.coparently.app.presentation.navigation.appDestinations
+import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCSignatureOverride
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import platform.Foundation.NSSelectorFromString
 import platform.UIKit.UINavigationController
 import platform.UIKit.UINavigationControllerDelegateProtocol
 import platform.UIKit.UIViewController
+import platform.UIKit.presentationController
 import platform.UIKit.transitionCoordinator
 import platform.darwin.NSObject
 
@@ -76,6 +79,9 @@ import platform.darwin.NSObject
  * @property onRootFlowRequested A tab's way out: a screen there navigated to a root-flow route,
  *   which the shell then shows as the root flow. Null for the root flow.
  */
+// One stack mirrored into UIKit: its steps share the stack's state, and splitting them would only
+// hand that state around.
+@Suppress("TooManyFunctions")
 internal class StackHost(
     private val shell: ShellEnvironment,
     private val session: ViewModelStoreOwner,
@@ -260,7 +266,9 @@ internal class StackHost(
      * sheet (an event's preview, whose Edit opens this form) is still up when the form arrives, and
      * UIKit drops a second presentation without a word, which would leave the stack waiting on a
      * transition that never ends. What is up is dismissed without animation and the form presented
-     * once it has gone; one already being dismissed is waited for.
+     * once it has gone; one already being dismissed is waited for. A controller taken away in code
+     * tells its presentation delegate nothing, so its owner (a screen's sheet, a picker, a question)
+     * is told as a swipe down tells it ([tellDismissed]), and releases what it holds.
      */
     private fun presentOverWhatIsUp(sheetNavigation: UIViewController, animated: Boolean) {
         val present = { navigation.presentViewController(sheetNavigation, animated) { transitionEnded() } }
@@ -269,11 +277,13 @@ internal class StackHost(
             other == null -> present()
             other.beingDismissed -> {
                 val coordinator = other.transitionCoordinator
-                if (coordinator == null || !coordinator.animateAlongsideTransition(null, completion = { _ -> present() })) {
-                    present()
-                }
+                val waits = coordinator?.animateAlongsideTransition(null, completion = { _ -> present() }) == true
+                if (!waits) present()
             }
-            else -> other.dismissViewControllerAnimated(false) { present() }
+            else -> other.dismissViewControllerAnimated(false) {
+                tellDismissed(other)
+                present()
+            }
         }
     }
 
@@ -455,6 +465,21 @@ internal class StackHost(
  * ([ScreenController.showsBar]), and hides it over one that does not; [screens] are the stack's
  * screens.
  */
+/**
+ * Tells [controller]'s presentation delegate that it was dismissed, as UIKit tells it after a swipe
+ * down and never after a dismissal in code. The method is optional in the protocol, so it is called
+ * only on a delegate that implements it.
+ */
+// `respondsToSelector` and `NSSelectorFromString` are Kotlin/Native's C interop.
+@OptIn(ExperimentalForeignApi::class)
+private fun tellDismissed(controller: UIViewController) {
+    val presentation = controller.presentationController ?: return
+    val delegate = presentation.delegate ?: return
+    if (delegate.respondsToSelector(NSSelectorFromString("presentationControllerDidDismiss:"))) {
+        delegate.presentationControllerDidDismiss(presentation)
+    }
+}
+
 private fun UINavigationController.applyBar(screens: Collection<ScreenController>) {
     val top = topViewController ?: return
     val showsBar = screens.firstOrNull { it.viewController === top }?.showsBar ?: return

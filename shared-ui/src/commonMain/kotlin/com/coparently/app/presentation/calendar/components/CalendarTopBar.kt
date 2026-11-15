@@ -5,9 +5,11 @@ import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.presentation.calendar.CalendarViewMode
 import com.coparently.app.presentation.calendar.SwapSelectionHeader
 import com.coparently.app.presentation.common.AppTopBar
+import com.coparently.app.presentation.common.BarLeading
 import com.coparently.app.presentation.common.ScreenBar
 import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_back
 import com.coparently.app.resources.nav_calendar
 import kotlinx.datetime.YearMonth
 import org.jetbrains.compose.resources.stringResource
@@ -19,12 +21,16 @@ import org.jetbrains.compose.resources.stringResource
  * @property viewMode The view the grid shows
  * @property filtersActive Whether any filter is narrowing the calendar
  * @property swapMonth The month on screen while days are chosen for a swap, or null while they are not
+ * @property backStep Undoes the inner step the Calendar's Back takes first (a Day view a month cell
+ *   opened, D-11), or null while there is none. Where a shell draws the bars it then shows its bar
+ *   with a back button, the screen's one visible way back out of that Day view on the iPhone.
  */
 data class CalendarTopBarState(
     val children: List<ChildInfo>,
     val viewMode: CalendarViewMode,
     val filtersActive: Boolean,
-    val swapMonth: YearMonth? = null
+    val swapMonth: YearMonth? = null,
+    val backStep: (() -> Unit)? = null
 )
 
 /**
@@ -61,7 +67,9 @@ data class SwapSelectionBarActions(
  * redesign's header as Android does (the wordmark, the children's photos and the gear, "Your
  * family calendar", the Month/Week/Day control and Filters), and the grid card's own bar keeps
  * Today and "+" ([CalendarMonthBar]). So the shell is handed a hidden bar: no navigation bar over
- * the Calendar's root, while "Calendar" still names it to a screen pushed over it. The selection
+ * the Calendar's root, while "Calendar" still names it to a screen pushed over it. While an inner
+ * step waits ([CalendarTopBarState.backStep]) the bar is shown with a back button instead, since
+ * the root has no other way back to Month. The selection
  * header draws its close button and arrows in content too. Public for the app's `CalendarBarsTest`.
  *
  * @param state What the bar shows
@@ -75,7 +83,15 @@ fun CalendarTopBar(
     swapActions: SwapSelectionBarActions
 ) {
     if (shellDrawsBars()) {
-        AppTopBar(ScreenBar(title = stringResource(Res.string.nav_calendar), hidden = true))
+        val backStep = state.backStep
+        val backLabel = stringResource(Res.string.common_back)
+        AppTopBar(
+            ScreenBar(
+                title = stringResource(Res.string.nav_calendar),
+                leading = backStep?.let { BarLeading.Back(label = backLabel, onClick = it) } ?: BarLeading.None,
+                hidden = backStep == null
+            )
+        )
     }
     val swapMonth = state.swapMonth
     if (swapMonth != null) {

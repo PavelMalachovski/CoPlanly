@@ -241,7 +241,8 @@ fun EventTypeFilterSheet(
                 sheetState = sheetState
             ) { body() }
         },
-        content = body
+        content = body,
+        scrollable = true
     )
 }
 

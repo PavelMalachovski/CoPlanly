@@ -143,7 +143,8 @@ fun PlanQuestionSheet(
         content = {
             ReportUnsaved(unsaved = draft != seeded, onRefused = { confirmDiscard = true })
             body()
-        }
+        },
+        scrollable = true
     )
 }
 

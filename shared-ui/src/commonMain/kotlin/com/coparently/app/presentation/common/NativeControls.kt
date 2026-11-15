@@ -62,6 +62,8 @@ interface NativeControls {
      * @param onSelect Called with the index of the segment the parent tapped
      * @param enabled Whether the parent can choose now
      * @param background The colour of what the control sits on, as for [Switch]
+     * @param accessibilityLabel What the choice is about, read by VoiceOver for the control as a
+     *   whole, or null for none
      * @param modifier Modifier applied to the control
      */
     @Composable
@@ -72,6 +74,7 @@ interface NativeControls {
         onSelect: (Int) -> Unit,
         enabled: Boolean,
         background: Color,
+        accessibilityLabel: String?,
         modifier: Modifier
     )
 

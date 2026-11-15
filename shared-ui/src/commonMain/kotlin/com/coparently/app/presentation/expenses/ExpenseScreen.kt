@@ -752,7 +752,8 @@ private fun ViewSwitcher(
         labels = listOf(listLabel, analyticsLabel),
         selectedIndex = if (showAnalytics) 1 else 0,
         onSelect = { onSelect(it == 1) },
-        modifier = rowModifier
+        modifier = rowModifier,
+        accessibilityLabel = label
     ) {
         SingleChoiceSegmentedButtonRow(modifier = rowModifier) {
             SegmentedButton(

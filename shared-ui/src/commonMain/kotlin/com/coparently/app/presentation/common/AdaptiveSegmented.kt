@@ -23,9 +23,12 @@ import androidx.compose.ui.graphics.Color
  * @param background The colour of what the control sits on, behind the native control on the iPhone
  *   (Compose clears its pixels under it): a card's `surfaceContainer` by default; a caller on the
  *   screen's ground passes `colorScheme.background`
+ * @param accessibilityLabel What the choice is about, read by VoiceOver for the native control as a
+ *   whole (the Material row names itself through its own semantics), or null for none
  * @param material The site's Material row, drawn where there are no native controls
  */
 @Composable
+@Suppress("LongParameterList") // the control's values, its callback, its look and the site's row
 fun AdaptiveSegmented(
     labels: List<String>,
     selectedIndex: Int,
@@ -33,6 +36,7 @@ fun AdaptiveSegmented(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     background: Color = MaterialTheme.colorScheme.surfaceContainer,
+    accessibilityLabel: String? = null,
     material: @Composable () -> Unit
 ) {
     val native = nativeControls()
@@ -45,6 +49,7 @@ fun AdaptiveSegmented(
             onSelect = onSelect,
             enabled = enabled,
             background = background,
+            accessibilityLabel = accessibilityLabel,
             modifier = modifier
         )
     }

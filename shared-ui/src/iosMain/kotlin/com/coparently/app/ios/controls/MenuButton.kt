@@ -92,16 +92,26 @@ internal fun menuButtonConfiguration(look: MenuButtonLook): UIButtonConfiguratio
         baseForegroundColor = if (look.tint.isUnspecified) UIColor.secondaryLabelColor else uiColorOf(look.tint)
     }
 
-/** The intrinsic size, in points, of a menu button drawn with [look], measured from UIKit's own. */
+/**
+ * The size, in points, of a menu button drawn with [look]: UIKit's own intrinsic size, and for a
+ * button that is a symbol alone (the chat's "+") at least [MIN_TOUCH_TARGET_PT] square, the touch
+ * target the Human Interface Guidelines ask for, with the symbol centred in it. A titled pop-up
+ * button keeps its intrinsic size, so an option row's height does not move.
+ */
 // `CGRectMake` and `useContents` are Kotlin/Native's C interop.
 @OptIn(ExperimentalForeignApi::class)
 internal fun menuButtonSize(look: MenuButtonLook): Pair<Double, Double> {
     val button = UIButton(frame = CGRectMake(0.0, 0.0, 0.0, 0.0))
     button.configuration = menuButtonConfiguration(look)
-    return button.intrinsicContentSize.useContents {
+    val intrinsic = button.intrinsicContentSize.useContents {
         if (width > 0.0 && height > 0.0) width to height else MENU_BUTTON_FALLBACK_PT to MENU_BUTTON_FALLBACK_PT
     }
+    if (look.title != null) return intrinsic
+    return maxOf(intrinsic.first, MIN_TOUCH_TARGET_PT) to maxOf(intrinsic.second, MIN_TOUCH_TARGET_PT)
 }
+
+/** The smallest touch target, in points, of a menu button that is a symbol alone. */
+internal const val MIN_TOUCH_TARGET_PT = 44.0
 
 /**
  * The button `IosNativeControls.MenuButton` draws: a plain-style `UIButton` that draws itself and

@@ -156,8 +156,14 @@ class IosStorageBucket(
 
         fun NSError.isObjectNotFound(): Boolean = domain == FIRStorageErrorCodeDomain && code == OBJECT_NOT_FOUND
 
+        /**
+         * The failure as an [IOException] naming the path's first segment alone (its prefix, such as
+         * `family_documents`) and the error's domain and code: the rest of a path names a family and
+         * a file, and Firebase's own description repeats the path, so neither goes into a message
+         * that may reach a log.
+         */
         fun NSError.asIOException(path: String): IOException =
-            IOException("Storage failed for $path: $domain $code $localizedDescription")
+            IOException("Storage failed under ${path.substringBefore('/')}/: $domain $code")
 
         fun ByteArray.toNSData(): NSData =
             if (isEmpty()) {
