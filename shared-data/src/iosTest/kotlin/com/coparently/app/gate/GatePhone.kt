@@ -4,10 +4,13 @@ package com.coparently.app.gate
 
 import com.coparently.app.data.chat.ChatAttachmentOutbox
 import com.coparently.app.data.family.SelectedFamilySource
+import com.coparently.app.data.files.IosPickedFiles
+import com.coparently.app.data.files.IosRecordPhotoStorage
 import com.coparently.app.data.files.IosStorageBucket
 import com.coparently.app.data.files.SharedFileCache
 import com.coparently.app.data.files.SharedFileStager
 import com.coparently.app.data.files.SharedFileStorage
+import com.coparently.app.data.files.StoredRecordFamilies
 import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.local.buildCoPlanlyDatabase
 import com.coparently.app.data.platform.AppDirectories
@@ -46,7 +49,6 @@ import com.coparently.app.data.repository.UserRepositoryImpl
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.di.koin.FUNCTIONS_REGION
-import com.coparently.app.di.koin.NoPickedFiles
 import com.coparently.app.di.koin.NoRequestClockJobs
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.model.PairingState
@@ -76,9 +78,10 @@ import platform.Foundation.NSUUID
  * One parent's iPhone in the write gate's test process (MON-24 phase 3, Task 7): a named Firebase
  * app of its own on the emulators, a Room database of its own on the bundled driver, and the
  * production data layer wired over both as the iPhone's `platformDataModule` wires it — GitLive's
- * Firestore, Functions and Auth ([IosFirebaseAuth]), Cloud Storage ([IosStorageBucket], part C), the
- * push queue ([FirestorePushQueue]) and the stand-ins for what the iPhone does not have yet
- * (`NoPickedFiles`, `NoRequestClockJobs`). Every class that writes to Firestore or Storage is the
+ * Firestore, Functions and Auth ([IosFirebaseAuth]), Cloud Storage ([IosStorageBucket], part C), a
+ * record's photos ([IosRecordPhotoStorage]) and the pickers' copies ([IosPickedFiles], Task 11), the
+ * push queue ([FirestorePushQueue]) and the stand-in for what the iPhone does not have yet
+ * (`NoRequestClockJobs`). Every class that writes to Firestore or Storage is the
  * production class.
  *
  * Built by hand, as the Android e2e job's `EmulatorParent` is, because one process has one Koin
@@ -135,14 +138,28 @@ internal class GatePhone private constructor(
     /** The event writer and reader's data source. */
     val eventDataSource = FirestoreEventDataSource(documents)
 
-    /** Messages, gated by the chat outbox the iPhone binds (nothing can be picked yet). */
+    /** Record photos, re-encoded and stored under the record's family, every upload recorded. */
+    val recordPhotoStorage = IosRecordPhotoStorage(
+        authService = signedIn,
+        userDao = database.userDao(),
+        storage = sharedFileStorage,
+        cache = sharedFileCache,
+        storedRecords = StoredRecordFamilies(
+            expenseDao = database.expenseDao(),
+            childInfoDao = database.childInfoDao(),
+            petDao = database.petDao(),
+            eventDao = database.eventDao()
+        )
+    )
+
+    /** Messages, gated by the chat outbox the iPhone binds, which stages from the pickers' copies. */
     val messageRepository = MessageRepositoryImpl(
         messageDao = database.messageDao(),
         signedInUser = signedIn,
         firestoreMessageDataSource = messageDataSource,
         attachmentGate = ChatAttachmentOutbox(
             directories = directories,
-            stager = SharedFileStager(NoPickedFiles),
+            stager = SharedFileStager(IosPickedFiles(directories.cache.toString())),
             storage = sharedFileStorage,
             cache = sharedFileCache,
             authService = signedIn

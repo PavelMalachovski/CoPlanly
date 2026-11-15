@@ -37,9 +37,10 @@ targets:
     platform: iOS
     deploymentTarget: "17.0"
     sources:
-      # Everything in the folder: the Swift entry point, the asset catalogue and, when the owner has
-      # dropped it there, GoogleService-Info.plist (never committed). Info.plist and the entitlements
-      # are read through the settings below, not copied.
+      # Everything in the folder: the Swift entry point, the asset catalogue, the five languages'
+      # InfoPlist.strings (the camera question, part C, Task 11) and, when the owner has dropped it
+      # there, GoogleService-Info.plist (never committed). Info.plist and the entitlements are read
+      # through the settings below, not copied.
       - path: CoPlanly
         excludes:
           - Info.plist

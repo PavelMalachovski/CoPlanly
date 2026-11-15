@@ -3,7 +3,6 @@ package com.coparently.app.di.koin
 import com.coparently.app.data.export.ExportVerifyAddress
 import com.coparently.app.data.export.ExportedFile
 import com.coparently.app.data.export.RecordFileWriter
-import com.coparently.app.data.files.PickedFiles
 import com.coparently.app.data.remote.firebase.PushRegistration
 import com.coparently.app.data.remote.google.CredentialProvider
 import com.coparently.app.data.remote.google.GoogleAccess
@@ -19,14 +18,11 @@ import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.export.CommunicationRecord
 import com.coparently.app.domain.export.ExportFormat
 import com.coparently.app.domain.export.RecordLabels
-import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.notification.RequestClockScheduler
 import com.coparently.app.domain.receipts.ReceiptTextRecognizer
-import com.coparently.app.domain.repository.RecordPhotoStorage
 import kotlinx.io.IOException
-import kotlinx.io.RawSource
 
 /*
  * What the data layer asks of the platform that the iPhone does not have yet (MON-24 phase 2, Task
@@ -41,7 +37,8 @@ import kotlinx.io.RawSource
  * (`NoPush` kept only the push switch, `NoSyncRequests` and `NoWording` went), for
  * `FirestorePushQueue`, `ForegroundSyncRunner` and `:shared-ui`'s `IosPairingWording` and
  * `IosSchoolImportWordings`; in part B's Task 11 `NoAccountDeletion`, for `IosAccountDeletion`; in
- * part C's Task 10 `NoStorageBucket`, for `IosStorageBucket`.
+ * part C's Task 10 `NoStorageBucket`, for `IosStorageBucket`; in its Task 11 `NoPickedFiles` and
+ * `NoRecordPhotoStorage`, for `IosPickedFiles` and `IosRecordPhotoStorage`.
  */
 
 /**
@@ -130,37 +127,8 @@ internal object NoGoogleCalendar : GoogleCalendarAccount, CredentialProvider {
     override suspend fun <T> withCredential(call: suspend (GoogleCredential) -> T): T = call(getCredential())
 }
 
-/**
- * Nothing can be picked yet: no file has a name, and reading one fails as unavailable, never as a
- * type the rules would refuse.
- */
-internal object NoPickedFiles : PickedFiles {
-    override fun typeOf(contentUri: String): String? = throw IOException(UNAVAILABLE)
-    override fun displayNameOf(contentUri: String): String? = null
-    override fun open(contentUri: String): RawSource = throw IOException(UNAVAILABLE)
-}
-
 /** No verification page is configured for the iPhone yet, so an export prints no address. */
 internal val NoExportVerifyAddress = ExportVerifyAddress { "" }
-
-/**
- * No Cloud Storage for a record's photos yet (part C binds it with Task 11): an upload fails, so
- * nothing is stored that names a photo, and a delete fails too, so a caller that keeps a list keeps
- * the reference rather than dropping one to an object it could not reach
- * (`RecordPhotoStorage.delete`'s contract). The event form's photo is the first caller
- * (`EventViewModel`, slice 10b).
- */
-internal object NoRecordPhotoStorage : RecordPhotoStorage {
-    override suspend fun upload(
-        kind: RecordPhotoKind,
-        recordId: String,
-        recordFamilyId: String?,
-        localUri: String
-    ): String = throw IOException(UNAVAILABLE)
-
-    override suspend fun delete(reference: String, recordFamilyId: String?): Unit =
-        throw IOException(UNAVAILABLE)
-}
 
 /**
  * No on-device text recognition yet (ML Kit's is Android's; the iPhone's comes with its camera,

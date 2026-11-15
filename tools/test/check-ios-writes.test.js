@@ -371,11 +371,42 @@ test('a listed object the Storage emulator lacks, or with no emulator to ask, fa
   assert.ok(noEmulator.problems.includes(`storage:${VAULT}: no Storage emulator to read it from`));
 });
 
-test('the gate must have uploaded a vault file', async () => {
-  assert.deepEqual(REQUIRED_FILE_PREFIXES, ['family_documents']);
+test('the gate must have uploaded a vault file and a pet photo', async () => {
+  assert.deepEqual(REQUIRED_FILE_PREFIXES, ['family_documents', 'pet_photos']);
   const none = await runOver('users/u\n', {}, { requiredFiles: REQUIRED_FILE_PREFIXES, files: {} });
   assert.ok(none.problems.includes('storage:family_documents: the gate uploaded no file to compare'));
-  const one = await runOver(`users/u\nstorage:${VAULT}\n`, {}, { requiredFiles: REQUIRED_FILE_PREFIXES, files: { [VAULT]: object() } });
-  assert.ok(!one.problems.some((p) => p.startsWith('storage:')), one.problems.join('\n'));
-  assert.ok(one.lines.some((line) => line === `ok storage:${VAULT} against SharedFileStorage.upload at FamilyDocumentPaths.storagePath`));
+  assert.ok(none.problems.includes('storage:pet_photos: the gate uploaded no file to compare'));
+  const both = await runOver(`users/u\nstorage:${VAULT}\nstorage:${PET_PHOTO}\n`, {}, {
+    requiredFiles: REQUIRED_FILE_PREFIXES, files: { [VAULT]: object(), [PET_PHOTO]: photo() },
+  });
+  assert.ok(!both.problems.some((p) => p.startsWith('storage:')), both.problems.join('\n'));
+  assert.ok(both.lines.some((line) => line === `ok storage:${VAULT} against SharedFileStorage.upload at FamilyDocumentPaths.storagePath`));
+  assert.ok(both.lines.some((line) => line === `ok storage:${PET_PHOTO} against SharedFileStorage.uploadBytes at RecordPhotoPaths.build`));
+});
+
+// ---- Record photos (part C, Task 11) ----
+
+const PET_PHOTO = 'pet_photos/alice__bob/pet-1/0b1e3c9a-5d2f-4e6a-8b7c-1d2e3f4a5b6c.jpg';
+/** A pet photo's metadata as the Storage emulator answers it. */
+const photo = (extra = {}) => object(Object.assign({ name: PET_PHOTO, contentType: 'image/jpeg' }, extra));
+
+test('a pet photo in the family\'s or the uploader\'s own folder has no mismatch', () => {
+  assert.deepEqual(compareFile(PET_PHOTO, photo()), []);
+  assert.deepEqual(compareFile('pet_photos/solo_alice/pet-1/0b1e3c9a-5d2f-4e6a-8b7c-1d2e3f4a5b6c.jpg', photo()), []);
+});
+
+test('a pet photo off the shape, not a JPEG or in a stranger\'s folder is a mismatch', () => {
+  assert.equal(compareFile('pet_photos/alice__bob/pet-1/photo.png', photo()).length, 1);
+  assert.deepEqual(compareFile(PET_PHOTO, photo({ contentType: 'application/pdf' })), [
+    'contentType: "application/pdf" is not one storage.rules admits',
+  ]);
+  assert.deepEqual(compareFile('pet_photos/solo_carol/pet-1/0b1e3c9a-5d2f-4e6a-8b7c-1d2e3f4a5b6c.jpg', photo()), [
+    'metadata.uploader: not one of the family the path names',
+  ]);
+  assert.deepEqual(compareFile('pet_photos/solo_/pet-1/0b1e3c9a-5d2f-4e6a-8b7c-1d2e3f4a5b6c.jpg', photo()), [
+    'path: "solo_" names no uid',
+  ]);
+  assert.deepEqual(compareFile('pet_photos/alice/pet-1/0b1e3c9a-5d2f-4e6a-8b7c-1d2e3f4a5b6c.jpg', photo()), [
+    'path: "alice" is not a pair id of two uids, which storage.rules splits',
+  ]);
 });

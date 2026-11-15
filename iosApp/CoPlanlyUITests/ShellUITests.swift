@@ -13,7 +13,8 @@ import XCTest
 /// its bar (disabled until the event has a title), its Starts date picked in the system's own
 /// calendar, "Jump to date" as a sheet a swipe down closes, an event's delete asked in the system's
 /// action sheet and cancelled ("Discard changes?" being its alert), New event's description and the chat composer
-/// staying above the keyboard, a `coplanly://pair` link reaching the pairing screen with its code, and
+/// staying above the keyboard, a `coplanly://pair` link reaching the pairing screen with its code, the
+/// vault's document picker opened and cancelled, an invitation's share sheet opened and closed, and
 /// a sign-out reaching the sign-in screen with no tabs, then a
 /// sign-in landing on fresh tabs, and last, deleting the account from Settings, which reaches the
 /// sign-in screen.
@@ -102,6 +103,12 @@ final class ShellUITests: XCTestCase {
             try self.eventPreviewSheet()
         }
         step("a coplanly://pair link opens Pairing with its code", after: ["sign in"]) { try self.pairingLink() }
+        step("Documents' Add a file opens the document picker, and Cancel returns", after: ["Family"]) {
+            try self.documentPicker()
+        }
+        step("an invitation's Share opens the share sheet, and it closes", after: ["Family"]) {
+            try self.inviteShareSheet()
+        }
         step("sign out, and sign in to fresh tabs", after: ["Settings"]) {
             try self.signOutAndIn(email: email, password: password)
         }
@@ -677,6 +684,66 @@ final class ShellUITests: XCTestCase {
         shot("16-pairing-link")
         try require(reached, "The link did not reach the pairing screen with its code")
         if asked.exists { pressIfThere("Cancel") }
+        try goToFamilyRoot()
+    }
+
+    /// The vault's Add a file presents the system's document picker (MON-24 phase 3, part C,
+    /// Task 11), and its Cancel takes it away and leaves Documents as it was, picking nothing; a
+    /// second tap opens it again. The simulator has no camera, so Take a photo is not offered.
+    private func documentPicker() throws {
+        try goToFamilyRoot()
+        let row = try element(containing: "Court orders, school letters")
+        let screenBottom = app.windows.firstMatch.frame.maxY - 120
+        for _ in 0..<6 where row.frame.maxY > screenBottom {
+            app.swipeUp()
+        }
+        sleep(1)
+        press(row)
+        if !app.navigationBars["Family"].waitForNonExistence(timeout: 3) { press(row) }
+        try require(app.navigationBars["Documents"].waitForExistence(timeout: timeout), "Documents did not open")
+        try require(!app.buttons["Take a photo"].exists, "Take a photo was offered on a phone with no camera")
+        for attempt in 1...2 {
+            press(try element(labelled: "Add a file", in: app.buttons))
+            let cancel = app.buttons["Cancel"]
+            try require(cancel.waitForExistence(timeout: timeout), "The document picker did not appear (open \(attempt))")
+            if attempt == 1 { shot("17-document-picker") }
+            cancel.tap()
+            try require(cancel.waitForNonExistence(timeout: timeout), "Cancel did not close the document picker")
+            try require(app.navigationBars["Documents"].waitForExistence(timeout: timeout), "Cancel left the Documents screen")
+        }
+        try goToFamilyRoot()
+    }
+
+    /// The pairing screen's Share, under "Add another co-parent", presents the system's share sheet
+    /// with the invitation (MON-24 phase 3, part C, Task 11), and its Close takes it away and leaves
+    /// the pairing screen as it was. Opening the row mints a code on the emulators.
+    private func inviteShareSheet() throws {
+        try goToFamilyRoot()
+        let row = try element(containing: "Linked: ")
+        press(row)
+        if !app.navigationBars["Family"].waitForNonExistence(timeout: 3) { press(row) }
+        press(try element(containing: "Add another co-parent"))
+        let share = app.buttons.matching(NSPredicate(format: "label == %@", "Share")).firstMatch
+        try require(share.waitForExistence(timeout: 60), "The invitation's Share button did not appear")
+        press(share)
+        let sheet = app.otherElements["ActivityListView"]
+        let copy = app.buttons["Copy"]
+        var shown = false
+        for _ in 0..<30 where !shown {
+            shown = sheet.exists || copy.exists
+            if !shown { sleep(1) }
+        }
+        shot("18-invite-share-sheet")
+        try require(shown, "The share sheet did not appear")
+        let close = app.buttons["Close"]
+        if close.exists {
+            close.tap()
+        } else {
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45))
+                .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.98)))
+        }
+        try require(sheet.waitForNonExistence(timeout: timeout) && !copy.exists, "The share sheet did not close")
+        try require(labelExists(containing: "Add another co-parent"), "Closing the share sheet left the pairing screen")
         try goToFamilyRoot()
     }
 

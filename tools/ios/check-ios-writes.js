@@ -62,7 +62,7 @@ const BUCKET = `${PROJECT}.appspot.com`;
 const STORAGE_PREFIX = 'storage:';
 
 /** The Storage prefixes the gate must have uploaded at least one object under. */
-const REQUIRED_FILE_PREFIXES = ['family_documents'];
+const REQUIRED_FILE_PREFIXES = ['family_documents', 'pet_photos'];
 
 /** What `storage.rules`' `isAcceptableSharedFile` admits (`SharedFilePolicy` in the app). */
 const SHARED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/heic', 'image/heif', 'image/webp'];
@@ -84,6 +84,15 @@ const FILE_RULES = {
     path: /^chat_attachments\/([^/]+)\/([^/]+)\/([^/]+)$/,
     contentTypes: SHARED_FILE_TYPES,
     source: 'SharedFileStorage.upload at ChatAttachmentCodec.storagePath',
+  },  // RecordPhotoPaths.build: pet_photos/{familyId | solo_{uid}}/{recordId}/{random uuid}.jpg, the
+  // JPEG FirebaseImageStorage (and the iPhone's IosRecordPhotoStorage, part C, Task 11) re-encodes
+  // every photo to, through SharedFileStorage.uploadBytes. Before the uploader has a family the
+  // owner is their own solo_ folder, which only they may write.
+  pet_photos: {
+    path: /^pet_photos\/([^/]+)\/([^/]+)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.jpg)$/,
+    contentTypes: ['image/jpeg'],
+    soloOwner: true,
+    source: 'SharedFileStorage.uploadBytes at RecordPhotoPaths.build',
   },
 };
 
@@ -325,8 +334,8 @@ function adjust(base, rule) {
 
 // ---- the rules --------------------------------------------------------------------------------
 
-/** The iPhone stores no record photo yet (`NoRecordPhotoStorage`), so no record carries one. */
-const NO_STORAGE = 'the iPhone stores no record photo yet (NoRecordPhotoStorage): no photo to reference';
+/** The gate photographs a pet (part C, Task 11) and no child, so a child's photo lists stay empty. */
+const NO_STORAGE = 'the gate uploads a pet\'s photo only (IosRecordPhotoStorage, part C): no medical photo to reference';
 
 /** A rule: the fixture of this writer path, and its adjustments with their reasons. */
 const RULES = {
@@ -394,7 +403,7 @@ const RULES = {
     fixture: 'child_info/repository-save.json',
     keyedMaps: { guests: 'keyed by the guest\'s uid' },
     // The portrait (schema 47): toFirestoreMap writes the key always, null for a child with none,
-    // as Android does; the fixture's child has one, and the iPhone has no Cloud Storage to add one.
+    // as Android does; the fixture's child has one, and the gate photographs no child.
     replace: { photo: oneOf(NULL, STRING) },
     mayBeEmpty: {
       guests: 'a guest is granted through the guest callable by a third account; ChildInfoGuests.encode is shared code',
@@ -402,8 +411,9 @@ const RULES = {
     },
   }),
 
-  // PetRepositoryImpl.upsertPet.
-  pets: () => ({ fixture: 'pets/repository-save.json', mayBeEmpty: { photos: NO_STORAGE } }),
+  // PetRepositoryImpl.upsertPet; the gate's pet carries the reference to the photo it uploaded
+  // (IosRecordPhotoStorage, part C, Task 11), compared with the fixture's element.
+  pets: () => ({ fixture: 'pets/repository-save.json' }),
 
   // ExpenseRepositoryImpl.addExpense → expenseToFirestoreMap (an empty receipt is "").
   expenses: () => ({ fixture: 'expenses/repository-save.json' }),
@@ -556,10 +566,15 @@ function compareFile(objectPath, meta) {
   if (!rule) return [`no Android shape is known for Storage prefix "${prefix}"`];
   const problems = [];
   const match = rule.path.exec(objectPath);
-  const pair = match ? match[1].split('__') : [];
+  // A record photo's owner may be its uploader's own folder, `solo_{uid}` (storage.rules'
+  // isRecordPhotoOwner), which names one uid: the uploader's.
+  const solo = match && rule.soloOwner && match[1].startsWith('solo_') ? match[1].slice('solo_'.length) : null;
+  const pair = solo ? [solo, solo] : match ? match[1].split('__') : [];
   if (!match) {
     problems.push(`path: not the shape ${rule.source} writes (${rule.path})`);
-  } else if (pair.length !== 2 || pair.some((uid) => uid === '')) {
+  } else if (solo === '') {
+    problems.push('path: "solo_" names no uid');
+  } else if (!solo && (pair.length !== 2 || pair.some((uid) => uid === ''))) {
     problems.push(`path: "${match[1]}" is not a pair id of two uids, which storage.rules splits`);
   }
   if (!rule.contentTypes.includes(meta.contentType)) {
