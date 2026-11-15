@@ -69,5 +69,7 @@
 	<string>$(COPLANLY_TERMS_URL)</string>
 	<key>CoPlanlySupportEmail</key>
 	<string>$(COPLANLY_SUPPORT_EMAIL)</string>
+	<key>CoPlanlyExportVerifyUrl</key>
+	<string>$(COPLANLY_EXPORT_VERIFY_URL)</string>
 </dict>
 </plist>

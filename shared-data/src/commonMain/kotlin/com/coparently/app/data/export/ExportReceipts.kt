@@ -91,7 +91,8 @@ class ExportReceipts(
 /**
  * Where an export's verification page is hosted, as the platform's build configures it (MON-16;
  * MON-24 phase 2, Task 8j): the app's `BuildConfig.EXPORT_VERIFY_URL`, blank while `web/verify/` is
- * not hosted. The iPhone's says blank until it has one, which leaves the line off the file.
+ * not hosted. The iPhone's is the `Info.plist` key `CoPlanlyExportVerifyUrl`, blank by default
+ * too, which leaves the line off the file.
  */
 fun interface ExportVerifyAddress {
 

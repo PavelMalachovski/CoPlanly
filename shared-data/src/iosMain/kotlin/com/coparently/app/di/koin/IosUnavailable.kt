@@ -1,8 +1,5 @@
 package com.coparently.app.di.koin
 
-import com.coparently.app.data.export.ExportVerifyAddress
-import com.coparently.app.data.export.ExportedFile
-import com.coparently.app.data.export.RecordFileWriter
 import com.coparently.app.data.remote.firebase.PushRegistration
 import com.coparently.app.data.remote.google.CredentialProvider
 import com.coparently.app.data.remote.google.GoogleAccess
@@ -15,14 +12,9 @@ import com.coparently.app.data.requests.RequestClockNotices
 import com.coparently.app.data.school.SchoolImportScheduler
 import com.coparently.app.data.support.SupportReminderScheduler
 import com.coparently.app.domain.changerequests.RequestDeadline
-import com.coparently.app.domain.export.CommunicationRecord
-import com.coparently.app.domain.export.ExportFormat
-import com.coparently.app.domain.export.RecordLabels
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.notification.RequestClockScheduler
-import com.coparently.app.domain.receipts.ReceiptTextRecognizer
-import kotlinx.io.IOException
 
 /*
  * What the data layer asks of the platform that the iPhone does not have yet (MON-24 phase 2, Task
@@ -38,7 +30,9 @@ import kotlinx.io.IOException
  * `FirestorePushQueue`, `ForegroundSyncRunner` and `:shared-ui`'s `IosPairingWording` and
  * `IosSchoolImportWordings`; in part B's Task 11 `NoAccountDeletion`, for `IosAccountDeletion`; in
  * part C's Task 10 `NoStorageBucket`, for `IosStorageBucket`; in its Task 11 `NoPickedFiles` and
- * `NoRecordPhotoStorage`, for `IosPickedFiles` and `IosRecordPhotoStorage`.
+ * `NoRecordPhotoStorage`, for `IosPickedFiles` and `IosRecordPhotoStorage`; in its Task 12
+ * `NoReceiptText`, `NoRecordFiles` and `NoExportVerifyAddress`, for `VisionReceiptText`,
+ * `IosRecordFileWriter` and `InfoPlistExportVerifyAddress`.
  */
 
 /**
@@ -125,44 +119,6 @@ internal object NoGoogleCalendar : GoogleCalendarAccount, CredentialProvider {
         throw GoogleAccessException(GoogleAccessFailure.NOT_CONNECTED)
 
     override suspend fun <T> withCredential(call: suspend (GoogleCredential) -> T): T = call(getCredential())
-}
-
-/** No verification page is configured for the iPhone yet, so an export prints no address. */
-internal val NoExportVerifyAddress = ExportVerifyAddress { "" }
-
-/**
- * No on-device text recognition yet (ML Kit's is Android's; the iPhone's comes with its camera,
- * phase 4): a receipt's text is not read, and [available] says so, so the shared expense form never
- * scans a photo here (slice 11e: it offers no receipt at all while the iPhone has no picker or image
- * loader either). Were a scan asked for, it would fail and the form would show its failed-scan
- * message and keep the photo, as when recognition fails on Android (`ExpenseViewModel.scanReceipt`,
- * slice 10d). Nothing is sent anywhere instead (item 10 of "Things that are easy to get wrong").
- */
-internal object NoReceiptText : ReceiptTextRecognizer {
-
-    /** Says so, so the shared expense form never scans here (slice 11e). */
-    override val available: Boolean = false
-
-    override suspend fun recognize(imageUri: String): List<String> = throw IOException(UNAVAILABLE)
-}
-
-/**
- * No communication record's file yet (slice 10f: the export's ViewModel asks for it): the PDF is
- * drawn with Android's `PdfDocument` and the file handed to its share sheet, and the iPhone has
- * neither yet, so it says it is not [available] and the export screen offers no format (slice 11g);
- * were it asked anyway, rendering fails, nothing is saved and the screen says the export failed.
- * An id reserved before the render is left with no hash, as after any failed export on Android,
- * and no file names it (MON-16); the server sweeps such reservations after seven days (Legal item
- * 6). Replace it when the iPhone draws a PDF and shares a file.
- */
-internal object NoRecordFiles : RecordFileWriter {
-    override val available: Boolean = false
-
-    override suspend fun render(record: CommunicationRecord, labels: RecordLabels, format: ExportFormat): ByteArray =
-        throw IOException(UNAVAILABLE)
-
-    override suspend fun save(bytes: ByteArray, record: CommunicationRecord, format: ExportFormat): ExportedFile =
-        throw IOException(UNAVAILABLE)
 }
 
 private const val UNAVAILABLE = "Not available in this iPhone build yet"

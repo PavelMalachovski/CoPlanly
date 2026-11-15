@@ -3,6 +3,7 @@
 package com.coparently.app.data.session
 
 import com.coparently.app.data.chat.ChatAttachmentOutbox
+import com.coparently.app.data.export.IosRecordFileWriter
 import com.coparently.app.data.files.IosPickedFiles
 import com.coparently.app.data.platform.AppDirectories
 import com.coparently.app.data.platform.logger
@@ -85,12 +86,19 @@ class IosAccountTraces(
 
         /**
          * Under [AppDirectories.cache], Android's list: the downloaded files and the vault's
-         * captures (`shared_files`), receipt photos (`receipts`), the last export (`exports`) and
-         * payment codes (`payment_codes`). A new directory of the account's files joins this list
-         * and Android's. One is the iPhone's alone: the pickers' copies (`picked`, `IosPickedFiles`),
-         * which Android does not make, its picked files staying the provider's.
+         * captures (`shared_files`), receipt photos (`receipts`), the last export (`exports`,
+         * `IosRecordFileWriter`) and payment codes (`payment_codes`). A new directory of the
+         * account's files joins this list and Android's. One is the iPhone's alone: the pickers'
+         * copies (`picked`, `IosPickedFiles`), which Android does not make, its picked files
+         * staying the provider's.
          */
         val CACHE_DIRECTORIES: List<String> =
-            listOf("shared_files", "receipts", "exports", "payment_codes", IosPickedFiles.PICKED_DIRECTORY)
+            listOf(
+                "shared_files",
+                "receipts",
+                IosRecordFileWriter.EXPORT_DIRECTORY,
+                "payment_codes",
+                IosPickedFiles.PICKED_DIRECTORY
+            )
     }
 }

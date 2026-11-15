@@ -141,10 +141,13 @@ targets:
         # What AppDelegate hands the shared code (IosAppConfig), through Info.plist. Blank hides a
         # link or leaves the choice of Firebase to the bundled configuration. The addresses are the
         # Android build's published ones (app/build.gradle.kts); the support address is blank there.
+        # The export's verification page (CoPlanlyExportVerifyUrl, read by the shared code's
+        # InfoPlistExportVerifyAddress) is blank too, as on Android until web/verify/ is hosted.
         COPLANLY_EMULATOR_HOST: ""
         COPLANLY_PRIVACY_POLICY_URL: "https://coparently-a39c9.web.app/privacy/"
         COPLANLY_TERMS_URL: "https://coparently-a39c9.web.app/terms/"
         COPLANLY_SUPPORT_EMAIL: ""
+        COPLANLY_EXPORT_VERIFY_URL: ""
         # Google's sign-in URL scheme (the "Register the app's URL schemes" phase). Blank: read from the
         # bundled GoogleService-Info.plist when there is one. Set it only on your own Mac; never commit
         # a value.
