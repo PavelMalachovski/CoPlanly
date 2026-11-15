@@ -1,15 +1,21 @@
 package com.coparently.app.ios.controls
 
+import com.coparently.app.presentation.common.BarMenuItem
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.Foundation.NSSelectorFromString
 import platform.UIKit.UIControlEventValueChanged
+import platform.UIKit.UIAction
 import platform.UIKit.UIControl
+import platform.UIKit.UIMenuElementState
 import platform.UIKit.UISwitch
 import platform.UIKit.accessibilityLabel
+import platform.UIKit.isAccessibilityElement
 import platform.darwin.NSObject
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotSame
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 /**
@@ -76,6 +82,35 @@ class NativeControlsIosTest {
         assertFalse(control.enabled)
     }
 
+    @Test
+    fun `a menu anchor shows one entry per item and ticks the chosen one`() {
+        val button = MenuAnchorButton {}
+        button.show(MENU)
+
+        val entries = button.menu?.children.orEmpty().map { it as UIAction }
+        assertEquals(listOf("None", "Weekly", "Monthly"), entries.map { it.title })
+        assertEquals(
+            listOf(false, true, false),
+            entries.map { it.state == UIMenuElementState.UIMenuElementStateOn }
+        )
+        assertTrue(button.showsMenuAsPrimaryAction)
+        assertTrue(button.isAccessibilityElement)
+        assertEquals("Weekly", button.accessibilityLabel)
+    }
+
+    @Test
+    fun `a menu anchor keeps its menu while the items look the same`() {
+        val button = MenuAnchorButton {}
+        button.show(MENU)
+        val first = button.menu
+        button.show(MENU.map { it.copy(onClick = {}) })
+        assertSame(first, button.menu)
+
+        button.show(MENU.map { it.copy(checked = false) })
+        assertNotSame(first, button.menu)
+        assertFalse(button.isAccessibilityElement)
+    }
+
     /**
      * Sends `UIControlEventValueChanged` to each action registered for it, as
      * `sendActionsForControlEvents` would: that call routes through `UIApplication`, which a test
@@ -93,5 +128,10 @@ class NativeControlsIosTest {
     private companion object {
         const val LABEL = "Pause before sending"
         val SEGMENTS = listOf("Month", "Week", "Day")
+        val MENU = listOf(
+            BarMenuItem(label = "None", sfSymbol = null, onClick = {}),
+            BarMenuItem(label = "Weekly", sfSymbol = null, onClick = {}, checked = true),
+            BarMenuItem(label = "Monthly", sfSymbol = null, onClick = {})
+        )
     }
 }

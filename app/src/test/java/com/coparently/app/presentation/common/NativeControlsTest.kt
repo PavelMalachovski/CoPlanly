@@ -1,7 +1,10 @@
 package com.coparently.app.presentation.common
 
+import androidx.compose.foundation.clickable
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.state.ToggleableState
@@ -228,6 +231,49 @@ class NativeControlsTest {
         assertEquals(listOf(LocalTime(18, 0)), picked)
     }
 
+    @Test
+    fun `an option row under native controls hands the fake one item per option, the selected checked, no dialog`() {
+        val picked = mutableListOf<String?>()
+        rule.setContent {
+            CompositionLocalProvider(LocalNativeControls provides fake) {
+                OptionRow(onSelect = { picked += it })
+            }
+        }
+        rule.waitForIdle()
+
+        val items = fake.menus.last()
+        assertEquals(REPEAT_OPTIONS.map { it.second }, items.map { it.label })
+        assertEquals(listOf(false, true, false), items.map { it.checked })
+        rule.onNodeWithTag(RecordingNativeControls.MENU_ANCHOR_TAG).assertExists()
+        rule.onNodeWithText(REPEAT_ROW).performClick()
+        rule.onNodeWithText(REPEAT_DIALOG).assertDoesNotExist()
+
+        items[2].onClick()
+        assertEquals(listOf("monthly"), picked)
+    }
+
+    @Test
+    fun `without native controls tapping the row opens the dialog`() {
+        rule.setContent { OptionRow(onSelect = {}) }
+
+        rule.onNodeWithText(REPEAT_DIALOG).assertDoesNotExist()
+        rule.onNodeWithText(REPEAT_ROW).performClick()
+        rule.onNodeWithText(REPEAT_DIALOG).assertExists()
+        assertTrue(fake.menus.isEmpty())
+    }
+
+    /** A repeat row as the event form draws one: the row opens a dialog that names itself. */
+    @Composable
+    private fun OptionRow(onSelect: (String?) -> Unit) {
+        AdaptiveOptionRow(
+            options = REPEAT_OPTIONS,
+            selected = "weekly",
+            onSelect = onSelect,
+            row = { open -> SectionRow(title = REPEAT_ROW, onClick = open) },
+            dialog = { dismiss -> Text(REPEAT_DIALOG, modifier = Modifier.clickable(onClick = dismiss)) }
+        )
+    }
+
     private companion object {
         val DAY = LocalDate(2026, 11, 1)
         const val CONFIRM = "Pick this day"
@@ -237,5 +283,12 @@ class NativeControlsTest {
         const val MATERIAL_SEGMENTS = "Material segments"
         const val NATIVE_ROW = "Pause before sending"
         const val MATERIAL_ROW = "Share usage data"
+        const val REPEAT_ROW = "Repeat"
+        const val REPEAT_DIALOG = "Choose how it repeats"
+        val REPEAT_OPTIONS = listOf<Pair<String?, String>>(
+            null to "Never",
+            "weekly" to "Weekly",
+            "monthly" to "Monthly"
+        )
     }
 }

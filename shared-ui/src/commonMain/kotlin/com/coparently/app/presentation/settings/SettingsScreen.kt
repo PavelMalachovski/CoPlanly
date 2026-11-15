@@ -86,6 +86,7 @@ import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.telemetry.TelemetryConsent
 import com.coparently.app.presentation.ai.AiConsentSettingsEntry
 import com.coparently.app.presentation.chat.SendHold
+import com.coparently.app.presentation.common.AdaptiveOptionRow
 import com.coparently.app.presentation.common.AdaptiveSwitch
 import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.BarLeading
@@ -351,8 +352,6 @@ fun SettingsScreen(
     val defaultCurrency by settingsViewModel.defaultCurrency.collectAsState()
     val pauseBeforeSending by settingsViewModel.pauseBeforeSending.collectAsState()
 
-    var showCurrencyPicker by remember { mutableStateOf(false) }
-    var showLanguagePicker by remember { mutableStateOf(false) }
     var showThemePicker by remember { mutableStateOf(false) }
     var showSignOutConfirm by remember { mutableStateOf(false) }
     // Deletion asks twice, the same shape unpair uses: the first dialog says what is lost,
@@ -654,20 +653,70 @@ fun SettingsScreen(
                     // Settings app).
                     if (appLanguages.available) {
                         Divider()
-                        SectionRow(
-                            icon = Icons.Default.Language,
-                            title = stringResource(Res.string.settings_language_title),
-                            onClick = { showLanguagePicker = true },
-                            trailing = { ValueLabel(stringResource(currentLanguage.labelRes)) }
+                        val languageOptions = AppLanguage.entries.map { it to stringResource(it.labelRes) }
+                        val onLanguage: (AppLanguage) -> Unit = { language ->
+                            if (language != currentLanguage) {
+                                currentLanguage = language
+                                // Recreates the activity with the new locale and persists the
+                                // choice (autoStoreLocales); below Android 13, "System default"
+                                // over a choice starts the app again (SystemDefaultRelaunch). The
+                                // phone's own half.
+                                appLanguages.apply(language)
+                            }
+                        }
+                        AdaptiveOptionRow(
+                            options = languageOptions,
+                            selected = currentLanguage,
+                            onSelect = onLanguage,
+                            row = { open ->
+                                SectionRow(
+                                    icon = Icons.Default.Language,
+                                    title = stringResource(Res.string.settings_language_title),
+                                    onClick = open,
+                                    trailing = { ValueLabel(stringResource(currentLanguage.labelRes)) }
+                                )
+                            },
+                            dialog = { dismiss ->
+                                SingleChoiceDialog(
+                                    title = stringResource(Res.string.settings_language_picker_title),
+                                    options = languageOptions,
+                                    selected = currentLanguage,
+                                    onSelect = { language ->
+                                        dismiss()
+                                        onLanguage(language)
+                                    },
+                                    onDismiss = dismiss
+                                )
+                            }
                         )
                     }
                     Divider()
-                    SectionRow(
-                        icon = Icons.Default.Payments,
-                        title = stringResource(Res.string.currency_settings_title),
-                        onClick = { showCurrencyPicker = true },
-                        trailing = {
-                            ValueLabel("${defaultCurrency.code} ${defaultCurrency.symbol}")
+                    val currencyOptions = SupportedCurrency.entries.map { it to "${it.code}  ${it.symbol}" }
+                    AdaptiveOptionRow(
+                        options = currencyOptions,
+                        selected = defaultCurrency,
+                        onSelect = { settingsViewModel.setDefaultCurrency(it) },
+                        row = { open ->
+                            SectionRow(
+                                icon = Icons.Default.Payments,
+                                title = stringResource(Res.string.currency_settings_title),
+                                onClick = open,
+                                trailing = {
+                                    ValueLabel("${defaultCurrency.code} ${defaultCurrency.symbol}")
+                                }
+                            )
+                        },
+                        dialog = { dismiss ->
+                            SingleChoiceDialog(
+                                title = stringResource(Res.string.currency_picker_title),
+                                options = currencyOptions,
+                                selected = defaultCurrency,
+                                onSelect = { currency ->
+                                    dismiss()
+                                    settingsViewModel.setDefaultCurrency(currency)
+                                },
+                                onDismiss = dismiss
+                            )
                         }
                     )
                     // Only where this phone can register for pushes (the iPhone's stand-in cannot
@@ -999,38 +1048,6 @@ fun SettingsScreen(
                 }
             },
             onDismiss = { showThemePicker = false }
-        )
-    }
-
-    if (showLanguagePicker) {
-        SingleChoiceDialog(
-            title = stringResource(Res.string.settings_language_picker_title),
-            options = AppLanguage.entries.map { it to stringResource(it.labelRes) },
-            selected = currentLanguage,
-            onSelect = { language ->
-                showLanguagePicker = false
-                if (language != currentLanguage) {
-                    currentLanguage = language
-                    // Recreates the activity with the new locale and persists the choice
-                    // (autoStoreLocales); below Android 13, "System default" over a choice
-                    // starts the app again (SystemDefaultRelaunch). The phone's own half.
-                    appLanguages.apply(language)
-                }
-            },
-            onDismiss = { showLanguagePicker = false }
-        )
-    }
-
-    if (showCurrencyPicker) {
-        SingleChoiceDialog(
-            title = stringResource(Res.string.currency_picker_title),
-            options = SupportedCurrency.entries.map { it to "${it.code}  ${it.symbol}" },
-            selected = defaultCurrency,
-            onSelect = { currency ->
-                showCurrencyPicker = false
-                settingsViewModel.setDefaultCurrency(currency)
-            },
-            onDismiss = { showCurrencyPicker = false }
         )
     }
 }

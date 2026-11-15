@@ -59,6 +59,8 @@ import com.coparently.app.presentation.common.PhotoStripStrings
 import com.coparently.app.presentation.common.VaccinationListEditor
 import com.coparently.app.presentation.common.field
 import com.coparently.app.presentation.common.labelRes
+import com.coparently.app.presentation.common.nativeControls
+import com.coparently.app.presentation.common.optionMenuItems
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.platform.LocalFilePicker
@@ -527,6 +529,22 @@ private fun SpeciesDropdown(
     enabled: Boolean
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val native = nativeControls()
+    if (native != null && enabled) {
+        // The iPhone: the system's menu from the field, the species chosen now ticked.
+        val options = PetSpecies.entries.map { it to stringResource(it.labelRes()) }
+        native.MenuAnchor(items = optionMenuItems(options, species, onSpecies), modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                value = stringResource(species.labelRes()),
+                onValueChange = {},
+                readOnly = true,
+                label = { Text(stringResource(Res.string.pet_species_label)) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = false) },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        return
+    }
     ExposedDropdownMenuBox(
         expanded = expanded && enabled,
         onExpandedChange = { if (enabled) expanded = it }

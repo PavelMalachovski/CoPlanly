@@ -123,6 +123,21 @@ interface NativeControls {
      */
     @Composable
     fun CompactTime(value: LocalTime, onChange: (LocalTime) -> Unit, modifier: Modifier)
+
+    /**
+     * A menu opened from what [content] draws: on the iPhone a transparent `UIButton` over the
+     * content, whose `UIMenu` holds [items] and which shows it as its primary action, so a tap on
+     * the row opens the system's menu from the row. Each entry calls the latest [items]' entry at
+     * its place; a [BarMenuItem.checked] entry carries the system's checkmark, a destructive one is
+     * drawn so and a disabled one dimmed.
+     *
+     * @param items The menu's entries, in order
+     * @param modifier Modifier applied to the anchor, the content and the button over it
+     * @param content What the parent sees and taps: a row, a field or a button. Its own click does
+     *   nothing here; the button over it takes the tap
+     */
+    @Composable
+    fun MenuAnchor(items: List<BarMenuItem>, modifier: Modifier, content: @Composable () -> Unit)
 }
 
 /**

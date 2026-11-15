@@ -39,13 +39,17 @@ import com.coparently.app.presentation.theme.screenTopAppBarColors
  * @property destructive Whether the entry destroys something: drawn in the error colour on
  *   Android and as a destructive element on the iPhone
  * @property enabled Whether the entry can be chosen now
+ * @property checked Whether the entry is the option chosen now: a checkmark beside it on the
+ *   iPhone (`UIMenuElementStateOn`), as a choice opened from a row shows its value. Android's
+ *   bar menus set none, and draw none
  */
 data class BarMenuItem(
     val label: String,
     val sfSymbol: String?,
     val onClick: () -> Unit,
     val destructive: Boolean = false,
-    val enabled: Boolean = true
+    val enabled: Boolean = true,
+    val checked: Boolean = false
 )
 
 /**

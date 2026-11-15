@@ -50,8 +50,10 @@ import com.coparently.app.domain.chat.ChatAttachmentCodec
 import com.coparently.app.domain.files.SharedFilePolicy
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
+import com.coparently.app.presentation.common.BarMenuItem
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.nativeControls
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.platform.AppImage
 import com.coparently.app.presentation.platform.LocalFileDetails
@@ -123,7 +125,8 @@ fun ChatAttachmentsHost(
  * Attaching is real, because attachments exist (design item 8 forbade it until they did): it opens
  * the system picker limited to what the rules accept, then asks before sending — a file in the chat
  * stays there for good, like every message. Where the phone has no picker (`FilePicker.available`,
- * the iPhone until phase 3) the entry is left out, and the menu keeps the other two.
+ * the iPhone until phase 3) the entry is left out, and the menu keeps the other two. On the iPhone
+ * the `+` opens the system's menu of the same entries ([NativeControls.MenuAnchor]).
  *
  * @param conversationId The thread a file is sent into.
  * @param onRequestChange Opens the event picker that starts a change request.
@@ -143,24 +146,37 @@ fun ChatComposerMenu(
     var open by remember { mutableStateOf(false) }
     // A picker closed without a choice calls nothing, which leaves `picked` as it was: null.
     val picker = filePicker.rememberDocumentPicker(SharedFilePolicy.CONTENT_TYPES.toList()) { uri -> picked = uri }
-    Box(modifier = modifier) {
-        IconButton(onClick = { open = true }) {
-            Icon(Icons.Default.Add, contentDescription = stringResource(Res.string.chat_composer_actions))
+    val native = nativeControls()
+    if (native != null) {
+        // The iPhone: the system's menu from the `+`, its entries named as on Android.
+        native.MenuAnchor(
+            items = composerMenuItems(filePicker.available, { picker.launch() }, onRequestChange, onTemplates),
+            modifier = modifier
+        ) {
+            IconButton(onClick = {}) {
+                Icon(Icons.Default.Add, contentDescription = stringResource(Res.string.chat_composer_actions))
+            }
         }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            if (filePicker.available) {
-                ComposerMenuItem(Icons.Default.AttachFile, stringResource(Res.string.chat_attach)) {
-                    open = false
-                    picker.launch()
+    } else {
+        Box(modifier = modifier) {
+            IconButton(onClick = { open = true }) {
+                Icon(Icons.Default.Add, contentDescription = stringResource(Res.string.chat_composer_actions))
+            }
+            DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                if (filePicker.available) {
+                    ComposerMenuItem(Icons.Default.AttachFile, stringResource(Res.string.chat_attach)) {
+                        open = false
+                        picker.launch()
+                    }
                 }
-            }
-            ComposerMenuItem(Icons.Default.SwapHoriz, stringResource(Res.string.chat_request_change)) {
-                open = false
-                onRequestChange()
-            }
-            ComposerMenuItem(Icons.Default.Bolt, stringResource(Res.string.chat_templates)) {
-                open = false
-                onTemplates()
+                ComposerMenuItem(Icons.Default.SwapHoriz, stringResource(Res.string.chat_request_change)) {
+                    open = false
+                    onRequestChange()
+                }
+                ComposerMenuItem(Icons.Default.Bolt, stringResource(Res.string.chat_templates)) {
+                    open = false
+                    onTemplates()
+                }
             }
         }
     }
@@ -182,6 +198,22 @@ fun ChatComposerMenu(
         )
     }
 }
+
+/**
+ * The composer menu's entries as the iPhone's `UIMenu` shows them: attach a file (where the phone
+ * has a picker), request a change and the templates, each with its SF Symbol.
+ */
+@Composable
+private fun composerMenuItems(
+    canAttach: Boolean,
+    onAttach: () -> Unit,
+    onRequestChange: () -> Unit,
+    onTemplates: () -> Unit
+): List<BarMenuItem> = listOfNotNull(
+    if (canAttach) BarMenuItem(stringResource(Res.string.chat_attach), "paperclip", onAttach) else null,
+    BarMenuItem(stringResource(Res.string.chat_request_change), "arrow.left.arrow.right", onRequestChange),
+    BarMenuItem(stringResource(Res.string.chat_templates), "bolt", onTemplates)
+)
 
 /**
  * The files a message carries, above its bubble: a thumbnail for an image, a chip for a PDF, and —

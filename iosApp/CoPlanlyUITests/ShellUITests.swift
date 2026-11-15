@@ -81,6 +81,9 @@ final class ShellUITests: XCTestCase {
         step("New event's Starts date is the system's pill", after: ["New event is a sheet with Save in its bar"]) {
             try self.startsDatePill()
         }
+        step("New event's Repeat opens the system's menu", after: ["New event is a sheet with Save in its bar"]) {
+            try self.repeatMenu()
+        }
         step("a new event swiped down closes without asking", after: ["New event is a sheet with Save in its bar"]) {
             try self.newEventSwipeDown()
         }
@@ -375,6 +378,36 @@ final class ShellUITests: XCTestCase {
             "The Starts pill does not read the \(day)th: \(reads)"
         )
         shot("10d-starts-pill-picked")
+    }
+
+    /// The event form's Repeat row opens the system's menu from the row (MON-24 phase 3, part C,
+    /// Task 4), not a dialog: its entries are the options, and the one picked is what the row then
+    /// reads. The labels are the shared strings in English ("Weekly" is `event_repeat_weekly`).
+    private func repeatMenu() throws {
+        let sheetBar = app.navigationBars["New event"]
+        if !sheetBar.exists { try eventFormSheet() }
+        dismissKeyboard()
+        let row = try element(labelled: "Repeat", in: app.staticTexts)
+        let screenBottom = app.windows.firstMatch.frame.maxY - 160
+        for _ in 0..<8 where row.frame.maxY > screenBottom {
+            app.swipeUp()
+        }
+        sleep(1)
+        press(row)
+        let weekly = app.buttons.matching(NSPredicate(format: "label == %@", "Weekly")).firstMatch
+        try require(weekly.waitForExistence(timeout: timeout), "Repeat did not open a menu with \"Weekly\"")
+        try require(app.buttons["Monthly"].exists, "The Repeat menu does not list every option")
+        try require(!app.alerts.firstMatch.exists, "Repeat opened a dialog as well as the menu")
+        shot("10e-repeat-menu")
+        weekly.tap()
+        try require(app.buttons["Monthly"].waitForNonExistence(timeout: timeout), "The Repeat menu stayed open after a pick")
+        // The row's own text, not the anchor's button, which now reads the value too.
+        let button = Int(XCUIElement.ElementType.button.rawValue)
+        let reads = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS %@ AND elementType != %d", "Weekly", button))
+            .firstMatch
+        try require(reads.waitForExistence(timeout: timeout), "The Repeat row does not read \"Weekly\" after the pick")
+        shot("10f-repeat-picked")
     }
 
     /// "Jump to date", opened from the month title on the calendar's card, is the system's inline

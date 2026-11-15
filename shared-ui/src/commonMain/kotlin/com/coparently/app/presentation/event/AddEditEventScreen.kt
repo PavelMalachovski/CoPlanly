@@ -92,6 +92,7 @@ import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.calendar.CalendarViewModel
+import com.coparently.app.presentation.common.AdaptiveOptionRow
 import com.coparently.app.presentation.common.AdaptiveSwitch
 import com.coparently.app.presentation.common.AnswerByField
 import com.coparently.app.presentation.common.AnswerByPickSaver
@@ -418,8 +419,6 @@ fun AddEditEventScreen(
     // A description is one tap away rather than a box on every new event (UX audit H5); an event
     // that has one shows it.
     var descriptionOpen by rememberSaveable { mutableStateOf(false) }
-    var showRepeatDialog by remember { mutableStateOf(false) }
-    var showReminderDialog by remember { mutableStateOf(false) }
     var showStartTimePicker by remember { mutableStateOf(false) }
     var showEndTimePicker by remember { mutableStateOf(false) }
 
@@ -1356,11 +1355,38 @@ fun AddEditEventScreen(
             val reminderPermissionRequester =
                 com.coparently.app.presentation.common.rememberNotificationPermissionRequester()
             SectionGroup {
-                SectionRow(
-                    title = stringResource(Res.string.event_form_repeat),
-                    icon = Icons.Default.Repeat,
-                    onClick = { showRepeatDialog = true },
-                    trailing = { OptionValue(repeatOptions.firstOrNull { it.first == recurrencePattern }?.second) }
+                val repeatTitle = stringResource(Res.string.event_form_repeat)
+                val onRepeat: (String?) -> Unit = { value ->
+                    recurrencePattern = value
+                    if (value == null) recurrenceEndDate = null
+                }
+                // A dialog of radio rows on Android, the system's menu from the row on the iPhone.
+                AdaptiveOptionRow(
+                    options = repeatOptions,
+                    selected = recurrencePattern,
+                    onSelect = onRepeat,
+                    row = { open ->
+                        SectionRow(
+                            title = repeatTitle,
+                            icon = Icons.Default.Repeat,
+                            onClick = open,
+                            trailing = {
+                                OptionValue(repeatOptions.firstOrNull { it.first == recurrencePattern }?.second)
+                            }
+                        )
+                    },
+                    dialog = { dismiss ->
+                        EventOptionDialog(
+                            title = repeatTitle,
+                            options = repeatOptions,
+                            selected = recurrencePattern,
+                            onSelect = { value ->
+                                onRepeat(value)
+                                dismiss()
+                            },
+                            onDismiss = dismiss
+                        )
+                    }
                 )
                 // Recurrence end date (optional, only for recurring events)
                 if (recurrencePattern != null) {
@@ -1381,40 +1407,40 @@ fun AddEditEventScreen(
                     )
                 }
                 Divider()
-                SectionRow(
-                    title = stringResource(Res.string.event_form_reminder),
-                    icon = Icons.Default.Notifications,
-                    onClick = { showReminderDialog = true },
-                    trailing = { OptionValue(reminderOptions.firstOrNull { it.first == reminderMinutes }?.second) }
-                )
-            }
-            if (showRepeatDialog) {
-                EventOptionDialog(
-                    title = stringResource(Res.string.event_form_repeat),
-                    options = repeatOptions,
-                    selected = recurrencePattern,
-                    onSelect = { value ->
-                        recurrencePattern = value
-                        if (value == null) recurrenceEndDate = null
-                        showRepeatDialog = false
-                    },
-                    onDismiss = { showRepeatDialog = false }
-                )
-            }
-            if (showReminderDialog) {
-                EventOptionDialog(
-                    title = stringResource(Res.string.event_form_reminder),
+                val reminderTitle = stringResource(Res.string.event_form_reminder)
+                val onReminder: (Int?) -> Unit = { value ->
+                    if (value == null) {
+                        reminderMinutes = null
+                    } else {
+                        reminderPermissionRequester.request { reminderMinutes = value }
+                    }
+                }
+                AdaptiveOptionRow(
                     options = reminderOptions,
                     selected = reminderMinutes,
-                    onSelect = { value ->
-                        showReminderDialog = false
-                        if (value == null) {
-                            reminderMinutes = null
-                        } else {
-                            reminderPermissionRequester.request { reminderMinutes = value }
-                        }
+                    onSelect = onReminder,
+                    row = { open ->
+                        SectionRow(
+                            title = reminderTitle,
+                            icon = Icons.Default.Notifications,
+                            onClick = open,
+                            trailing = {
+                                OptionValue(reminderOptions.firstOrNull { it.first == reminderMinutes }?.second)
+                            }
+                        )
                     },
-                    onDismiss = { showReminderDialog = false }
+                    dialog = { dismiss ->
+                        EventOptionDialog(
+                            title = reminderTitle,
+                            options = reminderOptions,
+                            selected = reminderMinutes,
+                            onSelect = { value ->
+                                dismiss()
+                                onReminder(value)
+                            },
+                            onDismiss = dismiss
+                        )
+                    }
                 )
             }
 

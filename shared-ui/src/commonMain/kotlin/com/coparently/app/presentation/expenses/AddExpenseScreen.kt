@@ -79,10 +79,13 @@ import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.LocalDateSaver
+import com.coparently.app.presentation.common.NativeControls
 import com.coparently.app.presentation.common.ScreenBar
 import com.coparently.app.presentation.common.SideBySideOrStacked
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.nativeControls
+import com.coparently.app.presentation.common.optionMenuItems
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberRecordPhoto
@@ -605,6 +608,11 @@ private fun ExpenseCategoryDropdown(
     onExpandedChange: (Boolean) -> Unit,
     onCategorySelected: (ExpenseCategory) -> Unit
 ) {
+    val native = nativeControls()
+    if (native != null) {
+        ExpenseCategoryMenu(native, category, onCategorySelected)
+        return
+    }
     ExposedDropdownMenuBox(
         expanded = expanded,
         onExpandedChange = { onExpandedChange(!expanded) },
@@ -635,6 +643,35 @@ private fun ExpenseCategoryDropdown(
                 )
             }
         }
+    }
+}
+
+/**
+ * The category field on the iPhone: the same read-only field, opening the system's menu of
+ * categories from itself ([NativeControls.MenuAnchor]), the category chosen now ticked.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ExpenseCategoryMenu(
+    native: NativeControls,
+    category: ExpenseCategory,
+    onCategorySelected: (ExpenseCategory) -> Unit
+) {
+    val options = ExpenseCategory.values().map { it to stringResource(it.labelRes) }
+    native.MenuAnchor(
+        items = optionMenuItems(options, category, onCategorySelected),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        OutlinedTextField(
+            value = stringResource(category.labelRes),
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(stringResource(Res.string.expense_field_category)) },
+            leadingIcon = { CategoryDot(category) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = false) },
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 

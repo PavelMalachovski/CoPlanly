@@ -14,6 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.coparently.app.domain.money.SupportedCurrency
+import com.coparently.app.presentation.common.nativeControls
+import com.coparently.app.presentation.common.optionMenuItems
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.currency_selector_label
 import org.jetbrains.compose.resources.stringResource
@@ -24,7 +26,8 @@ import org.jetbrains.compose.resources.stringResource
  * @param selected Currently selected currency
  * @param enabled Whether the control accepts input
  * @param onSelect Called with the newly picked currency
- * @param modifier Modifier applied to the root [Box] that anchors the dropdown to the button
+ * @param modifier Modifier applied to the root [Box] that anchors the dropdown to the button (the
+ *   menu anchor on the iPhone, where the system's menu opens from the button)
  */
 @Composable
 fun CurrencySelector(
@@ -35,6 +38,21 @@ fun CurrencySelector(
 ) {
     var expanded by remember { mutableStateOf(false) }
     val label = stringResource(Res.string.currency_selector_label)
+    val native = nativeControls()
+
+    if (native != null && enabled) {
+        // The iPhone: the system's menu from the button, the chosen currency ticked.
+        val options = SupportedCurrency.entries.map { it to "${it.code}  ${it.symbol}" }
+        native.MenuAnchor(items = optionMenuItems(options, selected, onSelect), modifier = modifier) {
+            OutlinedButton(
+                onClick = {},
+                modifier = Modifier.semantics { contentDescription = "$label: ${selected.code}" }
+            ) {
+                Text(selected.code)
+            }
+        }
+        return
+    }
 
     Box(modifier = modifier) {
         OutlinedButton(

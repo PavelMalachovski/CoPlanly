@@ -32,6 +32,7 @@ import platform.UIKit.UILayoutPriorityDefaultHigh
 import platform.UIKit.UIMenu
 import platform.UIKit.UIMenuElementAttributesDestructive
 import platform.UIKit.UIMenuElementAttributesDisabled
+import platform.UIKit.UIMenuElementState
 import platform.UIKit.UINavigationItemLargeTitleDisplayMode
 import platform.UIKit.UIScreen
 import platform.UIKit.UIViewController
@@ -250,7 +251,8 @@ internal class NativeBars(
 
     /**
      * An action whose tap opens its [menu] as a `UIMenu`: each entry a `UIAction` calling the
-     * latest bar's entry at the same place, a destructive one marked so, a disabled one dimmed.
+     * latest bar's entry at the same place, a destructive one marked so, a disabled one dimmed, a
+     * checked one ticked.
      */
     private fun menuItem(index: Int, action: BarAction, menu: List<BarMenuItem>): UIBarButtonItem {
         val entries = menu.mapIndexed { entry, menuItem ->
@@ -263,6 +265,7 @@ internal class NativeBars(
                 if (menuItem.destructive) flags = flags or UIMenuElementAttributesDestructive
                 if (!menuItem.enabled) flags = flags or UIMenuElementAttributesDisabled
                 attributes = flags
+                if (menuItem.checked) state = UIMenuElementState.UIMenuElementStateOn
             }
         }
         return UIBarButtonItem().apply {
@@ -408,7 +411,7 @@ private data class VisibleBar(
                     enabled = action.enabled,
                     primary = action.primary,
                     dot = action.dot,
-                    menu = action.menu?.map { VisibleMenuItem(it.label, it.sfSymbol, it.destructive, it.enabled) }
+                    menu = action.menu?.map { VisibleMenuItem(it.label, it.sfSymbol, it.destructive, it.enabled, it.checked) }
                 )
             },
             trailing = bar.trailingContent != null,
@@ -438,5 +441,6 @@ private data class VisibleMenuItem(
     val label: String,
     val sfSymbol: String?,
     val destructive: Boolean,
-    val enabled: Boolean
+    val enabled: Boolean,
+    val checked: Boolean
 )

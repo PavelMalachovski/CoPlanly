@@ -67,6 +67,15 @@ class RecordingNativeControls : NativeControls {
     /** The latest compact time pill's callback. */
     var lastCompactTimeChange: ((LocalTime) -> Unit)? = null
 
+    /** Every menu anchor drawn: its entries, in the order of composition. */
+    val menus = mutableListOf<List<BarMenuItem>>()
+
+    @Composable
+    override fun MenuAnchor(items: List<BarMenuItem>, modifier: Modifier, content: @Composable () -> Unit) {
+        menus += items
+        Box(modifier.testTag(MENU_ANCHOR_TAG)) { content() }
+    }
+
     @Composable
     override fun Switch(
         checked: Boolean,
@@ -130,6 +139,9 @@ class RecordingNativeControls : NativeControls {
     }
 
     companion object {
+        /** The test tag of a menu anchor this fake drew around its content. */
+        const val MENU_ANCHOR_TAG = "native-menu-anchor"
+
         /** The test tag of a compact date pill this fake drew. */
         const val COMPACT_DATE_TAG = "native-compact-date"
 

@@ -1,5 +1,6 @@
 package com.coparently.app.ios.controls
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -13,6 +14,7 @@ import androidx.compose.ui.uikit.LocalUIViewController
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import androidx.compose.ui.viewinterop.UIKitView
+import com.coparently.app.presentation.common.BarMenuItem
 import com.coparently.app.presentation.common.NativeControls
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_dialog_cancel
@@ -169,6 +171,25 @@ internal object IosNativeControls : NativeControls {
             update = { picker -> updateCompactTime(picker, value) },
             properties = UIKitInteropProperties(isInteractive = true, isNativeAccessibilityEnabled = true)
         )
+    }
+
+    /**
+     * [content] with a [MenuAnchorButton] laid over it at its size: a tap anywhere on the content
+     * opens the system's menu of [items] from it. The menu is rebuilt only when the items' visible
+     * part changes, and each entry calls the latest items' entry at its place.
+     */
+    @Composable
+    override fun MenuAnchor(items: List<BarMenuItem>, modifier: Modifier, content: @Composable () -> Unit) {
+        val latest by rememberUpdatedState(items)
+        Box(modifier) {
+            content()
+            UIKitView(
+                factory = { MenuAnchorButton { index -> latest.getOrNull(index)?.onClick?.invoke() } },
+                modifier = Modifier.matchParentSize(),
+                update = { button -> button.show(latest) },
+                properties = UIKitInteropProperties(isInteractive = true, isNativeAccessibilityEnabled = true)
+            )
+        }
     }
 
     /** The switch's intrinsic size in points, measured once from UIKit's own switch. */
