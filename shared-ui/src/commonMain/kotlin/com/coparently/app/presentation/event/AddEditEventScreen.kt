@@ -53,7 +53,6 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -93,6 +92,7 @@ import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.calendar.CalendarViewModel
+import com.coparently.app.presentation.common.AdaptiveSwitch
 import com.coparently.app.presentation.common.AnswerByField
 import com.coparently.app.presentation.common.AnswerByPickSaver
 import com.coparently.app.presentation.common.BarAction
@@ -1232,15 +1232,20 @@ fun AddEditEventScreen(
                     title = allDayLabel,
                     icon = Icons.Default.Schedule,
                     trailing = {
-                        Switch(
+                        AdaptiveSwitch(
                             checked = allDay,
                             // Named for TalkBack, like the Important switch below.
                             modifier = Modifier.semantics { contentDescription = allDayLabel },
                             onCheckedChange = {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 allDay = it
-                            }
+                            },
+                            accessibilityLabel = allDayLabel
                         )
+                    },
+                    onToggle = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        allDay = !allDay
                     }
                 )
                 Divider()
@@ -1444,7 +1449,7 @@ fun AddEditEventScreen(
                             }
                         }
                         val importantLabel = stringResource(Res.string.event_form_important_title)
-                        Switch(
+                        AdaptiveSwitch(
                             checked = isImportant,
                             // Named for TalkBack: a bare switch beside its label reads as
                             // "Switch, off" with nothing to say what it toggles.
@@ -1452,7 +1457,8 @@ fun AddEditEventScreen(
                             onCheckedChange = {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 isImportant = it
-                            }
+                            },
+                            accessibilityLabel = importantLabel
                         )
                     }
                     // Only once the switch is on: the helper says what the mark will mean, and
@@ -1503,13 +1509,14 @@ fun AddEditEventScreen(
                             Res.string.friend_event_participates,
                             friend.name
                         )
-                        Switch(
+                        AdaptiveSwitch(
                             checked = friendParticipates == friend.friendUid,
                             modifier = Modifier.semantics { contentDescription = participatesLabel },
                             onCheckedChange = { on ->
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 friendParticipates = if (on) friend.friendUid else null
-                            }
+                            },
+                            accessibilityLabel = participatesLabel
                         )
                     }
                 }
@@ -1552,13 +1559,14 @@ fun AddEditEventScreen(
                         }
                     }
                     val privateLabel = stringResource(Res.string.event_form_private_title)
-                    Switch(
+                    AdaptiveSwitch(
                         checked = isPrivate,
                         modifier = Modifier.semantics { contentDescription = privateLabel },
                         onCheckedChange = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             isPrivate = it
-                        }
+                        },
+                        accessibilityLabel = privateLabel
                     )
                 }
             }

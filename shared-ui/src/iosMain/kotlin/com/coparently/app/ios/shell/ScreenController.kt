@@ -28,12 +28,14 @@ import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.LocalOwnersProvider
+import com.coparently.app.ios.controls.IosNativeControls
 import com.coparently.app.presentation.AppProviders
 import com.coparently.app.presentation.common.BackSteps
 import com.coparently.app.presentation.common.ConnectivityBanner
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.LocalBackSteps
 import com.coparently.app.presentation.common.LocalBarHost
+import com.coparently.app.presentation.common.LocalNativeControls
 import com.coparently.app.presentation.common.LocalScreenVisible
 import com.coparently.app.presentation.common.LocalSheetGuard
 import com.coparently.app.presentation.common.SheetGuard
@@ -69,6 +71,9 @@ import platform.UIKit.UIViewController
  * @property sheetGuard The sheet the screen is the first screen of, or null.
  * @property visible Whether the screen is seen now, provided as [LocalScreenVisible]: a hidden tab's
  *   screen stays composed here, where Android would have disposed it.
+ *
+ * Every screen, the first screen of a form's sheet included, draws the system's own controls:
+ * [IosNativeControls] is provided as `LocalNativeControls` beside the bar host.
  */
 @Suppress("LongParameterList") // the entry, what it draws, and what the stack and the shell share with it
 internal class ScreenController(
@@ -120,6 +125,8 @@ internal class ScreenController(
         Shared {
             CompositionLocalProvider(
                 LocalBarHost provides bars.takeIf { nativeBar },
+                // Every hosted screen, a form's sheet included, draws the system's own controls.
+                LocalNativeControls provides IosNativeControls,
                 LocalSheetGuard provides sheetGuard,
                 LocalBackSteps provides backSteps,
                 LocalScreenVisible provides visible

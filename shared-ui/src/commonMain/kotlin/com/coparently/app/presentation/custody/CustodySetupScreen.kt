@@ -38,7 +38,6 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -60,6 +59,7 @@ import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.CustodyModelType
+import com.coparently.app.presentation.common.AdaptiveSwitch
 import com.coparently.app.presentation.common.AnswerByField
 import com.coparently.app.presentation.common.AnswerByPickSaver
 import com.coparently.app.presentation.common.FamilyMember
@@ -832,9 +832,10 @@ private fun MidweekContactSection(
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f)
             )
-            Switch(
+            AdaptiveSwitch(
                 checked = uiState.midweekEnabled,
-                onCheckedChange = onEnabledChange
+                onCheckedChange = onEnabledChange,
+                accessibilityLabel = stringResource(Res.string.custody_midweek_enable)
             )
         }
 
@@ -885,7 +886,7 @@ private fun MidweekContactSection(
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.weight(1f)
                 )
-                Switch(
+                AdaptiveSwitch(
                     checked = uiState.midweekEveryWeek,
                     onCheckedChange = onEveryWeekChange
                 )

@@ -29,7 +29,6 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -51,6 +50,7 @@ import com.coparently.app.domain.payments.PaymentState
 import com.coparently.app.domain.support.SupportAgreement
 import com.coparently.app.domain.support.SupportReminderRule
 import com.coparently.app.domain.support.SupportTerms
+import com.coparently.app.presentation.common.AdaptiveSwitch
 import com.coparently.app.presentation.common.BannerTone
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.GroupLabel
@@ -367,16 +367,19 @@ private fun LazyListScope.months(
 private fun ReminderGroup(days: Int?, onChange: (Int?) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         SectionGroup {
+            val reminderLabel = stringResource(Res.string.support_reminder_row)
             SectionRow(
-                title = stringResource(Res.string.support_reminder_row),
+                title = reminderLabel,
                 icon = Icons.Default.NotificationsActive,
                 supporting = stringResource(Res.string.support_reminder_row_supporting),
                 trailing = {
-                    Switch(
+                    AdaptiveSwitch(
                         checked = days != null,
-                        onCheckedChange = { on -> onChange(if (on) SupportReminderRule.DAYS_BEFORE[1] else null) }
+                        onCheckedChange = { on -> onChange(if (on) SupportReminderRule.DAYS_BEFORE[1] else null) },
+                        accessibilityLabel = reminderLabel
                     )
-                }
+                },
+                onToggle = { onChange(if (days == null) SupportReminderRule.DAYS_BEFORE[1] else null) }
             )
         }
         if (days != null) {

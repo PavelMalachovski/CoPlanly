@@ -171,6 +171,10 @@ private class SectionGroupScopeImpl : SectionGroupScope {
  *   pill — which at 150 % squeezed the title and supporting line into a column one or two words
  *   wide. Still one trailing control; only where it sits changes. Leave it off for a switch or a
  *   chevron, which are narrow and belong at the row's end.
+ * @param onToggle For a row whose [trailing] control is a switch: what flipping it does. Used only
+ *   under native controls ([nativeControls]), where the whole row flips the switch, as a grouped
+ *   list's switch row does on the iPhone. Ignored where Material draws the row (Android), so the
+ *   row's semantics and its look stay as they were; and ignored when [onClick] is given.
  */
 @Composable
 @Suppress("LongParameterList") // one row anatomy, expressed as one parameter list
@@ -186,13 +190,16 @@ fun SectionRow(
     onClick: (() -> Unit)? = null,
     leading: @Composable (() -> Unit)? = null,
     trailing: @Composable (() -> Unit)? = null,
-    stackTrailingAtLargeFont: Boolean = false
+    stackTrailingAtLargeFont: Boolean = false,
+    onToggle: (() -> Unit)? = null
 ) {
     val trailingBelow = stackTrailingAtLargeFont && stacksAtLargeFont()
+    val rowToggle = onToggle.takeIf { onClick == null && nativeControls() != null }
     Row(
         modifier = modifier
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
+            .then(if (rowToggle != null) Modifier.clickable(role = Role.Switch, onClick = rowToggle) else Modifier)
             .defaultMinSize(minHeight = 56.dp)
             .padding(horizontal = Spacing.L, vertical = Spacing.L),
         horizontalArrangement = Arrangement.spacedBy(Spacing.M),

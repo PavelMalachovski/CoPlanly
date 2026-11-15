@@ -26,7 +26,6 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -42,6 +41,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.calendar.ParentFilter
+import com.coparently.app.presentation.common.AdaptiveSwitch
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.eventTypeLabel
 import com.coparently.app.presentation.theme.CoPlanlyColors
@@ -223,9 +223,10 @@ fun EventTypeFilterSheet(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Switch(
+                AdaptiveSwitch(
                     checked = showHolidays,
-                    onCheckedChange = onShowHolidaysChange
+                    onCheckedChange = onShowHolidaysChange,
+                    accessibilityLabel = stringResource(Res.string.calendar_filter_holidays_title)
                 )
             }
         }

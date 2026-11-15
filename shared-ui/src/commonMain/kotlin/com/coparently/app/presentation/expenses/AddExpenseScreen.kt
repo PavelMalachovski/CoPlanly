@@ -42,7 +42,6 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -68,6 +67,7 @@ import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.receipts.ReceiptScan
+import com.coparently.app.presentation.common.AdaptiveSwitch
 import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.BarLeading
@@ -1028,7 +1028,12 @@ private fun SplitSection(
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f)
             )
-            Switch(checked = shared, onCheckedChange = onSharedChange, enabled = enabled)
+            AdaptiveSwitch(
+                checked = shared,
+                onCheckedChange = onSharedChange,
+                enabled = enabled,
+                accessibilityLabel = stringResource(Res.string.expense_split_shared)
+            )
         }
 
         if (!shared) {
@@ -1055,7 +1060,7 @@ private fun SplitSection(
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f)
             )
-            Switch(
+            AdaptiveSwitch(
                 checked = overrideMomPercent != null,
                 onCheckedChange = { on ->
                     onOverrideChange(if (on) agreedRatio.momPercent else null)

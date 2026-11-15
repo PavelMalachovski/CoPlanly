@@ -56,7 +56,6 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -87,6 +86,7 @@ import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.telemetry.TelemetryConsent
 import com.coparently.app.presentation.ai.AiConsentSettingsEntry
 import com.coparently.app.presentation.chat.SendHold
+import com.coparently.app.presentation.common.AdaptiveSwitch
 import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.BarLeading
 import com.coparently.app.presentation.common.ConfirmationDialog
@@ -677,29 +677,33 @@ fun SettingsScreen(
                         // POST_NOTIFICATIONS is requested here, contextually, not on app start.
                         val notificationPermissionRequester =
                             com.coparently.app.presentation.common.rememberNotificationPermissionRequester()
+                        val pushOn = settingsUiState.notificationsEnabled &&
+                            permissions.isGranted(PlatformPermission.NOTIFICATIONS)
+                        val onPushChange: (Boolean) -> Unit = { enabled ->
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            if (enabled) {
+                                notificationPermissionRequester.request {
+                                    settingsViewModel.toggleNotifications(true)
+                                }
+                            } else {
+                                settingsViewModel.toggleNotifications(false)
+                            }
+                        }
                         SectionRow(
                             icon = Icons.Default.Notifications,
                             title = stringResource(Res.string.settings_push_notifications),
                             supporting = stringResource(Res.string.settings_push_notifications_description),
                             trailing = {
                                 val pushLabel = stringResource(Res.string.settings_push_notifications)
-                                Switch(
+                                AdaptiveSwitch(
                                     modifier = Modifier.semantics { contentDescription = pushLabel },
-                                    checked = settingsUiState.notificationsEnabled &&
-                                        permissions.isGranted(PlatformPermission.NOTIFICATIONS),
-                                    onCheckedChange = { enabled ->
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        if (enabled) {
-                                            notificationPermissionRequester.request {
-                                                settingsViewModel.toggleNotifications(true)
-                                            }
-                                        } else {
-                                            settingsViewModel.toggleNotifications(false)
-                                        }
-                                    },
-                                    enabled = !settingsUiState.isLoading
+                                    checked = pushOn,
+                                    onCheckedChange = onPushChange,
+                                    enabled = !settingsUiState.isLoading,
+                                    accessibilityLabel = pushLabel
                                 )
-                            }
+                            },
+                            onToggle = { onPushChange(!pushOn) }.takeIf { !settingsUiState.isLoading }
                         )
                     }
                 }
@@ -721,14 +725,19 @@ fun SettingsScreen(
                         ),
                         trailing = {
                             val pauseLabel = stringResource(Res.string.settings_pause_before_sending_title)
-                            Switch(
+                            AdaptiveSwitch(
                                 checked = pauseBeforeSending,
                                 modifier = Modifier.semantics { contentDescription = pauseLabel },
                                 onCheckedChange = { enabled ->
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     settingsViewModel.setPauseBeforeSending(enabled)
-                                }
+                                },
+                                accessibilityLabel = pauseLabel
                             )
+                        },
+                        onToggle = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            settingsViewModel.setPauseBeforeSending(!pauseBeforeSending)
                         }
                     )
                 }
@@ -750,15 +759,20 @@ fun SettingsScreen(
                         supporting = stringResource(Res.string.settings_telemetry_description),
                         trailing = {
                             val telemetryLabel = stringResource(Res.string.settings_telemetry_title)
-                            Switch(
+                            AdaptiveSwitch(
                                 checked = telemetryConsent == TelemetryConsent.GRANTED,
                                 // Named for TalkBack, which otherwise reads only "Switch, on".
                                 modifier = Modifier.semantics { contentDescription = telemetryLabel },
                                 onCheckedChange = { granted ->
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     telemetryConsentViewModel.answer(granted)
-                                }
+                                },
+                                accessibilityLabel = telemetryLabel
                             )
+                        },
+                        onToggle = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            telemetryConsentViewModel.answer(telemetryConsent != TelemetryConsent.GRANTED)
                         }
                     )
                     Divider()
@@ -1114,10 +1128,11 @@ private fun GoogleCalendarActions(
                 text = syncLabel,
                 style = MaterialTheme.typography.bodyLarge
             )
-            Switch(
+            AdaptiveSwitch(
                 checked = isSyncEnabled,
                 modifier = Modifier.semantics { contentDescription = syncLabel },
                 onCheckedChange = onToggleSync,
+                accessibilityLabel = syncLabel,
                 // On only while connected, off always. The switch is stored and survives a
                 // disconnect now, so "on with nothing connected" is reachable — and must stay
                 // switchable off. (This read `signedIn || !enabled`, the other way round.)
