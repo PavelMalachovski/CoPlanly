@@ -45,6 +45,7 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionGroupScope
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.SheetHeight
+import com.coparently.app.presentation.common.nativeControls
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.titleMediumEmphasized
@@ -334,6 +335,8 @@ fun SectionGroupScope.StickersRow(onOpen: () -> Unit) {
 
 @Composable
 private fun Chevron() {
+    // The grouped row draws the one chevron under native controls (Grouped board).
+    if (nativeControls() != null) return
     Icon(
         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
         contentDescription = null,

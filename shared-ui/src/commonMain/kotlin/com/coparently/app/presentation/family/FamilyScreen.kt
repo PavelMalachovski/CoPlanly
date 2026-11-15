@@ -56,6 +56,7 @@ import com.coparently.app.presentation.common.ScreenBar
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionGroupScope
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.nativeControls
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.custody.labelRes
 import com.coparently.app.presentation.home.MonthMoney
@@ -587,6 +588,8 @@ private fun SectionGroupScope.NavRow(
 /** The trailing chevron on a row that navigates elsewhere. */
 @Composable
 private fun Chevron() {
+    // The grouped row draws the one chevron under native controls (Grouped board).
+    if (nativeControls() != null) return
     Icon(
         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
         contentDescription = null,

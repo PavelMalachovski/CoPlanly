@@ -105,6 +105,7 @@ import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.coverageNote
 import com.coparently.app.presentation.common.familyLabel
 import com.coparently.app.presentation.common.labelRes
+import com.coparently.app.presentation.common.nativeControls
 import com.coparently.app.presentation.common.regionLabelRes
 import com.coparently.app.presentation.common.regionName
 import com.coparently.app.presentation.common.regionSummaryRes
@@ -1064,6 +1065,8 @@ fun SettingsScreen(
 /** The trailing chevron on a row that expands in place, showing which way it is now. */
 @Composable
 private fun DisclosureChevron(expanded: Boolean) {
+    // The grouped row draws the one chevron under native controls (Grouped board).
+    if (nativeControls() != null) return
     // Turns with the section it opens, over the same duration, instead of swapping glyphs in one
     // frame while the section below it animated.
     val rotation by animateFloatAsState(
@@ -1091,6 +1094,8 @@ private const val HALF_TURN_DEGREES = 180f
 /** The trailing chevron on a row that navigates elsewhere. */
 @Composable
 private fun Chevron() {
+    // The grouped row draws the one chevron under native controls (Grouped board).
+    if (nativeControls() != null) return
     Icon(
         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
         contentDescription = null,

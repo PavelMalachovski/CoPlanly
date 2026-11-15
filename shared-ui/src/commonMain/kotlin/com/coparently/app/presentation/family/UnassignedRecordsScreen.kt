@@ -51,6 +51,7 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.nativeControls
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.custody.labelRes
 import com.coparently.app.presentation.theme.IconSizes
@@ -245,12 +246,14 @@ private fun RecordRow(record: UnassignedRecord, onClick: (() -> Unit)?) {
         supporting = recordDetail(record),
         onClick = onClick,
         trailing = {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(IconSizes.Standard)
-            )
+            if (nativeControls() == null) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(IconSizes.Standard)
+                )
+            }
         }
     )
 }
