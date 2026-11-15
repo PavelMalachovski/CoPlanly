@@ -54,6 +54,28 @@ class CalendarBarsTest : PushedBarsHarness() {
     }
 
     @Test
+    fun `while a Day view a month cell opened waits the bar is shown with a back button`() {
+        compose(withHost = true) { calendarBar(backStep = { clicks += "back" }) }
+        rule.waitForIdle()
+        val bar = shown.last()
+        assertTrue("The bar is shown while the step waits", !bar.hidden)
+        assertEquals("Calendar", bar.title)
+        val leading = bar.leading
+        assertTrue("A back button leads", leading is BarLeading.Back)
+        (leading as BarLeading.Back).onClick()
+        rule.waitForIdle()
+        assertEquals(listOf("back"), clicks)
+    }
+
+    @Test
+    fun `with no step waiting the bar stays hidden`() {
+        compose(withHost = true) { calendarBar(backStep = null) }
+        rule.waitForIdle()
+        assertTrue(shown.last().hidden)
+        assertEquals(BarLeading.None, shown.last().leading)
+    }
+
+    @Test
     fun `the iPhone draws the brand row, heading, view control and Filters in content`() {
         compose(withHost = true) { calendarBar() }
         assertTrue(rule.onAllNodesWithText("coplanly", substring = true).fetchSemanticsNodes().isNotEmpty())
@@ -152,7 +174,8 @@ class CalendarBarsTest : PushedBarsHarness() {
         filtersActive: Boolean = false,
         onSettings: (() -> Unit)? = { clicks += "settings" },
         swapMonth: YearMonth? = null,
-        swapActions: SwapSelectionBarActions = SwapSelectionBarActions({}, {}, {})
+        swapActions: SwapSelectionBarActions = SwapSelectionBarActions({}, {}, {}),
+        backStep: (() -> Unit)? = null
     ) {
         CompositionLocalProvider(LocalFixedToday provides DAY) {
             CalendarTopBar(
@@ -160,7 +183,8 @@ class CalendarBarsTest : PushedBarsHarness() {
                     children = emptyList(),
                     viewMode = CalendarViewMode.MONTH,
                     filtersActive = filtersActive,
-                    swapMonth = swapMonth
+                    swapMonth = swapMonth,
+                    backStep = backStep
                 ),
                 actions = CalendarTopBarActions(
                     onViewModeChange = {},

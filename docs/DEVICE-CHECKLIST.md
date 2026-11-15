@@ -2584,7 +2584,9 @@ and no real receipt. What is left:
       straight. The amount and the date fill in. Then one **held at an angle** (about 20°) and one
       photographed sideways: the total is still found, or the form says it could not read the
       receipt and keeps the photo — never a wrong amount from two printed rows joined into one. With
-      the phone in airplane mode it reads the same: nothing leaves the phone.
+      the phone in airplane mode it reads the same: nothing leaves the phone. This is the only proof
+      that Vision recognises text: a CI simulator may recognise nothing, and `VisionReceiptTextTest`
+      then skips its recognition checks and says so.
 - [ ] **An export** (Family → Export the record): CSV and PDF. The PDF opens in Files with the
       statement first, every page's footer, and the period you chose; the CSV opens in Numbers with
       Czech and Cyrillic text intact. Sign out and back in: no exported file is left in the app.

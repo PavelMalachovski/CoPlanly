@@ -4,12 +4,11 @@ import androidx.compose.ui.graphics.Color
 import com.coparently.app.presentation.common.BarMenuItem
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.Foundation.NSSelectorFromString
-import platform.UIKit.UIControlEventValueChanged
 import platform.UIKit.UIAction
 import platform.UIKit.UIColor
 import platform.UIKit.UIControl
+import platform.UIKit.UIControlEventValueChanged
 import platform.UIKit.UIMenuElementState
-import platform.UIKit.UISwitch
 import platform.UIKit.accessibilityLabel
 import platform.UIKit.isAccessibilityElement
 import platform.darwin.NSObject
@@ -99,6 +98,21 @@ class NativeControlsIosTest {
         assertTrue(button.isAccessibilityElement)
         assertEquals("Repeat, Weekly", button.accessibilityLabel)
         assertEquals("Weekly", button.configuration?.title)
+    }
+
+    @Test
+    fun `a segmented control is named for VoiceOver when its site names the choice`() {
+        val control = makeSegmented(SEGMENTS) {}
+        updateSegmented(control, SEGMENTS, selectedIndex = 0, enabled = true, accessibilityLabel = "Show")
+
+        assertEquals("Show", control.accessibilityLabel)
+    }
+
+    @Test
+    fun `a menu button that is a symbol alone is at least the touch target square`() {
+        val (width, height) = menuButtonSize(MenuButtonLook(title = null, sfSymbol = "plus", tint = Color.Unspecified))
+
+        assertTrue(width >= MIN_TOUCH_TARGET_PT && height >= MIN_TOUCH_TARGET_PT, "$width x $height")
     }
 
     @Test

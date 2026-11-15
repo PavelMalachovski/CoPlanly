@@ -25,7 +25,6 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.components.TimePickerDialog
 import com.coparently.app.testing.RobolectricTestApplication
 import kotlinx.datetime.LocalDate
@@ -180,6 +179,23 @@ class NativeControlsTest {
         rule.onNodeWithText(MATERIAL_SEGMENTS).assertExists()
         assertTrue(materialRan)
         assertTrue(fake.segmented.isEmpty())
+    }
+
+    @Test
+    fun `segmented with native controls hands on the choice's VoiceOver name`() {
+        rule.setContent {
+            CompositionLocalProvider(LocalNativeControls provides fake) {
+                AdaptiveSegmented(
+                    labels = VIEW_LABELS,
+                    selectedIndex = 0,
+                    onSelect = {},
+                    accessibilityLabel = "Show"
+                ) {}
+            }
+        }
+        rule.waitForIdle()
+
+        assertEquals("Show", fake.segmented.last().accessibilityLabel)
     }
 
     @Test

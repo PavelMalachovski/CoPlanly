@@ -158,7 +158,10 @@ final class ShellUITests: XCTestCase {
     private func requireHeaderRoot(_ name: String) throws {
         let gear = app.buttons.matching(NSPredicate(format: "label == %@", "Settings")).firstMatch
         try require(gear.waitForExistence(timeout: timeout), "\(name)'s first screen has no Settings button")
-        try require(app.navigationBars.count == 0, "\(name)'s first screen still shows a navigation bar")
+        // The bar of a screen just popped can still be animating away: wait for it rather than look once.
+        let noBar = XCTNSPredicateExpectation(predicate: NSPredicate(format: "count == 0"), object: app.navigationBars)
+        let gone = XCTWaiter().wait(for: [noBar], timeout: 10) == .completed
+        try require(gone, "\(name)'s first screen still shows a navigation bar")
     }
 
     private func otherTabs() throws {
@@ -1356,8 +1359,9 @@ final class ShellUITests: XCTestCase {
             try self.require(sheetBar.waitForExistence(timeout: 8), "Jump to date did not open as a sheet with Cancel")
             try self.require(self.app.datePickers.firstMatch.exists, "The jump-to-date sheet holds no date picker")
         }
-        // An option menu: New event's Repeat, the system's pop-up button, with its menu open.
-        tourVisit("control-option-menu") {
+        // An option menu: New event's Repeat, the system's pop-up button, with its menu open; a tap
+        // outside it after the shot closes it choosing nothing, as `tourReset` cannot (it has no Close).
+        tourVisit("control-option-menu", afterShot: { self.tapOutside() }) {
             try self.tourTab("Calendar")
             try self.tourOpenSheet(labelled: "Add event")
             self.dismissKeyboard()
@@ -1390,9 +1394,10 @@ final class ShellUITests: XCTestCase {
         }
     }
 
-    /// Runs one visit to [route]: back to a known place, [reach], a screenshot, then nothing more.
-    /// A visit that throws, or during which XCUITest recorded an issue, is skipped with the reason.
-    private func tourVisit(_ route: String, _ reach: () throws -> Void) {
+    /// Runs one visit to [route]: back to a known place, [reach], a screenshot, then [afterShot]
+    /// (what a visit leaves open that `tourReset` cannot close). A visit that throws, or during which
+    /// XCUITest recorded an issue, is skipped with the reason, a screenshot and the element tree.
+    private func tourVisit(_ route: String, afterShot: (() -> Void)? = nil, _ reach: () throws -> Void) {
         if Date() > tourDeadline {
             let outcome = "skipped: the tour's \(Int(tourBudget / 60)) minutes ran out before this visit"
             print("COPLANLY_TOUR_VISIT \(route): \(outcome)")
@@ -1414,6 +1419,8 @@ final class ShellUITests: XCTestCase {
             } catch {
                 outcome = "skipped: \(error)"
             }
+            if outcome.hasPrefix("skipped") { tourDiagnose(route) }
+            afterShot?()
         }
         if app.state != .runningForeground {
             tourCrashes.append(route)
@@ -1426,6 +1433,27 @@ final class ShellUITests: XCTestCase {
         tourOutcomes.append((route, outcome))
     }
 
+    /// What was on screen when [route] was skipped: a screenshot and the element tree, so a skip can
+    /// be told apart from a screen that is not there without running the tour again.
+    private func tourDiagnose(_ route: String) {
+        guard app.state == .runningForeground else { return }
+        let name = "skip-" + tourShotName(route)
+        let screen = XCTAttachment(screenshot: app.screenshot())
+        screen.name = name
+        screen.lifetime = .keepAlways
+        add(screen)
+        let tree = XCTAttachment(string: app.debugDescription)
+        tree.name = name + "-tree"
+        tree.lifetime = .keepAlways
+        add(tree)
+    }
+
+    /// A tap at the top of the screen, outside a menu or an action sheet, which closes it choosing nothing.
+    private func tapOutside() {
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.06)).tap()
+        sleep(1)
+    }
+
     /// [route] up to its first `/` or `?`: `edit_event/{eventId}` is shot as `tour-edit_event`.
     private func tourShotName(_ route: String) -> String {
         String(route.prefix { $0 != "/" && $0 != "?" })
@@ -1434,6 +1462,7 @@ final class ShellUITests: XCTestCase {
     /// Closes what an earlier visit left open — a question, a sheet, the event preview — so the
     /// next starts from a tab.
     private func tourReset() {
+        var tappedOutside = false
         for _ in 0..<4 {
             // A question in the system's action sheet: its Cancel, never its action.
             let sheetCancel = app.sheets.firstMatch.buttons["Cancel"]
@@ -1441,9 +1470,11 @@ final class ShellUITests: XCTestCase {
                 sheetCancel.tap()
                 sleep(1)
             }
-            // A picker's sheet (Jump to date) closes with its bar's Cancel, which saves nothing.
+            // A picker's sheet (Jump to date) closes with its bar's Cancel, which saves nothing; only a
+            // picker's, never another bar's Cancel, which may be a form's own.
             let pickerCancel = app.navigationBars.buttons.matching(NSPredicate(format: "label == %@", "Cancel")).firstMatch
-            if pickerCancel.exists && pickerCancel.isHittable {
+            let pickerShown = app.datePickers.firstMatch.exists || app.pickers.firstMatch.exists
+            if pickerShown && pickerCancel.exists && pickerCancel.isHittable {
                 pickerCancel.tap()
                 sleep(1)
             }
@@ -1451,7 +1482,16 @@ final class ShellUITests: XCTestCase {
             let closes = app.navigationBars.buttons.matching(NSPredicate(format: "label == %@", "Close"))
             // The sheet on top is the one whose cross can be touched.
             let top = (0..<closes.count).reversed().map { closes.element(boundBy: $0) }.first { $0.isHittable }
-            guard let top else { break }
+            guard let top else {
+                // A sheet is up but its cross cannot be touched: something over it (a menu) takes the
+                // touches. A tap outside closes that, and the next round finds the cross.
+                if closes.count > 0 && !tappedOutside {
+                    tappedOutside = true
+                    tapOutside()
+                    continue
+                }
+                break
+            }
             top.tap()
             sleep(1)
         }
@@ -1564,17 +1604,32 @@ final class ShellUITests: XCTestCase {
         throw StepFailure(description: "Tapping \"\(what)\" opened no form sheet")
     }
 
-    /// The element reading [text], scrolled until it is above the tab bar.
+    /// The element reading [text], scrolled until all of it is on the screen: below the navigation
+    /// bar (a list left scrolled down by an earlier visit holds rows above it, which a tap would miss)
+    /// and above the tab bar. It looks further down first, then back up.
     private func tourScrolledTo(_ text: String) throws -> XCUIElement {
         let match = element(labelledContaining: text)
-        let bottom = app.windows.firstMatch.frame.maxY - 120
-        for attempt in 0..<6 {
+        let window = app.windows.firstMatch.frame
+        let bottom = window.maxY - 120
+        for attempt in 0..<12 {
+            let bar = app.navigationBars.firstMatch
+            let top = bar.exists ? max(bar.frame.maxY, window.minY) : window.minY + 60
             // The screen's first frame may take a moment; after a swipe the list is already there.
-            if match.waitForExistence(timeout: attempt == 0 ? 8 : 1) && !match.frame.isEmpty && match.frame.maxY <= bottom {
-                sleep(1)
-                return match
+            if match.waitForExistence(timeout: attempt == 0 ? 8 : 1) && !match.frame.isEmpty {
+                let frame = match.frame
+                if frame.minY >= top && frame.maxY <= bottom {
+                    sleep(1)
+                    return match
+                }
+                if frame.minY < top {
+                    app.swipeDown()
+                    continue
+                }
+                app.swipeUp()
+                continue
             }
-            app.swipeUp()
+            // Not in the tree: further down for six swipes, then back up.
+            if attempt < 6 { app.swipeUp() } else { app.swipeDown() }
         }
         try require(match.exists, "Nothing on screen reads \"\(text)\"")
         return match
