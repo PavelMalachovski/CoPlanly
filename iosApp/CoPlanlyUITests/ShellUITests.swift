@@ -396,22 +396,16 @@ final class ShellUITests: XCTestCase {
         let pill = byStarts.waitForExistence(timeout: 5) ? byStarts : app.datePickers.firstMatch
         try require(pill.waitForExistence(timeout: timeout), "The Starts date is not the system's date picker")
         let day = Calendar.current.component(.day, from: Date()) == 20 ? 21 : 20
-        let dayPattern = ".*\\b\(day)\\b.*"
-        let pickersBefore = app.datePickers.count
         press(pill)
-        // The days of the calendar the pill opened, not the form's own pills (a time can read "20:00").
-        let opened = app.datePickers.element(boundBy: pickersBefore)
-        let days = opened.waitForExistence(timeout: timeout) ? opened.buttons : app.buttons
-        let dayButtons = days.matching(NSPredicate(format: "label MATCHES %@", dayPattern))
-        try require(
-            dayButtons.firstMatch.waitForExistence(timeout: timeout),
-            "The system's calendar did not open, or has no \(day)th"
-        )
-        // The calendar keeps the months either side as off-screen pages, whose days match too: the
-        // day of the month on screen is the one that can be touched.
-        let dayButton = try hittable(in: dayButtons, what: "the \(day)th of the month on screen")
-        shot("10c-starts-system-calendar")
-        dayButton.tap()
+        // Opened or not, the popover is closed again if the step fails, so it does not cascade.
+        do {
+            let dayButton = try calendarDay(day)
+            shot("10c-starts-system-calendar")
+            press(dayButton)
+        } catch {
+            closeCalendarPopover()
+            throw error
+        }
         // The calendar's popover closes on a pick on some releases; on others a tap outside it does.
         let outside = app.otherElements["PopoverDismissRegion"]
         if outside.waitForExistence(timeout: 2) { outside.tap() }
@@ -423,6 +417,49 @@ final class ShellUITests: XCTestCase {
             "The Starts pill does not read the \(day)th: \(reads)"
         )
         shot("10d-starts-pill-picked")
+    }
+
+    /// The button of the opened calendar for [day], chosen by frame: wholly inside the window, and
+    /// preferably of the month the pill shows. Neighbouring months are kept as off-screen pages whose
+    /// days match the label too, and Compose's elements are not reliably reported hittable.
+    private func calendarDay(_ day: Int) throws -> XCUIElement {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "MMMM"
+        let month = formatter.string(from: Date())
+        let predicate = NSPredicate(format: "label MATCHES %@", ".*\\b\(day)\\b.*")
+        let window = app.windows.firstMatch.frame
+        var listed: [String] = []
+        let deadline = Date().addingTimeInterval(TimeInterval(timeout))
+        repeat {
+            let candidates = app.buttons.matching(predicate).allElementsBoundByIndex
+            let onScreen = candidates.filter { element in
+                let f = element.frame
+                return element.exists && !f.isEmpty && f.minX >= 0 && f.maxX <= window.width
+                    && f.minY >= 0 && f.maxY <= window.height
+            }
+            if let best = onScreen.first(where: { $0.label.contains(month) }) ?? onScreen.first { return best }
+            listed = candidates.map { "\($0.label) @ \($0.frame)" }
+            usleep(500_000)
+        } while Date() < deadline
+        let detail = String(listed.joined(separator: "; ").prefix(450))
+        throw StepFailure(description: "No calendar day \(day) on screen (\(month)); candidates: \(detail)")
+    }
+
+    /// Closes the system calendar's popover or sheet, if one is up.
+    private func closeCalendarPopover() {
+        let outside = app.otherElements["PopoverDismissRegion"]
+        if outside.exists {
+            outside.tap()
+        } else {
+            let cancel = app.navigationBars.buttons.matching(NSPredicate(format: "label == %@ OR label == %@", "Done", "Cancel")).firstMatch
+            if app.datePickers.firstMatch.exists && cancel.exists && cancel.isHittable {
+                cancel.tap()
+            } else {
+                tapOutside()
+            }
+        }
+        _ = outside.waitForNonExistence(timeout: 3)
     }
 
     /// The event form's Repeat row ends in the system's pop-up button (MON-24 phase 3, part C,
