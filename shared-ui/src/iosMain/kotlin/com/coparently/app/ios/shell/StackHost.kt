@@ -148,6 +148,22 @@ internal class StackHost(
         navController.popBackStack(startRoute, inclusive = false)
     }
 
+    /** The stack's first screen, while UIKit shows one. */
+    private val rootScreen: ScreenController?
+        get() = navigation.viewControllers.firstOrNull()?.let { root ->
+            screens.values.firstOrNull { it.viewController === root }
+        }
+
+    /** Whether the stack's first screen has an inner step its back undoes first. */
+    val rootStepPending: Boolean get() = rootScreen?.backSteps?.hasEnabledStep == true
+
+    /**
+     * Undoes the latest inner step of the stack's first screen, as its bar's back button would, and
+     * answers whether there was one: what a tap on the Calendar tab does to a Day view opened from a
+     * month cell, alongside `CalendarTabTaps`.
+     */
+    fun undoRootStep(): Boolean = rootScreen?.backSteps?.handle() == true
+
     /** Ends the stack: its screens leave, its entries are destroyed and their ViewModels cleared. */
     fun dispose() {
         if (disposed) return

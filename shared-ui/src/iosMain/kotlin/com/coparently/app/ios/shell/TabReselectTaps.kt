@@ -4,6 +4,7 @@ import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCAction
 import kotlinx.cinterop.ObjCSignatureOverride
+import platform.Foundation.NSLog
 import platform.Foundation.NSSelectorFromString
 import platform.UIKit.UIGestureRecognizer
 import platform.UIKit.UIGestureRecognizerDelegateProtocol
@@ -68,6 +69,7 @@ internal class TabReselectTaps(
     @ObjCAction
     fun tapped(sender: UITapGestureRecognizer) {
         if (sender.state != UIGestureRecognizerStateEnded) return
+        tabTapLog("recognizer tapped")
         val before = selectedAtTouch ?: return
         selectedAtTouch = null
         // After UIKit's own handling of the same tap, which may have moved to another tab.
@@ -79,6 +81,7 @@ internal class TabReselectTaps(
     @ObjCSignatureOverride
     override fun gestureRecognizer(gestureRecognizer: UIGestureRecognizer, shouldReceiveTouch: UITouch): Boolean {
         selectedAtTouch = controller.selectedViewController
+        tabTapLog("recognizer touch")
         return true
     }
 
@@ -87,4 +90,14 @@ internal class TabReselectTaps(
         gestureRecognizer: UIGestureRecognizer,
         shouldRecognizeSimultaneouslyWithGestureRecognizer: UIGestureRecognizer
     ): Boolean = true
+}
+
+/**
+ * Logs [message] with the prefix `COPLANLY_TABTAP` (MON-24 phase 3, part C): which of UIKit's
+ * callbacks a tap on the tab bar reaches on the CI simulator is not documented, and a tap on the
+ * selected Calendar tab did not return Day view to Month there. A log line only: nothing on screen
+ * or in the accessibility tree changes.
+ */
+internal fun tabTapLog(message: String) {
+    NSLog("COPLANLY_TABTAP %@", message)
 }
