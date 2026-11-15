@@ -1,5 +1,6 @@
 package com.coparently.app.presentation.platform
 
+import com.coparently.app.data.files.IosPickedFiles
 import com.coparently.app.data.platform.logger
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -29,11 +30,8 @@ import platform.CoreImage.CIFilter
 import platform.CoreImage.CIImage
 import platform.CoreImage.createCGImage
 import platform.CoreImage.filterWithName
-import platform.Foundation.NSCachesDirectory
-import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSString
 import platform.Foundation.NSUTF8StringEncoding
-import platform.Foundation.NSUserDomainMask
 import platform.Foundation.create
 import platform.Foundation.dataUsingEncoding
 import platform.Foundation.setValue
@@ -46,8 +44,9 @@ import platform.Foundation.setValue
  * standards ask, read back one cell per module with the generator's quiet zone cut off, so it is
  * the shape Android's (no margin) is. The text goes in as UTF-8. The shared picture is a PNG of the
  * matrix with a four-module quiet zone, about 800 pixels square as on Android, written to
- * `Caches/qr/` and handed to [shareSheet] by its absolute path (the form the iPhone's picked files
- * take). Nothing is sent anywhere: a bank's app reads the picture the parent shares.
+ * `payment_codes/` under the app's cache directory (as Android's, so sign-out wipes it) and handed
+ * to [shareSheet] by its absolute path (the form the iPhone's picked files take). Nothing is sent
+ * anywhere: a bank's app reads the picture the parent shares.
  */
 internal class IosQrCodes(private val shareSheet: ShareSheet) : QrCodes {
 
@@ -62,7 +61,7 @@ internal class IosQrCodes(private val shareSheet: ShareSheet) : QrCodes {
         if (!shareSheet.available) return
         runCatching {
             val png = QrPicture.png(matrix) ?: return
-            val directory = Path(cachesDirectory() ?: return, SHARE_DIRECTORY)
+            val directory = Path(IosPickedFiles.appCache(), SHARE_DIRECTORY)
             SystemFileSystem.createDirectories(directory)
             val file = Path(directory, SHARE_FILE)
             SystemFileSystem.sink(file).buffered().use { it.write(png) }
@@ -70,12 +69,9 @@ internal class IosQrCodes(private val shareSheet: ShareSheet) : QrCodes {
         }.onFailure { logger.w(TAG, "The payment code could not be shared", it) }
     }
 
-    private fun cachesDirectory(): String? =
-        NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true).firstOrNull() as? String
-
     private companion object {
         const val TAG = "SettleUpPayment"
-        const val SHARE_DIRECTORY = "qr"
+        const val SHARE_DIRECTORY = "payment_codes"
         const val SHARE_FILE = "settle-up.png"
     }
 }

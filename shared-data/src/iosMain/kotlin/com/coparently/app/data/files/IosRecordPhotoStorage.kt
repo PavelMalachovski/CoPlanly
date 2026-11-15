@@ -55,8 +55,9 @@ import kotlin.uuid.Uuid
  * `FirebaseImageStorage` does, with the iPhone's image code.
  *
  * The picked image (a path, or a `file://` address: [IosPickedFiles]' copy, or a photo the camera
- * took) is re-encoded as JPEG at quality 0.85 with its longest side at most 2048 pixels, upright
- * (ImageIO applies the photo's orientation), and its SHA-256 taken. The object goes to
+ * took) is re-encoded as JPEG at quality 0.85, scaled down by Android's own power-of-two rule
+ * ([RecordPhotoEncoding.sampleSize], so the same photo is stored at the same size from both phones),
+ * upright (ImageIO applies the photo's orientation), and its SHA-256 taken. The object goes to
  * [RecordPhotoPaths.build]'s path under the record's family, or under the uploader's own `solo_`
  * folder while there is none, through [SharedFileStorage], which stamps the `uploader` and `sha256`
  * metadata `storage.rules` requires. **No download URL is ever requested**: the record keeps the
@@ -134,15 +135,17 @@ class IosRecordPhotoStorage(
 
 /**
  * A picked image as the JPEG a record photo is stored as: ImageIO's thumbnail of the file, upright,
- * with its longest side at most [MAX_DIMENSION_PX] (a smaller image keeps its size), encoded by
- * UIKit at [JPEG_QUALITY]. Android's `FirebaseImageStorage` stores the same quality.
+ * scaled down as Android's `FirebaseImageStorage` subsamples (`inSampleSize` from [sampleSize]: the
+ * sample doubles while either side divided by twice the sample is still at least
+ * [MAX_DIMENSION_PX]), so a 4000-pixel photo is stored at 2000 and one under 3200 is kept whole;
+ * never scaled up. Encoded by UIKit at [JPEG_QUALITY], the quality Android stores.
  */
 internal object RecordPhotoEncoding {
 
-    /** The longest side of a stored photo, in pixels. */
-    const val MAX_DIMENSION_PX = 2048
+    /** Android's `MAX_DIMENSION_PX`: the side the subsampling works down towards. */
+    const val MAX_DIMENSION_PX = 1600
 
-    /** UIKit's JPEG quality for a stored photo. */
+    /** UIKit's JPEG quality for a stored photo (Android's `JPEG_QUALITY` 85). */
     const val JPEG_QUALITY = 0.85
 
     /**
@@ -156,8 +159,8 @@ internal object RecordPhotoEncoding {
             val source = CGImageSourceCreateWithDataProvider(provider, null)
                 ?: throw IOException("Cannot read image: $path")
             try {
-                val longest = longestSideOf(source) ?: throw IOException("Cannot decode image: $path")
-                val image = thumbnail(source, minOf(longest, MAX_DIMENSION_PX))
+                val (width, height) = sizeOf(source) ?: throw IOException("Cannot decode image: $path")
+                val image = thumbnail(source, maxOf(width, height) / sampleSize(width, height))
                     ?: throw IOException("Cannot decode image: $path")
                 try {
                     val data = UIImageJPEGRepresentation(UIImage.imageWithCGImage(image), JPEG_QUALITY)
@@ -174,11 +177,23 @@ internal object RecordPhotoEncoding {
         }
     }
 
-    /** The image's longer side in pixels, before orientation (which swaps, never changes, them). */
-    private fun longestSideOf(source: platform.ImageIO.CGImageSourceRef): Int? {
+    /**
+     * Android's `calculateInSampleSize`, line for line: 1, doubled while [width] or [height] divided
+     * by twice the sample is still at least [MAX_DIMENSION_PX].
+     */
+    fun sampleSize(width: Int, height: Int): Int {
+        var sampleSize = 1
+        while (width / (sampleSize * 2) >= MAX_DIMENSION_PX || height / (sampleSize * 2) >= MAX_DIMENSION_PX) {
+            sampleSize *= 2
+        }
+        return sampleSize
+    }
+
+    /** The image's pixel width and height, before orientation (which swaps, never changes, them). */
+    private fun sizeOf(source: platform.ImageIO.CGImageSourceRef): Pair<Int, Int>? {
         val full = CGImageSourceCreateImageAtIndex(source, 0u, null) ?: return null
         return try {
-            maxOf(CGImageGetWidth(full), CGImageGetHeight(full)).toInt()
+            CGImageGetWidth(full).toInt() to CGImageGetHeight(full).toInt()
         } finally {
             CGImageRelease(full)
         }

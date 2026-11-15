@@ -90,7 +90,7 @@ class IosRecordPhotoStorageTest {
     }
 
     @Test
-    fun `a 4000 px image is stored at 2048 px as JPEG`() = runBlocking {
+    fun `a 4000 px image is stored at 2000 px as JPEG - as Android subsamples it`() = runBlocking {
         val picked = jpegFile(width = 4000, height = 1000)
 
         val reference = photos.upload(RecordPhotoKind.PET, RECORD, FAMILY, picked)
@@ -110,7 +110,7 @@ class IosRecordPhotoStorageTest {
             bucket.metadata[photo.storagePath]
         )
         assertTrue(stored.size > 2 && stored[0] == 0xFF.toByte() && stored[1] == 0xD8.toByte(), "Not a JPEG")
-        assertEquals(2048 to 512, pixelSizeOf(stored))
+        assertEquals(2000 to 500, pixelSizeOf(stored))
     }
 
     @Test
@@ -119,6 +119,15 @@ class IosRecordPhotoStorageTest {
 
         val photo = assertNotNull(RecordPhotoCodec.decode(reference))
         assertEquals(300 to 200, pixelSizeOf(bucket.objects.getValue(photo.storagePath)))
+    }
+
+    @Test
+    fun `the sample size is the one Android takes`() {
+        assertEquals(1, RecordPhotoEncoding.sampleSize(3199, 2000))
+        assertEquals(2, RecordPhotoEncoding.sampleSize(3200, 2400))
+        assertEquals(2, RecordPhotoEncoding.sampleSize(4000, 3000))
+        assertEquals(4, RecordPhotoEncoding.sampleSize(6400, 4800))
+        assertEquals(2, RecordPhotoEncoding.sampleSize(1000, 4000))
     }
 
     @Test

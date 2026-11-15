@@ -29,7 +29,9 @@ import platform.UniformTypeIdentifiers.UTType
 import platform.UniformTypeIdentifiers.UTTypeImage
 import platform.UniformTypeIdentifiers.UTTypeItem
 import platform.darwin.NSObject
+import platform.darwin.DISPATCH_QUEUE_PRIORITY_DEFAULT
 import platform.darwin.dispatch_async
+import platform.darwin.dispatch_get_global_queue
 import platform.darwin.dispatch_get_main_queue
 
 /**
@@ -37,12 +39,13 @@ import platform.darwin.dispatch_get_main_queue
  * (images, one), a document through `UIDocumentPickerViewController(forOpeningContentTypes:,
  * asCopy: true)` limited to the MIME types asked for (mapped through `UTType`).
  *
- * What is picked is copied into `Caches/picked/<uuid>/` ([IosPickedFiles.keep]) and handed on as
- * that copy's absolute path, the iPhone's content URI, which `PickedFiles`, the image seam and the
- * record photo upload read. A picker closed without a choice (Cancel, or a swipe down) calls
- * nothing, as on Android, and leaves the launcher ready for the next tap. Each picker is presented
- * from the screen's own view controller once nothing there is moving ([presentWhenSettled]), and a
- * picker still up when its screen leaves composition is taken away without calling back.
+ * What is picked is copied into `picked/<uuid>/` under the app's cache directory
+ * ([IosPickedFiles.keep]) and handed on as that copy's absolute path, the iPhone's content URI,
+ * which `PickedFiles`, the image seam and the record photo upload read. A picker closed without a
+ * choice (Cancel, or a swipe down) calls nothing, as on Android, and leaves the launcher ready for
+ * the next tap. Each picker is presented from the screen's own view controller once nothing there
+ * is moving ([presentWhenSettled]), and a picker still up when its screen leaves composition is
+ * taken away without calling back.
  */
 internal object IosFilePicker : FilePicker {
 
@@ -51,7 +54,7 @@ internal object IosFilePicker : FilePicker {
     @Composable
     override fun rememberImagePicker(onPicked: (contentUri: String) -> Unit): PlatformLauncher {
         val current by rememberUpdatedState(onPicked)
-        val files = remember { IosPickedFiles() }
+        val files = remember { IosPickedFiles.forApp() }
         return rememberPresenterLauncher { onEnded ->
             PhotoPickerPresentation(files, onPicked = { current(it) }, onEnded = onEnded)
         }
@@ -64,7 +67,7 @@ internal object IosFilePicker : FilePicker {
     ): PlatformLauncher {
         val current by rememberUpdatedState(onPicked)
         val types by rememberUpdatedState(contentTypes)
-        val files = remember { IosPickedFiles() }
+        val files = remember { IosPickedFiles.forApp() }
         return rememberPresenterLauncher { onEnded ->
             DocumentPickerPresentation(files, types, onPicked = { current(it) }, onEnded = onEnded)
         }
@@ -134,6 +137,9 @@ private class PhotoPickerPresentation(
 ) : Presentation {
 
     private var finished = false
+
+    /** Set by [close]: a pick still being copied when its screen left is not handed on. */
+    private var disposed = false
     private val delegate = Delegate()
     private val picker = PHPickerViewController(
         configuration = PHPickerConfiguration().apply {
@@ -149,6 +155,7 @@ private class PhotoPickerPresentation(
     }
 
     override fun close() {
+        disposed = true
         if (finished) return
         finished = true
         takeAway(picker)
@@ -168,13 +175,13 @@ private class PhotoPickerPresentation(
         provider.loadFileRepresentationForTypeIdentifier(UTTypeImage.identifier) { url, _ ->
             val copy = url?.let { file -> keep(file, suggested) }
             dispatch_async(dispatch_get_main_queue()) {
-                copy?.let(onPicked)
+                if (!disposed) copy?.let(onPicked)
                 onEnded()
             }
         }
     }
 
-    /** The picker's file kept under `Caches/picked/`, named [suggested] with the file's extension. */
+    /** The picker's file kept under `picked/`, named [suggested] with the file's extension. */
     private fun keep(file: NSURL, suggested: String?): String? {
         val source = file.path ?: return null
         val extension = file.pathExtension.orEmpty()
@@ -213,7 +220,7 @@ private class PhotoPickerPresentation(
 /**
  * The document picker, one file of [contentTypes] (MIME types, each mapped through `UTType`; one
  * the phone does not know is left out, and none known offers any item). It copies the pick into the
- * app's inbox (`asCopy`), from where it is copied under `Caches/picked/`, the inbox's copy removed,
+ * app's inbox (`asCopy`), from where it is copied under `picked/`, the inbox's copy removed,
  * and handed to [onPicked]. UIKit calls `documentPickerWasCancelled` for Cancel and for a swipe down
  * alike, and takes the picker away itself.
  */
@@ -225,6 +232,9 @@ private class DocumentPickerPresentation(
 ) : Presentation {
 
     private var finished = false
+
+    /** Set by [close]: a pick still being copied when its screen left is not handed on. */
+    private var disposed = false
     private val delegate = Delegate()
     private val picker = UIDocumentPickerViewController(
         forOpeningContentTypes = contentTypes.mapNotNull { UTType.typeWithMIMEType(it) }
@@ -238,25 +248,36 @@ private class DocumentPickerPresentation(
     }
 
     override fun close() {
+        disposed = true
         if (finished) return
         finished = true
         takeAway(picker)
     }
 
-    /** A document was picked: kept, handed on, then the end. */
+    /**
+     * A document was picked: kept off the main queue (a large file takes a while to copy), then
+     * handed on back on it, unless its screen left meanwhile; then the end.
+     */
     fun picked(urls: List<*>) {
         if (finished) return
         finished = true
         val url = urls.firstOrNull() as? NSURL
         val inbox = url?.path
-        val copy = inbox?.let {
-            runCatching { files.keep(inbox, url.lastPathComponent ?: IosPickedFiles.FALLBACK_NAME) }
+        if (inbox == null) {
+            onEnded()
+            return
+        }
+        val name = url.lastPathComponent ?: IosPickedFiles.FALLBACK_NAME
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT.toLong(), 0u)) {
+            val copy = runCatching { files.keep(inbox, name) }
                 .onFailure { logger.w(PICKER_TAG, "The picked document could not be kept", it) }
                 .getOrNull()
-                .also { NSFileManager.defaultManager.removeItemAtPath(inbox, error = null) }
+            NSFileManager.defaultManager.removeItemAtPath(inbox, error = null)
+            dispatch_async(dispatch_get_main_queue()) {
+                if (!disposed) copy?.let(onPicked)
+                onEnded()
+            }
         }
-        copy?.let(onPicked)
-        onEnded()
     }
 
     /** Cancel, a swipe down, or a presentation UIKit dropped: the end alone. */

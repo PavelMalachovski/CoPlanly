@@ -96,12 +96,13 @@ import org.koin.dsl.module
  * sign-in), the account switch's wipe ([IosAccountSwitch]) and sign-out's traces
  * ([IosAccountTraces]) — since Task 6, the push queue ([FirestorePushQueue]) and the sync while the
  * app is open ([ForegroundSyncRunner]), since part B's Task 11 account deletion
- * ([IosAccountDeletion]), since part C's Task 10 Cloud Storage ([IosStorageBucket]), since Task 11 a record's photos
- * ([IosRecordPhotoStorage]) and the pickers' copies ([IosPickedFiles]) — and, for what the iPhone
- * does not have yet (a push token, Google Calendar, background jobs and notifications), the stand-ins in `IosUnavailable.kt`, which answer as a phone with nothing
- * of the kind would. The two wordings the data layer writes into stored data read the app's
- * strings, so `:shared-ui`'s `platformUiModule` binds them (`IosPairingWording`,
- * `IosSchoolImportWordings`); the graph resolves with both modules, as `IosApp.start` builds it.
+ * ([IosAccountDeletion]), since part C's Task 10 Cloud Storage ([IosStorageBucket]), since Task 11
+ * a record's photos ([IosRecordPhotoStorage]) and the pickers' copies ([IosPickedFiles]) — and, for
+ * what the iPhone does not have yet (a push token, Google Calendar, background jobs and
+ * notifications), the stand-ins in `IosUnavailable.kt`, which answer as a phone with nothing of the
+ * kind would. The two wordings the data layer writes into stored data read the app's strings, so
+ * `:shared-ui`'s `platformUiModule` binds them (`IosPairingWording`, `IosSchoolImportWordings`);
+ * the graph resolves with both modules, as `IosApp.start` builds it.
  *
  * The iPhone app's `IosApp.start` builds this graph after `IosFirebase` has configured Firebase,
  * and phase 3 replaces each remaining stand-in with the real one.
@@ -213,7 +214,7 @@ actual val platformDataModule: Module = module {
         )
     }
     single<ReceiptTextRecognizer> { NoReceiptText }
-    single { IosPickedFiles() }
+    single { IosPickedFiles(get<AppDirectories>().cache.toString()) }
     single<PickedFiles> { get<IosPickedFiles>() }
     single<ExportVerifyAddress> { NoExportVerifyAddress }
     single<RecordFileWriter> { NoRecordFiles }

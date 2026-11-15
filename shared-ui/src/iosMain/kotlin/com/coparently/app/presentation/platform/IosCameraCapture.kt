@@ -41,8 +41,9 @@ import platform.darwin.dispatch_get_main_queue
  * on the simulator, where a screen offers the picker alone; a launch there answers
  * [CaptureResult.NoCameraApp]. The camera permission is asked first while it has not been answered,
  * and a refusal (now or before, or a restriction) answers [CaptureResult.PermissionDenied]. A photo
- * is saved as JPEG at quality 0.9 in `Caches/receipts/` ([CaptureTarget.RECEIPT]) or
- * `Caches/shared_files/capture/` ([CaptureTarget.SHARED_FILE]), as on Android, and answered as
+ * is saved as JPEG at quality 0.9 in `receipts/` ([CaptureTarget.RECEIPT]) or
+ * `shared_files/capture/` ([CaptureTarget.SHARED_FILE]) under the app's cache directory, as on
+ * Android (and wiped with the account's files at sign-out, `IosAccountTraces`), and answered as
  * [CaptureResult.Taken] with its absolute path. Every launch answers exactly once: Cancel, a photo
  * that could not be saved, or a presentation UIKit dropped answer [CaptureResult.Cancelled].
  */
@@ -139,7 +140,7 @@ private class CameraPresentation(
     /** [image] as a JPEG in [target]'s folder; its path, or null when it could not be written. */
     private fun save(image: UIImage): String? {
         val data = UIImageJPEGRepresentation(image, JPEG_QUALITY) ?: return null
-        val caches = IosPickedFiles.systemCaches()
+        val caches = IosPickedFiles.appCache()
         val (folder, name) = when (target) {
             CaptureTarget.RECEIPT ->
                 "$caches/receipts" to "receipt_${(NSDate().timeIntervalSince1970 * MILLIS).toLong()}.jpg"

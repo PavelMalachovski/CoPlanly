@@ -139,7 +139,7 @@ private object NoClipboard : SensitiveClipboard {
 private object IosFileDetails : FileDetails {
     override val available: Boolean = true
 
-    private val files = IosPickedFiles()
+    private val files = IosPickedFiles.forApp()
 
     override fun describe(contentUri: String): PickedFileDescription {
         val name = files.displayNameOf(contentUri) ?: contentUri.substringAfterLast('/')

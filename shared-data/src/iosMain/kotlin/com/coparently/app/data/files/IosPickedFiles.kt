@@ -2,6 +2,7 @@
 
 package com.coparently.app.data.files
 
+import com.coparently.app.data.platform.IosAppDirectories
 import com.coparently.app.data.platform.logger
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.io.IOException
@@ -11,32 +12,34 @@ import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 import kotlinx.io.readString
 import kotlinx.io.writeString
-import platform.Foundation.NSCachesDirectory
 import platform.Foundation.NSFileManager
-import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSURL
 import platform.Foundation.NSUUID
-import platform.Foundation.NSUserDomainMask
 import platform.UniformTypeIdentifiers.UTType
 
 /**
  * [PickedFiles] on the iPhone (MON-24 phase 3, part C, Task 11).
  *
  * A picked item's "content URI" here is the absolute path of the copy the picker made with
- * [IosPickedFiles.keep], in `Caches/picked/<uuid>/<sanitised name>`: the system's pickers hand out
+ * [IosPickedFiles.keep], in `picked/<uuid>/<sanitised name>` under the app's cache directory
+ * (`AppDirectories.cache`, so sign-out, an account switch and deletion remove it with the rest of
+ * the account's files: `IosAccountTraces.CACHE_DIRECTORIES`): the system's pickers hand out
  * a file only for the length of their callback (the photo picker) or in the app's own inbox (the
  * document picker), so the app keeps its own copy, as Android's `content://` URI stays readable for
- * the grant's life. A photo the camera took (`Caches/receipts/`, `Caches/shared_files/capture/`) is
- * a path too, and a `file://` address is read as its path.
+ * the grant's life. A photo the camera took (`receipts/`, `shared_files/capture/` under the same
+ * cache directory) is a path too, and a `file://` address is read as its path.
+ *
+ * A copy stays until the cache is wiped or iOS purges it: the same path is shown as a preview,
+ * staged, uploaded and described by different consumers, none of which is the last one for sure.
  *
  * - [typeOf] answers from the extension, through `UTType`'s preferred MIME type.
  * - [displayNameOf] answers the original name, which [keep] writes beside the copy, else the path's
  *   last segment.
  * - [open] reads the file.
  *
- * @param caches The Caches directory the copies live under (a test names its own).
+ * @param caches The app's cache directory (`AppDirectories.cache`; a test names its own).
  */
-class IosPickedFiles(private val caches: String = systemCaches()) : PickedFiles {
+class IosPickedFiles(private val caches: String) : PickedFiles {
 
     override fun typeOf(contentUri: String): String? {
         val name = pathOf(contentUri).substringAfterLast('/')
@@ -61,11 +64,11 @@ class IosPickedFiles(private val caches: String = systemCaches()) : PickedFiles 
 
     /**
      * Copies the file at [source] (a path, or a `file://` address) into a folder of its own under
-     * `Caches/picked/`, named [originalName] made safe ([sanitise]), and records [originalName]
+     * `picked/`, named [originalName] made safe ([sanitise]), and records [originalName]
      * beside the folder for [displayNameOf]. Answers the copy's absolute path: the picked item's
      * content URI.
      *
-     * Nothing is written outside `Caches/picked/<uuid>/`: the name keeps no `/`, and a name of dots
+     * Nothing is written outside `picked/<uuid>/`: the name keeps no `/`, and a name of dots
      * alone becomes [FALLBACK_NAME].
      *
      * @throws IOException when the copy could not be made
@@ -105,7 +108,7 @@ class IosPickedFiles(private val caches: String = systemCaches()) : PickedFiles 
 
     /** Public for the pickers in `:shared-ui` and the tests. */
     companion object {
-        /** The folder under Caches that holds the picked copies. */
+        /** The folder under the cache directory that holds the picked copies. */
         const val PICKED_DIRECTORY = "picked"
 
         /** What a name made only of characters that are not kept (or of dots) becomes. */
@@ -142,9 +145,11 @@ class IosPickedFiles(private val caches: String = systemCaches()) : PickedFiles 
                 contentUri
             }
 
-        /** The app's Caches directory. */
-        fun systemCaches(): String =
-            NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true).first() as String
+        /** The app's cache directory, as `platformDataModule`'s `AppDirectories` names it. */
+        fun appCache(): String = IosAppDirectories().cache.toString()
+
+        /** The picked files in [appCache], for the pickers, which run outside the Koin graph's reach. */
+        fun forApp(): IosPickedFiles = IosPickedFiles(appCache())
 
         private const val FILE_SCHEME = "file://"
     }

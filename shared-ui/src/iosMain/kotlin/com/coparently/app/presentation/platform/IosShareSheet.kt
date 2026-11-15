@@ -12,7 +12,7 @@ import platform.UIKit.UIActivityViewController
  * text, or with the file's URL, presented from the top-most presented controller once nothing there
  * is moving ([presentWhenSettled]), as Android's `ACTION_SEND` in a chooser.
  *
- * A file is named by its absolute path (a picked copy, the payment code's PNG in `Caches/qr/`, an
+ * A file is named by its absolute path (a picked copy, the payment code's PNG in `payment_codes/`, an
  * exported record) or by a `file://` address; the receiving app gets that one file, as Android's
  * one-off read grant gives it. A file that is not there opens no sheet, rather than an empty one.
  * The sheet has no title of its own on the iPhone, so `chooserTitle` is not shown.
