@@ -401,25 +401,25 @@ final class ShellUITests: XCTestCase {
         // not the system's calendar, which opens on the tap.
         let before = Set(dayButtons(day).map { "\($0.label)@\($0.frame)" })
         press(pill)
-        // Opened or not, the popover is closed again if the step fails, so it does not cascade.
+        // Opened or not, the calendar is closed again if the step fails, so it does not cascade.
         do {
             let dayButton = try calendarDay(day, excluding: before)
             shot("10c-starts-system-calendar")
             press(dayButton)
-            // The calendar's popover closes on a pick on some releases; on others a tap outside it does.
-            let outside = app.otherElements["PopoverDismissRegion"]
-            if outside.waitForExistence(timeout: 2) { outside.tap() }
-            try require(outside.waitForNonExistence(timeout: timeout), "The system's calendar stayed open")
+            // On some releases the calendar closes on a pick; on iOS 26 it stays up until a tap
+            // outside it, and its dismiss region carries no "PopoverDismissRegion" name.
+            closeCalendarPopover()
+            try require(!calendarPopoverOpen, "The system's calendar stayed open after a tap outside it")
         } catch {
             closeCalendarPopover()
             throw error
         }
-        // VoiceOver reads the pill as its button's value ("Nov 20, 2026"), under the label "Date Picker".
-        let pillButton = pill.buttons.firstMatch
-        let reads = [
-            pill.label, pill.value as? String ?? "",
-            pillButton.exists ? pillButton.label : "", pillButton.exists ? (pillButton.value as? String ?? "") : ""
-        ]
+        // VoiceOver reads the pill as the value of its "Date Picker" child ("11/20/26", or
+        // "Nov 20, 2026"), which is a button while the calendar is closed and another element
+        // while it is open: every child is read, whatever its type.
+        let children = pill.descendants(matching: .any).allElementsBoundByIndex
+        let reads = [pill.label, pill.value as? String ?? ""]
+            + children.flatMap { [$0.label, $0.value as? String ?? ""] }.filter { !$0.isEmpty }
         try require(
             reads.contains { $0.range(of: "\\b\(day)\\b", options: .regularExpression) != nil },
             "The Starts pill does not read the \(day)th: \(reads)"
@@ -495,24 +495,41 @@ final class ShellUITests: XCTestCase {
             usleep(500_000)
         } while Date() < deadline
         let detail = String(listed.joined(separator: "; ").prefix(450))
-        let opened = app.otherElements["PopoverDismissRegion"].exists ? "open" : "not open"
+        let opened = calendarPopoverOpen ? "open" : "not open"
         throw StepFailure(description: "No new calendar day \(day) on screen (\(month), the popover \(opened)); candidates: \(detail)")
     }
 
-    /// Closes the system calendar's popover or sheet, if one is up.
+    /// Whether the compact date picker's calendar is open: its month arrows show. The form's pills
+    /// have none, and no other calendar (Jump to date's sheet) is up during the form's steps.
+    private var calendarPopoverOpen: Bool {
+        app.buttons["DatePicker.NextMonth"].exists
+    }
+
+    /// Closes the compact date picker's calendar, if it is up, by a tap outside it: on the dismiss
+    /// region where it is named, else on the sheet's bar title, outside the calendar (a tap there
+    /// does nothing if it reaches the form), else at the top of the screen.
     private func closeCalendarPopover() {
+        guard calendarPopoverOpen else { return }
         let outside = app.otherElements["PopoverDismissRegion"]
         if outside.exists {
             outside.tap()
         } else {
-            let cancel = app.navigationBars.buttons.matching(NSPredicate(format: "label == %@ OR label == %@", "Done", "Cancel")).firstMatch
-            if app.datePickers.firstMatch.exists && cancel.exists && cancel.isHittable {
-                cancel.tap()
+            let calendar = app.datePickers.allElementsBoundByIndex.map(\.frame).max { $0.height < $1.height } ?? .zero
+            let title = app.navigationBars.staticTexts.firstMatch
+            if title.exists && !title.frame.intersects(calendar) {
+                title.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
             } else {
-                tapOutside()
+                app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.12)).tap()
             }
         }
-        _ = outside.waitForNonExistence(timeout: 3)
+        _ = app.buttons["DatePicker.NextMonth"].waitForNonExistence(timeout: 5)
+    }
+
+    /// What a failed step may leave over the next one: the date picker's calendar or the Repeat
+    /// menu (each closed by a tap outside, choosing nothing).
+    private func closeTransients() {
+        closeCalendarPopover()
+        if app.buttons["Weekly"].exists && app.buttons["Monthly"].exists { tapOutside() }
     }
 
     /// The event form's Repeat row ends in the system's pop-up button (MON-24 phase 3, part C,
@@ -808,18 +825,50 @@ final class ShellUITests: XCTestCase {
     /// shared strings in English.
     private func pairingLink() throws {
         try goToFamilyRoot()
-        app.open(URL(string: "coplanly://pair?code=ABC234")!)
-        let refused = element(labelledContaining: "No invitation matches that code")
-        let asked = element(labelledContaining: "Link with")
+        let code = "ABC234"
+        // XCUITest relaunches the app to open a link (a new process), so this is the cold start's
+        // path: the link waits for the signed-in tabs and then pushes Pairing onto the tab shown.
+        app.open(URL(string: "coplanly://pair?code=\(code)")!)
+        let answer = app.descendants(matching: .any).matching(NSPredicate(
+            format: "label CONTAINS %@ OR label CONTAINS %@", "No invitation matches that code", "Link with"
+        )).firstMatch
+        let paired = element(labelledContaining: "Add another co-parent")
+        // The refusal is a snackbar of a few seconds, which a snapshot taken while it animates can
+        // miss: it is looked for until Pairing has been up a while, and then the code is looked for
+        // where it stays, in the screen's own code field.
         var reached = false
-        for _ in 0..<60 where !reached {
-            reached = refused.exists || asked.exists
-            if !reached { sleep(1) }
+        var pairingSince: Date?
+        let deadline = Date().addingTimeInterval(120)
+        while !reached && Date() < deadline {
+            reached = answer.exists
+            if !reached && pairingSince == nil && paired.exists { pairingSince = Date() }
+            if let since = pairingSince, Date().timeIntervalSince(since) > 15 { break }
         }
         shot("16-pairing-link")
+        if !reached && paired.exists { reached = codeInField(code, under: paired) }
         try require(reached, "The link did not reach the pairing screen with its code")
-        if asked.exists { pressIfThere("Cancel") }
+        if app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Link with")).firstMatch.exists {
+            pressIfThere("Cancel")
+        }
         try goToFamilyRoot()
+    }
+
+    /// Whether Pairing holds [code] after a link: its "Enter a code" field, opened from [row] ("Add
+    /// another co-parent"), shows it, or the field's refusal of it shows under it.
+    private func codeInField(_ code: String, under row: XCUIElement) -> Bool {
+        press(row)
+        let enter = app.buttons["Enter a code"]
+        guard enter.waitForExistence(timeout: timeout) else { return false }
+        press(enter)
+        let holding = NSPredicate(format: "value CONTAINS %@ OR label CONTAINS %@", code, "No invitation matches that code")
+        let field = app.textViews.matching(holding).firstMatch
+        let plain = app.textFields.matching(holding).firstMatch
+        let refusal = element(labelledContaining: "No invitation matches that code")
+        for _ in 0..<20 {
+            if field.exists || plain.exists || refusal.exists { return true }
+            usleep(500_000)
+        }
+        return false
     }
 
     /// The vault's Add a file presents the system's document picker (MON-24 phase 3, part C,
@@ -858,8 +907,9 @@ final class ShellUITests: XCTestCase {
         press(row)
         if !app.navigationBars["Family"].waitForNonExistence(timeout: 3) { press(row) }
         press(try element(containing: "Add another co-parent"))
-        let share = app.buttons.matching(NSPredicate(format: "label == %@", "Share")).firstMatch
-        try require(share.waitForExistence(timeout: 60), "The invitation's Share button did not appear")
+        // The code card's button is `pairing_share_link`, "Share link" in English.
+        let share = app.buttons.matching(NSPredicate(format: "label == %@", "Share link")).firstMatch
+        try require(share.waitForExistence(timeout: 60), "The invitation's Share link button did not appear")
         press(share)
         let sheet = app.otherElements["ActivityListView"]
         let copy = app.buttons["Copy"]
@@ -897,11 +947,12 @@ final class ShellUITests: XCTestCase {
         }
         sleep(1)
         press(row)
-        // The confirmation's button reads as the row does; it is the last one drawn.
-        let named = app.buttons.matching(NSPredicate(format: "label == %@", "Sign out of app"))
-        try require(named.element(boundBy: 0).waitForExistence(timeout: timeout), "No sign-out confirmation")
-        sleep(1)
-        press(named.element(boundBy: named.count - 1))
+        // The confirmation is the system's action sheet (a destructive question, design item 1),
+        // whose button reads as the row does. It is tapped in the sheet, once it can be touched: an
+        // index among every "Sign out of app" could name the row under the sheet, and a tap there
+        // lands on the sheet's dimming and cancels it.
+        let confirm = try signOutConfirmation()
+        confirm.tap()
         try require(app.staticTexts["Welcome back!"].waitForExistence(timeout: 120), "Signing out did not reach the sign-in screen")
         try require(!app.tabBars.firstMatch.exists, "The tab bar is still there on the sign-in screen")
         shot("11-signed-out")
@@ -918,6 +969,20 @@ final class ShellUITests: XCTestCase {
         try require(app.navigationBars["Family"].waitForExistence(timeout: timeout), "The Family tab did not open at its first screen")
         try require(!app.navigationBars["Settings"].exists, "The Family tab kept the signed-out session's Settings")
         shot("12-fresh-tabs")
+    }
+
+    /// The sign-out question's confirming button: in the system's action sheet, or an alert should
+    /// a release draw the question as one, waited for until it can be touched.
+    private func signOutConfirmation() throws -> XCUIElement {
+        let byLabel = NSPredicate(format: "label == %@", "Sign out of app")
+        let inSheet = app.sheets.buttons.matching(byLabel).firstMatch
+        let inAlert = app.alerts.buttons.matching(byLabel).firstMatch
+        let deadline = Date().addingTimeInterval(TimeInterval(timeout))
+        repeat {
+            for button in [inSheet, inAlert] where button.exists && button.isHittable { return button }
+            usleep(500_000)
+        } while Date() < deadline
+        throw StepFailure(description: "No sign-out confirmation in an action sheet or an alert")
     }
 
     /// Settings → Delete account → both confirmations (MON-24 phase 3, part B, Task 11): the
@@ -1099,6 +1164,8 @@ final class ShellUITests: XCTestCase {
         if outcome != "passed" {
             shot("zz-failed-" + name.replacingOccurrences(of: " ", with: "-"))
             print("COPLANLY_UI_HIERARCHY_BEGIN \(name)\n\(app.debugDescription)\nCOPLANLY_UI_HIERARCHY_END")
+            // After the record, so it shows what the step left; the next step then starts clean.
+            closeTransients()
         }
         outcomes.append((name, outcome))
     }
@@ -1380,10 +1447,7 @@ final class ShellUITests: XCTestCase {
         }
         sleep(1)
         press(row)
-        let named = app.buttons.matching(NSPredicate(format: "label == %@", "Sign out of app"))
-        try require(named.element(boundBy: 0).waitForExistence(timeout: timeout), "No sign-out confirmation")
-        sleep(1)
-        press(named.element(boundBy: named.count - 1))
+        try signOutConfirmation().tap()
         try require(
             app.staticTexts["Welcome back!"].waitForExistence(timeout: 120),
             "Signing out did not reach the sign-in screen"
