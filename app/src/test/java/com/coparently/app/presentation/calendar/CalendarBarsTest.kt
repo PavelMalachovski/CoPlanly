@@ -8,6 +8,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.performClick
 import com.coparently.app.presentation.calendar.components.CalendarMonthBar
 import com.coparently.app.presentation.calendar.components.CalendarTopBar
 import com.coparently.app.presentation.calendar.components.CalendarTopBarActions
@@ -29,75 +31,50 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The calendar's bars (MON-24 phase 3, part B, Task 8): where a shell draws the bars (the iPhone, a
- * recording host here) the calendar hands it the month the grid card shows as its title, then
- * Today, Filters, the gear and "+", and draws neither the brand row nor the heading lines; the grid
- * card's month bar keeps its arrows and drops Today and "+". While days are chosen for a swap the
- * bar is the selection header's content: a close button and the month arrows. With no host
- * (Android) every row is drawn as it always was.
+ * The calendar's bars (MON-24 phase 3, part B, Task 8; part C, Task 8): where a shell draws the bars
+ * (the iPhone, a recording host here) the calendar hands it a hidden bar named "Calendar" and leads
+ * with the redesign's header in content, as Android does: the brand row with the gear, the heading
+ * lines, the Month/Week/Day control and Filters; the grid card's month bar keeps Today, the arrows
+ * and "+". While days are chosen for a swap the selection header is drawn in content too, its close
+ * button and month arrows Compose's. With no host (Android) every row is drawn as it always was.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = RobolectricTestApplication::class, qualifiers = "w393dp-h851dp")
 class CalendarBarsTest : PushedBarsHarness() {
 
     @Test
-    fun `the bar is titled with the month and carries Today, Filters, the gear and plus`() {
+    fun `the iPhone hands the shell a hidden bar named Calendar`() {
         compose(withHost = true) { calendarBar() }
-        assertBar(
-            title = "May",
-            back = null,
-            actions = listOf(
-                "calendar" to "Today",
-                "line.3.horizontal.decrease.circle" to "Filters",
-                "gearshape" to "Settings",
-                "plus" to "Add event"
-            )
-        )
-        assertTrue(shown.last().actions.none { it.primary })
-        clickAction("Today")
-        clickAction("Filters")
-        clickAction("Settings")
-        clickAction("Add event")
-        assertEquals(listOf("today", "filters", "settings", "add"), clicks)
-    }
-
-    @Test
-    fun `the iPhone draws no brand row, heading or Filters button, and keeps the view control`() {
-        compose(withHost = true) { calendarBar() }
-        assertTrue(rule.onAllNodesWithText("coplanly", substring = true).fetchSemanticsNodes().isEmpty())
-        assertTrue(rule.onAllNodesWithText("Your family calendar").fetchSemanticsNodes().isEmpty())
-        assertTrue(rule.onAllNodesWithContentDescription("Filters").fetchSemanticsNodes().isEmpty())
-        assertTrue(rule.onAllNodesWithText("Month").fetchSemanticsNodes().isNotEmpty())
-        assertTrue(rule.onAllNodesWithText("Week").fetchSemanticsNodes().isNotEmpty())
-    }
-
-    @Test
-    fun `another year's month carries its year, and an active filter fills its symbol`() {
-        compose(withHost = true) {
-            calendarBar(titleDate = LocalDate(2027, 1, 1), filtersActive = true)
-        }
         rule.waitForIdle()
         val bar = shown.last()
-        assertEquals("January 2027", bar.title)
-        assertEquals("line.3.horizontal.decrease.circle.fill", bar.actions[1].sfSymbol)
+        assertTrue("The bar is shown", bar.hidden)
+        assertEquals("Calendar", bar.title)
+        assertEquals(BarLeading.None, bar.leading)
+        assertTrue(bar.actions.isEmpty())
     }
 
     @Test
-    fun `with nowhere to open Settings the bar offers no gear`() {
+    fun `the iPhone draws the brand row, heading, view control and Filters in content`() {
+        compose(withHost = true) { calendarBar() }
+        assertTrue(rule.onAllNodesWithText("coplanly", substring = true).fetchSemanticsNodes().isNotEmpty())
+        assertTrue(rule.onAllNodesWithText("Your family calendar").fetchSemanticsNodes().isNotEmpty())
+        assertTrue(rule.onAllNodesWithText("Month").fetchSemanticsNodes().isNotEmpty())
+        assertTrue(rule.onAllNodesWithText("Week").fetchSemanticsNodes().isNotEmpty())
+        rule.onNodeWithContentDescription("Filters").performClick()
+        rule.onNodeWithContentDescription("Settings").performClick()
+        rule.waitForIdle()
+        assertEquals(listOf("filters", "settings"), clicks)
+    }
+
+    @Test
+    fun `with nowhere to open Settings the header offers no gear`() {
         compose(withHost = true) { calendarBar(onSettings = null) }
-        assertBar(
-            title = "May",
-            back = null,
-            actions = listOf(
-                "calendar" to "Today",
-                "line.3.horizontal.decrease.circle" to "Filters",
-                "plus" to "Add event"
-            )
-        )
+        assertTrue(rule.onAllNodesWithContentDescription("Settings").fetchSemanticsNodes().isEmpty())
+        assertTrue(rule.onAllNodesWithContentDescription("Filters").fetchSemanticsNodes().isNotEmpty())
     }
 
     @Test
-    fun `while days are chosen the bar closes the selection and pages the month`() {
+    fun `while days are chosen the iPhone draws the selection header in content`() {
         compose(withHost = true) {
             var month by remember { mutableStateOf<YearMonth?>(MONTH) }
             calendarBar(
@@ -119,29 +96,23 @@ class CalendarBarsTest : PushedBarsHarness() {
             )
         }
         rule.waitForIdle()
-        val choosing = shown.last()
-        assertEquals("Choose days to swap", choosing.title)
-        val leading = choosing.leading
-        assertTrue("The leading is $leading", leading is BarLeading.Close)
-        assertEquals("Stop choosing days", (leading as BarLeading.Close).label)
-        assertEquals(
-            listOf("chevron.left" to "Previous month", "chevron.right" to "Next month"),
-            choosing.actions.map { it.sfSymbol to it.label }
-        )
-        clickAction("Previous month")
-        clickAction("Next month")
-        rule.runOnIdle { (shown.last().leading as BarLeading.Close).onClick() }
+        assertTrue(rule.onAllNodesWithText("Choose days to swap").fetchSemanticsNodes().isNotEmpty())
+        assertTrue("The bar is shown", shown.isNotEmpty() && shown.all { it.hidden })
+        rule.onNodeWithContentDescription("Previous month").performClick()
+        rule.onNodeWithContentDescription("Next month").performClick()
+        rule.onNodeWithContentDescription("Stop choosing days").performClick()
         rule.waitForIdle()
         assertEquals(listOf("previous", "next", "close"), clicks)
-        assertEquals("May", shown.last().title)
-        assertEquals(BarLeading.None, shown.last().leading)
+        assertTrue(rule.onAllNodesWithText("Choose days to swap").fetchSemanticsNodes().isEmpty())
+        assertTrue(rule.onAllNodesWithText("Your family calendar").fetchSemanticsNodes().isNotEmpty())
+        assertTrue(shown.last().hidden)
     }
 
     @Test
-    fun `under a host the grid card's month bar keeps its arrows and drops Today and plus`() {
+    fun `under a host the grid card's month bar keeps Today, the arrows and plus`() {
         compose(withHost = true) { monthBar() }
-        assertTrue(rule.onAllNodesWithText("Today").fetchSemanticsNodes().isEmpty())
-        assertTrue(rule.onAllNodesWithContentDescription("Add event").fetchSemanticsNodes().isEmpty())
+        assertTrue(rule.onAllNodesWithText("Today").fetchSemanticsNodes().isNotEmpty())
+        assertTrue(rule.onAllNodesWithContentDescription("Add event").fetchSemanticsNodes().isNotEmpty())
         assertTrue(rule.onAllNodesWithContentDescription("Previous period").fetchSemanticsNodes().isNotEmpty())
         assertTrue(rule.onAllNodesWithContentDescription("Next period").fetchSemanticsNodes().isNotEmpty())
         assertTrue(rule.onAllNodesWithContentDescription("Swap days").fetchSemanticsNodes().isNotEmpty())
@@ -178,7 +149,6 @@ class CalendarBarsTest : PushedBarsHarness() {
 
     @Composable
     private fun calendarBar(
-        titleDate: LocalDate = MONTH_START,
         filtersActive: Boolean = false,
         onSettings: (() -> Unit)? = { clicks += "settings" },
         swapMonth: YearMonth? = null,
@@ -189,16 +159,13 @@ class CalendarBarsTest : PushedBarsHarness() {
                 state = CalendarTopBarState(
                     children = emptyList(),
                     viewMode = CalendarViewMode.MONTH,
-                    titleDate = titleDate,
                     filtersActive = filtersActive,
                     swapMonth = swapMonth
                 ),
                 actions = CalendarTopBarActions(
                     onViewModeChange = {},
                     onFilters = { clicks += "filters" },
-                    onSettings = onSettings,
-                    onToday = { clicks += "today" },
-                    onAddEvent = { clicks += "add" }
+                    onSettings = onSettings
                 ),
                 swapActions = swapActions
             )

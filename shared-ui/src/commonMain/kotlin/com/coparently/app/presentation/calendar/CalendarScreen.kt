@@ -736,13 +736,12 @@ fun CalendarScreen(
     Scaffold(
         containerColor = ScreenContainerColor,
         topBar = {
-            // The header, or the swap selection's; on the iPhone the month, Today, Filters, the gear
-            // and "+" are the navigation bar's (MON-24 phase 3, part B).
+            // The header, or the swap selection's, in content on both platforms: the iPhone hides its
+            // navigation bar over the Calendar's root (MON-24 phase 3, part C).
             CalendarTopBar(
                 state = CalendarTopBarState(
                     children = children,
                     viewMode = viewMode,
-                    titleDate = anchorDate,
                     filtersActive = parentFilter != ParentFilter.BOTH ||
                         hiddenEventTypes.isNotEmpty() ||
                         !showHolidays,
@@ -751,9 +750,7 @@ fun CalendarScreen(
                 actions = CalendarTopBarActions(
                     onViewModeChange = { mode -> calendarViewModel.setViewMode(mode) },
                     onFilters = { showTypeFilters = true },
-                    onSettings = onSettingsClick,
-                    onToday = showToday,
-                    onAddEvent = addEventOnScreenDay
+                    onSettings = onSettingsClick
                 ),
                 swapActions = SwapSelectionBarActions(
                     onPreviousMonth = { calendarViewModel.showMonth(displayedMonth.minusMonth()) },
@@ -1049,7 +1046,6 @@ fun CalendarScreen(
                             custodyModel != null && viewMode == CalendarViewMode.MONTH && !selectingSwap &&
                                 grid.followsFamily
                         }?.let { { selectingSwap = true } },
-                        // Drawn here on Android; the iPhone's bar carries it (CalendarTopBar).
                         onAddEvent = addEventOnScreenDay.takeUnless { swapHeaderShown }
                     )
                     // Whose colour is whose and what the marks mean, in every view (new-user review,

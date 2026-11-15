@@ -248,6 +248,33 @@ class AppTopBarTest {
     }
 
     @Test
+    fun `a hidden bar reaches the host as hidden`() {
+        val shown = mutableListOf<ScreenBar>()
+        val host = BarHost { shown += it }
+        val hidden = mutableStateOf(true)
+        rule.setContent {
+            MaterialTheme {
+                CompositionLocalProvider(LocalBarHost provides host) {
+                    AppTopBar(ScreenBar(title = TITLE, hidden = hidden.value))
+                }
+            }
+        }
+        rule.waitForIdle()
+
+        rule.onNodeWithText(TITLE).assertDoesNotExist()
+        assertTrue("the host was handed no bar", shown.isNotEmpty())
+        assertTrue(shown.last().hidden)
+        assertEquals("the host keeps the title, which names the screen", TITLE, shown.last().title)
+
+        // Hiding is something the host draws: a change of it alone reaches the host again.
+        val before = shown.size
+        hidden.value = false
+        rule.waitForIdle()
+        assertTrue("showing the bar again did not reach the host", shown.size > before)
+        assertFalse(shown.last().hidden)
+    }
+
+    @Test
     fun `a recomposition that changes nothing visible shows nothing new`() {
         val shown = mutableListOf<ScreenBar>()
         val host = BarHost { shown += it }

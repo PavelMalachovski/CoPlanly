@@ -66,7 +66,7 @@ final class ShellUITests: XCTestCase {
         step("Home", after: ["sign in"]) { try self.home() }
         step("Calendar and Chat tabs", after: ["sign in"]) { try self.otherTabs() }
         step("Chat thread's bar and overflow menu", after: ["Calendar and Chat tabs"]) { try self.chatThreadBar() }
-        step("Calendar's bar shows the month and its actions", after: ["Calendar and Chat tabs"]) { try self.calendarBar() }
+        step("Calendar leads with the redesign's header", after: ["Calendar and Chat tabs"]) { try self.calendarHeader() }
         step("Family", after: ["sign in"]) { try self.family() }
         step("Expenses", after: ["Family"]) { try self.expenses() }
         step("back swipe", after: ["Expenses"]) { try self.backSwipe() }
@@ -141,8 +141,17 @@ final class ShellUITests: XCTestCase {
 
     private func home() throws {
         app.tabBars.firstMatch.buttons["Home"].tap()
-        try require(app.navigationBars["Home"].waitForExistence(timeout: timeout), "Home's navigation bar is missing")
+        try requireHeaderRoot("Home")
         shot("01-home")
+    }
+
+    /// The first screen of the Home or the Calendar tab (MON-24 phase 3, part C, Task 8): it leads
+    /// with the redesign's wordmark header, whose gear is a "Settings" button in content, and the
+    /// shell shows no navigation bar over it.
+    private func requireHeaderRoot(_ name: String) throws {
+        let gear = app.buttons.matching(NSPredicate(format: "label == %@", "Settings")).firstMatch
+        try require(gear.waitForExistence(timeout: timeout), "\(name)'s first screen has no Settings button")
+        try require(app.navigationBars.count == 0, "\(name)'s first screen still shows a navigation bar")
     }
 
     private func otherTabs() throws {
@@ -306,22 +315,31 @@ final class ShellUITests: XCTestCase {
         shot("08-family-again")
     }
 
-    /// The Calendar tab's system bar (MON-24 phase 3, part B, Task 8): titled with the month on
-    /// screen, this month at first, with Today, Filters, Settings and "+" as its buttons; the brand
-    /// row and its heading are not drawn, and the Month/Week/Day control stays under the bar.
-    private func calendarBar() throws {
+    /// The Calendar tab leads with the redesign's header (MON-24 phase 3, part C, Task 8), under no
+    /// navigation bar: the wordmark row's Settings, "Your family calendar", the Month/Week/Day control
+    /// and Filters, then the month card, whose own bar holds the month, Today and "+".
+    private func calendarHeader() throws {
         try goToCalendarRoot()
-        let bar = app.navigationBars[calendarMonthTitle]
-        try require(bar.waitForExistence(timeout: 60), "The calendar's bar is not titled \(calendarMonthTitle)")
-        shot("17-calendar-bar")
-        for label in ["Today", "Filters", "Settings", "Add event"] {
-            try require(bar.buttons[label].exists, "The calendar's bar has no \(label) button")
+        try require(calendarHeading.waitForExistence(timeout: 60), "The calendar does not lead with \"Your family calendar\"")
+        shot("17-calendar-header")
+        try requireHeaderRoot("The Calendar")
+        for label in ["Settings", "Filters", "Today", "Add event"] {
+            let button = app.buttons.matching(NSPredicate(format: "label == %@", label)).firstMatch
+            try require(button.exists, "The calendar has no \(label) button in content")
         }
-        try require(!labelExists(containing: "Your family calendar"), "The calendar still draws its heading under the bar")
-        try require(element(labelledContaining: "Week").exists, "The Month/Week/Day control is missing under the bar")
+        try require(calendarMonthButton.exists, "The month card's title is not \(calendarMonthTitle)")
+        try require(element(labelledContaining: "Week").exists, "The Month/Week/Day control is missing")
     }
 
-    /// The month the calendar opens on, as its bar titles it: this month's name, in English.
+    /// The calendar's heading, the second row of its header.
+    private var calendarHeading: XCUIElement { element(labelledContaining: "Your family calendar") }
+
+    /// The month card's title, a button that opens "Jump to date": this month while nothing moved it.
+    private var calendarMonthButton: XCUIElement {
+        app.buttons.matching(NSPredicate(format: "label == %@", calendarMonthTitle)).firstMatch
+    }
+
+    /// The month the calendar opens on, as its card's bar titles it: this month's name, in English.
     ///
     /// Two assumptions, both true of CI's simulator: the app speaks English (the simulator's
     /// language, so the shared `calendarMonthTitle` names the month as `en` does, with no year for
@@ -335,7 +353,7 @@ final class ShellUITests: XCTestCase {
         return formatter.string(from: Date())
     }
 
-    /// The event form, opened from the calendar's bar, is a sheet whose bar carries a cross
+    /// The event form, opened from the "+" of the calendar's month card, is a sheet whose bar carries a cross
     /// and Save (MON-24 phase 3, part B): Save is disabled until the event has a title, and no second
     /// Save is drawn under the form.
     private func eventFormSheet() throws {
@@ -343,9 +361,8 @@ final class ShellUITests: XCTestCase {
         press(try element(labelled: "Add event", in: app.buttons))
         let sheetBar = app.navigationBars["New event"]
         try require(sheetBar.waitForExistence(timeout: timeout), "The event form did not open as a sheet")
-        // The calendar's own bar may still be in the hierarchy under the sheet; nothing else may be.
-        let underSheet = app.navigationBars[calendarMonthTitle].exists ? 1 : 0
-        try require(app.navigationBars.count - underSheet == 1, "More than one bar over the event form")
+        // The calendar shows no navigation bar of its own under the sheet: the sheet's is the one bar.
+        try require(app.navigationBars.count == 1, "More than one bar over the event form")
         let save = sheetBar.buttons["Save event"]
         try require(save.waitForExistence(timeout: timeout), "The sheet's bar carries no Save")
         try require(!save.isEnabled, "Save was enabled on an event with no title")
@@ -434,9 +451,8 @@ final class ShellUITests: XCTestCase {
             try require(eventSheet.waitForNonExistence(timeout: timeout), "The event form did not close before the jump")
         }
         try goToCalendarRoot()
-        let calendarBar = app.navigationBars[calendarMonthTitle]
-        try require(calendarBar.waitForExistence(timeout: timeout), "The calendar's bar is not titled \(calendarMonthTitle)")
-        let title = app.buttons.matching(NSPredicate(format: "label == %@", calendarMonthTitle)).firstMatch
+        try require(calendarHeading.waitForExistence(timeout: timeout), "The calendar's first screen is missing")
+        let title = calendarMonthButton
         try require(title.waitForExistence(timeout: timeout), "The card's month title is not a button")
 
         press(title)
@@ -446,14 +462,14 @@ final class ShellUITests: XCTestCase {
         shot("17b-jump-to-date-sheet")
         swipeSheetDown(from: sheetBar)
         try require(sheetBar.waitForNonExistence(timeout: timeout), "A swipe down did not close the jump-to-date sheet")
-        try require(app.navigationBars[calendarMonthTitle].waitForExistence(timeout: timeout), "The calendar moved after a dismissed jump")
-        try require(app.navigationBars.count == 1, "Something was left presented over the calendar")
+        try require(title.waitForExistence(timeout: timeout), "The calendar moved after a dismissed jump")
+        try require(app.navigationBars.count == 0, "Something was left presented over the calendar")
 
         press(title)
         try require(sheetBar.waitForExistence(timeout: timeout), "Jump to date did not open a second time")
         press(sheetBar.buttons.matching(NSPredicate(format: "label == %@", "Cancel")).firstMatch)
         try require(sheetBar.waitForNonExistence(timeout: timeout), "Cancel did not close the jump-to-date sheet")
-        try require(app.navigationBars[calendarMonthTitle].exists, "The calendar moved after a cancelled jump")
+        try require(title.exists, "The calendar moved after a cancelled jump")
     }
 
     /// Deleting an event asks first, in the system's action sheet (MON-24 phase 3, part C, Task 5):
@@ -582,8 +598,8 @@ final class ShellUITests: XCTestCase {
         swipeSheetDown(from: sheetBar)
         try require(sheetBar.waitForNonExistence(timeout: timeout), "A swipe down did not close the new event's sheet")
         try require(!app.staticTexts["Discard changes?"].exists, "A new event asked before closing")
-        try require(app.navigationBars[calendarMonthTitle].waitForExistence(timeout: timeout), "The calendar's bar did not come back after the event form")
-        try require(app.navigationBars.count == 1, "A second bar over the calendar after the event form")
+        try require(calendarHeading.waitForExistence(timeout: timeout), "The calendar did not come back after the event form")
+        try require(app.navigationBars.count == 0, "A bar was left over the calendar after the event form")
         try require(app.tabBars.firstMatch.buttons["Calendar"].isSelected, "The calendar was not under the sheet")
     }
 
@@ -738,11 +754,12 @@ final class ShellUITests: XCTestCase {
     private func goToHomeRoot() throws {
         let home = app.tabBars.firstMatch.buttons["Home"]
         home.tap()
-        if !app.navigationBars["Home"].waitForExistence(timeout: 3) { home.tap() }
-        try require(app.navigationBars["Home"].waitForExistence(timeout: timeout), "Home's first screen is missing")
+        // A pushed screen shows a bar, Home's first screen none: a second tap pops to it.
+        if app.navigationBars.firstMatch.waitForExistence(timeout: 3) { home.tap() }
+        try requireHeaderRoot("Home")
     }
 
-    /// The Calendar tab's first screen, under its system bar (MON-24 phase 3, part B, Task 8).
+    /// The Calendar tab's first screen, which shows no system bar (MON-24 phase 3, part C, Task 8).
     private func goToCalendarRoot() throws {
         let calendar = app.tabBars.firstMatch.buttons["Calendar"]
         calendar.tap()
@@ -1113,10 +1130,10 @@ final class ShellUITests: XCTestCase {
         }
         tourVisit("calendar") { try self.tourTab("Calendar") }
 
-        // Home.
+        // Home, whose first screen shows no navigation bar: the push is told by a bar appearing.
         tourVisit("change_requests?eventId={eventId}&section={section}") {
             try self.tourTab("Home")
-            try self.tourOpen(containing: "See all", from: "Home")
+            try self.tourOpen(containing: "See all", from: nil)
         }
 
         // The Family tab's rows.
@@ -1197,7 +1214,7 @@ final class ShellUITests: XCTestCase {
             try self.tourOpen(containing: "Connect a school", from: nil)
         }
 
-        // The calendar's forms, from its bar and from today's event.
+        // The calendar's forms, from its month card's "+" and from today's event.
         tourVisit("add_event?date={date}&hour={hour}") {
             try self.tourTab("Calendar")
             try self.tourOpenSheet(labelled: "Add event")
@@ -1289,9 +1306,11 @@ final class ShellUITests: XCTestCase {
         tab.tap()
         sleep(1)
         try require(tab.isSelected, "The \(name) tab did not select")
-        if name == "Home" || name == "Family" {
+        if name == "Family" {
             try require(app.navigationBars[name].waitForExistence(timeout: timeout), "\(name)'s first screen is missing")
         }
+        // Home and the Calendar lead with the wordmark header, under no navigation bar.
+        if name == "Home" || name == "Calendar" { try requireHeaderRoot(name) }
     }
 
     /// The Family tab's row reading [row], opened.
@@ -1310,16 +1329,17 @@ final class ShellUITests: XCTestCase {
     }
 
     /// Scrolls the element reading [text] onto the screen and taps it; it is reached once the bar
-    /// titled [from] has gone (a push), or, with no [from], once the screen's bar title changed.
+    /// titled [from] has gone (a push), or, with no [from], once the screen's bar title changed (a
+    /// bar appearing counts, over a first screen that shows none).
     private func tourOpen(containing text: String, from: String?) throws {
         let target = try tourScrolledTo(text)
-        let bar = app.navigationBars.firstMatch
-        let before = bar.identifier
+        // Home's and the Calendar's first screens show no bar: a push is then a bar appearing.
+        let before = tourBarTitle()
         press(target)
         let gone: () -> Bool = {
             if let from { return self.app.navigationBars[from].waitForNonExistence(timeout: 4) }
             for _ in 0..<8 {
-                if self.app.navigationBars.firstMatch.identifier != before { return true }
+                if self.tourBarTitle() != before { return true }
                 usleep(500_000)
             }
             return false
@@ -1330,6 +1350,12 @@ final class ShellUITests: XCTestCase {
             if target.exists { press(target) }
             try require(gone(), "Tapping \"\(text)\" opened no other screen")
         }
+    }
+
+    /// The identifier of the navigation bar on screen, or nil while there is none.
+    private func tourBarTitle() -> String? {
+        let bar = app.navigationBars.firstMatch
+        return bar.exists ? bar.identifier : nil
     }
 
     /// Taps the button labelled [label] (or else whatever reads it) and requires a form sheet: a

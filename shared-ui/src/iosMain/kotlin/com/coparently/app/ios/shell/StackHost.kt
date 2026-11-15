@@ -55,7 +55,9 @@ import platform.darwin.NSObject
  * back. So whenever the host has mirrored the stack — after a push or pop it asked for, a transition
  * that ended, or one that was cancelled — [applyBars] sets each navigation controller's bar for the
  * screen actually on top: shown over a screen that describes its bar, hidden over one that draws
- * its own. A form's sheet gets its bar state the same way, as soon as it is built.
+ * its own or whose bar asks to be hidden ([ScreenController.showsBar]: the Calendar's and Home's
+ * roots, which lead with the redesign's header). A form's sheet gets its bar state the same way, as
+ * soon as it is built.
  *
  * **A tab never shows the screens before the app proper.** A tab's screen that navigates to one
  * (Settings' sign-out navigates to the sign-in screen) is not mirrored: [onRootFlowRequested] hands
@@ -232,7 +234,7 @@ internal class StackHost(
             navigation.setViewControllers(controllers, animated)
         }
         main.lastOrNull()?.let { top ->
-            navigation.setNavigationBarHidden(!screens.getValue(top.id).nativeBar, animated)
+            navigation.setNavigationBarHidden(!screens.getValue(top.id).showsBar, animated)
         }
     }
 
@@ -359,6 +361,7 @@ internal class StackHost(
             shell = shell,
             session = session,
             nativeBar = showsNativeBar(route),
+            barHiddenAtFirst = hidesNativeBar(route),
             sheetGuard = form?.guard,
             visible = visibility.of(entry.id)
         )
@@ -378,9 +381,11 @@ internal class StackHost(
             // The edge swipe's delegate, once the navigation controller has made its gesture.
             edgeSwipe.attach()
             sheetEdgeSwipe?.attach()
-            // The bar shows for a screen that describes its bar, and hides over one that draws its own.
-            val nativeBar = screens.values.firstOrNull { it.viewController === willShowViewController }?.nativeBar
-            if (nativeBar != null) navigationController.setNavigationBarHidden(!nativeBar, animated)
+            // The bar shows for a screen that describes its bar, and hides over one that draws its own
+            // or whose bar asks to be hidden: each screen's own answer, so a screen pushed over the
+            // Calendar's root gets its bar back, and the root loses it again on the way back.
+            val showsBar = screens.values.firstOrNull { it.viewController === willShowViewController }?.showsBar
+            if (showsBar != null) navigationController.setNavigationBarHidden(!showsBar, animated)
             // A back swipe can be let go of: the transition then ends without `didShow`, and with
             // the stacks as they were. Whatever the shared controller did meanwhile is mirrored then.
             navigationController.transitionCoordinator?.animateAlongsideTransition(null) { context ->
@@ -427,6 +432,18 @@ internal class StackHost(
         /** Whether the navigation bar shows over [route]'s screen: every route but [NO_BAR_ROUTES]. */
         fun showsNativeBar(route: String): Boolean = route !in NO_BAR_ROUTES
 
+        /**
+         * The routes whose screens describe their bar but hand the shell a hidden one
+         * (`ScreenBar.hidden`), leading with the redesign's wordmark header in content: the
+         * Calendar's and Home's tab roots (MON-24 phase 3, part C). The bar starts hidden over them
+         * before they first compose, so it does not show for a frame; what the screen hands the
+         * host decides from then on.
+         */
+        val HIDDEN_BAR_ROUTES: Set<String> = setOf(Screen.Calendar.route, Screen.Home.route)
+
+        /** Whether [route]'s screen starts with its navigation bar hidden; see [HIDDEN_BAR_ROUTES]. */
+        fun hidesNativeBar(route: String): Boolean = route in HIDDEN_BAR_ROUTES
+
         /** Whether two lists hold the same view controllers, in order. */
         private fun sameControllers(current: List<*>, wanted: List<UIViewController>): Boolean =
             current.size == wanted.size && current.indices.all { current[it] === wanted[it] }
@@ -434,13 +451,14 @@ internal class StackHost(
 }
 
 /**
- * Shows this navigation controller's bar over a top screen that describes its bar, and hides it
- * over one that draws its own; [screens] are the stack's screens.
+ * Shows this navigation controller's bar over a top screen that shows one
+ * ([ScreenController.showsBar]), and hides it over one that does not; [screens] are the stack's
+ * screens.
  */
 private fun UINavigationController.applyBar(screens: Collection<ScreenController>) {
     val top = topViewController ?: return
-    val nativeBar = screens.firstOrNull { it.viewController === top }?.nativeBar ?: return
-    if (isNavigationBarHidden() == nativeBar) setNavigationBarHidden(!nativeBar, animated = false)
+    val showsBar = screens.firstOrNull { it.viewController === top }?.showsBar ?: return
+    if (isNavigationBarHidden() == showsBar) setNavigationBarHidden(!showsBar, animated = false)
 }
 
 /**
