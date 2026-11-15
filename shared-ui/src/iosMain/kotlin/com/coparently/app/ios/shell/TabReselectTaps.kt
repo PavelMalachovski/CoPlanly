@@ -99,5 +99,7 @@ internal class TabReselectTaps(
  * or in the accessibility tree changes.
  */
 internal fun tabTapLog(message: String) {
-    NSLog("COPLANLY_TABTAP %@", message)
+    // The whole line as NSLog's format, with no variadic argument (Kotlin/Native's bridging of a
+    // Kotlin string through C varargs is not something to rely on), its percent signs doubled.
+    NSLog("COPLANLY_TABTAP " + message.replace("%", "%%"))
 }
