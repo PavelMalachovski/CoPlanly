@@ -2827,7 +2827,8 @@ notes list each file):
   B's Task 11 by `IosAccountDeletion`: the `deleteAccount` callable, then the wipe Android's
   `AccountDeletionService` does and the session's end; Settings' row now deletes the account on the
   iPhone, held by `IosAccountDeletionTest` on the emulators and the walk's last step), `NoPush` (now the push switch and sign-out's detach alone, `PushRegistration`: the
-  phone holds no push token until phase 4), `NoGoogleCalendar`, `NoStorageBucket`,
+  phone holds no push token until phase 4), `NoGoogleCalendar`, ~~`NoStorageBucket`~~ (replaced in
+  part C's Task 10 by `IosStorageBucket`, the iOS SDK's Storage by path, never by download URL),
   `NoPickedFiles`, `NoRecordPhotoStorage`, `NoReceiptText`, `NoRecordFiles`,
   `NoEventReminders`, `NoRequestClockJobs`, `NoRequestClockNotices`, `NoSchoolImportJob`,
   `NoSupportReminderJob` and `NoExportVerifyAddress`. In

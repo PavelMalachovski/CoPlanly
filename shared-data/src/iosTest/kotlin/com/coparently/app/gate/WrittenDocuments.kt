@@ -2,6 +2,7 @@
 
 package com.coparently.app.gate
 
+import com.coparently.app.data.files.StorageBucket
 import com.coparently.app.data.remote.firebase.DocumentPath
 import com.coparently.app.data.remote.firebase.FieldPath
 import com.coparently.app.data.remote.firebase.FirestoreClient
@@ -37,12 +38,16 @@ internal class WrittenDocuments {
 
     private data class Recorded(
         val paths: List<String> = emptyList(),
+        val files: List<String> = emptyList(),
         val refused: List<Refusal> = emptyList(),
         val pushes: List<QueuedPush> = emptyList()
     )
 
     /** The documents written, in the order of their first write, each once. */
     val paths: List<String> get() = state.load().paths
+
+    /** The Storage objects uploaded (part C, Task 10), in the order of their upload, each once. */
+    val files: List<String> get() = state.load().files
 
     /** The writes the server refused. */
     val refused: List<Refusal> get() = state.load().refused
@@ -59,18 +64,27 @@ internal class WrittenDocuments {
     fun refused(path: DocumentPath, failure: Throwable) =
         change { it.copy(refused = it.refused + Refusal(path.text, failure.toString())) }
 
+    /** Records an upload of the Storage object at [path] that landed. */
+    fun stored(path: String) = change {
+        if (path in it.files) it else it.copy(files = it.files + path)
+    }
+
+    /** Records a refused upload of the Storage object at [path]. */
+    fun refusedFile(path: String, failure: Throwable) =
+        change { it.copy(refused = it.refused + Refusal("$STORAGE_PREFIX$path", failure.toString())) }
+
     /** Records a queued push. */
     fun queued(path: DocumentPath, data: Map<String, Any?>) =
         change { it.copy(pushes = it.pushes + QueuedPush(path.text, data)) }
 
     /**
-     * Writes the list to [file], one `collection/id` per line, creating its folder: what the checker
-     * reads after the tests.
+     * Writes the list to [file], one `collection/id` per line and then one `storage:<object path>`
+     * per Storage object, creating its folder: what the checker reads after the tests.
      */
     fun writeTo(file: String) {
         val path = Path(file)
         path.parent?.let { SystemFileSystem.createDirectories(it) }
-        val text = paths.joinToString("\n", postfix = "\n")
+        val text = (paths + files.map { STORAGE_PREFIX + it }).joinToString("\n", postfix = "\n")
         SystemFileSystem.sink(path).buffered().use { sink -> sink.writeString(text) }
     }
 
@@ -82,6 +96,11 @@ internal class WrittenDocuments {
     }
 
     private val DocumentPath.text: String get() = "$collection/$id"
+
+    companion object {
+        /** Marks a Storage object's line in the written list, as `check-ios-writes.js` reads it. */
+        const val STORAGE_PREFIX = "storage:"
+    }
 }
 
 /**
@@ -156,5 +175,43 @@ internal class RecordingFirestoreClient(
 
     private companion object {
         const val NOTIFICATION_QUEUE = "notification_queue"
+    }
+}
+
+/**
+ * The production [StorageBucket] ([delegate], `IosStorageBucket` on the iPhone) with every upload
+ * recorded in [written] once it landed, and each refusal with what was thrown (rethrown unchanged).
+ * Reads, downloads and deletes go straight through.
+ */
+internal class RecordingStorageBucket(
+    private val delegate: StorageBucket,
+    private val written: WrittenDocuments
+) : StorageBucket by delegate {
+
+    override suspend fun putFile(
+        path: String,
+        file: Path,
+        contentType: String,
+        customMetadata: Map<String, String>,
+        onProgress: (Float) -> Unit
+    ) = record(path) { delegate.putFile(path, file, contentType, customMetadata, onProgress) }
+
+    override suspend fun putBytes(
+        path: String,
+        bytes: ByteArray,
+        contentType: String,
+        customMetadata: Map<String, String>
+    ) = record(path) { delegate.putBytes(path, bytes, contentType, customMetadata) }
+
+    private suspend fun record(path: String, upload: suspend () -> Unit) {
+        try {
+            upload()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            written.refusedFile(path, e)
+            throw e
+        }
+        written.stored(path)
     }
 }

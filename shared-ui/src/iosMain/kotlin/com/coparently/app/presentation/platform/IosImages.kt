@@ -205,7 +205,7 @@ internal object IosImageSources {
 
 /**
  * Loads and decodes an [IosImageSource], as `RecordPhotoFetcher` and Coil's decoder do on Android.
- * Every failure — no graph, no bucket (`NoStorageBucket` until Storage is bound), a refused or
+ * Every failure — no graph, no bucket, a refused or
  * missing object, a wrong digest, bytes that are not an image — is null, which draws the
  * placeholder, and a later load tries again.
  *

@@ -2210,11 +2210,12 @@ wordings (`IosPairingWording` and `IosSchoolImportWordings`, bound in `:shared-u
 `PushDevice` and `PushQueue` half of `NoPush`), all three in Task 6, and the credential sheet
 (`IosCredentialSignIn` in place of `NoCredentialSignIn`, Task 9); part B replaced
 `NoAccountDeletion` with `IosAccountDeletion` (the `deleteAccount` callable, then the wipe Android's
-`AccountDeletionService` does, then the session's end; Task 11). Still stand-ins on the iPhone:
+`AccountDeletionService` does, then the session's end; Task 11); part C replaced `NoStorageBucket`
+with `IosStorageBucket` (the iOS SDK's Storage by path, Task 10). Still stand-ins on the iPhone:
 `NoPush` as `PushRegistration` alone (the push switch; the phone holds no token until phase 4),
 `NoEventReminders`,
 `NoRequestClockJobs`, `NoRequestClockNotices`, `NoSchoolImportJob`, `NoSupportReminderJob`,
-`NoGoogleCalendar`, `NoStorageBucket`, `NoPickedFiles`, `NoRecordPhotoStorage`, `NoReceiptText`,
+`NoGoogleCalendar`, `NoPickedFiles`, `NoRecordPhotoStorage`, `NoReceiptText`,
 `NoRecordFiles`, `NoExportVerifyAddress`, and in `:shared-ui` `NoSpeechDictation`, `NoAiAssist`,
 `NoInviteQrCodes` and the platform interfaces' `No…` objects in `IosPlatform.kt`. ROADMAP MON-24
 lists what still stands in. Every `data/…`

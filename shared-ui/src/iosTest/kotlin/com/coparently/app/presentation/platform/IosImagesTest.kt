@@ -70,7 +70,7 @@ class IosImagesTest {
         val parent = loader(BOB)
         val source = assertIs<IosImageSource.StoredPhoto>(parent.sourceOf(reference))
         assertEquals(listOf(familyPath), source.paths)
-        // The bucket refuses (as `NoStorageBucket` does until Storage is bound): no image, no throw.
+        // The bucket refuses (as the rules refuse a stranger): no image, no throw.
         assertNull(parent.loadModel(reference, IntSize(100, 100), fullResolution = false))
         assertEquals(1, bucket.downloads)
     }

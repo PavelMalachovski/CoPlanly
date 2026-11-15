@@ -7,16 +7,18 @@ import dev.gitlive.firebase.auth.auth
 import dev.gitlive.firebase.firestore.firestore
 import dev.gitlive.firebase.functions.functions
 import dev.gitlive.firebase.initialize
+import dev.gitlive.firebase.storage.storage
 
 /**
  * Starts Firebase for the iPhone app (MON-24 phase 3), before anything reads it: the Koin graph's
- * `platformDataModule` asks GitLive for the default Firestore, Auth and the Functions of
+ * `platformDataModule` asks GitLive for the default Firestore, Auth, Storage and the Functions of
  * [FUNCTIONS_REGION], and those must already point where this says.
  *
  * Two configurations, and the choice is the shell's ([IosAppConfig.emulatorHost]):
  * - **The emulators** on [IosAppConfig.emulatorHost], under the credential-free `demo-coplanly`
  *   project the Android e2e job uses. Firestore on [FIRESTORE_PORT], Functions on [FUNCTIONS_PORT]
- *   and, since Task 5, Auth on [AUTH_PORT], the ports `firebase.json` gives them. The options are
+ *   since Task 5, Auth on [AUTH_PORT] and, since part C's Task 10, Storage on [STORAGE_PORT], the
+ *   ports `firebase.json` gives them. The options are
  *   fakes the emulators accept and no production service would, so a build without the real
  *   configuration can never reach production.
  * - **The real project**, from the `GoogleService-Info.plist` the owner drops into the app's
@@ -31,6 +33,9 @@ internal object IosFirebase {
 
     /** The Auth emulator's port in `firebase.json`. */
     private const val AUTH_PORT = 9099
+
+    /** The Storage emulator's port in `firebase.json`. */
+    private const val STORAGE_PORT = 9199
 
     /**
      * The emulators' project: `demo-` makes the Firebase emulators run it without credentials and
@@ -55,6 +60,7 @@ internal object IosFirebase {
         Firebase.initialize(options = EMULATOR_OPTIONS)
         Firebase.firestore.useEmulator(host, FIRESTORE_PORT)
         Firebase.functions(FUNCTIONS_REGION).useEmulator(host, FUNCTIONS_PORT)
+        Firebase.storage.useEmulator(host, STORAGE_PORT)
         // Before anything signs in: the SDK refuses the emulator once Auth has been used.
         Firebase.auth.useEmulator(host, AUTH_PORT)
     }

@@ -2,6 +2,7 @@ package com.coparently.app.di.koin
 
 import com.coparently.app.data.export.ExportVerifyAddress
 import com.coparently.app.data.export.RecordFileWriter
+import com.coparently.app.data.files.IosStorageBucket
 import com.coparently.app.data.files.PickedFiles
 import com.coparently.app.data.files.StorageBucket
 import com.coparently.app.data.http.HttpTimeouts
@@ -77,6 +78,7 @@ import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
 import dev.gitlive.firebase.firestore.firestore
 import dev.gitlive.firebase.functions.functions
+import dev.gitlive.firebase.storage.storage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -92,12 +94,12 @@ import org.koin.dsl.module
  * sign-in), the account switch's wipe ([IosAccountSwitch]) and sign-out's traces
  * ([IosAccountTraces]) — since Task 6, the push queue ([FirestorePushQueue]) and the sync while the
  * app is open ([ForegroundSyncRunner]), since part B's Task 11 account deletion
- * ([IosAccountDeletion]) — and, for what the iPhone does not have yet (a push token, Cloud Storage,
- * a file picker, Google Calendar, background jobs and notifications), the stand-ins in
- * `IosUnavailable.kt`, which answer as a phone with nothing of the kind would. The two wordings the
- * data layer writes into stored data read the app's strings, so `:shared-ui`'s `platformUiModule`
- * binds them (`IosPairingWording`, `IosSchoolImportWordings`); the graph resolves with both
- * modules, as `IosApp.start` builds it.
+ * ([IosAccountDeletion]), since part C's Task 10 Cloud Storage ([IosStorageBucket]) — and, for
+ * what the iPhone does not have yet (a push token, a file picker, Google Calendar, background jobs
+ * and notifications), the stand-ins in `IosUnavailable.kt`, which answer as a phone with nothing
+ * of the kind would. The two wordings the data layer writes into stored data read the app's
+ * strings, so `:shared-ui`'s `platformUiModule` binds them (`IosPairingWording`,
+ * `IosSchoolImportWordings`); the graph resolves with both modules, as `IosApp.start` builds it.
  *
  * The iPhone app's `IosApp.start` builds this graph after `IosFirebase` has configured Firebase,
  * and phase 3 replaces each remaining stand-in with the real one.
@@ -195,7 +197,8 @@ actual val platformDataModule: Module = module {
     single<GoogleCalendarAccount> { NoGoogleCalendar }
     single<GoogleCalendarConnectionSource> { NoGoogleCalendar }
     single<CredentialProvider> { NoGoogleCalendar }
-    single<StorageBucket> { NoStorageBucket }
+    // Cloud Storage by path, never by download URL (part C, Task 10).
+    single<StorageBucket> { IosStorageBucket(Firebase.storage) }
     single<RecordPhotoStorage> { NoRecordPhotoStorage }
     single<ReceiptTextRecognizer> { NoReceiptText }
     single<PickedFiles> { NoPickedFiles }

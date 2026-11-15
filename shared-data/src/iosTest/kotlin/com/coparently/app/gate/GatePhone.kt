@@ -4,6 +4,7 @@ package com.coparently.app.gate
 
 import com.coparently.app.data.chat.ChatAttachmentOutbox
 import com.coparently.app.data.family.SelectedFamilySource
+import com.coparently.app.data.files.IosStorageBucket
 import com.coparently.app.data.files.SharedFileCache
 import com.coparently.app.data.files.SharedFileStager
 import com.coparently.app.data.files.SharedFileStorage
@@ -47,7 +48,6 @@ import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.di.koin.FUNCTIONS_REGION
 import com.coparently.app.di.koin.NoPickedFiles
 import com.coparently.app.di.koin.NoRequestClockJobs
-import com.coparently.app.di.koin.NoStorageBucket
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.model.PairingState
 import dev.gitlive.firebase.Firebase
@@ -57,6 +57,8 @@ import dev.gitlive.firebase.auth.auth
 import dev.gitlive.firebase.firestore.firestore
 import dev.gitlive.firebase.functions.functions
 import dev.gitlive.firebase.initialize
+import dev.gitlive.firebase.storage.FirebaseStorage
+import dev.gitlive.firebase.storage.storage
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -74,13 +76,15 @@ import platform.Foundation.NSUUID
  * One parent's iPhone in the write gate's test process (MON-24 phase 3, Task 7): a named Firebase
  * app of its own on the emulators, a Room database of its own on the bundled driver, and the
  * production data layer wired over both as the iPhone's `platformDataModule` wires it — GitLive's
- * Firestore, Functions and Auth ([IosFirebaseAuth]), the push queue ([FirestorePushQueue]) and the
- * stand-ins for what the iPhone does not have yet (`NoStorageBucket`, `NoPickedFiles`,
- * `NoRequestClockJobs`). Every class that writes to Firestore is the production class.
+ * Firestore, Functions and Auth ([IosFirebaseAuth]), Cloud Storage ([IosStorageBucket], part C), the
+ * push queue ([FirestorePushQueue]) and the stand-ins for what the iPhone does not have yet
+ * (`NoPickedFiles`, `NoRequestClockJobs`). Every class that writes to Firestore or Storage is the
+ * production class.
  *
  * Built by hand, as the Android e2e job's `EmulatorParent` is, because one process has one Koin
  * graph and the gate needs two of everything. Its Firestore client is wrapped by
- * [RecordingFirestoreClient], so each document it writes reaches [written].
+ * [RecordingFirestoreClient] and its bucket by [RecordingStorageBucket], so each document and each
+ * file it writes reaches [written].
  *
  * The Firebase app is named and **never deleted**, as on Android: the SDKs keep emulator settings
  * per app for the life of the process. Each phone signs up a fresh account, so nothing is shared
@@ -93,11 +97,13 @@ internal class GatePhone private constructor(
     val auth: FirebaseAuth,
     firestore: FirestoreClient,
     functions: IosCallableFunctions,
+    storage: FirebaseStorage,
     written: WrittenDocuments
 ) {
     private val root = NSTemporaryDirectory() + "coplanly-gate-" + NSUUID().UUIDString
 
-    private val directories = object : AppDirectories {
+    /** The phone's folders, under a temporary root [close] removes. */
+    val directories = object : AppDirectories {
         override val files: Path = Path(root, "files")
         override val cache: Path = Path(root, "cache")
         override val noBackup: Path = Path(root, "no_backup")
@@ -119,12 +125,17 @@ internal class GatePhone private constructor(
     private val pushQueue = FirestorePushQueue(documents, signedIn)
     private val userDataSource = FirestoreUserDataSource(documents)
     private val messageDataSource = FirestoreMessageDataSource(documents)
-    private val sharedFileStorage = SharedFileStorage(NoStorageBucket)
+
+    /** The vault's and the chat's files in Cloud Storage, every upload recorded. */
+    val sharedFileStorage = SharedFileStorage(RecordingStorageBucket(IosStorageBucket(storage), written))
+
+    /** The verified download cache a reader opens a shared file through. */
+    val sharedFileCache = SharedFileCache(directories, sharedFileStorage)
 
     /** The event writer and reader's data source. */
     val eventDataSource = FirestoreEventDataSource(documents)
 
-    /** Messages, gated by the chat outbox the iPhone binds (no Cloud Storage yet). */
+    /** Messages, gated by the chat outbox the iPhone binds (nothing can be picked yet). */
     val messageRepository = MessageRepositoryImpl(
         messageDao = database.messageDao(),
         signedInUser = signedIn,
@@ -133,7 +144,7 @@ internal class GatePhone private constructor(
             directories = directories,
             stager = SharedFileStager(NoPickedFiles),
             storage = sharedFileStorage,
-            cache = SharedFileCache(directories, sharedFileStorage),
+            cache = sharedFileCache,
             authService = signedIn
         )
     )
@@ -287,6 +298,7 @@ internal class GatePhone private constructor(
         private const val FIRESTORE_PORT = 8080
         private const val FUNCTIONS_PORT = 5001
         private const val AUTH_PORT = 9099
+        private const val STORAGE_PORT = 9199
 
         /** The emulators' fake options, which no production service accepts (`IosFirebase`'s). */
         private val OPTIONS = FirebaseOptions(
@@ -307,8 +319,9 @@ internal class GatePhone private constructor(
             val auth = Firebase.auth(app).also { it.useEmulator(host, AUTH_PORT) }
             val firestore = Firebase.firestore(app).also { it.useEmulator(host, FIRESTORE_PORT) }
             val functions = Firebase.functions(app, FUNCTIONS_REGION).also { it.useEmulator(host, FUNCTIONS_PORT) }
+            val storage = Firebase.storage(app).also { it.useEmulator(host, STORAGE_PORT) }
             val client = GitLiveFirestoreClient(firestore)
-            val phone = GatePhone(name, auth, client, IosCallableFunctions(functions), written)
+            val phone = GatePhone(name, auth, client, IosCallableFunctions(functions), storage, written)
             val email = "gate-${name.lowercase()}-${NSUUID().UUIDString.lowercase()}@example.test"
             phone.signedIn.createAccountWithEmail(email, PASSWORD).getOrThrow()
             checkNotNull(auth.currentUser) { "$name did not sign up" }.updateProfile(displayName = name)

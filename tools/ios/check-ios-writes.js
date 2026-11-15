@@ -17,6 +17,12 @@
  *    drift on the iPhone: a Long written as a double, a map as a string, a timestamp for ISO text,
  *    a key missing or added.
  *
+ * Since part C's Task 10 the gate also uploads files to Cloud Storage, listed in the same file as
+ * `storage:<object path>` lines. Each is read back from the Storage emulator (`--storage`, the
+ * emulators' admin token too) and its path, content type, size and custom metadata are held to what
+ * Android's `SharedFileStorage` writes (`FILE_RULES`): the path shape `storage.rules` keys on, and
+ * exactly the `uploader` and `sha256` keys, the uploader one of the path's family.
+ *
  * Where a fixture's optional keys legitimately differ from what the gate writes, the rule says so
  * with its reason (`mayBeAbsent`, `mayBeEmpty`); keys a server or a later step adds to the document
  * are typed too (`serverAdded`, `laterSteps`). Nothing is skipped silently.
@@ -29,6 +35,7 @@
  *
  * Usage: node tools/ios/check-ios-writes.js --emulator 127.0.0.1:8080
  *          --fixtures app/src/test/resources/wire/current [--written build/ios-gate/written.txt]
+ *          [--storage 127.0.0.1:9199]
  * No dependencies. `node --test tools/test/check-ios-writes.test.js` covers it.
  */
 'use strict';
@@ -47,6 +54,38 @@ const REQUIRED_COLLECTIONS = [
   'users', 'invitations', 'conversations', 'messages', 'events', 'event_versions', 'expenses',
   'child_info', 'pets', 'change_requests', 'custody_models', 'request_deadlines', 'notification_queue',
 ];
+
+/** The emulators' default bucket, as `IosFirebase` and Android's e2e `EmulatorEnvironment` name it. */
+const BUCKET = `${PROJECT}.appspot.com`;
+
+/** How written.txt marks a Storage object's line (`WrittenDocuments.STORAGE_PREFIX`). */
+const STORAGE_PREFIX = 'storage:';
+
+/** The Storage prefixes the gate must have uploaded at least one object under. */
+const REQUIRED_FILE_PREFIXES = ['family_documents'];
+
+/** What `storage.rules`' `isAcceptableSharedFile` admits (`SharedFilePolicy` in the app). */
+const SHARED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/heic', 'image/heif', 'image/webp'];
+
+/**
+ * The Storage objects Android writes, by top-level prefix: the path's shape (its first group the
+ * pair id `storage.rules`' `isOneOfPair` splits) and the content types the rule admits. Both are
+ * `SharedFileStorage.upload`, whose custom metadata is `uploader` then `sha256`, nothing else.
+ */
+const FILE_RULES = {
+  // FamilyDocumentPaths.storagePath: family_documents/{familyId}/{docId}/{fileName}.
+  family_documents: {
+    path: /^family_documents\/([^/]+)\/([^/]+)\/([^/]+)$/,
+    contentTypes: SHARED_FILE_TYPES,
+    source: 'SharedFileStorage.upload at FamilyDocumentPaths.storagePath',
+  },
+  // ChatAttachmentCodec.storagePath: chat_attachments/{conversationId}/{messageId}/{fileName}.
+  chat_attachments: {
+    path: /^chat_attachments\/([^/]+)\/([^/]+)\/([^/]+)$/,
+    contentTypes: SHARED_FILE_TYPES,
+    source: 'SharedFileStorage.upload at ChatAttachmentCodec.storagePath',
+  },
+};
 
 // ---- shapes -----------------------------------------------------------------------------------
 
@@ -286,8 +325,8 @@ function adjust(base, rule) {
 
 // ---- the rules --------------------------------------------------------------------------------
 
-/** The iPhone has no Cloud Storage until phase 4 (`NoStorageBucket`), so nothing carries a file. */
-const NO_STORAGE = 'the iPhone has no Cloud Storage yet (NoStorageBucket): no photo or file to reference';
+/** The iPhone stores no record photo yet (`NoRecordPhotoStorage`), so no record carries one. */
+const NO_STORAGE = 'the iPhone stores no record photo yet (NoRecordPhotoStorage): no photo to reference';
 
 /** A rule: the fixture of this writer path, and its adjustments with their reasons. */
 const RULES = {
@@ -480,16 +519,67 @@ function ruleFor(collection, doc, fixtures) {
 
 // ---- the run ----------------------------------------------------------------------------------
 
-/** The unique `collection/id` paths of written.txt's [text]. */
+/** The unique `collection/id` paths of written.txt's [text]; its `storage:` lines are [parseWrittenFiles]'. */
 function parseWritten(text) {
   const paths = [];
   for (const line of text.split('\n')) {
     const p = line.trim();
-    if (!p) continue;
+    if (!p || p.startsWith(STORAGE_PREFIX)) continue;
     if (!/^[^/\s]+\/[^/\s]+$/.test(p)) throw new Error(`"${p}" is not a collection/document path`);
     if (!paths.includes(p)) paths.push(p);
   }
   return paths;
+}
+
+/** The unique Storage object paths of written.txt's `storage:` lines. */
+function parseWrittenFiles(text) {
+  const paths = [];
+  for (const line of text.split('\n')) {
+    const p = line.trim();
+    if (!p.startsWith(STORAGE_PREFIX)) continue;
+    const objectPath = p.slice(STORAGE_PREFIX.length);
+    if (!objectPath || objectPath.startsWith('/') || objectPath.split('/').some((part) => part === '')) {
+      throw new Error(`"${p}" is not a Storage object path`);
+    }
+    if (!paths.includes(objectPath)) paths.push(objectPath);
+  }
+  return paths;
+}
+
+/**
+ * The mismatches of the Storage object at [objectPath], whose metadata the emulator answered as
+ * [meta] (its `contentType`, `size` and custom `metadata`), with what Android writes there.
+ */
+function compareFile(objectPath, meta) {
+  const prefix = objectPath.split('/')[0];
+  const rule = FILE_RULES[prefix];
+  if (!rule) return [`no Android shape is known for Storage prefix "${prefix}"`];
+  const problems = [];
+  const match = rule.path.exec(objectPath);
+  const pair = match ? match[1].split('__') : [];
+  if (!match) {
+    problems.push(`path: not the shape ${rule.source} writes (${rule.path})`);
+  } else if (pair.length !== 2 || pair.some((uid) => uid === '')) {
+    problems.push(`path: "${match[1]}" is not a pair id of two uids, which storage.rules splits`);
+  }
+  if (!rule.contentTypes.includes(meta.contentType)) {
+    problems.push(`contentType: "${meta.contentType}" is not one storage.rules admits`);
+  }
+  if (!(Number(meta.size) > 0)) problems.push(`size: ${meta.size}, where storage.rules requires more than 0`);
+  const custom = meta.metadata || {};
+  const keys = Object.keys(custom).sort();
+  if (keys.join(',') !== 'sha256,uploader') {
+    problems.push(`metadata: keys [${keys.join(', ')}] where ${rule.source} writes [sha256, uploader]`);
+  }
+  if (typeof custom.sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(custom.sha256)) {
+    problems.push('metadata.sha256: not 64 lowercase hex digits');
+  }
+  if (typeof custom.uploader !== 'string' || custom.uploader === '') {
+    problems.push('metadata.uploader: missing or empty');
+  } else if (pair.length === 2 && !pair.includes(custom.uploader)) {
+    problems.push('metadata.uploader: not one of the family the path names');
+  }
+  return problems;
 }
 
 /** `host:port` of a loopback emulator; anything else is refused. */
@@ -514,6 +604,17 @@ function emulatorReader(emulator) {
   };
 }
 
+/** Reads one object's metadata from the Storage emulator at [emulator] as its owner; null when there is none. */
+function storageReader(emulator) {
+  return async (objectPath) => {
+    const url = `http://${emulator.host}:${emulator.port}/v0/b/${BUCKET}/o/${encodeURIComponent(objectPath)}`;
+    const response = await fetch(url, { headers: { Authorization: 'Bearer owner' } });
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error(`storage:${objectPath}: the Storage emulator answered ${response.status}`);
+    return response.json();
+  };
+}
+
 /** A shape as plain text, for the log of a document that did not match. */
 function describe(value) {
   const type = typeOf(value);
@@ -528,12 +629,18 @@ function describe(value) {
  * Compares every document [written] lists. Resolves with every problem found; logs one line per
  * document compared through [log].
  */
-async function run({ written, fixtures, fetchDocument, required = REQUIRED_COLLECTIONS, log = console.log }) {
+async function run({
+  written, fixtures, fetchDocument, fetchFile = null, required = REQUIRED_COLLECTIONS,
+  requiredFiles = REQUIRED_FILE_PREFIXES, log = console.log,
+}) {
   const problems = [];
   if (!fs.existsSync(written)) return { problems: [`${written} is missing: the gate wrote nothing`], checked: 0 };
   let paths;
+  let files;
   try {
-    paths = parseWritten(fs.readFileSync(written, 'utf8'));
+    const text = fs.readFileSync(written, 'utf8');
+    paths = parseWritten(text);
+    files = parseWrittenFiles(text);
   } catch (e) {
     return { problems: [`${written}: ${e.message}`], checked: 0 };
   }
@@ -569,6 +676,29 @@ async function run({ written, fixtures, fetchDocument, required = REQUIRED_COLLE
       problems.push(`${collection}: the gate wrote no document to compare`);
     }
   }
+  for (const objectPath of files) {
+    if (!fetchFile) {
+      problems.push(`storage:${objectPath}: no Storage emulator to read it from`);
+      continue;
+    }
+    const meta = await fetchFile(objectPath);
+    if (!meta) {
+      problems.push(`storage:${objectPath}: not found on the Storage emulator`);
+      continue;
+    }
+    const mismatches = compareFile(objectPath, meta);
+    checked++;
+    if (mismatches.length === 0) {
+      log(`ok storage:${objectPath} against ${FILE_RULES[objectPath.split('/')[0]].source}`);
+    } else {
+      problems.push(...mismatches.map((m) => `storage:${objectPath}: ${m}`));
+    }
+  }
+  for (const prefix of requiredFiles) {
+    if (!files.some((p) => p.startsWith(`${prefix}/`))) {
+      problems.push(`storage:${prefix}: the gate uploaded no file to compare`);
+    }
+  }
   return { problems, checked };
 }
 
@@ -587,10 +717,19 @@ async function main(argv) {
     return 2;
   }
   const fixtures = option(argv, 'fixtures', 'app/src/test/resources/wire/current');
+  let storage;
+  try {
+    storage = parseEmulator(option(argv, 'storage', '127.0.0.1:9199'));
+  } catch (e) {
+    console.log(`::error::--storage: ${e.message}`);
+    return 2;
+  }
   const written = option(argv, 'written', 'build/ios-gate/written.txt');
-  const { problems, checked } = await run({ written, fixtures, fetchDocument: emulatorReader(emulator) });
+  const { problems, checked } = await run({
+    written, fixtures, fetchDocument: emulatorReader(emulator), fetchFile: storageReader(storage),
+  });
   for (const problem of problems) console.log(`::error::${problem}`);
-  console.log(`${checked} documents compared, ${problems.length} problems`);
+  console.log(`${checked} documents and files compared, ${problems.length} problems`);
   return problems.length === 0 ? 0 : 1;
 }
 
@@ -602,5 +741,6 @@ if (require.main === module) {
 }
 
 module.exports = {
-  shapeOfJson, compare, compareDocument, ruleFor, parseWritten, parseEmulator, run, REQUIRED_COLLECTIONS,
+  shapeOfJson, compare, compareDocument, ruleFor, parseWritten, parseWrittenFiles, compareFile, parseEmulator, run,
+  REQUIRED_COLLECTIONS, REQUIRED_FILE_PREFIXES,
 };

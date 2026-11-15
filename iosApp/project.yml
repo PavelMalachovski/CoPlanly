@@ -54,6 +54,9 @@ targets:
       # The sign-in (MON-24 phase 3, Task 5): GitLive's Auth bindings in `Shared` call it.
       - package: Firebase
         product: FirebaseAuth
+      # Cloud Storage (MON-24 phase 3, part C, Task 10): GitLive's Storage bindings in `Shared` call it.
+      - package: Firebase
+        product: FirebaseStorage
       - package: GoogleSignIn
         product: GoogleSignIn
     preBuildScripts:

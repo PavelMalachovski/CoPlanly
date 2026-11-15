@@ -2427,8 +2427,9 @@ jobs:
       # list each document written in COPLANLY_GATE_OUTPUT; then, before the emulators stop,
       # `tools/ios/check-ios-writes.js` reads each of those documents back from the Firestore emulator
       # (loopback only) and compares its keys and Firestore types with what Android writes
-      # (`wire/current/`, or a literal shape from the shared writer). Both must pass; the checker
-      # runs even when the tests failed, so its findings are in the same log.
+      # (`wire/current/`, or a literal shape from the shared writer), and each file the gate uploaded
+      # (part C, Task 10) from the Storage emulator, its path and custom metadata. Both must pass; the
+      # checker runs even when the tests failed, so its findings are in the same log.
       - name: iPhone tests on the emulators
         id: emulator-tests
         env:
@@ -2449,7 +2450,7 @@ jobs:
           firestore-tests/node_modules/.bin/firebase emulators:exec \
             --only auth,firestore,functions,storage \
             --project demo-coplanly \
-            './gradlew --continue :shared-data:iosSimulatorArm64Test --rerun :shared-ui:iosSimulatorArm64Test --rerun; tests=$?; node tools/ios/check-ios-writes.js --emulator 127.0.0.1:8080 --fixtures app/src/test/resources/wire/current --written "$COPLANLY_GATE_OUTPUT"; checker=$?; echo "tests: $tests, write gate checker: $checker"; [ "$tests" -eq 0 ] && [ "$checker" -eq 0 ]' \
+            './gradlew --continue :shared-data:iosSimulatorArm64Test --rerun :shared-ui:iosSimulatorArm64Test --rerun; tests=$?; node tools/ios/check-ios-writes.js --emulator 127.0.0.1:8080 --storage 127.0.0.1:9199 --fixtures app/src/test/resources/wire/current --written "$COPLANLY_GATE_OUTPUT"; checker=$?; echo "tests: $tests, write gate checker: $checker"; [ "$tests" -eq 0 ] && [ "$checker" -eq 0 ]' \
             2>&1 | tee "$RUNNER_TEMP/emulator-tests.log"
 
       # A test that finds no emulator host returns at once, so a run where the variables never
