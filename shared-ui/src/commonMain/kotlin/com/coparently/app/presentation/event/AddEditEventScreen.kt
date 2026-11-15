@@ -423,6 +423,27 @@ fun AddEditEventScreen(
     var showStartTimePicker by remember { mutableStateOf(false) }
     var showEndTimePicker by remember { mutableStateOf(false) }
 
+    // What picking each date and time does, whether in Material's dialogs or in the iPhone's
+    // compact pickers on the rows themselves: one rule for both.
+    val pickStartDate: (LocalDate) -> Unit = { startDate = it }
+    // The span is what is kept, so a later start date carries the end along.
+    val pickEndDate: (LocalDate) -> Unit = {
+        endDaySpan = endDaySpanFor(startDate, it)
+        keepNoEnd = false
+    }
+    val pickStartTime: (LocalTime) -> Unit = { selectedTime ->
+        startTime = selectedTime
+        // Auto-adjust end time if it's before start time (on a same-day event: an
+        // overnight one ends earlier in the day than it starts)
+        if (endDaySpan == 0 && endTime < startTime) {
+            endTime = startTime.plusHour()
+        }
+    }
+    val pickEndTime: (LocalTime) -> Unit = { selectedTime ->
+        endTime = selectedTime
+        keepNoEnd = false
+    }
+
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
     val focusManager = LocalFocusManager.current
@@ -1265,7 +1286,8 @@ fun AddEditEventScreen(
                     onTime = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         showStartTimePicker = true
-                    }
+                    },
+                    edit = EventDateTimeEdit(startDate, pickStartDate, startTime, pickStartTime)
                 )
                 Divider()
                 EventDateTimeRow(
@@ -1284,7 +1306,8 @@ fun AddEditEventScreen(
                     onTime = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         showEndTimePicker = true
-                    }
+                    },
+                    edit = EventDateTimeEdit(endDate, pickEndDate, endTime, pickEndTime)
                 )
             }
 
@@ -1711,21 +1734,18 @@ fun AddEditEventScreen(
             initialDate = startDate,
             confirmLabel = stringResource(Res.string.event_form_ok),
             dismissLabel = stringResource(Res.string.event_form_cancel),
-            onConfirm = { startDate = it },
+            onConfirm = pickStartDate,
             onDismiss = { showDatePicker = false }
         )
     }
 
-    // End date picker: the span is what is kept, so a later start date carries the end along
+    // End date picker
     if (showEndDatePicker) {
         LocalDatePickerDialog(
             initialDate = startDate.plus(endDaySpan, DateTimeUnit.DAY),
             confirmLabel = stringResource(Res.string.event_form_ok),
             dismissLabel = stringResource(Res.string.event_form_cancel),
-            onConfirm = {
-                endDaySpan = endDaySpanFor(startDate, it)
-                keepNoEnd = false
-            },
+            onConfirm = pickEndDate,
             onDismiss = { showEndDatePicker = false }
         )
     }
@@ -1734,14 +1754,7 @@ fun AddEditEventScreen(
     if (showStartTimePicker) {
         TimePickerDialog(
             initialTime = startTime,
-            onTimeSelected = { selectedTime ->
-                startTime = selectedTime
-                // Auto-adjust end time if it's before start time (on a same-day event: an
-                // overnight one ends earlier in the day than it starts)
-                if (endDaySpan == 0 && endTime < startTime) {
-                    endTime = startTime.plusHour()
-                }
-            },
+            onTimeSelected = pickStartTime,
             onDismiss = { showStartTimePicker = false }
         )
     }
@@ -1750,10 +1763,7 @@ fun AddEditEventScreen(
     if (showEndTimePicker) {
         TimePickerDialog(
             initialTime = endTime,
-            onTimeSelected = { selectedTime ->
-                endTime = selectedTime
-                keepNoEnd = false
-            },
+            onTimeSelected = pickEndTime,
             onDismiss = { showEndTimePicker = false }
         )
     }

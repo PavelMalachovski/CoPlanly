@@ -9,6 +9,8 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.coparently.app.presentation.common.NativeControls
+import com.coparently.app.presentation.common.nativeControls
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_dialog_cancel
 import com.coparently.app.resources.common_dialog_ok
@@ -20,13 +22,32 @@ import org.jetbrains.compose.resources.stringResource
  * Time picker dialog component for selecting time.
  * Based on Material 3 design guidelines.
  *
+ * Where the shell has native controls (the iPhone) it is [NativeControls.TimeDialog] instead: the
+ * system's wheels in a sheet, on the phone's own 12- or 24-hour clock, with the same order of
+ * callbacks.
+ *
  * @param initialTime Initial time to display
  * @param onTimeSelected Callback when time is selected
  * @param onDismiss Callback when dialog is dismissed
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimePickerDialog(
+    initialTime: LocalTime,
+    onTimeSelected: (LocalTime) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val native = nativeControls()
+    if (native != null) {
+        native.TimeDialog(initial = initialTime, onConfirm = onTimeSelected, onDismiss = onDismiss)
+    } else {
+        MaterialTimePickerDialog(initialTime, onTimeSelected, onDismiss)
+    }
+}
+
+/** The Material3 dialog [TimePickerDialog] draws where the shell has no native controls. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MaterialTimePickerDialog(
     initialTime: LocalTime,
     onTimeSelected: (LocalTime) -> Unit,
     onDismiss: () -> Unit

@@ -10,7 +10,10 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.coparently.app.presentation.components.TimePickerDialog
 import com.coparently.app.testing.RobolectricTestApplication
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -126,7 +129,110 @@ class NativeControlsTest {
         assertEquals(2, chosen)
     }
 
+    @Test
+    fun `the date dialog under native controls asks the fake and does not draw Material's`() {
+        val picked = mutableListOf<LocalDate>()
+        var dismissed = 0
+        rule.setContent {
+            CompositionLocalProvider(LocalNativeControls provides fake) {
+                LocalDatePickerDialog(
+                    initialDate = DAY,
+                    confirmLabel = CONFIRM,
+                    dismissLabel = DISMISS,
+                    onConfirm = { picked += it },
+                    onDismiss = { dismissed++ }
+                )
+            }
+        }
+        rule.waitForIdle()
+
+        assertEquals(RecordingNativeControls.DateDialogCall(DAY, CONFIRM, DISMISS), fake.dateDialogs.last())
+        rule.onNodeWithTag(RecordingNativeControls.DATE_DIALOG_TAG).assertExists()
+        // Material's dialog draws its confirm and cancel buttons; under native controls neither is.
+        rule.onNodeWithText(CONFIRM).assertDoesNotExist()
+        rule.onNodeWithText(DISMISS).assertDoesNotExist()
+
+        fake.lastDateConfirm?.invoke(LocalDate(2026, 11, 20))
+        fake.lastDialogDismiss?.invoke()
+        assertEquals(listOf(LocalDate(2026, 11, 20)), picked)
+        assertEquals(1, dismissed)
+    }
+
+    @Test
+    fun `without native controls the date dialog is Material's`() {
+        rule.setContent {
+            LocalDatePickerDialog(
+                initialDate = DAY,
+                confirmLabel = CONFIRM,
+                dismissLabel = DISMISS,
+                onConfirm = {},
+                onDismiss = {}
+            )
+        }
+        rule.onNodeWithText(CONFIRM).assertExists()
+        assertTrue(fake.dateDialogs.isEmpty())
+    }
+
+    @Test
+    fun `DatePickerField under native controls is the compact picker`() {
+        var changed: LocalDate? = null
+        var clicks = 0
+        rule.setContent {
+            CompositionLocalProvider(LocalNativeControls provides fake) {
+                DatePickerField(
+                    label = FIELD_LABEL,
+                    value = "1 Nov 2026",
+                    onClick = { clicks++ },
+                    date = DAY,
+                    onDateChange = { changed = it }
+                )
+            }
+        }
+        rule.waitForIdle()
+
+        assertEquals(RecordingNativeControls.CompactDateCall(DAY, FIELD_LABEL), fake.compactDates.last())
+        rule.onNodeWithTag(RecordingNativeControls.COMPACT_DATE_TAG).assertExists()
+        rule.onNodeWithText(FIELD_LABEL).assertExists()
+        // The outlined field's formatted value is not drawn: the pill shows the day itself.
+        rule.onNodeWithText("1 Nov 2026").assertDoesNotExist()
+
+        fake.lastCompactDateChange?.invoke(LocalDate(2026, 11, 20))
+        assertEquals(LocalDate(2026, 11, 20), changed)
+        assertEquals(0, clicks)
+    }
+
+    @Test
+    fun `DatePickerField without a day keeps the field under native controls`() {
+        rule.setContent {
+            CompositionLocalProvider(LocalNativeControls provides fake) {
+                DatePickerField(label = FIELD_LABEL, value = "1 Nov 2026", onClick = {})
+            }
+        }
+        rule.onNodeWithText("1 Nov 2026").assertExists()
+        assertTrue(fake.compactDates.isEmpty())
+    }
+
+    @Test
+    fun `the time dialog under native controls asks the fake`() {
+        val picked = mutableListOf<LocalTime>()
+        rule.setContent {
+            CompositionLocalProvider(LocalNativeControls provides fake) {
+                TimePickerDialog(initialTime = LocalTime(9, 30), onTimeSelected = { picked += it }, onDismiss = {})
+            }
+        }
+        rule.waitForIdle()
+
+        assertEquals(LocalTime(9, 30), fake.timeDialogs.last())
+        rule.onNodeWithTag(RecordingNativeControls.TIME_DIALOG_TAG).assertExists()
+        fake.lastTimeConfirm?.invoke(LocalTime(18, 0))
+        assertEquals(listOf(LocalTime(18, 0)), picked)
+    }
+
     private companion object {
+        val DAY = LocalDate(2026, 11, 1)
+        const val CONFIRM = "Pick this day"
+        const val DISMISS = "Never mind"
+        const val FIELD_LABEL = "Date of birth"
         val VIEW_LABELS = listOf("Month", "Week", "Day")
         const val MATERIAL_SEGMENTS = "Material segments"
         const val NATIVE_ROW = "Pause before sending"

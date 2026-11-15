@@ -446,7 +446,9 @@ fun AddExpenseScreen(
                 label = stringResource(Res.string.expense_field_date),
                 value = readerMediumDate(date),
                 onClick = { showDatePicker = true },
-                enabled = !isSaving
+                enabled = !isSaving,
+                date = date,
+                onDateChange = { date = it }
             )
 
             FamilyMemberChips(

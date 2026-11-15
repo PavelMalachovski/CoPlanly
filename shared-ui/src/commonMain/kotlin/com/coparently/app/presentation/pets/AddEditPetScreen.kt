@@ -103,7 +103,9 @@ import com.coparently.app.resources.pet_vet_phone_label
 import com.coparently.app.resources.pets_back
 import com.coparently.app.resources.profile_dob_label
 import com.coparently.app.utils.ReaderDateText
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.uuid.ExperimentalUuidApi
@@ -341,6 +343,8 @@ fun AddEditPetScreen(
                 onBreed = { breed = it },
                 dateOfBirth = dateOfBirth,
                 onPickDate = { showDatePicker = true },
+                // As the picker does: the day changes, the time of day the record had stays.
+                onDateOfBirth = { day -> dateOfBirth = LocalDateTime(day, dateOfBirth?.time ?: LocalTime(0, 0)) },
                 enabled = !isSaving
             )
 
@@ -469,6 +473,7 @@ fun AddEditPetScreen(
 /** Name, species, breed and date of birth. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+@Suppress("LongParameterList") // the four fields, each with its setter, and whether they are editable
 private fun BasicSection(
     name: String,
     onName: (String) -> Unit,
@@ -478,6 +483,7 @@ private fun BasicSection(
     onBreed: (String) -> Unit,
     dateOfBirth: LocalDateTime?,
     onPickDate: () -> Unit,
+    onDateOfBirth: (LocalDate) -> Unit,
     enabled: Boolean
 ) {
     SectionCard(title = stringResource(Res.string.pet_section_basic)) {
@@ -505,7 +511,9 @@ private fun BasicSection(
             label = stringResource(Res.string.profile_dob_label),
             value = dateOfBirth?.let { ReaderDateText.date(it.date, "yMMMd") },
             onClick = onPickDate,
-            enabled = enabled
+            enabled = enabled,
+            date = dateOfBirth?.date,
+            onDateChange = onDateOfBirth
         )
     }
 }

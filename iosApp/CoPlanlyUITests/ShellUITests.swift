@@ -10,7 +10,8 @@ import XCTest
 /// second tap on the selected tab popping two screens, the Chat tab's thread under the system bar with
 /// its overflow menu opening and closing, a sheet holding an edit swiped down, which
 /// must ask "Discard changes?" and stay open on "Keep editing", the event form as a sheet with Save in
-/// its bar (disabled until the event has a title), New event's description and the chat composer
+/// its bar (disabled until the event has a title), its Starts date picked in the system's own
+/// calendar, "Jump to date" as a sheet a swipe down closes, New event's description and the chat composer
 /// staying above the keyboard, a `coplanly://pair` link reaching the pairing screen with its code, and
 /// a sign-out reaching the sign-in screen with no tabs, then a
 /// sign-in landing on fresh tabs, and last, deleting the account from Settings, which reaches the
@@ -77,6 +78,10 @@ final class ShellUITests: XCTestCase {
         step("cancelled back swipe over a sub-screen", after: ["Settings"]) { try self.cancelledSwipeOverSubScreen() }
         step("a tab tap pops two screens", after: ["Settings"]) { try self.tabTapPopsTwo() }
         step("New event is a sheet with Save in its bar", after: ["Calendar and Chat tabs"]) { try self.eventFormSheet() }
+        step("New event's Starts date is the system's pill", after: ["New event is a sheet with Save in its bar"]) {
+            try self.startsDatePill()
+        }
+        step("Jump to date is a sheet a swipe closes", after: ["Calendar and Chat tabs"]) { try self.jumpToDateSwipeDown() }
         step("a new event swiped down closes without asking", after: ["New event is a sheet with Save in its bar"]) {
             try self.newEventSwipeDown()
         }
@@ -336,6 +341,66 @@ final class ShellUITests: XCTestCase {
         dismissKeyboard()
         try require(waitUntilEnabled(save), "Save stayed disabled once the event had a title")
         shot("10b-event-form-with-title")
+    }
+
+    /// The event form's Starts date is the system's compact date picker (MON-24 phase 3, part C,
+    /// Task 3): tapping it opens the system's own calendar, and the day chosen there is the day the
+    /// pill reads. The day is the 20th, or the 21st when today is the 20th, so the pick is a change.
+    private func startsDatePill() throws {
+        let sheetBar = app.navigationBars["New event"]
+        if !sheetBar.exists { try eventFormSheet() }
+        let byStarts = app.datePickers.matching(NSPredicate(format: "label == %@", "Starts")).firstMatch
+        let pill = byStarts.waitForExistence(timeout: 5) ? byStarts : app.datePickers.firstMatch
+        try require(pill.waitForExistence(timeout: timeout), "The Starts date is not the system's date picker")
+        let day = Calendar.current.component(.day, from: Date()) == 20 ? 21 : 20
+        let dayPattern = ".*\\b\(day)\\b.*"
+        let pickersBefore = app.datePickers.count
+        press(pill)
+        // The days of the calendar the pill opened, not the form's own pills (a time can read "20:00").
+        let opened = app.datePickers.element(boundBy: pickersBefore)
+        let days = opened.waitForExistence(timeout: timeout) ? opened.buttons : app.buttons
+        let dayButton = days.matching(NSPredicate(format: "label MATCHES %@", dayPattern)).firstMatch
+        try require(dayButton.waitForExistence(timeout: timeout), "The system's calendar did not open, or has no \(day)th")
+        shot("10c-starts-system-calendar")
+        dayButton.tap()
+        // The calendar's popover closes on a pick on some releases; on others a tap outside it does.
+        let outside = app.otherElements["PopoverDismissRegion"]
+        if outside.waitForExistence(timeout: 2) { outside.tap() }
+        try require(outside.waitForNonExistence(timeout: timeout), "The system's calendar stayed open")
+        let pillButton = pill.buttons.firstMatch
+        let reads = [pill.label, pill.value as? String ?? "", pillButton.exists ? pillButton.label : ""]
+        try require(
+            reads.contains { $0.range(of: "\\b\(day)\\b", options: .regularExpression) != nil },
+            "The Starts pill does not read the \(day)th: \(reads)"
+        )
+        shot("10d-starts-pill-picked")
+    }
+
+    /// "Jump to date", opened from the month title on the calendar's card, is the system's inline
+    /// calendar in a sheet (MON-24 phase 3, part C, Task 3). A swipe down closes it without moving
+    /// the calendar, leaves nothing presented, and it opens again.
+    private func jumpToDateSwipeDown() throws {
+        try goToCalendarRoot()
+        let calendarBar = app.navigationBars[calendarMonthTitle]
+        try require(calendarBar.waitForExistence(timeout: timeout), "The calendar's bar is not titled \(calendarMonthTitle)")
+        let title = app.buttons.matching(NSPredicate(format: "label == %@", calendarMonthTitle)).firstMatch
+        try require(title.waitForExistence(timeout: timeout), "The card's month title is not a button")
+
+        press(title)
+        let sheetBar = app.navigationBars.containing(NSPredicate(format: "label == %@", "Cancel")).firstMatch
+        try require(sheetBar.waitForExistence(timeout: timeout), "Jump to date did not open as a sheet with Cancel")
+        try require(app.datePickers.firstMatch.exists, "The jump-to-date sheet holds no date picker")
+        shot("17b-jump-to-date-sheet")
+        swipeSheetDown(from: sheetBar)
+        try require(sheetBar.waitForNonExistence(timeout: timeout), "A swipe down did not close the jump-to-date sheet")
+        try require(app.navigationBars[calendarMonthTitle].waitForExistence(timeout: timeout), "The calendar moved after a dismissed jump")
+        try require(app.navigationBars.count == 1, "Something was left presented over the calendar")
+
+        press(title)
+        try require(sheetBar.waitForExistence(timeout: timeout), "Jump to date did not open a second time")
+        press(sheetBar.buttons.matching(NSPredicate(format: "label == %@", "Cancel")).firstMatch)
+        try require(sheetBar.waitForNonExistence(timeout: timeout), "Cancel did not close the jump-to-date sheet")
+        try require(app.navigationBars[calendarMonthTitle].exists, "The calendar moved after a cancelled jump")
     }
 
     /// A new event asks nothing when it is left: its draft is kept as the parent types and comes

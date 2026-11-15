@@ -4,6 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 
 /**
  * The phone's own controls, where a shell draws them (MON-24 phase 3, part C).
@@ -63,6 +65,64 @@ interface NativeControls {
         enabled: Boolean,
         modifier: Modifier
     )
+
+    /**
+     * A date asked for in a sheet: on the iPhone a sheet at the medium height holding an inline
+     * `UIDatePicker` in date mode, with [dismissLabel] and [confirmLabel] in its bar. Shown while
+     * this composable is composed; leaving composition closes it without calling back.
+     *
+     * Done reports the picked day through [onConfirm] and then calls [onDismiss], as Material's
+     * dialog does; Cancel or a swipe down calls only [onDismiss]. [onDismiss] is called once.
+     *
+     * @param initial The day the picker opens on
+     * @param confirmLabel The confirm button's text
+     * @param dismissLabel The cancel button's text
+     * @param onConfirm Receives the picked day, the calendar day the parent saw
+     * @param onDismiss Called once when the sheet closes, whichever way
+     */
+    @Composable
+    fun DateDialog(
+        initial: LocalDate,
+        confirmLabel: String,
+        dismissLabel: String,
+        onConfirm: (LocalDate) -> Unit,
+        onDismiss: () -> Unit
+    )
+
+    /**
+     * A time asked for in a sheet: on the iPhone a `UIDatePicker` in time mode with wheels, on the
+     * phone's own 12- or 24-hour clock. It behaves as [DateDialog]: Done reports through
+     * [onConfirm] and then calls [onDismiss]; Cancel or a swipe down calls only [onDismiss].
+     *
+     * @param initial The time the wheels open on
+     * @param onConfirm Receives the picked hour and minute
+     * @param onDismiss Called once when the sheet closes, whichever way
+     */
+    @Composable
+    fun TimeDialog(initial: LocalTime, onConfirm: (LocalTime) -> Unit, onDismiss: () -> Unit)
+
+    /**
+     * A date in place: on the iPhone a `UIDatePicker` in its compact style, the system's pill, which
+     * opens the system's own calendar. A value set from here is shown without reporting a change.
+     *
+     * @param value The day shown, or null while none is chosen
+     * @param onChange Called with the day the parent picks
+     * @param label What the date is, for VoiceOver
+     * @param modifier Modifier applied to the pill
+     */
+    @Composable
+    fun CompactDate(value: LocalDate?, onChange: (LocalDate) -> Unit, label: String, modifier: Modifier)
+
+    /**
+     * A time in place: on the iPhone a compact `UIDatePicker` in time mode, which opens the system's
+     * wheels. A value set from here is shown without reporting a change.
+     *
+     * @param value The time shown
+     * @param onChange Called with the time the parent picks
+     * @param modifier Modifier applied to the pill
+     */
+    @Composable
+    fun CompactTime(value: LocalTime, onChange: (LocalTime) -> Unit, modifier: Modifier)
 }
 
 /**

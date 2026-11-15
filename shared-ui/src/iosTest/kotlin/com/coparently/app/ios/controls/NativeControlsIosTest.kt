@@ -5,6 +5,7 @@ import platform.Foundation.NSSelectorFromString
 import platform.UIKit.UIControlEventValueChanged
 import platform.UIKit.UIControl
 import platform.UIKit.UISwitch
+import platform.UIKit.accessibilityLabel
 import platform.darwin.NSObject
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -49,7 +50,7 @@ class NativeControlsIosTest {
     fun `a segment set from outside does not call back`() {
         val chosen = mutableListOf<Int>()
         val control = makeSegmented(SEGMENTS) { chosen += it }
-        assertEquals(3L, control.numberOfSegments)
+        assertEquals(3uL, control.numberOfSegments)
 
         updateSegmented(control, SEGMENTS, selectedIndex = 1, enabled = true)
         assertEquals(1L, control.selectedSegmentIndex)
@@ -70,7 +71,7 @@ class NativeControlsIosTest {
         updateSegmented(control, SEGMENTS, selectedIndex = 0, enabled = true)
         updateSegmented(control, listOf("A", "B"), selectedIndex = 1, enabled = false)
 
-        assertEquals(2L, control.numberOfSegments)
+        assertEquals(2uL, control.numberOfSegments)
         assertEquals(1L, control.selectedSegmentIndex)
         assertFalse(control.enabled)
     }

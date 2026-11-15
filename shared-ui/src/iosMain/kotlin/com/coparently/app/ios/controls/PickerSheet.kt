@@ -1,0 +1,341 @@
+package com.coparently.app.ios.controls
+
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.ObjCAction
+import kotlinx.cinterop.useContents
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import platform.CoreGraphics.CGRectMake
+import platform.Foundation.NSDate
+import platform.Foundation.NSSelectorFromString
+import platform.UIKit.NSLayoutConstraint
+import platform.UIKit.UIAdaptivePresentationControllerDelegateProtocol
+import platform.UIKit.UIApplication
+import platform.UIKit.UIBarButtonItem
+import platform.UIKit.UIBarButtonItemStyle
+import platform.UIKit.UIColor
+import platform.UIKit.UIControlEventValueChanged
+import platform.UIKit.UIDatePicker
+import platform.UIKit.UIDatePickerMode
+import platform.UIKit.UIDatePickerStyle
+import platform.UIKit.UILabel
+import platform.UIKit.UIModalPresentationPageSheet
+import platform.UIKit.UINavigationController
+import platform.UIKit.UIPresentationController
+import platform.UIKit.UISheetPresentationControllerDetent
+import platform.UIKit.UIView
+import platform.UIKit.UIViewAutoresizingFlexibleHeight
+import platform.UIKit.UIViewAutoresizingFlexibleWidth
+import platform.UIKit.UIViewController
+import platform.UIKit.UIWindowScene
+import platform.UIKit.accessibilityLabel
+import platform.UIKit.NSTextAlignmentCenter
+import platform.UIKit.navigationItem
+import platform.UIKit.presentationController
+import platform.UIKit.secondaryLabelColor
+import platform.UIKit.sheetPresentationController
+import platform.UIKit.systemBackgroundColor
+import platform.darwin.NSObject
+
+/**
+ * The view controller a sheet or alert is presented from: the top of what [from] (or, without one,
+ * the key window's root) presents now. Presenting from a controller that already presents another
+ * fails in UIKit, so every presented control asks here.
+ */
+internal fun topViewController(from: UIViewController? = null): UIViewController? {
+    var top = from ?: keyWindowRoot() ?: return null
+    while (true) {
+        val next = top.presentedViewController ?: break
+        if (next.beingDismissed) break
+        top = next
+    }
+    return top
+}
+
+/** The key window's root view controller, from the app's connected scenes. */
+private fun keyWindowRoot(): UIViewController? =
+    UIApplication.sharedApplication.connectedScenes
+        .filterIsInstance<UIWindowScene>()
+        .firstNotNullOfOrNull { it.keyWindow?.rootViewController }
+
+/**
+ * A `UIDatePicker` presented as a sheet at the medium height, with a grabber, Cancel on the left of
+ * its bar and Done on the right (MON-24 phase 3, part C, Task 3): what the shared date and time
+ * dialogs are on the iPhone.
+ *
+ * It ends once, whichever way: Done reports the picker's value through [onDone] and then calls
+ * [onClosed], as Material's dialogs call their confirm and then their dismiss; Cancel and a swipe
+ * down call only [onClosed]. [close] takes it away without calling either, for a dialog that left
+ * composition while shown. The object holds the bar buttons' target and the presentation delegate,
+ * which UIKit does not retain, so it must be kept for as long as the sheet is up.
+ */
+// `CGRectMake` and `NSSelectorFromString` are Kotlin/Native's C interop.
+@OptIn(ExperimentalForeignApi::class)
+internal class PickerSheet(
+    val picker: UIDatePicker,
+    confirmLabel: String,
+    dismissLabel: String,
+    private val onDone: (NSDate) -> Unit,
+    private val onClosed: () -> Unit
+) {
+    /** Whether the sheet has ended, by any of its four ways. */
+    var finished: Boolean = false
+        private set
+
+    private val actions = Actions()
+    private val content = UIViewController(nibName = null, bundle = null)
+
+    /** The navigation controller presented as the sheet, holding the picker's screen. */
+    val navigation: UINavigationController
+
+    init {
+        content.view.backgroundColor = UIColor.systemBackgroundColor
+        content.view.addSubview(picker)
+        picker.translatesAutoresizingMaskIntoConstraints = false
+        val guide = content.view.safeAreaLayoutGuide
+        NSLayoutConstraint.activateConstraints(
+            listOf(
+                picker.topAnchor.constraintEqualToAnchor(guide.topAnchor),
+                picker.leadingAnchor.constraintEqualToAnchor(guide.leadingAnchor, constant = MARGIN_PT),
+                picker.trailingAnchor.constraintEqualToAnchor(guide.trailingAnchor, constant = -MARGIN_PT)
+            )
+        )
+        content.navigationItem.leftBarButtonItem = UIBarButtonItem(
+            title = dismissLabel,
+            style = UIBarButtonItemStyle.UIBarButtonItemStylePlain,
+            target = actions,
+            action = NSSelectorFromString("cancel:")
+        )
+        content.navigationItem.rightBarButtonItem = UIBarButtonItem(
+            title = confirmLabel,
+            style = UIBarButtonItemStyle.UIBarButtonItemStyleDone,
+            target = actions,
+            action = NSSelectorFromString("done:")
+        )
+        navigation = UINavigationController(rootViewController = content).also { sheet ->
+            sheet.modalPresentationStyle = UIModalPresentationPageSheet
+            sheet.sheetPresentationController?.let { controller ->
+                controller.detents = listOf(UISheetPresentationControllerDetent.mediumDetent())
+                controller.prefersGrabberVisible = true
+            }
+            sheet.presentationController?.delegate = actions
+        }
+    }
+
+    /** Presents the sheet over [from]; without a controller to present from, it ends at once. */
+    fun present(from: UIViewController?) {
+        if (from == null) {
+            dismissed()
+            return
+        }
+        from.presentViewController(navigation, animated = true, completion = null)
+    }
+
+    /** Done: the picker's value, then the end. */
+    fun confirm() {
+        if (finished) return
+        finished = true
+        takeAway()
+        onDone(picker.date)
+        onClosed()
+    }
+
+    /** Cancel: the end alone. */
+    fun cancel() {
+        if (finished) return
+        finished = true
+        takeAway()
+        onClosed()
+    }
+
+    /** The sheet went by itself (a swipe down): the end alone, with nothing left to take away. */
+    fun dismissed() {
+        if (finished) return
+        finished = true
+        onClosed()
+    }
+
+    /** Takes the sheet away without calling back: its dialog left composition while it was shown. */
+    fun close() {
+        if (finished) return
+        finished = true
+        takeAway()
+    }
+
+    private fun takeAway() {
+        if (navigation.presentingViewController != null && !navigation.beingDismissed) {
+            navigation.dismissViewControllerAnimated(true, completion = null)
+        }
+    }
+
+    /** The bar buttons' target and the sheet's presentation delegate. */
+    private inner class Actions : NSObject(), UIAdaptivePresentationControllerDelegateProtocol {
+
+        /** Cancel's target-action. */
+        @ObjCAction
+        fun cancel(sender: UIBarButtonItem) {
+            this@PickerSheet.cancel()
+        }
+
+        /** Done's target-action. */
+        @ObjCAction
+        fun done(sender: UIBarButtonItem) {
+            confirm()
+        }
+
+        override fun presentationControllerDidDismiss(presentationController: UIPresentationController) {
+            dismissed()
+        }
+    }
+
+    private companion object {
+        /** The picker's inset from the sheet's edges, in points: UIKit's standard margin. */
+        const val MARGIN_PT = 16.0
+    }
+}
+
+/** A date sheet: an inline calendar in date mode, opening on [initial]. */
+internal fun dateSheet(
+    initial: LocalDate,
+    confirmLabel: String,
+    dismissLabel: String,
+    onConfirm: (LocalDate) -> Unit,
+    onDismiss: () -> Unit
+): PickerSheet = PickerSheet(
+    picker = makeDatePicker(UIDatePickerMode.UIDatePickerModeDate, UIDatePickerStyle.UIDatePickerStyleInline).apply {
+        setDate(nsDateFor(initial), animated = false)
+    },
+    confirmLabel = confirmLabel,
+    dismissLabel = dismissLabel,
+    onDone = { onConfirm(localDateOf(it)) },
+    onClosed = onDismiss
+)
+
+/** A time sheet: wheels in time mode on the phone's own clock, opening on [initial]. */
+internal fun timeSheet(
+    initial: LocalTime,
+    confirmLabel: String,
+    dismissLabel: String,
+    onConfirm: (LocalTime) -> Unit,
+    onDismiss: () -> Unit
+): PickerSheet = PickerSheet(
+    picker = makeDatePicker(UIDatePickerMode.UIDatePickerModeTime, UIDatePickerStyle.UIDatePickerStyleWheels).apply {
+        setDate(nsDateFor(initial), animated = false)
+    },
+    confirmLabel = confirmLabel,
+    dismissLabel = dismissLabel,
+    onDone = { onConfirm(localTimeOf(it)) },
+    onClosed = onDismiss
+)
+
+/**
+ * A `UIDatePicker` in [mode] and [style], on [pickerCalendar] and its zone, so what it shows is what
+ * [localDateOf] and [localTimeOf] read back. The clock's 12 or 24 hours follow the phone's setting
+ * through the picker's own locale.
+ */
+// `CGRectMake` is Kotlin/Native's C interop.
+@OptIn(ExperimentalForeignApi::class)
+internal fun makeDatePicker(mode: UIDatePickerMode, style: UIDatePickerStyle): UIDatePicker =
+    UIDatePicker(frame = CGRectMake(0.0, 0.0, 0.0, 0.0)).apply { configure(mode, style) }
+
+private fun UIDatePicker.configure(mode: UIDatePickerMode, style: UIDatePickerStyle) {
+    val calendar = pickerCalendar()
+    this.calendar = calendar
+    timeZone = calendar.timeZone
+    datePickerMode = mode
+    preferredDatePickerStyle = style
+}
+
+/**
+ * A compact `UIDatePicker` that is its own target, so the action and what it calls live exactly as
+ * long as the view: UIKit does not retain a control's targets. UIKit sends
+ * `UIControlEventValueChanged` only for the parent's own pick, never for a date set in code.
+ */
+// `CGRectMake` and `NSSelectorFromString` are Kotlin/Native's C interop.
+@OptIn(ExperimentalForeignApi::class)
+internal class ValueChangedDatePicker(
+    mode: UIDatePickerMode,
+    private val onValueChanged: (NSDate) -> Unit
+) : UIDatePicker(frame = CGRectMake(0.0, 0.0, 0.0, 0.0)) {
+
+    init {
+        configure(mode, UIDatePickerStyle.UIDatePickerStyleCompact)
+        addTarget(this, action = NSSelectorFromString("valueChanged:"), forControlEvents = UIControlEventValueChanged)
+    }
+
+    /** The target-action of `UIControlEventValueChanged`. */
+    @ObjCAction
+    fun valueChanged(sender: UIDatePicker) {
+        onValueChanged(sender.date)
+    }
+}
+
+/**
+ * The compact date pill: the picker, and over it a dash while no day is chosen. A compact picker
+ * always shows a date, so with none chosen the picker is all but transparent (still above UIKit's
+ * hit-test threshold, so a tap still opens the calendar) and the dash says nothing is set.
+ */
+// `CGRectMake` is Kotlin/Native's C interop.
+@OptIn(ExperimentalForeignApi::class)
+internal class CompactDatePill(onChange: (LocalDate) -> Unit) : UIView(frame = CGRectMake(0.0, 0.0, 0.0, 0.0)) {
+
+    /** The compact picker the parent taps. */
+    val picker = ValueChangedDatePicker(UIDatePickerMode.UIDatePickerModeDate) { onChange(localDateOf(it)) }
+
+    /** The dash shown while no day is chosen. */
+    val placeholder = UILabel(frame = CGRectMake(0.0, 0.0, 0.0, 0.0)).apply {
+        text = NO_DATE
+        textAlignment = NSTextAlignmentCenter
+        textColor = UIColor.secondaryLabelColor
+        userInteractionEnabled = false
+        hidden = true
+    }
+
+    init {
+        listOf(picker, placeholder).forEach { child ->
+            child.autoresizingMask = UIViewAutoresizingFlexibleWidth or UIViewAutoresizingFlexibleHeight
+            addSubview(child)
+        }
+    }
+}
+
+/**
+ * Shows [value] on [pill] without reporting a change, or, for null, [today] under the dash; names
+ * the picker [label] for VoiceOver.
+ */
+internal fun updateCompactDate(pill: CompactDatePill, value: LocalDate?, today: LocalDate, label: String) {
+    val shown = value ?: today
+    if (localDateOf(pill.picker.date) != shown) pill.picker.setDate(nsDateFor(shown), animated = false)
+    pill.picker.alpha = if (value == null) UNCHOSEN_ALPHA else 1.0
+    pill.placeholder.hidden = value != null
+    pill.picker.accessibilityLabel = label
+}
+
+/** Shows [value] on [picker], a compact time picker, without reporting a change. */
+internal fun updateCompactTime(picker: UIDatePicker, value: LocalTime) {
+    if (localTimeOf(picker.date) != value) picker.setDate(nsDateFor(value), animated = false)
+}
+
+/**
+ * The size of a compact picker in [mode] showing [date], in points, measured from UIKit's own; or
+ * [fallback] if UIKit reports none.
+ */
+// `useContents` is Kotlin/Native's C interop.
+@OptIn(ExperimentalForeignApi::class)
+internal fun compactPickerSize(
+    mode: UIDatePickerMode,
+    date: NSDate,
+    fallback: Pair<Double, Double>
+): Pair<Double, Double> {
+    val picker = makeDatePicker(mode, UIDatePickerStyle.UIDatePickerStyleCompact)
+    picker.setDate(date, animated = false)
+    return picker.intrinsicContentSize.useContents {
+        if (width > 0.0 && height > 0.0) width to height else fallback
+    }
+}
+
+/** What the date pill shows while no day is chosen: a dash, not a word, so no translation. */
+private const val NO_DATE = "—"
+
+/** The picker's opacity while no day is chosen: just above UIKit's hit-test threshold of 0.01. */
+private const val UNCHOSEN_ALPHA = 0.02

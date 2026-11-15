@@ -61,6 +61,8 @@ import com.coparently.app.resources.medical_photos_upload_failed
 import com.coparently.app.resources.medical_section_title
 import com.coparently.app.resources.profile_dob_label
 import com.coparently.app.utils.ReaderDateText
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.uuid.ExperimentalUuidApi
@@ -373,7 +375,10 @@ fun AddEditChildInfoScreen(
                         label = stringResource(Res.string.profile_dob_label),
                         value = dateOfBirth?.let { ReaderDateText.date(it.date, "yMMMd") },
                         onClick = { showDatePicker = true },
-                        enabled = !isSaving
+                        enabled = !isSaving,
+                        date = dateOfBirth?.date,
+                        // As the picker does: the day changes, the time of day the record had stays.
+                        onDateChange = { day -> dateOfBirth = LocalDateTime(day, dateOfBirth?.time ?: LocalTime(0, 0)) }
                     )
                 }
             }
