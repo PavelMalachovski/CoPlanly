@@ -159,7 +159,18 @@ final class ShellUITests: XCTestCase {
         let gear = app.buttons.matching(NSPredicate(format: "label == %@", "Settings")).firstMatch
         try require(gear.waitForExistence(timeout: timeout), "\(name)'s first screen has no Settings button")
         // The bar of a screen just popped can still be animating away: wait for it rather than look once.
-        try require(waitForNoNavigationBar(), "\(name)'s first screen still shows a navigation bar")
+        if !waitForNoNavigationBar() {
+            throw StepFailure(description: "\(name)'s first screen still shows a navigation bar (\(tabTapTrace()))")
+        }
+    }
+
+    /// What the shell saw of the tab bar's taps (its `TabTapTrace`, the tab bar's value), printed
+    /// with the prefix `COPLANLY_TABTAP` and returned for a failure's message.
+    @discardableResult
+    private func tabTapTrace() -> String {
+        let value = app.tabBars.firstMatch.value as? String ?? "no trace"
+        print("COPLANLY_TABTAP test read: \(value)")
+        return "tab taps: \(value)"
     }
 
     private func otherTabs() throws {
@@ -659,10 +670,9 @@ final class ShellUITests: XCTestCase {
         // The step before left Day view open (opened from a month cell): a tap on the Calendar tab
         // opens Month on today (`CalendarTabTaps`), and its bar, which Day view's Back needed, goes.
         let month = app.segmentedControls.buttons["Month"]
-        try require(
-            month.waitForExistence(timeout: timeout) && waitUntilSelected(month),
-            "A tap on the Calendar tab did not return Day view to Month"
-        )
+        if !(month.waitForExistence(timeout: timeout) && waitUntilSelected(month)) {
+            throw StepFailure(description: "A tap on the Calendar tab did not return Day view to Month (\(tabTapTrace()))")
+        }
         try require(waitForNoNavigationBar(), "The Calendar's Month still shows a navigation bar")
         let edit = app.buttons.matching(NSPredicate(format: "label == %@", "Edit")).firstMatch
         // A failure leaves no preview over the tab bar, so the steps after it start from a tab.
@@ -985,6 +995,23 @@ final class ShellUITests: XCTestCase {
         throw StepFailure(description: "No sign-out confirmation in an action sheet or an alert")
     }
 
+    /// Waits up to two minutes for a relaunched app to show its Family tab. A snapshot taken while
+    /// the starting app keeps its main thread busy fails after 30 s with "Timed out while evaluating
+    /// UI query", which XCUITest does not report as a false answer but as a failure that ends the
+    /// test at once (the walk's summary was then never printed). So no element is asked for until
+    /// the app runs in the foreground and has had a moment to start; `app.state` needs no snapshot.
+    private func waitForRelaunchedTabs() -> Bool {
+        let deadline = Date().addingTimeInterval(120)
+        guard app.wait(for: .runningForeground, timeout: 60) else { return false }
+        sleep(15)
+        let family = app.tabBars.buttons["Family"]
+        repeat {
+            if family.waitForExistence(timeout: 10) { return true }
+            sleep(2)
+        } while Date() < deadline
+        return false
+    }
+
     /// Settings → Delete account → both confirmations (MON-24 phase 3, part B, Task 11): the
     /// `deleteAccount` callable erases the account on the emulators, the phone is wiped and signed
     /// out, and the app shows the sign-in screen with no tabs. The labels are the shared strings in
@@ -992,7 +1019,7 @@ final class ShellUITests: XCTestCase {
     private func deleteAccount() throws {
         app.terminate()
         app.launch()
-        try require(app.tabBars.firstMatch.buttons["Family"].waitForExistence(timeout: 120), "No tab bar after relaunching")
+        try require(waitForRelaunchedTabs(), "No tab bar after relaunching")
         try settings()
         let row = try element(labelled: "Delete account", in: app.buttons)
         let screenBottom = app.windows.firstMatch.frame.maxY - 120
@@ -1168,6 +1195,8 @@ final class ShellUITests: XCTestCase {
             closeTransients()
         }
         outcomes.append((name, outcome))
+        // As it goes too, for a walk that XCUITest ends before its summary.
+        print("COPLANLY_STEP_DONE \(name): \(outcome)")
     }
 
     // MARK: - Finding and touching
