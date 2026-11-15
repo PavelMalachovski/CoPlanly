@@ -30,11 +30,13 @@ import androidx.compose.ui.semantics.semantics
 import com.coparently.app.domain.events.AllDayEvent
 import com.coparently.app.domain.friends.CalendarFriendGrant
 import com.coparently.app.domain.model.Event
+import com.coparently.app.presentation.common.AdaptiveSheet
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ErrorState
 import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.SheetHeight
 import com.coparently.app.presentation.professionals.ProfessionalDay
 import com.coparently.app.presentation.professionals.WindowPager
 import com.coparently.app.presentation.theme.ScreenContainerColor
@@ -126,16 +128,24 @@ fun FriendCalendarScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FriendEventSheet(event: Event, grant: CalendarFriendGrant?, onDismiss: () -> Unit) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ) {
+    val body: @Composable () -> Unit = {
         FriendEventDetails(
             event = event,
             addedBy = grant.addedBy(event),
             takesPart = grant.takesPart(event)
         )
     }
+    AdaptiveSheet(
+        onDismiss = onDismiss,
+        height = SheetHeight.Large,
+        material = {
+            ModalBottomSheet(
+                onDismissRequest = onDismiss,
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            ) { body() }
+        },
+        content = body
+    )
 }
 
 @Composable

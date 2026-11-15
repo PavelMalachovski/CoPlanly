@@ -247,9 +247,31 @@ internal class StackHost(
             sheetNavigation.applyBar(screens.values)
             sheetEdgeSwipe = EdgeSwipeBack(sheetNavigation, stepPendingOn)
             sheetMoving = true
-            navigation.presentViewController(sheetNavigation, animated) { transitionEnded() }
+            presentOverWhatIsUp(sheetNavigation, animated)
         } else if (!sameControllers(existing.viewControllers, controllers)) {
             existing.setViewControllers(controllers, animated)
+        }
+    }
+
+    /**
+     * Presents a form's sheet, first taking away what the screen presents already: a screen's own
+     * sheet (an event's preview, whose Edit opens this form) is still up when the form arrives, and
+     * UIKit drops a second presentation without a word, which would leave the stack waiting on a
+     * transition that never ends. What is up is dismissed without animation and the form presented
+     * once it has gone; one already being dismissed is waited for.
+     */
+    private fun presentOverWhatIsUp(sheetNavigation: UIViewController, animated: Boolean) {
+        val present = { navigation.presentViewController(sheetNavigation, animated) { transitionEnded() } }
+        val other = navigation.presentedViewController?.takeIf { it !== sheetNavigation }
+        when {
+            other == null -> present()
+            other.beingDismissed -> {
+                val coordinator = other.transitionCoordinator
+                if (coordinator == null || !coordinator.animateAlongsideTransition(null, completion = { _ -> present() })) {
+                    present()
+                }
+            }
+            else -> other.dismissViewControllerAnimated(false) { present() }
         }
     }
 

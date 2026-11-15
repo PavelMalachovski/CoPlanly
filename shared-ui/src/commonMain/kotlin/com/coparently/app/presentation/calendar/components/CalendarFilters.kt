@@ -42,8 +42,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.calendar.ParentFilter
 import com.coparently.app.presentation.common.AdaptiveSegmented
+import com.coparently.app.presentation.common.AdaptiveSheet
 import com.coparently.app.presentation.common.AdaptiveSwitch
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.SheetHeight
 import com.coparently.app.presentation.common.eventTypeLabel
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.CoPlanlyCorners
@@ -94,10 +96,7 @@ fun EventTypeFilterSheet(
     val dims = dimensions()
     var newTypeName by remember { mutableStateOf("") }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState
-    ) {
+    val body: @Composable () -> Unit = {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -233,6 +232,17 @@ fun EventTypeFilterSheet(
             }
         }
     }
+    AdaptiveSheet(
+        onDismiss = onDismiss,
+        height = SheetHeight.Large,
+        material = {
+            ModalBottomSheet(
+                onDismissRequest = onDismiss,
+                sheetState = sheetState
+            ) { body() }
+        },
+        content = body
+    )
 }
 
 /**

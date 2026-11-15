@@ -104,6 +104,12 @@ class RecordingNativeControls : NativeControls {
     /** Every action sheet composed, in the order of composition. */
     val actionSheets = mutableListOf<ActionSheetCall>()
 
+    /** The height of every sheet composed, in the order of composition. */
+    val sheets = mutableListOf<SheetHeight>()
+
+    /** The latest sheet's dismiss, for a test that swipes it down. */
+    var lastSheetDismiss: (() -> Unit)? = null
+
     /** The colour each native control was told it sits on, in the order of composition. */
     val backgrounds = mutableListOf<Color>()
 
@@ -224,7 +230,17 @@ class RecordingNativeControls : NativeControls {
         Box(Modifier.size(1.dp).testTag(ACTION_SHEET_TAG))
     }
 
+    @Composable
+    override fun Sheet(height: SheetHeight, onDismiss: () -> Unit, content: @Composable () -> Unit) {
+        sheets += height
+        lastSheetDismiss = onDismiss
+        Box(Modifier.testTag(SHEET_TAG)) { content() }
+    }
+
     companion object {
+        /** The test tag of the box a sheet's content is drawn in by this fake. */
+        const val SHEET_TAG = "native-sheet"
+
         /** The test tag of a confirmation this fake drew. */
         const val CONFIRM_TAG = "native-confirm"
 

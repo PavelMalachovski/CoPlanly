@@ -16,6 +16,7 @@ import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import androidx.compose.ui.viewinterop.UIKitView
 import com.coparently.app.presentation.common.BarMenuItem
 import com.coparently.app.presentation.common.NativeControls
+import com.coparently.app.presentation.common.SheetHeight
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_dialog_cancel
 import com.coparently.app.resources.common_dialog_ok
@@ -275,6 +276,16 @@ internal object IosNativeControls : NativeControls {
                 onDismiss = { dismiss() }
             )
         }
+    }
+
+    /**
+     * A [ComposeSheet] presented from the screen's own view controller while this is composed,
+     * holding [content] under the screen's locals; a swipe down calls [onDismiss] once, and leaving
+     * composition takes the sheet away without calling back.
+     */
+    @Composable
+    override fun Sheet(height: SheetHeight, onDismiss: () -> Unit, content: @Composable () -> Unit) {
+        PresentComposeSheet(height = height, onDismiss = onDismiss, content = content)
     }
 
     /** The switch's intrinsic size in points, measured once from UIKit's own switch. */

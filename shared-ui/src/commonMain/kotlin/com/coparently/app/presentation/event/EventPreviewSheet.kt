@@ -47,10 +47,12 @@ import com.coparently.app.data.family.placementFamilyId
 import com.coparently.app.domain.events.AllDayEvent
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Event
+import com.coparently.app.presentation.common.AdaptiveSheet
 import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.RecordPlaceMark
+import com.coparently.app.presentation.common.SheetHeight
 import com.coparently.app.presentation.common.placeOf
 import com.coparently.app.presentation.common.rememberRecordPhoto
 import com.coparently.app.presentation.platform.AppImage
@@ -76,6 +78,9 @@ import org.jetbrains.compose.resources.stringResource
  * Read-only preview of an event shown before the editor: tapping an event in
  * the calendar opens this sheet; the full editor is one tap further (Edit).
  *
+ * On Android it opens fully. On the iPhone it is the system's sheet at half the screen
+ * ([SheetHeight.Medium]), so the grid the event sits in stays in view and in reach above it.
+ *
  * @param event Event (or expanded occurrence) to preview
  * @param parentNames Resolves a slot to that parent's name
  * @param members The family's children and pets, for naming who the event is about
@@ -95,12 +100,7 @@ fun EventPreviewSheet(
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        // Opens fully, like every other sheet in the app: a half-open action sheet is one more
-        // resting state to drag through (audit 2026-09 §3.3).
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ) {
+    val body: @Composable () -> Unit = {
         EventPreviewContent(
             event = event,
             parentNames = parentNames,
@@ -109,6 +109,19 @@ fun EventPreviewSheet(
             onDelete = onDelete
         )
     }
+    AdaptiveSheet(
+        onDismiss = onDismiss,
+        height = SheetHeight.Medium,
+        material = {
+            ModalBottomSheet(
+                onDismissRequest = onDismiss,
+                // Opens fully, like every other sheet in the app: a half-open action sheet is one more
+                // resting state to drag through (audit 2026-09 §3.3).
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            ) { body() }
+        },
+        content = body
+    )
 }
 
 /**

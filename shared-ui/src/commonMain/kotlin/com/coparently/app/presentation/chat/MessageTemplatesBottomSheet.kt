@@ -23,6 +23,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import com.coparently.app.domain.model.DefaultMessageTemplates
 import com.coparently.app.domain.model.MessageTemplate
+import com.coparently.app.presentation.common.AdaptiveSheet
+import com.coparently.app.presentation.common.SheetHeight
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.chat_templates_sheet_title
@@ -47,10 +49,7 @@ fun MessageTemplatesBottomSheet(
         mutableStateOf(DefaultMessageTemplates.getAll())
     }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ) {
+    val body: @Composable () -> Unit = {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -87,6 +86,17 @@ fun MessageTemplatesBottomSheet(
             }
         }
     }
+    AdaptiveSheet(
+        onDismiss = onDismiss,
+        height = SheetHeight.Large,
+        material = {
+            ModalBottomSheet(
+                onDismissRequest = onDismiss,
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            ) { body() }
+        },
+        content = body
+    )
 }
 
 /**

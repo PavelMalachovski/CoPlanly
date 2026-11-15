@@ -96,6 +96,11 @@ final class ShellUITests: XCTestCase {
         step("deleting an event asks in an action sheet, and Cancel keeps it", after: ["Jump to date is a sheet a swipe closes"]) {
             try self.deleteEventAsks()
         }
+        step("an event's preview is the system's half-height sheet, swiped away and opened again", after: [
+            "deleting an event asks in an action sheet, and Cancel keeps it",
+        ]) {
+            try self.eventPreviewSheet()
+        }
         step("a coplanly://pair link opens Pairing with its code", after: ["sign in"]) { try self.pairingLink() }
         step("sign out, and sign in to fresh tabs", after: ["Settings"]) {
             try self.signOutAndIn(email: email, password: password)
@@ -502,6 +507,65 @@ final class ShellUITests: XCTestCase {
             element(labelledContaining: deleteCheckTitle).waitForExistence(timeout: timeout),
             "The event was deleted although the parent cancelled"
         )
+    }
+
+    /// An event's preview is the system's own sheet at half the screen (MON-24 phase 3, part C,
+    /// Task 6): opened from the month grid, it shows the event's title in the lower half while the
+    /// calendar above it stays in reach (the Month/Week/Day control can still be touched). A swipe
+    /// down closes it and leaves nothing presented, and the event opens it again. It uses the event
+    /// `deleteEventAsks` saved and kept.
+    private func eventPreviewSheet() throws {
+        try goToCalendarRoot()
+        let edit = app.buttons.matching(NSPredicate(format: "label == %@", "Edit")).firstMatch
+        try openPreview(of: deleteCheckTitle, edit: edit)
+
+        let title = try previewTitle(above: edit)
+        let control = app.segmentedControls.buttons["Week"]
+        try require(control.exists && control.isHittable, "The calendar above the preview sheet is out of reach")
+        try require(control.frame.maxY < title.frame.minY, "The preview sheet covers the calendar's top")
+        shot("17d-event-preview-sheet")
+        swipePreviewDown(from: title)
+        try require(edit.waitForNonExistence(timeout: timeout), "A swipe down did not close the event's preview")
+        try require(app.navigationBars.count == 1, "Something was left presented over the calendar")
+
+        try openPreview(of: deleteCheckTitle, edit: edit)
+        shot("17e-event-preview-sheet-again")
+        swipePreviewDown(from: try previewTitle(above: edit))
+        try require(edit.waitForNonExistence(timeout: timeout), "The second preview did not close")
+    }
+
+    /// The event's title in the preview sheet: the lowest label holding it in the lower part of the
+    /// screen above the sheet's [edit] button (the grid's own block of the event sits higher).
+    private func previewTitle(above edit: XCUIElement) throws -> XCUIElement {
+        let titles = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", deleteCheckTitle))
+        let inSheet = titles.allElementsBoundByIndex
+            .filter { $0.frame.minY > app.frame.height * 0.4 && $0.frame.minY < edit.frame.minY }
+            .max { $0.frame.minY < $1.frame.minY }
+        guard let found = inSheet else {
+            throw StepFailure(description: "The preview sheet does not show the event's title in the lower half")
+        }
+        return found
+    }
+
+    /// Drags the preview sheet down from just above its [title], inside the sheet's top margin under
+    /// the grabber, to the bottom of the screen.
+    private func swipePreviewDown(from title: XCUIElement) {
+        let start = app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: app.frame.width / 2, dy: title.frame.minY - 12))
+        start.press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.98)))
+    }
+
+    /// Opens [title]'s preview from the calendar: a tap on its month cell opens Day view, and a tap
+    /// on the event there opens the preview, whose [edit] button then shows.
+    private func openPreview(of title: String, edit: XCUIElement) throws {
+        for _ in 0..<3 where !edit.exists {
+            guard let event = tourTopmost(containing: title) else {
+                throw StepFailure(description: "Nothing on the calendar reads \"\(title)\"")
+            }
+            press(event)
+            _ = edit.waitForExistence(timeout: 5)
+        }
+        try require(edit.exists, "The event's preview did not open")
     }
 
     /// The title of the event `deleteEventAsks` saves and then does not delete.

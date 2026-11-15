@@ -50,12 +50,14 @@ import com.coparently.app.domain.chat.ToneNudge
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
+import com.coparently.app.presentation.common.AdaptiveSheet
 import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.BarLeading
 import com.coparently.app.presentation.common.BarMenuItem
 import com.coparently.app.presentation.common.ScreenBackStep
 import com.coparently.app.presentation.common.ScreenBar
+import com.coparently.app.presentation.common.SheetHeight
 import com.coparently.app.presentation.common.WhileScreenVisible
 import com.coparently.app.presentation.common.rememberMicrophonePermissionRequester
 import com.coparently.app.presentation.common.rememberParentNames
@@ -659,10 +661,7 @@ private fun ChangeRequestEventPicker(
     onEventSelected: (Event) -> Unit,
     onDismiss: () -> Unit
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ) {
+    val body: @Composable () -> Unit = {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -701,6 +700,17 @@ private fun ChangeRequestEventPicker(
             }
         }
     }
+    AdaptiveSheet(
+        onDismiss = onDismiss,
+        height = SheetHeight.Large,
+        material = {
+            ModalBottomSheet(
+                onDismissRequest = onDismiss,
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            ) { body() }
+        },
+        content = body
+    )
 }
 
 /** Diameter of the co-parent avatar in the thread header. */

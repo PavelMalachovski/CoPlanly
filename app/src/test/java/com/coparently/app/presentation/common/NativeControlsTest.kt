@@ -1,10 +1,16 @@
 package com.coparently.app.presentation.common
 
 import androidx.compose.foundation.clickable
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
@@ -34,6 +40,7 @@ import org.robolectric.annotation.Config
  * The native controls seam (MON-24 phase 3, part C, Task 1): without `LocalNativeControls` an
  * adaptive control is Material's, as Android draws it; with it, the shell's.
  */
+@OptIn(ExperimentalMaterial3Api::class) // the Material sheet a site draws, which the native branch must not
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = RobolectricTestApplication::class, qualifiers = "w393dp-h851dp")
 class NativeControlsTest {
@@ -368,6 +375,72 @@ class NativeControlsTest {
         assertTrue(fake.confirms.isEmpty())
     }
 
+    @Test
+    fun `a sheet under native controls hands its content to the fake and draws no ModalBottomSheet`() {
+        rule.setContent {
+            CompositionLocalProvider(LocalNativeControls provides fake) {
+                AdaptiveSheet(
+                    onDismiss = {},
+                    height = SheetHeight.Medium,
+                    material = { ModalBottomSheet(onDismissRequest = {}) { Text(MATERIAL_SHEET) } },
+                    content = { Text(SHEET_BODY) }
+                )
+            }
+        }
+        rule.waitForIdle()
+
+        assertEquals(SheetHeight.Medium, fake.sheets.last())
+        rule.onNodeWithTag(RecordingNativeControls.SHEET_TAG).assertExists()
+        rule.onNodeWithText(SHEET_BODY).assertExists()
+        rule.onNodeWithText(MATERIAL_SHEET).assertDoesNotExist()
+    }
+
+    @Test
+    fun `dismissing the fake's sheet calls onDismiss once`() {
+        var dismissed = 0
+        rule.setContent {
+            var open by remember { mutableStateOf(true) }
+            CompositionLocalProvider(LocalNativeControls provides fake) {
+                if (open) {
+                    AdaptiveSheet(
+                        onDismiss = {
+                            dismissed++
+                            open = false
+                        },
+                        height = SheetHeight.Large,
+                        material = { Text(MATERIAL_SHEET) },
+                        content = { Text(SHEET_BODY) }
+                    )
+                }
+            }
+        }
+        rule.waitForIdle()
+        assertTrue(fake.sheets.isNotEmpty())
+        assertEquals(SheetHeight.Large, fake.sheets.last())
+
+        rule.runOnIdle { fake.lastSheetDismiss?.invoke() }
+        rule.waitForIdle()
+
+        assertEquals(1, dismissed)
+        rule.onNodeWithText(SHEET_BODY).assertDoesNotExist()
+    }
+
+    @Test
+    fun `without native controls a sheet is the site's own`() {
+        rule.setContent {
+            AdaptiveSheet(
+                onDismiss = {},
+                height = SheetHeight.Large,
+                material = { Text(MATERIAL_SHEET) },
+                content = { Text(SHEET_BODY) }
+            )
+        }
+
+        rule.onNodeWithText(MATERIAL_SHEET).assertIsDisplayed()
+        rule.onNodeWithText(SHEET_BODY).assertDoesNotExist()
+        assertTrue(fake.sheets.isEmpty())
+    }
+
     /** A repeat row as the event form draws one: the row opens a dialog that names itself. */
     @Composable
     private fun OptionRow(onSelect: (String?) -> Unit, selected: String? = "weekly") {
@@ -394,6 +467,8 @@ class NativeControlsTest {
         const val DELETE_MESSAGE = "This cannot be undone."
         const val DELETE = "Delete"
         const val LEAVE = "Leave the form"
+        const val MATERIAL_SHEET = "Material's sheet"
+        const val SHEET_BODY = "What the sheet holds"
         const val REPEAT_ROW = "Repeat"
         const val REPEAT_DIALOG = "Choose how it repeats"
         val REPEAT_OPTIONS = listOf<Pair<String?, String>>(

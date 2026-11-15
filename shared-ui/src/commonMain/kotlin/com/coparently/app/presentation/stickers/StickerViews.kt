@@ -38,11 +38,13 @@ import com.coparently.app.domain.stickers.ParentRole
 import com.coparently.app.domain.stickers.ParentRoleAnswer
 import com.coparently.app.domain.stickers.Sticker
 import com.coparently.app.domain.stickers.StickerKind
+import com.coparently.app.presentation.common.AdaptiveSheet
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.HeroIcon
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionGroupScope
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.SheetHeight
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.titleMediumEmphasized
@@ -172,7 +174,7 @@ private fun SendStickerSheet(
     onSend: (StickerKind) -> Unit,
     onDismiss: () -> Unit
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    val body: @Composable () -> Unit = {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -226,6 +228,14 @@ private fun SendStickerSheet(
             }
         }
     }
+    AdaptiveSheet(
+        onDismiss = onDismiss,
+        height = SheetHeight.Large,
+        material = {
+            ModalBottomSheet(onDismissRequest = onDismiss) { body() }
+        },
+        content = body
+    )
 }
 
 /**

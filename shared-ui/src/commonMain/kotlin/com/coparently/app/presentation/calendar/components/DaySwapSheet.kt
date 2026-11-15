@@ -47,12 +47,15 @@ import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.RequestCap
 import com.coparently.app.domain.custody.SwapSides
 import com.coparently.app.presentation.calendar.MiniMonthModel
+import com.coparently.app.presentation.common.AdaptiveSheet
 import com.coparently.app.presentation.common.AnswerByField
 import com.coparently.app.presentation.common.AnswerByPickSaver
 import com.coparently.app.presentation.common.LocalBarHost
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.SectionGroup
+import com.coparently.app.presentation.common.SheetHeight
 import com.coparently.app.presentation.common.StickyActionBar
+import com.coparently.app.presentation.common.nativeControls
 import com.coparently.app.presentation.common.rememberAnswerByOffer
 import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.IconSizes
@@ -133,18 +136,28 @@ class SwapSheetActions(
 fun DaySwapSheet(offer: SwapSheetOffer, parentNames: ParentNames, actions: SwapSheetActions) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     val scope = rememberCoroutineScope()
+    // The sheet state is Material's alone: under the iPhone's own sheet nothing shows it, so it is
+    // never asked to expand there, where the parent pulls the sheet up to its large height.
+    val native = nativeControls() != null
     // At a large font the half-height anchor cannot hold the rows and the pinned button; wait until
     // the sheet's own show() has settled, or this expand races it.
     val largeFont = stacksAtLargeFont()
     LaunchedEffect(largeFont) {
-        if (largeFont) {
+        if (largeFont && !native) {
             snapshotFlow { sheetState.currentValue }.first { it != SheetValue.Hidden }
             sheetState.expand()
         }
     }
-    ModalBottomSheet(onDismissRequest = actions.onCancel, sheetState = sheetState) {
-        DaySwapSheetContent(offer, parentNames, actions, onNeedRoom = { scope.launch { sheetState.expand() } })
-    }
+    AdaptiveSheet(
+        onDismiss = actions.onCancel,
+        height = SheetHeight.Medium,
+        material = {
+            ModalBottomSheet(onDismissRequest = actions.onCancel, sheetState = sheetState) {
+                DaySwapSheetContent(offer, parentNames, actions, onNeedRoom = { scope.launch { sheetState.expand() } })
+            }
+        },
+        content = { DaySwapSheetContent(offer, parentNames, actions, onNeedRoom = {}) }
+    )
 }
 
 /**

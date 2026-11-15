@@ -223,6 +223,28 @@ interface NativeControls {
      */
     @Composable
     fun ActionSheet(title: String?, items: List<BarMenuItem>, onDismiss: () -> Unit)
+
+    /**
+     * An in-screen sheet holding [content], shown while this composable is composed: on the iPhone
+     * a Compose view controller presented as the system's page sheet, with the grabber, at the
+     * medium and large heights ([SheetHeight.Medium], the screen above left usable) or the large one
+     * alone ([SheetHeight.Large]). It is presented once when this enters composition; leaving
+     * composition takes it away without calling back.
+     *
+     * [content] is composed under the caller's locals (its ViewModels' owner, Koin, the platform,
+     * the theme, the native controls), so a ViewModel asked for inside is the caller's instance;
+     * there is no bar host inside ([LocalBarHost] is null). A form inside that reports edits through
+     * [LocalSheetGuard] keeps the sheet from closing on a swipe and asks instead.
+     *
+     * A swipe down calls [onDismiss] once. If the system cannot present it at all, it ends as a
+     * dismissal, so [onDismiss] is called once and the caller's flag is released.
+     *
+     * @param height How tall the sheet opens
+     * @param onDismiss Called once when the parent closes the sheet, or when it could not be shown
+     * @param content What the sheet holds
+     */
+    @Composable
+    fun Sheet(height: SheetHeight, onDismiss: () -> Unit, content: @Composable () -> Unit)
 }
 
 /**
