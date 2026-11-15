@@ -97,7 +97,7 @@ invocation is yours.
 | **MON-20** | **Built** (read-only card in custody settings, pure calculator); left: a look on a phone | P2 | — |
 | **MON-21** | **Built** (a proposal from an agreed plan answer, citing it; rules and rules tests); left: the rules deploy and a look on two phones — see the 👁 table | P2 | — |
 | **MON-22** | **Built** (schema 41, PR #101): a local-only journal and an opt-in export section; left: the device check (DEVICE-CHECKLIST §6) | P2 | — |
-| **MON-24** | The iPhone app: one Kotlin codebase (Compose Multiplatform), iOS-adapted on the iPhone, full parity. **Phases 1 and 2 built** (the domain in `:shared`; the data layer in `:shared-data`, the UI in `:shared-ui` and a thin Android shell; wire and stored bytes unchanged; on one branch, merged after the Android release). **Phase 3's part A built and CI-proven** (the Xcode project, the native shell, sign-in by e-mail and Google, the foreground sync, the write gate), awaiting the owner's check on their Mac. **Phase 3's part B built** (every destination under a system bar, forms as sheets, inner back steps, `coplanly://` links, account deletion on the iPhone, the iPhone tour), its branch-wide CI run and the owner's check pending; next: part C (photos, pickers, Storage). Design: `docs/superpowers/specs/2026-10-27-iphone-app-design.md` | P1 | L |
+| **MON-24** | The iPhone app: one Kotlin codebase (Compose Multiplatform), iOS-adapted on the iPhone, full parity. **Phases 1 and 2 built** (the domain in `:shared`; the data layer in `:shared-data`, the UI in `:shared-ui` and a thin Android shell; wire and stored bytes unchanged; on one branch, merged after the Android release). **Phase 3's part A built and CI-proven** (the Xcode project, the native shell, sign-in by e-mail and Google, the foreground sync, the write gate), awaiting the owner's check on their Mac. **Phase 3's part B built** (every destination under a system bar, forms as sheets, inner back steps, `coplanly://` links, account deletion on the iPhone, the iPhone tour), its branch-wide CI run and the owner's check pending. **Phase 3's part C built** (the system's controls behind `LocalNativeControls`, Calendar and Home led by the redesign's header, photos, files, the camera, sharing, payment codes, receipt reading and the export on the iPhone), its branch-wide CI run and the owner's check pending; next: part D (the theme). Design: `docs/superpowers/specs/2026-10-27-iphone-app-design.md` | P1 | L |
 | **MON-25** | Request clocks' on-time steps (deadline notice, end) move to a scheduled Cloud Function, for both platforms; needed by MON-24 before an iPhone build reaches a user (planned before phase 2, which went ahead without it by owner decision, 1 November 2026). Needs its own design pass | P1 | L |
 | **REL-4 (drafting)** | Done as far as the code can answer: every placeholder left is a fact only the owner has, listed at the top of each document. The deletion page and the privacy link in the app are written | P0 | S |
 | **L-4 (photos)** | **Built** (family-keyed Storage paths, no download URLs, pre-pairing photos moved by the server, legacy purge callable; rules, functions, unit and e2e tests); left: `firebase deploy --only storage`, the functions deploy, `purgeLegacyPhotoPaths` once, and DEVICE-CHECKLIST §3.10 on two phones | P0 | S |
@@ -2802,9 +2802,11 @@ notes list each file):
 - Task 13 (AGP 9 and Kotlin 2.4) joined the plan, because phase 3 needs Kotlin 2.4.
 
 **Carried to phase 3** (nothing here changes what an Android parent sees):
-- **The export's ways in on the iPhone.** The Family tab's, Earlier families' and the chat's entries
+- ~~**The export's ways in on the iPhone.** The Family tab's, Earlier families' and the chat's entries
   to the export are still drawn where `RecordFileWriter` or `ShareSheet` is unavailable (the iPhone
-  for now); the export screen itself offers no format there. Hide them, design item 8.
+  for now); the export screen itself offers no format there. Hide them, design item 8.~~ Moot since
+  part C: the iPhone writes the record (`IosRecordFileWriter`) and shares it (`IosShareSheet`), so
+  every way in leads somewhere.
 - **About 25 symbols made public for app callers that have since moved** to `:shared-ui` (CLAUDE.md's
   screenshots paragraph gives each one's original reason): `eventTimeLine`; `splitSharesText`,
   `formatMoney` and `balanceCaption`; `SwapDayAnswers`, `SwapOfferSides`, `SwapNoteQuote`,
@@ -2829,14 +2831,18 @@ notes list each file):
   iPhone, held by `IosAccountDeletionTest` on the emulators and the walk's last step), `NoPush` (now the push switch and sign-out's detach alone, `PushRegistration`: the
   phone holds no push token until phase 4), `NoGoogleCalendar`, ~~`NoStorageBucket`~~ (replaced in
   part C's Task 10 by `IosStorageBucket`, the iOS SDK's Storage by path, never by download URL),
-  `NoPickedFiles`, `NoRecordPhotoStorage`, `NoReceiptText`, `NoRecordFiles`,
+  ~~`NoPickedFiles`, `NoRecordPhotoStorage`~~ (part C's Task 11: `IosPickedFiles`,
+  `IosRecordPhotoStorage`), ~~`NoReceiptText`, `NoRecordFiles`~~ (Task 12: `VisionReceiptText`,
+  `IosRecordFileWriter`),
   `NoEventReminders`, `NoRequestClockJobs`, `NoRequestClockNotices`, `NoSchoolImportJob`,
-  `NoSupportReminderJob` and `NoExportVerifyAddress`. In
+  `NoSupportReminderJob` and ~~`NoExportVerifyAddress`~~ (Task 12: `InfoPlistExportVerifyAddress`). In
   `:shared-ui`: `NoSpeechDictation`, `NoAiAssist` with `AiAssistAvailability(false)`,
   and `NoInviteQrCodes` (`di/koin/IosUiUnavailable.kt`), and in
-  `presentation/platform/IosPlatform.kt` the platform interfaces' (`NoShareSheet`, `NoFilePicker`,
-  `NoCameraCapture`, `NoQrScanner`, `NoDictation`, `NoPermissions`, `NoOpenUrl`, `NoClipboard`,
-  `NoImages`, `NoQrCodes`, `NoAppLanguages`) with `NoGoogleCalendarSignIn`,
+  `presentation/platform/IosPlatform.kt` the platform interfaces' (~~`NoShareSheet`, `NoFilePicker`,
+  `NoCameraCapture`~~ (part C's Task 11: `IosShareSheet`, `IosFilePicker`, `IosCameraCapture`),
+  `NoQrScanner`, `NoDictation`, `NoPermissions`, `NoOpenUrl`, `NoClipboard`,
+  ~~`NoImages`, `NoQrCodes`~~ (Task 9: `IosImages`, `IosQrCodes`), `NoAppLanguages`) with
+  `NoGoogleCalendarSignIn`,
   which `ProvideIosShell` provides. Each says it is unavailable, and the screens hide what it
   stands for. The sign-in's (`NoSignedInUser`, `NoAuthSession`, `NoAccountSignIn`,
   `NoAccountSwitch`, `NoAccountTraces`, `NoAuthErrors`) were replaced in phase 3's Task 5 by
@@ -2996,9 +3002,10 @@ and does what it did. What it built, task by task:
 - **Phase 4** (pushes, reminders and background jobs): `NoPush` as `PushRegistration`,
   `NoEventReminders`, `NoRequestClockJobs`, `NoRequestClockNotices`, `NoSchoolImportJob` and
   `NoSupportReminderJob`.
-- **Part C** (files, photos and the export): `NoStorageBucket`, `NoPickedFiles`,
+- ~~**Part C** (files, photos and the export): `NoStorageBucket`, `NoPickedFiles`,
   `NoRecordPhotoStorage`, `NoReceiptText`, `NoRecordFiles`, `NoExportVerifyAddress`, and the
-  platform's `NoShareSheet`, `NoFilePicker`, `NoCameraCapture`, `NoImages` and `NoQrCodes`.
+  platform's `NoShareSheet`, `NoFilePicker`, `NoCameraCapture`, `NoImages` and `NoQrCodes`.~~ All
+  replaced in part C (below).
 - **Not in parts B or C** (the parent design's later phases decide): `NoGoogleCalendar` with `NoGoogleCalendarSignIn`, `NoSpeechDictation`,
   `NoAiAssist`, `NoInviteQrCodes`, `NoQrScanner`, `NoDictation`, `NoPermissions`, `NoOpenUrl`,
   `NoClipboard` and `NoAppLanguages` (iOS's own Settings sets the language).
@@ -3011,6 +3018,90 @@ and does what it did. What it built, task by task:
   reach in the owner's check. The check lists what the code is written to reach.
 - **The deferred review minors** go to the final review: StackHost's one-second grace is
   time-based, the walk's typed-text clearing, the detekt and test-tightness minors.
+
+**Phase 3, part C — the system's controls, files and photos: built, awaiting the branch-wide CI
+run and the owner's check** (November 2026; plan
+`docs/superpowers/plans/2026-11-15-iphone-phase-3c-controls-files-photos.md`, owner's check
+`docs/superpowers/plans/2026-11-15-iphone-phase-3c-owner-check.md`). The owner approved the canvas's
+eight control boards and the seven iPhone boards redrawn on the November redesign on 15 November
+2026, and ruled that the iPhone keeps the redesign's look (the lavender ground, white cards with a
+hairline, the indigo tint, the wordmark header on Calendar and Home): only the controls are the
+system's. Android draws and does what it did; every adaptive control's null branch is the site's
+previous Material call. What it built, task by task:
+
+- **The seam and the switch** (Task 1): `NativeControls`, `LocalNativeControls` (provided by the
+  shell's `ScreenController` alone) and `AdaptiveSwitch`, a `UISwitch` in the system's green; a
+  grouped row with a switch toggles from the whole row.
+- **Segmented choices** (Task 2): the nine `SingleChoiceSegmentedButtonRow`s are
+  `UISegmentedControl`s; a choice of more than five stays chips.
+- **Dates and times** (Task 3): a date asked for is a sheet with the inline calendar, a time the
+  wheels on the phone's own clock, a date in place the compact pill. A date crosses through the
+  Gregorian calendar in the phone's zone (ruling: a Buddhist or Japanese current calendar would
+  shift the year). Every presented controller goes through `presentWhenSettled`.
+- **Option menus** (Task 4): the event's Repeat and Reminder, Settings' currency, an expense's
+  category and currency, a pet's species, a blood type and the chat's "+" are a self-drawing `UIButton` pop-up beside the Compose title, never laid over it
+  (ruling: Compose Multiplatform 1.9.3 draws a native view under a cleared hole in its canvas, so
+  the first overlay erased its row). Every in-place native control takes a `background` for the
+  same reason.
+- **Alerts and action sheets** (Task 5): `ConfirmationDialog`, "Discard changes?" and the deletes
+  are the system's alert or action sheet; a long press on a chat message offers "Report message"
+  in an action sheet. The seasonal layer dialog has no delete question, and none was added (ruling: a
+  product decision with new strings).
+- **In-screen sheets** (Task 6): `AdaptiveSheet` is a page sheet with the grabber. It closes when
+  its screen is covered or its tab left (ruling), and only the event preview and the day swap leave
+  the grid above them usable.
+- **Grouped rows** (Task 7): inset-grouped under native controls, a hairline 16 dp in, the row's
+  own chevron (ruling: the sites' chevrons draw nothing there; Settings' Google Calendar row keeps
+  its expand arrow).
+- **The redesign's header on Calendar and Home** (Task 8): `ScreenBar.hidden` and
+  `StackHost.HIDDEN_BAR_ROUTES`; the brand row, the heading, Month/Week/Day and Filters, and the
+  card's Today and "+", in content. This replaces part B's month-titled bar; Home no longer shows
+  the date subtitle part A's bar had.
+- **Images and payment codes** (Task 9): `IosImages` (record photos as the signed-in parent,
+  digest-checked, a byte-bounded memory cache) and `IosQrCodes` (Core Image's generator).
+- **Storage** (Task 10): `IosStorageBucket` on the pod's `FIRStorageReference`; the write gate
+  stores and reads back a vault document.
+- **Pickers, the camera, sharing and record photos** (Task 11): `IosFilePicker` (PHPicker, the
+  document picker), `IosCameraCapture`, `IosShareSheet`, `IosPickedFiles` and
+  `IosRecordPhotoStorage`; every file the phone makes is under `AppDirectories.cache`, wiped with
+  the account, and a photo is re-encoded by Android's 1600 px power-of-two rule (ruling: the plan's
+  2048 px rested on a wrong premise). The write gate stores a pet's photo.
+- **Receipts and the export** (Task 12): `VisionReceiptText` (Apple's Vision on the phone),
+  `IosRecordFileWriter` (the common CSV, a PDF through `UIGraphicsPDFRenderer`) and
+  `InfoPlistExportVerifyAddress`.
+- **The record** (Task 13): the tour shows six controls in use; CLAUDE.md, this entry, the spec's
+  decisions, the device checklist (§3.40) and the privacy documents (Vision named beside ML Kit).
+
+**Still stand-ins on the iPhone after part C** (each hides what it stands for):
+- **Phase 4** (pushes, reminders and background jobs): `NoPush` as `PushRegistration`,
+  `NoEventReminders`, `NoRequestClockJobs`, `NoRequestClockNotices`, `NoSchoolImportJob` and
+  `NoSupportReminderJob`.
+- **Not in parts B or C** (the parent design's later phases decide): `NoGoogleCalendar` with
+  `NoGoogleCalendarSignIn`, `NoSpeechDictation`, `NoAiAssist`, `NoInviteQrCodes`, `NoQrScanner`,
+  `NoDictation`, `NoPermissions`, `NoOpenUrl`, `NoClipboard` and `NoAppLanguages` (iOS's own
+  Settings sets the language).
+- **Drawn differently, not stood in for**: a Google account's picture is a web address, which
+  `IosImages` never fetches, so the iPhone draws the initial; a Slovak account's PAY by square has
+  no code on the iPhone (no LZMA1 encoder until phase 4, `Lzma1Raw`), while QR Platba and EPC draw;
+  and with `NoClipboard` the payer cannot copy the IBAN there yet.
+
+**Open after part C:**
+- **The branch-wide CI run**, which also settles part B's: nothing of part C has run on a
+  simulator. Vision on CI's simulator, PDFKit's text in `IosRecordFileWriterTest`, the XCUITest
+  selectors of the out-of-process document picker and share sheet, and the Storage emulator's REST
+  shape in `check-ios-writes.js` are each the first to know.
+- **The owner's check** (`docs/superpowers/plans/2026-11-15-iphone-phase-3c-owner-check.md`) and
+  device check §3.40, among them a real receipt read by Vision (a tilted one too) and §3.25's
+  payment code read by a banking app from an iPhone.
+- **Known iPhone-only differences the check should judge**: VoiceOver reads an option row twice
+  ("Repeat", then "Repeat, Weekly"); the chat's "+" is under 44 pt; Home has no date subtitle;
+  `SwapDayAnswers` cannot un-pick a day once picked; Settings' currency reads "CZK  Kč".
+- **The deferred review minors** go to the final review: the switch's and segmented control's
+  VoiceOver labels, a sheet's edits lost when its screen is covered (`PlanQuestionSheet`), the
+  undimmed sheet's and alert's teardown edges, the menu button's size on a Dynamic Type change,
+  the ground callers' background matching only the gradient's top, `storage.rules`' "at most 1600
+  px" comment (Android's rule reaches 3199 px; no rules change was in scope), and the test-tightness
+  minors.
 
 Still owed from part A, beyond the stand-ins listed above: ~~in-app account deletion on the iPhone
 before the App Store~~ (done in part B's Task 11, `IosAccountDeletion`), and the minor findings the
@@ -3337,7 +3428,9 @@ bytes are identical on Android). Kept as the record of each step; what phase 2 l
   the school import (`schoolUiModule`). **Task 10 is done** but for the login screen's and Google
   Calendar's connection ViewModels, which move with their screens in Task 11.
 - **The screens to `:shared-ui`** — **done (phase 2, Task 11, November 2026; slices 11a–11g, each
-  reviewed and green in CI)**.
+  reviewed and green in CI)**. Every "the iPhone for now" below is phase 2's: phase 3's part C gave
+  the iPhone the share sheet, the pickers, the camera, images, payment codes, receipt reading and
+  the export (above).
   Slice 11a, the foundation: the screens' three libraries in common code (`koin-compose-viewmodel`
   4.1.1, JetBrains' `lifecycle-runtime-compose` 2.9.6, Compose Multiplatform's `ui-backhandler`
   1.9.3, none moving an Android version), and `presentation/platform/`: one interface per thing a

@@ -1108,6 +1108,14 @@ final class ShellUITests: XCTestCase {
         "add_expense", "edit_expense/{expenseId}",
     ]
 
+    /// The system's controls the tour shows in use (MON-24 phase 3, part C), each a visit of its own
+    /// after the destinations, shot as `tour-control-…`. They are not routes: the summary counts
+    /// them apart, and one the tour cannot show is skipped with the reason, as a route is.
+    private let tourControls = [
+        "control-switch", "control-segment", "control-date-sheet", "control-option-menu",
+        "control-action-sheet", "control-preview-sheet",
+    ]
+
     /// The destinations no signed-in parent of the seeded family can reach, each with the reason.
     private let tourUnreachable: [String: String] = [
         "loading": "shown only until the start destination is known, a moment no tap leads to",
@@ -1129,7 +1137,9 @@ final class ShellUITests: XCTestCase {
     /// `tools/ios/seed-shell-family.js --tour` seeded on fresh emulators (an event today with a
     /// change request about it, a child, a pet, an expense and a vault document), visits every
     /// destination it can reach from there and attaches a screenshot named `tour-<route>` for each,
-    /// the route as `AppDestinationCatalog` writes it up to its first `/` or `?`.
+    /// the route as `AppDestinationCatalog` writes it up to its first `/` or `?`. Since part C it also
+    /// shows the system's controls in use (`tourControls`: a switch, a segment, the date sheet, an
+    /// option menu, an action sheet and the event preview sheet), each shot as `tour-control-…`.
     ///
     /// As the Android UI tour (`e2e/UiTourTest`), a destination it cannot reach is recorded with
     /// the reason, never as a failure: a `COPLANLY_TOUR <route>: skipped: …` line, in a text
@@ -1168,13 +1178,20 @@ final class ShellUITests: XCTestCase {
         for route in tourRoutes where !tourOutcomes.contains(where: { $0.route == route }) {
             tourOutcomes.append((route, "skipped: " + (tourUnreachable[route] ?? cause)))
         }
+        for control in tourControls where !tourOutcomes.contains(where: { $0.route == control }) {
+            tourOutcomes.append((control, "skipped: " + cause))
+        }
         touring = false
 
         let lines = tourOutcomes.map { "COPLANLY_TOUR \($0.route): \($0.outcome)" }
         print("COPLANLY_TOUR_SUMMARY_BEGIN")
         lines.forEach { print($0) }
-        let reached = tourOutcomes.filter { $0.outcome == "reached" }.count
-        print("COPLANLY_TOUR_SUMMARY reached \(reached) of \(tourRoutes.count) destinations")
+        let reached = tourOutcomes.filter { tourRoutes.contains($0.route) && $0.outcome == "reached" }.count
+        let shown = tourOutcomes.filter { tourControls.contains($0.route) && $0.outcome == "reached" }.count
+        print(
+            "COPLANLY_TOUR_SUMMARY reached \(reached) of \(tourRoutes.count) destinations, " +
+                "\(shown) of \(tourControls.count) controls in use"
+        )
         print("COPLANLY_TOUR_SUMMARY_END")
         let log = XCTAttachment(string: lines.joined(separator: "\n") + "\n")
         log.name = "tour-log"
@@ -1292,11 +1309,84 @@ final class ShellUITests: XCTestCase {
             try self.tourOpenSheet(labelled: "Request change")
         }
 
+        // The system's controls in use (part C), each from a known place; reset closes what it opens.
+        tourControlVisits()
+
         // A link: a guest invitation's code, which the emulators do not hold.
         tourVisit("guest_accept?code={code}") {
             try self.tourTab("Family")
             self.app.open(URL(string: "coplanly://guest?code=ABC234")!)
             try self.require(self.element(labelledContaining: "Guest access").waitForExistence(timeout: 60), "The guest link did not open Guest access")
+        }
+    }
+
+    /// The six controls of `tourControls`, each left open for its screenshot (MON-24 phase 3, part C,
+    /// Task 13). None saves or deletes anything: the switch is flipped back after its own shot, the
+    /// option menu and the action sheet are left for `tourReset` to cancel, and the segment needs no
+    /// undoing, since a tap on the Calendar tab opens Month again (CLAUDE.md design item 5).
+    private func tourControlVisits() {
+        // A switch: New event's "All day", a UISwitch, flipped on for a shot and back off.
+        tourVisit("control-switch") {
+            try self.tourTab("Calendar")
+            try self.tourOpenSheet(labelled: "Add event")
+            self.dismissKeyboard()
+            let byLabel = self.app.switches.matching(NSPredicate(format: "label CONTAINS %@", "All day")).firstMatch
+            let toggle = byLabel.waitForExistence(timeout: 8) ? byLabel : self.app.switches.firstMatch
+            try self.require(toggle.waitForExistence(timeout: 8), "The event form shows no system switch")
+            toggle.tap()
+            sleep(1)
+            self.shot("tour-control-switch-on")
+            toggle.tap()
+        }
+        // A segmented control: the calendar's Month/Week/Day, with Week chosen.
+        tourVisit("control-segment") {
+            try self.tourTab("Calendar")
+            let week = self.app.segmentedControls.buttons["Week"]
+            try self.require(week.waitForExistence(timeout: 8), "The calendar's Month/Week/Day is not a segmented control")
+            week.tap()
+            try self.require(week.isSelected, "Week did not select")
+        }
+        // The date sheet: "Jump to date", the inline calendar at half the screen.
+        tourVisit("control-date-sheet") {
+            try self.tourTab("Calendar")
+            let title = self.calendarMonthButton
+            try self.require(title.waitForExistence(timeout: 8), "The card's month title is not a button")
+            self.press(title)
+            let sheetBar = self.app.navigationBars.containing(NSPredicate(format: "label == %@", "Cancel")).firstMatch
+            try self.require(sheetBar.waitForExistence(timeout: 8), "Jump to date did not open as a sheet with Cancel")
+            try self.require(self.app.datePickers.firstMatch.exists, "The jump-to-date sheet holds no date picker")
+        }
+        // An option menu: New event's Repeat, the system's pop-up button, with its menu open.
+        tourVisit("control-option-menu") {
+            try self.tourTab("Calendar")
+            try self.tourOpenSheet(labelled: "Add event")
+            self.dismissKeyboard()
+            let repeatButton = self.app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Repeat,")).firstMatch
+            try self.require(repeatButton.waitForExistence(timeout: 8), "Repeat has no pop-up button named \"Repeat, …\"")
+            let screenBottom = self.app.windows.firstMatch.frame.maxY - 160
+            for _ in 0..<8 where repeatButton.frame.maxY > screenBottom {
+                self.app.swipeUp()
+            }
+            sleep(1)
+            self.press(repeatButton)
+            let weekly = self.app.buttons.matching(NSPredicate(format: "label == %@", "Weekly")).firstMatch
+            try self.require(weekly.waitForExistence(timeout: 8), "Repeat did not open a menu with \"Weekly\"")
+        }
+        // An action sheet: deleting today's seeded event asks; the tour never answers it.
+        tourVisit("control-action-sheet") {
+            try self.tourOpenEvent()
+            let editBar = self.app.navigationBars["Edit event"]
+            try self.require(editBar.waitForExistence(timeout: 8), "The event's form has no Edit event bar")
+            let delete = editBar.buttons.matching(NSPredicate(format: "label == %@", "Delete event")).firstMatch
+            try self.require(delete.waitForExistence(timeout: 8), "The event's form has no Delete event in its bar")
+            self.press(delete)
+            try self.require(self.app.sheets.firstMatch.waitForExistence(timeout: 8), "Delete did not ask in the system's action sheet")
+        }
+        // The event preview: the system's sheet at half the screen, the calendar above it.
+        tourVisit("control-preview-sheet") {
+            try self.tourTab("Calendar")
+            let edit = self.app.buttons.matching(NSPredicate(format: "label == %@", "Edit")).firstMatch
+            try self.openPreview(of: self.tourEventTitle, edit: edit)
         }
     }
 
@@ -1345,6 +1435,18 @@ final class ShellUITests: XCTestCase {
     /// next starts from a tab.
     private func tourReset() {
         for _ in 0..<4 {
+            // A question in the system's action sheet: its Cancel, never its action.
+            let sheetCancel = app.sheets.firstMatch.buttons["Cancel"]
+            if sheetCancel.exists {
+                sheetCancel.tap()
+                sleep(1)
+            }
+            // A picker's sheet (Jump to date) closes with its bar's Cancel, which saves nothing.
+            let pickerCancel = app.navigationBars.buttons.matching(NSPredicate(format: "label == %@", "Cancel")).firstMatch
+            if pickerCancel.exists && pickerCancel.isHittable {
+                pickerCancel.tap()
+                sleep(1)
+            }
             if app.staticTexts["Discard changes?"].exists { pressIfThere("Discard") }
             let closes = app.navigationBars.buttons.matching(NSPredicate(format: "label == %@", "Close"))
             // The sheet on top is the one whose cross can be touched.

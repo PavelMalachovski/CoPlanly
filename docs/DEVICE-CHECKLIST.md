@@ -2435,6 +2435,10 @@ school) and a build with the row switched on: a debug build, or release with
 
 ### 3.37 The calendar's bar on an iPhone · 1P, iPhone, swap check needs a custody schedule
 
+> **Replaced by part C** (MON-24 phase 3, part C, Task 8): the Calendar and Home now show no system
+> bar, and the redesign's header leads them in content. Check §3.40's first group instead; what
+> follows describes part B's bar and is kept for its history.
+
 MON-24 phase 3, part B, Task 8. `CalendarBarsTest` holds what the bar is handed and that Android
 draws every header row as before; the `ios-app` job's walk opens the Calendar tab and finds the month
 as the bar's title with Today, Filters, Settings and "+" (artifact `ios-shell`, `17-calendar-bar`).
@@ -2518,6 +2522,85 @@ reach:
   `ios/shell/FormSheet.kt` and `common/DiscardGuard.kt` (the sheets), `ios/shell/NativeBars.kt` (the
   bar's buttons and title view), `ios/shell/StackHost.kt`, and `data/session/IosAccountDeletion.kt`
   with `SignInProviderSession.kt` (`shared-data`'s `iosMain`).
+
+### 3.40 The iPhone's own controls, photos, files and the export · 1P, iPhone, the photo and share checks need the co-parent's phone
+
+MON-24 phase 3, part C. The board for each control is on the canvas (third row,
+https://claude.ai/artifact/732JJxDHeHtUp8zLFAdUTH); the owner's walk of the same boards is
+`docs/superpowers/plans/2026-11-15-iphone-phase-3c-owner-check.md`. `NativeControlsTest` (the app's
+Robolectric tests) holds that every adaptive control reaches the iPhone branch and that Android's is
+the Material call it was, and the 470 screenshots that Android did not move; `NativeControlsIosTest`
+and the walk prove the mechanics on the simulator (artifact `ios-shell`), and the tour shows six
+controls in use (artifact `ios-tour`, `tour-control-…`). The simulator has no camera, no banking app
+and no real receipt. What is left:
+
+- [ ] **Calendar and Home lead with the redesign's header.** No system bar over either: the
+      "coplanly." wordmark, the children's avatars and the gear, then "Your family calendar" (on
+      Home, the family switcher's row), under the status bar, nothing under it cut off. On the
+      Calendar, Month/Week/Day and Filters are under the heading, and the grid card's bar holds the
+      month, Today, "⇄" and "+". Push Settings: its system bar returns, and its back button reads
+      "Calendar" (or "Home").
+- [ ] **A switch** (New event → All day; Settings → Pause before sending): the system's
+      switch in its green, on the card's white with no dark corners around it. Flip it from the
+      switch and from the row itself; each flip is one change, and the switch never jumps back on
+      its own.
+- [ ] **A segmented choice** (Calendar → Month/Week/Day; Add expense's "Who paid?"): the system's
+      control, full width. A tap selects and the screen follows. VoiceOver reads each segment.
+- [ ] **Dates and times** (New event): Starts' date is the system's compact pill, which opens its
+      calendar; the time opens wheels on your phone's 12- or 24-hour clock. The card's month title
+      → "Jump to date" opens a half-height sheet with the inline calendar: pick a day and Done, and
+      the grid goes there; swipe it down, and nothing moves. **In another time zone** (Settings →
+      General → Date & Time, set it by hand to Kiritimati, UTC+14, then to Pago Pago, UTC−11): the
+      day you pick is the day saved, in both.
+- [ ] **Option menus** (New event → Repeat and Reminder; Add expense → Category; a pet's species; a
+      child's blood type; the chat's "+"): each row ends in the system's pop-up button with its
+      up-and-down chevron, the chosen value in grey and a checkmark in the menu. The chat's "+" is
+      easy to hit with a thumb. VoiceOver: note whether it reads the row's name twice.
+- [ ] **Questions** (an event's Delete; a document's Delete; unlinking; a dirty form swiped down):
+      a destructive action asks in the action sheet from the bottom, red over a separate Cancel;
+      "Discard changes?" is an alert. Cancel does nothing; a tap outside the action sheet is a
+      cancel; the question opens again. Long-press a chat message: "Report message" in an action
+      sheet.
+- [ ] **In-screen sheets** (an event's preview from the grid; Filters; the day swap's review; a
+      guest or friend invitation; the message templates): the system's sheet with the grabber.
+      Under the event's preview and the day swap the grid stays usable; under the others it is
+      dimmed. Switch tab while a sheet is up and come back: it has closed, and opens again.
+- [ ] **Grouped rows** (Settings, Family): inset-grouped, small grey headers, a hairline that
+      starts 16 points in, one chevron per row that opens something (Google Calendar's row keeps
+      its expand arrow instead).
+- [ ] **A photo picked and a photo taken.** Pick a pet's, a child's and an event's photo from
+      Photos (the system's picker, no library permission asked): each is saved and appears on the
+      co-parent's phone (Android or iPhone) the same way up; a HEIC photo arrives as a JPEG. Take
+      one with the camera (Add expense's receipt; Documents → Take a photo): the camera is asked
+      for once, in your language, and the photo is stored the same way up. Turn the camera off in
+      Settings → CoPlanly: the receipt's camera says it is not allowed; nothing hangs.
+- [ ] **A vault file** (Family → Documents → Add a file): a PDF from Files whose name has spaces
+      and accents ("Rozsudek září 2026.pdf") uploads, keeps its name, and opens on the co-parent's
+      phone; Cancel in the picker adds nothing.
+- [ ] **A share** (an invitation's Share; Settle up's Share QR code; the export): the system's share
+      sheet opens with the text or the file, Messages or Mail receives it intact, and closing the
+      sheet leaves the screen as it was.
+- [ ] **A receipt read** (Add expense → scan a receipt): photograph a real Czech shop receipt held
+      straight. The amount and the date fill in. Then one **held at an angle** (about 20°) and one
+      photographed sideways: the total is still found, or the form says it could not read the
+      receipt and keeps the photo — never a wrong amount from two printed rows joined into one. With
+      the phone in airplane mode it reads the same: nothing leaves the phone.
+- [ ] **An export** (Family → Export the record): CSV and PDF. The PDF opens in Files with the
+      statement first, every page's footer, and the period you chose; the CSV opens in Numbers with
+      Czech and Cyrillic text intact. Sign out and back in: no exported file is left in the app.
+- [ ] **The payment code** read by a banking app from the iPhone: §3.25, with the payer on the
+      iPhone. A Slovak account shows no code on the iPhone (PAY by square waits for phase 4); a Czech
+      one and another euro account do.
+- [ ] **A Google account's picture** is drawn as its initial on the iPhone (a web address is not
+      fetched); a record photo is drawn.
+- **If it fails:** the control's adaptive composable in `presentation/common/` (`AdaptiveSwitch`,
+  `AdaptiveSegmented`, `AdaptiveMenu`, `AdaptiveSheet`, `ConfirmationDialog`, `PickerDates`,
+  `DatePickerField`, `DesignSystem`) and its iPhone half in `ios/controls/` (`:shared-ui`'s
+  `iosMain`); the header in `ios/shell/StackHost.kt` (`HIDDEN_BAR_ROUTES`); photos and files in
+  `data/files/IosPickedFiles.kt`, `IosRecordPhotoStorage.kt`, `IosStorageBucket.kt`
+  (`shared-data`'s `iosMain`) and `presentation/platform/IosFilePicker.kt`, `IosCameraCapture.kt`,
+  `IosShareSheet.kt`, `IosImages.kt`; the receipt in `data/receipts/VisionReceiptText.kt`; the
+  export in `data/export/IosRecordFileWriter.kt`.
 
 ---
 

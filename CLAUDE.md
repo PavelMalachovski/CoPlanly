@@ -112,6 +112,36 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    draw a second anatomy for any of these. The calendar's compact banners over the grid
    (`CalendarBanners.kt`, one row of icon, text and action, which wraps rather than cuts) are the
    deliberate exception.
+   **On the iPhone the controls are the system's, and nothing else changes** (MON-24 phase 3, part
+   C; owner rulings of 15 November 2026 and the eight control boards on the canvas). The iPhone
+   keeps this refresh's look — the lavender ground, the white cards with their hairline, the indigo
+   tint, the wordmark header on Calendar and Home. `presentation/common/NativeControls.kt` declares
+   one `@Composable` member per control and `LocalNativeControls` (null unless a shell provides one;
+   only the iPhone's `ScreenController` does, with `IosNativeControls`). Every adaptive control asks
+   `nativeControls()` and, on null, makes **exactly the Material call the site made before**, with
+   the same parameters, modifiers, colours and semantics — that branch is Android, and the 470
+   screenshots hold it: `AdaptiveSwitch` (`UISwitch`, the system's green), `AdaptiveSegmented`
+   (`UISegmentedControl`; a choice of more than five stays chips), the date and time pickers
+   (`LocalDatePickerDialog`, `TimePickerDialog`, `DatePickerField` and the event form's rows: a sheet
+   with the inline calendar, wheels, the compact pill), `AdaptiveOptionRow` and `MenuFieldRow` (a
+   pop-up button with the system's chevron in the row's trailing slot, beside the Compose title),
+   `ConfirmationDialog` and `DiscardGuard` (an alert, or an action sheet for a destructive action),
+   `AdaptiveSheet` (a page sheet with the grabber at the medium and large heights) and
+   `SectionGroup`/`SectionRow`/`GroupLabel` (inset-grouped: a small grey header, 50 dp rows, a
+   hairline 16 dp in, the row's own chevron — so a site's chevron helper draws nothing there). A new
+   control adds a member to the interface, its iPhone half in `IosNativeControls` and its recording
+   in the tests' `RecordingNativeControls` (`NativeControlsTest`), which is how a Robolectric test
+   reaches the iPhone branch. A dialog that carries content (the colour picker, the region, family
+   kind and split dialogs, Settle up, a proposal) stays a Compose dialog. Two rules of Compose
+   Multiplatform 1.9.3's interop, both learned the hard way. **Never lay a native view over Compose
+   content**: a `UIKitView` is drawn *under* the Compose canvas, which clears its pixels in the
+   view's bounds, so a transparent native overlay erases what it covers (the first option menus
+   erased their rows). **Every in-place native control takes a `background`** (by default
+   `surfaceContainer`; a caller on the ground, a sheet or a dialog passes its own), because around a
+   control that is not opaque the window, not the card, shows through. A presented controller (an
+   alert, a picker sheet, a page sheet) is its own window and needs neither; it is presented through
+   `presentWhenSettled` (`ios/controls/PickerSheet.kt`), which waits out a transition and ends as a
+   dismissal when UIKit drops it, so `onDismiss` is called once and a second open works.
 2. **Parent colours go through `presentation/theme/ParentColors.kt`**: `fill()` for dots,
    bars and tints; `text()` for anything that is a foreground (it picks the theme-aware
    `*Light`/`*Dark` partner). The raw `MomPink`/`DadBlue` are fill-only — using them as text
@@ -1818,8 +1848,9 @@ utils/     — in shared-ui/ (the date and money seams, SwapDays, MonthTitle, �
 **Where an iPhone path lives** (MON-24 phase 3, November 2026). The iPhone app's Swift and project
 files are under `iosApp/` (above); its Kotlin side is `:shared-ui`'s
 `shared-ui/src/iosMain/kotlin/com/coparently/app/ios/` (`IosApp`, the start, the Google sheet's
-`IosCredentialSignIn`, the wordings) and `…/ios/shell/` (the native shell: the tab bar, a
-navigation controller per tab mirroring the shared back stack, native bars, form sheets), with the
+`IosCredentialSignIn`, the wordings), `…/ios/shell/` (the native shell: the tab bar, a
+navigation controller per tab mirroring the shared back stack, native bars, form sheets) and
+`…/ios/controls/` (the system's controls, part C), with the
 iPhone halves of the seams in each module's `iosMain` (`shared-data/src/iosMain/`,
 `shared-ui/src/iosMain/`) and their tests in `iosTest`. A new iPhone screen is a shared screen; the
 shell only hosts it. `iosApp/README.md` says how to run it, and the owner's check of part A is
@@ -1862,7 +1893,48 @@ shell alone, so Android reads a null and behaves as before:
   reason, as the Android UI tour does. Only a crash or a failed launch fails the job (the
   `tour-crashed` marker); its step's other failures, a timeout or the seed, are a notice, and the
   tour stops visiting after 35 minutes so it always writes its summary. A new
-  destination is added to its `tourRoutes`, which mirrors `AppDestinationCatalog.all`.
+  destination is added to its `tourRoutes`, which mirrors `AppDestinationCatalog.all`. Since part C
+  it also shows six controls in use (`tourControls`: a switch, a segment, the date sheet, an option
+  menu, an action sheet and the event preview sheet, shot as `tour-control-…`), counted apart from
+  the routes and skipped with a reason like them.
+
+**Part C's shapes** (November 2026; owner's check
+`docs/superpowers/plans/2026-11-15-iphone-phase-3c-owner-check.md`):
+- **The system's controls** behind `LocalNativeControls` (design refresh item 1, which states the
+  null-branch rule and the two interop rules). The iPhone halves are in `…/ios/controls/`:
+  `IosNativeControls`, `MenuButton.kt` (a `UIButton` that draws itself and shows its `UIMenu` as
+  its primary action, always an accessibility element named "row, value"), `PickerSheet.kt`
+  (`presentWhenSettled`, `topViewController`), `DateBridge.kt`, `Alerts.kt`, `ComposeSheet.kt` and
+  `NativeBackground.kt`.
+- **A date crosses to UIKit through the Gregorian calendar in the phone's zone** (`DateBridge.kt`),
+  never UTC millis and never `NSCalendar.current`, whose Buddhist or Japanese year would shift a
+  `LocalDate`; `PickerDatesIosTest` holds the day at UTC+14 and UTC−11, as `PickerDates` does on
+  Android.
+- **An in-screen sheet closes when its screen is covered or its tab left** (`onDismiss` once), and
+  dims the screen under it unless it asks: only the calendar's event preview and the day swap
+  sheet are `undimmed`, so the grid above them stays in reach. Content inside composes under the
+  caller's locals with no bar host.
+- **Calendar and Home show no system bar** (`ScreenBar.hidden`, `StackHost.HIDDEN_BAR_ROUTES`):
+  the redesign's header leads them in content (design item 5); a screen pushed over them gets its
+  bar back, and its back button reads "Calendar" or "Home".
+- **Files the phone makes live under `AppDirectories.cache`**, which sign-out, an account switch
+  and deletion wipe: picked copies in `picked/` (`IosPickedFiles`, the iPhone's "content URI" an
+  absolute path, a sanitised name with the original beside it), camera photos in `receipts/` and
+  `shared_files/capture/`, the payment code's PNG in `payment_codes/`, the export in `exports/`.
+  Never `Caches/` directly.
+- **A record photo is re-encoded by Android's rule** (`RecordPhotoEncoding.sampleSize`, Android's
+  power-of-two subsampling over 1600 px, line for line), JPEG at 0.85, orientation applied, so the
+  same photo is stored at the same size from either phone. Through `IosRecordPhotoStorage` and
+  `IosStorageBucket` (the pod's `FIRStorageReference`, never a download URL).
+- **A receipt is read by Apple's Vision on the phone** (`VisionReceiptText`; item 10), the lines top
+  to bottom with one printed row joined left to right, and nothing sent anywhere. **The export** is
+  `IosRecordFileWriter`: the common CSV byte for byte, and a PDF of the same layout drawn with
+  `UIGraphicsPDFRenderer` in the system font; its verification address is
+  `InfoPlistExportVerifyAddress` (blank, as Android's, until the page is hosted).
+- **What the iPhone does not draw yet**: a Google account's picture (a web address `IosImages`
+  never fetches; the initial is drawn), PAY by square (no LZMA1 encoder until phase 4; QR Platba
+  and EPC draw), the invitation's QR (`NoInviteQrCodes`), and everything ROADMAP MON-24 lists as a
+  stand-in.
 
 **Where a `domain/…` path in this file lives** (MON-24 phase 1, November 2026). The domain moved
 to the shared module with every package unchanged, so a path this file writes as
@@ -2211,14 +2283,20 @@ wordings (`IosPairingWording` and `IosSchoolImportWordings`, bound in `:shared-u
 (`IosCredentialSignIn` in place of `NoCredentialSignIn`, Task 9); part B replaced
 `NoAccountDeletion` with `IosAccountDeletion` (the `deleteAccount` callable, then the wipe Android's
 `AccountDeletionService` does, then the session's end; Task 11); part C replaced `NoStorageBucket`
-with `IosStorageBucket` (the iOS SDK's Storage by path, Task 10). Still stand-ins on the iPhone:
+with `IosStorageBucket` (the iOS SDK's Storage by path, Task 10), `NoPickedFiles` and
+`NoRecordPhotoStorage` with `IosPickedFiles` and `IosRecordPhotoStorage` (Task 11), and
+`NoReceiptText`, `NoRecordFiles` and `NoExportVerifyAddress` with `VisionReceiptText`,
+`IosRecordFileWriter` and `InfoPlistExportVerifyAddress` (Task 12), and in `:shared-ui`'s
+`IosPlatform.kt` `NoImages` and `NoQrCodes` with `IosImages` and `IosQrCodes` (Task 9) and
+`NoShareSheet`, `NoFilePicker` and `NoCameraCapture` with `IosShareSheet`, `IosFilePicker` and
+`IosCameraCapture` (Task 11). Still stand-ins on the iPhone:
 `NoPush` as `PushRegistration` alone (the push switch; the phone holds no token until phase 4),
 `NoEventReminders`,
 `NoRequestClockJobs`, `NoRequestClockNotices`, `NoSchoolImportJob`, `NoSupportReminderJob`,
-`NoGoogleCalendar`, `NoPickedFiles`, `NoRecordPhotoStorage`, `NoReceiptText`,
-`NoRecordFiles`, `NoExportVerifyAddress`, and in `:shared-ui` `NoSpeechDictation`, `NoAiAssist`,
-`NoInviteQrCodes` and the platform interfaces' `No…` objects in `IosPlatform.kt`. ROADMAP MON-24
-lists what still stands in. Every `data/…`
+`NoGoogleCalendar`, and in `:shared-ui` `NoSpeechDictation`, `NoAiAssist`,
+`NoInviteQrCodes` and the platform interfaces' `NoQrScanner`, `NoDictation`, `NoPermissions`,
+`NoOpenUrl`, `NoClipboard` and `NoAppLanguages` with `NoGoogleCalendarSignIn` in `IosPlatform.kt`.
+ROADMAP MON-24 lists what still stands in. Every `data/…`
 path this history does not name as moved is under `app/src/main/java/com/coparently/app/` (the
 third exception at the top of this note).
 
@@ -2433,8 +2511,8 @@ as ISO text (`LocalDateSaver`), its receipt a content URI or reference saved as 
 `LocalDatePickerDialog`, its scan's snackbars read in composition. **The receipt is offered only where
 the picker and the image loader are** (`FilePicker.available` and `PlatformImages.available`), and a
 photo is **scanned only where the phone reads text** (`ReceiptTextRecognizer.available`, new, true
-by default; the iPhone's `NoReceiptText` says false; `ExpenseViewModel.receiptScanAvailable`), the
-carried note's hiding. Public for the app's tests: `CollapsedMonthSummary` (the screenshots) and
+by default; the iPhone's `NoReceiptText` said false until part C's `VisionReceiptText`, Apple's
+Vision on the phone; `ExpenseViewModel.receiptScanAvailable`), the carried note's hiding. Public for the app's tests: `CollapsedMonthSummary` (the screenshots) and
 `ReceiptScanEffect` with `ReceiptScanFormState` and `ReceiptScanCallbacks` (`ReceiptScanEffectTest`,
 androidTest, its form's date a kotlinx-datetime day now). The header's previews are the app's
 `expenses/ExpensePreviews.kt`. `BuildReceiptScanUpdateTest`, `CategoryPaletteTest`,
@@ -2498,7 +2576,8 @@ through `kotlin.time` (whole hours and minutes, as `TimeUnit` truncated them), a
 notification question through `PermissionRequester`. **The carried notes**: where the phone draws no
 QR (`InviteQrCodes.available`, new, true by default; the iPhone's `NoInviteQrCodes` says false;
 `PairingViewModel.qrAvailable`) the card draws no QR frame; where there is no share sheet, clipboard
-or scanner (the iPhone for now) the card offers no Share, no copy (the code stays, the line under
+or scanner (the iPhone has the share sheet since part C, and neither of the others yet) the card
+offers no Share, no copy (the code stays, the line under
 it says only how long it lasts) and the form no scan button; and the onboarding's notification step
 offers its button only where the phone asks for the permission. `QRScannerActivity`,
 `QrScannerScreen` and `AndroidInviteQrCodes` stay in the app. **Then the sign-in's and the profile's screens, with
@@ -2580,8 +2659,8 @@ and a finished file goes to `ShareSheet.shareFile`, whose Android half builds th
 built (`fileShareIntent` in `AndroidPlatform.kt`; the app keeps `recordShareIntent(file)` over it in
 `presentation/export/RecordShareIntent.kt` for `ExportFileWriterTest`). **The export offers its
 formats only where the phone draws and shares the file** (`RecordFileWriter.available`, new, true
-by default; the iPhone's `NoRecordFiles` says false; `ExportViewModel.exportAvailable`, and
-`ShareSheet.available`), the carried note's hiding. The contacts screen's call button and tappable
+by default; the iPhone's `NoRecordFiles` said false until part C's `IosRecordFileWriter`;
+`ExportViewModel.exportAvailable`, and `ShareSheet.available`), the carried note's hiding. The contacts screen's call button and tappable
 rows likewise appear only where `OpenUrl.available` (slice 11g review, I1). **Since 11e/11g a camera
 button (the receipt's, the vault's) is drawn only where `CameraCapture.available`**, which on Android
 asks whether the phone has a camera: every CI and UI-tour emulator boots with `-camera-back none`,
@@ -2716,7 +2795,8 @@ day, which `AddEditEventScreen` converts with `toKotlinLocalDate()`), in `eventU
 is a stored model, so `:shared-ui` applies the serialization plugin and `check-invariants.js`' checks
 4 and 5 read `shared-ui/` too; the R8 probe names it as before. Its photo goes through the domain's
 `RecordPhotoStorage`, which the iPhone's `platformDataModule` stands in for with
-`NoRecordPhotoStorage` (a data seam, beside `NoStorageBucket`) (every upload and delete an `IOException`: nothing stored, nothing dropped).
+`NoRecordPhotoStorage` (a data seam, beside `NoStorageBucket`) (every upload and delete an `IOException`: nothing stored, nothing dropped),
+until part C replaced the two with `IosRecordPhotoStorage` and `IosStorageBucket`.
 `EventViewModelTest` keeps Gson as the oracle for a draft an older build wrote (Gson 2.11.0 in
 `:shared-ui`'s `androidHostTest`), and `EventOwnerViewModelTest`'s check of the form's
 `autoEventOwner` moved to the app's `AddEditEventScreenTest`, where that function is.
@@ -2778,9 +2858,10 @@ edge: `ExpenseScreen` hands `monthPagingTransition` and its month label `toJavaY
 the payments' calls and `PendingSettleUp` take the month as it is (they converted it with
 `toKotlinYearMonth()` before); `SettleUpDialog` formats `pending.month.toJavaYearMonth()`. The
 receipt's on-device text goes through the domain's `ReceiptTextRecognizer`, which the iPhone's
-`platformDataModule` stands in for with `NoReceiptText` (every scan an `IOException`, so the form
-shows its failed-scan message, "Couldn't read the receipt" (`ReceiptScanState.Failed`), and keeps
-the photo; nothing is sent anywhere, item 10). The four `ExpenseViewModel` tests (MockK) run in
+`platformDataModule` stood in for with `NoReceiptText` (every scan an `IOException`, so the form
+showed its failed-scan message, "Couldn't read the receipt" (`ReceiptScanState.Failed`), and kept
+the photo; nothing is sent anywhere, item 10) until part C's `VisionReceiptText`, Apple's Vision on
+the phone. The four `ExpenseViewModel` tests (MockK) run in
 `androidHostTest`, unchanged but for their location.
 Then **payments and child support**: `PaymentsViewModel` and `SupportViewModel`, in `paymentsUiModule`
 and `supportUiModule`, on `SignedInUser` for the uid where they took `FirebaseAuthService`
@@ -2912,10 +2993,10 @@ slice 11g (no conversion since); the
 zone `TimeZone.currentSystemDefault()`, today `Clock.System.todayIn`, the default start three months
 back with `minus(3, DateTimeUnit.MONTH)` (java.time's `minusMonths`, the day clamped the same way).
 `ConnectSchoolViewModel`'s town filter folds case with `lowercase()`, what `lowercase(Locale.ROOT)`
-did. The iPhone's `platformDataModule` binds `NoRecordFiles` (it says `available` false, so the
-screen offers no format since slice 11g; rendering would fail and save nothing; the Family tab's,
-Earlier families' and the chat's ways into the export are still drawn there, carried to phase 3 in
-ROADMAP MON-24) and the school directory over its own client, as it binds the
+did. The iPhone's `platformDataModule` bound `NoRecordFiles` (it said `available` false, so the
+screen offered no format since slice 11g, while the Family tab's, Earlier families' and the chat's
+ways into the export were still drawn; part C's `IosRecordFileWriter`, a CSV and a PDF drawn with
+`UIGraphicsPDFRenderer`, made both real) and the school directory over its own client, as it binds the
 Bakaláři client. The three tests (MockK) run in `androidHostTest`. **Task 10 is done but for
 `AuthViewModel` and `SyncViewModel`**, which stay in the app until Task 11 (above); the app's
 `viewModelModule` holds those two alone (both moved in slice 11f, and `viewModelModule` with them).
@@ -2937,8 +3018,9 @@ constructor has no defaults, so a shell cannot leave one out. The app's `Provide
 the screens called (`Intent.createChooser`, the activity-result contracts, `QRScannerActivity`,
 `OnDeviceSpeechDictation`'s rule, `copySensitive`, `openSharedFile`, `BuildConfig`); `MainActivity`,
 `QRScannerActivity` and the screenshot frame (`ScreenshotFrame`) wrap their content in it. The
-iPhone's `iosPlatformServices(buildValues)` (`iosMain`) answers with stand-ins that are not available
-until phase 3 and 4, and its `ProvideIosShell(buildValues, credentialSignIn, content)` provides those with
+iPhone's `iosPlatformServices(buildValues)` (`iosMain`) answers with the iPhone's own where it has
+one (since part C the share sheet, the pickers, the camera, the images, the file details and the
+payment codes) and with stand-ins that are not available until phase 4 for the rest, and its `ProvideIosShell(buildValues, credentialSignIn, content)` provides those with
 the two locals `MainActivity` provides on its own (`LocalCredentialSignIn`, `LocalGoogleCalendarSignIn`),
 as the app's `IosCredentialSignIn` (Task 9 of phase 3) and the unavailable `NoGoogleCalendarSignIn`: with `CoPlanlyApp` inside it (Task
 12), the one call the phase-3 view controller makes. Three things not to undo. **A local read outside the provider throws** — no
@@ -2956,8 +3038,8 @@ never Coil itself: on Android `CoilImages` in `AndroidPlatform.kt` is the Coil 2
 `Size.ORIGINAL` with a crossfade for `fullResolution`, the zoomable viewer's), with the app's
 `ImageLoaderFactory` and `RecordPhotoFetcher` unchanged; a placeholder and `fullResolution` may be
 asked for together. Coil 3 is not part of MON-24 phase 2. `PlatformImages` says whether it is
-`available`: the iPhone's stand-in says no, so a screen whose point is the image (the photo strips,
-an attachment's thumbnail) leaves it out, and an image drawn anyway keeps its place and draws its
+`available`: a stand-in says no (the iPhone's did until part C's `IosImages`), so a screen whose
+point is the image (the photo strips, an attachment's thumbnail) leaves it out, and an image drawn anyway keeps its place and draws its
 placeholder. `PreviewWrapper` provides the platform too, so a moved screen's preview does not throw.
 **Chat's screens followed in slice 11b**, each with `git mv` to `:shared-ui`'s `commonMain`, package
 unchanged, so `NavGraph` calls `ConversationsScreen` and `ChatScreen` as before: every file of

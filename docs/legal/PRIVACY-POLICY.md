@@ -433,7 +433,9 @@ decision about anyone (Art. 22): it drafts words that you read, change and choos
 
 - **Receipt scanning.** When you photograph a receipt, the text is recognised **entirely on
   your device**. The photograph and the recognised text are not sent to any text-recognition
-  or AI service — writing help, if you turn it on, never receives a receipt.
+  or AI service — writing help, if you turn it on, never receives a receipt. On an Android phone
+  the text is read by Google's ML Kit and on an iPhone by Apple's Vision, each running on the
+  phone itself.
 - **Voice typing in chat.** If you use the microphone in the chat composer, your phone's own
   speech recognition turns what you say into text **on the device**. The app offers the
   microphone only on phones that can do this on the device, and never uses an online speech

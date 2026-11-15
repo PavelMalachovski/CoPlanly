@@ -278,8 +278,8 @@ Google's data processing terms apply as a fallback.
   invitation codes, which stops a sweep of codes at ten an hour per account.
 - **Encryption**: TLS in transit; Google's encryption at rest; on the device, SQLCipher with a
   Keystore-wrapped key, sealed preferences, backup and device transfer disabled.
-- **Minimisation by design**: private events and the journal never leave the device; on-device OCR;
-  pushes carry a type and names rather than sentences (a chat push alone carries the start of the
+- **Minimisation by design**: private events and the journal never leave the device; on-device OCR
+  (ML Kit on Android, Apple Vision on the iPhone); pushes carry a type and names rather than sentences (a chat push alone carries the start of the
   message); telemetry off until consent; AI writing help off until consent, capped at
   20 messages or a fixed list of numbers, and never stored or logged.
 - **Integrity**: immutable messages and revisions; server timestamps; SHA-256 on every shared file

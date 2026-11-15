@@ -36,6 +36,12 @@ and again on 10 November. This phase is where that look is first built.
 | What a screen shows where a board differs from Android | What Android shows: the boards bind the frame, the controls and the style, not a screen's content. | Owner, 10 Nov 2026 |
 | The release build on the new toolchain | Built from `main` after the merge (`release.yml`), then installed over the beta on a phone. | Owner, 10 Nov 2026 |
 | Before merging phases 1–2 | A final review of the whole branch, then the full CI, then the merge of pull request #158. Phase 3 starts from `main` after it. | Owner, 10 Nov 2026 |
+| The iPhone's look | **The November redesign's** (`docs/superpowers/specs/2026-11-12-zuzana-redesign-design.md`): the lavender ground, white cards with 24 dp corners and a hairline, the indigo `#4F46E5` tint, and the wordmark header leading Calendar and Home with no system bar over them. Only the controls are the system's. This replaces part D's "system colours for backgrounds" (§6). | Owner, 15 Nov 2026 |
+| What part D keeps | SF Pro, Dynamic Type, SF Symbols in content and Increase Contrast; dark mode. Not the system's background colours. | Owner, 15 Nov 2026 |
+| The controls' before/after pairs | The eight control boards on the canvas (https://claude.ai/artifact/732JJxDHeHtUp8zLFAdUTH, third row) approved: date and time, switch, segments (Month/Week/Day), menus (Repeat, Reminder, ⋯), the in-screen sheet, confirmation and action sheet, grouped rows, and share, file and photo. The seven iPhone boards redrawn on the November redesign approved with them. | Owner, 15 Nov 2026 |
+| The switch's colour | The system's green, not the tint (the Switch board). | Owner, 15 Nov 2026 |
+| A choice of more than five | Stays chips (currencies, countries, contact-window days, "Answer by"); only segmented rows become `UISegmentedControl`. | Part C plan, 15 Nov 2026 |
+| A dialog that carries content | Stays a Compose dialog (the colour picker, the region, family kind and split dialogs, Settle up, a proposal); only a question with buttons becomes an alert or action sheet. | Part C plan, 15 Nov 2026 |
 
 How design is agreed from here on:
 
@@ -281,8 +287,8 @@ owner has agreed, and ends with simulator screenshots beside the canvas.
 | --- | --- | --- |
 | **A. Proof and skeleton** | The Xcode project and its CI job. The shell with the four tabs. Native bars on the tabs' first screens and on one path three levels deep (Family → Expenses → Add expense as a sheet) and Settings. Sign-in by e-mail and Google. The foreground sync. The three fixes and the write gate of §5.6. | The owner signs in on their Mac and walks that path with real data. §7's open points get their answers. |
 | **B. Every screen** | All 45 bars and 51 destinations on the shell. Every form a sheet. Insets as §5.5. Deep links. | Every screen reachable on iPhone with a system bar. Android unchanged. |
-| **C. Adaptive controls** | The parent design's §5.3 table: date and time pickers, switch, segmented choice, menus, in-screen sheets, confirmation dialogs and action sheets, grouped rows and lists, the share, file and photo pickers. | Controls are the system's. Each kind is agreed as a before/after pair first. |
-| **D. Theme** | System colours for backgrounds, labels and separators with the CoPlanly indigo as tint; dark mode; SF Pro and Dynamic Type; SF Symbols in content, mapped one to one from the 131 Material icons in use; Increase Contrast. | The seven boards are met, in light and dark. |
+| **C. Adaptive controls** | The parent design's §5.3 table: date and time pickers, switch, segmented choice, menus, in-screen sheets, confirmation dialogs and action sheets, grouped rows and lists, the share, file and photo pickers. Built with the photos, files, payment codes, receipt reading and the export on the iPhone, and Calendar and Home led by the redesign's header (plan `docs/superpowers/plans/2026-11-15-iphone-phase-3c-controls-files-photos.md`). | Controls are the system's. Each kind is agreed as a before/after pair first (the eight boards, approved 15 November 2026). |
+| **D. Theme** | ~~System colours for backgrounds, labels and separators with the CoPlanly indigo as tint~~ (the owner kept the November redesign's look on 15 November 2026, §2); dark mode; SF Pro and Dynamic Type; SF Symbols in content, mapped one to one from the 131 Material icons in use; Increase Contrast. | The seven boards are met, in light and dark. |
 
 Part A is first because everything else stands on it and because its risks are the ones that could
 change the design (§7). Parts B to D are planned in detail when A's answers are in.
