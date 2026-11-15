@@ -184,20 +184,37 @@ fun ChatComposerMenu(
     }
     picked?.let { uri ->
         val name = remember(uri) { fileDetails.describe(uri) }
-        AlertDialog(
-            onDismissRequest = { picked = null },
-            title = { Text(stringResource(Res.string.chat_attach_confirm_title)) },
-            text = { Text(stringResource(Res.string.chat_attach_confirm_body, name.name, name.size)) },
-            confirmButton = {
-                TextButton(onClick = {
+        if (native != null) {
+            // The iPhone: a question with two answers is the system's alert.
+            native.Confirm(
+                title = stringResource(Res.string.chat_attach_confirm_title),
+                message = stringResource(Res.string.chat_attach_confirm_body, name.name, name.size),
+                confirmText = stringResource(Res.string.chat_attach_send),
+                dismissText = stringResource(Res.string.shared_file_cancel),
+                destructive = false,
+                asActionSheet = false,
+                onConfirm = {
                     viewModel.send(conversationId, uri)
                     picked = null
-                }) { Text(stringResource(Res.string.chat_attach_send)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { picked = null }) { Text(stringResource(Res.string.shared_file_cancel)) }
-            }
-        )
+                },
+                onDismiss = { picked = null }
+            )
+        } else {
+            AlertDialog(
+                onDismissRequest = { picked = null },
+                title = { Text(stringResource(Res.string.chat_attach_confirm_title)) },
+                text = { Text(stringResource(Res.string.chat_attach_confirm_body, name.name, name.size)) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        viewModel.send(conversationId, uri)
+                        picked = null
+                    }) { Text(stringResource(Res.string.chat_attach_send)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { picked = null }) { Text(stringResource(Res.string.shared_file_cancel)) }
+                }
+            )
+        }
     }
 }
 

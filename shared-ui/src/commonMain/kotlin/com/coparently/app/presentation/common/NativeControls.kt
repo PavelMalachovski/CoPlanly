@@ -170,6 +170,59 @@ interface NativeControls {
         background: Color,
         modifier: Modifier
     )
+
+    /**
+     * A question with two answers, shown while this composable is composed: on the iPhone a
+     * `UIAlertController`, presented once when this enters composition and taken away without
+     * calling back when it leaves. As an alert ([asActionSheet] false) it shows [title], [message]
+     * and the two answers side by side; as an action sheet it rises from the bottom with [title] and
+     * [message] over the confirm action and a separate Cancel. A [destructive] confirm is drawn in
+     * the system's red (`.destructive`), the dismiss is always `.cancel`.
+     *
+     * Each answer calls its own lambda once: the confirm [onConfirm] alone, as Material's confirm
+     * button does, and the dismiss [onDismiss]. If the system cannot present it at all, it ends as a
+     * dismissal, so [onDismiss] is called once and the caller's flag is released.
+     *
+     * @param title The question
+     * @param message What answering does
+     * @param confirmText The confirm action's title
+     * @param dismissText The cancel action's title
+     * @param destructive Whether the confirm destroys something: drawn red
+     * @param asActionSheet Whether it is an action sheet rather than an alert: a destructive
+     *   confirmation of an action is one; a question with two answers ("Discard changes?") is an
+     *   alert even when one answer is red
+     * @param onConfirm Called once when the parent confirms
+     * @param onDismiss Called once when the parent cancels, or when it could not be shown
+     */
+    @Composable
+    @Suppress("LongParameterList") // the question, its two answers, how they look and what they do
+    fun Confirm(
+        title: String,
+        message: String,
+        confirmText: String,
+        dismissText: String,
+        destructive: Boolean,
+        asActionSheet: Boolean,
+        onConfirm: () -> Unit,
+        onDismiss: () -> Unit
+    )
+
+    /**
+     * A choice among [items], shown while this composable is composed: on the iPhone a
+     * `UIAlertController` action sheet with [title] (none for null), one action per item (a
+     * destructive item in red, a disabled one dimmed) and the system's Cancel. Leaving composition
+     * takes it away without calling back.
+     *
+     * An item calls the latest [items]' entry at its place, once, and nothing else, as a Material
+     * menu item does: the item closes the caller's state itself. Cancel, or a sheet the system could
+     * not present, calls [onDismiss] once.
+     *
+     * @param title The sheet's title, or null for none
+     * @param items The actions, in order
+     * @param onDismiss Called once when the parent cancels, or when it could not be shown
+     */
+    @Composable
+    fun ActionSheet(title: String?, items: List<BarMenuItem>, onDismiss: () -> Unit)
 }
 
 /**

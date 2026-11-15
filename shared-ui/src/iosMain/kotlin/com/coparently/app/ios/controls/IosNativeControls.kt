@@ -223,6 +223,60 @@ internal object IosNativeControls : NativeControls {
         )
     }
 
+    /**
+     * A [confirmAlert] presented from the screen's own view controller while this is composed: an
+     * alert, or an action sheet when [asActionSheet]. Each answer calls its lambda once; leaving
+     * composition takes it away without calling back.
+     */
+    @Composable
+    @Suppress("LongParameterList") // the interface's member
+    override fun Confirm(
+        title: String,
+        message: String,
+        confirmText: String,
+        dismissText: String,
+        destructive: Boolean,
+        asActionSheet: Boolean,
+        onConfirm: () -> Unit,
+        onDismiss: () -> Unit
+    ) {
+        val confirm by rememberUpdatedState(onConfirm)
+        val dismiss by rememberUpdatedState(onDismiss)
+        AlertWhileComposed {
+            confirmAlert(
+                title = title,
+                message = message,
+                confirmText = confirmText,
+                dismissText = dismissText,
+                destructive = destructive,
+                asActionSheet = asActionSheet,
+                onConfirm = { confirm() },
+                onDismiss = { dismiss() }
+            )
+        }
+    }
+
+    /**
+     * A [menuActionSheet] presented from the screen's own view controller while this is composed,
+     * with the app's Cancel. An item runs the latest items' entry at its place; leaving composition
+     * takes the sheet away without calling back.
+     */
+    @Composable
+    override fun ActionSheet(title: String?, items: List<BarMenuItem>, onDismiss: () -> Unit) {
+        val latest by rememberUpdatedState(items)
+        val dismiss by rememberUpdatedState(onDismiss)
+        val cancelText = stringResource(Res.string.common_dialog_cancel)
+        AlertWhileComposed {
+            menuActionSheet(
+                title = title,
+                items = items,
+                cancelText = cancelText,
+                onItem = { index -> latest.getOrNull(index)?.onClick?.invoke() },
+                onDismiss = { dismiss() }
+            )
+        }
+    }
+
     /** The switch's intrinsic size in points, measured once from UIKit's own switch. */
     // `CGRectMake` and `useContents` are Kotlin/Native's C interop.
     @OptIn(ExperimentalForeignApi::class)
@@ -263,6 +317,21 @@ private fun PresentedWhileComposed(build: () -> PickerSheet) {
         val sheet = build()
         sheet.present(host)
         onDispose { sheet.close() }
+    }
+}
+
+/**
+ * Presents the alert [build] makes from the screen's own view controller when this enters
+ * composition, once, and takes it away without calling back when it leaves, as
+ * [PresentedWhileComposed] does for a picker sheet.
+ */
+@Composable
+private fun AlertWhileComposed(build: () -> AlertSheet) {
+    val host = LocalUIViewController.current
+    DisposableEffect(Unit) {
+        val alert = build()
+        alert.present(host)
+        onDispose { alert.close() }
     }
 }
 

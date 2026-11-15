@@ -79,6 +79,31 @@ class RecordingNativeControls : NativeControls {
     /** Every menu button drawn, in the order of composition. */
     val menuButtons = mutableListOf<MenuButtonCall>()
 
+    /** One confirmation asked: its question, answers and how it was to be shown. */
+    data class ConfirmCall(
+        val title: String,
+        val message: String,
+        val confirmText: String,
+        val dismissText: String,
+        val destructive: Boolean,
+        val asActionSheet: Boolean
+    )
+
+    /** Every confirmation composed, in the order of composition. */
+    val confirms = mutableListOf<ConfirmCall>()
+
+    /** The latest confirmation's confirm, for a test that answers it. */
+    var lastConfirm: (() -> Unit)? = null
+
+    /** The latest confirmation's or action sheet's dismiss, for a test that cancels it. */
+    var lastAlertDismiss: (() -> Unit)? = null
+
+    /** One action sheet shown: its title and its entries. */
+    data class ActionSheetCall(val title: String?, val items: List<BarMenuItem>)
+
+    /** Every action sheet composed, in the order of composition. */
+    val actionSheets = mutableListOf<ActionSheetCall>()
+
     /** The colour each native control was told it sits on, in the order of composition. */
     val backgrounds = mutableListOf<Color>()
 
@@ -174,7 +199,38 @@ class RecordingNativeControls : NativeControls {
         Box(modifier.size(80.dp, 34.dp).testTag(COMPACT_TIME_TAG))
     }
 
+    @Composable
+    @Suppress("LongParameterList") // the interface's member
+    override fun Confirm(
+        title: String,
+        message: String,
+        confirmText: String,
+        dismissText: String,
+        destructive: Boolean,
+        asActionSheet: Boolean,
+        onConfirm: () -> Unit,
+        onDismiss: () -> Unit
+    ) {
+        confirms += ConfirmCall(title, message, confirmText, dismissText, destructive, asActionSheet)
+        lastConfirm = onConfirm
+        lastAlertDismiss = onDismiss
+        Box(Modifier.size(1.dp).testTag(CONFIRM_TAG))
+    }
+
+    @Composable
+    override fun ActionSheet(title: String?, items: List<BarMenuItem>, onDismiss: () -> Unit) {
+        actionSheets += ActionSheetCall(title, items)
+        lastAlertDismiss = onDismiss
+        Box(Modifier.size(1.dp).testTag(ACTION_SHEET_TAG))
+    }
+
     companion object {
+        /** The test tag of a confirmation this fake drew. */
+        const val CONFIRM_TAG = "native-confirm"
+
+        /** The test tag of an action sheet this fake drew. */
+        const val ACTION_SHEET_TAG = "native-action-sheet"
+
         /** The test tag of a menu button this fake drew. */
         const val MENU_BUTTON_TAG = "native-menu-button"
 

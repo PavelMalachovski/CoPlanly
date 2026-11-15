@@ -11,7 +11,8 @@ import XCTest
 /// its overflow menu opening and closing, a sheet holding an edit swiped down, which
 /// must ask "Discard changes?" and stay open on "Keep editing", the event form as a sheet with Save in
 /// its bar (disabled until the event has a title), its Starts date picked in the system's own
-/// calendar, "Jump to date" as a sheet a swipe down closes, New event's description and the chat composer
+/// calendar, "Jump to date" as a sheet a swipe down closes, an event's delete asked in the system's
+/// action sheet and cancelled ("Discard changes?" being its alert), New event's description and the chat composer
 /// staying above the keyboard, a `coplanly://pair` link reaching the pairing screen with its code, and
 /// a sign-out reaching the sign-in screen with no tabs, then a
 /// sign-in landing on fresh tabs, and last, deleting the account from Settings, which reaches the
@@ -92,6 +93,9 @@ final class ShellUITests: XCTestCase {
         }
         // After the event form's steps: they reuse its open sheet, and this one needs the calendar bare.
         step("Jump to date is a sheet a swipe closes", after: ["Calendar and Chat tabs"]) { try self.jumpToDateSwipeDown() }
+        step("deleting an event asks in an action sheet, and Cancel keeps it", after: ["Jump to date is a sheet a swipe closes"]) {
+            try self.deleteEventAsks()
+        }
         step("a coplanly://pair link opens Pairing with its code", after: ["sign in"]) { try self.pairingLink() }
         step("sign out, and sign in to fresh tabs", after: ["Settings"]) {
             try self.signOutAndIn(email: email, password: password)
@@ -219,6 +223,9 @@ final class ShellUITests: XCTestCase {
         dismissKeyboard()
         swipeSheetDown(from: sheetBar)
         try require(app.staticTexts["Discard changes?"].waitForExistence(timeout: timeout), "A swipe over edits did not ask first")
+        // A question with two answers is the system's alert, not an action sheet (part C, Task 5).
+        try require(app.alerts["Discard changes?"].exists, "Discard changes? is not the system's alert")
+        try require(!app.sheets.firstMatch.exists, "Discard changes? was asked in an action sheet")
         shot("05-discard-question")
     }
 
@@ -443,6 +450,62 @@ final class ShellUITests: XCTestCase {
         try require(sheetBar.waitForNonExistence(timeout: timeout), "Cancel did not close the jump-to-date sheet")
         try require(app.navigationBars[calendarMonthTitle].exists, "The calendar moved after a cancelled jump")
     }
+
+    /// Deleting an event asks first, in the system's action sheet (MON-24 phase 3, part C, Task 5):
+    /// "Delete event" over a red Delete and a separate Cancel. It saves an event of its own, opens
+    /// it from the calendar into its form, asks to delete it from the form's bar, and cancels: the
+    /// form stays open, and once closed the event is still on the calendar.
+    private func deleteEventAsks() throws {
+        try goToCalendarRoot()
+        press(try element(labelled: "Add event", in: app.buttons))
+        let newBar = app.navigationBars["New event"]
+        try require(newBar.waitForExistence(timeout: timeout), "The event form did not open")
+        // The new event's draft may still hold the earlier steps' title; the check's words are
+        // appended to it, and everything below looks the event up by what its label contains.
+        try type(deleteCheckTitle, into: field(labelled: "Event title"))
+        dismissKeyboard()
+        let save = newBar.buttons["Save event"]
+        try require(waitUntilEnabled(save), "Save stayed disabled once the event had a title")
+        press(save)
+        try require(newBar.waitForNonExistence(timeout: timeout), "Saving did not close the event form")
+
+        // A tap on the month cell opens Day view; a tap on the event there opens its preview.
+        let edit = app.buttons.matching(NSPredicate(format: "label == %@", "Edit")).firstMatch
+        for _ in 0..<3 where !edit.exists {
+            guard let event = tourTopmost(containing: deleteCheckTitle) else {
+                throw StepFailure(description: "Nothing on the calendar reads \"\(deleteCheckTitle)\"")
+            }
+            press(event)
+            _ = edit.waitForExistence(timeout: 5)
+        }
+        try require(edit.exists, "The saved event's preview did not open")
+        press(edit)
+        let editBar = app.navigationBars["Edit event"]
+        try require(editBar.waitForExistence(timeout: timeout), "Edit did not open the event's form")
+
+        press(try element(labelled: "Delete event", in: editBar.buttons))
+        let sheet = app.sheets.firstMatch
+        try require(sheet.waitForExistence(timeout: timeout), "Delete did not ask in the system's action sheet")
+        try require(!app.alerts.firstMatch.exists, "Delete asked in an alert, not an action sheet")
+        try require(sheet.staticTexts["Delete event"].exists, "The action sheet is not titled Delete event")
+        try require(sheet.buttons["Delete"].exists, "The action sheet has no Delete")
+        let cancel = sheet.buttons["Cancel"]
+        try require(cancel.exists, "The action sheet has no Cancel")
+        shot("17c-delete-event-action-sheet")
+        cancel.tap()
+        try require(sheet.waitForNonExistence(timeout: timeout), "Cancel left the action sheet up")
+        try require(editBar.exists, "Cancel closed the event's form")
+
+        closeButton(of: editBar).tap()
+        try require(editBar.waitForNonExistence(timeout: timeout), "The event's form did not close")
+        try require(
+            element(labelledContaining: deleteCheckTitle).waitForExistence(timeout: timeout),
+            "The event was deleted although the parent cancelled"
+        )
+    }
+
+    /// The title of the event `deleteEventAsks` saves and then does not delete.
+    private let deleteCheckTitle = "Shell delete check"
 
     /// A new event asks nothing when it is left: its draft is kept as the parent types and comes
     /// back on the next "+" (CLAUDE.md design item 16), so a swipe down closes the sheet at once.

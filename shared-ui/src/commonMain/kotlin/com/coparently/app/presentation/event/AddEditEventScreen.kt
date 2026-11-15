@@ -111,6 +111,7 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.eventTypeLabel
+import com.coparently.app.presentation.common.nativeControls
 import com.coparently.app.presentation.common.rememberAnswerByOffer
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.rememberParentNames
@@ -1800,68 +1801,100 @@ fun AddEditEventScreen(
 
     // Delete Confirmation Dialog
     if (showDeleteDialog && eventId != null) {
-        AlertDialog(
-            onDismissRequest = {
-                if (!isDeleting) {
-                    showDeleteDialog = false
-                }
-            },
-            title = {
-                Text(stringResource(Res.string.event_form_delete_dialog_title))
-            },
-            text = {
-                Text(stringResource(Res.string.event_form_delete_dialog_message))
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        isDeleting = true
-                        scope.launch {
-                            try {
-                                val event = viewModel.getEventById(eventId)
-                                event?.let {
-                                    viewModel.deleteEvent(it)
-                                    snackbarHostState.showSnackbar(
-                                        message = eventDeletedMessage,
-                                        duration = SnackbarDuration.Short
-                                    )
-                                    kotlinx.coroutines.delay(500)
-                                    onSave() // Navigate back
-                                } ?: run {
-                                    snackbarHostState.showSnackbar(
-                                        message = notFoundMessage,
-                                        duration = SnackbarDuration.Short
-                                    )
-                                    isDeleting = false
-                                    showDeleteDialog = false
-                                }
-                            } catch (e: Exception) {
-                                snackbarHostState.showSnackbar(
-                                    message = deleteFailedMessage,
-                                    duration = SnackbarDuration.Long
-                                )
-                                isDeleting = false
-                                showDeleteDialog = false
-                            }
+        DeleteEventDialog(
+            isDeleting = isDeleting,
+            onConfirm = {
+                isDeleting = true
+                scope.launch {
+                    try {
+                        val event = viewModel.getEventById(eventId)
+                        event?.let {
+                            viewModel.deleteEvent(it)
+                            snackbarHostState.showSnackbar(
+                                message = eventDeletedMessage,
+                                duration = SnackbarDuration.Short
+                            )
+                            kotlinx.coroutines.delay(500)
+                            onSave() // Navigate back
+                        } ?: run {
+                            snackbarHostState.showSnackbar(
+                                message = notFoundMessage,
+                                duration = SnackbarDuration.Short
+                            )
+                            isDeleting = false
+                            showDeleteDialog = false
                         }
-                    },
-                    enabled = !isDeleting
-                ) {
-                    Text(stringResource(Res.string.event_delete), color = MaterialTheme.colorScheme.error)
+                    } catch (e: Exception) {
+                        snackbarHostState.showSnackbar(
+                            message = deleteFailedMessage,
+                            duration = SnackbarDuration.Long
+                        )
+                        isDeleting = false
+                        showDeleteDialog = false
+                    }
                 }
             },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteDialog = false
-                    },
-                    enabled = !isDeleting
-                ) {
-                    Text(stringResource(Res.string.event_form_cancel))
-                }
-            }
+            onDismiss = { showDeleteDialog = false }
         )
     }
+}
+
+/**
+ * Asks before an event is deleted. Under the iPhone's native controls it is the system's action
+ * sheet, Delete in red, which goes away once answered; otherwise Material's dialog, whose answers
+ * are disabled while [isDeleting] and which stays up until the delete has run.
+ *
+ * @param isDeleting Whether the delete is under way: nothing may dismiss it then
+ * @param onConfirm Deletes the event
+ * @param onDismiss Closes the question
+ */
+@Composable
+private fun DeleteEventDialog(isDeleting: Boolean, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val title = stringResource(Res.string.event_form_delete_dialog_title)
+    val message = stringResource(Res.string.event_form_delete_dialog_message)
+    val native = nativeControls()
+    if (native != null) {
+        native.Confirm(
+            title = title,
+            message = message,
+            confirmText = stringResource(Res.string.event_delete),
+            dismissText = stringResource(Res.string.event_form_cancel),
+            destructive = true,
+            asActionSheet = true,
+            onConfirm = onConfirm,
+            onDismiss = { if (!isDeleting) onDismiss() }
+        )
+        return
+    }
+    AlertDialog(
+        onDismissRequest = {
+            if (!isDeleting) {
+                onDismiss()
+            }
+        },
+        title = {
+            Text(title)
+        },
+        text = {
+            Text(message)
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = !isDeleting
+            ) {
+                Text(stringResource(Res.string.event_delete), color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !isDeleting
+            ) {
+                Text(stringResource(Res.string.event_form_cancel))
+            }
+        }
+    )
 }
 
 /**

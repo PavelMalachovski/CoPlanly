@@ -12,6 +12,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertHasNoClickAction
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -299,6 +300,74 @@ class NativeControlsTest {
         assertEquals(listOf(card, Color.Red), fake.backgrounds.takeLast(2))
     }
 
+    @Test
+    fun `a destructive confirmation under native controls is an action sheet`() {
+        var confirmed = 0
+        rule.setContent {
+            CompositionLocalProvider(LocalNativeControls provides fake) {
+                ConfirmationDialog(
+                    title = DELETE_TITLE,
+                    message = DELETE_MESSAGE,
+                    confirmText = DELETE,
+                    dismissText = DISMISS,
+                    onConfirm = { confirmed++ },
+                    onDismiss = {},
+                    isDestructive = true
+                )
+            }
+        }
+        rule.waitForIdle()
+
+        val asked = fake.confirms.last()
+        assertEquals(
+            RecordingNativeControls.ConfirmCall(
+                title = DELETE_TITLE,
+                message = DELETE_MESSAGE,
+                confirmText = DELETE,
+                dismissText = DISMISS,
+                destructive = true,
+                asActionSheet = true
+            ),
+            asked
+        )
+        rule.onNodeWithText(DELETE_TITLE).assertDoesNotExist()
+        fake.lastConfirm?.invoke()
+        assertEquals(1, confirmed)
+    }
+
+    @Test
+    fun `discard changes is an alert`() {
+        rule.setContent {
+            CompositionLocalProvider(LocalNativeControls provides fake) {
+                val guard = rememberDiscardGuard(dirty = true, onLeave = {})
+                Text(LEAVE, modifier = Modifier.clickable { guard() })
+            }
+        }
+        rule.onNodeWithText(LEAVE).performClick()
+        rule.waitForIdle()
+
+        assertTrue(fake.confirms.isNotEmpty())
+        val asked = fake.confirms.last()
+        assertTrue(asked.destructive)
+        assertFalse(asked.asActionSheet)
+    }
+
+    @Test
+    fun `without native controls ConfirmationDialog is Material's`() {
+        rule.setContent {
+            ConfirmationDialog(
+                title = DELETE_TITLE,
+                message = DELETE_MESSAGE,
+                onConfirm = {},
+                onDismiss = {},
+                isDestructive = true
+            )
+        }
+
+        rule.onNodeWithText(DELETE_TITLE).assertIsDisplayed()
+        assertTrue(fake.confirms.isEmpty())
+    }
+
     /** A repeat row as the event form draws one: the row opens a dialog that names itself. */
     @Composable
     private fun OptionRow(onSelect: (String?) -> Unit, selected: String? = "weekly") {
@@ -321,6 +390,10 @@ class NativeControlsTest {
         const val MATERIAL_SEGMENTS = "Material segments"
         const val NATIVE_ROW = "Pause before sending"
         const val MATERIAL_ROW = "Share usage data"
+        const val DELETE_TITLE = "Delete event"
+        const val DELETE_MESSAGE = "This cannot be undone."
+        const val DELETE = "Delete"
+        const val LEAVE = "Leave the form"
         const val REPEAT_ROW = "Repeat"
         const val REPEAT_DIALOG = "Choose how it repeats"
         val REPEAT_OPTIONS = listOf<Pair<String?, String>>(
