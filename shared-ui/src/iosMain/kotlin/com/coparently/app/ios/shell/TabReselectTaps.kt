@@ -12,23 +12,23 @@ import platform.UIKit.UIGestureRecognizerStateEnded
 import platform.UIKit.UITabBarController
 import platform.UIKit.UITapGestureRecognizer
 import platform.UIKit.UITouch
-import platform.UIKit.UIViewController
 import platform.darwin.NSObject
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
 
 /**
- * Every tap on the tab already selected in [controller]'s tab bar, told to [onReselect] with that
- * tab's view controller (MON-24 phase 3, part C).
+ * Every tap on [controller]'s tab bar, by tab index (MON-24 phase 3, part C): [onReselect] for a tap
+ * that left the tab selected, [onChange] for one that selected another.
  *
- * UIKit's delegate is not a reliable witness of such a tap: on the iOS 26 simulator in CI a tap on
- * the selected Calendar tab reached neither `tabBarController(_:didSelect:)` nor
- * `tabBarController(_:shouldSelect:)` (the walk and the tour each found Day view still open, with
- * its bar, after the tap that `CalendarTabTaps` answers by opening Month). So the tab bar's own
- * touches are watched: a tap recognizer on the bar, which never cancels or delays the bar's touches
- * and recognizes beside the bar's own gestures, notes the tab selected when the touch begins, and
- * once UIKit has handled the tap, reports the tab if it is still the one selected. A tap that
- * changes the tab is UIKit's `didSelect` to report, not this.
+ * UIKit's delegate is not a reliable witness on the iOS 26 simulator in CI: there no tap reached the
+ * shell through `tabBarController(_:didSelect:)`, not even one that changed the tab (CI run 9's
+ * `COPLANLY_TABTAP` trace logged every touch here and no Calendar count), and a tap on the selected
+ * Calendar tab left Day view open. So the tab bar's own touches are watched: a tap recognizer on
+ * the bar, which never cancels or delays the bar's touches and recognizes beside the bar's own
+ * gestures, notes the selected index when the touch begins and, once UIKit has handled the tap,
+ * compares it with the selected index then. Indices, not the view controllers: in the same trace
+ * the selected controller read before and after a tap on the selected tab never compared as the
+ * same object. A tap reported by the delegate as well is counted twice, which nothing minds.
  *
  * A tap on the bar outside every item (its margins) also leaves the tab selected, and is reported
  * as a reselection too: the only answer to one is to show the tab's start, which is what a tap on
@@ -41,11 +41,12 @@ import platform.darwin.dispatch_get_main_queue
 @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 internal class TabReselectTaps(
     private val controller: UITabBarController,
-    private val onReselect: (UIViewController) -> Unit
+    private val onReselect: (Int) -> Unit,
+    private val onChange: (Int) -> Unit
 ) : NSObject(), UIGestureRecognizerDelegateProtocol {
 
-    /** The tab selected when the tap's touch began, until the tap ends or fails. */
-    private var selectedAtTouch: UIViewController? = null
+    /** The tab index selected when the tap's touch began, until the tap ends. */
+    private var selectedAtTouch: Int? = null
 
     private val recognizer = UITapGestureRecognizer(target = this, action = NSSelectorFromString("tapped:")).also {
         it.cancelsTouchesInView = false
@@ -74,14 +75,21 @@ internal class TabReselectTaps(
         selectedAtTouch = null
         // After UIKit's own handling of the same tap, which may have moved to another tab.
         dispatch_async(dispatch_get_main_queue()) {
-            if (controller.selectedViewController === before) onReselect(before)
+            val now = controller.selectedIndex.toInt()
+            if (now == before) {
+                tabTapLog("reselect index=$now")
+                onReselect(now)
+            } else {
+                tabTapLog("changed from=$before to=$now")
+                onChange(now)
+            }
         }
     }
 
     @ObjCSignatureOverride
     override fun gestureRecognizer(gestureRecognizer: UIGestureRecognizer, shouldReceiveTouch: UITouch): Boolean {
-        selectedAtTouch = controller.selectedViewController
-        tabTapLog("recognizer touch")
+        selectedAtTouch = controller.selectedIndex.toInt()
+        tabTapLog("recognizer touch index=$selectedAtTouch")
         return true
     }
 

@@ -150,8 +150,9 @@ internal class StackHost(
 
     /** The stack's first screen, while UIKit shows one. */
     private val rootScreen: ScreenController?
-        get() = navigation.viewControllers.firstOrNull()?.let { root ->
-            screens.values.firstOrNull { it.viewController === root }
+        get() = (navigation.viewControllers.firstOrNull() as? UIViewController)?.let { root ->
+            // `isEqual`, Objective-C's identity, whatever Kotlin/Native's wrappers compare as.
+            screens.values.firstOrNull { root.isEqual(it.viewController) }
         }
 
     /** Whether the stack's first screen has an inner step its back undoes first. */

@@ -348,13 +348,17 @@ internal class TabShell(
             onRootFlowRequested = shell::showRootFlow
         )
     }
-    private val tabDelegate = TabDelegate(::tabTapped)
+    private val tabDelegate = TabDelegate { index -> tabTapped(index, "delegate") }
 
     /** The tab bar controller the shell shows. */
     val controller: UITabBarController = UITabBarController()
 
-    /** A tap on the tab already selected, which [tabDelegate] is not told of. */
-    private val reselectTaps = TabReselectTaps(controller, ::tabReselected)
+    /** Every tap on the tab bar, which [tabDelegate] is not reliably told of. */
+    private val reselectTaps = TabReselectTaps(
+        controller,
+        onReselect = ::tabReselected,
+        onChange = { index -> tabTapped(index, "recognizer") }
+    )
 
     init {
         BottomNavDestination.entries.forEach { tab ->
@@ -429,44 +433,47 @@ internal class TabShell(
 
     private fun host(tab: BottomNavDestination): StackHost = hosts[tab.ordinal]
 
-    /** A tap on a tab, a change or a reselection: the tab is the one seen, and the Calendar counts it. */
-    private fun tabTapped(selected: UIViewController) {
-        hosts.firstOrNull { it.navigation === selected }?.let { shell.visibility.selectedStack = it.startRoute }
-        if (selected === host(BottomNavDestination.CALENDAR).navigation) {
+    /**
+     * A tap that left the tab at [index] selected, as [source] reported it: the tab is the one seen,
+     * and the Calendar counts it. By index, the tab bar's order being [BottomNavDestination]'s.
+     */
+    private fun tabTapped(index: Int, source: String) {
+        val tab = BottomNavDestination.entries.getOrNull(index) ?: return
+        shell.visibility.selectedStack = tab.route
+        if (tab == BottomNavDestination.CALENDAR) {
             CalendarTabTaps.tap()
-            tabTapLog("calendar counted count=${CalendarTabTaps.count.value}")
+            tabTapLog("calendar counted count=${CalendarTabTaps.count.value} from $source")
         }
     }
 
     /**
-     * A tap the parent made on the tab already selected, [selected], which [reselectTaps] saw (a
+     * A tap the parent made on the tab already selected, at [index], which [reselectTaps] saw (a
      * touch on the tab bar, never a selection made in code, so not the first selection at sign-in).
      * On the Calendar it also undoes the first screen's inner step (Day view opened from a month
      * cell), as its bar's back would, so the tap shows Month even if the screen does not answer
      * `CalendarTabTaps`.
      */
-    private fun tabReselected(selected: UIViewController) {
-        tabTapLog("reselect")
-        tabTapped(selected)
-        val calendar = host(BottomNavDestination.CALENDAR)
-        if (selected !== calendar.navigation) return
-        tabTapLog("calendar rootStepUndone=${calendar.undoRootStep()}")
+    private fun tabReselected(index: Int) {
+        tabTapped(index, "reselect")
+        if (BottomNavDestination.entries.getOrNull(index) != BottomNavDestination.CALENDAR) return
+        val undone = host(BottomNavDestination.CALENDAR).undoRootStep()
+        tabTapLog("calendar rootStepUndone=$undone")
     }
 
     /**
-     * Tells [onSelect] of every tap that selects another tab. A tap on the tab already selected is
-     * [TabReselectTaps]'s to report: on the iOS 26 simulator in CI it reached this delegate neither
-     * as `didSelect` nor as `shouldSelect`. Should a release call `didSelect` for it as well, the
-     * tap is counted twice, which nothing minds (`CalendarTabTaps` answers by showing Month on
-     * today, whatever the count). A selection made in code reaches neither.
+     * Tells [onSelect] of a tap that selects another tab, by the index selected then, should UIKit
+     * call `didSelect`: on the iOS 26 simulator in CI it did not, for any tap (CI run 9's trace),
+     * which is why [TabReselectTaps] reports every tap on the bar too. A tap reported by both is
+     * counted twice, which nothing minds (`CalendarTabTaps` answers by showing Month on today,
+     * whatever the count). A selection made in code reaches neither.
      */
-    private class TabDelegate(private val onSelect: (UIViewController) -> Unit) :
+    private class TabDelegate(private val onSelect: (Int) -> Unit) :
         NSObject(), UITabBarControllerDelegateProtocol {
         override fun tabBarController(
             tabBarController: UITabBarController,
             didSelectViewController: UIViewController
         ) {
-            onSelect(didSelectViewController)
+            onSelect(tabBarController.selectedIndex.toInt())
         }
     }
 }
