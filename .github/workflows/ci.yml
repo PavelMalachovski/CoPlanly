@@ -2406,6 +2406,9 @@ jobs:
         id: shell-test
         env:
           FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
+          # The Functions emulator loads the functions on a slow macOS runner past the CLI's 10-second
+          # discovery default, and then serves no callable: the seed's first call 404s.
+          FUNCTIONS_DISCOVERY_TIMEOUT: 60
           UDID: ${{ steps.simulator.outputs.udid }}
         run: |
           set -o pipefail
@@ -2443,6 +2446,7 @@ jobs:
           # The simulator the app was launched on, still booted: the tests run there rather than
           # `--standalone`, where no Keychain is available (see the modules' build files).
           COPLANLY_SIMULATOR_UDID: ${{ steps.simulator.outputs.udid }}
+          FUNCTIONS_DISCOVERY_TIMEOUT: 60
         run: |
           set -o pipefail
           export PATH="$FIREBASE_JAVA_HOME/bin:$PATH"
@@ -2496,6 +2500,7 @@ jobs:
         timeout-minutes: 50
         env:
           FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
+          FUNCTIONS_DISCOVERY_TIMEOUT: 60
           UDID: ${{ steps.simulator.outputs.udid }}
         run: |
           set -o pipefail
