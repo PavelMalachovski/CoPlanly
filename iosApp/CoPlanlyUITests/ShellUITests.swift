@@ -159,9 +159,7 @@ final class ShellUITests: XCTestCase {
         let gear = app.buttons.matching(NSPredicate(format: "label == %@", "Settings")).firstMatch
         try require(gear.waitForExistence(timeout: timeout), "\(name)'s first screen has no Settings button")
         // The bar of a screen just popped can still be animating away: wait for it rather than look once.
-        let noBar = XCTNSPredicateExpectation(predicate: NSPredicate(format: "count == 0"), object: app.navigationBars)
-        let gone = XCTWaiter().wait(for: [noBar], timeout: 10) == .completed
-        try require(gone, "\(name)'s first screen still shows a navigation bar")
+        try require(waitForNoNavigationBar(), "\(name)'s first screen still shows a navigation bar")
     }
 
     private func otherTabs() throws {
@@ -392,26 +390,36 @@ final class ShellUITests: XCTestCase {
     private func startsDatePill() throws {
         let sheetBar = app.navigationBars["New event"]
         if !sheetBar.exists { try eventFormSheet() }
+        dismissKeyboard()
         let byStarts = app.datePickers.matching(NSPredicate(format: "label == %@", "Starts")).firstMatch
         let pill = byStarts.waitForExistence(timeout: 5) ? byStarts : app.datePickers.firstMatch
         try require(pill.waitForExistence(timeout: timeout), "The Starts date is not the system's date picker")
+        // The title's keyboard may stay up (its key is Next, not Done): the pill is brought above it.
+        try bringIntoForm(pill, what: "the Starts pill")
         let day = Calendar.current.component(.day, from: Date()) == 20 ? 21 : 20
+        // The calendar grid behind the sheet has buttons for the day too: what is on screen now is
+        // not the system's calendar, which opens on the tap.
+        let before = Set(dayButtons(day).map { "\($0.label)@\($0.frame)" })
         press(pill)
         // Opened or not, the popover is closed again if the step fails, so it does not cascade.
         do {
-            let dayButton = try calendarDay(day)
+            let dayButton = try calendarDay(day, excluding: before)
             shot("10c-starts-system-calendar")
             press(dayButton)
+            // The calendar's popover closes on a pick on some releases; on others a tap outside it does.
+            let outside = app.otherElements["PopoverDismissRegion"]
+            if outside.waitForExistence(timeout: 2) { outside.tap() }
+            try require(outside.waitForNonExistence(timeout: timeout), "The system's calendar stayed open")
         } catch {
             closeCalendarPopover()
             throw error
         }
-        // The calendar's popover closes on a pick on some releases; on others a tap outside it does.
-        let outside = app.otherElements["PopoverDismissRegion"]
-        if outside.waitForExistence(timeout: 2) { outside.tap() }
-        try require(outside.waitForNonExistence(timeout: timeout), "The system's calendar stayed open")
+        // VoiceOver reads the pill as its button's value ("Nov 20, 2026"), under the label "Date Picker".
         let pillButton = pill.buttons.firstMatch
-        let reads = [pill.label, pill.value as? String ?? "", pillButton.exists ? pillButton.label : ""]
+        let reads = [
+            pill.label, pill.value as? String ?? "",
+            pillButton.exists ? pillButton.label : "", pillButton.exists ? (pillButton.value as? String ?? "") : ""
+        ]
         try require(
             reads.contains { $0.range(of: "\\b\(day)\\b", options: .regularExpression) != nil },
             "The Starts pill does not read the \(day)th: \(reads)"
@@ -419,31 +427,76 @@ final class ShellUITests: XCTestCase {
         shot("10d-starts-pill-picked")
     }
 
-    /// The button of the opened calendar for [day], chosen by frame: wholly inside the window, and
-    /// preferably of the month the pill shows. Neighbouring months are kept as off-screen pages whose
-    /// days match the label too, and Compose's elements are not reliably reported hittable.
-    private func calendarDay(_ day: Int) throws -> XCUIElement {
+    /// Scrolls the open form until [element] is drawn between the sheet's bar and the keyboard (or
+    /// the screen's bottom): the form's viewport ends above a keyboard that stays up, and a native
+    /// control outside it is not even in the tree.
+    private func bringIntoForm(_ element: XCUIElement, what: String) throws {
+        let barBottom = app.navigationBars.firstMatch.exists ? app.navigationBars.firstMatch.frame.maxY : 0
+        for _ in 0..<10 {
+            let keyboard = app.keyboards.firstMatch
+            let limit = keyboard.exists ? keyboard.frame.minY - 60 : app.windows.firstMatch.frame.maxY - 160
+            if element.exists {
+                let frame = element.frame
+                if frame.minY >= barBottom && frame.maxY <= limit { return }
+                if frame.minY < barBottom {
+                    dragForm(from: 0.3, to: 0.42)
+                    continue
+                }
+            }
+            dragForm(from: 0.42, to: 0.3)
+        }
+        try require(element.exists, "\(what) is not in the form")
+    }
+
+    /// Drags the form from [from] to [to] (fractions of the screen's height, at its middle): a short
+    /// drag, so an element in view is not scrolled past the bar.
+    private func dragForm(from: CGFloat, to: CGFloat) {
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: from))
+        start.press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: to)))
+        usleep(500_000)
+    }
+
+    /// The buttons whose label names [day], wholly inside the window.
+    private func dayButtons(_ day: Int) -> [XCUIElement] {
+        let predicate = NSPredicate(format: "label MATCHES %@", ".*\\b\(day)\\b.*")
+        let window = app.windows.firstMatch.frame
+        return app.buttons.matching(predicate).allElementsBoundByIndex.filter { element in
+            let f = element.frame
+            return element.exists && !f.isEmpty && f.minX >= 0 && f.maxX <= window.width
+                && f.minY >= 0 && f.maxY <= window.height
+        }
+    }
+
+    /// The button of the opened calendar for [day], chosen by frame: wholly inside the window, not
+    /// one of [excluding] (what was on screen before the calendar opened: the grid behind the
+    /// sheet), and preferably inside the system's date picker and of the month the pill shows.
+    /// Neighbouring months are kept as off-screen pages whose days match the label too, and
+    /// Compose's elements are not reliably reported hittable.
+    private func calendarDay(_ day: Int, excluding: Set<String>) throws -> XCUIElement {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "MMMM"
         let month = formatter.string(from: Date())
         let predicate = NSPredicate(format: "label MATCHES %@", ".*\\b\(day)\\b.*")
-        let window = app.windows.firstMatch.frame
         var listed: [String] = []
         let deadline = Date().addingTimeInterval(TimeInterval(timeout))
         repeat {
-            let candidates = app.buttons.matching(predicate).allElementsBoundByIndex
-            let onScreen = candidates.filter { element in
+            let inPicker = app.datePickers.buttons.matching(predicate).allElementsBoundByIndex
+            let window = app.windows.firstMatch.frame
+            let pickerDays = inPicker.filter { element in
                 let f = element.frame
                 return element.exists && !f.isEmpty && f.minX >= 0 && f.maxX <= window.width
                     && f.minY >= 0 && f.maxY <= window.height
             }
+            let new = dayButtons(day).filter { !excluding.contains("\($0.label)@\($0.frame)") }
+            let onScreen = pickerDays.isEmpty ? new : pickerDays
             if let best = onScreen.first(where: { $0.label.contains(month) }) ?? onScreen.first { return best }
-            listed = candidates.map { "\($0.label) @ \($0.frame)" }
+            listed = (inPicker + new).map { "\($0.label) @ \($0.frame)" }
             usleep(500_000)
         } while Date() < deadline
         let detail = String(listed.joined(separator: "; ").prefix(450))
-        throw StepFailure(description: "No calendar day \(day) on screen (\(month)); candidates: \(detail)")
+        let opened = app.otherElements["PopoverDismissRegion"].exists ? "open" : "not open"
+        throw StepFailure(description: "No new calendar day \(day) on screen (\(month), the popover \(opened)); candidates: \(detail)")
     }
 
     /// Closes the system calendar's popover or sheet, if one is up.
@@ -471,11 +524,12 @@ final class ShellUITests: XCTestCase {
         if !sheetBar.exists { try eventFormSheet() }
         dismissKeyboard()
         let repeatButton = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Repeat,")).firstMatch
-        try require(repeatButton.waitForExistence(timeout: timeout), "Repeat has no pop-up button named \"Repeat, …\"")
-        let screenBottom = app.windows.firstMatch.frame.maxY - 160
-        for _ in 0..<8 where repeatButton.frame.maxY > screenBottom {
-            app.swipeUp()
+        // A native control below the form's viewport (under a keyboard that stayed up) is not in the
+        // tree until it is scrolled into view.
+        if !repeatButton.waitForExistence(timeout: 5) || repeatButton.frame.maxY > app.windows.firstMatch.frame.maxY - 160 {
+            try bringIntoForm(repeatButton, what: "Repeat's pop-up button")
         }
+        try require(repeatButton.waitForExistence(timeout: timeout), "Repeat has no pop-up button named \"Repeat, …\"")
         sleep(1)
         press(repeatButton)
         let weekly = app.buttons.matching(NSPredicate(format: "label == %@", "Weekly")).firstMatch
@@ -585,7 +639,42 @@ final class ShellUITests: XCTestCase {
     /// `deleteEventAsks` saved and kept.
     private func eventPreviewSheet() throws {
         try goToCalendarRoot()
+        // The step before left Day view open (opened from a month cell): a tap on the Calendar tab
+        // opens Month on today (`CalendarTabTaps`), and its bar, which Day view's Back needed, goes.
+        let month = app.segmentedControls.buttons["Month"]
+        try require(
+            month.waitForExistence(timeout: timeout) && waitUntilSelected(month),
+            "A tap on the Calendar tab did not return Day view to Month"
+        )
+        try require(waitForNoNavigationBar(), "The Calendar's Month still shows a navigation bar")
         let edit = app.buttons.matching(NSPredicate(format: "label == %@", "Edit")).firstMatch
+        // A failure leaves no preview over the tab bar, so the steps after it start from a tab.
+        do {
+            try previewChecks(edit: edit)
+        } catch {
+            // The sheet leaves the calendar above it undimmed and in reach, so it is swiped away, not
+            // tapped outside: a tap there would land on the calendar.
+            if edit.exists, let title = try? previewTitle(above: edit) { swipePreviewDown(from: title) }
+            _ = edit.waitForNonExistence(timeout: 5)
+            throw error
+        }
+    }
+
+    /// Waits a little for [element] to read as selected.
+    private func waitUntilSelected(_ element: XCUIElement) -> Bool {
+        let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == 1"), object: element)
+        return XCTWaiter().wait(for: [selected], timeout: 10) == .completed
+    }
+
+    /// Waits a little for no navigation bar to be drawn (one leaving may still be animating away).
+    private func waitForNoNavigationBar() -> Bool {
+        let noBar = XCTNSPredicateExpectation(predicate: NSPredicate(format: "count == 0"), object: app.navigationBars)
+        return XCTWaiter().wait(for: [noBar], timeout: 10) == .completed
+    }
+
+    /// The preview's checks: opened from the month grid (through Day view, whose bar carries Back
+    /// and leaves the header's Month/Week/Day control below it), swiped away, and opened again.
+    private func previewChecks(edit: XCUIElement) throws {
         try openPreview(of: deleteCheckTitle, edit: edit)
 
         let title = try previewTitle(above: edit)
