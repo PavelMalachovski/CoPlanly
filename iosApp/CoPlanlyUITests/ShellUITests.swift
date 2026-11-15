@@ -526,12 +526,15 @@ final class ShellUITests: XCTestCase {
         shot("17d-event-preview-sheet")
         swipePreviewDown(from: title)
         try require(edit.waitForNonExistence(timeout: timeout), "A swipe down did not close the event's preview")
-        try require(app.navigationBars.count == 1, "Something was left presented over the calendar")
+        // The sheet covers the tab bar while it is up, so a tab bar within reach means it has gone.
+        let calendarTab = app.tabBars.firstMatch.buttons["Calendar"]
+        try require(calendarTab.isHittable, "Something was left presented over the calendar")
 
         try openPreview(of: deleteCheckTitle, edit: edit)
         shot("17e-event-preview-sheet-again")
         swipePreviewDown(from: try previewTitle(above: edit))
         try require(edit.waitForNonExistence(timeout: timeout), "The second preview did not close")
+        try require(calendarTab.isHittable, "Something was left presented after the second preview")
     }
 
     /// The event's title in the preview sheet: the lowest label holding it in the lower part of the

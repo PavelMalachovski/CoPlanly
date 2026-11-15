@@ -280,12 +280,17 @@ internal object IosNativeControls : NativeControls {
 
     /**
      * A [ComposeSheet] presented from the screen's own view controller while this is composed,
-     * holding [content] under the screen's locals; a swipe down calls [onDismiss] once, and leaving
-     * composition takes the sheet away without calling back.
+     * holding [content] under the screen's locals; a swipe down, or the screen no longer seen,
+     * calls [onDismiss] once, and leaving composition takes the sheet away without calling back.
      */
     @Composable
-    override fun Sheet(height: SheetHeight, onDismiss: () -> Unit, content: @Composable () -> Unit) {
-        PresentComposeSheet(height = height, onDismiss = onDismiss, content = content)
+    override fun Sheet(
+        height: SheetHeight,
+        undimmed: Boolean,
+        onDismiss: () -> Unit,
+        content: @Composable () -> Unit
+    ) {
+        PresentComposeSheet(height = height, undimmed = undimmed, onDismiss = onDismiss, content = content)
     }
 
     /** The switch's intrinsic size in points, measured once from UIKit's own switch. */

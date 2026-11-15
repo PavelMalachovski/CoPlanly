@@ -1209,7 +1209,9 @@ fun CalendarScreen(
                     previewEventId = null
                     deleteEventWithUndo(eventId)
                 },
-                onDismiss = { previewEventId = null }
+                onDismiss = { previewEventId = null },
+                // The grid above the iPhone's half-height sheet stays in reach.
+                undimmed = true
             )
         } else {
             // Event disappeared (deleted/synced away) — close the sheet

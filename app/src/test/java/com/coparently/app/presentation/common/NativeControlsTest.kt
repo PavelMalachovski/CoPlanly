@@ -390,6 +390,7 @@ class NativeControlsTest {
         rule.waitForIdle()
 
         assertEquals(SheetHeight.Medium, fake.sheets.last())
+        assertFalse("A sheet is dimmed unless the site asks", fake.sheetsUndimmed.last())
         rule.onNodeWithTag(RecordingNativeControls.SHEET_TAG).assertExists()
         rule.onNodeWithText(SHEET_BODY).assertExists()
         rule.onNodeWithText(MATERIAL_SHEET).assertDoesNotExist()

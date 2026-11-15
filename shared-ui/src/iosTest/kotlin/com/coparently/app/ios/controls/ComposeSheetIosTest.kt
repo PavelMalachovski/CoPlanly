@@ -25,8 +25,9 @@ class ComposeSheetIosTest {
     private var dismissed = 0
     private var built = 0
 
-    private fun sheet(height: SheetHeight = SheetHeight.Large) = ComposeSheet(
+    private fun sheet(height: SheetHeight = SheetHeight.Large, undimmed: Boolean = false) = ComposeSheet(
         height = height,
+        undimmed = undimmed,
         onDismissed = { dismissed++ }
     ) {
         built++
@@ -58,7 +59,7 @@ class ComposeSheetIosTest {
 
     @Test
     fun `the sheet is built once and is a page sheet with the grabber`() {
-        val sheet = sheet(SheetHeight.Medium)
+        val sheet = sheet(SheetHeight.Medium, undimmed = true)
 
         val first = sheet.prepare()
         assertSame(first, sheet.prepare())
@@ -71,9 +72,30 @@ class ComposeSheetIosTest {
 
     @Test
     fun `a large sheet dims what is under it`() {
-        val presentation = assertNotNull(sheet(SheetHeight.Large).prepare().sheetPresentationController)
+        val sheet = sheet(SheetHeight.Large, undimmed = true)
+        val presentation = assertNotNull(sheet.prepare().sheetPresentationController)
 
         assertEquals(null, presentation.largestUndimmedDetentIdentifier)
+    }
+
+    @Test
+    fun `a medium sheet not asked to leave the screen usable dims it`() {
+        val presentation = assertNotNull(sheet(SheetHeight.Medium).prepare().sheetPresentationController)
+
+        assertEquals(null, presentation.largestUndimmedDetentIdentifier)
+    }
+
+    @Test
+    fun `a screen no longer seen ends the sheet as a dismissal once`() {
+        val sheet = sheet()
+
+        sheet.screenHidden()
+        sheet.screenHidden()
+        sheet.dismissed()
+        sheet.close()
+
+        assertEquals(1, dismissed)
+        assertTrue(sheet.finished)
     }
 
     @Test

@@ -107,6 +107,9 @@ class RecordingNativeControls : NativeControls {
     /** The height of every sheet composed, in the order of composition. */
     val sheets = mutableListOf<SheetHeight>()
 
+    /** Whether each sheet composed left the screen above it usable, in the order of composition. */
+    val sheetsUndimmed = mutableListOf<Boolean>()
+
     /** The latest sheet's dismiss, for a test that swipes it down. */
     var lastSheetDismiss: (() -> Unit)? = null
 
@@ -231,8 +234,9 @@ class RecordingNativeControls : NativeControls {
     }
 
     @Composable
-    override fun Sheet(height: SheetHeight, onDismiss: () -> Unit, content: @Composable () -> Unit) {
+    override fun Sheet(height: SheetHeight, undimmed: Boolean, onDismiss: () -> Unit, content: @Composable () -> Unit) {
         sheets += height
+        sheetsUndimmed += undimmed
         lastSheetDismiss = onDismiss
         Box(Modifier.testTag(SHEET_TAG)) { content() }
     }

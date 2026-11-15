@@ -239,12 +239,19 @@ interface NativeControls {
      * A swipe down calls [onDismiss] once. If the system cannot present it at all, it ends as a
      * dismissal, so [onDismiss] is called once and the caller's flag is released.
      *
+     * The screen under the sheet is dimmed and cannot be touched, unless [undimmed] asks for it to
+     * stay usable above a medium sheet (the calendar under an event's preview). If the screen stops
+     * being seen while the app is in the foreground (it is covered, or its tab left), the sheet is
+     * taken away and [onDismiss] is called once.
+     *
      * @param height How tall the sheet opens
-     * @param onDismiss Called once when the parent closes the sheet, or when it could not be shown
+     * @param undimmed Whether the screen above a [SheetHeight.Medium] sheet stays usable
+     * @param onDismiss Called once when the parent closes the sheet, when the screen under it stops
+     *   being seen, or when it could not be shown
      * @param content What the sheet holds
      */
     @Composable
-    fun Sheet(height: SheetHeight, onDismiss: () -> Unit, content: @Composable () -> Unit)
+    fun Sheet(height: SheetHeight, undimmed: Boolean, onDismiss: () -> Unit, content: @Composable () -> Unit)
 }
 
 /**

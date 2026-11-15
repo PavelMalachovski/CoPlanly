@@ -156,7 +156,9 @@ fun DaySwapSheet(offer: SwapSheetOffer, parentNames: ParentNames, actions: SwapS
                 DaySwapSheetContent(offer, parentNames, actions, onNeedRoom = { scope.launch { sheetState.expand() } })
             }
         },
-        content = { DaySwapSheetContent(offer, parentNames, actions, onNeedRoom = {}) }
+        content = { DaySwapSheetContent(offer, parentNames, actions, onNeedRoom = {}) },
+        // The grid the days are chosen on stays in reach above the iPhone's half-height sheet.
+        undimmed = true
     )
 }
 
