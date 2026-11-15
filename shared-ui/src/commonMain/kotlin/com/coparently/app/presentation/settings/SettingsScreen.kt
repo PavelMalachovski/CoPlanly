@@ -509,7 +509,9 @@ fun SettingsScreen(
                             // and because the toggle belongs with the sign-in and sync actions that
                             // govern whether it can be used at all. It costs one extra tap on a
                             // control a parent sets once.
-                            trailing = { DisclosureChevron(expanded = googleExpanded) }
+                            trailing = { DisclosureChevron(expanded = googleExpanded) },
+                            // The rotating arrow is this row's mark; a second chevron would double it.
+                            nativeChevron = false
                         )
                         AnimatedVisibility(visible = googleExpanded, enter = sectionEnter(), exit = sectionExit()) {
                             GoogleCalendarActions(
@@ -1065,8 +1067,6 @@ fun SettingsScreen(
 /** The trailing chevron on a row that expands in place, showing which way it is now. */
 @Composable
 private fun DisclosureChevron(expanded: Boolean) {
-    // The grouped row draws the one chevron under native controls (Grouped board).
-    if (nativeControls() != null) return
     // Turns with the section it opens, over the same duration, instead of swapping glyphs in one
     // frame while the section below it animated.
     val rotation by animateFloatAsState(

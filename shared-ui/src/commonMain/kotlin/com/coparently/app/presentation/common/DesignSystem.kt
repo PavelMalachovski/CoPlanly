@@ -194,6 +194,9 @@ private class SectionGroupScopeImpl : SectionGroupScope {
  *   exposes it as a toggleable switch (on or off to VoiceOver) rather than a bare button. Null
  *   keeps the plain click.
  *
+ * @param nativeChevron Whether a clickable row draws the native chevron; false for a row whose own
+ *   trailing control is the mark (an expand arrow carrying state). Ignored without native controls.
+ *
  * Under native controls a row with [onClick] ends in a chevron after [trailing] and is at least
  * 50 dp high (the Grouped board); Android draws neither.
  */
@@ -213,7 +216,8 @@ fun SectionRow(
     trailing: @Composable (() -> Unit)? = null,
     stackTrailingAtLargeFont: Boolean = false,
     onToggle: (() -> Unit)? = null,
-    toggled: Boolean? = null
+    toggled: Boolean? = null,
+    nativeChevron: Boolean = true
 ) {
     val trailingBelow = stackTrailingAtLargeFont && stacksAtLargeFont()
     val native = nativeControls() != null
@@ -279,7 +283,7 @@ fun SectionRow(
             }
         }
         if (!trailingBelow) trailing?.invoke()
-        if (native && onClick != null) {
+        if (native && onClick != null && nativeChevron) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 // Decorative: the row itself is the button. The tag is for tests only.
