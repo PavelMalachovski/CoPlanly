@@ -51,8 +51,9 @@ class IosStorageBucketEmulatorTest {
         assertEquals(uid, bucket.customMetadata(path, "uploader"))
         assertEquals(digest, bucket.customMetadata(path, "sha256"))
         assertNull(bucket.customMetadata(path, "absent"), "a key the object does not carry")
-        // A missing object is no error to delete, as on Android.
-        bucket.delete(vaultPath(uid))
+        // No delete of a missing path here: `storage.rules` allows a vault delete only by the
+        // object's uploader, so with no object the rule denies before existence is checked — the
+        // same refusal Android gets. The not-found mapping is held where it is reachable, above.
     }
 
     @Test
@@ -80,7 +81,10 @@ class IosStorageBucketEmulatorTest {
             val progress = mutableListOf<Float>()
             val metadata = linkedMapOf("uploader" to uid, "sha256" to Sha256.digest(bytes).toHex())
             bucket.putFile(path, source, PDF, metadata) { progress += it }
+            // The SDK may report no progress at all for a body this small, sent in one write; what it
+            // reports must be fractions that end at the whole file.
             assertTrue(progress.all { it in 0f..1f }, "progress is a fraction: $progress")
+            assertTrue(progress.isEmpty() || progress.last() == 1f, "progress ends at 1: $progress")
 
             val target = Path(folder, "downloaded.pdf")
             bucket.getFile(path, target)

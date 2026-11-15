@@ -389,8 +389,8 @@ private class GateScenario(
             content = "Pick-up moved to 17:30",
             // A reference with no upload (part B, Task 12): it names another message's file, so the
             // attachment gate (`ChatAttachmentOutbox.ensureUploaded`, which keeps only references
-            // stored under their own message) uploads nothing, and the iPhone, with no Cloud
-            // Storage yet, still writes a non-empty list for the checker to compare.
+            // stored under their own message) uploads nothing, and the message still carries a
+            // non-empty list for the checker to compare.
             attachments = listOf(ATTACHMENT_REFERENCE)
         )
         alice.messageRepository.sendMessage(message)
@@ -546,7 +546,10 @@ private class GateScenario(
         SystemFileSystem.sink(source).buffered().use { it.write(bytes) }
         val progress = mutableListOf<Float>()
         alice.sharedFileStorage.upload(path, source, PDF, sha256, alice.uid) { progress += it }
-        expectThat(progress.all { it in 0f..1f }) { "the vault upload's progress is not a fraction: $progress" }
+        // The SDK may report no progress for a body this small; what it reports ends at the whole file.
+        expectThat(progress.all { it in 0f..1f } && (progress.isEmpty() || progress.last() == 1f)) {
+            "the vault upload's progress is not fractions ending at 1: $progress"
+        }
         expectThat(bob.sharedFileStorage.isStored(path, sha256)) { "Bob reads no object with the digest at $path" }
         val copy = bob.sharedFileCache.localCopy(path, VAULT_FILE, sha256)
         val read = SystemFileSystem.source(copy).buffered().use { it.readByteArray() }
