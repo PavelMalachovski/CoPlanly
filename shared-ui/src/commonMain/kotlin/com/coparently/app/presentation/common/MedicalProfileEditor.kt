@@ -128,6 +128,9 @@ fun MedicalProfileEditor(
  * iPhone the label and the system's pop-up button, [MenuFieldRow]), a plain label/value pair with no
  * dropdown affordance at all when not.
  */
+// One field in its three forms (Material's dropdown, the iPhone's pop-up button, read-only), each a
+// branch of the same choice.
+@Suppress("LongMethod")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun BloodTypeSection(

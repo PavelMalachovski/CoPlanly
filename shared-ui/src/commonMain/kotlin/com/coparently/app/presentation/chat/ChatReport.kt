@@ -115,6 +115,9 @@ fun ChatReportHost(content: @Composable () -> Unit) {
  * @param isCurrentUser Whether the reader sent it
  * @param content The bubble
  */
+// The bubble's long press in its two anatomies (Material's menu, the iPhone's action sheet) and the
+// report's dialog it opens: one gesture, read together.
+@Suppress("LongMethod")
 @Composable
 internal fun ReportableBubble(message: Message, isCurrentUser: Boolean, content: @Composable () -> Unit) {
     val report = LocalChatMessageReport.current

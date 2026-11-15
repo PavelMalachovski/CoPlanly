@@ -53,12 +53,12 @@ import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.DatePickerField
 import com.coparently.app.presentation.common.FormSave
 import com.coparently.app.presentation.common.FormTopBar
+import com.coparently.app.presentation.common.MenuFieldRow
 import com.coparently.app.presentation.common.PhotoOwner
 import com.coparently.app.presentation.common.PhotoStrip
 import com.coparently.app.presentation.common.PhotoStripStrings
 import com.coparently.app.presentation.common.VaccinationListEditor
 import com.coparently.app.presentation.common.field
-import com.coparently.app.presentation.common.MenuFieldRow
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.nativeControls
 import com.coparently.app.presentation.common.rememberDiscardGuard

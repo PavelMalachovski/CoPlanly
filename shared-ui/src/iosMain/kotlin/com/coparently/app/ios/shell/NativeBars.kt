@@ -419,7 +419,9 @@ private data class VisibleBar(
                     enabled = action.enabled,
                     primary = action.primary,
                     dot = action.dot,
-                    menu = action.menu?.map { VisibleMenuItem(it.label, it.sfSymbol, it.destructive, it.enabled, it.checked) }
+                    menu = action.menu?.map {
+                        VisibleMenuItem(it.label, it.sfSymbol, it.destructive, it.enabled, it.checked)
+                    }
                 )
             },
             trailing = bar.trailingContent != null,

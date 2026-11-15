@@ -132,6 +132,9 @@ fun ChatAttachmentsHost(
  * @param onRequestChange Opens the event picker that starts a change request.
  * @param onTemplates Opens the message templates.
  */
+// The "+" in its two anatomies (Material's dropdown, the iPhone's system menu) beside the picker
+// that its first entry opens; split, each half would be read without the other.
+@Suppress("LongMethod")
 @Composable
 fun ChatComposerMenu(
     conversationId: String,

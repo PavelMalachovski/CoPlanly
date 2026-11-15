@@ -225,18 +225,7 @@ fun SectionRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
-            .then(
-                when {
-                    rowToggle == null -> Modifier
-                    toggled == null -> Modifier.clickable(role = Role.Switch, onClick = rowToggle)
-                    else -> Modifier.toggleable(
-                        value = toggled,
-                        role = Role.Switch,
-                        onValueChange = { rowToggle() }
-                    )
-                }
-            )
+            .sectionRowClicks(onClick, rowToggle, toggled)
             .defaultMinSize(minHeight = if (native) 50.dp else 56.dp)
             .padding(horizontal = Spacing.L, vertical = Spacing.L),
         horizontalArrangement = Arrangement.spacedBy(Spacing.M),
@@ -252,36 +241,15 @@ fun SectionRow(
                 modifier = Modifier.size(IconSizes.Standard)
             )
         }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = titleColor
-            )
-            if (supporting != null) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(5.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (supportingIcon != null) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(supportingIcon)
-                        )
-                    }
-                    Text(
-                        text = supporting,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = supportingColor
-                    )
-                }
-            }
-            if (trailingBelow && trailing != null) {
-                Box(modifier = Modifier.padding(top = Spacing.S)) { trailing() }
-            }
-        }
+        SectionRowText(
+            title = title,
+            titleColor = titleColor,
+            supporting = supporting,
+            supportingColor = supportingColor,
+            supportingIcon = supportingIcon,
+            below = trailing.takeIf { trailingBelow },
+            modifier = Modifier.weight(1f)
+        )
         if (!trailingBelow) trailing?.invoke()
         if (native && onClick != null && nativeChevron) {
             Icon(
@@ -295,12 +263,80 @@ fun SectionRow(
     }
 }
 
-/** Test tag of the chevron a clickable [SectionRow] draws under native controls. */
-internal const val CHEVRON_TAG = "chevron"
+/** The click a [SectionRow] answers: its own [onClick], else the row-wide switch toggle. */
+private fun Modifier.sectionRowClicks(
+    onClick: (() -> Unit)?,
+    rowToggle: (() -> Unit)?,
+    toggled: Boolean?
+): Modifier = this
+    .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
+    .then(
+        when {
+            rowToggle == null -> Modifier
+            toggled == null -> Modifier.clickable(role = Role.Switch, onClick = rowToggle)
+            else -> Modifier.toggleable(
+                value = toggled,
+                role = Role.Switch,
+                onValueChange = { rowToggle() }
+            )
+        }
+    )
 
-/** Test tag of the inset divider a [SectionGroup] draws under native controls. */
-internal const val DIVIDER_TAG = "group-divider"
+/** A [SectionRow]'s title, its supporting line and, at large font, its trailing control below. */
+@Composable
+@Suppress("LongParameterList") // the row's own text parameters, passed through
+private fun SectionRowText(
+    title: String,
+    titleColor: Color,
+    supporting: String?,
+    supportingColor: Color,
+    supportingIcon: Color?,
+    below: @Composable (() -> Unit)?,
+    modifier: Modifier
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge,
+            color = titleColor
+        )
+        if (supporting != null) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (supportingIcon != null) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(supportingIcon)
+                    )
+                }
+                Text(
+                    text = supporting,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = supportingColor
+                )
+            }
+        }
+        if (below != null) {
+            Box(modifier = Modifier.padding(top = Spacing.S)) { below() }
+        }
+    }
+}
 
+/**
+ * Test tag of the chevron a clickable [SectionRow] draws under native controls. Public because the
+ * app's Robolectric tests look it up across the module boundary.
+ */
+const val CHEVRON_TAG = "chevron"
+
+/**
+ * Test tag of the inset divider a [SectionGroup] draws under native controls. Public because the
+ * app's Robolectric tests look it up across the module boundary.
+ */
+const val DIVIDER_TAG = "group-divider"
 
 /**
  * A small pill-shaped chip — the refresh's replacement for unlabelled icon actions.

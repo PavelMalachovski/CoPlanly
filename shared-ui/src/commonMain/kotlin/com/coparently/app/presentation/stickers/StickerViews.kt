@@ -167,6 +167,8 @@ fun HomeStickers(coParentName: String, viewModel: StickersViewModel = koinViewMo
  * The fixed phrases a parent may send — no free text, so nothing can be turned into sarcasm —
  * and where the sending stands.
  */
+// One sheet: its body and the two hosts (Material's sheet, the iPhone's) that hold it.
+@Suppress("LongMethod")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SendStickerSheet(

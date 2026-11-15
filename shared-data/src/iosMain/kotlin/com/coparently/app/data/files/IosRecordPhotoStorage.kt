@@ -45,8 +45,8 @@ import platform.ImageIO.kCGImageSourceCreateThumbnailWithTransform
 import platform.ImageIO.kCGImageSourceThumbnailMaxPixelSize
 import platform.UIKit.UIImage
 import platform.UIKit.UIImageJPEGRepresentation
-import platform.posix.memcpy
 import platform.posix.int32_tVar
+import platform.posix.memcpy
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -154,17 +154,17 @@ internal object RecordPhotoEncoding {
      * @throws IOException when it cannot be read or is not an image
      */
     fun jpeg(path: String): ByteArray {
-        val provider = CGDataProviderCreateWithFilename(path) ?: throw IOException("Cannot open image: $path")
+        val provider = CGDataProviderCreateWithFilename(path) ?: cannot("open", path)
         try {
             val source = CGImageSourceCreateWithDataProvider(provider, null)
-                ?: throw IOException("Cannot read image: $path")
+                ?: cannot("read", path)
             try {
-                val (width, height) = sizeOf(source) ?: throw IOException("Cannot decode image: $path")
+                val (width, height) = sizeOf(source) ?: cannot("decode", path)
                 val image = thumbnail(source, maxOf(width, height) / sampleSize(width, height))
-                    ?: throw IOException("Cannot decode image: $path")
+                    ?: cannot("decode", path)
                 try {
                     val data = UIImageJPEGRepresentation(UIImage.imageWithCGImage(image), JPEG_QUALITY)
-                        ?: throw IOException("Cannot encode image: $path")
+                        ?: cannot("encode", path)
                     return data.toByteArray()
                 } finally {
                     CGImageRelease(image)
@@ -176,6 +176,9 @@ internal object RecordPhotoEncoding {
             CGDataProviderRelease(provider)
         }
     }
+
+    /** Fails the re-encoding of the image at [path] at [step]: open, read, decode or encode. */
+    private fun cannot(step: String, path: String): Nothing = throw IOException("Cannot $step image: $path")
 
     /**
      * Android's `calculateInSampleSize`, line for line: 1, doubled while [width] or [height] divided

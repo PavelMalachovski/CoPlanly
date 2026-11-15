@@ -9,6 +9,7 @@ import platform.CoreGraphics.CGRectMake
 import platform.Foundation.NSDate
 import platform.Foundation.NSSelectorFromString
 import platform.UIKit.NSLayoutConstraint
+import platform.UIKit.NSTextAlignmentCenter
 import platform.UIKit.UIAdaptivePresentationControllerDelegateProtocol
 import platform.UIKit.UIApplication
 import platform.UIKit.UIBarButtonItem
@@ -29,7 +30,6 @@ import platform.UIKit.UIViewAutoresizingFlexibleWidth
 import platform.UIKit.UIViewController
 import platform.UIKit.UIWindowScene
 import platform.UIKit.accessibilityLabel
-import platform.UIKit.NSTextAlignmentCenter
 import platform.UIKit.navigationItem
 import platform.UIKit.presentationController
 import platform.UIKit.secondaryLabelColor
@@ -50,10 +50,10 @@ import platform.darwin.dispatch_time
  */
 internal fun topViewController(from: UIViewController? = null): UIViewController? {
     var top = from ?: keyWindowRoot() ?: return null
-    while (true) {
-        val next = top.presentedViewController ?: break
-        if (next.beingDismissed) break
+    var next = top.presentedViewController
+    while (next != null && !next.beingDismissed) {
         top = next
+        next = top.presentedViewController
     }
     return top
 }
@@ -87,22 +87,31 @@ private fun presentAttempt(
     attemptsLeft: Int
 ) {
     if (!isWanted()) return
-    val host = topViewController(from) ?: return onDropped()
-    val busy = host.presentedViewController != null || host.beingPresented || host.beingDismissed
-    if (busy) {
-        if (attemptsLeft <= 0) return onDropped()
-        val retry = { presentAttempt(controller, from, isWanted, onDropped, attemptsLeft - 1) }
-        val coordinator = host.presentedViewController?.transitionCoordinator ?: host.transitionCoordinator
-        if (coordinator == null || !coordinator.animateAlongsideTransition(null, completion = { _ -> retry() })) {
-            dispatch_after(
-                dispatch_time(DISPATCH_TIME_NOW, RETRY_DELAY_NS),
-                dispatch_get_main_queue()
-            ) { retry() }
+    val host = topViewController(from)
+    val busy = host != null && (host.presentedViewController != null || host.beingPresented || host.beingDismissed)
+    when {
+        host == null -> onDropped()
+        busy && attemptsLeft <= 0 -> onDropped()
+        busy -> retryAfterTransition(host) {
+            presentAttempt(controller, from, isWanted, onDropped, attemptsLeft - 1)
         }
-        return
+        else -> {
+            host.presentViewController(controller, animated = true, completion = null)
+            if (controller.presentingViewController == null) onDropped()
+        }
     }
-    host.presentViewController(controller, animated = true, completion = null)
-    if (controller.presentingViewController == null) onDropped()
+}
+
+/**
+ * Runs [retry] once the transition on [host] (or on what it presents) has ended, or after
+ * [RETRY_DELAY_NS] when there is no coordinator to wait on.
+ */
+private fun retryAfterTransition(host: UIViewController, retry: () -> Unit) {
+    val coordinator = host.presentedViewController?.transitionCoordinator ?: host.transitionCoordinator
+    val waits = coordinator?.animateAlongsideTransition(null, completion = { _ -> retry() }) == true
+    if (!waits) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, RETRY_DELAY_NS), dispatch_get_main_queue()) { retry() }
+    }
 }
 
 /** How many times [presentWhenSettled] waits for a transition before it gives up. */
@@ -230,15 +239,15 @@ internal class PickerSheet(
     /** The bar buttons' target and the sheet's presentation delegate. */
     private inner class Actions : NSObject(), UIAdaptivePresentationControllerDelegateProtocol {
 
-        /** Cancel's target-action. */
+        /** Cancel's target-action; the sender is the selector's own argument, unused. */
         @ObjCAction
-        fun cancel(sender: UIBarButtonItem) {
+        fun cancel(@Suppress("UnusedParameter") sender: UIBarButtonItem) {
             this@PickerSheet.cancel()
         }
 
-        /** Done's target-action. */
+        /** Done's target-action; the sender is the selector's own argument, unused. */
         @ObjCAction
-        fun done(sender: UIBarButtonItem) {
+        fun done(@Suppress("UnusedParameter") sender: UIBarButtonItem) {
             confirm()
         }
 

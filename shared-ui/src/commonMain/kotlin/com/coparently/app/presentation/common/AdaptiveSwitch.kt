@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
  *   system's green
  */
 @Composable
+@Suppress("LongParameterList") // Material's switch parameters, the VoiceOver name and the colour under it
 fun AdaptiveSwitch(
     checked: Boolean,
     onCheckedChange: ((Boolean) -> Unit)?,
