@@ -29,9 +29,11 @@ import com.coparently.app.presentation.platform.ProvideIosShell
 import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.ObjCSignatureOverride
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -39,7 +41,10 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import org.koin.core.Koin
+import platform.Foundation.NSDate
 import platform.Foundation.setValue
+import platform.Foundation.timeIntervalSince1970
+import platform.UIKit.UITab
 import platform.UIKit.UITabBarController
 import platform.UIKit.UITabBarControllerDelegateProtocol
 import platform.UIKit.UITabBarItem
@@ -348,13 +353,19 @@ internal class TabShell(
             onRootFlowRequested = shell::showRootFlow
         )
     }
-    private val tabDelegate = TabDelegate(::tabTapped)
-
     /** The tab bar controller the shell shows. */
     val controller: UITabBarController = UITabBarController()
 
-    /** A tap on the tab already selected, which [tabDelegate] is not told of. */
-    private val reselectTaps = TabReselectTaps(controller, ::tabTapped)
+    /** What the shell saw of the tab bar's taps ([TabTapTrace]). */
+    private val trace = TabTapTrace(controller)
+
+    private val tabDelegate = TabDelegate(trace, onChange = ::tabTapped, onReselect = ::tabReselected)
+
+    /** A tap on the tab already selected, which [tabDelegate] may not be told of. */
+    private val reselectTaps = TabReselectTaps(controller, trace, ::tabReselected)
+
+    /** When the Calendar last answered a tap, in seconds since 1970, so one tap is answered once. */
+    private var calendarAnsweredAt = 0.0
 
     init {
         BottomNavDestination.entries.forEach { tab ->
@@ -428,26 +439,102 @@ internal class TabShell(
 
     private fun host(tab: BottomNavDestination): StackHost = hosts[tab.ordinal]
 
-    /** A tap on a tab, a change or a reselection: the tab is the one seen, and the Calendar counts it. */
+    /** A tap that selected [selected]: the tab is the one seen, and the Calendar answers it. */
     private fun tabTapped(selected: UIViewController) {
         hosts.firstOrNull { it.navigation === selected }?.let { shell.visibility.selectedStack = it.startRoute }
-        if (selected === host(BottomNavDestination.CALENDAR).navigation) CalendarTabTaps.tap()
+        if (selected === host(BottomNavDestination.CALENDAR).navigation) answerCalendarTap()
     }
 
     /**
-     * Tells [onSelect] of every tap that selects another tab. A tap on the tab already selected is
-     * [TabReselectTaps]'s to report: on the iOS 26 simulator in CI it reached this delegate neither
-     * as `didSelect` nor as `shouldSelect`. Should a release call `didSelect` for it as well, the
-     * tap is counted twice, which nothing minds (`CalendarTabTaps` answers by showing Month on
-     * today, whatever the count). A selection made in code reaches neither.
+     * A tap on the tab already selected, [selected], from whichever of the delegate and
+     * [reselectTaps] saw it. On the Calendar it also undoes the first screen's inner step (Day view
+     * opened from a month cell), as its bar's back would, so the tap shows Month even if
+     * `CalendarTabTaps` were not answered.
      */
-    private class TabDelegate(private val onSelect: (UIViewController) -> Unit) :
-        NSObject(), UITabBarControllerDelegateProtocol {
+    private fun tabReselected(selected: UIViewController) {
+        trace.note(TabTapTrace.Event.RESELECT)
+        tabTapped(selected)
+    }
+
+    /**
+     * Counts a tap on the Calendar tab for `CalendarTabTaps` and undoes its first screen's inner
+     * step, once for one tap: the delegate, its `UITab` twin and [reselectTaps] may each report it.
+     */
+    private fun answerCalendarTap() {
+        val now = NSDate().timeIntervalSince1970
+        if (now - calendarAnsweredAt < ONE_TAP_S) return
+        calendarAnsweredAt = now
+        CalendarTabTaps.tap()
+        trace.note(TabTapTrace.Event.CALENDAR_COUNTED, "count=${CalendarTabTaps.count.value}")
+        val calendar = host(BottomNavDestination.CALENDAR)
+        if (calendar.undoRootStep()) trace.note(TabTapTrace.Event.ROOT_STEP_UNDONE)
+        // Whether the Calendar answered: its Day view's step is gone a moment later.
+        scope.launch {
+            delay(ANSWER_CHECK_MS)
+            if (calendar.rootStepPending) trace.note(TabTapTrace.Event.ROOT_STEP_LEFT)
+        }
+    }
+
+    private companion object {
+        /** Reports of a tap closer together than this, in seconds, are one tap. */
+        const val ONE_TAP_S = 0.3
+
+        /** How long after a Calendar tap the trace checks that Day view's step is gone. */
+        const val ANSWER_CHECK_MS = 800L
+    }
+
+    /**
+     * Tells [onChange] of a tap that selects another tab, and [onReselect] of one on the tab already
+     * selected, through both of UIKit's delegate forms: the view controller's and, since iOS 18,
+     * the `UITab`'s, whichever a release calls (a `UITab` stands for the view controller UIKit
+     * made it for). A tap may reach several of them, or none: on the iOS 26 simulator in CI a tap
+     * on the selected tab reached neither view-controller callback, which is why [TabReselectTaps]
+     * watches the bar too and the shell answers one tap once. A selection made in code reaches
+     * none of them.
+     */
+    private class TabDelegate(
+        private val trace: TabTapTrace,
+        private val onChange: (UIViewController) -> Unit,
+        private val onReselect: (UIViewController) -> Unit
+    ) : NSObject(), UITabBarControllerDelegateProtocol {
+
+        @ObjCSignatureOverride
+        override fun tabBarController(
+            tabBarController: UITabBarController,
+            shouldSelectViewController: UIViewController
+        ): Boolean {
+            trace.note(TabTapTrace.Event.SHOULD_SELECT)
+            if (shouldSelectViewController === tabBarController.selectedViewController) {
+                onReselect(shouldSelectViewController)
+            }
+            return true
+        }
+
+        @ObjCSignatureOverride
         override fun tabBarController(
             tabBarController: UITabBarController,
             didSelectViewController: UIViewController
         ) {
-            onSelect(didSelectViewController)
+            trace.note(TabTapTrace.Event.DID_SELECT)
+            onChange(didSelectViewController)
+        }
+
+        @ObjCSignatureOverride
+        override fun tabBarController(tabBarController: UITabBarController, shouldSelectTab: UITab): Boolean {
+            trace.note(TabTapTrace.Event.SHOULD_SELECT_TAB)
+            val selected = tabBarController.selectedViewController
+            if (shouldSelectTab === tabBarController.selectedTab && selected != null) onReselect(selected)
+            return true
+        }
+
+        @ObjCSignatureOverride
+        override fun tabBarController(
+            tabBarController: UITabBarController,
+            didSelectTab: UITab,
+            previousTab: UITab?
+        ) {
+            trace.note(TabTapTrace.Event.DID_SELECT_TAB)
+            tabBarController.selectedViewController?.let(onChange)
         }
     }
 }
