@@ -59,6 +59,7 @@ import com.coparently.app.domain.payments.Payment
 import com.coparently.app.domain.payments.PaymentKind
 import com.coparently.app.domain.payments.PaymentState
 import com.coparently.app.presentation.changerequests.splitSharesText
+import com.coparently.app.presentation.common.AdaptiveSegmented
 import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.BannerTone
 import com.coparently.app.presentation.common.BarAction
@@ -740,24 +741,32 @@ private fun ViewSwitcher(
     // The row itself is labelled: two unlabelled-in-context buttons announce "List" and
     // "Analytics" with nothing saying what they switch.
     val label = stringResource(Res.string.expense_analytics_view_label)
-    SingleChoiceSegmentedButtonRow(
-        modifier = modifier
-            .fillMaxWidth()
-            .semantics { contentDescription = label }
+    val listLabel = stringResource(Res.string.expense_analytics_tab_list)
+    val analyticsLabel = stringResource(Res.string.expense_analytics_tab_analytics)
+    val rowModifier = modifier
+        .fillMaxWidth()
+        .semantics { contentDescription = label }
+    AdaptiveSegmented(
+        labels = listOf(listLabel, analyticsLabel),
+        selectedIndex = if (showAnalytics) 1 else 0,
+        onSelect = { onSelect(it == 1) },
+        modifier = rowModifier
     ) {
-        SegmentedButton(
-            selected = !showAnalytics,
-            onClick = { onSelect(false) },
-            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
-        ) {
-            Text(stringResource(Res.string.expense_analytics_tab_list))
-        }
-        SegmentedButton(
-            selected = showAnalytics,
-            onClick = { onSelect(true) },
-            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
-        ) {
-            Text(stringResource(Res.string.expense_analytics_tab_analytics))
+        SingleChoiceSegmentedButtonRow(modifier = rowModifier) {
+            SegmentedButton(
+                selected = !showAnalytics,
+                onClick = { onSelect(false) },
+                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+            ) {
+                Text(listLabel)
+            }
+            SegmentedButton(
+                selected = showAnalytics,
+                onClick = { onSelect(true) },
+                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+            ) {
+                Text(analyticsLabel)
+            }
         }
     }
 }

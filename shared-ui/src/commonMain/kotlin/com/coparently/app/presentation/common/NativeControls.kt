@@ -40,6 +40,29 @@ interface NativeControls {
         accessibilityLabel: String?,
         modifier: Modifier
     )
+
+    /**
+     * A segmented choice of one among [labels]: `UISegmentedControl` on the iPhone, filling the
+     * width at 32 pt.
+     *
+     * The selected segment is [selectedIndex] at every composition (-1 for none); setting it from
+     * here never reports a selection. Only the parent's own tap calls [onSelect], with the tapped
+     * segment's index.
+     *
+     * @param labels The segments' titles, in order
+     * @param selectedIndex The chosen segment, or -1 when none is chosen
+     * @param onSelect Called with the index of the segment the parent tapped
+     * @param enabled Whether the parent can choose now
+     * @param modifier Modifier applied to the control
+     */
+    @Composable
+    fun Segmented(
+        labels: List<String>,
+        selectedIndex: Int,
+        onSelect: (Int) -> Unit,
+        enabled: Boolean,
+        modifier: Modifier
+    )
 }
 
 /**

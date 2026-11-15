@@ -67,6 +67,7 @@ import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.receipts.ReceiptScan
+import com.coparently.app.presentation.common.AdaptiveSegmented
 import com.coparently.app.presentation.common.AdaptiveSwitch
 import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.BarAction
@@ -972,9 +973,16 @@ private fun PaidBySection(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.XS)) {
         Text(text = stringResource(Res.string.expense_paid_by_title), style = MaterialTheme.typography.bodyLarge)
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            listOf(false to stringResource(Res.string.expense_paid_by_you), true to coParentName)
-                .forEachIndexed { index, (coParentPaid, label) ->
+        val options = listOf(false to stringResource(Res.string.expense_paid_by_you), true to coParentName)
+        AdaptiveSegmented(
+            labels = options.map { it.second },
+            selectedIndex = if (paidByCoParent) 1 else 0,
+            onSelect = { onChange(options[it].first) },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = enabled
+        ) {
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                options.forEachIndexed { index, (coParentPaid, label) ->
                     SegmentedButton(
                         selected = paidByCoParent == coParentPaid,
                         onClick = { onChange(coParentPaid) },
@@ -983,6 +991,7 @@ private fun PaidBySection(
                         label = { Text(label) }
                     )
                 }
+            }
         }
     }
 }

@@ -23,6 +23,15 @@ class RecordingNativeControls : NativeControls {
     /** The latest switch's callback, for a test that flips it. */
     var lastSwitchChange: ((Boolean) -> Unit)? = null
 
+    /** One drawn segmented control: its titles, chosen index and whether it could be used. */
+    data class SegmentedCall(val labels: List<String>, val selectedIndex: Int, val enabled: Boolean)
+
+    /** Every segmented control drawn, in the order of composition. */
+    val segmented = mutableListOf<SegmentedCall>()
+
+    /** The latest segmented control's callback, for a test that taps a segment. */
+    var lastSegmentSelect: ((Int) -> Unit)? = null
+
     @Composable
     override fun Switch(
         checked: Boolean,
@@ -36,7 +45,23 @@ class RecordingNativeControls : NativeControls {
         Box(modifier.size(51.dp, 31.dp).testTag(SWITCH_TAG))
     }
 
+    @Composable
+    override fun Segmented(
+        labels: List<String>,
+        selectedIndex: Int,
+        onSelect: (Int) -> Unit,
+        enabled: Boolean,
+        modifier: Modifier
+    ) {
+        segmented += SegmentedCall(labels = labels, selectedIndex = selectedIndex, enabled = enabled)
+        lastSegmentSelect = onSelect
+        Box(modifier.size(200.dp, 32.dp).testTag(SEGMENTED_TAG))
+    }
+
     companion object {
+        /** The test tag of a segmented control this fake drew. */
+        const val SEGMENTED_TAG = "native-segmented"
+
         /** The test tag of a switch this fake drew. */
         const val SWITCH_TAG = "native-switch"
     }

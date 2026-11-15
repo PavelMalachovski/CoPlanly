@@ -47,6 +47,7 @@ import com.coparently.app.domain.model.PairingInvite
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.model.activeInviteOrNull
+import com.coparently.app.presentation.common.AdaptiveSegmented
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.SectionGroup
@@ -716,21 +717,30 @@ private fun LazyListScope.enterCodeSection(
  */
 @Composable
 private fun PairingModeToggle(selected: PairingMode, onSelect: (PairingMode) -> Unit) {
-    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-        SegmentedButton(
-            selected = selected == PairingMode.SHARE,
-            onClick = { onSelect(PairingMode.SHARE) },
-            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-            icon = {},
-            label = { Text(stringResource(Res.string.pairing_mode_share)) }
-        )
-        SegmentedButton(
-            selected = selected == PairingMode.ENTER,
-            onClick = { onSelect(PairingMode.ENTER) },
-            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-            icon = {},
-            label = { Text(stringResource(Res.string.pairing_mode_enter)) }
-        )
+    val shareLabel = stringResource(Res.string.pairing_mode_share)
+    val enterLabel = stringResource(Res.string.pairing_mode_enter)
+    AdaptiveSegmented(
+        labels = listOf(shareLabel, enterLabel),
+        selectedIndex = if (selected == PairingMode.SHARE) 0 else 1,
+        onSelect = { onSelect(if (it == 0) PairingMode.SHARE else PairingMode.ENTER) },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            SegmentedButton(
+                selected = selected == PairingMode.SHARE,
+                onClick = { onSelect(PairingMode.SHARE) },
+                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                icon = {},
+                label = { Text(shareLabel) }
+            )
+            SegmentedButton(
+                selected = selected == PairingMode.ENTER,
+                onClick = { onSelect(PairingMode.ENTER) },
+                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                icon = {},
+                label = { Text(enterLabel) }
+            )
+        }
     }
 }
 

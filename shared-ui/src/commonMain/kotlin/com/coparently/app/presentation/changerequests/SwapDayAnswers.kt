@@ -21,6 +21,7 @@ import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.custody.DaySwapInbox
 import com.coparently.app.domain.time.IsoText
+import com.coparently.app.presentation.common.AdaptiveSegmented
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
@@ -81,14 +82,26 @@ fun SwapDayAnswers(
                     },
                     style = MaterialTheme.typography.bodyMedium
                 )
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    ANSWERS.forEachIndexed { index, (answer, label) ->
-                        SegmentedButton(
-                            selected = picks[iso] == answer,
-                            onClick = { picks = if (picks[iso] == answer) picks - iso else picks + (iso to answer) },
-                            shape = SegmentedButtonDefaults.itemShape(index = index, count = ANSWERS.size),
-                            label = { Text(stringResource(label)) }
-                        )
+                val answerLabels = ANSWERS.map { stringResource(it.second) }
+                AdaptiveSegmented(
+                    labels = answerLabels,
+                    selectedIndex = ANSWERS.indexOfFirst { it.first == picks[iso] },
+                    // UIKit reports a tap on a segment that is not chosen, so the iPhone cannot
+                    // take a pick back by tapping it again, as the Material row does.
+                    onSelect = { picks = picks + (iso to ANSWERS[it].first) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        ANSWERS.forEachIndexed { index, (answer, label) ->
+                            SegmentedButton(
+                                selected = picks[iso] == answer,
+                                onClick = {
+                                    picks = if (picks[iso] == answer) picks - iso else picks + (iso to answer)
+                                },
+                                shape = SegmentedButtonDefaults.itemShape(index = index, count = ANSWERS.size),
+                                label = { Text(stringResource(label)) }
+                            )
+                        }
                     }
                 }
             }

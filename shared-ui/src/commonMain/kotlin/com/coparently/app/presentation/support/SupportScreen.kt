@@ -50,6 +50,7 @@ import com.coparently.app.domain.payments.PaymentState
 import com.coparently.app.domain.support.SupportAgreement
 import com.coparently.app.domain.support.SupportReminderRule
 import com.coparently.app.domain.support.SupportTerms
+import com.coparently.app.presentation.common.AdaptiveSegmented
 import com.coparently.app.presentation.common.AdaptiveSwitch
 import com.coparently.app.presentation.common.BannerTone
 import com.coparently.app.presentation.common.EmptyState
@@ -468,14 +469,21 @@ private fun ProposeSupportDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(stringResource(Res.string.support_dialog_payer), style = MaterialTheme.typography.labelLarge)
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    participants.forEachIndexed { index, uid ->
-                        SegmentedButton(
-                            selected = payer == uid,
-                            onClick = { payer = uid },
-                            shape = SegmentedButtonDefaults.itemShape(index = index, count = participants.size),
-                            label = { Text(names.labelForUid(uid)) }
-                        )
+                AdaptiveSegmented(
+                    labels = participants.map { names.labelForUid(it) },
+                    selectedIndex = participants.indexOf(payer),
+                    onSelect = { payer = participants[it] },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        participants.forEachIndexed { index, uid ->
+                            SegmentedButton(
+                                selected = payer == uid,
+                                onClick = { payer = uid },
+                                shape = SegmentedButtonDefaults.itemShape(index = index, count = participants.size),
+                                label = { Text(names.labelForUid(uid)) }
+                            )
+                        }
                     }
                 }
                 Text(stringResource(Res.string.support_dialog_note), style = MaterialTheme.typography.bodySmall)

@@ -59,6 +59,7 @@ import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.CustodyModelType
+import com.coparently.app.presentation.common.AdaptiveSegmented
 import com.coparently.app.presentation.common.AdaptiveSwitch
 import com.coparently.app.presentation.common.AnswerByField
 import com.coparently.app.presentation.common.AnswerByPickSaver
@@ -515,26 +516,33 @@ fun CustodyPatternForm(
             )
 
             // Two names, one chosen — a switch said only "on" for one of them (second audit).
-            SingleChoiceSegmentedButtonRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = dims.paddingSmall)
+            val firstOptions = listOf(true, false)
+            val rowModifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = dims.paddingSmall)
+            AdaptiveSegmented(
+                labels = firstOptions.map { parentNames.labelFor(if (it) "mom" else "dad") },
+                selectedIndex = firstOptions.indexOf(uiState.momFirst),
+                onSelect = { actions.setMomFirst(firstOptions[it]) },
+                modifier = rowModifier
             ) {
-                listOf(true, false).forEachIndexed { index, momFirst ->
-                    val slot = if (momFirst) "mom" else "dad"
-                    SegmentedButton(
-                        selected = uiState.momFirst == momFirst,
-                        onClick = { actions.setMomFirst(momFirst) },
-                        shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
-                        icon = {
-                            Box(
-                                modifier = Modifier
-                                    .size(12.dp)
-                                    .background(ParentColors.fill(slot), CircleShape)
-                            )
-                        },
-                        label = { Text(parentNames.labelFor(slot)) }
-                    )
+                SingleChoiceSegmentedButtonRow(modifier = rowModifier) {
+                    firstOptions.forEachIndexed { index, momFirst ->
+                        val slot = if (momFirst) "mom" else "dad"
+                        SegmentedButton(
+                            selected = uiState.momFirst == momFirst,
+                            onClick = { actions.setMomFirst(momFirst) },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
+                            icon = {
+                                Box(
+                                    modifier = Modifier
+                                        .size(12.dp)
+                                        .background(ParentColors.fill(slot), CircleShape)
+                                )
+                            },
+                            label = { Text(parentNames.labelFor(slot)) }
+                        )
+                    }
                 }
             }
 

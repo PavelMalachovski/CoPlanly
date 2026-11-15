@@ -28,6 +28,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.presentation.calendar.CalendarViewMode
+import com.coparently.app.presentation.common.AdaptiveSegmented
 import com.coparently.app.presentation.common.BrandHeader
 import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.common.stacksAtLargeFont
@@ -173,18 +174,25 @@ private fun ViewModeControl(
     modifier: Modifier = Modifier
 ) {
     val modes = CalendarViewMode.entries
-    SingleChoiceSegmentedButtonRow(modifier = modifier) {
-        modes.forEachIndexed { index, mode ->
-            SegmentedButton(
-                selected = mode == viewMode,
-                onClick = { onViewModeChange(mode) },
-                shape = SegmentedButtonDefaults.itemShape(index = index, count = modes.size),
-                // No check mark at any size, so the label has the segment's whole width: three
-                // labels already fit badly at 200 % in German. A label, not money, so it may end
-                // in an ellipsis (design item 15).
-                icon = {},
-                label = { Text(text = viewModeLabel(mode), maxLines = 1, overflow = TextOverflow.Ellipsis) }
-            )
+    AdaptiveSegmented(
+        labels = modes.map { viewModeLabel(it) },
+        selectedIndex = modes.indexOf(viewMode),
+        onSelect = { onViewModeChange(modes[it]) },
+        modifier = modifier
+    ) {
+        SingleChoiceSegmentedButtonRow(modifier = modifier) {
+            modes.forEachIndexed { index, mode ->
+                SegmentedButton(
+                    selected = mode == viewMode,
+                    onClick = { onViewModeChange(mode) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = modes.size),
+                    // No check mark at any size, so the label has the segment's whole width: three
+                    // labels already fit badly at 200 % in German. A label, not money, so it may end
+                    // in an ellipsis (design item 15).
+                    icon = {},
+                    label = { Text(text = viewModeLabel(mode), maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                )
+            }
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.coparently.app.presentation.common
 
+import androidx.compose.material3.Text
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -11,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.coparently.app.testing.RobolectricTestApplication
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -87,7 +89,46 @@ class NativeControlsTest {
         assertEquals(0, materialToggles)
     }
 
+    @Test
+    fun `segmented without native controls draws the site's row`() {
+        var materialRan = false
+        rule.setContent {
+            AdaptiveSegmented(labels = VIEW_LABELS, selectedIndex = 0, onSelect = {}) {
+                materialRan = true
+                Text(MATERIAL_SEGMENTS)
+            }
+        }
+        rule.onNodeWithText(MATERIAL_SEGMENTS).assertExists()
+        assertTrue(materialRan)
+        assertTrue(fake.segmented.isEmpty())
+    }
+
+    @Test
+    fun `segmented with native controls`() {
+        var materialRan = false
+        var chosen = -1
+        rule.setContent {
+            CompositionLocalProvider(LocalNativeControls provides fake) {
+                AdaptiveSegmented(labels = VIEW_LABELS, selectedIndex = 0, onSelect = { chosen = it }) {
+                    materialRan = true
+                }
+            }
+        }
+        rule.waitForIdle()
+
+        assertEquals(
+            RecordingNativeControls.SegmentedCall(labels = VIEW_LABELS, selectedIndex = 0, enabled = true),
+            fake.segmented.last()
+        )
+        rule.onNodeWithTag(RecordingNativeControls.SEGMENTED_TAG).assertExists()
+        assertFalse(materialRan)
+        fake.lastSegmentSelect?.invoke(2)
+        assertEquals(2, chosen)
+    }
+
     private companion object {
+        val VIEW_LABELS = listOf("Month", "Week", "Day")
+        const val MATERIAL_SEGMENTS = "Material segments"
         const val NATIVE_ROW = "Pause before sending"
         const val MATERIAL_ROW = "Share usage data"
     }

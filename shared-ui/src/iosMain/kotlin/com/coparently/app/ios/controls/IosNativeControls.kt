@@ -1,5 +1,7 @@
 package com.coparently.app.ios.controls
 
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -15,6 +17,8 @@ import kotlinx.cinterop.useContents
 import platform.CoreGraphics.CGRectMake
 import platform.Foundation.NSSelectorFromString
 import platform.UIKit.UIControlEventValueChanged
+import platform.UIKit.UISegmentedControl
+import platform.UIKit.UISegmentedControlNoSegment
 import platform.UIKit.UISwitch
 
 /**
@@ -49,6 +53,28 @@ internal object IosNativeControls : NativeControls {
         )
     }
 
+    /**
+     * A `UISegmentedControl` filling the width at [SEGMENTED_HEIGHT_PT]. The segments are rebuilt
+     * only when [labels] change, and [selectedIndex] is set at every update without the control
+     * sending `UIControlEventValueChanged`; only the parent's tap reaches [onSelect].
+     */
+    @Composable
+    override fun Segmented(
+        labels: List<String>,
+        selectedIndex: Int,
+        onSelect: (Int) -> Unit,
+        enabled: Boolean,
+        modifier: Modifier
+    ) {
+        val callback by rememberUpdatedState(onSelect)
+        UIKitView(
+            factory = { makeSegmented(labels) { callback(it) } },
+            modifier = modifier.fillMaxWidth().height(SEGMENTED_HEIGHT_PT.dp),
+            update = { view -> updateSegmented(view, labels, selectedIndex, enabled) },
+            properties = UIKitInteropProperties(isInteractive = true, isNativeAccessibilityEnabled = true)
+        )
+    }
+
     /** The switch's intrinsic size in points, measured once from UIKit's own switch. */
     // `CGRectMake` and `useContents` are Kotlin/Native's C interop.
     @OptIn(ExperimentalForeignApi::class)
@@ -57,6 +83,9 @@ internal object IosNativeControls : NativeControls {
             if (width > 0.0 && height > 0.0) width to height else SWITCH_WIDTH_PT to SWITCH_HEIGHT_PT
         }
     }
+
+    /** The height of a segmented control, in points (UIKit's standard bar-size control). */
+    private const val SEGMENTED_HEIGHT_PT = 32.0
 
     /** `UISwitch`'s intrinsic width before iOS 26, used if UIKit reports no size. */
     private const val SWITCH_WIDTH_PT = 51.0
@@ -100,5 +129,59 @@ internal class ValueChangedSwitch(
     @ObjCAction
     fun valueChanged(sender: UISwitch) {
         onValueChanged(sender.on)
+    }
+}
+
+/**
+ * A new segmented control with one segment per entry of [labels], whose target-action,
+ * `UIControlEventValueChanged`, calls [onSelect] with the tapped segment's index. UIKit sends that
+ * event only for the parent's own tap, never for an index set in code, which is what
+ * [updateSegmented] does.
+ */
+internal fun makeSegmented(labels: List<String>, onSelect: (Int) -> Unit): UISegmentedControl =
+    ValueChangedSegmented(labels, onSelect)
+
+/**
+ * Shows [labels], [selectedIndex] and [enabled] on [view] without reporting a selection. The
+ * segments are rebuilt only when the labels differ from the ones shown.
+ */
+internal fun updateSegmented(view: UISegmentedControl, labels: List<String>, selectedIndex: Int, enabled: Boolean) {
+    if (view is ValueChangedSegmented && view.shown != labels) view.show(labels)
+    val index = if (selectedIndex in labels.indices) selectedIndex.toLong() else UISegmentedControlNoSegment
+    if (view.selectedSegmentIndex != index) view.selectedSegmentIndex = index
+    if (view.enabled != enabled) view.enabled = enabled
+}
+
+/**
+ * A `UISegmentedControl` that is its own target, so the action and what it calls live exactly as
+ * long as the view: UIKit does not retain a control's targets. It remembers the labels it shows.
+ */
+// `CGRectMake` and `NSSelectorFromString` are Kotlin/Native's C interop.
+@OptIn(ExperimentalForeignApi::class)
+internal class ValueChangedSegmented(
+    labels: List<String>,
+    private val onSelect: (Int) -> Unit
+) : UISegmentedControl(frame = CGRectMake(0.0, 0.0, 0.0, 0.0)) {
+
+    /** The titles the segments show now. */
+    var shown: List<String> = emptyList()
+        private set
+
+    init {
+        show(labels)
+        addTarget(this, action = NSSelectorFromString("valueChanged:"), forControlEvents = UIControlEventValueChanged)
+    }
+
+    /** Replaces the segments with one per entry of [labels]. */
+    fun show(labels: List<String>) {
+        removeAllSegments()
+        labels.forEachIndexed { index, title -> insertSegmentWithTitle(title, atIndex = index.toULong(), animated = false) }
+        shown = labels
+    }
+
+    /** The target-action of `UIControlEventValueChanged`. */
+    @ObjCAction
+    fun valueChanged(sender: UISegmentedControl) {
+        onSelect(sender.selectedSegmentIndex.toInt())
     }
 }

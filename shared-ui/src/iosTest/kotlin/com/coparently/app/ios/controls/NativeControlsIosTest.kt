@@ -3,6 +3,7 @@ package com.coparently.app.ios.controls
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.Foundation.NSSelectorFromString
 import platform.UIKit.UIControlEventValueChanged
+import platform.UIKit.UIControl
 import platform.UIKit.UISwitch
 import platform.darwin.NSObject
 import kotlin.test.Test
@@ -44,13 +45,43 @@ class NativeControlsIosTest {
         assertEquals(emptyList(), received)
     }
 
+    @Test
+    fun `a segment set from outside does not call back`() {
+        val chosen = mutableListOf<Int>()
+        val control = makeSegmented(SEGMENTS) { chosen += it }
+        assertEquals(3L, control.numberOfSegments)
+
+        updateSegmented(control, SEGMENTS, selectedIndex = 1, enabled = true)
+        assertEquals(1L, control.selectedSegmentIndex)
+        updateSegmented(control, SEGMENTS, selectedIndex = 2, enabled = true)
+        assertEquals(2L, control.selectedSegmentIndex)
+        assertEquals(emptyList(), chosen)
+
+        // The parent's tap: UIKit sets the index, then sends the event.
+        control.selectedSegmentIndex = 0
+        sendValueChanged(control)
+
+        assertEquals(listOf(0), chosen)
+    }
+
+    @Test
+    fun `segments are rebuilt only when the labels change`() {
+        val control = makeSegmented(SEGMENTS) {}
+        updateSegmented(control, SEGMENTS, selectedIndex = 0, enabled = true)
+        updateSegmented(control, listOf("A", "B"), selectedIndex = 1, enabled = false)
+
+        assertEquals(2L, control.numberOfSegments)
+        assertEquals(1L, control.selectedSegmentIndex)
+        assertFalse(control.enabled)
+    }
+
     /**
      * Sends `UIControlEventValueChanged` to each action registered for it, as
      * `sendActionsForControlEvents` would: that call routes through `UIApplication`, which a test
      * process spawned on the simulator does not have, so it would reach no target.
      */
     @OptIn(ExperimentalForeignApi::class)
-    private fun sendValueChanged(control: UISwitch) {
+    private fun sendValueChanged(control: UIControl) {
         control.allTargets.forEach { target ->
             control.actionsForTarget(target, forControlEvent = UIControlEventValueChanged)?.forEach { action ->
                 (target as NSObject).performSelector(NSSelectorFromString(action as String), withObject = control)
@@ -60,5 +91,6 @@ class NativeControlsIosTest {
 
     private companion object {
         const val LABEL = "Pause before sending"
+        val SEGMENTS = listOf("Month", "Week", "Day")
     }
 }
