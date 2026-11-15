@@ -33,16 +33,23 @@ import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 import kotlinx.io.readByteArray
+import org.jetbrains.skia.Codec
+import org.jetbrains.skia.Data
+import org.jetbrains.skia.EncodedOrigin
 import org.jetbrains.skia.Image
 import org.jetbrains.skia.Rect
 import org.jetbrains.skia.SamplingMode
 import org.jetbrains.skia.Surface
+import org.jetbrains.skia.impl.use
 import org.koin.mp.KoinPlatform
 import platform.CoreGraphics.CGRectMake
 import platform.CoreGraphics.CGSizeMake
 import platform.Foundation.NSData
+import platform.Foundation.NSNotificationCenter
+import platform.Foundation.NSOperationQueue
 import platform.Foundation.NSURL
 import platform.Foundation.create
+import platform.UIKit.UIApplicationDidReceiveMemoryWarningNotification
 import platform.UIKit.UIGraphicsImageRenderer
 import platform.UIKit.UIGraphicsImageRendererFormat
 import platform.UIKit.UIImage
@@ -66,7 +73,9 @@ import androidx.compose.foundation.Image as ComposeImage
  *
  * The bytes are decoded by Skia on [Dispatchers.Default] and, unless `fullResolution` is asked for,
  * scaled down to the size the image is laid out at; UIKit decodes what Skia cannot (a HEIC picked
- * from the photo library). Decoded images are kept in memory ([IosImageMemory]).
+ * from the photo library) or what it would draw on its side (a photo whose EXIF orientation turns
+ * it). Images decoded at their laid-out size are kept in memory, up to a budget of decoded bytes
+ * ([IosImageMemory]); a whole photograph (the zoomable viewer's) is never kept.
  */
 internal class IosImages(private val loader: IosImageLoader) : PlatformImages {
 
@@ -218,15 +227,21 @@ internal class IosImageLoader(
 
     /** What [memory] already holds for [source] at this size, without loading. */
     fun cached(source: IosImageSource, target: IntSize?, fullResolution: Boolean): ImageBitmap? =
-        if (mayShow(source)) memory[keyOf(source, target, fullResolution)] else null
+        boundOf(target, fullResolution)?.takeIf { mayShow(source) }?.let { memory[keyOf(source, it)] }
 
     /** [source] decoded, scaled down to [target] unless [fullResolution], or null. */
     suspend fun load(source: IosImageSource, target: IntSize?, fullResolution: Boolean): ImageBitmap? {
         // A photograph decoded for one account is not shown to the next from memory either.
         if (!mayShow(source)) return null
-        val key = keyOf(source, target, fullResolution)
-        return memory[key] ?: decoded(source, if (fullResolution) null else target)?.also { memory[key] = it }
+        // A whole photograph (12 MP is about 48 MB decoded) is held by the screen showing it, never
+        // by the cache: a few of them would have the phone end the app for its memory.
+        val bound = boundOf(target, fullResolution) ?: return decoded(source, null)
+        val key = keyOf(source, bound)
+        return memory[key] ?: decoded(source, bound)?.also { memory[key] = it }
     }
+
+    /** The size to decode at, or null for the whole image. */
+    private fun boundOf(target: IntSize?, fullResolution: Boolean): IntSize? = target.takeUnless { fullResolution }
 
     private suspend fun decoded(source: IosImageSource, bound: IntSize?): ImageBitmap? =
         bytesOf(source)?.let { bytes -> withContext(Dispatchers.Default) { IosImageDecoder.decode(bytes, bound) } }
@@ -272,12 +287,8 @@ internal class IosImageLoader(
         SystemFileSystem.source(path).buffered().use { it.readByteArray() }
     }.getOrNull()
 
-    private fun keyOf(source: IosImageSource, target: IntSize?, fullResolution: Boolean): String =
-        if (fullResolution || target == null) {
-            "${source.cacheKey}@full"
-        } else {
-            "${source.cacheKey}@${target.width}x${target.height}"
-        }
+    private fun keyOf(source: IosImageSource, bound: IntSize): String =
+        "${source.cacheKey}@${bound.width}x${bound.height}"
 
     private companion object {
         const val TAG = "IosImages"
@@ -288,26 +299,65 @@ internal class IosImageLoader(
 }
 
 /**
- * Decoded images, the most recently used [capacity] of them. Touched only on the main thread: a
- * load reads and writes it from the composition's coroutine, before and after the decode.
+ * Decoded images, the most recently used of them up to [budgetBytes] decoded bytes (four per pixel).
+ * Touched only on the main thread: a load reads and writes it from the composition's coroutine,
+ * before and after the decode, and the memory warning clears it on the main queue.
  */
-internal class IosImageMemory(private val capacity: Int) {
+internal class IosImageMemory(private val budgetBytes: Long) {
 
     private val entries = LinkedHashMap<String, ImageBitmap>()
+
+    /** The decoded bytes held now. */
+    var sizeBytes: Long = 0
+        private set
+
+    /** How many images are held. */
+    val count: Int get() = entries.size
 
     /** The image under [key], now the most recently used, or null. */
     operator fun get(key: String): ImageBitmap? = entries.remove(key)?.also { entries[key] = it }
 
-    /** Keeps [image] under [key], dropping the least recently used beyond [capacity]. */
+    /**
+     * Keeps [image] under [key], dropping the least recently used until the budget holds; an image
+     * larger than the whole budget is not kept.
+     */
     operator fun set(key: String, image: ImageBitmap) {
-        entries.remove(key)
+        entries.remove(key)?.let { sizeBytes -= bytesOf(it) }
+        val size = bytesOf(image)
+        if (size > budgetBytes) return
         entries[key] = image
-        while (entries.size > capacity) entries.remove(entries.keys.first())
+        sizeBytes += size
+        while (sizeBytes > budgetBytes) {
+            val oldest = entries.keys.first()
+            entries.remove(oldest)?.let { sizeBytes -= bytesOf(it) }
+        }
+    }
+
+    /** Drops every image. */
+    fun clear() {
+        entries.clear()
+        sizeBytes = 0
     }
 
     companion object {
-        /** The app's one cache: 32 images, a screen's thumbnails and a viewer's photograph. */
-        val shared = IosImageMemory(capacity = 32)
+        /** 64 MB: a screen's thumbnails and photo strips several times over. */
+        const val BUDGET_BYTES: Long = 64L * 1024L * 1024L
+
+        /** The app's one cache, emptied when iOS warns that memory is low. */
+        val shared: IosImageMemory by lazy {
+            IosImageMemory(BUDGET_BYTES).also { memory ->
+                NSNotificationCenter.defaultCenter.addObserverForName(
+                    name = UIApplicationDidReceiveMemoryWarningNotification,
+                    `object` = null,
+                    queue = NSOperationQueue.mainQueue
+                ) { _ -> memory.clear() }
+            }
+        }
+
+        private const val BYTES_PER_PIXEL = 4L
+
+        /** What [image] holds decoded: four bytes a pixel, as Skia's N32 bitmaps do. */
+        fun bytesOf(image: ImageBitmap): Long = image.width.toLong() * image.height.toLong() * BYTES_PER_PIXEL
     }
 }
 
@@ -316,13 +366,32 @@ internal object IosImageDecoder {
 
     /** [bytes] decoded, scaled down to cover [bound] (when given and smaller), or null. */
     fun decode(bytes: ByteArray, bound: IntSize?): ImageBitmap? {
-        val image = skiaImage(bytes) ?: uiKitImage(bytes, bound)?.let { skiaImage(it) } ?: return null
-        return runCatching { scaledDown(image, bound).toComposeImageBitmap() }.getOrNull()
+        val image = (if (isUpright(bytes)) skiaImage(bytes) else null)
+            ?: uiKitImage(bytes, bound)?.let { skiaImage(it) }
+            ?: return null
+        val scaled = runCatching { scaledDown(image, bound) }.getOrNull()
+        // `toComposeImageBitmap` draws the image into a bitmap of its own, so the Skia image can
+        // be closed once it has.
+        val bitmap = scaled?.let { runCatching { it.toComposeImageBitmap() }.getOrNull() }
+        scaled?.close()
+        if (scaled !== image) image.close()
+        return bitmap
     }
 
     private fun skiaImage(bytes: ByteArray): Image? = runCatching {
         Image.makeFromEncoded(bytes).takeIf { it.width > 0 && it.height > 0 }
     }.getOrNull()
+
+    /**
+     * Whether [bytes] draw as they are stored: no EXIF orientation that turns them. Skia's own
+     * decoder is not relied on to apply one, so a turned photo goes through UIKit, which does.
+     * Bytes Skia's codec cannot read count as upright, and Skia or UIKit then decide.
+     */
+    private fun isUpright(bytes: ByteArray): Boolean = runCatching {
+        Data.makeFromBytes(bytes).use { data ->
+            Codec.makeFromData(data).use { it.encodedOrigin == EncodedOrigin.TOP_LEFT }
+        }
+    }.getOrDefault(true)
 
     /**
      * [bytes] through `UIImage` (which reads HEIC and applies the photo's orientation), drawn at most
@@ -363,7 +432,6 @@ internal object IosImageDecoder {
         )
         val scaled = surface.makeImageSnapshot()
         surface.close()
-        image.close()
         return scaled
     }
 

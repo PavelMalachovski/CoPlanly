@@ -1,5 +1,6 @@
 package com.coparently.app.presentation.platform
 
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.unit.IntSize
 import com.coparently.app.data.files.SharedFileCache
 import com.coparently.app.data.files.SharedFileStorage
@@ -18,6 +19,8 @@ import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 import platform.Foundation.NSTemporaryDirectory
 import platform.Foundation.NSUUID
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -44,10 +47,12 @@ class IosImagesTest {
     private val familyPath = RecordPhotoPaths.build(RecordPhotoKind.PET, family, ALICE, RECORD, "a.jpg")
     private val reference = RecordPhotoCodec.encode(RecordPhoto(familyPath, "image/jpeg", 10, SHA256))
 
+    private val memory = IosImageMemory(IosImageMemory.BUDGET_BYTES)
+
     private fun loader(viewer: String?) = IosImageLoader(
         photoCache = { cache },
         viewerUid = { viewer },
-        memory = IosImageMemory(capacity = 4)
+        memory = memory
     )
 
     @Test
@@ -102,6 +107,51 @@ class IosImagesTest {
         assertEquals(THUMBNAIL, thumbnail.height)
     }
 
+    @Test
+    fun `images past the byte budget evict the oldest`() {
+        // 100 by 100 is 40 000 decoded bytes; two fit in 100 000, a third pushes the first out.
+        val small = IosImageMemory(budgetBytes = 100_000)
+        small["a"] = ImageBitmap(100, 100)
+        small["b"] = ImageBitmap(100, 100)
+        assertEquals(80_000, small.sizeBytes)
+        small["c"] = ImageBitmap(100, 100)
+        assertNull(small["a"])
+        assertNotNull(small["b"])
+        assertNotNull(small["c"])
+        assertEquals(80_000, small.sizeBytes)
+        // An image larger than the whole budget is not kept at all.
+        small["huge"] = ImageBitmap(200, 200)
+        assertNull(small["huge"])
+        assertEquals(2, small.count)
+        small.clear()
+        assertEquals(0, small.count)
+        assertEquals(0, small.sizeBytes)
+    }
+
+    @Test
+    fun `a full-resolution load is not retained`() = runTest {
+        val matrix = assertNotNull(IosQrCodes(UnavailableShareSheet).encode("CoPlanly"))
+        val file = write("whole.png", assertNotNull(QrPicture.png(matrix)))
+        val images = loader(ALICE)
+        assertNotNull(images.loadModel(file, IntSize(THUMBNAIL, THUMBNAIL), fullResolution = true))
+        assertEquals(0, memory.count)
+        val source = assertNotNull(images.sourceOf(file))
+        assertNull(images.cached(source, IntSize(THUMBNAIL, THUMBNAIL), fullResolution = true))
+        assertNotNull(images.loadModel(file, IntSize(THUMBNAIL, THUMBNAIL), fullResolution = false))
+        assertEquals(1, memory.count)
+        assertNotNull(images.cached(source, IntSize(THUMBNAIL, THUMBNAIL), fullResolution = false))
+    }
+
+    @OptIn(ExperimentalEncodingApi::class)
+    @Test
+    fun `a photo turned by its EXIF orientation is drawn upright`() {
+        // An 8 by 4 JPEG whose EXIF orientation 6 says "turn a quarter clockwise": 4 by 8 on screen.
+        val jpeg = Base64.decode(ORIENTATION_6_JPEG)
+        val drawn = assertNotNull(IosImageDecoder.decode(jpeg, bound = null))
+        assertEquals(4, drawn.width)
+        assertEquals(8, drawn.height)
+    }
+
     private fun write(name: String, bytes: ByteArray): Path {
         SystemFileSystem.createDirectories(root)
         val file = Path(root, name)
@@ -153,5 +203,18 @@ class IosImagesTest {
         const val RECORD = "pet-1"
         const val SHA256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
         const val THUMBNAIL = 48
+
+        /** An 8 by 4 JPEG with EXIF orientation 6, made with Pillow 12.3 (`exif[0x0112] = 6`). */
+        const val ORIENTATION_6_JPEG =
+            "/9j/4AAQSkZJRgABAQAAAQABAAD/4QAiRXhpZgAATU0AKgAAAAgAAQESAAMAAAABAAYAAAAAAAD/2wBDAAYEBQYFBAYGBQYH" +
+                "BwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYa" +
+                "KCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAEAAgDASIAAhEBAxEB/8QA" +
+                "HwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKB" +
+                "kaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWG" +
+                "h4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QA" +
+                "HwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEI" +
+                "FEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOE" +
+                "hYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oA" +
+                "DAMBAAIRAxEAPwDgKKKK+eP2E//Z"
     }
 }
