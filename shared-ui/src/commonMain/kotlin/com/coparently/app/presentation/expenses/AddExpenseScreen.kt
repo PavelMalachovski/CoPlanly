@@ -79,13 +79,13 @@ import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.LocalDateSaver
+import com.coparently.app.presentation.common.MenuFieldRow
 import com.coparently.app.presentation.common.NativeControls
 import com.coparently.app.presentation.common.ScreenBar
 import com.coparently.app.presentation.common.SideBySideOrStacked
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.nativeControls
-import com.coparently.app.presentation.common.optionMenuItems
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberRecordPhoto
@@ -430,7 +430,8 @@ fun AddExpenseScreen(
                 CurrencySelector(
                     selected = effectiveCurrency,
                     enabled = !isSaving,
-                    onSelect = { currency = it }
+                    onSelect = { currency = it },
+                    background = MaterialTheme.colorScheme.background
                 )
             }
 
@@ -451,7 +452,9 @@ fun AddExpenseScreen(
                 onClick = { showDatePicker = true },
                 enabled = !isSaving,
                 date = date,
-                onDateChange = { date = it }
+                onDateChange = { date = it },
+                // The form sits on the screen's ground, not on a card.
+                background = MaterialTheme.colorScheme.background
             )
 
             FamilyMemberChips(
@@ -647,10 +650,9 @@ private fun ExpenseCategoryDropdown(
 }
 
 /**
- * The category field on the iPhone: the same read-only field, opening the system's menu of
- * categories from itself ([NativeControls.MenuAnchor]), the category chosen now ticked.
+ * The category on the iPhone: the field's label and the system's pop-up button of categories
+ * ([MenuFieldRow]), the category chosen now checked. The form sits on the screen's ground.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ExpenseCategoryMenu(
     native: NativeControls,
@@ -658,21 +660,14 @@ private fun ExpenseCategoryMenu(
     onCategorySelected: (ExpenseCategory) -> Unit
 ) {
     val options = ExpenseCategory.values().map { it to stringResource(it.labelRes) }
-    native.MenuAnchor(
-        items = optionMenuItems(options, category, onCategorySelected),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        OutlinedTextField(
-            value = stringResource(category.labelRes),
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(stringResource(Res.string.expense_field_category)) },
-            leadingIcon = { CategoryDot(category) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = false) },
-            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
+    MenuFieldRow(
+        native = native,
+        label = stringResource(Res.string.expense_field_category),
+        options = options,
+        selected = category,
+        onSelect = onCategorySelected,
+        background = MaterialTheme.colorScheme.background
+    )
 }
 
 /** The category's colour, as the chart's own slice hue — a dot, not an icon tint. */
@@ -1014,6 +1009,8 @@ private fun PaidBySection(
         Text(text = stringResource(Res.string.expense_paid_by_title), style = MaterialTheme.typography.bodyLarge)
         val options = listOf(false to stringResource(Res.string.expense_paid_by_you), true to coParentName)
         AdaptiveSegmented(
+            // Behind the native control: the form sits on the screen's ground.
+            background = MaterialTheme.colorScheme.background,
             labels = options.map { it.second },
             selectedIndex = if (paidByCoParent) 1 else 0,
             onSelect = { onChange(options[it].first) },
@@ -1080,7 +1077,8 @@ private fun SplitSection(
                 checked = shared,
                 onCheckedChange = onSharedChange,
                 enabled = enabled,
-                accessibilityLabel = stringResource(Res.string.expense_split_shared)
+                accessibilityLabel = stringResource(Res.string.expense_split_shared),
+                background = MaterialTheme.colorScheme.background
             )
         }
 
@@ -1113,7 +1111,8 @@ private fun SplitSection(
                 onCheckedChange = { on ->
                     onOverrideChange(if (on) agreedRatio.momPercent else null)
                 },
-                enabled = enabled
+                enabled = enabled,
+                background = MaterialTheme.colorScheme.background
             )
         }
         Text(

@@ -14,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import com.coparently.app.presentation.theme.Spacing
 import kotlinx.datetime.LocalDate
@@ -43,6 +44,8 @@ import kotlinx.datetime.LocalDate
  * @param modifier Applied to the field; it fills the width by default.
  * @param date The date as a day, or null while none is chosen, for the native pill.
  * @param onDateChange Receives the day picked in the native pill, or null to keep the field there.
+ * @param background What the native pill sits on: a card's `surfaceContainer` by default; a form
+ *   on the screen's ground passes `colorScheme.background`, a Material `Card` its own container.
  */
 @Composable
 // A label, the shown value, the picker, two states, and the day the iPhone's pill edits in place.
@@ -54,11 +57,12 @@ fun DatePickerField(
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
     date: LocalDate? = null,
-    onDateChange: ((LocalDate) -> Unit)? = null
+    onDateChange: ((LocalDate) -> Unit)? = null,
+    background: Color = MaterialTheme.colorScheme.surfaceContainer
 ) {
     val native = nativeControls()
     if (native != null && onDateChange != null) {
-        NativeDateRow(native, label, date, onDateChange.takeIf { enabled } ?: {}, modifier)
+        NativeDateRow(native, label, date, onDateChange.takeIf { enabled } ?: {}, background, modifier)
     } else {
         MaterialDateField(label, value, onClick, enabled, modifier)
     }
@@ -66,11 +70,13 @@ fun DatePickerField(
 
 /** The label and the system's compact date pill on one line, as the iPhone's own forms show a date. */
 @Composable
+@Suppress("LongParameterList") // the label, the day, its callback, the colour under it and the modifier
 private fun NativeDateRow(
     native: NativeControls,
     label: String,
     date: LocalDate?,
     onDateChange: (LocalDate) -> Unit,
+    background: Color,
     modifier: Modifier
 ) {
     Row(
@@ -78,7 +84,13 @@ private fun NativeDateRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        native.CompactDate(value = date, onChange = onDateChange, label = label, modifier = Modifier)
+        native.CompactDate(
+            value = date,
+            onChange = onDateChange,
+            label = label,
+            background = background,
+            modifier = Modifier
+        )
     }
 }
 

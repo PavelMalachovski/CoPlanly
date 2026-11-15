@@ -1,14 +1,17 @@
 package com.coparently.app.presentation.common
 
 import androidx.compose.foundation.clickable
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -241,15 +244,34 @@ class NativeControlsTest {
         }
         rule.waitForIdle()
 
-        val items = fake.menus.last()
-        assertEquals(REPEAT_OPTIONS.map { it.second }, items.map { it.label })
-        assertEquals(listOf(false, true, false), items.map { it.checked })
-        rule.onNodeWithTag(RecordingNativeControls.MENU_ANCHOR_TAG).assertExists()
-        rule.onNodeWithText(REPEAT_ROW).performClick()
+        val button = fake.menuButtons.last()
+        assertEquals(REPEAT_OPTIONS.map { it.second }, button.items.map { it.label })
+        assertEquals(listOf(false, true, false), button.items.map { it.checked })
+        assertEquals("Weekly", button.title)
+        assertEquals(null, button.sfSymbol)
+        assertEquals("$REPEAT_ROW, Weekly", button.accessibilityLabel)
+        rule.onNodeWithTag(RecordingNativeControls.MENU_BUTTON_TAG).assertExists()
+        // The row's title is drawn by Compose, as text and nothing to tap.
+        rule.onNodeWithText(REPEAT_ROW).assertHasNoClickAction()
         rule.onNodeWithText(REPEAT_DIALOG).assertDoesNotExist()
 
-        items[2].onClick()
+        button.items[2].onClick()
         assertEquals(listOf("monthly"), picked)
+    }
+
+    @Test
+    fun `an option row whose value matches no option still draws its button`() {
+        rule.setContent {
+            CompositionLocalProvider(LocalNativeControls provides fake) {
+                OptionRow(onSelect = {}, selected = "yearly")
+            }
+        }
+        rule.waitForIdle()
+
+        val button = fake.menuButtons.last()
+        assertEquals(null, button.title)
+        assertEquals(REPEAT_ROW, button.accessibilityLabel)
+        assertEquals(listOf(false, false, false), button.items.map { it.checked })
     }
 
     @Test
@@ -259,15 +281,31 @@ class NativeControlsTest {
         rule.onNodeWithText(REPEAT_DIALOG).assertDoesNotExist()
         rule.onNodeWithText(REPEAT_ROW).performClick()
         rule.onNodeWithText(REPEAT_DIALOG).assertExists()
-        assertTrue(fake.menus.isEmpty())
+        assertTrue(fake.menuButtons.isEmpty())
+    }
+
+    @Test
+    fun `a native control is told what it sits on, a card by default`() {
+        var card = Color.Unspecified
+        rule.setContent {
+            CompositionLocalProvider(LocalNativeControls provides fake) {
+                card = MaterialTheme.colorScheme.surfaceContainer
+                AdaptiveSwitch(checked = true, onCheckedChange = {})
+                AdaptiveSwitch(checked = true, onCheckedChange = {}, background = Color.Red)
+            }
+        }
+        rule.waitForIdle()
+
+        assertEquals(listOf(card, Color.Red), fake.backgrounds.takeLast(2))
     }
 
     /** A repeat row as the event form draws one: the row opens a dialog that names itself. */
     @Composable
-    private fun OptionRow(onSelect: (String?) -> Unit) {
+    private fun OptionRow(onSelect: (String?) -> Unit, selected: String? = "weekly") {
         AdaptiveOptionRow(
+            title = REPEAT_ROW,
             options = REPEAT_OPTIONS,
-            selected = "weekly",
+            selected = selected,
             onSelect = onSelect,
             row = { open -> SectionRow(title = REPEAT_ROW, onClick = open) },
             dialog = { dismiss -> Text(REPEAT_DIALOG, modifier = Modifier.clickable(onClick = dismiss)) }

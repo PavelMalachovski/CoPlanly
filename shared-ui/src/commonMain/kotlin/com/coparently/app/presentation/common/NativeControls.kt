@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 
@@ -32,14 +33,19 @@ interface NativeControls {
      * @param enabled Whether the parent can flip it now
      * @param accessibilityLabel What the switch turns on and off, for VoiceOver, or null when the
      *   [modifier]'s semantics already say it
+     * @param background The colour of what the switch sits on: the host view's background on the
+     *   iPhone, because Compose clears its own pixels under a native view and the window shows
+     *   through around a control that is not opaque
      * @param modifier Modifier applied to the switch
      */
     @Composable
+    @Suppress("LongParameterList") // the control's values, its callback, the colour under it and the modifier
     fun Switch(
         checked: Boolean,
         onCheckedChange: ((Boolean) -> Unit)?,
         enabled: Boolean,
         accessibilityLabel: String?,
+        background: Color,
         modifier: Modifier
     )
 
@@ -55,14 +61,17 @@ interface NativeControls {
      * @param selectedIndex The chosen segment, or -1 when none is chosen
      * @param onSelect Called with the index of the segment the parent tapped
      * @param enabled Whether the parent can choose now
+     * @param background The colour of what the control sits on, as for [Switch]
      * @param modifier Modifier applied to the control
      */
     @Composable
+    @Suppress("LongParameterList") // the control's values, its callback, the colour under it and the modifier
     fun Segmented(
         labels: List<String>,
         selectedIndex: Int,
         onSelect: (Int) -> Unit,
         enabled: Boolean,
+        background: Color,
         modifier: Modifier
     )
 
@@ -108,10 +117,17 @@ interface NativeControls {
      * @param value The day shown, or null while none is chosen
      * @param onChange Called with the day the parent picks
      * @param label What the date is, for VoiceOver
+     * @param background The colour of what the pill sits on, as for [Switch]
      * @param modifier Modifier applied to the pill
      */
     @Composable
-    fun CompactDate(value: LocalDate?, onChange: (LocalDate) -> Unit, label: String, modifier: Modifier)
+    fun CompactDate(
+        value: LocalDate?,
+        onChange: (LocalDate) -> Unit,
+        label: String,
+        background: Color,
+        modifier: Modifier
+    )
 
     /**
      * A time in place: on the iPhone a compact `UIDatePicker` in time mode, which opens the system's
@@ -119,25 +135,41 @@ interface NativeControls {
      *
      * @param value The time shown
      * @param onChange Called with the time the parent picks
+     * @param background The colour of what the pill sits on, as for [Switch]
      * @param modifier Modifier applied to the pill
      */
     @Composable
-    fun CompactTime(value: LocalTime, onChange: (LocalTime) -> Unit, modifier: Modifier)
+    fun CompactTime(value: LocalTime, onChange: (LocalTime) -> Unit, background: Color, modifier: Modifier)
 
     /**
-     * A menu opened from what [content] draws: on the iPhone a transparent `UIButton` over the
-     * content, whose `UIMenu` holds [items] and which shows it as its primary action, so a tap on
-     * the row opens the system's menu from the row. Each entry calls the latest [items]' entry at
-     * its place; a [BarMenuItem.checked] entry carries the system's checkmark, a destructive one is
-     * drawn so and a disabled one dimmed.
+     * A button that opens a menu of [items]: on the iPhone a `UIButton` in the plain style that
+     * draws itself, with [title] and the SF Symbol [sfSymbol], whose `UIMenu` it shows as its
+     * primary action. Without a symbol it is an option row's pop-up button: [title] (the chosen
+     * option, or nothing when none matches) followed by the system's up-and-down chevron. Each
+     * entry calls the latest [items]' entry at its place; a [BarMenuItem.checked] entry carries the
+     * system's checkmark, a destructive one is drawn so and a disabled one dimmed. Nothing is laid
+     * over Compose content: the button takes its own size, at its intrinsic content size.
      *
      * @param items The menu's entries, in order
-     * @param modifier Modifier applied to the anchor, the content and the button over it
-     * @param content What the parent sees and taps: a row, a field or a button. Its own click does
-     *   nothing here; the button over it takes the tap
+     * @param title The button's text, or null for none
+     * @param sfSymbol The button's SF Symbol (e.g. `plus`), or null for an option row's chevron
+     * @param accessibilityLabel What VoiceOver reads for the button, always set, e.g. "Repeat, Weekly"
+     * @param tint The text and symbol colour, or [Color.Unspecified] for the system's secondary label
+     *   grey (an option row's value)
+     * @param background The colour of what the button sits on, as for [Switch]
+     * @param modifier Modifier applied to the button
      */
     @Composable
-    fun MenuAnchor(items: List<BarMenuItem>, modifier: Modifier, content: @Composable () -> Unit)
+    @Suppress("LongParameterList") // a menu, its two looks, its name and its two colours
+    fun MenuButton(
+        items: List<BarMenuItem>,
+        title: String?,
+        sfSymbol: String?,
+        accessibilityLabel: String,
+        tint: Color,
+        background: Color,
+        modifier: Modifier
+    )
 }
 
 /**

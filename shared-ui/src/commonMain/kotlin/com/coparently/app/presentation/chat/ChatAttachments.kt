@@ -126,7 +126,7 @@ fun ChatAttachmentsHost(
  * the system picker limited to what the rules accept, then asks before sending — a file in the chat
  * stays there for good, like every message. Where the phone has no picker (`FilePicker.available`,
  * the iPhone until phase 3) the entry is left out, and the menu keeps the other two. On the iPhone
- * the `+` opens the system's menu of the same entries ([NativeControls.MenuAnchor]).
+ * the `+` is the system's button opening a menu of the same entries ([NativeControls.MenuButton]).
  *
  * @param conversationId The thread a file is sent into.
  * @param onRequestChange Opens the event picker that starts a change request.
@@ -148,15 +148,17 @@ fun ChatComposerMenu(
     val picker = filePicker.rememberDocumentPicker(SharedFilePolicy.CONTENT_TYPES.toList()) { uri -> picked = uri }
     val native = nativeControls()
     if (native != null) {
-        // The iPhone: the system's menu from the `+`, its entries named as on Android.
-        native.MenuAnchor(
+        // The iPhone: the `+` is the system's own button showing the menu of the same entries, in
+        // the primary colour, on the thread's ground beside the field.
+        native.MenuButton(
             items = composerMenuItems(filePicker.available, { picker.launch() }, onRequestChange, onTemplates),
+            title = null,
+            sfSymbol = "plus",
+            accessibilityLabel = stringResource(Res.string.chat_composer_actions),
+            tint = MaterialTheme.colorScheme.primary,
+            background = MaterialTheme.colorScheme.background,
             modifier = modifier
-        ) {
-            IconButton(onClick = {}) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(Res.string.chat_composer_actions))
-            }
-        }
+        )
     } else {
         Box(modifier = modifier) {
             IconButton(onClick = { open = true }) {

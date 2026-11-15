@@ -175,6 +175,8 @@ private fun ViewModeControl(
 ) {
     val modes = CalendarViewMode.entries
     AdaptiveSegmented(
+        // Behind the native control: on the screen's ground.
+        background = MaterialTheme.colorScheme.background,
         labels = modes.map { viewModeLabel(it) },
         selectedIndex = modes.indexOf(viewMode),
         onSelect = { onViewModeChange(modes[it]) },

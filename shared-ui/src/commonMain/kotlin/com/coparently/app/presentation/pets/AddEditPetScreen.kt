@@ -58,9 +58,9 @@ import com.coparently.app.presentation.common.PhotoStrip
 import com.coparently.app.presentation.common.PhotoStripStrings
 import com.coparently.app.presentation.common.VaccinationListEditor
 import com.coparently.app.presentation.common.field
+import com.coparently.app.presentation.common.MenuFieldRow
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.nativeControls
-import com.coparently.app.presentation.common.optionMenuItems
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.platform.LocalFilePicker
@@ -515,7 +515,9 @@ private fun BasicSection(
             onClick = onPickDate,
             enabled = enabled,
             date = dateOfBirth?.date,
-            onDateChange = onDateOfBirth
+            onDateChange = onDateOfBirth,
+            // The pet form's sections are Material Cards.
+            background = MaterialTheme.colorScheme.surfaceContainerHighest
         )
     }
 }
@@ -531,18 +533,15 @@ private fun SpeciesDropdown(
     var expanded by remember { mutableStateOf(false) }
     val native = nativeControls()
     if (native != null && enabled) {
-        // The iPhone: the system's menu from the field, the species chosen now ticked.
-        val options = PetSpecies.entries.map { it to stringResource(it.labelRes()) }
-        native.MenuAnchor(items = optionMenuItems(options, species, onSpecies), modifier = Modifier.fillMaxWidth()) {
-            OutlinedTextField(
-                value = stringResource(species.labelRes()),
-                onValueChange = {},
-                readOnly = true,
-                label = { Text(stringResource(Res.string.pet_species_label)) },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = false) },
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
+        // The iPhone: the label and the system's pop-up button, on the form's Material Card.
+        MenuFieldRow(
+            native = native,
+            label = stringResource(Res.string.pet_species_label),
+            options = PetSpecies.entries.map { it to stringResource(it.labelRes()) },
+            selected = species,
+            onSelect = onSpecies,
+            background = MaterialTheme.colorScheme.surfaceContainerHighest
+        )
         return
     }
     ExposedDropdownMenuBox(

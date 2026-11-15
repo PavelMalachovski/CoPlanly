@@ -378,7 +378,9 @@ fun AddEditChildInfoScreen(
                         enabled = !isSaving,
                         date = dateOfBirth?.date,
                         // As the picker does: the day changes, the time of day the record had stays.
-                        onDateChange = { day -> dateOfBirth = LocalDateTime(day, dateOfBirth?.time ?: LocalTime(0, 0)) }
+                        onDateChange = { day -> dateOfBirth = LocalDateTime(day, dateOfBirth?.time ?: LocalTime(0, 0)) },
+                        // The section is a Material Card.
+                        background = MaterialTheme.colorScheme.surfaceContainerHighest
                     )
                 }
             }

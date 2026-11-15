@@ -470,6 +470,8 @@ private fun ProposeSupportDialog(
                 )
                 Text(stringResource(Res.string.support_dialog_payer), style = MaterialTheme.typography.labelLarge)
                 AdaptiveSegmented(
+                    // Behind the native control: the dialog's container.
+                    background = MaterialTheme.colorScheme.surfaceContainerHigh,
                     labels = participants.map { names.labelForUid(it) },
                     selectedIndex = participants.indexOf(payer),
                     onSelect = { payer = participants[it] },

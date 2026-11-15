@@ -227,7 +227,8 @@ fun EventTypeFilterSheet(
                 AdaptiveSwitch(
                     checked = showHolidays,
                     onCheckedChange = onShowHolidaysChange,
-                    accessibilityLabel = stringResource(Res.string.calendar_filter_holidays_title)
+                    accessibilityLabel = stringResource(Res.string.calendar_filter_holidays_title),
+                    background = MaterialTheme.colorScheme.surfaceContainerLow
                 )
             }
         }
@@ -316,6 +317,8 @@ private fun ParentFilterSegments(
     val bothLabel = stringResource(Res.string.calendar_filter_both)
     val dadLabel = parentNames.labelFor("dad")
     AdaptiveSegmented(
+        // Behind the native control: the filters sheet's container.
+        background = MaterialTheme.colorScheme.surfaceContainerLow,
         labels = listOf(momLabel, bothLabel, dadLabel),
         selectedIndex = order.indexOf(selected),
         onSelect = { onSelected(order[it]) },

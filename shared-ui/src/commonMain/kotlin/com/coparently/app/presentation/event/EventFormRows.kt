@@ -63,11 +63,19 @@ internal fun EventDateTimeRow(
     edit: EventDateTimeEdit? = null
 ) {
     val native = nativeControls()
+    // The row sits in the form's SectionGroup, on its card's colour.
+    val card = MaterialTheme.colorScheme.surfaceContainer
     val values: @Composable () -> Unit = if (native != null && edit != null) {
         {
-            native.CompactDate(value = edit.date, onChange = edit.onDate, label = label, modifier = Modifier)
+            native.CompactDate(
+                value = edit.date,
+                onChange = edit.onDate,
+                label = label,
+                background = card,
+                modifier = Modifier
+            )
             if (time != null) {
-                native.CompactTime(value = edit.time, onChange = edit.onTime, modifier = Modifier)
+                native.CompactTime(value = edit.time, onChange = edit.onTime, background = card, modifier = Modifier)
             }
         }
     } else {

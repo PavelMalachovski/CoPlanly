@@ -521,6 +521,8 @@ fun CustodyPatternForm(
                 .fillMaxWidth()
                 .padding(vertical = dims.paddingSmall)
             AdaptiveSegmented(
+                // Behind the native control: on the screen's ground.
+                background = MaterialTheme.colorScheme.background,
                 labels = firstOptions.map { parentNames.labelFor(if (it) "mom" else "dad") },
                 selectedIndex = firstOptions.indexOf(uiState.momFirst),
                 onSelect = { actions.setMomFirst(firstOptions[it]) },

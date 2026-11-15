@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import kotlinx.datetime.LocalDate
@@ -67,36 +68,63 @@ class RecordingNativeControls : NativeControls {
     /** The latest compact time pill's callback. */
     var lastCompactTimeChange: ((LocalTime) -> Unit)? = null
 
-    /** Every menu anchor drawn: its entries, in the order of composition. */
-    val menus = mutableListOf<List<BarMenuItem>>()
+    /** One drawn menu button: its entries, its title, its symbol and its VoiceOver name. */
+    data class MenuButtonCall(
+        val items: List<BarMenuItem>,
+        val title: String?,
+        val sfSymbol: String?,
+        val accessibilityLabel: String
+    )
+
+    /** Every menu button drawn, in the order of composition. */
+    val menuButtons = mutableListOf<MenuButtonCall>()
+
+    /** The colour each native control was told it sits on, in the order of composition. */
+    val backgrounds = mutableListOf<Color>()
 
     @Composable
-    override fun MenuAnchor(items: List<BarMenuItem>, modifier: Modifier, content: @Composable () -> Unit) {
-        menus += items
-        Box(modifier.testTag(MENU_ANCHOR_TAG)) { content() }
+    @Suppress("LongParameterList") // the interface's member
+    override fun MenuButton(
+        items: List<BarMenuItem>,
+        title: String?,
+        sfSymbol: String?,
+        accessibilityLabel: String,
+        tint: Color,
+        background: Color,
+        modifier: Modifier
+    ) {
+        menuButtons += MenuButtonCall(items, title, sfSymbol, accessibilityLabel)
+        backgrounds += background
+        Box(modifier.size(80.dp, 44.dp).testTag(MENU_BUTTON_TAG))
     }
 
     @Composable
+    @Suppress("LongParameterList") // the interface's member
     override fun Switch(
         checked: Boolean,
         onCheckedChange: ((Boolean) -> Unit)?,
         enabled: Boolean,
         accessibilityLabel: String?,
+        background: Color,
         modifier: Modifier
     ) {
+        backgrounds += background
         switches += SwitchCall(checked = checked, enabled = enabled)
         lastSwitchChange = onCheckedChange
         Box(modifier.size(51.dp, 31.dp).testTag(SWITCH_TAG))
     }
 
     @Composable
+    @Suppress("LongParameterList") // the interface's member
     override fun Segmented(
         labels: List<String>,
         selectedIndex: Int,
         onSelect: (Int) -> Unit,
         enabled: Boolean,
+        background: Color,
         modifier: Modifier
     ) {
+        backgrounds += background
         segmented += SegmentedCall(labels = labels, selectedIndex = selectedIndex, enabled = enabled)
         lastSegmentSelect = onSelect
         Box(modifier.size(200.dp, 32.dp).testTag(SEGMENTED_TAG))
@@ -125,22 +153,30 @@ class RecordingNativeControls : NativeControls {
     }
 
     @Composable
-    override fun CompactDate(value: LocalDate?, onChange: (LocalDate) -> Unit, label: String, modifier: Modifier) {
+    override fun CompactDate(
+        value: LocalDate?,
+        onChange: (LocalDate) -> Unit,
+        label: String,
+        background: Color,
+        modifier: Modifier
+    ) {
+        backgrounds += background
         compactDates += CompactDateCall(value = value, label = label)
         lastCompactDateChange = onChange
         Box(modifier.size(110.dp, 34.dp).testTag(COMPACT_DATE_TAG))
     }
 
     @Composable
-    override fun CompactTime(value: LocalTime, onChange: (LocalTime) -> Unit, modifier: Modifier) {
+    override fun CompactTime(value: LocalTime, onChange: (LocalTime) -> Unit, background: Color, modifier: Modifier) {
+        backgrounds += background
         compactTimes += value
         lastCompactTimeChange = onChange
         Box(modifier.size(80.dp, 34.dp).testTag(COMPACT_TIME_TAG))
     }
 
     companion object {
-        /** The test tag of a menu anchor this fake drew around its content. */
-        const val MENU_ANCHOR_TAG = "native-menu-anchor"
+        /** The test tag of a menu button this fake drew. */
+        const val MENU_BUTTON_TAG = "native-menu-button"
 
         /** The test tag of a compact date pill this fake drew. */
         const val COMPACT_DATE_TAG = "native-compact-date"

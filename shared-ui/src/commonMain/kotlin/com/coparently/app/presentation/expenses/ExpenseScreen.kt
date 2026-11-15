@@ -747,6 +747,8 @@ private fun ViewSwitcher(
         .fillMaxWidth()
         .semantics { contentDescription = label }
     AdaptiveSegmented(
+        // Behind the native control: on the screen's ground.
+        background = MaterialTheme.colorScheme.background,
         labels = listOf(listLabel, analyticsLabel),
         selectedIndex = if (showAnalytics) 1 else 0,
         onSelect = { onSelect(it == 1) },

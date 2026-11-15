@@ -664,14 +664,17 @@ fun SettingsScreen(
                                 appLanguages.apply(language)
                             }
                         }
+                        val languageTitle = stringResource(Res.string.settings_language_title)
                         AdaptiveOptionRow(
+                            title = languageTitle,
+                            icon = Icons.Default.Language,
                             options = languageOptions,
                             selected = currentLanguage,
                             onSelect = onLanguage,
                             row = { open ->
                                 SectionRow(
                                     icon = Icons.Default.Language,
-                                    title = stringResource(Res.string.settings_language_title),
+                                    title = languageTitle,
                                     onClick = open,
                                     trailing = { ValueLabel(stringResource(currentLanguage.labelRes)) }
                                 )
@@ -692,14 +695,17 @@ fun SettingsScreen(
                     }
                     Divider()
                     val currencyOptions = SupportedCurrency.entries.map { it to "${it.code}  ${it.symbol}" }
+                    val currencyTitle = stringResource(Res.string.currency_settings_title)
                     AdaptiveOptionRow(
+                        title = currencyTitle,
+                        icon = Icons.Default.Payments,
                         options = currencyOptions,
                         selected = defaultCurrency,
                         onSelect = { settingsViewModel.setDefaultCurrency(it) },
                         row = { open ->
                             SectionRow(
                                 icon = Icons.Default.Payments,
-                                title = stringResource(Res.string.currency_settings_title),
+                                title = currencyTitle,
                                 onClick = open,
                                 trailing = {
                                     ValueLabel("${defaultCurrency.code} ${defaultCurrency.symbol}")

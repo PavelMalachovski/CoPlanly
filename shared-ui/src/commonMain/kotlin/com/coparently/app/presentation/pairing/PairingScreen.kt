@@ -720,6 +720,8 @@ private fun PairingModeToggle(selected: PairingMode, onSelect: (PairingMode) -> 
     val shareLabel = stringResource(Res.string.pairing_mode_share)
     val enterLabel = stringResource(Res.string.pairing_mode_enter)
     AdaptiveSegmented(
+        // Behind the native control: on the screen's ground.
+        background = MaterialTheme.colorScheme.background,
         labels = listOf(shareLabel, enterLabel),
         selectedIndex = if (selected == PairingMode.SHARE) 0 else 1,
         onSelect = { onSelect(if (it == 0) PairingMode.SHARE else PairingMode.ENTER) },

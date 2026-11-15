@@ -1,7 +1,9 @@
 package com.coparently.app.presentation.common
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 
 /**
  * A segmented choice of one among [labels]: the site's own Material row where the shell has no
@@ -18,6 +20,9 @@ import androidx.compose.ui.Modifier
  * @param onSelect Called with the index of the segment the parent chose
  * @param modifier Modifier applied to the native control
  * @param enabled Whether the parent can choose now (the native control; the row has its own)
+ * @param background The colour of what the control sits on, behind the native control on the iPhone
+ *   (Compose clears its pixels under it): a card's `surfaceContainer` by default; a caller on the
+ *   screen's ground passes `colorScheme.background`
  * @param material The site's Material row, drawn where there are no native controls
  */
 @Composable
@@ -27,6 +32,7 @@ fun AdaptiveSegmented(
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    background: Color = MaterialTheme.colorScheme.surfaceContainer,
     material: @Composable () -> Unit
 ) {
     val native = nativeControls()
@@ -38,6 +44,7 @@ fun AdaptiveSegmented(
             selectedIndex = selectedIndex,
             onSelect = onSelect,
             enabled = enabled,
+            background = background,
             modifier = modifier
         )
     }

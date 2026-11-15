@@ -1,10 +1,12 @@
 package com.coparently.app.ios.controls
 
+import androidx.compose.ui.graphics.Color
 import com.coparently.app.presentation.common.BarMenuItem
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.Foundation.NSSelectorFromString
 import platform.UIKit.UIControlEventValueChanged
 import platform.UIKit.UIAction
+import platform.UIKit.UIColor
 import platform.UIKit.UIControl
 import platform.UIKit.UIMenuElementState
 import platform.UIKit.UISwitch
@@ -83,9 +85,9 @@ class NativeControlsIosTest {
     }
 
     @Test
-    fun `a menu anchor shows one entry per item and ticks the chosen one`() {
-        val button = MenuAnchorButton {}
-        button.show(MENU)
+    fun `a menu button shows one entry per item and ticks the chosen one`() {
+        val button = MenuButtonView {}
+        button.show(MENU, OPTION_LOOK, "Repeat, Weekly", UIColor.whiteColor)
 
         val entries = button.menu?.children.orEmpty().map { it as UIAction }
         assertEquals(listOf("None", "Weekly", "Monthly"), entries.map { it.title })
@@ -95,20 +97,42 @@ class NativeControlsIosTest {
         )
         assertTrue(button.showsMenuAsPrimaryAction)
         assertTrue(button.isAccessibilityElement)
-        assertEquals("Weekly", button.accessibilityLabel)
+        assertEquals("Repeat, Weekly", button.accessibilityLabel)
+        assertEquals("Weekly", button.configuration?.title)
     }
 
     @Test
-    fun `a menu anchor keeps its menu while the items look the same`() {
-        val button = MenuAnchorButton {}
-        button.show(MENU)
+    fun `a menu button with nothing checked is still named and opens`() {
+        val button = MenuButtonView {}
+        val plus = MenuButtonLook(title = null, sfSymbol = "plus", tint = Color.Unspecified)
+        button.show(MENU.map { it.copy(checked = false) }, plus, "Add", UIColor.whiteColor)
+
+        assertTrue(button.isAccessibilityElement)
+        assertEquals("Add", button.accessibilityLabel)
+        assertTrue(button.showsMenuAsPrimaryAction)
+        assertEquals(3, button.menu?.children?.size)
+    }
+
+    @Test
+    fun `a menu button keeps its menu while the items look the same`() {
+        val button = MenuButtonView {}
+        button.show(MENU, OPTION_LOOK, "Repeat, Weekly", UIColor.whiteColor)
         val first = button.menu
-        button.show(MENU.map { it.copy(onClick = {}) })
+        button.show(MENU.map { it.copy(onClick = {}) }, OPTION_LOOK, "Repeat, Weekly", UIColor.whiteColor)
         assertSame(first, button.menu)
 
-        button.show(MENU.map { it.copy(checked = false) })
+        button.show(MENU.map { it.copy(checked = false) }, OPTION_LOOK, "Repeat", UIColor.whiteColor)
         assertNotSame(first, button.menu)
-        assertFalse(button.isAccessibilityElement)
+    }
+
+    @Test
+    fun `a segmented host paints behind the control and not its track`() {
+        val control = makeSegmented(SEGMENTS) {}
+        val host = SegmentedHost(control)
+        host.backgroundColor = uiColorOf(Color(red = 1f, green = 0f, blue = 0f))
+
+        assertSame(control, host.control)
+        assertEquals(null, control.backgroundColor)
     }
 
     /**
@@ -128,6 +152,7 @@ class NativeControlsIosTest {
     private companion object {
         const val LABEL = "Pause before sending"
         val SEGMENTS = listOf("Month", "Week", "Day")
+        val OPTION_LOOK = MenuButtonLook("Weekly", null, Color.Unspecified)
         val MENU = listOf(
             BarMenuItem(label = "None", sfSymbol = null, onClick = {}),
             BarMenuItem(label = "Weekly", sfSymbol = null, onClick = {}, checked = true),

@@ -380,20 +380,22 @@ final class ShellUITests: XCTestCase {
         shot("10d-starts-pill-picked")
     }
 
-    /// The event form's Repeat row opens the system's menu from the row (MON-24 phase 3, part C,
-    /// Task 4), not a dialog: its entries are the options, and the one picked is what the row then
-    /// reads. The labels are the shared strings in English ("Weekly" is `event_repeat_weekly`).
+    /// The event form's Repeat row ends in the system's pop-up button (MON-24 phase 3, part C,
+    /// Task 4), not a row that opens a dialog: VoiceOver reads it as "Repeat, <value>", its menu
+    /// lists the options, and the one picked is what the button then reads. The labels are the
+    /// shared strings in English ("Weekly" is `event_repeat_weekly`).
     private func repeatMenu() throws {
         let sheetBar = app.navigationBars["New event"]
         if !sheetBar.exists { try eventFormSheet() }
         dismissKeyboard()
-        let row = try element(labelled: "Repeat", in: app.staticTexts)
+        let repeatButton = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Repeat,")).firstMatch
+        try require(repeatButton.waitForExistence(timeout: timeout), "Repeat has no pop-up button named \"Repeat, …\"")
         let screenBottom = app.windows.firstMatch.frame.maxY - 160
-        for _ in 0..<8 where row.frame.maxY > screenBottom {
+        for _ in 0..<8 where repeatButton.frame.maxY > screenBottom {
             app.swipeUp()
         }
         sleep(1)
-        press(row)
+        press(repeatButton)
         let weekly = app.buttons.matching(NSPredicate(format: "label == %@", "Weekly")).firstMatch
         try require(weekly.waitForExistence(timeout: timeout), "Repeat did not open a menu with \"Weekly\"")
         try require(app.buttons["Monthly"].exists, "The Repeat menu does not list every option")
@@ -401,12 +403,10 @@ final class ShellUITests: XCTestCase {
         shot("10e-repeat-menu")
         weekly.tap()
         try require(app.buttons["Monthly"].waitForNonExistence(timeout: timeout), "The Repeat menu stayed open after a pick")
-        // The row's own text, not the anchor's button, which now reads the value too.
-        let button = Int(XCUIElement.ElementType.button.rawValue)
-        let reads = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "label CONTAINS %@ AND elementType != %d", "Weekly", button))
-            .firstMatch
-        try require(reads.waitForExistence(timeout: timeout), "The Repeat row does not read \"Weekly\" after the pick")
+        let picked = app.buttons.matching(
+            NSPredicate(format: "label BEGINSWITH %@ AND label CONTAINS %@", "Repeat,", "Weekly")
+        ).firstMatch
+        try require(picked.waitForExistence(timeout: timeout), "The Repeat button does not read \"Weekly\" after the pick")
         shot("10f-repeat-picked")
     }
 

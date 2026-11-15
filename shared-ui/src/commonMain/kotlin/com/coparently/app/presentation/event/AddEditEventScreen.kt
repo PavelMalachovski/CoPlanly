@@ -1362,6 +1362,8 @@ fun AddEditEventScreen(
                 }
                 // A dialog of radio rows on Android, the system's menu from the row on the iPhone.
                 AdaptiveOptionRow(
+                    title = repeatTitle,
+                    icon = Icons.Default.Repeat,
                     options = repeatOptions,
                     selected = recurrencePattern,
                     onSelect = onRepeat,
@@ -1416,6 +1418,8 @@ fun AddEditEventScreen(
                     }
                 }
                 AdaptiveOptionRow(
+                    title = reminderTitle,
+                    icon = Icons.Default.Notifications,
                     options = reminderOptions,
                     selected = reminderMinutes,
                     onSelect = onReminder,

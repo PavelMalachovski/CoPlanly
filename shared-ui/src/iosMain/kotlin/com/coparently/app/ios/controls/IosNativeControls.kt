@@ -1,6 +1,5 @@
 package com.coparently.app.ios.controls
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -10,6 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.uikit.LocalUIViewController
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.UIKitInteropProperties
@@ -48,13 +48,16 @@ internal object IosNativeControls : NativeControls {
      * A `UISwitch`, laid out at the switch's own intrinsic size (51 × 31 pt before iOS 26) and in
      * the system's green. [checked] and [enabled] are set from Compose at every update without the
      * switch sending `UIControlEventValueChanged`; only the parent's flip reaches [onCheckedChange].
+     * Its rectangle is painted [background], so its rounded ends show what it sits on.
      */
     @Composable
+    @Suppress("LongParameterList") // the interface's member
     override fun Switch(
         checked: Boolean,
         onCheckedChange: ((Boolean) -> Unit)?,
         enabled: Boolean,
         accessibilityLabel: String?,
+        background: Color,
         modifier: Modifier
     ) {
         val callback by rememberUpdatedState(onCheckedChange)
@@ -63,6 +66,7 @@ internal object IosNativeControls : NativeControls {
             factory = { makeSwitch { callback?.invoke(it) } },
             modifier = modifier.size(width.dp, height.dp),
             update = { view ->
+                view.backgroundColor = uiColorOf(background)
                 updateSwitch(view, checked, enabled && onCheckedChange != null, accessibilityLabel)
             },
             properties = UIKitInteropProperties(isInteractive = true, isNativeAccessibilityEnabled = true)
@@ -72,21 +76,27 @@ internal object IosNativeControls : NativeControls {
     /**
      * A `UISegmentedControl` filling the width at [SEGMENTED_HEIGHT_PT]. The segments are rebuilt
      * only when [labels] change, and [selectedIndex] is set at every update without the control
-     * sending `UIControlEventValueChanged`; only the parent's tap reaches [onSelect].
+     * sending `UIControlEventValueChanged`; only the parent's tap reaches [onSelect]. It sits in a
+     * [SegmentedHost] painted [background], which leaves the control's own track untouched.
      */
     @Composable
+    @Suppress("LongParameterList") // the interface's member
     override fun Segmented(
         labels: List<String>,
         selectedIndex: Int,
         onSelect: (Int) -> Unit,
         enabled: Boolean,
+        background: Color,
         modifier: Modifier
     ) {
         val callback by rememberUpdatedState(onSelect)
         UIKitView(
-            factory = { makeSegmented(labels) { callback(it) } },
+            factory = { SegmentedHost(makeSegmented(labels) { callback(it) }) },
             modifier = modifier.fillMaxWidth().height(SEGMENTED_HEIGHT_PT.dp),
-            update = { view -> updateSegmented(view, labels, selectedIndex, enabled) },
+            update = { host ->
+                host.backgroundColor = uiColorOf(background)
+                updateSegmented(host.control, labels, selectedIndex, enabled)
+            },
             properties = UIKitInteropProperties(isInteractive = true, isNativeAccessibilityEnabled = true)
         )
     }
@@ -129,10 +139,16 @@ internal object IosNativeControls : NativeControls {
     /**
      * A [CompactDatePill] at the compact picker's own size for the day it shows. [value] is set at
      * every update without the picker sending `UIControlEventValueChanged`; only the parent's pick
-     * reaches [onChange].
+     * reaches [onChange]. The pill's host is painted [background].
      */
     @Composable
-    override fun CompactDate(value: LocalDate?, onChange: (LocalDate) -> Unit, label: String, modifier: Modifier) {
+    override fun CompactDate(
+        value: LocalDate?,
+        onChange: (LocalDate) -> Unit,
+        label: String,
+        background: Color,
+        modifier: Modifier
+    ) {
         val callback by rememberUpdatedState(onChange)
         val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
         val (width, height) = remember(value) {
@@ -145,7 +161,10 @@ internal object IosNativeControls : NativeControls {
         UIKitView(
             factory = { CompactDatePill { callback(it) } },
             modifier = modifier.size(width.dp, height.dp),
-            update = { pill -> updateCompactDate(pill, value, today, label) },
+            update = { pill ->
+                pill.backgroundColor = uiColorOf(background)
+                updateCompactDate(pill, value, today, label)
+            },
             properties = UIKitInteropProperties(isInteractive = true, isNativeAccessibilityEnabled = true)
         )
     }
@@ -153,10 +172,10 @@ internal object IosNativeControls : NativeControls {
     /**
      * A compact time picker at its own size for the time it shows, on the phone's own clock. [value]
      * is set at every update without the picker sending `UIControlEventValueChanged`; only the
-     * parent's pick reaches [onChange].
+     * parent's pick reaches [onChange]. The picker's rectangle is painted [background].
      */
     @Composable
-    override fun CompactTime(value: LocalTime, onChange: (LocalTime) -> Unit, modifier: Modifier) {
+    override fun CompactTime(value: LocalTime, onChange: (LocalTime) -> Unit, background: Color, modifier: Modifier) {
         val callback by rememberUpdatedState(onChange)
         val (width, height) = remember(value) {
             compactPickerSize(
@@ -168,28 +187,40 @@ internal object IosNativeControls : NativeControls {
         UIKitView(
             factory = { ValueChangedDatePicker(UIDatePickerMode.UIDatePickerModeTime) { callback(localTimeOf(it)) } },
             modifier = modifier.size(width.dp, height.dp),
-            update = { picker -> updateCompactTime(picker, value) },
+            update = { picker ->
+                picker.backgroundColor = uiColorOf(background)
+                updateCompactTime(picker, value)
+            },
             properties = UIKitInteropProperties(isInteractive = true, isNativeAccessibilityEnabled = true)
         )
     }
 
     /**
-     * [content] with a [MenuAnchorButton] laid over it at its size: a tap anywhere on the content
-     * opens the system's menu of [items] from it. The menu is rebuilt only when the items' visible
-     * part changes, and each entry calls the latest items' entry at its place.
+     * A [MenuButtonView] at its own intrinsic size for its look: the button draws itself, with its
+     * title and symbol (or the pop-up chevron), and shows the menu of [items] on a tap. The look is
+     * redrawn and the menu rebuilt only when they change; each entry calls the latest items' entry at
+     * its place. Its rectangle is painted [background].
      */
     @Composable
-    override fun MenuAnchor(items: List<BarMenuItem>, modifier: Modifier, content: @Composable () -> Unit) {
+    @Suppress("LongParameterList") // the interface's member
+    override fun MenuButton(
+        items: List<BarMenuItem>,
+        title: String?,
+        sfSymbol: String?,
+        accessibilityLabel: String,
+        tint: Color,
+        background: Color,
+        modifier: Modifier
+    ) {
         val latest by rememberUpdatedState(items)
-        Box(modifier) {
-            content()
-            UIKitView(
-                factory = { MenuAnchorButton { index -> latest.getOrNull(index)?.onClick?.invoke() } },
-                modifier = Modifier.matchParentSize(),
-                update = { button -> button.show(latest) },
-                properties = UIKitInteropProperties(isInteractive = true, isNativeAccessibilityEnabled = true)
-            )
-        }
+        val look = MenuButtonLook(title, sfSymbol, tint)
+        val (width, height) = remember(look) { menuButtonSize(look) }
+        UIKitView(
+            factory = { MenuButtonView { index -> latest.getOrNull(index)?.onClick?.invoke() } },
+            modifier = modifier.size(width.dp, height.dp),
+            update = { button -> button.show(latest, look, accessibilityLabel, uiColorOf(background)) },
+            properties = UIKitInteropProperties(isInteractive = true, isNativeAccessibilityEnabled = true)
+        )
     }
 
     /** The switch's intrinsic size in points, measured once from UIKit's own switch. */
