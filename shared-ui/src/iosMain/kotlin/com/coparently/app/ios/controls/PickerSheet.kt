@@ -25,8 +25,6 @@ import platform.UIKit.UINavigationController
 import platform.UIKit.UIPresentationController
 import platform.UIKit.UISheetPresentationControllerDetent
 import platform.UIKit.UIView
-import platform.UIKit.UIViewAutoresizingFlexibleHeight
-import platform.UIKit.UIViewAutoresizingFlexibleWidth
 import platform.UIKit.UIViewController
 import platform.UIKit.UIWindowScene
 import platform.UIKit.accessibilityLabel
@@ -342,6 +340,11 @@ internal class ValueChangedDatePicker(
  * The compact date pill: the picker, and over it a dash while no day is chosen. A compact picker
  * always shows a date, so with none chosen the picker is all but transparent (still above UIKit's
  * hit-test threshold, so a tap still opens the calendar) and the dash says nothing is set.
+ *
+ * Both are laid out at the pill's own bounds ([layoutSubviews]), as [SegmentedHost] lays out its
+ * control: a picker made with a zero frame takes a default size of its own, and resizing it with the
+ * pill (autoresizing) added the pill's size to that, so it reached past the pill and over the time
+ * pill beside it, where no tap could reach it.
  */
 // `CGRectMake` is Kotlin/Native's C interop.
 @OptIn(ExperimentalForeignApi::class)
@@ -360,10 +363,14 @@ internal class CompactDatePill(onChange: (LocalDate) -> Unit) : UIView(frame = C
     }
 
     init {
-        listOf(picker, placeholder).forEach { child ->
-            child.autoresizingMask = UIViewAutoresizingFlexibleWidth or UIViewAutoresizingFlexibleHeight
-            addSubview(child)
-        }
+        addSubview(picker)
+        addSubview(placeholder)
+    }
+
+    override fun layoutSubviews() {
+        super.layoutSubviews()
+        picker.setFrame(bounds)
+        placeholder.setFrame(bounds)
     }
 }
 

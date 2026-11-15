@@ -92,7 +92,7 @@ internal class ScreenController(
     private val shell: ShellEnvironment,
     private val session: ViewModelStoreOwner,
     val nativeBar: Boolean,
-    barHiddenAtFirst: Boolean,
+    private val barHiddenAtFirst: Boolean,
     private val sheetGuard: SheetGuard?,
     private val visible: State<Boolean>
 ) {
@@ -159,8 +159,10 @@ internal class ScreenController(
                         snapshotFlow { backSteps.hasEnabledStep }.collect { bars.stepPending(it) }
                     }
                 }
-                // With the navigation bar hidden the screen starts under the status bar alone.
-                ScreenFrame(shell, underStatusBar = nativeBar && barHidden) {
+                // A screen that leads with its own header (the bar hidden now, or at first: the
+                // Calendar's root shows the bar over Day view) is inset by the frame, under the status
+                // bar alone or under the bar too.
+                ScreenFrame(shell, headerInContent = nativeBar && (barHidden || barHiddenAtFirst)) {
                     WhileAlive(entry) {
                         entry.LocalOwnersProvider(rememberSaveableStateHolder()) { destination.content(entry) }
                     }
@@ -208,10 +210,12 @@ internal class ScreenController(
  * A hosted screen's frame: the offline line at the top and the shell's messages at the bottom,
  * around [content]. While the line shows it takes the top inset, which [content] then does not
  * apply again; while it does not, [content] applies the top inset itself (the navigation bar's and
- * the status bar's), as Android's root Scaffold leaves it (design item 14). A screen whose bar is
- * hidden ([underStatusBar]: the Calendar's and Home's roots) leads with a header in its own top
- * bar slot, which no Scaffold insets, so the frame takes the top inset for it: the status bar's,
- * there being no navigation bar.
+ * the status bar's), as Android's root Scaffold leaves it (design item 14). A screen whose bar
+ * starts hidden ([headerInContent]: the Calendar's and Home's roots) leads with a header in its own
+ * top bar slot, which no Scaffold insets, so the frame takes the top inset for it: the status bar's
+ * while there is no navigation bar, and the status bar's and the navigation bar's while one shows
+ * (the Calendar's Day view opened from a month cell, whose bar carries Back), so the header's
+ * Month/Week/Day control is not drawn under the bar.
  *
  * **The keyboard is taken here, once, for every hosted screen** (design item 14, as Android's
  * `NavHost` takes it): [content] is laid out above the keyboard while one is up, and the keyboard's
@@ -220,7 +224,7 @@ internal class ScreenController(
  * the keys.
  */
 @Composable
-private fun ScreenFrame(shell: ShellEnvironment, underStatusBar: Boolean, content: @Composable () -> Unit) {
+private fun ScreenFrame(shell: ShellEnvironment, headerInContent: Boolean, content: @Composable () -> Unit) {
     val offline by shell.connectivity.isOffline.collectAsState()
     Scaffold(
         // The app's ground behind every hosted screen, whose own Scaffold is transparent over it, as
@@ -236,7 +240,7 @@ private fun ScreenFrame(shell: ShellEnvironment, underStatusBar: Boolean, conten
                 .fillMaxSize()
                 .padding(inner)
                 .consumeWindowInsets(inner)
-                .then(if (underStatusBar) Modifier.windowInsetsPadding(statusBarInset) else Modifier)
+                .then(if (headerInContent) Modifier.windowInsetsPadding(topSafeInset) else Modifier)
                 .imePadding()
         ) {
             content()
@@ -257,6 +261,9 @@ private fun WhileAlive(entry: NavBackStackEntry, content: @Composable () -> Unit
     }
 }
 
-/** The top of the safe area, which a screen whose navigation bar is hidden starts under. */
-private val statusBarInset: WindowInsets
+/**
+ * The top of the safe area, which a screen leading with its own header starts under: the status
+ * bar's, and the navigation bar's while one shows over the screen.
+ */
+private val topSafeInset: WindowInsets
     @Composable get() = WindowInsets.safeDrawing.only(WindowInsetsSides.Top)

@@ -29,6 +29,7 @@ import com.coparently.app.presentation.platform.ProvideIosShell
 import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.ObjCSignatureOverride
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -426,13 +427,42 @@ internal class TabShell(
 
     private fun host(tab: BottomNavDestination): StackHost = hosts[tab.ordinal]
 
-    /** Tells [onSelect] of every tap on a tab, the one on the tab already selected included. */
+    /**
+     * Tells [onSelect] of every tap on a tab, the one on the tab already selected included.
+     *
+     * `didSelectViewController` alone missed a tap on the tab already selected (on the iOS 26
+     * simulator in CI a Calendar tab tap left Day view open, which `CalendarTabTaps` closes), while
+     * `shouldSelectViewController` is asked for every tap the parent makes. So a tap on the selected
+     * tab is counted when it is asked, and a `didSelect` that follows it for the same tap is not
+     * counted again; any other tap is counted on `didSelect`. A selection made in code reaches
+     * neither.
+     */
     private class TabDelegate(private val onSelect: (UIViewController) -> Unit) :
         NSObject(), UITabBarControllerDelegateProtocol {
+
+        /** The tab whose reselection was counted when asked, until the tap's `didSelect`, if any. */
+        private var reselected: UIViewController? = null
+
+        @ObjCSignatureOverride
+        override fun tabBarController(
+            tabBarController: UITabBarController,
+            shouldSelectViewController: UIViewController
+        ): Boolean {
+            reselected = shouldSelectViewController.takeIf { it === tabBarController.selectedViewController }
+            reselected?.let(onSelect)
+            return true
+        }
+
+        @ObjCSignatureOverride
         override fun tabBarController(
             tabBarController: UITabBarController,
             didSelectViewController: UIViewController
         ) {
+            if (reselected === didSelectViewController) {
+                reselected = null
+                return
+            }
+            reselected = null
             onSelect(didSelectViewController)
         }
     }
