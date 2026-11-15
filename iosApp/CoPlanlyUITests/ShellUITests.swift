@@ -159,18 +159,7 @@ final class ShellUITests: XCTestCase {
         let gear = app.buttons.matching(NSPredicate(format: "label == %@", "Settings")).firstMatch
         try require(gear.waitForExistence(timeout: timeout), "\(name)'s first screen has no Settings button")
         // The bar of a screen just popped can still be animating away: wait for it rather than look once.
-        if !waitForNoNavigationBar() {
-            throw StepFailure(description: "\(name)'s first screen still shows a navigation bar (\(tabTapTrace()))")
-        }
-    }
-
-    /// What the shell saw of the tab bar's taps (its `TabTapTrace`, the tab bar's value), printed
-    /// with the prefix `COPLANLY_TABTAP` and returned for a failure's message.
-    @discardableResult
-    private func tabTapTrace() -> String {
-        let value = app.tabBars.firstMatch.value as? String ?? "no trace"
-        print("COPLANLY_TABTAP test read: \(value)")
-        return "tab taps: \(value)"
+        try require(waitForNoNavigationBar(), "\(name)'s first screen still shows a navigation bar")
     }
 
     private func otherTabs() throws {
@@ -670,9 +659,11 @@ final class ShellUITests: XCTestCase {
         // The step before left Day view open (opened from a month cell): a tap on the Calendar tab
         // opens Month on today (`CalendarTabTaps`), and its bar, which Day view's Back needed, goes.
         let month = app.segmentedControls.buttons["Month"]
-        if !(month.waitForExistence(timeout: timeout) && waitUntilSelected(month)) {
-            throw StepFailure(description: "A tap on the Calendar tab did not return Day view to Month (\(tabTapTrace()))")
-        }
+        // The shell logs what it saw of the tap (COPLANLY_TABTAP); the job prints those lines.
+        try require(
+            month.waitForExistence(timeout: timeout) && waitUntilSelected(month),
+            "A tap on the Calendar tab did not return Day view to Month"
+        )
         try require(waitForNoNavigationBar(), "The Calendar's Month still shows a navigation bar")
         let edit = app.buttons.matching(NSPredicate(format: "label == %@", "Edit")).firstMatch
         // A failure leaves no preview over the tab bar, so the steps after it start from a tab.
@@ -1005,7 +996,9 @@ final class ShellUITests: XCTestCase {
         guard app.wait(for: .runningForeground, timeout: 60) else { return false }
         sleep(15)
         let family = app.tabBars.buttons["Family"]
+        // Bounded: two minutes in all, each wait 10 s, and over at once if the app stopped.
         repeat {
+            guard app.state == .runningForeground else { return false }
             if family.waitForExistence(timeout: 10) { return true }
             sleep(2)
         } while Date() < deadline

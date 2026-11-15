@@ -208,6 +208,12 @@ ui_test() {
     [ -f "$crash" ] || continue
     echo "::group::crash log $(basename "$crash")"; head -c 60000 "$crash"; echo; echo "::endgroup::"
   done
+  # What the shell saw of each tab-bar tap (TabShell's COPLANLY_TABTAP lines, NSLog's default level).
+  echo "::group::the shell's tab-tap trace (COPLANLY_TABTAP)"
+  xcrun simctl spawn "$udid" log show --last 60m --style compact \
+    --predicate 'process == "CoPlanly" AND eventMessage CONTAINS "COPLANLY_TABTAP"' \
+    2>/dev/null | tail -n 300 || true
+  echo "::endgroup::"
   echo "::group::the app's errors in the system log"
   xcrun simctl spawn "$udid" log show --last 30m --style compact \
     --predicate 'process == "CoPlanly" AND (messageType == error OR messageType == fault OR eventMessage CONTAINS[c] "exception")' \
