@@ -402,8 +402,14 @@ final class ShellUITests: XCTestCase {
         // The days of the calendar the pill opened, not the form's own pills (a time can read "20:00").
         let opened = app.datePickers.element(boundBy: pickersBefore)
         let days = opened.waitForExistence(timeout: timeout) ? opened.buttons : app.buttons
-        let dayButton = days.matching(NSPredicate(format: "label MATCHES %@", dayPattern)).firstMatch
-        try require(dayButton.waitForExistence(timeout: timeout), "The system's calendar did not open, or has no \(day)th")
+        let dayButtons = days.matching(NSPredicate(format: "label MATCHES %@", dayPattern))
+        try require(
+            dayButtons.firstMatch.waitForExistence(timeout: timeout),
+            "The system's calendar did not open, or has no \(day)th"
+        )
+        // The calendar keeps the months either side as off-screen pages, whose days match too: the
+        // day of the month on screen is the one that can be touched.
+        let dayButton = try hittable(in: dayButtons, what: "the \(day)th of the month on screen")
         shot("10c-starts-system-calendar")
         dayButton.tap()
         // The calendar's popover closes on a pick on some releases; on others a tap outside it does.
@@ -999,6 +1005,17 @@ final class ShellUITests: XCTestCase {
         _ = keyboard.waitForNonExistence(timeout: 5)
     }
 
+    /// The first element of [query] that can be touched, waiting a little for one: a query may also
+    /// match elements kept off screen (a calendar's neighbouring months), which a tap cannot reach.
+    private func hittable(in query: XCUIElementQuery, what: String) throws -> XCUIElement {
+        for _ in 0..<10 {
+            let candidates = query.allElementsBoundByIndex
+            if let match = candidates.first(where: { $0.exists && $0.isHittable }) { return match }
+            usleep(500_000)
+        }
+        throw StepFailure(description: "Nothing on screen can be touched for \(what)")
+    }
+
     /// Taps [element] where it is drawn. Compose's elements are not always reported hittable, so a
     /// tap at their centre stands in for XCUITest's own hit test.
     private func press(_ element: XCUIElement) {
@@ -1166,6 +1183,14 @@ final class ShellUITests: XCTestCase {
 
         touring = true
         tourDeadline = Date().addingTimeInterval(tourBudget)
+        // A walk that failed before its own sign-out leaves this simulator signed in, so the tour
+        // may start on the tabs: it signs out through the app first, and a sign-out that fails is
+        // only printed, the sign-in screen's visit then recording why it was not reached.
+        do {
+            try tourSignOutIfSignedIn()
+        } catch {
+            print("COPLANLY_TOUR_SIGN_OUT_FIRST failed: \(error)")
+        }
         tourVisit("auth") {
             try self.require(self.app.staticTexts["Welcome back!"].waitForExistence(timeout: 120), "The sign-in screen did not show")
         }
@@ -1203,6 +1228,40 @@ final class ShellUITests: XCTestCase {
         if !tourCrashes.isEmpty {
             XCTFail("The app stopped running while the tour visited: " + tourCrashes.joined(separator: ", "))
         }
+    }
+
+    /// Signs out through the app when the tour starts signed in: no sign-in screen within 15 s,
+    /// but the tab bar. The steps are the walk's own (`signOutAndIn`): Settings from the Family
+    /// tab's bar, "Sign out of app", and its confirmation.
+    private func tourSignOutIfSignedIn() throws {
+        if app.staticTexts["Welcome back!"].waitForExistence(timeout: 15) { return }
+        let tabs = app.tabBars.firstMatch
+        guard tabs.waitForExistence(timeout: 30) else { return }
+        print("COPLANLY_TOUR_SIGN_OUT_FIRST the app started signed in; signing out")
+        let family = tabs.buttons["Family"]
+        try require(family.waitForExistence(timeout: timeout), "No Family tab to sign out from")
+        family.tap()
+        sleep(1)
+        family.tap()
+        let gear = app.navigationBars["Family"].buttons["Settings"]
+        try require(gear.waitForExistence(timeout: timeout), "The Family tab's bar has no Settings")
+        gear.tap()
+        try require(app.navigationBars["Settings"].waitForExistence(timeout: timeout), "Settings did not open")
+        let row = try element(labelled: "Sign out of app", in: app.buttons)
+        let screenBottom = app.windows.firstMatch.frame.maxY - 120
+        for _ in 0..<12 where row.frame.maxY > screenBottom {
+            app.swipeUp()
+        }
+        sleep(1)
+        press(row)
+        let named = app.buttons.matching(NSPredicate(format: "label == %@", "Sign out of app"))
+        try require(named.element(boundBy: 0).waitForExistence(timeout: timeout), "No sign-out confirmation")
+        sleep(1)
+        press(named.element(boundBy: named.count - 1))
+        try require(
+            app.staticTexts["Welcome back!"].waitForExistence(timeout: 120),
+            "Signing out did not reach the sign-in screen"
+        )
     }
 
     /// Every visit after signing in, each from a known place. The order keeps the ones that leave
