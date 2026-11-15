@@ -697,10 +697,19 @@ final class ShellUITests: XCTestCase {
 
         let title = try previewTitle(above: edit)
         let control = app.segmentedControls.buttons["Week"]
-        try require(control.exists && control.isHittable, "The calendar above the preview sheet is out of reach")
+        try require(control.exists, "The calendar's Month/Week/Day is not above the preview sheet")
         try require(control.frame.maxY < title.frame.minY, "The preview sheet covers the calendar's top")
         shot("17d-event-preview-sheet")
-        swipePreviewDown(from: title)
+        // In reach means a tap on it works: `isHittable` reads false for every element under an
+        // undimmed sheet's pass-through container (run 10), so the segment is tapped where it is
+        // drawn and must then read as selected; the calendar shows Week under the sheet.
+        control.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        try require(waitUntilSelected(control), "The calendar above the preview sheet is out of reach")
+        shot("17d2-event-preview-sheet-week-tapped")
+        // Looked up again: the calendar under the sheet changed, and with it the elements' order.
+        // (The week's events load anew, so the sheet may have gone and come back meanwhile.)
+        _ = edit.waitForExistence(timeout: 5)
+        if edit.exists { swipePreviewDown(from: try previewTitle(above: edit)) }
         try require(edit.waitForNonExistence(timeout: timeout), "A swipe down did not close the event's preview")
         // The sheet covers the tab bar while it is up, so a tab bar within reach means it has gone.
         let calendarTab = app.tabBars.firstMatch.buttons["Calendar"]
@@ -1754,11 +1763,20 @@ final class ShellUITests: XCTestCase {
             // The sheet on top is the one whose cross can be touched.
             let top = (0..<closes.count).reversed().map { closes.element(boundBy: $0) }.first { $0.isHittable }
             guard let top else {
-                // A sheet is up but its cross cannot be touched: something over it (a menu) takes the
-                // touches. A tap outside closes that, and the next round finds the cross.
+                // A sheet is up but its cross does not read as touchable: something over it (a menu)
+                // takes the touches. A tap outside closes that, and the next round finds the cross.
                 if closes.count > 0 && !tappedOutside {
                     tappedOutside = true
                     tapOutside()
+                    continue
+                }
+                // Still not "hittable" after that: XCUITest's hit test can misread a native sheet
+                // (run 10 left New event up under every later visit this way), so the topmost cross
+                // is tapped where it is drawn; a menu still over it takes that tap and closes, and the
+                // next round taps the cross again.
+                if closes.count > 0 {
+                    press(closes.element(boundBy: closes.count - 1))
+                    sleep(1)
                     continue
                 }
                 break
