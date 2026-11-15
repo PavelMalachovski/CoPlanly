@@ -35,12 +35,18 @@ import platform.UIKit.presentationController
 import platform.UIKit.secondaryLabelColor
 import platform.UIKit.sheetPresentationController
 import platform.UIKit.systemBackgroundColor
+import platform.UIKit.transitionCoordinator
+import platform.darwin.DISPATCH_TIME_NOW
 import platform.darwin.NSObject
+import platform.darwin.dispatch_after
+import platform.darwin.dispatch_get_main_queue
+import platform.darwin.dispatch_time
 
 /**
  * The view controller a sheet or alert is presented from: the top of what [from] (or, without one,
- * the key window's root) presents now. Presenting from a controller that already presents another
- * fails in UIKit, so every presented control asks here.
+ * the key window's root) presents now, stopping under a controller that is being dismissed. That
+ * presenter may still be mid-transition, when UIKit drops a presentation without a word, so present
+ * through [presentWhenSettled] rather than calling `presentViewController` on this directly.
  */
 internal fun topViewController(from: UIViewController? = null): UIViewController? {
     var top = from ?: keyWindowRoot() ?: return null
@@ -51,6 +57,59 @@ internal fun topViewController(from: UIViewController? = null): UIViewController
     }
     return top
 }
+
+/**
+ * Presents [controller] from [topViewController] of [from] once nothing there is moving: while a
+ * presentation or dismissal is in flight (a previous sheet still sliding away, a form sheet sliding
+ * in), UIKit ignores `presentViewController` without calling anything back. So it waits for the
+ * transition's end (its coordinator's completion, or a short delay when a dismissal has no
+ * coordinator), and tries again, at most [MAX_PRESENT_ATTEMPTS] times.
+ *
+ * [onDropped] is called once, when it cannot present at all: no controller to present from, the
+ * attempts used up, or UIKit dropping the presentation after all (nothing presents [controller]
+ * once asked), so a caller's "open" state is released and a later open works. Nothing is presented
+ * once [isWanted] answers false (the dialog left composition while it waited).
+ */
+internal fun presentWhenSettled(
+    controller: UIViewController,
+    from: UIViewController?,
+    isWanted: () -> Boolean,
+    onDropped: () -> Unit
+) {
+    presentAttempt(controller, from, isWanted, onDropped, attemptsLeft = MAX_PRESENT_ATTEMPTS)
+}
+
+private fun presentAttempt(
+    controller: UIViewController,
+    from: UIViewController?,
+    isWanted: () -> Boolean,
+    onDropped: () -> Unit,
+    attemptsLeft: Int
+) {
+    if (!isWanted()) return
+    val host = topViewController(from) ?: return onDropped()
+    val busy = host.presentedViewController != null || host.beingPresented || host.beingDismissed
+    if (busy) {
+        if (attemptsLeft <= 0) return onDropped()
+        val retry = { presentAttempt(controller, from, isWanted, onDropped, attemptsLeft - 1) }
+        val coordinator = host.presentedViewController?.transitionCoordinator ?: host.transitionCoordinator
+        if (coordinator == null || !coordinator.animateAlongsideTransition(null, completion = { _ -> retry() })) {
+            dispatch_after(
+                dispatch_time(DISPATCH_TIME_NOW, RETRY_DELAY_NS),
+                dispatch_get_main_queue()
+            ) { retry() }
+        }
+        return
+    }
+    host.presentViewController(controller, animated = true, completion = null)
+    if (controller.presentingViewController == null) onDropped()
+}
+
+/** How many times [presentWhenSettled] waits for a transition before it gives up. */
+private const val MAX_PRESENT_ATTEMPTS = 10
+
+/** The wait between two attempts when a transition has no coordinator to wait on: 0.15 s. */
+private const val RETRY_DELAY_NS = 150_000_000L
 
 /** The key window's root view controller, from the app's connected scenes. */
 private fun keyWindowRoot(): UIViewController? =
@@ -122,13 +181,13 @@ internal class PickerSheet(
         }
     }
 
-    /** Presents the sheet over [from]; without a controller to present from, it ends at once. */
+    /**
+     * Presents the sheet over the top of what [from] presents, once nothing there is moving
+     * ([presentWhenSettled]). If it cannot be presented, it ends as a dismissal does, so the
+     * dialog's state is released and a second open works.
+     */
     fun present(from: UIViewController?) {
-        if (from == null) {
-            dismissed()
-            return
-        }
-        from.presentViewController(navigation, animated = true, completion = null)
+        presentWhenSettled(navigation, from, isWanted = { !finished }, onDropped = ::dismissed)
     }
 
     /** Done: the picker's value, then the end. */

@@ -129,7 +129,7 @@ class PickerDatesIosTest {
 
     private companion object {
         const val LABEL = "Starts"
-        val ZONES = listOf("Pacific/Kiritimati", "Pacific/Pago_Pago")
+        val ZONES = listOf("Pacific/Kiritimati", "Pacific/Pago_Pago", "Europe/Prague")
         val DAYS = listOf(LocalDate(2026, 11, 1), LocalDate(2026, 3, 29), LocalDate(2026, 10, 25))
     }
 }

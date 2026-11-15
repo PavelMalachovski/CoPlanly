@@ -209,7 +209,7 @@ private fun PresentedWhileComposed(build: () -> PickerSheet) {
     val host = LocalUIViewController.current
     DisposableEffect(Unit) {
         val sheet = build()
-        sheet.present(topViewController(host))
+        sheet.present(host)
         onDispose { sheet.close() }
     }
 }

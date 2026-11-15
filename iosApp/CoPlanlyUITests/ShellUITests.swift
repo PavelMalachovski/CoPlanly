@@ -81,13 +81,14 @@ final class ShellUITests: XCTestCase {
         step("New event's Starts date is the system's pill", after: ["New event is a sheet with Save in its bar"]) {
             try self.startsDatePill()
         }
-        step("Jump to date is a sheet a swipe closes", after: ["Calendar and Chat tabs"]) { try self.jumpToDateSwipeDown() }
         step("a new event swiped down closes without asking", after: ["New event is a sheet with Save in its bar"]) {
             try self.newEventSwipeDown()
         }
         step("New event's description stays above the keyboard", after: ["New event is a sheet with Save in its bar"]) {
             try self.eventDescriptionAboveKeyboard()
         }
+        // After the event form's steps: they reuse its open sheet, and this one needs the calendar bare.
+        step("Jump to date is a sheet a swipe closes", after: ["Calendar and Chat tabs"]) { try self.jumpToDateSwipeDown() }
         step("a coplanly://pair link opens Pairing with its code", after: ["sign in"]) { try self.pairingLink() }
         step("sign out, and sign in to fresh tabs", after: ["Settings"]) {
             try self.signOutAndIn(email: email, password: password)
@@ -380,6 +381,13 @@ final class ShellUITests: XCTestCase {
     /// calendar in a sheet (MON-24 phase 3, part C, Task 3). A swipe down closes it without moving
     /// the calendar, leaves nothing presented, and it opens again.
     private func jumpToDateSwipeDown() throws {
+        // The tab bar is under a sheet still up, so a tab tap would not reach the calendar: close it.
+        let eventSheet = app.navigationBars["New event"]
+        if eventSheet.exists {
+            dismissKeyboard()
+            swipeSheetDown(from: eventSheet)
+            try require(eventSheet.waitForNonExistence(timeout: timeout), "The event form did not close before the jump")
+        }
         try goToCalendarRoot()
         let calendarBar = app.navigationBars[calendarMonthTitle]
         try require(calendarBar.waitForExistence(timeout: timeout), "The calendar's bar is not titled \(calendarMonthTitle)")
