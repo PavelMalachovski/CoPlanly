@@ -43,6 +43,7 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.payments.PaymentsViewModel
 import com.coparently.app.presentation.platform.LocalQrCodes
 import com.coparently.app.presentation.platform.LocalSensitiveClipboard
+import com.coparently.app.presentation.platform.LocalShareSheet
 import com.coparently.app.presentation.platform.QrMatrix
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
@@ -240,14 +241,16 @@ private fun SettleUpPaymentBlock(
 
 /**
  * Copy the IBAN, and share the code as an image when there is one; each only where the phone can
- * (`SensitiveClipboard.available`, and a code only where `QrCodes` drew one — the iPhone until
- * phase 3 has neither, and the IBAN is read off the screen there).
+ * (`SensitiveClipboard.available`, and a code only where `QrCodes` drew one and `ShareSheet` can
+ * hand it on — the iPhone draws the code since part C, but shares it only once its share sheet is
+ * built, and the IBAN is read off the screen until its clipboard is).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PaymentActions(iban: String, qr: QrMatrix?) {
     val clipboard = LocalSensitiveClipboard.current
     val qrCodes = LocalQrCodes.current
+    val shareSheet = LocalShareSheet.current
     val appMessages = LocalAppMessages.current
     val copied = stringResource(Res.string.settle_up_iban_copied)
     val chooser = stringResource(Res.string.settle_up_share_chooser)
@@ -262,7 +265,7 @@ private fun PaymentActions(iban: String, qr: QrMatrix?) {
                 Text(stringResource(Res.string.settle_up_copy_iban))
             }
         }
-        if (qr != null) {
+        if (qr != null && shareSheet.available) {
             TextButton(onClick = { qrCodes.shareImage(qr, chooser) }) {
                 Text(stringResource(Res.string.settle_up_share_qr))
             }
