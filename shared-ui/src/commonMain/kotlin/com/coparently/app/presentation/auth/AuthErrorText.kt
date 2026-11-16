@@ -32,18 +32,38 @@ import org.jetbrains.compose.resources.StringResource
  * @return the id of the localized message for this error
  */
 fun AuthError.messageRes(): StringResource = when (this) {
-    AuthError.EmptyFields -> Res.string.auth_error_empty_fields
-    AuthError.EmptyEmail -> Res.string.auth_error_empty_email
+    AuthError.EmptyFields,
+    AuthError.EmptyEmail,
+    AuthError.InvalidEmail,
+    AuthError.WeakPassword -> formMessageRes()
+    AuthError.Interrupted,
+    AuthError.NoGoogleAccount,
+    AuthError.NoSavedPassword -> sheetMessageRes()
     AuthError.InvalidCredentials -> Res.string.auth_error_invalid_credentials
     AuthError.EmailAlreadyInUse -> Res.string.auth_error_email_already_in_use
-    AuthError.WeakPassword -> Res.string.auth_error_weak_password
-    AuthError.InvalidEmail -> Res.string.auth_error_invalid_email
     AuthError.UserDisabled -> Res.string.auth_error_user_disabled
     AuthError.Network -> Res.string.auth_error_network
     AuthError.TooManyRequests -> Res.string.auth_error_too_many_requests
+    AuthError.ExistsWithDifferentMethod -> Res.string.auth_error_exists_with_different_method
+    AuthError.Unknown -> Res.string.auth_error_unknown
+}
+
+/**
+ * The message for what the typed form itself got wrong. [messageRes] routes only those four here,
+ * and its own `when` stays exhaustive, so a new [AuthError] cannot fall into the `else`.
+ */
+private fun AuthError.formMessageRes(): StringResource = when (this) {
+    AuthError.EmptyFields -> Res.string.auth_error_empty_fields
+    AuthError.EmptyEmail -> Res.string.auth_error_empty_email
+    AuthError.InvalidEmail -> Res.string.auth_error_invalid_email
+    AuthError.WeakPassword -> Res.string.auth_error_weak_password
+    else -> Res.string.auth_error_unknown
+}
+
+/** The message for how a credential sheet ended; [messageRes] routes only those three here. */
+private fun AuthError.sheetMessageRes(): StringResource = when (this) {
     AuthError.Interrupted -> Res.string.auth_error_interrupted
     AuthError.NoGoogleAccount -> Res.string.auth_error_no_google_account
     AuthError.NoSavedPassword -> Res.string.auth_error_no_saved_password
-    AuthError.ExistsWithDifferentMethod -> Res.string.auth_error_exists_with_different_method
-    AuthError.Unknown -> Res.string.auth_error_unknown
+    else -> Res.string.auth_error_unknown
 }

@@ -340,6 +340,14 @@ class MainActivity : AppCompatActivity() {
             readLaunchIntent(intent)
         }
 
+        showApp()
+    }
+
+    /**
+     * Sets the app as this activity's content: the platform's capabilities and the two sign-ins
+     * only an activity can host around `:shared-ui`'s [CoPlanlyApp], in the theme the parent chose.
+     */
+    private fun showApp() {
         setContent {
             val darkTheme by darkThemeState.collectAsState()
 

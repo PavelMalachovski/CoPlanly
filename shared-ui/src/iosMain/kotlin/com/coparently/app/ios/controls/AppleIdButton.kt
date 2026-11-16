@@ -67,12 +67,15 @@ internal class TappedAppleIdButton(
 ) {
 
     init {
-        addTarget(this, action = NSSelectorFromString("tapped:"), forControlEvents = UIControlEventTouchUpInside)
+        addTarget(this, action = NSSelectorFromString("tapped"), forControlEvents = UIControlEventTouchUpInside)
     }
 
-    /** The target-action of `UIControlEventTouchUpInside`. */
+    /**
+     * The target-action of `UIControlEventTouchUpInside`. UIKit accepts an action that takes no
+     * sender (selector `tapped`, without a colon), and this one has no use for it.
+     */
     @ObjCAction
-    fun tapped(sender: ASAuthorizationAppleIDButton) {
+    fun tapped() {
         onTap()
     }
 }
