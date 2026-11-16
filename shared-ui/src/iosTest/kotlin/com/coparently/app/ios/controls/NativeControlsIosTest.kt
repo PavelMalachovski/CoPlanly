@@ -9,6 +9,8 @@ import platform.UIKit.UIColor
 import platform.UIKit.UIControl
 import platform.UIKit.UIControlEventValueChanged
 import platform.UIKit.UIMenuElementState
+import platform.UIKit.UISegmentedControl
+import platform.UIKit.UISwitch
 import platform.UIKit.accessibilityLabel
 import platform.UIKit.isAccessibilityElement
 import platform.darwin.NSObject
@@ -18,6 +20,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotSame
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
+import kotlin.test.fail
 
 /**
  * The iPhone's switch (MON-24 phase 3, part C, Task 1): a value set from outside while it is shown
@@ -153,17 +156,34 @@ class NativeControlsIosTest {
      * Sends `UIControlEventValueChanged` to each action registered for it, as
      * `sendActionsForControlEvents` would: that call routes through `UIApplication`, which a test
      * process spawned on the simulator does not have, so it would reach no target.
+     *
+     * The registration is read from UIKit (each target must answer its action's selector), but the
+     * action is then called in Kotlin, not through `performSelector:withObject:`: the actions return
+     * nothing, and `performSelector` reads the return register as an object, which Kotlin/Native then
+     * retains. Whatever that register held decided whether the test ran or the process ended with
+     * signal 11 (CI run 11).
      */
     @OptIn(ExperimentalForeignApi::class)
     private fun sendValueChanged(control: UIControl) {
+        var sent = 0
         control.allTargets.forEach { target ->
             control.actionsForTarget(target, forControlEvent = UIControlEventValueChanged)?.forEach { action ->
-                (target as NSObject).performSelector(NSSelectorFromString(action as String), withObject = control)
+                assertTrue((target as NSObject).respondsToSelector(NSSelectorFromString(action as String)), "$action")
+                assertEquals(VALUE_CHANGED, action, "the action registered")
+                when (target) {
+                    is ValueChangedSwitch -> target.valueChanged(control as UISwitch)
+                    is ValueChangedSegmented -> target.valueChanged(control as UISegmentedControl)
+                    else -> fail("an unexpected target $target")
+                }
+                sent++
             }
         }
+        assertTrue(sent > 0, "no action is registered for UIControlEventValueChanged")
     }
 
     private companion object {
+        /** The selector both controls register for `UIControlEventValueChanged`. */
+        const val VALUE_CHANGED = "valueChanged:"
         const val LABEL = "Pause before sending"
         val SEGMENTS = listOf("Month", "Week", "Day")
         val OPTION_LOOK = MenuButtonLook("Weekly", null, Color.Unspecified)

@@ -3,15 +3,13 @@
 package com.coparently.app.data.files
 
 import com.coparently.app.data.remote.firebase.AuthEmulator
+import com.coparently.app.data.remote.firebase.EmulatorApps
 import com.coparently.app.data.remote.firebase.runOnMainRunLoop
 import com.coparently.app.domain.files.toHex
 import com.coparently.app.domain.platform.Sha256
 import dev.gitlive.firebase.Firebase
-import dev.gitlive.firebase.FirebaseOptions
 import dev.gitlive.firebase.auth.FirebaseAuth
 import dev.gitlive.firebase.auth.auth
-import dev.gitlive.firebase.initialize
-import dev.gitlive.firebase.storage.storage
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.io.IOException
 import kotlinx.io.buffered
@@ -132,25 +130,16 @@ class IosStorageBucketEmulatorTest {
         const val PDF = "application/pdf"
         const val PASSWORD = "storage-password-1"
         const val AUTH_PORT = 9099
-        const val STORAGE_PORT = 9199
 
         /** The named app, made once per process: the SDKs refuse `useEmulator` after first use. */
         private var app: Pair<FirebaseAuth, IosStorageBucket>? = null
 
         fun emulatorApp(host: String): Pair<FirebaseAuth, IosStorageBucket> = app ?: run {
-            val firebaseApp = Firebase.initialize(
-                context = null,
-                options = FirebaseOptions(
-                    applicationId = "1:000000000000:ios:0000000000000000",
-                    apiKey = "A-fake-key-for-the-firebase-emulators-x",
-                    projectId = "demo-coplanly",
-                    storageBucket = "demo-coplanly.appspot.com",
-                    gcmSenderId = "000000000000",
-                ),
-                name = "storage_bucket_test",
-            )
+            // The app and its Storage from EmulatorApps, which configures every test app's Storage
+            // before any is used: the SDK ends the process on a late `useEmulator`.
+            val firebaseApp = EmulatorApps.app(EmulatorApps.STORAGE_BUCKET_TEST, host)
             val auth = Firebase.auth(firebaseApp).also { it.useEmulator(host, AUTH_PORT) }
-            val storage = Firebase.storage(firebaseApp).also { it.useEmulator(host, STORAGE_PORT) }
+            val storage = EmulatorApps.storage(EmulatorApps.STORAGE_BUCKET_TEST, host)
             Pair(auth, IosStorageBucket(storage)).also { app = it }
         }
     }

@@ -16,6 +16,7 @@ import com.coparently.app.data.local.buildCoPlanlyDatabase
 import com.coparently.app.data.platform.AppDirectories
 import com.coparently.app.data.platform.MemoryTextStore
 import com.coparently.app.data.platform.SealedSecurePreferences
+import com.coparently.app.data.remote.firebase.EmulatorApps
 import com.coparently.app.data.remote.firebase.FirestoreChangeRequestDataSource
 import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
 import com.coparently.app.data.remote.firebase.FirestoreClient
@@ -53,14 +54,11 @@ import com.coparently.app.di.koin.NoRequestClockJobs
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.model.PairingState
 import dev.gitlive.firebase.Firebase
-import dev.gitlive.firebase.FirebaseOptions
 import dev.gitlive.firebase.auth.FirebaseAuth
 import dev.gitlive.firebase.auth.auth
 import dev.gitlive.firebase.firestore.firestore
 import dev.gitlive.firebase.functions.functions
-import dev.gitlive.firebase.initialize
 import dev.gitlive.firebase.storage.FirebaseStorage
-import dev.gitlive.firebase.storage.storage
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -315,16 +313,7 @@ internal class GatePhone private constructor(
         private const val FIRESTORE_PORT = 8080
         private const val FUNCTIONS_PORT = 5001
         private const val AUTH_PORT = 9099
-        private const val STORAGE_PORT = 9199
 
-        /** The emulators' fake options, which no production service accepts (`IosFirebase`'s). */
-        private val OPTIONS = FirebaseOptions(
-            applicationId = "1:000000000000:ios:0000000000000000",
-            apiKey = "A-fake-key-for-the-firebase-emulators-x",
-            projectId = "demo-coplanly",
-            storageBucket = "demo-coplanly.appspot.com",
-            gcmSenderId = "000000000000",
-        )
 
         /**
          * Starts a phone named [name] on the emulators at [host] — a Firebase app called [appName],
@@ -332,11 +321,13 @@ internal class GatePhone private constructor(
          * `UserRepositoryImpl.ensureProfile` writes, as the app does after sign-in.
          */
         suspend fun create(name: String, appName: String, host: String, written: WrittenDocuments): GatePhone {
-            val app = Firebase.initialize(context = null, options = OPTIONS, name = appName)
+            // The app and its Storage come from EmulatorApps, which points every test app's Storage at
+            // the emulator before any is used: the SDK ends the process on a late `useEmulator`.
+            val app = EmulatorApps.app(appName, host)
             val auth = Firebase.auth(app).also { it.useEmulator(host, AUTH_PORT) }
             val firestore = Firebase.firestore(app).also { it.useEmulator(host, FIRESTORE_PORT) }
             val functions = Firebase.functions(app, FUNCTIONS_REGION).also { it.useEmulator(host, FUNCTIONS_PORT) }
-            val storage = Firebase.storage(app).also { it.useEmulator(host, STORAGE_PORT) }
+            val storage = EmulatorApps.storage(appName, host)
             val client = GitLiveFirestoreClient(firestore)
             val phone = GatePhone(name, auth, client, IosCallableFunctions(functions), storage, written)
             val email = "gate-${name.lowercase()}-${NSUUID().UUIDString.lowercase()}@example.test"

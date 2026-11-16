@@ -1785,6 +1785,17 @@ final class ShellUITests: XCTestCase {
             sleep(1)
         }
         if app.staticTexts["Discard changes?"].exists { pressIfThere("Discard") }
+        // A sheet still over the tab bar after its crosses (run 11: every later tab tap computed the
+        // hit point {-1, -1}, so the Calendar's and the Family tab's visits were skipped): swiped down
+        // from its bar, as a parent would close it, answering "Discard" if it asks.
+        let calendarTab = app.tabBars.firstMatch.buttons["Calendar"]
+        for _ in 0..<3 where calendarTab.exists && !calendarTab.isHittable {
+            let bar = app.navigationBars.firstMatch
+            guard bar.exists else { break }
+            swipeSheetDown(from: bar)
+            sleep(1)
+            if app.staticTexts["Discard changes?"].exists { pressIfThere("Discard") }
+        }
         // The calendar's event preview is a sheet of the calendar's own: a tap on its scrim, above
         // it, closes it.
         if app.buttons.matching(NSPredicate(format: "label == %@", "Edit")).firstMatch.exists &&
