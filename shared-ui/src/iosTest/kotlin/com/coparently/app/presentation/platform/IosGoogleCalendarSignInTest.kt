@@ -126,8 +126,6 @@ class IosGoogleCalendarSignInTest {
 
     private class FakeSheet(
         override val available: Boolean = true,
-        override fun disconnect() = Unit
-
         override val calendarAvailable: Boolean = true,
         private val answer: SheetAnswer = SheetAnswer(),
     ) : GoogleIdTokenSource {
@@ -139,6 +137,8 @@ class IosGoogleCalendarSignInTest {
         ) = error("the calendar's sign-in never asks for an ID token")
 
         override fun signOut() = Unit
+
+        override fun disconnect() = Unit
 
         override fun requestCalendarAccess(
             scope: String,
