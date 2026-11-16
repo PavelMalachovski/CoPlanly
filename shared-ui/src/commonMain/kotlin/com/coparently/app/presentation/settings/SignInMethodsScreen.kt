@@ -20,6 +20,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.coparently.app.data.remote.firebase.SignInMethod
@@ -102,12 +104,14 @@ fun SignInMethodsScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val credentials = LocalCredentialSignIn.current
-    val buildValues = LocalAppBuildValues.current
     val offered = SignInMethodsUiState.offeredMethods(
         googleAvailable = credentials.available,
-        appleAvailable = credentials.appleAvailable && buildValues.appleSignIn
+        appleAvailable = credentials.appleAvailable && LocalAppBuildValues.current.appleSignIn
     )
     val scope = rememberCoroutineScope()
+    // A sheet's link can finish after the screen left mid-flow, its coroutine cancelled before the
+    // methods were read again: read them each time the screen opens.
+    LaunchedEffect(Unit) { viewModel.refresh() }
     // By name: an enum is not a value every platform's saved state keeps.
     var removing by rememberSaveable { mutableStateOf<String?>(null) }
     var addingEmail by rememberSaveable { mutableStateOf(false) }
@@ -193,7 +197,10 @@ private fun SignInMethodsContent(
             )
         }
         val rows = state.rows(offered)
-        if (rows.isNotEmpty()) {
+        if (state.linked == null) {
+            // Until the methods are first read (offline, the auth state settling).
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+        } else if (rows.isNotEmpty()) {
             Column {
                 GroupLabel(stringResource(Res.string.sign_in_methods_group))
                 SectionGroup {

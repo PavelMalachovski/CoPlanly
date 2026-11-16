@@ -137,6 +137,23 @@ class SignInMethodsViewModelTest {
     }
 
     @Test
+    fun linkedAppleShownWithoutFlag() = runTest(dispatcher) {
+        linking.methods.value = setOf(SignInMethod.EMAIL, SignInMethod.APPLE)
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        val withoutFlag = SignInMethodsUiState.offeredMethods(googleAvailable = false, appleAvailable = false)
+        val rows = vm.state.value.rows(withoutFlag)
+
+        val apple = rows.single { it.method == SignInMethod.APPLE }
+        assertTrue(apple.linked, "a linked Apple ID is listed without the flag")
+        assertTrue(apple.canRemove, "and can be removed")
+        assertFalse(SignInMethod.APPLE in withoutFlag, "adding Apple stays behind the flag")
+        assertTrue(rows.none { it.method == SignInMethod.APPLE && !it.linked }, "no Add-Apple row")
+        assertEquals(listOf(SignInMethod.EMAIL, SignInMethod.APPLE), vm.state.value.linkedInOrder)
+    }
+
+    @Test
     fun appleLinkRefreshesMethods() = runTest(dispatcher) {
         linking.methods.value = setOf(SignInMethod.EMAIL)
         // The sheet links on the platform's own user, which the seam reads only when asked again.

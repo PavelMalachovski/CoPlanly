@@ -48,6 +48,10 @@ data class SignInMethodsUiState(
      * [SignInMethod]'s order. A method neither linked nor offered has no row: a row whose Add could
      * not work would promise what the phone cannot keep (design item 8). Nothing while the methods
      * have not been read yet.
+     *
+     * A linked method always has its row, offered or not: an Apple ID already linked is listed with
+     * Remove (and named in Settings' value) even while the build's `APPLE_SIGN_IN` flag is off, so
+     * it can still be removed. The flag gates only adding Apple (controller ruling, Task 6 review).
      */
     fun rows(offered: Set<SignInMethod>): List<SignInMethodRow> {
         val methods = linked ?: return emptyList()
@@ -124,6 +128,14 @@ class SignInMethodsViewModel(
             SignInMethodsUiState(linked = linked, working = busy, banner = message)
         }.stateIn(viewModelScope, SharingStarted.Eagerly, SignInMethodsUiState())
 
+    /**
+     * Reads the methods again ([AccountLinking.refresh]), as the screen does each time it opens: a
+     * sheet's link that finished after the screen left (a rotation, Back) is then listed.
+     */
+    fun refresh() {
+        viewModelScope.launch { accountLinking.refresh() }
+    }
+
     /** Whether [method] may be removed now: it is linked and it is not the account's last. */
     fun canRemove(method: SignInMethod): Boolean = unlinkRefusal(state.value.linked, method) == null
 
@@ -179,8 +191,12 @@ class SignInMethodsViewModel(
         banner.value = null
         try {
             call().onFailure { e ->
-                logger.w(TAG, "Changing the $method sign-in method failed: ${e::class.simpleName}")
-                banner.value = messageOf(e)
+                val message = messageOf(e)
+                // A sheet the parent closed is not a failure: nothing to say, nothing to log.
+                if (message != null) {
+                    logger.w(TAG, "Changing the $method sign-in method failed: ${e::class.simpleName}")
+                }
+                banner.value = message
             }
         } finally {
             working.value = null

@@ -1112,6 +1112,9 @@ final class ShellUITests: XCTestCase {
         if !app.navigationBars["Settings"].exists { try settings() }
         try openFromSettings(signInMethodsTitle)
         try require(element(labelledContaining: "E-mail").waitForExistence(timeout: timeout), "Sign-in methods lists no e-mail row")
+        // Case-sensitive, so "Not linked" does not count: the e-mail the walk signed in with is the
+        // one method this account holds (Google needs a bundled plist, Apple is not linked).
+        try require(labelExists(containing: "Linked"), "Sign-in methods does not show the e-mail as linked")
         shot("09b-sign-in-methods")
         app.navigationBars[signInMethodsTitle].buttons.element(boundBy: 0).tap()
         try require(app.navigationBars["Settings"].waitForExistence(timeout: timeout), "Back from Sign-in methods did not return to Settings")
