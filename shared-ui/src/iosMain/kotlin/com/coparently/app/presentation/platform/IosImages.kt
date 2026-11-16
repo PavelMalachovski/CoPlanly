@@ -406,14 +406,31 @@ internal object IosImageDecoder {
         val (width, height) = image.size.useContents { width to height }
         if (width <= 0.0 || height <= 0.0) return null
         val factor = coverFactor(width, height, bound)
+        return pngOf(image, width * factor, height * factor)
+    }
+
+    /**
+     * [image] drawn into a [width] by [height] pixel canvas (scale 1) and written as PNG, or null when
+     * UIKit gives back nothing. Shared with the SF Symbols' rasterising (`SfSymbolBitmaps`).
+     */
+    @OptIn(ExperimentalForeignApi::class)
+    internal fun pngOf(image: UIImage, width: Double, height: Double): ByteArray? {
         val format = UIGraphicsImageRendererFormat.preferredFormat().apply { scale = 1.0 }
-        val renderer = UIGraphicsImageRenderer(size = CGSizeMake(width * factor, height * factor), format = format)
+        val renderer = UIGraphicsImageRenderer(size = CGSizeMake(width, height), format = format)
         val png = renderer.PNGDataWithActions { _ ->
-            image.drawInRect(CGRectMake(0.0, 0.0, width * factor, height * factor))
+            image.drawInRect(CGRectMake(0.0, 0.0, width, height))
         }
         val length = png.length.toInt()
         if (length == 0) return null
         return ByteArray(length).also { out -> out.usePinned { memcpy(it.addressOf(0), png.bytes, png.length) } }
+    }
+
+    /** Encoded image [bytes] (a PNG from [pngOf]) as a Compose bitmap through Skia, or null. */
+    internal fun bitmapOfEncoded(bytes: ByteArray): ImageBitmap? {
+        val image = skiaImage(bytes) ?: return null
+        val bitmap = runCatching { image.toComposeImageBitmap() }.getOrNull()
+        image.close()
+        return bitmap
     }
 
     private fun scaledDown(image: Image, bound: IntSize?): Image {

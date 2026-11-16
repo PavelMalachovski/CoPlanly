@@ -11,6 +11,7 @@ import platform.UIKit.UIUserInterfaceStyle.UIUserInterfaceStyleLight
 import platform.UIKit.UIUserInterfaceStyle.UIUserInterfaceStyleUnspecified
 import platform.UIKit.UIViewController
 import platform.UIKit.UIWindow
+import platform.UIKit.colorWithDynamicProvider
 
 /**
  * The window's side of the app's theme on the iPhone (MON-24 phase 3, part D): the interface style
@@ -53,9 +54,9 @@ internal object WindowAppearance {
 
     /** The scheme's `primary` for whichever style the traits resolve to, at [contrast]'s level. */
     fun tintColor(contrast: () -> ContrastLevel): UIColor =
-        UIColor(dynamicProvider = { traits: UITraitCollection? ->
+        UIColor.colorWithDynamicProvider { traits: UITraitCollection? ->
             uiColorOf(colorSchemeFor(darkTheme = isDark(traits), contrast = contrast()).primary)
-        })
+        }
 
     private fun isDark(traits: UITraitCollection?): Boolean = traits?.userInterfaceStyle == UIUserInterfaceStyleDark
 }

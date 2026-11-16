@@ -19,6 +19,7 @@ import platform.UIKit.UIUserInterfaceStyle.UIUserInterfaceStyleLight
 import platform.UIKit.UIUserInterfaceStyle.UIUserInterfaceStyleUnspecified
 import platform.UIKit.UIViewController
 import platform.UIKit.UIWindow
+import platform.UIKit.resolvedColorWithTraitCollection
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -77,11 +78,11 @@ class WindowAppearanceTest {
         window.makeKeyAndVisible()
         try {
             WindowAppearance.apply(window, true, standard)
-            controller.updateTraitsIfNeeded()
+            window.layoutIfNeeded()
             assertEquals(UIUserInterfaceStyleDark, controller.traitCollection.userInterfaceStyle)
 
             WindowAppearance.apply(window, false, standard)
-            controller.updateTraitsIfNeeded()
+            window.layoutIfNeeded()
             assertEquals(UIUserInterfaceStyleLight, controller.traitCollection.userInterfaceStyle)
         } finally {
             // Never left key for the test classes that run after this one.
