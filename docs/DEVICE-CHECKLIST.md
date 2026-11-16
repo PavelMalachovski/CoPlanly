@@ -2601,7 +2601,14 @@ and no real receipt. What is left:
       app crashed while XCUITest read the accessibility tree during that scroll: the crash is inside
       Compose Multiplatform 1.9.3 (`AccessibilityElement.accessibilityValue` reading a disposed
       element), which VoiceOver reads the same way. A crash here goes to the owner with the crash
-      report; it is not ours to work around.
+      report; it is not ours to work around. **CI treats that crash as a warning, not a failure**
+      (run 13 met it again, on the journal entry): when every crash the tour met has
+      `AccessibilityElement.<get-cachedProperties>` among its faulting thread's top frames and an
+      `XCTAutomationSession` frame below (`tools/ios/known-tour-crash.py`), `simulator.sh` writes a
+      `::warning::` naming the visits instead of failing the job — it is XCUITest's snapshot racing a
+      recomposition. Any other crash, or a failed launch, still fails it. So this check, with a real
+      VoiceOver user, is the only place the race is judged. Scroll the journal and open an entry
+      the same way.
 - **If it fails:** the control's adaptive composable in `presentation/common/` (`AdaptiveSwitch`,
   `AdaptiveSegmented`, `AdaptiveMenu`, `AdaptiveSheet`, `ConfirmationDialog`, `PickerDates`,
   `DatePickerField`, `DesignSystem`) and its iPhone half in `ios/controls/` (`:shared-ui`'s

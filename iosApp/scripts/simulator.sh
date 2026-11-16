@@ -196,6 +196,21 @@ ui_test() {
     # testTour's two XCTFail texts, the only failures that count against the app.
     grep -E "The app stopped running while the tour visited|The app did not launch" \
       "$out/xcodebuild-$name.log" > "$out/tour-crashed" 2>/dev/null || rm -f "$out/tour-crashed"
+    # One crash is Compose Multiplatform 1.9.3's, not ours: XCUITest's accessibility snapshot reading
+    # an element a recomposition disposed (docs/DEVICE-CHECKLIST.md §3.40, where a VoiceOver user's
+    # check stays). When every crash the tour met is that one, by its exact faulting frames
+    # (tools/ios/known-tour-crash.py), it is a warning naming the visits instead of tour-crashed. A
+    # failed launch, any other crash, or a crash without its report still fails the job.
+    if [ -s "$out/tour-crashed" ] && ! grep -q "The app did not launch" "$out/tour-crashed"; then
+      local visits crashed
+      visits=$(sed -n 's/.*The app stopped running while the tour visited: //p' "$out/tour-crashed" | head -n 1)
+      crashed=$(awk -F', ' '{ print NF }' <<< "$visits")
+      # The crash reports are in "$out/shots", exported from the result bundle above.
+      if python3 -I tools/ios/known-tour-crash.py "$out/shots" "${crashed:-1}"; then
+        echo "::warning::The iPhone tour's app crashed in Compose Multiplatform's accessibility race (DEVICE-CHECKLIST §3.40, not a CoPlanly defect) while visiting: $visits"
+        rm -f "$out/tour-crashed"
+      fi
+    fi
     # A route holds no space (testTour's tourRoutes), so "[^ ]+" is the whole route.
     grep -E "COPLANLY_TOUR [^ ]+: |COPLANLY_TOUR_SUMMARY reached" "$out/xcodebuild-$name.log" > "$out/tour.txt" 2>/dev/null ||
       grep "COPLANLY_TOUR_VISIT" "$out/xcodebuild-$name.log" > "$out/tour.txt" 2>/dev/null || true
