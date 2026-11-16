@@ -122,6 +122,7 @@ object IosApp {
             pairingWebLink = PAIRING_WEB_LINK,
             // The EduPage import is not offered on the iPhone yet (as `platformUiModule` binds it).
             edupageImport = false,
+            appleSignIn = bundleAppleSignIn(),
         )
     }
 

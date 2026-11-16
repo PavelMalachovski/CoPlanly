@@ -302,7 +302,7 @@ class ConnectSchoolViewModelTest {
         importer = importer,
         selectedFamilySource = families,
         childInfoRepository = children,
-        buildValues = AppBuildValues("1", null, null, null, pairingWebLink = false, edupageImport = false)
+        buildValues = AppBuildValues("1", null, null, null, pairingWebLink = false, edupageImport = false, appleSignIn = false)
     )
 
     private fun TestScope.signedIn(): ConnectSchoolViewModel {

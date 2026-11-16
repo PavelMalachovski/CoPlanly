@@ -6,6 +6,7 @@ import com.coparently.app.domain.ai.AiAssistAvailability
 import com.coparently.app.domain.ai.AiAssistRepository
 import com.coparently.app.domain.dictation.SpeechDictation
 import com.coparently.app.ios.IosPairingWording
+import com.coparently.app.ios.bundleAppleSignIn
 import com.coparently.app.ios.IosSchoolImportWordings
 import com.coparently.app.presentation.auth.AuthErrors
 import com.coparently.app.presentation.auth.IosAuthErrors
@@ -36,7 +37,8 @@ actual val platformUiModule: Module = module {
     single<PairingWording> { IosPairingWording() }
     single<SchoolImportWordings> { IosSchoolImportWordings(get()) }
     // The EduPage import is not offered on the iPhone: this stand-in is what a ViewModel reads, while
-    // the screens read the real values the shell provides (`ProvideIosShell`).
+    // the screens read the real values the shell provides (`ProvideIosShell`). Apple's flag is the
+    // bundle's, as the shell reads it.
     single {
         AppBuildValues(
             versionName = "",
@@ -44,7 +46,8 @@ actual val platformUiModule: Module = module {
             termsUrl = null,
             supportEmail = null,
             pairingWebLink = false,
-            edupageImport = false
+            edupageImport = false,
+            appleSignIn = bundleAppleSignIn()
         )
     }
 }

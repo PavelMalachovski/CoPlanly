@@ -82,7 +82,8 @@ class PlatformServicesTest {
             termsUrl = null,
             supportEmail = null,
             pairingWebLink = false,
-            edupageImport = false
+            edupageImport = false,
+            appleSignIn = false
         ),
         images = object : PlatformImages {
             override val available = false

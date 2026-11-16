@@ -56,7 +56,7 @@ class AuthViewModelTest {
      * [activity], so each case still drives Credential Manager's calls with the Activity (MON-24
      * phase 2, slice 11f: the ViewModel takes this where it took the Activity).
      */
-    private val credentials get() = AndroidCredentialSignIn(activity, credentialAuthenticator)
+    private val credentials get() = AndroidCredentialSignIn(activity, credentialAuthenticator, mockk(relaxed = true))
 
     @Before
     fun setUp() {
