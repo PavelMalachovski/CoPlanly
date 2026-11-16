@@ -75,14 +75,18 @@ class WindowAppearanceTest {
         val controller = UIViewController(nibName = null, bundle = null)
         window.rootViewController = controller
         window.makeKeyAndVisible()
+        try {
+            WindowAppearance.apply(window, true, standard)
+            controller.updateTraitsIfNeeded()
+            assertEquals(UIUserInterfaceStyleDark, controller.traitCollection.userInterfaceStyle)
 
-        WindowAppearance.apply(window, true, standard)
-        controller.updateTraitsIfNeeded()
-        assertEquals(UIUserInterfaceStyleDark, controller.traitCollection.userInterfaceStyle)
-
-        WindowAppearance.apply(window, false, standard)
-        controller.updateTraitsIfNeeded()
-        assertEquals(UIUserInterfaceStyleLight, controller.traitCollection.userInterfaceStyle)
+            WindowAppearance.apply(window, false, standard)
+            controller.updateTraitsIfNeeded()
+            assertEquals(UIUserInterfaceStyleLight, controller.traitCollection.userInterfaceStyle)
+        } finally {
+            // Never left key for the test classes that run after this one.
+            window.hidden = true
+        }
     }
 
     /** The window's tint as it resolves under [style]. */
