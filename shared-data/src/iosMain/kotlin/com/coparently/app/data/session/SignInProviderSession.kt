@@ -20,7 +20,8 @@ fun interface SignInProviderSession {
     /**
      * Ends the session and revokes the grant the provider holds for it (Google Sign-In's
      * `GIDSignIn.disconnect`), what Google Calendar's disconnect asks for beside its own revoke
-     * (`IosGoogleCalendarAccount`, only while a Calendar connection was held). Best effort, never fails; by default only ends the session.
+     * (`IosGoogleCalendarAccount`, only while a Calendar connection was held). Best effort, never
+     * fails; by default only ends the session.
      */
     fun disconnect() = signOut()
 
