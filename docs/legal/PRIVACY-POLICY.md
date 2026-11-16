@@ -57,7 +57,13 @@ Where something is *not* shared, we say so below.
 
 ### Your account
 
-- Email address and display name; a profile photo if you sign in with Google.
+- Email address and display name; a profile photo if you sign in with Google. If you sign in with
+  Apple, Apple gives us an email address — your own, or a private relay address Apple forwards to
+  you if you chose "Hide My Email" — and, only the first time and only if you share it, your name.
+- Which ways you sign in (email and password, Google, Apple), as Firebase Authentication records
+  them. You can add or remove one in Settings → Account → Sign-in methods; the last one cannot be
+  removed. Adding a way that already belongs to another CoPlanly account adds nothing, and the app
+  never tells you anything about that other account.
 - Optionally, your date of birth and phone number.
 - An authentication identifier from Firebase Authentication.
 - Which parent slot you occupy in your family, and who your linked co-parent is.
@@ -71,6 +77,20 @@ Where something is *not* shared, we say so below.
 We do **not** ask for or keep any health information about you, the parent. (Earlier test
 versions of the app had an optional medical section on a parent's own profile; it has been
 removed and what was entered in it deleted.)
+
+### Signing in with Apple
+
+If you sign in with Apple, or add Apple as a way to sign in, on an **iPhone**, the app sends the
+one-time authorisation code Apple gives it to our server (a Google Cloud Function in
+`europe-west3`), which exchanges it with Apple for a **refresh token** and keeps that token in a
+place no app can read. We keep it for one reason, which Apple requires: so that we can **revoke**
+CoPlanly's access to your Apple ID when you remove Apple from your sign-in methods or delete your
+account. We do not use it to sign you in or to read anything from Apple. It is kept while Apple is
+one of your sign-in methods, and revoked and deleted when you remove Apple or delete your account.
+If Apple cannot be reached when you delete your account, the token is deleted anyway; you can then
+remove CoPlanly yourself under your Apple ID's settings ("Sign in with Apple"). An Apple sign-in
+added **on Android** goes through a web page from Apple and Firebase, which gives the app no such
+code, so nothing is kept for it.
 
 **Why:** to give you an account, to show your co-parent who they are linked with, and to
 decide what each of you may read. **Legal basis:** performance of our contract with you
@@ -296,13 +316,13 @@ stays there.
 
 ### Google Calendar, if you connect it
 
-If you connect a Google account (Settings → Sync), CoPlanly asks Google for **read-only access
+If you connect a Google account (Settings → Sync), on Android or on an iPhone, CoPlanly asks Google for **read-only access
 to the events on the calendars you own** — Google shows it as "See the events on Google calendars
 you own" (the `calendar.events.owned.readonly` permission) — and uses it for one thing: while the
 sync is on, it reads the events of your **primary** Google Calendar for the next twelve months and
 copies them into the calendar on your phone. It does so when you switch the sync on or tap to sync,
-and on its own when you open the app and about every fifteen minutes in the background; turning
-the sync off stops it. It never creates, changes or
+and on its own when you open the app and, on Android, about every fifteen minutes in the
+background; turning the sync off stops it. It never creates, changes or
 deletes anything in your Google Calendar, and never reads a calendar somebody else shares with
 you.
 
@@ -465,6 +485,7 @@ We do not sell personal data, and we do not use it for advertising.
 | Google (Firebase), **our processor** | Account data, all synced content, files, push tokens, crash and usage data | Our hosting, database, file storage and messaging provider, acting only on our instructions |
 | Google (Vertex AI), **our processor**, running Anthropic's Claude model | Only if you use writing help: the last 20 messages of the thread and your note (reply suggestion), or the month's figures (summary) | To draft the text you asked for — see "Writing help (AI)" |
 | Google (Calendar API) | Only your calendar, only if you connect it | The integration you enabled — for your Google Calendar, Google is responsible under its own privacy policy |
+| Apple, if you sign in with Apple | The authorisation code to exchange and, when you remove Apple or delete your account, the token to revoke | Sign in with Apple, which you chose — for your Apple ID, Apple is responsible under its own privacy policy |
 
 **Where your data is processed.** Our database and file storage are located in
 {{FIRESTORE_REGION}}. Our server functions — which link co-parents, send notifications, renew
@@ -507,6 +528,7 @@ daily on our servers, not by hand.
 | A read-only calendar link | Until revoked; deleted after **90 days** without use |
 | Notifications waiting to be delivered | **30 days** |
 | The message thread, after your co-parent deletes their account | **30 days**, so you can export it — see below |
+| The token that lets us revoke Sign in with Apple (made on an iPhone) | While Apple is one of your sign-in methods; revoked and deleted when you remove it or delete your account |
 | An export's receipt | **10 years** from registration; a record ID reserved for an export that was never registered, **7 days** |
 | Usage statistics / crash reports (only if you agreed) | **2 months** / **90 days** |
 | Server logs (which account called which function, and errors — never names, messages or files) | **30 days** |
@@ -550,6 +572,8 @@ within which a claim arising from the family's affairs can generally still be br
   once linked;
 - deletes every read-only calendar link into your families, whichever of you created it;
 - unlinks the two of you, so their access ends immediately;
+- revokes CoPlanly's access to your Apple ID and deletes the token kept for that, if you signed
+  in with Apple on an iPhone;
 - deletes the fingerprints of your Google Calendar authorisations, if you connected one, and
   any notifications still queued for you, the daily count of your writing-help requests and
   the count of wrong invitation codes you entered;

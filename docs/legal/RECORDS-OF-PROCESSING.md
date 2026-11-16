@@ -30,6 +30,10 @@ appears among them for Claude on Vertex AI is for counsel to confirm (P15). No o
 is used: no email service, no support desk, no advertising or attribution SDK, and no AI service
 other than the one in P15, which the company reaches only through Google Cloud.
 
+**Apple is not a processor.** A parent who chooses Sign in with Apple (P1a) uses Apple as an
+identity provider; Apple is an independent controller of the Apple ID under its own terms, and
+receives from us only the authorisation code to exchange and the refresh token to revoke.
+
 ## Processing activities
 
 Security measures (Art. 30(1)(g)) common to every activity are in the last section; each row names
@@ -41,11 +45,23 @@ only what is specific to it.
 | --- | --- |
 | Purpose | Provide an account; link two co-parents; decide who may read what |
 | Data subjects | Parents |
-| Data | Name, email, optional profile photo (Google), optional date of birth and phone, auth identifier, parent slot (and, for a moment after a pairing that moved it, the time it moved, `slotMovedAt`, removed by the parent's phone at its next sync), partner uids, FCM token, country and region, onboarding state, whether the family cares for children, pets or both (`caresFor`), health-data consent record `{version, atMillis}`, AI-assist consent record `{version, grantedAt}` (P15), optional IBAN for being paid a settle-up (`paymentIban`, October 2026), how stickers address the parent (`parentRole`: dad, mom or parent — asked once, used only to word stickers, October 2026) |
+| Data | Name, email (from an Apple sign-in, possibly Apple's private relay address; Apple shares the name only at the first sign-in, and it fills only a blank profile name), the linked sign-in methods (email and password, Google, Apple — Firebase Auth's providers; the last cannot be removed), optional profile photo (Google), optional date of birth and phone, auth identifier, parent slot (and, for a moment after a pairing that moved it, the time it moved, `slotMovedAt`, removed by the parent's phone at its next sync), partner uids, FCM token, country and region, onboarding state, whether the family cares for children, pets or both (`caresFor`), health-data consent record `{version, atMillis}`, AI-assist consent record `{version, grantedAt}` (P15), optional IBAN for being paid a settle-up (`paymentIban`, October 2026), how stickers address the parent (`parentRole`: dad, mom or parent — asked once, used only to word stickers, October 2026) |
 | Legal basis | Art. 6(1)(b) contract; the consent record is kept under Art. 7(1) to demonstrate consent |
 | Recipients | The linked co-parent (name, slot, photo, the sticker role, and the IBAN, from which their phone draws a QR payment code — nothing is sent to a bank); before linking, a signed-in person entering the inviter's code sees the inviter's **first name** only (`previewPairingInvitation`, rate-limited per account, writes nothing). An invitation's Google Play link carries the code as the install referrer, which the invited parent's app reads once on the phone to prefill it (Play Install Referrer API); nothing from it reaches the controller |
 | Retention | Life of the account; deleted at once on account deletion |
 | Where | `users/{uid}`, `families/{id}`, Firebase Auth, Room `users` |
+
+### P1a. Sign in with Apple (MON-24 phase 4, part A, November 2026)
+
+| | |
+| --- | --- |
+| Purpose | Let a parent sign in with their Apple ID, and revoke CoPlanly's access to it when they remove Apple or delete their account, as Apple requires (App Store guideline 5.1.1(v)) |
+| Data subjects | Parents who choose Apple |
+| Data | In Firebase Auth: the Apple provider (Apple's user id), the email Apple shares (own or relay) and, once, the name (P1). On the server: `apple_tokens/{uid}` = `{refreshToken, clientId, storedAtMillis}`, only for an Apple sign-in or link made **on an iPhone** — the iPhone sends Apple's one-time authorisation code to `exchangeAppleAuthCode`, which redeems it with a client secret signed by the Apple key in `functions/.env`, and keeps the token only when the token's Apple user is the caller's linked one. An Apple method added **on Android** (Firebase's web flow) hands the app no code, so nothing is kept |
+| Legal basis | Art. 6(1)(b) contract: the sign-in the parent chose, and ending it with the account (Apple makes revoking the token a condition of offering it); counsel to confirm |
+| Recipients | Apple (the code, the token to revoke); nobody else. The collection is closed to every client (`firestore.rules`) |
+| Retention | While Apple is linked. `unlinkApple` revokes and deletes it (Apple's `invalid_grant` counts as already revoked; any other failure keeps it and the parent retries). `deleteAccount` revokes it and **deletes it even when the revoke fails** (least retention; the grant may then stay in the parent's Apple ID settings until they remove it) |
+| Where | `apple_tokens/{uid}`, Firebase Auth; the nonce for the sheet is made on the phone and never stored |
 
 ### P2. Family records: calendar, custody, expenses, plan, change requests
 
@@ -177,12 +193,12 @@ only what is specific to it.
 
 | | |
 | --- | --- |
-| Purpose | Copy the events of the parent's own primary Google Calendar into the app, read-only, at the parent's request. Nothing is written to Google (October 2026: the scope is `calendar.events.owned.readonly`, "See the events on Google calendars you own") |
+| Purpose | Copy the events of the parent's own primary Google Calendar into the app, read-only, at the parent's request. Nothing is written to Google (October 2026: the scope is `calendar.events.owned.readonly`, "See the events on Google calendars you own"). The same scope and server exchange on the iPhone since November 2026 (MON-24 phase 4, part A), which imports on the button and when the app opens, not in the background |
 | Data | On the device: OAuth tokens (encrypted) and the imported events of the next twelve months — title, description, start, end — stored as **private** events, which no sync path uploads until the parent switches one to shared (then P2). On the server: SHA-256 fingerprints of the five most recent refresh tokens, to refuse a token that is not this account's |
 | Legal basis | Art. 6(1)(b), at the parent's request |
 | Recipients | Google Calendar API (read). The authorisation code and refresh token pass through the `exchangeGoogleAuthCode`/`refreshGoogleAccessToken` functions; no calendar content reaches our servers. Google's API Services User Data Policy (Limited Use) applies |
 | Retention | Tokens and fingerprints: until disconnected (device tokens) or the account is deleted (fingerprints). Imported events: until the parent deletes them, as any event |
-| Where | Device `EncryptedPreferences` and Room `events`; `google_oauth/{uid}` |
+| Where | Device `EncryptedPreferences` (the Keychain-sealed store on the iPhone) and Room `events`; `google_oauth/{uid}`. Disconnect and sign-out clear the device tokens, then revoke the grant at Google, best effort |
 
 ### P11a. School import from Bakaláři (optional)
 
@@ -274,7 +290,7 @@ Google's data processing terms apply as a fallback.
 
 - **Access control on the server**: `firestore.rules` and `storage.rules`, tested offline on every
   change (`firestore-tests/`); every shared record gated on its family and live pairing; closed
-  collections for receipts, feeds, OAuth fingerprints, the AI-assist quota and the count of wrong
+  collections for receipts, feeds, OAuth fingerprints, Apple's refresh tokens, the AI-assist quota and the count of wrong
   invitation codes, which stops a sweep of codes at ten an hour per account.
 - **Encryption**: TLS in transit; Google's encryption at rest; on the device, SQLCipher with a
   Keystore-wrapped key, sealed preferences, backup and device transfer disabled.

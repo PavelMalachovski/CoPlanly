@@ -449,6 +449,58 @@ The request contract, which the app mirrors — change both together:
   with a `cloud-platform` access token from `google-auth-library`. A `stop_reason` of `refusal` or
   an empty answer is `ai-unavailable`.
 
+## Sign in with Apple (MON-24 phase 4, part A)
+
+Apple requires an app that offers Sign in with Apple to revoke the user's token when the account
+is deleted (App Store guideline 5.1.1(v)). Revoking needs a refresh token, and a refresh token
+needs the authorization code redeemed with a client secret signed by the Apple key, so both happen
+**here** (`apple-auth.js`), never in an app. Three callables touch it:
+
+- **`exchangeAppleAuthCode`** `{code, clientId}`: called by the iPhone after Firebase has signed the
+  parent in or linked Apple. It posts the code to Apple's `/auth/token` (four fields: `client_id`,
+  `client_secret`, `code`, `grant_type` — **no `redirect_uri`**, since the iPhone sheet's code has
+  none; a Services-ID code would need one) and keeps the refresh token in `apple_tokens/{uid}`
+  (`{refreshToken, clientId, storedAtMillis}`) only when the identity token's `sub` is the caller's
+  own linked Apple ID (`apple-account-mismatch` otherwise). A later exchange replaces the token
+  without revoking the old one, which would end the new sign-in too.
+- **`unlinkApple`**: refuses `last-method` when Apple is the account's only provider, revokes the
+  kept token at `/auth/revoke`, deletes the document and unlinks `apple.com`. Apple's 400
+  `invalid_grant` counts as already revoked; any other failure changes nothing and the parent
+  retries. With no token kept (an Apple method added on Android, where Firebase's web flow hands
+  over no code) it just unlinks.
+- **`deleteAccount`** revokes the kept token and **deletes `apple_tokens/{uid}` even when the
+  revoke fails** (least retention; the failure is logged as `revoke-failed` with the uid). The
+  parent can still remove CoPlanly under their Apple ID's "Sign in with Apple".
+
+`apple_tokens` is closed to every client (`firestore.rules`, pinned by
+`firestore-tests/rules/apple-tokens.test.js`). Nothing logs a code, a token or the key.
+
+### Switching it on (the owner's steps)
+
+1. **In the Apple Developer account** (Certificates, Identifiers & Profiles):
+   - give the App ID `app.coplanly` the **Sign in with Apple** capability. Do this before any
+     device or Release build is signed: `iosApp/CoPlanly/CoPlanly.entitlements` carries
+     `com.apple.developer.applesignin`, so a profile without the capability fails to sign;
+   - create a **Services ID** (for example `app.coplanly.signin`), enable Sign in with Apple on it
+     with `app.coplanly` as its primary App ID, and register Firebase's return URL,
+     `https://coparently-a39c9.firebaseapp.com/__/auth/handler`, with the domain
+     `coparently-a39c9.firebaseapp.com`;
+   - create a **key** with Sign in with Apple enabled, download its `.p8` once and note its Key ID
+     and the Team ID.
+2. **In the Firebase console**, Authentication → Sign-in method → Apple: enable it with the
+   Services ID, the Team ID, the Key ID and the key. Android's web flow and the iPhone's sheet
+   both sign in through it.
+3. **In `functions/.env`** (see `.env.example`): `APPLE_TEAM_ID`, `APPLE_KEY_ID`,
+   `APPLE_PRIVATE_KEY` (the whole PEM on one line, `\n` for each line break), `APPLE_BUNDLE_ID`
+   (`app.coplanly`) and `APPLE_SERVICES_ID`. With any missing, `exchangeAppleAuthCode` answers
+   `failed-precondition` / `apple-not-configured` and stores nothing. Then deploy
+   `firebase deploy --only functions:exchangeAppleAuthCode,functions:unlinkApple,functions:deleteAccount`
+   and `firebase deploy --only firestore:rules`.
+4. **Turn the flag on in release, as its own pull request**: `APPLE_SIGN_IN`'s release default in
+   `app/build.gradle.kts` and `COPLANLY_APPLE_SIGN_IN`'s Release value in `iosApp/project.yml`.
+   Until then only debug builds offer Apple (design item 8: no button that fails). Run device
+   check §3.42 first.
+
 ## Region: europe-west3 (September 2026)
 
 Every function is declared through `regional` (`functions.region(FUNCTIONS_REGION)` at the top of

@@ -1999,6 +1999,21 @@ the rules):
   (`import androidx.compose.ui.semantics.getOrNull`). Gradle cannot resolve Google's Maven in some
   cloud sessions, so a first iOS compile in CI is where these surface.
 
+**Phase 4's part A** (November 2026, accounts; item 51 states the rules):
+- **Google Calendar on the iPhone** is `IosGoogleCalendarAccount` (`shared-data` `iosMain`) and
+  `IosGoogleCalendarSignIn` (`shared-ui` `iosMain`): Google's sheet asks for the read-only scope
+  with the web client as `GIDServerClientID` (Info.plist, from `COPLANLY_GOOGLE_WEB_CLIENT_ID`;
+  blank draws no Google Calendar row), and the server code goes through `exchangeGoogleAuthCode` as
+  on Android, into the same `SecurePreferences` keys. Disconnect and sign-out read the token, clear
+  the store, then revoke at Google's revoke endpoint (`GoogleGrantRevocation`) and call
+  `GIDSignIn.disconnect`, best effort (item 23's order). GoogleSignIn-iOS cannot force a refresh
+  token, so after a revoke that failed (offline) a reconnect may get none and the connection falls
+  to "reconnect" after about an hour (device check §3.42). The import runs on the button and on
+  the foreground; the background one is part D's.
+- **Apple's entitlement** (`com.apple.developer.applesignin`) is in `CoPlanly.entitlements`, so a
+  device or Release build signs only once the App ID has the capability (console step 1,
+  `iosApp/README.md`).
+
 **Where a `domain/…` path in this file lives** (MON-24 phase 1, November 2026). The domain moved
 to the shared module with every package unchanged, so a path this file writes as
 `domain/<package>/<File>.kt` is `shared/src/commonMain/kotlin/com/coparently/app/domain/<package>/<File>.kt`,
@@ -2352,13 +2367,17 @@ with `IosStorageBucket` (the iOS SDK's Storage by path, Task 10), `NoPickedFiles
 `IosRecordFileWriter` and `InfoPlistExportVerifyAddress` (Task 12), and in `:shared-ui`'s
 `IosPlatform.kt` `NoImages` and `NoQrCodes` with `IosImages` and `IosQrCodes` (Task 9) and
 `NoShareSheet`, `NoFilePicker` and `NoCameraCapture` with `IosShareSheet`, `IosFilePicker` and
-`IosCameraCapture` (Task 11). Still stand-ins on the iPhone:
+`IosCameraCapture` (Task 11). Phase 4's part A (accounts) replaced `NoGoogleCalendar` with
+`IosGoogleCalendarAccount` (`data/remote/google/`, the same tokens, keys and server exchange as
+Android's, the grant revoked through `GoogleGrantRevocation`) and, in `:shared-ui`,
+`NoGoogleCalendarSignIn` with `IosGoogleCalendarSignIn` (Google's sheet asking for a server auth
+code). Still stand-ins on the iPhone:
 `NoPush` as `PushRegistration` alone (the push switch; the phone holds no token until phase 4),
 `NoEventReminders`,
 `NoRequestClockJobs`, `NoRequestClockNotices`, `NoSchoolImportJob`, `NoSupportReminderJob`,
-`NoGoogleCalendar`, and in `:shared-ui` `NoSpeechDictation`, `NoAiAssist`,
+and in `:shared-ui` `NoSpeechDictation`, `NoAiAssist`,
 `NoInviteQrCodes` and the platform interfaces' `NoQrScanner`, `NoDictation`, `NoPermissions`,
-`NoOpenUrl`, `NoClipboard` and `NoAppLanguages` with `NoGoogleCalendarSignIn` in `IosPlatform.kt`.
+`NoOpenUrl`, `NoClipboard` and `NoAppLanguages` in `IosPlatform.kt`.
 ROADMAP MON-24 lists what still stands in. Every `data/…`
 path this history does not name as moved is under `app/src/main/java/com/coparently/app/` (the
 third exception at the top of this note).
@@ -2614,10 +2633,11 @@ the answer to `SyncViewModel.handleSignInResult` as a `GoogleSignInAnswer`
 redeemed after the ViewModel says "processing", as before. The ViewModel reads the connection, the
 token and the two sign-outs through the new `GoogleCalendarAccount` (`data/remote/google/`, in
 `:shared-data`; `CredentialManagerService` answers it, so `signOut` keeps its order, the local store
-cleared before the network revoke, item 23; the iPhone's `NoGoogleCalendar` connects nothing), and the
+cleared before the network revoke, item 23; the iPhone's `NoGoogleCalendar` connected nothing until
+phase 4's part A replaced it with `IosGoogleCalendarAccount`), and the
 store through `SecurePreferences`. Settings draws the Google Calendar row only where
-`GoogleCalendarSignIn.available`; on the iPhone the shell provides an unavailable stand-in,
-`NoGoogleCalendarSignIn`, through `ProvideIosShell` (`iosMain`, beside `iosPlatformServices`; the 11f
+`GoogleCalendarSignIn.available`; on the iPhone the shell provides `IosGoogleCalendarSignIn` since
+phase 4's part A (an unavailable stand-in, `NoGoogleCalendarSignIn`, until then), through `ProvideIosShell` (`iosMain`, beside `iosPlatformServices`; the 11f
 review's I1, since `LocalGoogleCalendarSignIn` throws outside a provider). `SyncViewModelTest` and `SyncStateTextTest`
 stay in the app (the first runs over the device's real credential store), so `toSyncState` and
 `toUiText` are public. `AppLanguage`'s Android half (`current`, `apply`) is the app's
@@ -3083,9 +3103,9 @@ the screens called (`Intent.createChooser`, the activity-result contracts, `QRSc
 `QRScannerActivity` and the screenshot frame (`ScreenshotFrame`) wrap their content in it. The
 iPhone's `iosPlatformServices(buildValues)` (`iosMain`) answers with the iPhone's own where it has
 one (since part C the share sheet, the pickers, the camera, the images, the file details and the
-payment codes) and with stand-ins that are not available until phase 4 for the rest, and its `ProvideIosShell(buildValues, credentialSignIn, content)` provides those with
+payment codes) and with stand-ins that are not available until phase 4 for the rest, and its `ProvideIosShell(buildValues, credentialSignIn, googleCalendarSignIn, content)` provides those with
 the two locals `MainActivity` provides on its own (`LocalCredentialSignIn`, `LocalGoogleCalendarSignIn`),
-as the app's `IosCredentialSignIn` (Task 9 of phase 3) and the unavailable `NoGoogleCalendarSignIn`: with `CoPlanlyApp` inside it (Task
+as the app's `IosCredentialSignIn` (Task 9 of phase 3) and `IosGoogleCalendarSignIn` (phase 4, part A): with `CoPlanlyApp` inside it (Task
 12), the one call the phase-3 view controller makes. Three things not to undo. **A local read outside the provider throws** — no
 "unavailable" default, which would hide a feature in production with no test noticing; a test that
 composes a screen provides the platform as the app does. **`AndroidPlatformTest`** (the app's,
@@ -4903,6 +4923,39 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     `families/{id}.slots`. It is what names an ended family once its co-parent's profile is
     unreadable, and what answers a family's slots offline (item 19). A cache of server answers,
     never uploaded; a failed read never blanks what was known; `clearAllTables` wipes it.
+51. **An account keeps a way in, names no other account, and Apple's tokens stay on the server**
+    (MON-24 phase 4, part A, November 2026; spec
+    `docs/superpowers/specs/2026-11-16-iphone-phase-4-design.md` §3). Sign in with Apple on both
+    platforms (`IosCredentialSignIn` over `AppleSignInBridge.swift`; Firebase's web flow in
+    `AndroidCredentialSignIn`), and Settings → Account → **Sign-in methods** (`SignInMethodsScreen`,
+    `SignInMethodsViewModel`) adds or removes e-mail, Google and Apple through the `AccountLinking`
+    seam (`FirebaseAccountLinking`, `IosAccountLinking`), not `AccountSignIn`. Six things not to undo.
+    - **The last method is never removable** (`unlinkRefusal`, `SignInMethods.kt`; `unlinkApple`
+      refuses `last-method` too). Only e-mail, Google and Apple count: a phone or other provider is
+      ignored, since the app offers none.
+    - **No lookup, ever.** A method another account holds links nothing, signs nobody out and names
+      nothing (`LinkFailure.InUseByAnotherAccount`); `account-exists-with-different-credential` gets
+      one generic sentence (`AuthError.ExistsWithDifferentMethod`). No `fetchSignInMethodsForEmail`,
+      and no merge on the server. The net is **"Already use CoPlanly?"** (`NewAccountQuestion`,
+      `NewAccountAsk`, key `new_account_ask_<uid>`), asked once per uid after an Apple or Google
+      sign-in Firebase reports as new; its "Sign out and try again" deletes the empty account first.
+    - **Apple's key and refresh tokens live on the server alone.** The five `APPLE_*` values are in
+      `functions/.env`; `exchangeAppleAuthCode` keeps the token in `apple_tokens/{uid}` (closed to
+      every client) only once the caller's linked Apple ID is the token's own, and `unlinkApple` and
+      `deleteAccount` revoke it. Apple's `invalid_grant` counts as already revoked, and **deletion
+      deletes the document even when the revoke fails** (least retention). The exchange sends no
+      `redirect_uri` (the iPhone sheet's code has none). An Apple method added on Android stores
+      nothing: Firebase's web flow hands over no code.
+    - **The nonce is made in Kotlin** (`AppleNonce`); Swift gets only its SHA-256, Firebase the raw.
+      Apple's name, given only at the first sign-in, seeds a **blank** profile name, never over one;
+      a relay address is never a name (`ProfileIdentity`).
+    - **The flag gates adding Apple, nothing else**: `BuildConfig.APPLE_SIGN_IN`
+      (`-PCOPLANLY_APPLE_SIGN_IN`, on in debug) and the iPhone's `CoplanlyAppleSignIn` (YES in Debug,
+      NO in Release), read as `AppBuildValues.appleSignIn`. An Apple already linked stays listed and
+      removable with it off. Turning it on in release is its own pull request, after the console
+      steps in `functions/README.md`.
+    - **A failed pending link on Android restarts the sheet** (`isOwnAppleLink`), and a link
+      re-reads the methods (`AccountLinking.refresh`).
 
 ## Legal and GDPR (September 2026) — keep consistent
 

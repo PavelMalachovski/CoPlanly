@@ -130,6 +130,17 @@ SHA-256 fingerprints of the five most recent refresh tokens (`google_oauth/{uid}
 type covers a credential's fingerprint, and nothing from the calendar reaches our servers.
 Google's API Services User Data Policy (Limited Use) applies, and the privacy policy says so.
 
+**Sign in with Apple adds no data type** (MON-24 phase 4, part A, November 2026). Apple shares a
+*Name* (only at the first sign-in, if the parent allows it) and an *Email address* — possibly
+Apple's private relay address — both already declared for account management. On the server,
+`apple_tokens/{uid}` keeps Apple's refresh token for an iPhone sign-in, only to revoke it when Apple
+is removed or the account deleted; like the Google fingerprints, no Play data type covers a
+credential kept to end an authorisation, and it is closed to every client. Apple is the identity
+provider the parent chose, not a recipient of collected data, so nothing is declared as shared. The
+Play listing concerns the Android build, where an Apple sign-in goes through Firebase's web flow and
+keeps no token. **Google Calendar on an iPhone** reads the same scope and keeps its events on the
+phone as private events, exactly as on Android; it changes no answer here.
+
 **Analytics and crash reporting are optional, and off until asked** (REL-5, shipped). Three
 things now have to be true at once before either SDK collects anything, and this is what the
 declaration should say:
