@@ -27,6 +27,7 @@ import com.coparently.app.data.platform.Connectivity
 import com.coparently.app.data.platform.CrashReporter
 import com.coparently.app.data.platform.DeviceRegion
 import com.coparently.app.data.platform.SecurePreferences
+import com.coparently.app.data.remote.firebase.AccountLinking
 import com.coparently.app.data.remote.firebase.AccountSignIn
 import com.coparently.app.data.remote.firebase.AuthSession
 import com.coparently.app.data.remote.firebase.CallableFunctions
@@ -41,6 +42,7 @@ import com.coparently.app.data.remote.google.CredentialProvider
 import com.coparently.app.data.remote.google.GoogleCalendarAccount
 import com.coparently.app.data.remote.google.GoogleCalendarApi
 import com.coparently.app.data.remote.google.GoogleCalendarConnectionSource
+import com.coparently.app.data.remote.google.IosGoogleCalendarAccount
 import com.coparently.app.data.repository.PairingWording
 import com.coparently.app.data.requests.RequestClockNotices
 import com.coparently.app.data.school.SchoolImportScheduler
@@ -129,12 +131,13 @@ class IosKoinGraphTest {
             JournalDao::class, FamilyDocumentCacheDao::class, KnownFamilyDao::class,
             GoogleCalendarApi::class, BakalariClient::class, BakalariSchoolDirectory::class,
             IosFirebaseAuth::class, SignedInUser::class, AuthSession::class, AccountSignIn::class,
+            AccountLinking::class,
             IosAccountTraces::class, AccountTraces::class, LastSignedInUid::class, AccountConsistency::class,
             FirestorePushQueue::class, PushDevice::class, PushQueue::class, PushRegistration::class,
             AccountDeletion::class, ReminderScheduler::class, RequestClockScheduler::class,
             RequestClockNotices::class, SchoolImportScheduler::class, SupportReminderScheduler::class,
             SyncRequester::class, GoogleCalendarAccount::class, GoogleCalendarConnectionSource::class,
-            CredentialProvider::class, StorageBucket::class, RecordPhotoStorage::class,
+            CredentialProvider::class, IosGoogleCalendarAccount::class, StorageBucket::class, RecordPhotoStorage::class,
             ReceiptTextRecognizer::class, PickedFiles::class, ExportVerifyAddress::class,
             RecordFileWriter::class,
             // platformUiModule
@@ -156,6 +159,15 @@ class IosKoinGraphTest {
             ) = completion(null, null, false, "no Google here")
 
             override fun signOut() = Unit
+
+            override fun disconnect() = Unit
+
+            override val calendarAvailable: Boolean = false
+
+            override fun requestCalendarAccess(
+                scope: String,
+                completion: (String?, String?, String?, Boolean, String?) -> Unit
+            ) = completion(null, null, null, false, "no Google here")
         }
     }
 }

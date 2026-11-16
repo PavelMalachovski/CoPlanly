@@ -94,7 +94,15 @@ class ConnectSchoolEdupageTest {
         importer = importer,
         selectedFamilySource = families,
         childInfoRepository = children,
-        buildValues = AppBuildValues("1", null, null, null, pairingWebLink = false, edupageImport = edupage)
+        buildValues = AppBuildValues(
+            "1",
+            null,
+            null,
+            null,
+            pairingWebLink = false,
+            edupageImport = edupage,
+            appleSignIn = false
+        )
     )
 
     private fun signInToEdupage(vm: ConnectSchoolViewModel) {
@@ -128,7 +136,15 @@ class ConnectSchoolEdupageTest {
                 importer = importer,
                 selectedFamilySource = families,
                 childInfoRepository = children,
-                buildValues = AppBuildValues("1", null, null, null, pairingWebLink = false, edupageImport = true)
+                buildValues = AppBuildValues(
+                    "1",
+                    null,
+                    null,
+                    null,
+                    pairingWebLink = false,
+                    edupageImport = true,
+                    appleSignIn = false
+                )
             )
             advanceUntilIdle()
 

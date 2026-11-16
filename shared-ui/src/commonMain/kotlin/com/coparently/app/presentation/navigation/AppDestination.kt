@@ -196,6 +196,7 @@ object AppDestinationCatalog {
         Screen.ProfessionalPlan.route to DestinationKind.PUSH,
         Screen.CustodySetup.route to DestinationKind.PUSH,
         Screen.MyProfile.route to DestinationKind.PUSH,
+        Screen.SignInMethods.route to DestinationKind.PUSH,
         Screen.CoParentProfile.route to DestinationKind.PUSH,
         Screen.Conversations.route to DestinationKind.TAB_ROOT,
         Screen.Chat.route to DestinationKind.PUSH,
@@ -316,6 +317,7 @@ internal fun appDestinations(
         route = Screen.Onboarding.route,
         transitions = DestinationTransitions.FADE
     ) {
+        val shellDecides = shellDrawsBars()
         OnboardingScreen(
             onFinished = {
                 navController.navigate(Screen.Calendar.route) {
@@ -335,6 +337,18 @@ internal fun appDestinations(
                         Screen.Pairing.routeWithCode(null)
                     }
                 )
+            },
+            // "Already use CoPlanly?" answered "Sign out and try again": the new account is
+            // deleted and the session ended. As after a deletion in Settings, the iPhone's shell
+            // is asked again and finds nobody signed in; Android goes to sign-in itself.
+            onSignedOut = {
+                if (shellDecides) {
+                    authStateViewModel.refreshAuthState()
+                } else {
+                    navController.navigate(Screen.Auth.route) {
+                        popUpTo(Screen.Onboarding.route) { inclusive = true }
+                    }
+                }
             }
         )
     },
@@ -1006,6 +1020,16 @@ internal fun appDestinations(
         )
     },
 
+    // The account's sign-in methods (MON-24 phase 4, part A). A Settings detail route.
+    destination(
+        route = Screen.SignInMethods.route,
+        transitions = DestinationTransitions.PUSH
+    ) {
+        com.coparently.app.presentation.settings.SignInMethodsScreen(
+            onNavigateUp = { navController.popBackStack() }
+        )
+    },
+
     destination(
         route = Screen.CoParentProfile.route,
         transitions = DestinationTransitions.PUSH
@@ -1331,6 +1355,9 @@ private fun SettingsDestination(
         },
         onNavigateToMyProfile = {
             navController.navigate(Screen.MyProfile.route)
+        },
+        onNavigateToSignInMethods = {
+            navController.navigate(Screen.SignInMethods.route)
         },
         onSignOut = {
             if (!shellDecides) {

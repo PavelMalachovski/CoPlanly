@@ -148,6 +148,15 @@ class IosCredentialSignInTest {
         override fun signOut() {
             signOuts++
         }
+
+        override fun disconnect() = Unit
+
+        override val calendarAvailable: Boolean = false
+
+        override fun requestCalendarAccess(
+            scope: String,
+            completion: (String?, String?, String?, Boolean, String?) -> Unit
+        ) = completion(null, null, null, false, "no Google here")
     }
 
     private companion object {

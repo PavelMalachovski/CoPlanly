@@ -54,6 +54,17 @@ test('database and encryption changes need the SEC-2 upgrade run', () => {
   assert.ok(sectionsFor([K + 'data/security/DatabaseKey.kt']).includes('2.1'));
 });
 
+test('maps the account changes of MON-24 phase 4, part A, to 3.42', () => {
+  assert.ok(sectionsFor(['shared-ui/src/iosMain/kotlin/com/coparently/app/ios/AppleNonce.kt'])
+      .includes('3.42'));
+  assert.ok(sectionsFor(['shared-data/src/iosMain/kotlin/com/coparently/app/data/remote/google/' +
+      'IosGoogleCalendarAccount.kt']).includes('3.42'));
+  assert.ok(sectionsFor([K + 'presentation/settings/SignInMethodsScreen.kt']).includes('3.42'));
+  assert.ok(sectionsFor(['iosApp/CoPlanly/AppleSignInBridge.swift']).includes('3.42'));
+  assert.ok(sectionsFor(['functions/apple-auth.js']).includes('3.42'));
+  assert.ok(!sectionsFor([K + 'presentation/settings/SettingsScreen.kt']).includes('3.42'));
+});
+
 test('maps the request clocks to 5.9', () => {
   assert.ok(sectionsFor([K + 'data/requests/RequestClockSteps.kt']).includes('5.9'));
   assert.ok(sectionsFor([K + 'domain/changerequests/RequestClock.kt']).includes('5.9'));

@@ -5,7 +5,7 @@ package com.coparently.app.data.remote.google
  * automatic import asks before it calls Google.
  *
  * The app's `CredentialManagerService`, which holds the stored tokens and the Credential Manager
- * sign-in, answers it on Android; the iPhone's Google sign-in will answer it there.
+ * sign-in, answers it on Android; `IosGoogleCalendarAccount` answers it on the iPhone.
  */
 interface GoogleCalendarConnectionSource {
 

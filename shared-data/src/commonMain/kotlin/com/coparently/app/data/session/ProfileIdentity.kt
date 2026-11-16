@@ -78,7 +78,10 @@ object ProfileIdentity {
      *    of what a linked provider reports can never demote a name the user already has, but
      *    *before* the email guess so it wins whenever it has something to offer;
      * 4. the local part of the email address, the same last resort the pre-rewrite pairing
-     *    screen used.
+     *    screen used — never an Apple private relay address's (`@privaterelay.appleid.com`),
+     *    whose local part is a random string, not a name: a parent who signed in with Apple
+     *    and shared no name is left with none, so onboarding's Profile step asks for it
+     *    (MON-24 phase 4).
      *
      * @param displayName Name Firebase Auth reports for this session, if any
      * @param storedRemoteName Name currently in the Firestore profile document
@@ -97,7 +100,17 @@ object ProfileIdentity {
         ?: storedRemoteName?.nonBlank()
         ?: storedLocalName?.nonBlank()
         ?: bestProvider(providers)?.displayName?.nonBlank()
-        ?: email?.substringBefore("@")?.nonBlank()
+        ?: email?.takeUnless(::isAppleRelayAddress)?.substringBefore("@")?.nonBlank()
+
+    /** The domain of Apple's private relay addresses, which Sign in with Apple may share. */
+    private const val APPLE_RELAY_DOMAIN = "privaterelay.appleid.com"
+
+    /**
+     * Whether [email] is an Apple private relay address. It is an ordinary address everywhere else;
+     * only [resolveName] declines to make a name of it.
+     */
+    fun isAppleRelayAddress(email: String): Boolean =
+        email.substringAfterLast("@", missingDelimiterValue = "").trim().equals(APPLE_RELAY_DOMAIN, ignoreCase = true)
 
     /**
      * Picks the best available email address, or null when there is nothing usable.

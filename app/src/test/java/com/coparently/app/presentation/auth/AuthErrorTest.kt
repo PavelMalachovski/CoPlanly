@@ -58,6 +58,13 @@ class AuthErrorTest {
     }
 
     @Test
+    fun `an address that signs in another way gets the generic sentence, never the sign-up one`() {
+        val refusal = FirebaseAuthException("ERROR_ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL", "x")
+        assertEquals(AuthError.ExistsWithDifferentMethod, AuthError.fromGoogle(refusal))
+        assertEquals(AuthError.ExistsWithDifferentMethod, AndroidAuthErrors.fromApple(refusal))
+    }
+
+    @Test
     fun `a network failure is not a credential failure`() {
         assertEquals(
             AuthError.Network,

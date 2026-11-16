@@ -1,5 +1,8 @@
 package com.coparently.app.presentation.auth
 
+import com.coparently.app.presentation.platform.AppleSignInCancelledException
+import com.coparently.app.presentation.platform.SignsInAnotherWayException
+
 /**
  * Which [AuthError] a failed sign-in is (MON-24 phase 2, slice 11f): the SDKs' exceptions are the
  * platform's, so the mapping is too. On Android the app's `AndroidAuthErrors`, the mappings
@@ -28,4 +31,19 @@ interface AuthErrors {
      * @return null when the user dismissed the sheet, as [fromGoogle]
      */
     fun fromSavedPassword(cause: Throwable): AuthError?
+
+    /**
+     * Maps a failure of the Apple path (MON-24 phase 4, part A). The two outcomes the shell's
+     * [com.coparently.app.presentation.platform.CredentialSignIn.signInWithApple] names itself are
+     * read here, on every platform alike; anything else is the SDK's own, mapped as the e-mail path
+     * maps Firebase's reasons.
+     *
+     * @return null when the parent closed Apple's sheet ([AppleSignInCancelledException]): a
+     *   deliberate cancel is not an error, as on the Google path
+     */
+    fun fromApple(cause: Throwable): AuthError? = when (cause) {
+        is AppleSignInCancelledException -> null
+        is SignsInAnotherWayException -> AuthError.ExistsWithDifferentMethod
+        else -> fromEmailPassword(cause)
+    }
 }

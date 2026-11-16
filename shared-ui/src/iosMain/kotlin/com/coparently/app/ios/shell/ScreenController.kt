@@ -120,7 +120,9 @@ internal class ScreenController(
         chipFrame = { content ->
             WhileAlive(entry) {
                 CompositionLocalProvider(LocalViewModelStoreOwner provides entry) {
-                    ProvideIosShell(shell.buildValues, shell.credentialSignIn) { CoPlanlyTheme(content = content) }
+                    ProvideIosShell(shell.buildValues, shell.credentialSignIn, shell.googleCalendarSignIn) {
+                        CoPlanlyTheme(content = content)
+                    }
                 }
             }
         }
@@ -193,7 +195,7 @@ internal class ScreenController(
     @Composable
     private fun Shared(content: @Composable () -> Unit) {
         CompositionLocalProvider(LocalViewModelStoreOwner provides session) {
-            ProvideIosShell(shell.buildValues, shell.credentialSignIn) {
+            ProvideIosShell(shell.buildValues, shell.credentialSignIn, shell.googleCalendarSignIn) {
                 val darkTheme by shell.themeChoice.collectAsState()
                 AppProviders(darkTheme = darkTheme) {
                     CompositionLocalProvider(

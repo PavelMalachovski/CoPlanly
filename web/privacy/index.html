@@ -153,7 +153,13 @@ Where something is <em>not</em> shared, we say so below.</p>
 <h2>What we collect, and why</h2>
 <h3>Your account</h3>
 <ul>
-<li>Email address and display name; a profile photo if you sign in with Google.</li>
+<li>Email address and display name; a profile photo if you sign in with Google. If you sign in with
+Apple, Apple gives us an email address — your own, or a private relay address Apple forwards to
+you if you chose &quot;Hide My Email&quot; — and, only the first time and only if you share it, your name.</li>
+<li>Which ways you sign in (email and password, Google, Apple), as Firebase Authentication records
+them. You can add or remove one in Settings → Account → Sign-in methods; the last one cannot be
+removed. Adding a way that already belongs to another CoPlanly account adds nothing, and the app
+never tells you anything about that other account.</li>
 <li>Optionally, your date of birth and phone number.</li>
 <li>An authentication identifier from Firebase Authentication.</li>
 <li>Which parent slot you occupy in your family, and who your linked co-parent is.</li>
@@ -167,6 +173,18 @@ your co-parent can see it.</li>
 <p>We do <strong>not</strong> ask for or keep any health information about you, the parent. (Earlier test
 versions of the app had an optional medical section on a parent&#39;s own profile; it has been
 removed and what was entered in it deleted.)</p>
+<h3>Signing in with Apple</h3>
+<p>If you sign in with Apple, or add Apple as a way to sign in, on an <strong>iPhone</strong>, the app sends the
+one-time authorisation code Apple gives it to our server (a Google Cloud Function in
+<code>europe-west3</code>), which exchanges it with Apple for a <strong>refresh token</strong> and keeps that token in a
+place no app can read. We keep it for one reason, which Apple requires: so that we can <strong>revoke</strong>
+CoPlanly&#39;s access to your Apple ID when you remove Apple from your sign-in methods or delete your
+account. We do not use it to sign you in or to read anything from Apple. It is kept while Apple is
+one of your sign-in methods, and revoked and deleted when you remove Apple or delete your account.
+If Apple cannot be reached when you delete your account, the token is deleted anyway; you can then
+remove CoPlanly yourself under your Apple ID&#39;s settings (&quot;Sign in with Apple&quot;). An Apple sign-in
+added <strong>on Android</strong> goes through a web page from Apple and Firebase, which gives the app no such
+code, so nothing is kept for it.</p>
 <p><strong>Why:</strong> to give you an account, to show your co-parent who they are linked with, and to
 decide what each of you may read. <strong>Legal basis:</strong> performance of our contract with you
 (Art. 6(1)(b)). The consent record is kept to show that you gave consent (Art. 7(1)).</p>
@@ -372,13 +390,13 @@ address is held in the server&#39;s memory for at most ten minutes and is never 
 database or logs.</li>
 </ul>
 <h3>Google Calendar, if you connect it</h3>
-<p>If you connect a Google account (Settings → Sync), CoPlanly asks Google for <strong>read-only access
+<p>If you connect a Google account (Settings → Sync), on Android or on an iPhone, CoPlanly asks Google for <strong>read-only access
 to the events on the calendars you own</strong> — Google shows it as &quot;See the events on Google calendars
 you own&quot; (the <code>calendar.events.owned.readonly</code> permission) — and uses it for one thing: while the
 sync is on, it reads the events of your <strong>primary</strong> Google Calendar for the next twelve months and
 copies them into the calendar on your phone. It does so when you switch the sync on or tap to sync,
-and on its own when you open the app and about every fifteen minutes in the background; turning
-the sync off stops it. It never creates, changes or
+and on its own when you open the app and, on Android, about every fifteen minutes in the
+background; turning the sync off stops it. It never creates, changes or
 deletes anything in your Google Calendar, and never reads a calendar somebody else shares with
 you.</p>
 <ul>
@@ -575,6 +593,11 @@ the phone erases them.</p>
 <td>Only your calendar, only if you connect it</td>
 <td>The integration you enabled — for your Google Calendar, Google is responsible under its own privacy policy</td>
 </tr>
+<tr>
+<td>Apple, if you sign in with Apple</td>
+<td>The authorisation code to exchange and, when you remove Apple or delete your account, the token to revoke</td>
+<td>Sign in with Apple, which you chose — for your Apple ID, Apple is responsible under its own privacy policy</td>
+</tr>
 </tbody></table></div>
 <p><strong>Where your data is processed.</strong> Our database and file storage are located in
 {{FIRESTORE_REGION}}. Our server functions — which link co-parents, send notifications, renew
@@ -659,6 +682,10 @@ daily on our servers, not by hand.</p>
 <td><strong>30 days</strong>, so you can export it — see below</td>
 </tr>
 <tr>
+<td>The token that lets us revoke Sign in with Apple (made on an iPhone)</td>
+<td>While Apple is one of your sign-in methods; revoked and deleted when you remove it or delete your account</td>
+</tr>
+<tr>
 <td>An export&#39;s receipt</td>
 <td><strong>10 years</strong> from registration; a record ID reserved for an export that was never registered, <strong>7 days</strong></td>
 </tr>
@@ -720,6 +747,8 @@ itself stays with the person who sent it, because it is their record that the tw
 once linked;</li>
 <li>deletes every read-only calendar link into your families, whichever of you created it;</li>
 <li>unlinks the two of you, so their access ends immediately;</li>
+<li>revokes CoPlanly&#39;s access to your Apple ID and deletes the token kept for that, if you signed
+in with Apple on an iPhone;</li>
 <li>deletes the fingerprints of your Google Calendar authorisations, if you connected one, and
 any notifications still queued for you, the daily count of your writing-help requests and
 the count of wrong invitation codes you entered;</li>

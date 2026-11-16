@@ -95,9 +95,33 @@ class IosFirebaseAuthEmulatorTest {
         val result = auth.signInWithGoogleIdToken(idToken)
 
         assertTrue(result.isSuccess, "${result.exceptionOrNull()}")
+        assertEquals(SignInOutcome(isNewUser = true), result.getOrNull())
         val account = assertNotNull(auth.getCurrentAccount())
         assertTrue("google.com" in account.providers.map { it.providerId })
         assertNull(GoogleAccessTokens.take(idToken))
+    }
+
+    /**
+     * Phase 4, part A (the plan's review focus 1): linking a Google account another CoPlanly account
+     * already holds links nothing, and the e-mail account stays signed in, its methods unchanged.
+     */
+    @Test
+    fun `a Google account another account holds is not linked`() = AuthEmulator.run("google in use") { firebase ->
+        val auth = IosFirebaseAuth(firebase)
+        val linking = IosAccountLinking(firebase, AppleTokens(NoCallables))
+        val idToken = googleIdToken()
+        GoogleAccessTokens.hold(idToken, "an-access-token")
+        assertTrue(auth.signInWithGoogleIdToken(idToken).isSuccess)
+        assertTrue(auth.signOutCompletely().isSuccess)
+        assertTrue(auth.createAccountWithEmail(newEmail(), PASSWORD).isSuccess)
+        val uid = assertNotNull(auth.getCurrentUid())
+
+        GoogleAccessTokens.hold(idToken, "an-access-token")
+        val failure = linking.linkGoogle(idToken).exceptionOrNull()
+
+        assertEquals(LinkFailure.InUseByAnotherAccount, assertIs<LinkException>(failure).failure)
+        assertEquals(uid, auth.getCurrentUid())
+        assertEquals(setOf(SignInMethod.EMAIL), linking.linkedMethods().first())
     }
 
     @Test
@@ -178,6 +202,12 @@ class IosFirebaseAuthEmulatorTest {
     }
 
     private fun newEmail(): String = "iphone-${NSUUID().UUIDString.lowercase()}@example.test"
+
+    /** No callable is reached by linking Google; Apple's unlink alone would call one. */
+    private object NoCallables : CallableFunctions {
+        override suspend fun call(name: String, payload: Map<String, Any>): Any? =
+            error("No callable is expected here: $name")
+    }
 
     private companion object {
         const val PASSWORD = "correct-horse-battery"

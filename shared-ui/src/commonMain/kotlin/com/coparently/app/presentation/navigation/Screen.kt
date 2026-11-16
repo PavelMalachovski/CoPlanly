@@ -238,6 +238,9 @@ sealed class Screen(val route: String) {
     /** The signed-in user's own profile — editable. */
     data object MyProfile : Screen("my_profile")
 
+    /** The signed-in account's sign-in methods, from Settings → Account (MON-24 phase 4, part A). */
+    data object SignInMethods : Screen("sign_in_methods")
+
     /** The co-parent's profile — read-only, `firestore.rules` refuses the write anyway. */
     data object CoParentProfile : Screen("coparent_profile")
 

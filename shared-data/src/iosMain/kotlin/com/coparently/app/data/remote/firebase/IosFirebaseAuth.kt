@@ -20,6 +20,9 @@ import kotlin.coroutines.cancellation.CancellationException
  * app's deletion, where Android's goes with the app, so the first launch after a reinstall signs it
  * out before the first screen (`clearPreviousInstall`, `data/session/PreviousInstall.kt`).
  *
+ * Linking and unlinking the account's sign-in methods (MON-24 phase 4, part A) is
+ * [IosAccountLinking]'s.
+ *
  * @property auth GitLive's `FirebaseAuth`, the default app's (`Firebase.auth`), which `IosFirebase`
  *   points at the emulator when the app runs on one.
  */
@@ -87,12 +90,15 @@ class IosFirebaseAuth(private val auth: FirebaseAuth) : SignedInUser, AuthSessio
      * token (the iOS SDK's Google credential is made of both), where Android's takes a null one. The
      * iPhone's credential sheet holds the access token it was answered with in [GoogleAccessTokens],
      * and it is taken from there only for the ID token it came with. Without a matching one the
-     * credential throws, and that becomes this call's failure.
+     * credential throws, and that becomes this call's failure. The outcome says whether Firebase
+     * created the account at this sign-in (GitLive's `additionalUserInfo`, the iOS SDK's).
      */
-    override suspend fun signInWithGoogleIdToken(idToken: String): Result<Any> {
+    override suspend fun signInWithGoogleIdToken(idToken: String): Result<SignInOutcome> {
         val accessToken = GoogleAccessTokens.take(idToken)
         return attempt {
-            checkNotNull(auth.signInWithCredential(GoogleAuthProvider.credential(idToken, accessToken)).user)
+            val result = auth.signInWithCredential(GoogleAuthProvider.credential(idToken, accessToken))
+            checkNotNull(result.user)
+            SignInOutcome(isNewUser = result.additionalUserInfo?.isNewUser == true)
         }.onFailure { logger.e(TAG, "Google sign-in failed", it) }
     }
 

@@ -84,6 +84,7 @@ fun androidBuildValues(): AppBuildValues = AppBuildValues(
     supportEmail = BuildConfig.SUPPORT_EMAIL.takeIf { it.isNotBlank() },
     pairingWebLink = BuildConfig.PAIRING_WEB_LINK,
     edupageImport = BuildConfig.EDUPAGE_IMPORT,
+    appleSignIn = BuildConfig.APPLE_SIGN_IN,
 )
 
 /** `ACTION_SEND` in `Intent.createChooser`, as the invitation, feed and export screens built it. */

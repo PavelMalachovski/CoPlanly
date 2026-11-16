@@ -46,6 +46,8 @@ import com.coparently.app.presentation.home.MonthSpendDependencies
 import com.coparently.app.presentation.home.PutOffAsksViewModel
 import com.coparently.app.presentation.journal.JournalEditorViewModel
 import com.coparently.app.presentation.journal.JournalListViewModel
+import com.coparently.app.presentation.onboarding.NewAccountAsk
+import com.coparently.app.presentation.onboarding.NewAccountAskViewModel
 import com.coparently.app.presentation.onboarding.OnboardingViewModel
 import com.coparently.app.presentation.pairing.CustodyConflictViewModel
 import com.coparently.app.presentation.pairing.PairingViewModel
@@ -65,6 +67,7 @@ import com.coparently.app.presentation.school.ConnectSchoolViewModel
 import com.coparently.app.presentation.school.SchoolImportViewModel
 import com.coparently.app.presentation.settings.CalendarFeedViewModel
 import com.coparently.app.presentation.settings.SettingsViewModel
+import com.coparently.app.presentation.settings.SignInMethodsViewModel
 import com.coparently.app.presentation.stickers.StickersViewModel
 import com.coparently.app.presentation.support.SupportViewModel
 import com.coparently.app.presentation.sync.AuthStateViewModel
@@ -211,11 +214,13 @@ val supportUiModule: Module = module {
  * erasure go through `PushRegistration` and `AccountDeletion`, which the app binds on Android and
  * [platformDataModule] stands in for on the iPhone. Beside them, since Task 11, the sync group's
  * ViewModel: the co-parent sync and Google Calendar's connection (`GoogleCalendarAccount`), whose
- * sign-in screen the shell runs.
+ * sign-in screen the shell runs. And the account's sign-in methods (MON-24 phase 4, part A), linked
+ * and unlinked through `AccountLinking`, which both platforms bind.
  */
 val settingsUiModule: Module = module {
     viewModelOf(::CalendarFeedViewModel)
     viewModelOf(::SettingsViewModel)
+    viewModelOf(::SignInMethodsViewModel)
     viewModelOf(::SyncViewModel)
 }
 
@@ -233,10 +238,15 @@ val pairingUiModule: Module = module {
 /**
  * Onboarding (MON-24 phase 2, Task 10): the four-step wizard — the link and what it brought back,
  * the notification question, the profile with the country guessed from the phone's own region, and
- * the custody step's state beside the schedule editor [custodyUiModule] holds.
+ * the custody step's state beside the schedule editor [custodyUiModule] holds. Since MON-24 phase 4,
+ * part A, also "Already use CoPlanly?", asked once of an account a Google or Apple sign-in created:
+ * its per-uid mark ([NewAccountAsk], which the sign-in writes too) and its answers, which delete the
+ * new account through `AccountDeletion` before `AuthSession` ends the session.
  */
 val onboardingUiModule: Module = module {
     viewModelOf(::OnboardingViewModel)
+    factoryOf(::NewAccountAsk)
+    viewModelOf(::NewAccountAskViewModel)
 }
 
 /**

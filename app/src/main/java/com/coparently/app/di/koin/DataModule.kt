@@ -22,9 +22,11 @@ import com.coparently.app.data.notification.EventReminderScheduler
 import com.coparently.app.data.notification.NotificationManager
 import com.coparently.app.data.notification.WorkRequestClockScheduler
 import com.coparently.app.data.pairing.PlayInstallReferrerSource
+import com.coparently.app.data.remote.firebase.AccountLinking
 import com.coparently.app.data.remote.firebase.AccountSignIn
 import com.coparently.app.data.remote.firebase.AuthSession
 import com.coparently.app.data.remote.firebase.FcmService
+import com.coparently.app.data.remote.firebase.FirebaseAccountLinking
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirebaseImageStorage
 import com.coparently.app.data.remote.firebase.PushDevice
@@ -110,6 +112,8 @@ val dataModule = module {
     single<AuthSession> { get<FirebaseAuthService>() }
     // The sign-in screen's account calls, which AuthViewModel in `:shared-ui` asks for.
     single<AccountSignIn> { get<FirebaseAuthService>() }
+    // The account's sign-in methods, which Settings' "Sign-in methods" asks for (phase 4, part A).
+    single<AccountLinking> { FirebaseAccountLinking(firebaseAuth = get(), appleTokens = get()) }
     singleOf(::FirebaseImageStorage)
     singleOf(::CredentialAuthenticator)
     singleOf(::CredentialManagerService)

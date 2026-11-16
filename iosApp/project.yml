@@ -152,9 +152,23 @@ targets:
         # bundled GoogleService-Info.plist when there is one. Set it only on your own Mac; never commit
         # a value.
         COPLANLY_GOOGLE_URL_SCHEME: ""
+        # Google Calendar's web client (MON-24 phase 4, part A, Task 7): `Info.plist`'s GIDServerClientID,
+        # the OAuth client Google issues the server's authorization code for, whose secret the
+        # `exchangeGoogleAuthCode` function holds (Android's `default_web_client_id`). Blank: Settings
+        # offers no Google Calendar row (GoogleSignInBridge.calendarAvailable), as in CI. A client id is
+        # not a secret, but set it on your own Mac or the release build only, as the URL scheme.
+        COPLANLY_GOOGLE_WEB_CLIENT_ID: ""
+        # Sign in with Apple (MON-24 phase 4, part A): the `CoplanlyAppleSignIn` Info.plist key the
+        # shared code reads (`AppleSignInFlag.kt`), on in Debug and off in Release until the owner
+        # turns it on, as Android's `APPLE_SIGN_IN` build flag. The sheet also needs the
+        # `com.apple.developer.applesignin` entitlement (CoPlanly.entitlements), which a device build
+        # signs with the team's profile; a simulator build signs it locally.
       configs:
         Debug:
           ONLY_ACTIVE_ARCH: YES
+          COPLANLY_APPLE_SIGN_IN: "YES"
+        Release:
+          COPLANLY_APPLE_SIGN_IN: "NO"
     scheme:
       testTargets:
         - CoPlanlyUITests

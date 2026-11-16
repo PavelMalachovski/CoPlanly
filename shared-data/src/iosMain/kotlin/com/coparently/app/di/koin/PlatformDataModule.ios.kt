@@ -41,12 +41,14 @@ import com.coparently.app.data.platform.IosDeviceRegion
 import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.platform.keychainSecurePreferences
 import com.coparently.app.data.receipts.VisionReceiptText
+import com.coparently.app.data.remote.firebase.AccountLinking
 import com.coparently.app.data.remote.firebase.AccountSignIn
 import com.coparently.app.data.remote.firebase.AuthSession
 import com.coparently.app.data.remote.firebase.CallableFunctions
 import com.coparently.app.data.remote.firebase.FirestoreClient
 import com.coparently.app.data.remote.firebase.FirestorePushQueue
 import com.coparently.app.data.remote.firebase.GitLiveFirestoreClient
+import com.coparently.app.data.remote.firebase.IosAccountLinking
 import com.coparently.app.data.remote.firebase.IosCallableFunctions
 import com.coparently.app.data.remote.firebase.IosFirebaseAuth
 import com.coparently.app.data.remote.firebase.PushDevice
@@ -57,6 +59,8 @@ import com.coparently.app.data.remote.google.CredentialProvider
 import com.coparently.app.data.remote.google.GoogleCalendarAccount
 import com.coparently.app.data.remote.google.GoogleCalendarApi
 import com.coparently.app.data.remote.google.GoogleCalendarConnectionSource
+import com.coparently.app.data.remote.google.GoogleRevokeEndpoint
+import com.coparently.app.data.remote.google.IosGoogleCalendarAccount
 import com.coparently.app.data.requests.RequestClockNotices
 import com.coparently.app.data.school.SchoolImportScheduler
 import com.coparently.app.data.school.bakalari.BakalariClient
@@ -102,8 +106,9 @@ import org.koin.dsl.module
  * ([IosAccountDeletion]), since part C's Task 10 Cloud Storage ([IosStorageBucket]), since Task 11
  * a record's photos ([IosRecordPhotoStorage]) and the pickers' copies ([IosPickedFiles]), since
  * Task 12 a receipt read by Vision ([VisionReceiptText]), the record's file ([IosRecordFileWriter])
- * and its verification address ([InfoPlistExportVerifyAddress]) — and, for what the iPhone does not
- * have yet (a push token, Google Calendar, background jobs and notifications), the stand-ins in
+ * and its verification address ([InfoPlistExportVerifyAddress]), since phase 4's Task 7 Google
+ * Calendar ([IosGoogleCalendarAccount]) — and, for what the iPhone does not have yet (a push token,
+ * background jobs and notifications), the stand-ins in
  * `IosUnavailable.kt`, which answer as a phone with nothing of the kind would. The two wordings the
  * data layer writes into stored data read the app's strings, so `:shared-ui`'s `platformUiModule`
  * binds them (`IosPairingWording`, `IosSchoolImportWordings`); the graph resolves with both
@@ -152,6 +157,8 @@ actual val platformDataModule: Module = module {
     single<SignedInUser> { get<IosFirebaseAuth>() }
     single<AuthSession> { get<IosFirebaseAuth>() }
     single<AccountSignIn> { get<IosFirebaseAuth>() }
+    // The account's sign-in methods (phase 4, part A), Apple's unlink through `dataModules`' AppleTokens.
+    single<AccountLinking> { IosAccountLinking(Firebase.auth, appleTokens = get()) }
     // The provider session is the app's Google bridge, which `IosApp.start` binds (`iosAppModule`).
     single { IosAccountTraces(get(), get()) }
     single<AccountTraces> { get<IosAccountTraces>() }
@@ -202,9 +209,21 @@ actual val platformDataModule: Module = module {
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
         )
     }
-    single<GoogleCalendarAccount> { NoGoogleCalendar }
-    single<GoogleCalendarConnectionSource> { NoGoogleCalendar }
-    single<CredentialProvider> { NoGoogleCalendar }
+    // Google Calendar (phase 4, part A, Task 7): one object under the three types, its tokens in the
+    // sealed store and renewed through the token function; Google's sheet is the shell's.
+    // The grant is revoked on disconnect and sign-out through Google's revoke endpoint, as Android's
+    // `revokeAccess()` ends it, so the next connect carries a refresh token.
+    single {
+        IosGoogleCalendarAccount(
+            preferences = get(),
+            oauth = get(),
+            revocation = GoogleRevokeEndpoint(httpClient(HttpTimeouts.GOOGLE_CALENDAR)),
+            providerSession = get(),
+        )
+    }
+    single<GoogleCalendarAccount> { get<IosGoogleCalendarAccount>() }
+    single<GoogleCalendarConnectionSource> { get<IosGoogleCalendarAccount>() }
+    single<CredentialProvider> { get<IosGoogleCalendarAccount>() }
     // Cloud Storage by path, never by download URL (part C, Task 10).
     single<StorageBucket> { IosStorageBucket(Firebase.storage) }
     // A record's photos re-encoded and stored under its family's path, and the copies the pickers

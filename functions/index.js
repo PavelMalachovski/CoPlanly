@@ -19,6 +19,7 @@ const exportReceipts = require('./export-receipts');
 const recordPhotos = require('./record-photos');
 const aiAssist = require('./ai-assist');
 const redeemGuard = require('./redeem-guard');
+const appleAuth = require('./apple-auth');
 
 /**
  * Where every function here runs. The European Union, because the payloads are a family's own —
@@ -4908,9 +4909,11 @@ const PLAN_HALF_FIELDS = ['answers', 'agreedTo', 'catalogueVersions', 'updatedAt
  * @param {?Object=} bucket The Storage bucket holding the account's files; omitted in tests that
  *     do not exercise Storage, in which case no file is touched.
  * @param {number=} nowMillis The instant of the deletion; `Date.now()` when omitted.
+ * @param {?{config: ?Object, fetch: ?Function}=} apple What Apple's token is revoked with;
+ *     omitted, the deployment's configuration and the global `fetch` ([eraseAppleToken]).
  * @return {Promise<!Object>} Counts per collection, plus `unpairedFrom`.
  */
-async function deleteAccountDataImpl(db, uid, bucket, nowMillis) {
+async function deleteAccountDataImpl(db, uid, bucket, nowMillis, apple) {
   const removed = {};
   const now = typeof nowMillis === 'number' ? nowMillis : Date.now();
 
@@ -4983,6 +4986,12 @@ async function deleteAccountDataImpl(db, uid, bucket, nowMillis) {
   // The Google OAuth fingerprint (SEC-1 §2). Nothing else deletes it, and a fingerprint of a
   // refresh token issued to an account that no longer exists has no reason to remain.
   await db.collection('google_oauth').doc(uid).delete();
+
+  // Apple's refresh token (MON-24 phase 4): revoked, as Apple requires of an account deleted in
+  // the app, and deleted whether or not Apple answered — a failed revoke is logged with the uid
+  // and never stops the erasure. Early, so a later failure cannot leave the token unrevoked.
+  removed.apple_tokens = await eraseAppleToken(db, uid,
+      apple === undefined ? {config: appleConfigFromEnv(), fetch} : apple, now);
 
   // The AI assist quota (MON-12): a date and a count, keyed by the uid, and nothing else.
   await db.collection(aiAssist.AI_USAGE_COLLECTION).doc(uid).delete();
@@ -5590,6 +5599,299 @@ exports.refreshGoogleAccessToken = regional.https.onCall(async (data, context) =
   return refreshGoogleAccessTokenImpl(
       admin.firestore(), requireGoogleOAuthConfig(), postToGoogleToken,
       context.auth.uid, refreshToken);
+});
+
+// ── Sign in with Apple (MON-24 phase 4, part A) ────────────────────────────────────────────
+//
+// Apple requires its token to be revoked when an account is deleted (guideline 5.1.1(v)), so the
+// server keeps the refresh token Apple issues and revokes it. Four things hold it up:
+//
+// - **The key and every token stay here.** The client secret is signed with the `.p8` key in
+//   `functions/.env` (`apple-auth.js`); the refresh token lives in `apple_tokens/{uid}`
+//   (`{refreshToken, clientId, storedAtMillis}`), closed to every client (`firestore.rules`). The
+//   callables answer `{stored: true}` and `{unlinked: true}`, never a token.
+// - **Only the iPhone stores one.** Its sheet hands the app an authorization code the callable
+//   redeems. Firebase's web flow on Android hands the app none, so an Apple method added there
+//   stores nothing and has nothing to revoke (spec §3.8 call 1).
+// - **The last way in is never removed.** `unlinkApple` refuses when Apple is the account's only
+//   provider, before it touches anything.
+// - **A revoke that fails never blocks an erasure.** Account deletion logs it with the uid and
+//   deletes the document anyway; `unlinkApple`, which the parent can simply try again, changes
+//   nothing instead.
+//
+// Every log line names the uid and an outcome, never a token, a code or the key.
+
+/**
+ * The deployment's Apple configuration from `functions/.env`, or null when any value is missing.
+ *
+ * @return {?Object} See [appleAuth.appleConfig].
+ */
+function appleConfigFromEnv() {
+  return appleAuth.appleConfig(process.env);
+}
+
+/**
+ * The HttpsError for a deployment with no Apple configuration.
+ *
+ * @return {!functions.https.HttpsError} `failed-precondition` / `apple-not-configured`.
+ */
+function appleNotConfigured() {
+  return new functions.https.HttpsError(
+      'failed-precondition',
+      'Sign in with Apple is not configured for this deployment',
+      {reason: 'apple-not-configured'});
+}
+
+/**
+ * What the app is told when Apple's endpoint fails: `unavailable` when Apple could not be reached
+ * or is struggling (try again), `failed-precondition` / `apple-refused` otherwise. Apple's error
+ * code goes to the log with the uid; its body never does. A failure before any request (a key
+ * that cannot sign) is `failed-precondition` / `apple-not-configured`.
+ *
+ * @param {string} uid The caller, for the log.
+ * @param {string} step `exchange` or `revoke`, for the log.
+ * @param {*} err What the request rejected with.
+ * @return {!functions.https.HttpsError} The error the callable throws.
+ */
+function appleFailure(uid, step, err) {
+  if (!(err instanceof appleAuth.AppleTokenError)) {
+    // The request was never made: signing the client secret failed, so the key in
+    // `functions/.env` is malformed. Not Apple's outage, and nothing of the key is logged.
+    console.error(`Apple ${step} for ${uid}: apple key unusable`);
+    return appleNotConfigured();
+  }
+  const status = err && Number.isInteger(err.status) ? err.status : 0;
+  const appleError = err && typeof err.appleError === 'string' ? err.appleError : '';
+  console.warn(`Apple ${step} failed for ${uid} (status ${status}, error ${appleError || 'none'})`);
+  if (status === 0 || status === 429 || status >= 500) {
+    return new functions.https.HttpsError(
+        'unavailable', 'Apple could not be reached; try again', {reason: 'apple-unavailable'});
+  }
+  return new functions.https.HttpsError(
+      'failed-precondition', 'Apple refused the request',
+      {reason: 'apple-refused', cause: appleError || String(status)});
+}
+
+/**
+ * The `uid` Firebase Auth records for the caller's linked Apple ID, or '' when none is linked.
+ *
+ * @param {!Object} auth The Admin SDK's `auth()`, or a fake with `getUser`.
+ * @param {string} uid The signed-in caller.
+ * @return {!Promise<string>} Apple's `sub` for this account, or ''.
+ */
+async function linkedAppleSubject(auth, uid) {
+  const user = await auth.getUser(uid);
+  const apple = (user.providerData || [])
+      .find((info) => info && info.providerId === appleAuth.APPLE_PROVIDER_ID);
+  return apple && typeof apple.uid === 'string' ? apple.uid : '';
+}
+
+/**
+ * The HttpsError for a code that is not the caller's own Apple ID.
+ *
+ * @return {!functions.https.HttpsError} `failed-precondition` / `apple-account-mismatch`.
+ */
+function appleAccountMismatch() {
+  return new functions.https.HttpsError(
+      'failed-precondition', 'This Apple ID is not the one linked to this account',
+      {reason: 'apple-account-mismatch'});
+}
+
+/**
+ * Redeems Apple's authorization code and keeps the refresh token in `apple_tokens/{uid}`.
+ *
+ * **Only the caller's own Apple ID.** The code is a bearer credential, so a caller could send one
+ * issued to somebody else's Apple ID and have the server keep — and later revoke — that person's
+ * grant. The exchange therefore requires the `sub` of the identity token Apple returns with the
+ * tokens to equal the `apple.com` provider's `uid` Firebase Auth holds for the caller, and refuses
+ * a caller with no Apple ID linked before asking Apple anything. A mismatch stores nothing and
+ * revokes nothing: the grant is somebody else's. Decoding the identity token without checking its
+ * signature is sound here because it came from Apple's token endpoint over TLS, in answer to this
+ * server's own request ([appleAuth.subjectOf]).
+ *
+ * A later exchange replaces the document: Apple issues a new refresh token for each authorization,
+ * and revoking any one of them ends the app's authorization as a whole, so the newest is enough.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {!Object} auth The Admin SDK's `auth()`, or a fake with `getUser`.
+ * @param {?Object} config The Apple configuration, or null when the deployment has none.
+ * @param {function(string, !Object): !Promise<!Object>} fetchFn `fetch`, or a fake.
+ * @param {string} uid The signed-in caller.
+ * @param {string} code Apple's authorization code.
+ * @param {string} clientId The bundle id or the Services ID the code was issued to.
+ * @param {number=} nowMillis The current time; `Date.now()` when omitted.
+ * @return {!Promise<{stored: boolean}>} `{stored: true}`.
+ */
+async function exchangeAppleAuthCodeImpl(
+    db, auth, config, fetchFn, uid, code, clientId, nowMillis) {
+  if (!config) throw appleNotConfigured();
+  if (!appleAuth.isKnownClientId(config, clientId)) {
+    throw new functions.https.HttpsError(
+        'invalid-argument', 'clientId is not this app\'s', {reason: 'unknown-client-id'});
+  }
+  const linkedSubject = await linkedAppleSubject(auth, uid);
+  if (!linkedSubject) {
+    console.warn(`Apple exchange for ${uid}: no Apple ID linked`);
+    throw appleAccountMismatch();
+  }
+  const now = typeof nowMillis === 'number' ? nowMillis : Date.now();
+
+  let refreshToken;
+  let idToken;
+  try {
+    ({refreshToken, idToken} = await appleAuth.exchangeCode(
+        config, clientId, code, {fetch: fetchFn, nowSeconds: now / 1000}));
+  } catch (err) {
+    throw appleFailure(uid, 'exchange', err);
+  }
+  if (appleAuth.subjectOf(idToken) !== linkedSubject) {
+    console.warn(`Apple exchange for ${uid}: the code is for another Apple ID`);
+    throw appleAccountMismatch();
+  }
+  if (!refreshToken) {
+    console.warn(`Apple exchange for ${uid}: no refresh token`);
+    throw new functions.https.HttpsError(
+        'internal', 'Apple returned no refresh token', {reason: 'no-refresh-token'});
+  }
+
+  await db.collection(appleAuth.APPLE_TOKENS_COLLECTION).doc(uid)
+      .set({refreshToken, clientId, storedAtMillis: now});
+  console.log(`Apple token stored for ${uid}`);
+  return {stored: true};
+}
+
+exports.exchangeAppleAuthCodeImpl = exchangeAppleAuthCodeImpl;
+
+/**
+ * Unlinks Apple from the caller's account: revokes the kept token, deletes `apple_tokens/{uid}`,
+ * then removes the `apple.com` provider from the Firebase user.
+ *
+ * Refused with `failed-precondition` / `last-method` when Apple is the account's only provider,
+ * before anything changes. When a kept token cannot be revoked (Apple unreachable or refusing, or
+ * no usable Apple configuration), nothing changes either and the parent tries again: unlinking
+ * with the token still alive would leave an authorization the app no longer knows of. Apple's
+ * 400 `invalid_grant` is the exception: the token is already dead, so the unlink goes on.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {!Object} auth The Admin SDK's `auth()`, or a fake: `getUser` and `updateUser`.
+ * @param {?Object} config The Apple configuration, or null when the deployment has none.
+ * @param {function(string, !Object): !Promise<!Object>} fetchFn `fetch`, or a fake.
+ * @param {string} uid The signed-in caller.
+ * @param {number=} nowMillis The current time; `Date.now()` when omitted.
+ * @return {!Promise<{unlinked: boolean}>} `{unlinked: true}`.
+ */
+async function unlinkAppleImpl(db, auth, config, fetchFn, uid, nowMillis) {
+  const user = await auth.getUser(uid);
+  const providers = (user.providerData || []).map((info) => info && info.providerId);
+  if (providers.length > 0 && providers.every((id) => id === appleAuth.APPLE_PROVIDER_ID)) {
+    throw new functions.https.HttpsError(
+        'failed-precondition', 'Apple is this account\'s only sign-in method',
+        {reason: 'last-method'});
+  }
+
+  const ref = db.collection(appleAuth.APPLE_TOKENS_COLLECTION).doc(uid);
+  const snap = await ref.get();
+  const stored = snap.exists ? (snap.data() || {}) : null;
+  let tokenOutcome = stored ? 'revoked' : 'none kept';
+  if (stored && stored.refreshToken) {
+    if (!config) throw appleNotConfigured();
+    const now = typeof nowMillis === 'number' ? nowMillis : Date.now();
+    try {
+      await appleAuth.revoke(config, stored.clientId || config.bundleId, stored.refreshToken,
+          {fetch: fetchFn, nowSeconds: now / 1000});
+    } catch (err) {
+      // Apple saying the token is no longer valid means there is nothing left to revoke.
+      if (!isDeadToken(err)) throw appleFailure(uid, 'revoke', err);
+      tokenOutcome = 'already revoked';
+    }
+  }
+  if (snap.exists) await ref.delete();
+
+  if (providers.includes(appleAuth.APPLE_PROVIDER_ID)) {
+    await auth.updateUser(uid, {providersToUnlink: [appleAuth.APPLE_PROVIDER_ID]});
+  }
+  console.log(`Apple unlinked for ${uid} (token ${tokenOutcome})`);
+  return {unlinked: true};
+}
+
+exports.unlinkAppleImpl = unlinkAppleImpl;
+
+/**
+ * Whether a revoke failed because Apple no longer knows the token (400 `invalid_grant`): it was
+ * already revoked in the Apple ID's settings, or has expired, so the revocation has nothing left
+ * to do. Every other failure is a real one.
+ *
+ * @param {*} err What the revoke rejected with.
+ * @return {boolean} True for a dead token.
+ */
+function isDeadToken(err) {
+  return err instanceof appleAuth.AppleTokenError &&
+    err.status === 400 && err.appleError === 'invalid_grant';
+}
+
+/**
+ * Account deletion's Apple step: revokes the kept token when it can, and deletes
+ * `apple_tokens/{uid}` whatever happened, so a failed revoke never blocks the erasure.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} uid The account being erased.
+ * @param {?{config: ?Object, fetch: ?function(string, !Object): !Promise<!Object>}} apple The
+ *     configuration and `fetch` to revoke with.
+ * @param {number} now The instant of the deletion.
+ * @return {!Promise<number>} 1 when a document was deleted, else 0.
+ */
+async function eraseAppleToken(db, uid, apple, now) {
+  const ref = db.collection(appleAuth.APPLE_TOKENS_COLLECTION).doc(uid);
+  const snap = await ref.get();
+  if (!snap.exists) return 0;
+
+  const stored = snap.data() || {};
+  let outcome = 'revoked';
+  if (!stored.refreshToken) {
+    outcome = 'no-token';
+  } else if (!apple || !apple.config || !apple.fetch) {
+    outcome = 'not-configured';
+  } else {
+    try {
+      await appleAuth.revoke(apple.config, stored.clientId || apple.config.bundleId,
+          stored.refreshToken, {fetch: apple.fetch, nowSeconds: now / 1000});
+    } catch (err) {
+      const status = err && Number.isInteger(err.status) ? err.status : 0;
+      outcome = err instanceof appleAuth.AppleTokenError ?
+        `revoke-failed (status ${status})` : 'revoke-failed (apple key unusable)';
+    }
+  }
+  await ref.delete();
+  const log = outcome === 'revoked' ? console.log : console.error;
+  log(`Apple token at account deletion for ${uid}: ${outcome}`);
+  return 1;
+}
+
+/** The longest authorization code the callable accepts; Apple's are far shorter. */
+const APPLE_CODE_MAX_LENGTH = 1024;
+
+/** Keeps Apple's refresh token after a sign-in on the iPhone. See [exchangeAppleAuthCodeImpl]. */
+exports.exchangeAppleAuthCode = regional.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
+  }
+  const code = data && typeof data.code === 'string' ? data.code : '';
+  const clientId = data && typeof data.clientId === 'string' ? data.clientId : '';
+  if (!code || code.length > APPLE_CODE_MAX_LENGTH || !clientId) {
+    throw new functions.https.HttpsError(
+        'invalid-argument', 'code (1-1024 characters) and clientId are required');
+  }
+  return exchangeAppleAuthCodeImpl(admin.firestore(), admin.auth(), appleConfigFromEnv(), fetch,
+      context.auth.uid, code, clientId);
+});
+
+/** Unlinks Apple from the caller's account. See [unlinkAppleImpl]. */
+exports.unlinkApple = regional.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
+  }
+  return unlinkAppleImpl(
+      admin.firestore(), admin.auth(), appleConfigFromEnv(), fetch, context.auth.uid);
 });
 
 // ── Calendar feed (MON-17) ─────────────────────────────────────────────────────────────────

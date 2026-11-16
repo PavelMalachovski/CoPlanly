@@ -51,6 +51,7 @@ import com.coparently.app.utils.AppLocale
 import com.coparently.app.utils.ClockFormat
 import com.coparently.app.utils.follow
 import com.coparently.app.utils.inAppLanguage
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -94,6 +95,9 @@ class MainActivity : AppCompatActivity() {
 
     /** Credential Manager's sheets for the app's own sign-in, hosted on this activity. */
     private val credentialAuthenticator: CredentialAuthenticator by inject()
+
+    /** The Firebase Auth instance whose web flow signs in with Apple on this activity. */
+    private val firebaseAuth: FirebaseAuth by inject()
 
     private val todayWidgetRefresher: TodayWidgetRefresher by inject()
 
@@ -336,6 +340,14 @@ class MainActivity : AppCompatActivity() {
             readLaunchIntent(intent)
         }
 
+        showApp()
+    }
+
+    /**
+     * Sets the app as this activity's content: the platform's capabilities and the two sign-ins
+     * only an activity can host around `:shared-ui`'s [CoPlanlyApp], in the theme the parent chose.
+     */
+    private fun showApp() {
         setContent {
             val darkTheme by darkThemeState.collectAsState()
 
@@ -346,7 +358,13 @@ class MainActivity : AppCompatActivity() {
             }
             // The sign-in screen's credential sheets (`presentation/platform/CredentialSignIn`), on
             // this activity, which Credential Manager hosts them on; the ViewModel keeps none of it.
-            val credentialSignIn = remember { AndroidCredentialSignIn(this@MainActivity, credentialAuthenticator) }
+            val credentialSignIn = remember {
+                AndroidCredentialSignIn(
+                    this@MainActivity,
+                    credentialAuthenticator,
+                    firebaseAuth
+                )
+            }
 
             // Every platform capability the shared screens read (`presentation/platform/`, MON-24
             // phase 2, Task 11), from this activity, and the two sign-ins only an activity can

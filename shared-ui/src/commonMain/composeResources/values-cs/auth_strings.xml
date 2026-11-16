@@ -36,4 +36,8 @@
     <string name="auth_error_unknown">Něco se pokazilo. Zkuste to prosím znovu.</string>
     <string name="auth_error_empty_email">Zadejte e-mail pro obnovení hesla</string>
     <string name="auth_reset_email_sent">Odkaz pro obnovení hesla jsme poslali na %1$s. Zkontrolujte poštu.</string>
+
+    <!-- Sign in with Apple (MON-24 phase 4, part A). -->
+    <string name="auth_sign_in_with_apple">Přihlásit se přes Apple</string>
+    <string name="auth_error_exists_with_different_method">Tento e-mail se už přihlašuje jinak. Přihlaste se tak jako dřív a tuto metodu pak přidejte v Nastavení.</string>
 </resources>

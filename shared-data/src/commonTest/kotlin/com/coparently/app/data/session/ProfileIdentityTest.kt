@@ -203,6 +203,32 @@ class ProfileIdentityTest {
         assertNull(photoUrl)
     }
 
+    @Test
+    fun `an Apple relay address is never made a name`() {
+        val name = ProfileIdentity.resolveName(
+            displayName = null,
+            storedRemoteName = null,
+            storedLocalName = null,
+            email = "x7k2p9q4r1@privaterelay.appleid.com",
+            providers = emptyList()
+        )
+
+        assertNull(name)
+    }
+
+    @Test
+    fun `an ordinary address still gives its local part`() {
+        val name = ProfileIdentity.resolveName(
+            displayName = null,
+            storedRemoteName = null,
+            storedLocalName = null,
+            email = "jana@example.com",
+            providers = emptyList()
+        )
+
+        assertEquals("jana", name)
+    }
+
     private fun googleProvider(
         displayName: String? = null,
         email: String? = null,

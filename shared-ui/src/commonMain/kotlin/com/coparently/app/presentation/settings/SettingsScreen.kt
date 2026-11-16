@@ -203,6 +203,7 @@ import com.coparently.app.resources.settings_theme_light
 import com.coparently.app.resources.settings_theme_system
 import com.coparently.app.resources.settings_title
 import com.coparently.app.resources.settings_unknown
+import com.coparently.app.resources.sign_in_methods_title
 import com.coparently.app.resources.sync_google_reconnect
 import com.coparently.app.resources.sync_sign_in_google
 import com.coparently.app.resources.terms_of_service_description
@@ -245,6 +246,9 @@ import org.koin.compose.viewmodel.koinViewModel
  * @param authStateViewModel Firebase auth state, used to sign out
  * @param telemetryConsentViewModel The analytics and crash-reporting answer (REL-5)
  * @param healthConsentViewModel The child-health consent, withdrawn from its row in App
+ * @param onNavigateToSignInMethods Opens the account's sign-in methods (MON-24 phase 4, part A);
+ *   its row in Account names the methods linked
+ * @param signInMethodsViewModel The account's sign-in methods, which that row names
  */
 // The complexity is the optional-callback fan-out: each group is only rendered when the route
 // behind it was wired, and every one of those checks is a separate branch.
@@ -257,13 +261,15 @@ fun SettingsScreen(
     onNavigateToSchoolImport: (() -> Unit)? = null,
     onNavigateToDataSources: (() -> Unit)? = null,
     onNavigateToMyProfile: (() -> Unit)? = null,
+    onNavigateToSignInMethods: (() -> Unit)? = null,
     onSignOut: (() -> Unit)? = null,
     onAccountDeleted: (() -> Unit)? = null,
     syncViewModel: SyncViewModel = koinViewModel(),
     settingsViewModel: SettingsViewModel = koinViewModel(),
     authStateViewModel: com.coparently.app.presentation.sync.AuthStateViewModel = koinViewModel(),
     telemetryConsentViewModel: TelemetryConsentViewModel = koinViewModel(),
-    healthConsentViewModel: HealthConsentViewModel = koinViewModel()
+    healthConsentViewModel: HealthConsentViewModel = koinViewModel(),
+    signInMethodsViewModel: SignInMethodsViewModel = koinViewModel()
 ) {
     val haptic = LocalHapticFeedback.current
     val telemetryConsent by telemetryConsentViewModel.consent.collectAsState()
@@ -289,6 +295,7 @@ fun SettingsScreen(
     LaunchedEffect(Unit) { syncViewModel.refreshConnection() }
 
     val settingsUiState by settingsViewModel.settingsState.collectAsState()
+    val signInMethods by signInMethodsViewModel.state.collectAsState()
     // The split is two numbers about money; without names they do not say whose is whose.
     val parents by settingsViewModel.parents.collectAsState()
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
@@ -888,6 +895,21 @@ fun SettingsScreen(
                             icon = Icons.Default.Person,
                             title = stringResource(Res.string.settings_my_profile_title),
                             supporting = stringResource(Res.string.settings_my_profile_description),
+                            onClick = navigate,
+                            trailing = { Chevron() }
+                        )
+                        Divider()
+                    }
+                    // The ways into this account (board 2), named by what is linked.
+                    onNavigateToSignInMethods?.let { navigate ->
+                        SectionRow(
+                            icon = Icons.Default.Lock,
+                            title = stringResource(Res.string.sign_in_methods_title),
+                            supporting = signInMethods.linkedInOrder
+                                .map { stringResource(it.labelRes()) }
+                                // Each language's list reads "a, b" alike.
+                                .joinToString(", ")
+                                .ifEmpty { null },
                             onClick = navigate,
                             trailing = { Chevron() }
                         )

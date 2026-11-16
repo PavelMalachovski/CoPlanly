@@ -133,6 +133,15 @@ fun edupageImportFlag(default: Boolean): String =
     (project.findProperty("COPLANLY_EDUPAGE_IMPORT") as String?)?.trim()?.toBooleanStrictOrNull()?.toString()
         ?: default.toString()
 
+/**
+ * The `APPLE_SIGN_IN` value for a build type whose own default is [default]:
+ * `-PCOPLANLY_APPLE_SIGN_IN=true|false` overrides it for one build. Sign in with Apple waits behind
+ * it until the owner's console steps are done (MON-24 phase 4, spec §3.8 call 3).
+ */
+fun appleSignInFlag(default: Boolean): String =
+    (project.findProperty("COPLANLY_APPLE_SIGN_IN") as String?)?.trim()?.toBooleanStrictOrNull()?.toString()
+        ?: default.toString()
+
 /** The `AI_ASSIST_ENABLED` value for a build type whose own default is [default]. */
 fun aiAssistFlag(default: Boolean): String = aiAssistOverride ?: default.toString()
 
@@ -231,6 +240,7 @@ android {
             buildConfigField("Boolean", "ENABLE_ANALYTICS", "false")
             buildConfigField("Boolean", "AI_ASSIST_ENABLED", aiAssistFlag(default = true))
             buildConfigField("boolean", "EDUPAGE_IMPORT", edupageImportFlag(default = true))
+            buildConfigField("boolean", "APPLE_SIGN_IN", appleSignInFlag(default = true))
         }
 
         release {
@@ -249,6 +259,8 @@ android {
             buildConfigField("Boolean", "AI_ASSIST_ENABLED", aiAssistFlag(default = false))
             // The EduPage import is hidden in a release until the owner turns it on.
             buildConfigField("boolean", "EDUPAGE_IMPORT", edupageImportFlag(default = false))
+            // Sign in with Apple is hidden in a release until Apple is set up in Firebase.
+            buildConfigField("boolean", "APPLE_SIGN_IN", appleSignInFlag(default = false))
         }
 
         // REL-7's runtime proof: `release` as R8 builds it, plus the probe in `src/r8Test/`, run on

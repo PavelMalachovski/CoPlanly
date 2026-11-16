@@ -42,5 +42,13 @@
     <string name="onboarding_coparent_found_set">Eingerichtet</string>
     <string name="onboarding_coparent_nothing_yet">Bisher ist nichts angekommen. Das Telefon von %1$s schickt die Angaben, sobald es wieder online ist – du kannst jetzt weitermachen, alles Eingetragene erscheint später.</string>
 
+    <!-- Asked once of an account a Google or Apple sign-in just created (MON-24 phase 4, part A). -->
+    <string name="new_account_ask_title">Nutzt du CoPlanly schon?</string>
+    <string name="new_account_ask_body">Wenn du dich früher anders angemeldet hast, melde dich so an und füge diese Methode dann in den Einstellungen hinzu.</string>
+    <string name="new_account_ask_retry">Abmelden und neu versuchen</string>
+    <string name="new_account_ask_new">Das ist ein neues Konto</string>
+    <string name="new_account_ask_retry_failed">Das neue Konto konnte nicht entfernt werden. Prüfe deine Verbindung und versuche es erneut.</string>
+
     <!-- Asked when Skip would leave something typed on this step unsaved. -->
+
 </resources>

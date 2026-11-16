@@ -2659,6 +2659,67 @@ accessibility-extra-large text size (artifact `ios-tour`, `appearance/`). What o
   `presentation/common/SfSymbolTable.kt` (change the approved JSON first) and its drawing in
   `AppIcon.ios.kt` and `SfSymbolBitmaps.kt` (`:shared-ui`'s `iosMain`).
 
+### 3.42 Accounts: Apple, sign-in methods, the new-account question and Google Calendar on an iPhone · 1P, an iPhone and an Android phone, a debug build (the Apple flag is off in release)
+
+MON-24 phase 4, part A. The boards are the canvas's fifth row
+(https://claude.ai/artifact/732JJxDHeHtUp8zLFAdUTH). The rules are CLAUDE.md item 51. Unit and
+functions tests prove the linking rules, the generic messages and the token's exchange, revoke and
+deletion with Apple's endpoints stubbed; `IosFirebaseAuthEmulatorTest` links on the Auth emulator,
+and the iPhone walk opens Sign-in methods. Apple's real sheet and Google's real grant run only on a
+phone. **First:** the owner's console steps 1–3 (`functions/README.md`, "Sign in with Apple") are
+done and the functions deployed; a device build will not sign before step 1.
+
+- [ ] **Apple on an iPhone.** On the sign-in screen, Apple's black button sits above Google, at
+      least as large. Sign in with a fresh Apple ID, sharing the name: the account's profile name is
+      that name. Sign out, sign in again: the same account, and the name is not asked or changed.
+      Repeat with "Hide My Email" and no name: the profile name is empty (the Profile step asks for
+      one) and never the relay address's random part.
+- [ ] **Apple on Android.** The same button opens Apple's page in a Custom Tab; signing in with the
+      Apple ID used on the iPhone lands in **the same account** (same family, same name). Closing the
+      tab shows no error.
+- [ ] **Linking each way.** Settings → Account → Sign-in methods: from an e-mail account add Google,
+      then Apple (each Linked at once, and the Settings row's value lists them). Sign out and sign in
+      with each one: the same account. Do it the other way from an Apple account: add e-mail, then
+      Google. On both platforms.
+- [ ] **A method another account holds.** Add a Google or Apple account that already signs in to
+      another CoPlanly account: nothing is linked, the banner says it belongs to another account and
+      names nothing about it (no address, no name), and you stay signed in as before.
+- [ ] **The last method.** With one method linked, it carries no Remove button, and the note under
+      the group says any method can be removed except the last. With two, remove one (an action sheet on the iPhone asks first): the
+      other has no Remove left.
+- [ ] **The new-account question.** Sign in with a Google or Apple account that has no CoPlanly
+      account: before onboarding, "Already use CoPlanly?" asks once. "This is a new account" goes on
+      to the wizard and never asks again on this phone. Repeat with another new account and choose
+      "Sign out and try again": you are signed out, and the empty account is gone (signing in with
+      the same method asks again, as a new account). An account made with "Create account" by e-mail
+      is never asked.
+- [ ] **Apple's token is revoked.** On the iPhone, signed in with Apple, delete the account
+      (Settings → Account → Delete account). On the iPhone's Settings → your name → Sign-In &
+      Security → Sign in with Apple ("Apps using Apple ID"), CoPlanly is gone within a minute. Then,
+      on a second account, remove Apple in Sign-in methods: the same. (An Apple method added on
+      Android keeps no token, so it is not on this list's account until the iPhone signed in with
+      it.)
+- [ ] **Google Calendar on an iPhone.** With `COPLANLY_GOOGLE_WEB_CLIENT_ID` set and a bundled
+      `GoogleService-Info.plist`, Settings shows the Google Calendar row. Connect: Google asks only to
+      "See the events on Google calendars you own"; the primary calendar's events appear in the
+      calendar as private events, and again after the app returns to the foreground. Disconnect:
+      the row reads not connected and CoPlanly leaves the Google account's "Third-party apps with
+      account access" list. Reconnect at once: Google asks for consent again and the import works an
+      hour later too.
+- [ ] **A reconnect after a revoke that failed.** Connect, go offline (Airplane mode), disconnect,
+      come back online and reconnect. Note whether the row still imports after about an hour, or
+      falls to "Access expired or was revoked" with Reconnect: GoogleSignIn-iOS cannot force a
+      refresh token, so a grant the phone could not revoke may answer without one. Either result is
+      known; record which, and remove CoPlanly in the Google account's list once to recover.
+- **If it fails:** Apple on the iPhone in `AppleSignInBridge.swift`, `ios/IosCredentialSignIn.kt`,
+  `ios/AppleAccount.kt` and `ios/AppleNonce.kt`; on Android in `AndroidCredentialSignIn.kt`; the
+  methods in `FirebaseAccountLinking.kt`, `IosAccountLinking.kt` and `SignInMethodsViewModel.kt`;
+  the question in `NewAccountAsk.kt` and `NewAccountAskViewModel.kt`; the token in
+  `functions/apple-auth.js` and `exchangeAppleAuthCode`/`unlinkApple`/`deleteAccount` in
+  `functions/index.js` (the functions' log names the step and Apple's status, never a token); the
+  calendar in `IosGoogleCalendarAccount.kt`, `GoogleGrantRevocation.kt`,
+  `IosGoogleCalendarSignIn.kt` and `GoogleSignInBridge.swift`.
+
 ---
 
 ## After the session

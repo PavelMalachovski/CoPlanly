@@ -71,5 +71,9 @@
 	<string>$(COPLANLY_SUPPORT_EMAIL)</string>
 	<key>CoPlanlyExportVerifyUrl</key>
 	<string>$(COPLANLY_EXPORT_VERIFY_URL)</string>
+	<key>GIDServerClientID</key>
+	<string>$(COPLANLY_GOOGLE_WEB_CLIENT_ID)</string>
+	<key>CoplanlyAppleSignIn</key>
+	<string>$(COPLANLY_APPLE_SIGN_IN)</string>
 </dict>
 </plist>

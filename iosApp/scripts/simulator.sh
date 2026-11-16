@@ -251,6 +251,12 @@ ui_test() {
     --predicate 'process == "CoPlanly" AND eventMessage CONTAINS "COPLANLY_TABTAP"' \
     2>/dev/null | tail -n 300 || true
   echo "::endgroup::"
+  # What the shell saw of each edge swipe (EdgeSwipeBack's and StackHost's COPLANLY_SWIPE lines).
+  echo "::group::the shell's edge-swipe trace (COPLANLY_SWIPE)"
+  xcrun simctl spawn "$udid" log show --last 60m --style compact \
+    --predicate 'process == "CoPlanly" AND eventMessage CONTAINS "COPLANLY_SWIPE"' \
+    2>/dev/null | tail -n 400 || true
+  echo "::endgroup::"
   echo "::group::the app's errors in the system log"
   xcrun simctl spawn "$udid" log show --last 30m --style compact \
     --predicate 'process == "CoPlanly" AND (messageType == error OR messageType == fault OR eventMessage CONTAINS[c] "exception")' \

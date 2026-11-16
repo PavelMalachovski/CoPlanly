@@ -43,6 +43,7 @@ import kotlin.time.Clock
  * screen as `LocalNativeControls`: each adaptive control of the shared screens is drawn here as
  * UIKit's, inside the Compose screen through `UIKitView`.
  */
+@Suppress("TooManyFunctions") // one member per control of the interface it answers
 internal object IosNativeControls : NativeControls {
 
     /**
@@ -72,6 +73,12 @@ internal object IosNativeControls : NativeControls {
             },
             properties = UIKitInteropProperties(isInteractive = true, isNativeAccessibilityEnabled = true)
         )
+    }
+
+    /** The system's `ASAuthorizationAppleIDButton`, in place ([AppleIdButton]). */
+    @Composable
+    override fun AppleSignInButton(onClick: () -> Unit, enabled: Boolean, background: Color, modifier: Modifier) {
+        AppleIdButton(onClick = onClick, enabled = enabled, background = background, modifier = modifier)
     }
 
     /**

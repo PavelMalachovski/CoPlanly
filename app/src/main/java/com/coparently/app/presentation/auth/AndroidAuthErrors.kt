@@ -63,8 +63,8 @@ private fun firebaseError(cause: Throwable): AuthError? = when {
         "ERROR_WRONG_PASSWORD",
         "ERROR_USER_NOT_FOUND",
         "ERROR_INVALID_CREDENTIAL" -> AuthError.InvalidCredentials
-        "ERROR_EMAIL_ALREADY_IN_USE",
-        "ERROR_ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL" -> AuthError.EmailAlreadyInUse
+        "ERROR_EMAIL_ALREADY_IN_USE" -> AuthError.EmailAlreadyInUse
+        "ERROR_ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL" -> AuthError.ExistsWithDifferentMethod
         "ERROR_WEAK_PASSWORD" -> AuthError.WeakPassword
         "ERROR_INVALID_EMAIL" -> AuthError.InvalidEmail
         "ERROR_USER_DISABLED" -> AuthError.UserDisabled

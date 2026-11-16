@@ -820,6 +820,17 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // ---- Apple refresh tokens (MON-24 phase 4, part A) -------------------------
+    // `apple_tokens/{uid}` is `{refreshToken, clientId, storedAtMillis}`: the token Apple issued
+    // for a Sign in with Apple made on the iPhone, kept so the server can revoke it when Apple is
+    // unlinked or the account is deleted (Apple's guideline 5.1.1(v)). **Closed to every client,
+    // the owner included**: a refresh token read from here is a credential, and one written here
+    // could make the server revoke somebody else's authorization. `exchangeAppleAuthCode`,
+    // `unlinkApple` and `deleteAccount` run on Admin credentials and are its only door.
+    match /apple_tokens/{userId} {
+      allow read, write: if false;
+    }
+
     // ---- Calendar feeds (MON-17) ---------------------------------------------
     // `calendar_feeds/{sha256(token)}` — one read-only iCalendar link each: the family it
     // serves, who made it, and when it was last fetched. **No client may touch it, in either

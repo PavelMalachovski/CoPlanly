@@ -42,5 +42,13 @@
     <string name="onboarding_coparent_found_set">Nastaveno</string>
     <string name="onboarding_coparent_nothing_yet">Zatím nic nedorazilo. Údaje přijdou, až bude telefon, který používá %1$s, online – můžete pokračovat a vše zadané se objeví později.</string>
 
+    <!-- Asked once of an account a Google or Apple sign-in just created (MON-24 phase 4, part A). -->
+    <string name="new_account_ask_title">Už CoPlanly používáte?</string>
+    <string name="new_account_ask_body">Pokud jste se dřív přihlašovali jinak, přihlaste se tak a tuto metodu pak přidejte v Nastavení.</string>
+    <string name="new_account_ask_retry">Odhlásit se a zkusit znovu</string>
+    <string name="new_account_ask_new">Toto je nový účet</string>
+    <string name="new_account_ask_retry_failed">Nový účet se nepodařilo odstranit. Zkontrolujte připojení a zkuste to znovu.</string>
+
     <!-- Asked when Skip would leave something typed on this step unsaved. -->
+
 </resources>

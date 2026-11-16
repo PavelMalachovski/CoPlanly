@@ -97,7 +97,7 @@ invocation is yours.
 | **MON-20** | **Built** (read-only card in custody settings, pure calculator); left: a look on a phone | P2 | — |
 | **MON-21** | **Built** (a proposal from an agreed plan answer, citing it; rules and rules tests); left: the rules deploy and a look on two phones — see the 👁 table | P2 | — |
 | **MON-22** | **Built** (schema 41, PR #101): a local-only journal and an opt-in export section; left: the device check (DEVICE-CHECKLIST §6) | P2 | — |
-| **MON-24** | The iPhone app: one Kotlin codebase (Compose Multiplatform), iOS-adapted on the iPhone, full parity. **Phases 1 and 2 built** (the domain in `:shared`; the data layer in `:shared-data`, the UI in `:shared-ui` and a thin Android shell; wire and stored bytes unchanged; on one branch, merged after the Android release). **Phase 3's part A built and CI-proven** (the Xcode project, the native shell, sign-in by e-mail and Google, the foreground sync, the write gate), awaiting the owner's check on their Mac. **Phase 3's part B built** (every destination under a system bar, forms as sheets, inner back steps, `coplanly://` links, account deletion on the iPhone, the iPhone tour), its branch-wide CI run and the owner's check pending. **Phase 3's part C built** (the system's controls behind `LocalNativeControls`, Calendar and Home led by the redesign's header, photos, files, the camera, sharing, payment codes, receipt reading and the export on the iPhone), its branch-wide CI run and the owner's check pending. **Phase 3's part D built** (the theme: SF Pro with the Onest wordmark, SF Symbols through `AppIcon`, the app's theme choice and tint in the window, Increase Contrast as the medium scheme), its branch-wide CI run and the owner's check pending; what remains is phase 4, unchanged. Design: `docs/superpowers/specs/2026-10-27-iphone-app-design.md` | P1 | L |
+| **MON-24** | The iPhone app: one Kotlin codebase (Compose Multiplatform), iOS-adapted on the iPhone, full parity. **Phases 1 and 2 built** (the domain in `:shared`; the data layer in `:shared-data`, the UI in `:shared-ui` and a thin Android shell; wire and stored bytes unchanged; on one branch, merged after the Android release). **Phase 3's part A built and CI-proven** (the Xcode project, the native shell, sign-in by e-mail and Google, the foreground sync, the write gate), awaiting the owner's check on their Mac. **Phase 3's part B built** (every destination under a system bar, forms as sheets, inner back steps, `coplanly://` links, account deletion on the iPhone, the iPhone tour), its branch-wide CI run and the owner's check pending. **Phase 3's part C built** (the system's controls behind `LocalNativeControls`, Calendar and Home led by the redesign's header, photos, files, the camera, sharing, payment codes, receipt reading and the export on the iPhone), its branch-wide CI run and the owner's check pending. **Phase 3's part D built** (the theme: SF Pro with the Onest wordmark, SF Symbols through `AppIcon`, the app's theme choice and tint in the window, Increase Contrast as the medium scheme), its branch-wide CI run and the owner's check pending. **Phase 4's part A built** (accounts: Sign in with Apple on both platforms behind a flag, Sign-in methods in Settings, Apple's tokens revoked on the server, Google Calendar on the iPhone), its branch-wide CI run, the owner's console steps and the device check pending; parts B–E of phase 4 remain. Design: `docs/superpowers/specs/2026-10-27-iphone-app-design.md` | P1 | L |
 | **MON-25** | Request clocks' on-time steps (deadline notice, end) move to a scheduled Cloud Function, for both platforms; needed by MON-24 before an iPhone build reaches a user (planned before phase 2, which went ahead without it by owner decision, 1 November 2026). Needs its own design pass | P1 | L |
 | **REL-4 (drafting)** | Done as far as the code can answer: every placeholder left is a fact only the owner has, listed at the top of each document. The deletion page and the privacy link in the app are written | P0 | S |
 | **L-4 (photos)** | **Built** (family-keyed Storage paths, no download URLs, pre-pairing photos moved by the server, legacy purge callable; rules, functions, unit and e2e tests); left: `firebase deploy --only storage`, the functions deploy, `purgeLegacyPhotoPaths` once, and DEVICE-CHECKLIST §3.10 on two phones | P0 | S |
@@ -2676,7 +2676,7 @@ period or deletes them); no attachment of files to an entry; no backup — an en
 journal alone would be the way to add one, and it is a product decision, not a default. Needs
 `41.json` from the Regenerate workflow before its migration test can run.
 
-### MON-24 · **PHASES 1–2 BUILT; PHASE 3 PARTS A AND B BUILT, AWAITING THE OWNER'S CHECK** · P1 · L · CoPlanly for iPhone
+### MON-24 · **PHASES 1–2 BUILT; PHASE 3 BUILT AND PHASE 4 PART A BUILT, AWAITING THE OWNER'S CHECK** · P1 · L · CoPlanly for iPhone
 
 **Where:** ☁️ cloud for the shared Kotlin and the job definitions; ⚙️ the iOS build and simulator
 jobs on a GitHub-hosted macOS runner; 💻 the iPhone, TestFlight and App Store review.
@@ -2829,7 +2829,8 @@ notes list each file):
   B's Task 11 by `IosAccountDeletion`: the `deleteAccount` callable, then the wipe Android's
   `AccountDeletionService` does and the session's end; Settings' row now deletes the account on the
   iPhone, held by `IosAccountDeletionTest` on the emulators and the walk's last step), `NoPush` (now the push switch and sign-out's detach alone, `PushRegistration`: the
-  phone holds no push token until phase 4), `NoGoogleCalendar`, ~~`NoStorageBucket`~~ (replaced in
+  phone holds no push token until phase 4), ~~`NoGoogleCalendar`~~ (replaced in phase 4's part A by
+  `IosGoogleCalendarAccount`), ~~`NoStorageBucket`~~ (replaced in
   part C's Task 10 by `IosStorageBucket`, the iOS SDK's Storage by path, never by download URL),
   ~~`NoPickedFiles`, `NoRecordPhotoStorage`~~ (part C's Task 11: `IosPickedFiles`,
   `IosRecordPhotoStorage`), ~~`NoReceiptText`, `NoRecordFiles`~~ (Task 12: `VisionReceiptText`,
@@ -2842,7 +2843,7 @@ notes list each file):
   `NoCameraCapture`~~ (part C's Task 11: `IosShareSheet`, `IosFilePicker`, `IosCameraCapture`),
   `NoQrScanner`, `NoDictation`, `NoPermissions`, `NoOpenUrl`, `NoClipboard`,
   ~~`NoImages`, `NoQrCodes`~~ (Task 9: `IosImages`, `IosQrCodes`), `NoAppLanguages`) with
-  `NoGoogleCalendarSignIn`,
+  ~~`NoGoogleCalendarSignIn`~~ (phase 4's part A: `IosGoogleCalendarSignIn`),
   which `ProvideIosShell` provides. Each says it is unavailable, and the screens hide what it
   stands for. The sign-in's (`NoSignedInUser`, `NoAuthSession`, `NoAccountSignIn`,
   `NoAccountSwitch`, `NoAccountTraces`, `NoAuthErrors`) were replaced in phase 3's Task 5 by
@@ -3144,6 +3145,53 @@ drew. What it built, task by task:
 
 The stand-ins listed after part C are unchanged: what remains is phase 4 and the parent design's
 later phases.
+
+**Phase 4, part A — accounts: built, awaiting the branch-wide CI run, the owner's console steps and
+the device check** (November 2026; spec `docs/superpowers/specs/2026-11-16-iphone-phase-4-design.md`
+§3, plan `docs/superpowers/plans/2026-11-16-iphone-phase-4a-accounts.md`; the boards are the canvas's
+fifth row, approved 16 November 2026). CLAUDE.md item 51 holds the rules. What it built, task by task:
+
+- **Apple's refresh token on the server** (Task 1): `exchangeAppleAuthCode`, `unlinkApple` and
+  `deleteAccount`'s revoke (`functions/apple-auth.js`), `apple_tokens/{uid}` closed to every client.
+  Rulings: the exchange sends no `redirect_uri` (the iPhone sheet's code has none; a Services-ID
+  code would need one); a token is kept only when the caller's linked Apple ID is its own; Apple's
+  `invalid_grant` counts as already revoked; deletion deletes the document even when the revoke
+  fails (least retention — the grant may then stay in the parent's Apple ID settings until they
+  remove it).
+- **The linking seam** (Task 2): `AccountLinking` (`FirebaseAccountLinking`, `IosAccountLinking`),
+  `SignInMethod`, `LinkFailure`, `unlinkRefusal`. Ruling: a phone number or another provider is not
+  counted as a sign-in method (the app offers none), so such an account sees e-mail as its last.
+- **Apple on Android** (Task 3): Firebase's web flow behind `BuildConfig.APPLE_SIGN_IN`
+  (`-PCOPLANLY_APPLE_SIGN_IN`, on in debug, off in release); a closed sheet is a cancel. Ruling: a
+  failed pending link restarts the sheet, so a rare in-use error may show only after a second sheet.
+- **Apple on the iPhone** (Task 4): the system sheet (`AppleSignInBridge.swift`), Firebase through
+  GitLive, the code exchanged after Firebase signs in. Ruling: the nonce is made in Kotlin and Swift
+  gets only its SHA-256. `CoplanlyAppleSignIn` in Info.plist (YES in Debug, NO in Release) and the
+  `com.apple.developer.applesignin` entitlement.
+- **The sign-in screen and the new-account question** (Task 5): the Apple button (the system's on
+  the iPhone, Apple's artwork on Android); "Already use CoPlanly?" once per uid after an Apple or
+  Google sign-in Firebase reports as new, whose "Sign out and try again" deletes the empty account
+  first; the generic "signs in another way" sentence. Apple's name seeds a blank profile name and
+  never overwrites one.
+- **Sign-in methods** (Task 6): Settings → Account's row and screen. Ruling: with the flag off, an
+  Apple already linked stays listed and removable; the flag gates only adding Apple.
+- **Google Calendar on the iPhone** (Task 7): `IosGoogleCalendarAccount` and
+  `IosGoogleCalendarSignIn` in place of `NoGoogleCalendar` and `NoGoogleCalendarSignIn`;
+  `GIDServerClientID` from `COPLANLY_GOOGLE_WEB_CLIENT_ID` (blank draws no row). Disconnect and
+  sign-out revoke at Google's endpoint and call `GIDSignIn.disconnect`, best effort, after the local
+  clear. GoogleSignIn-iOS cannot force a refresh token, so a reconnect after a revoke that failed may
+  get none and lapse to "reconnect" after about an hour.
+- **The record** (Task 8): CLAUDE.md, this entry, the legal documents, the console steps in
+  `iosApp/README.md` and `functions/README.md`, and device check §3.42.
+
+**Open after part A:**
+- **The owner's console steps** (`functions/README.md`, "Sign in with Apple"): the capability, a
+  Services ID with Firebase's return URL and a key in the Apple Developer account; Apple enabled in
+  Firebase Auth; the five `APPLE_*` values in `functions/.env`; then the flag on in release as its
+  own pull request. The App ID needs the capability before any device or Release build signs.
+- **The branch-wide CI run** and **device check §3.42** (Apple on a phone, linking each way, the
+  token gone from "Apps using Apple ID", Google Calendar on an iPhone).
+- **The deploy**: `firestore.rules` (`apple_tokens`) and the functions.
 
 Still owed from part A, beyond the stand-ins listed above: ~~in-app account deletion on the iPhone
 before the App Store~~ (done in part B's Task 11, `IosAccountDeletion`), and the minor findings the

@@ -38,4 +38,8 @@
     <string name="auth_error_unknown">Something went wrong. Please try again.</string>
     <string name="auth_error_empty_email">Enter your email to reset the password</string>
     <string name="auth_reset_email_sent">We sent a password-reset link to %1$s. Check your inbox.</string>
+
+    <!-- Sign in with Apple (MON-24 phase 4, part A). -->
+    <string name="auth_sign_in_with_apple">Sign in with Apple</string>
+    <string name="auth_error_exists_with_different_method">This e-mail already signs in another way. Sign in the way you did before, then add this method in Settings.</string>
 </resources>

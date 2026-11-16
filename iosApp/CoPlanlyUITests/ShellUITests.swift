@@ -79,6 +79,9 @@ final class ShellUITests: XCTestCase {
         step("Settings", after: ["Family"]) { try self.settings() }
         step("cancelled back swipe over a sub-screen", after: ["Settings"]) { try self.cancelledSwipeOverSubScreen() }
         step("a tab tap pops two screens", after: ["Settings"]) { try self.tabTapPopsTwo() }
+        step("Settings' Sign-in methods lists the e-mail the walk signed in with", after: ["Settings"]) {
+            try self.signInMethods()
+        }
         step("New event is a sheet with Save in its bar", after: ["Calendar and Chat tabs"]) { try self.eventFormSheet() }
         step("New event's Starts date is the system's pill", after: ["New event is a sheet with Save in its bar"]) {
             try self.startsDatePill()
@@ -205,8 +208,14 @@ final class ShellUITests: XCTestCase {
 
     private func backSwipe() throws {
         try goToExpenses()
+        // Diagnostics: an unchanged count means the swipe never began a pop; one more means UIKit
+        // cancelled it (the app's COPLANLY_SWIPE lines say which condition, or which state).
+        let before = cancelledTransitions()
+        print("COPLANLY_SWIPE test back swipe cancelledTransitions before=\(before)")
         swipeBack(to: 0.85)
-        try require(app.navigationBars["Family"].waitForExistence(timeout: timeout), "The back swipe did not pop Expenses")
+        let popped = app.navigationBars["Family"].waitForExistence(timeout: timeout)
+        print("COPLANLY_SWIPE test back swipe cancelledTransitions after=\(cancelledTransitions()) popped=\(popped)")
+        try require(popped, "The back swipe did not pop Expenses")
         // The shared stack followed: the money row opens Expenses again.
         try openExpenses()
     }
@@ -1097,19 +1106,50 @@ final class ShellUITests: XCTestCase {
 
     /// Opens Data sources from Settings: a sub-screen under its own system bar, with the back button.
     private func openDataSources() throws {
-        let dataSources = try element(containing: dataSourcesTitle)
+        try openFromSettings(dataSourcesTitle)
+    }
+
+    /// Sign-in methods' title, its Settings row's and its system bar's (MON-24 phase 4, part A).
+    private let signInMethodsTitle = "Sign-in methods"
+
+    /// Settings → Sign-in methods (MON-24 phase 4, part A, Task 6): the screen opens under its own
+    /// system bar and lists the e-mail the walk signed in with, then Back returns to Settings.
+    private func signInMethods() throws {
+        if !app.navigationBars["Settings"].exists { try settings() }
+        try openFromSettings(signInMethodsTitle)
+        let email = element(labelledContaining: "E-mail")
+        try require(email.waitForExistence(timeout: timeout), "Sign-in methods lists no e-mail row")
+        // The e-mail the walk signed in with is the one method this account holds (Google needs a
+        // bundled plist, Apple is not linked), so the e-mail row itself must read "Linked": its own
+        // label when the row is one element, else its status line, the exact "Linked" ("Not linked"
+        // does not count) on the same row, within 30 pt of the title (a row is 50 pt or more).
+        let emailLinked = email.label.contains("Linked") ||
+            app.descendants(matching: .any)
+                .matching(NSPredicate(format: "label == %@", "Linked"))
+                .allElementsBoundByIndex
+                .contains { abs($0.frame.midY - email.frame.midY) < 30 }
+        try require(emailLinked, "Sign-in methods does not show the e-mail row as linked")
+        shot("09b-sign-in-methods")
+        app.navigationBars[signInMethodsTitle].buttons.element(boundBy: 0).tap()
+        try require(app.navigationBars["Settings"].waitForExistence(timeout: timeout), "Back from Sign-in methods did not return to Settings")
+    }
+
+    /// Opens Settings' row titled [title]: a sub-screen under its own system bar of that title, with
+    /// the back button.
+    private func openFromSettings(_ title: String) throws {
+        let row = try element(containing: title)
         let screenBottom = app.windows.firstMatch.frame.maxY - 120
-        for _ in 0..<6 where dataSources.frame.maxY > screenBottom {
+        for _ in 0..<6 where row.frame.maxY > screenBottom {
             app.swipeUp()
         }
         // A tap while the list still glides after a swipe only stops it: let it settle, and tap
         // once more if the first tap was spent that way.
         sleep(1)
-        press(dataSources)
-        if !app.navigationBars["Settings"].waitForNonExistence(timeout: 3) { press(dataSources) }
+        press(row)
+        if !app.navigationBars["Settings"].waitForNonExistence(timeout: 3) { press(row) }
         sleep(2)
-        try require(!app.navigationBars["Settings"].exists, "Data sources did not open over Settings")
-        try require(app.navigationBars[dataSourcesTitle].waitForExistence(timeout: timeout), "Data sources has no system bar")
+        try require(!app.navigationBars["Settings"].exists, "\(title) did not open over Settings")
+        try require(app.navigationBars[title].waitForExistence(timeout: timeout), "\(title) has no system bar")
     }
 
     /// The Family tab at its first screen, whatever an earlier step left: a question, a sheet, a
@@ -1385,7 +1425,7 @@ final class ShellUITests: XCTestCase {
         "school_import", "school_connect?connectionId={connectionId}", "calendar_feed", "data_sources",
         "friends", "friend_detail/{friendUid}", "friend_profile", "friend_calendar/{familyId}",
         "professionals", "professional_calendar/{grantId}", "professional_plan/{grantId}",
-        "custody_setup?planQuestion={planQuestion}", "my_profile", "coparent_profile",
+        "custody_setup?planQuestion={planQuestion}", "my_profile", "sign_in_methods", "coparent_profile",
         "conversations?draft={draft}", "chat/{conversationId}?draft={draft}", "family", "expenses",
         "add_expense", "edit_expense/{expenseId}",
     ]
@@ -1686,6 +1726,7 @@ final class ShellUITests: XCTestCase {
             ("calendar_feed", "Calendar feed for iPhone"),
             ("school_import", "Import from Bakal"),
             ("my_profile", "My details"),
+            ("sign_in_methods", signInMethodsTitle),
         ]
         for (route, row) in settingsRows {
             tourVisit(route) {

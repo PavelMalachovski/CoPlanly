@@ -19,6 +19,9 @@ import kotlinx.coroutines.tasks.await
  * the signed-in account, and the Android [AuthSession], the start's wait and sign-out's end that
  * `AuthStateViewModel` in `:shared-ui` asks for (Task 10).
  *
+ * Linking and unlinking the account's sign-in methods (MON-24 phase 4, part A) is
+ * [FirebaseAccountLinking]'s.
+ *
  * @property firebaseAuth Firebase Authentication instance
  */
 class FirebaseAuthService(
@@ -132,13 +135,14 @@ class FirebaseAuthService(
      * Signs in with Google ID token.
      *
      * @param idToken Google ID token from Google Sign-In
-     * @return Result containing FirebaseUser on success or error message on failure
+     * @return whether Firebase created the account at this sign-in, or the failure
      */
-    override suspend fun signInWithGoogleIdToken(idToken: String): Result<FirebaseUser> {
+    override suspend fun signInWithGoogleIdToken(idToken: String): Result<SignInOutcome> {
         return try {
             val credential = GoogleAuthProvider.getCredential(idToken, null)
             val result = firebaseAuth.signInWithCredential(credential).await()
-            Result.success(result.user!!)
+            checkNotNull(result.user)
+            Result.success(SignInOutcome(isNewUser = result.additionalUserInfo?.isNewUser == true))
         } catch (e: Exception) {
             logger.e("FirebaseAuthService", "Google sign-in failed", e)
             Result.failure(e)

@@ -8,6 +8,8 @@ package com.coparently.app.data.remote.firebase
  * ViewModel moved; the iPhone's stand-in signs nobody in yet (phase 3). Every failure is a
  * `Result.failure` carrying the SDK's own exception, which the screen's `AuthErrors` words; a
  * coroutine cancellation may arrive the same way, and the caller rethrows it.
+ *
+ * Linking and unlinking the account's sign-in methods (MON-24 phase 4, part A) is [AccountLinking]'s.
  */
 interface AccountSignIn {
 
@@ -17,8 +19,11 @@ interface AccountSignIn {
     /** Creates an account with an email address and a password, and signs it in. */
     suspend fun createAccountWithEmail(email: String, password: String): Result<Any>
 
-    /** Signs in with the id token Google's own sign-in handed back. */
-    suspend fun signInWithGoogleIdToken(idToken: String): Result<Any>
+    /**
+     * Signs in with the id token Google's own sign-in handed back; the outcome says whether
+     * Firebase created the account at this sign-in.
+     */
+    suspend fun signInWithGoogleIdToken(idToken: String): Result<SignInOutcome>
 
     /** Sends a password-reset link to [email]. */
     suspend fun sendPasswordResetEmail(email: String): Result<Unit>

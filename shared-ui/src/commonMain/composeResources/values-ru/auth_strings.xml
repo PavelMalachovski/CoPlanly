@@ -36,4 +36,8 @@
     <string name="auth_error_unknown">Что-то пошло не так. Попробуйте ещё раз.</string>
     <string name="auth_error_empty_email">Введите почту, чтобы сбросить пароль</string>
     <string name="auth_reset_email_sent">Мы отправили ссылку для сброса пароля на %1$s. Проверьте почту.</string>
+
+    <!-- Sign in with Apple (MON-24 phase 4, part A). -->
+    <string name="auth_sign_in_with_apple">Войти через Apple</string>
+    <string name="auth_error_exists_with_different_method">С этой почтой уже входят другим способом. Войдите так, как раньше, а затем добавьте этот способ в настройках.</string>
 </resources>

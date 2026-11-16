@@ -56,7 +56,8 @@ object IosAuthErrors : AuthErrors {
         is FirebaseNetworkException -> AuthError.Network
         is FirebaseAuthException -> when (cause.code?.toLongOrNull()) {
             WRONG_PASSWORD, USER_NOT_FOUND, INVALID_CREDENTIAL -> AuthError.InvalidCredentials
-            EMAIL_ALREADY_IN_USE, ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL -> AuthError.EmailAlreadyInUse
+            EMAIL_ALREADY_IN_USE -> AuthError.EmailAlreadyInUse
+            ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL -> AuthError.ExistsWithDifferentMethod
             WEAK_PASSWORD -> AuthError.WeakPassword
             INVALID_EMAIL -> AuthError.InvalidEmail
             USER_DISABLED -> AuthError.UserDisabled

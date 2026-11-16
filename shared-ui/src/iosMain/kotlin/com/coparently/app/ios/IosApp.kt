@@ -3,6 +3,7 @@ package com.coparently.app.ios
 import com.coparently.app.data.chat.ChatMirror
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.platform.logger
+import com.coparently.app.data.remote.firebase.AppleTokens
 import com.coparently.app.data.remote.firebase.PushDestination
 import com.coparently.app.data.session.SessionProfileSynchronizer
 import com.coparently.app.data.session.SignInProviderSession
@@ -22,6 +23,8 @@ import com.coparently.app.presentation.navigation.PendingDestinationOpen
 import com.coparently.app.presentation.navigation.PendingInviteCodes
 import com.coparently.app.presentation.platform.AppBuildValues
 import com.coparently.app.presentation.platform.CredentialSignIn
+import dev.gitlive.firebase.Firebase
+import dev.gitlive.firebase.auth.auth
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -82,6 +85,9 @@ object IosApp {
     /** Set by [start]: the credential sheets every screen is drawn with. */
     private var credentialSignIn: CredentialSignIn? = null
 
+    /** Set by [start]: Google's sheet, which also connects Google Calendar (the shell's sign-in). */
+    private var google: GoogleIdTokenSource? = null
+
     /** The shell, built by the first [rootViewController]. */
     private var shell: NativeShell? = null
 
@@ -97,12 +103,16 @@ object IosApp {
      * even after a first call that failed part-way: Firebase and Koin refuse to start twice.
      *
      * @param google Google's sign-in sheet, which the app's Swift side runs (`GoogleSignInBridge`);
-     *   the sign-in screen offers it only where it is available ([IosCredentialSignIn]), and its
-     *   session ends with ours ([SignInProviderSession]).
+     *   the sign-in screen offers it only where it is available ([IosCredentialSignIn]), Settings
+     *   connects Google Calendar through it where the build names the web client
+     *   (`IosGoogleCalendarSignIn`), and its session ends with ours ([SignInProviderSession]).
+     * @param apple Apple's sign-in sheet, which the app's Swift side runs (`AppleSignInBridge`); the
+     *   sign-in screen and the sign-in methods offer it only while the bundle's `CoplanlyAppleSignIn`
+     *   flag is on ([IosCredentialSignIn.appleAvailable]).
      * @throws IllegalStateException when called a second time.
      */
     @Throws(Throwable::class)
-    fun start(config: IosAppConfig, google: GoogleIdTokenSource) {
+    fun start(config: IosAppConfig, google: GoogleIdTokenSource, apple: AppleIdSource) {
         started.claim()
         reportUncaughtExceptions()
         IosFirebase.configure(config)
@@ -113,7 +123,14 @@ object IosApp {
         }.koin
         startSession(koin)
         this.koin = koin
-        credentialSignIn = IosCredentialSignIn(google)
+        this.google = google
+        val appleSignIn = bundleAppleSignIn()
+        credentialSignIn = IosCredentialSignIn(
+            google = google,
+            apple = apple,
+            appleSignIn = appleSignIn,
+            appleAccount = GitLiveAppleAccount(Firebase.auth, koin.get<AppleTokens>()),
+        )
         buildValues = AppBuildValues(
             versionName = config.versionName,
             privacyPolicyUrl = config.privacyPolicyUrl,
@@ -122,6 +139,7 @@ object IosApp {
             pairingWebLink = PAIRING_WEB_LINK,
             // The EduPage import is not offered on the iPhone yet (as `platformUiModule` binds it).
             edupageImport = false,
+            appleSignIn = appleSignIn,
         )
     }
 
@@ -156,6 +174,7 @@ object IosApp {
             checkNotNull(koin),
             values,
             checkNotNull(credentialSignIn),
+            checkNotNull(google),
             pendingLinks.launch
         ).also {
             shell = it
@@ -259,8 +278,15 @@ internal fun iosAppModule(google: GoogleIdTokenSource): Module = module {
     single<SignInProviderSession> { google.session() }
 }
 
-/** [google]'s own session, as the data layer ends it. */
-internal fun GoogleIdTokenSource.session(): SignInProviderSession = SignInProviderSession { signOut() }
+/** [google]'s own session, as the data layer ends it, and its grant, as Google Calendar revokes it. */
+internal fun GoogleIdTokenSource.session(): SignInProviderSession {
+    val google = this
+    return object : SignInProviderSession {
+        override fun signOut() = google.signOut()
+
+        override fun disconnect() = google.disconnect()
+    }
+}
 
 /**
  * A guard that lets one caller through and refuses every later one, claimed before the guarded work

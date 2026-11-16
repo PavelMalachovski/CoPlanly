@@ -7,11 +7,12 @@ and the data layer are the Kotlin Multiplatform modules', compiled into one stat
 | Path | What it is |
 | --- | --- |
 | `project.yml` | The Xcode project, for [XcodeGen](https://github.com/yonaskolb/XcodeGen). The generated `CoPlanly.xcodeproj/` is not committed. |
-| `CoPlanly/AppDelegate.swift` | The entry point: reads the configuration and calls `IosApp.shared.start(config:google:)` with the Google sheet's bridge (`shared-ui/src/iosMain/kotlin/com/coparently/app/ios/`). |
+| `CoPlanly/AppDelegate.swift` | The entry point: reads the configuration and calls `IosApp.shared.start(config:google:apple:)` with the Google and Apple sheets' bridges (`shared-ui/src/iosMain/kotlin/com/coparently/app/ios/`). |
 | `CoPlanly/SceneDelegate.swift` | The window: shows `IosApp.shared.rootViewController()`, the native shell, and hands Google's sign-in answers (`openURLContexts`) to Google Sign-In. |
-| `CoPlanly/GoogleSignInBridge.swift` | Google's sign-in sheet (Google Sign-In for iOS 9.2.0) for the shared sign-in screen; see "Google sign-in" below. |
-| `CoPlanly/Info.plist` | Bundle `app.coplanly`, display name CoPlanly, iPhone only, portrait only, iOS 17.0 and later. |
-| `CoPlanly/CoPlanly.entitlements` | Empty for now; push and sign-in add theirs. |
+| `CoPlanly/GoogleSignInBridge.swift` | Google's sign-in sheet (Google Sign-In for iOS 9.2.0) for the shared sign-in screen and for connecting Google Calendar; see "Google sign-in" and "Google Calendar" below. |
+| `CoPlanly/AppleSignInBridge.swift` | Apple's sign-in sheet (AuthenticationServices) for the sign-in screen and the sign-in methods, behind the `CoplanlyAppleSignIn` flag (YES in Debug, NO in Release; `project.yml`). |
+| `CoPlanly/Info.plist` | Bundle `app.coplanly`, display name CoPlanly, iPhone only, portrait only, iOS 17.0 and later. Two build settings reach it: `CoplanlyAppleSignIn` (from `COPLANLY_APPLE_SIGN_IN`) and `GIDServerClientID` (from `COPLANLY_GOOGLE_WEB_CLIENT_ID`). |
+| `CoPlanly/CoPlanly.entitlements` | Sign in with Apple (`com.apple.developer.applesignin`); push adds its own. |
 | `CoPlanly/Assets.xcassets` | The icon (made from the Android launcher icon by `tools/generate-ios-icon.py`; never edit the PNG by hand) and the indigo accent colour. |
 | `CoPlanlyUITests/` | The XCUITest walk of the native shell (`ShellUITests.testShellWalk`) and the tour of every screen (`testTour`), run in CI on the emulators. |
 | `scripts/simulator.sh` | CI's simulator steps (the `ios-app` job): pick, launch, the shell's walk and the tour. |
@@ -101,6 +102,53 @@ Signing out of the app also ends Google Sign-In's own session (`GoogleSignInBrid
 calls `GIDSignIn.signOut`), and so does the first launch after an install, since the Keychain where
 Google Sign-In keeps it survives an uninstall: on a shared phone the next "Continue with Google"
 asks for an account rather than offering the previous parent's (part B, Task 12).
+
+## Sign in with Apple
+
+The sign-in screen and Settings → Account → Sign-in methods offer Apple through the system's
+button and sheet (`AppleSignInBridge.swift`, with the Kotlin side in `IosCredentialSignIn`), only
+while `CoplanlyAppleSignIn` is YES: Debug builds say YES and Release builds NO (`project.yml`'s
+`COPLANLY_APPLE_SIGN_IN`), as Android's `BuildConfig.APPLE_SIGN_IN` is on in debug and off in
+release. An Apple method already linked stays listed and removable with the flag off. Kotlin makes
+the nonce and hands Swift only its SHA-256; after Firebase signs in, Apple's authorization code goes
+to the `exchangeAppleAuthCode` callable, which keeps the refresh token on the server so it can be
+revoked on unlink and deletion. Apple's name arrives only at the first sign-in and fills a blank
+profile name, never one already set.
+
+**The entitlement comes first.** `CoPlanly.entitlements` carries
+`com.apple.developer.applesignin`, so a build for a phone, and every Release build, signs only once
+the App ID `app.coplanly` has the Sign in with Apple capability. The simulator's local signing does
+not need it. The owner's steps, in order:
+
+1. **In the Apple Developer account**: the Sign in with Apple capability on `app.coplanly`, a
+   Services ID with Firebase's return URL, and a Sign in with Apple key.
+2. **In the Firebase console**: Apple enabled with the Services ID, the Team ID, the Key ID and
+   the key.
+3. **In `functions/.env`**: the five `APPLE_*` values, then the functions deployed.
+4. **Turning the flag on in release** (`COPLANLY_APPLE_SIGN_IN` here and Android's
+   `APPLE_SIGN_IN`), as its own pull request, after device check §3.42.
+
+`functions/README.md`, "Sign in with Apple", has each step in full. Apple's sheet cannot run in CI:
+the walk only signs in by e-mail and opens Sign-in methods.
+
+## Google Calendar
+
+Settings' Google Calendar row appears on the iPhone when the build carries the **web** OAuth
+client id (the same value as Android's `default_web_client_id`) in the target's
+`COPLANLY_GOOGLE_WEB_CLIENT_ID` build setting, which Info.plist passes on as `GIDServerClientID`,
+and the Google sheet itself is available (see "Google sign-in"). It is blank in `project.yml`, so
+without it the row is simply not drawn. A client id is no secret, but set it on your own Mac or
+for the release build only, as the URL scheme. Connecting asks
+Google for the same read-only scope as Android (`calendar.events.owned.readonly`) and a server auth
+code, which the functions' `exchangeGoogleAuthCode` redeems with the web client
+(`IosGoogleCalendarAccount`, `IosGoogleCalendarSignIn`). The tokens live in the app's Keychain
+store, never in Google Sign-In's session; the import runs on the button and when the app comes to
+the foreground.
+
+Disconnecting, and signing out, clear the stored tokens first and then revoke the grant at Google's
+revoke endpoint and call `GIDSignIn.disconnect`, best effort. GoogleSignIn-iOS has no way to force
+a refresh token: if that revoke failed (for example offline), a reconnect may come back without
+one, and the connection then falls to "reconnect" after about an hour (device check §3.42).
 
 ## In CI
 

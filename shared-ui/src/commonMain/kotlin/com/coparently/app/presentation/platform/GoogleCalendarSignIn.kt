@@ -9,8 +9,9 @@ import com.coparently.app.data.remote.google.GoogleSignInFailure
  *
  * On Android it is an activity result `MainActivity` registers, so the answer survives the activity
  * being recreated behind Google's screen; the activity hands it to its own `SyncViewModel`
- * (`SyncViewModel.handleSignInResult`) as a [GoogleSignInAnswer]. The iPhone has no Google sign-in
- * yet, so it is not [available] there and Settings draws no Google Calendar row.
+ * (`SyncViewModel.handleSignInResult`) as a [GoogleSignInAnswer]. On the iPhone it is Google's sheet
+ * (`IosGoogleCalendarSignIn`, MON-24 phase 4), whose answer the shell hands to its own; it is not
+ * [available] there without the web client id, and Settings then draws no Google Calendar row.
  */
 interface GoogleCalendarSignIn : PlatformCapability {
 

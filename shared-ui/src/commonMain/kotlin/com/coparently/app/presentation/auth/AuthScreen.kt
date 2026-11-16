@@ -10,35 +10,25 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.semantics.contentType
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
+import com.coparently.app.presentation.platform.LocalAppBuildValues
 import com.coparently.app.presentation.platform.LocalCredentialSignIn
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.IconSizes
@@ -56,18 +46,12 @@ import com.coparently.app.resources.auth_action_sign_up
 import com.coparently.app.resources.auth_cd_logo
 import com.coparently.app.resources.auth_create_your_account
 import com.coparently.app.resources.auth_divider_or
-import com.coparently.app.resources.auth_email_label
-import com.coparently.app.resources.auth_email_placeholder
 import com.coparently.app.resources.auth_forgot_password_link
 import com.coparently.app.resources.auth_google_sign_in
 import com.coparently.app.resources.auth_have_account_question
-import com.coparently.app.resources.auth_hide_password
 import com.coparently.app.resources.auth_no_account_question
-import com.coparently.app.resources.auth_password_label
-import com.coparently.app.resources.auth_password_placeholder
 import com.coparently.app.resources.auth_reset_email_sent
 import com.coparently.app.resources.auth_saved_password_sign_in
-import com.coparently.app.resources.auth_show_password
 import com.coparently.app.resources.auth_sign_in_subtitle
 import com.coparently.app.resources.auth_sign_up_subtitle
 import com.coparently.app.resources.auth_tagline
@@ -95,6 +79,7 @@ fun AuthScreen(
     // Credential Manager hosts its UI on an Activity and refuses an application context, so the
     // shell holds the Activity and hands the screen its sheets (`CredentialSignIn`, MON-24 phase 2).
     val credentials = LocalCredentialSignIn.current
+    val buildValues = LocalAppBuildValues.current
 
     // Gradient background
     Box(
@@ -201,82 +186,19 @@ fun AuthScreen(
                     Spacer(modifier = Modifier.height(Spacing.S))
 
                     // Email Field
-                    OutlinedTextField(
+                    AuthEmailField(
                         value = uiState.email,
                         onValueChange = viewModel::updateEmail,
-                        label = { Text(stringResource(Res.string.auth_email_label)) },
-                        placeholder = { Text(stringResource(Res.string.auth_email_placeholder)) },
-                        leadingIcon = {
-                            AppIcon(
-                                imageVector = Icons.Default.Email,
-                                contentDescription = null
-                            )
-                        },
-                        // The autofill hint, which both platforms' autofill read (Task 9).
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .semantics { contentType = ContentType.EmailAddress },
-                        enabled = !uiState.isLoading,
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Email,
-                            imeAction = ImeAction.Next
-                        ),
-                        shape = MaterialTheme.shapes.small
+                        enabled = !uiState.isLoading
                     )
 
-                    // Password Field
-                    var passwordVisible by remember { mutableStateOf(false) }
-
-                    OutlinedTextField(
+                    // Password Field: a new account's password is a new one, so autofill can
+                    // offer to make one.
+                    AuthPasswordField(
                         value = uiState.password,
                         onValueChange = viewModel::updatePassword,
-                        label = { Text(stringResource(Res.string.auth_password_label)) },
-                        placeholder = { Text(stringResource(Res.string.auth_password_placeholder)) },
-                        leadingIcon = {
-                            AppIcon(
-                                imageVector = Icons.Default.Lock,
-                                contentDescription = null
-                            )
-                        },
-                        trailingIcon = {
-                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                AppIcon(
-                                    imageVector = if (passwordVisible) {
-                                        Icons.Default.VisibilityOff
-                                    } else {
-                                        Icons.Default.Visibility
-                                    },
-                                    contentDescription = if (passwordVisible) {
-                                        stringResource(Res.string.auth_hide_password)
-                                    } else {
-                                        stringResource(Res.string.auth_show_password)
-                                    }
-                                )
-                            }
-                        },
-                        visualTransformation = if (passwordVisible) {
-                            VisualTransformation.None
-                        } else {
-                            PasswordVisualTransformation()
-                        },
-                        // A new account's password is a new one, so autofill can offer to make one.
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .semantics {
-                                contentType = if (uiState.isSignInMode) {
-                                    ContentType.Password
-                                } else {
-                                    ContentType.NewPassword
-                                }
-                            },
                         enabled = !uiState.isLoading,
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Password,
-                            imeAction = ImeAction.Done
-                        ),
-                        shape = MaterialTheme.shapes.small
+                        newPassword = !uiState.isSignInMode
                     )
 
                     // Sign-in only: a fresh account has no password to have forgotten. Needs only
@@ -372,6 +294,22 @@ fun AuthScreen(
                     }
 
                     Spacer(modifier = Modifier.height(Spacing.S))
+
+                    // Sign in with Apple, above Google (boards 1 and 4): only where the shell runs
+                    // Apple's sign-in and the build offers it (the `APPLE_SIGN_IN` flag), since a
+                    // button that could do nothing is design item 8.
+                    if (credentials.appleAvailable && buildValues.appleSignIn) {
+                        AppleSignInButton(
+                            onClick = {
+                                coroutineScope.launch { viewModel.signInWithApple(credentials) }
+                            },
+                            enabled = !uiState.isLoading,
+                            background = CardDefaults.cardColors().containerColor,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(dims.buttonHeight)
+                        )
+                    }
 
                     // Google Sign-In Button — only where the phone has the credential sheets (the
                     // iPhone has no sign-in yet), as a button that could do nothing is design item 8.

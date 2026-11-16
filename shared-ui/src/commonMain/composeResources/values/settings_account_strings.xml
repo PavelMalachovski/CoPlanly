@@ -128,4 +128,22 @@
     <string name="family_switcher_professional_row">A professional’s access waits for your consent</string>
     <string name="family_switcher_plan_other">Parenting plan answers are waiting in another family</string>
     <string name="family_switcher_plan_row">Parenting plan answers are waiting</string>
+    <!-- MON-24 phase 4, part A: Settings → Account → Sign-in methods (board 2). -->
+    <string name="sign_in_methods_title">Sign-in methods</string>
+    <string name="sign_in_methods_intro">The ways you can sign in to this account. Add one so you can sign in on another phone.</string>
+    <string name="sign_in_methods_group">Methods</string>
+    <string name="sign_in_methods_email">E-mail</string>
+    <string name="sign_in_methods_google">Google</string>
+    <string name="sign_in_methods_apple">Apple</string>
+    <string name="sign_in_methods_linked">Linked</string>
+    <string name="sign_in_methods_not_linked">Not linked</string>
+    <string name="sign_in_methods_add">Add</string>
+    <string name="sign_in_methods_remove">Remove</string>
+    <string name="sign_in_methods_last_note">You can remove any method except the last one.</string>
+    <string name="sign_in_methods_in_use">This sign-in already belongs to another CoPlanly account. Sign in with it to use that account.</string>
+    <string name="sign_in_methods_sign_in_again">For your security, sign out and sign in again, then try once more.</string>
+    <string name="sign_in_methods_failed">That did not work. Check your connection and try again.</string>
+    <string name="sign_in_methods_add_email_title">Add an e-mail and password</string>
+    <string name="sign_in_methods_remove_title">Remove %1$s?</string>
+    <string name="sign_in_methods_remove_message">You will no longer be able to sign in this way. Your account and its data stay as they are.</string>
 </resources>

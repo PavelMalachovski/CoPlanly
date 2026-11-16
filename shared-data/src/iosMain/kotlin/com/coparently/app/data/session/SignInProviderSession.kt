@@ -17,6 +17,14 @@ fun interface SignInProviderSession {
     /** Ends the provider's own session on this phone; does nothing when there is none. */
     fun signOut()
 
+    /**
+     * Ends the session and revokes the grant the provider holds for it (Google Sign-In's
+     * `GIDSignIn.disconnect`), what Google Calendar's disconnect asks for beside its own revoke
+     * (`IosGoogleCalendarAccount`, only while a Calendar connection was held). Best effort, never
+     * fails; by default only ends the session.
+     */
+    fun disconnect() = signOut()
+
     /** No provider session to end, for a test or a phone without the provider. */
     companion object {
         /** Ends nothing. */

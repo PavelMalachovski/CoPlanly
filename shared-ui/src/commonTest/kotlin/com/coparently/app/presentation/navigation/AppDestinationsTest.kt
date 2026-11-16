@@ -18,7 +18,7 @@ class AppDestinationsTest {
         val routes = AppDestinationCatalog.all.map { it.first }
         assertEquals(routes.size, routes.toSet().size, "a route appears twice")
         assertEquals(SCREEN_ROUTES.toSet(), routes.toSet())
-        assertEquals(51, routes.size)
+        assertEquals(52, routes.size)
     }
 
     @Test
@@ -131,6 +131,7 @@ class AppDestinationsTest {
             Screen.ProfessionalPlan.route,
             Screen.CustodySetup.route,
             Screen.MyProfile.route,
+            Screen.SignInMethods.route,
             Screen.CoParentProfile.route,
             Screen.CustodyConflict.route,
             Screen.EditEvent.route,

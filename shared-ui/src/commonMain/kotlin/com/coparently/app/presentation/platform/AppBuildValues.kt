@@ -14,6 +14,9 @@ package com.coparently.app.presentation.platform
  *   (CLAUDE.md item 37)
  * @property edupageImport Whether the school import offers EduPage beside Bakaláři: on in debug builds,
  *   off in release unless the build says otherwise (`-PCOPLANLY_EDUPAGE_IMPORT=true`)
+ * @property appleSignIn Whether Sign in with Apple is offered (MON-24 phase 4, spec §3.8 call 3): on
+ *   in debug builds, off in release until the owner's console steps are done
+ *   (`-PCOPLANLY_APPLE_SIGN_IN=true` on Android, the Info.plist key `CoplanlyAppleSignIn` on the iPhone)
  */
 data class AppBuildValues(
     val versionName: String,
@@ -22,4 +25,5 @@ data class AppBuildValues(
     val supportEmail: String?,
     val pairingWebLink: Boolean,
     val edupageImport: Boolean,
+    val appleSignIn: Boolean,
 )
