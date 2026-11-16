@@ -2402,8 +2402,13 @@ jobs:
       # points: a back swipe, one let go of, a tab tap popping two screens, and a sheet with an edit
       # swiped down asking "Discard changes?". The screenshots are the `ios-shell` artifact. Before the
       # emulator tests, on emulators of its own, so a shell failure shows without waiting for them.
+      #
+      # `continue-on-error`, so the emulator tests and the write gate after it run whatever the walk
+      # does (run 13 lost both to one failed walk step); "The native shell walk passed", after them,
+      # fails the job when the walk did.
       - name: The native shell on the emulators (XCUITest)
         id: shell-test
+        continue-on-error: true
         env:
           FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
           # The Functions emulator loads the functions on a slow macOS runner past the CLI's 10-second
@@ -2435,6 +2440,7 @@ jobs:
       # checker runs even when the tests failed, so its findings are in the same log.
       - name: iPhone tests on the emulators
         id: emulator-tests
+        if: ${{ !cancelled() && steps.shell-test.outcome != 'skipped' }}
         env:
           FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
           COPLANLY_EMULATOR_HOST: 127.0.0.1
@@ -2477,6 +2483,18 @@ jobs:
           fi
           if ! grep -q "COPLANLY_EMULATOR_TEST_RAN write gate" <<< "$ran"; then
             echo "::error::The write gate (IosWriteGateTest) did not report that it ran."
+            exit 1
+          fi
+
+      # The walk is `continue-on-error` so that the emulator tests and the write gate run after a
+      # failed walk; here, once they have, its failure fails the job.
+      - name: The native shell walk passed
+        if: ${{ !cancelled() && steps.shell-test.outcome != 'skipped' }}
+        env:
+          OUTCOME: ${{ steps.shell-test.outcome }}
+        run: |
+          if [ "$OUTCOME" != success ]; then
+            echo "::error::The native shell walk (testShellWalk) failed: see shell-test.log in the ios-shell artifact."
             exit 1
           fi
 
