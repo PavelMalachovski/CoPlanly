@@ -72,6 +72,10 @@ internal fun symbolWeightOf(weight: FontWeight): UIFontWeight =
  * point size is [GLYPH_FRACTION] of the box it is drawn in, centred — the 20 dp live area of
  * Material's 24 dp icon. Should UIKit give nothing back at draw time, [fallback] (the Material
  * vector) is drawn instead, so an icon never draws nothing.
+ *
+ * An `AutoMirrored` icon is not mirrored in a right-to-left layout here, as Material's would be: the
+ * symbol is drawn as UIKit renders it. No right-to-left language ships today; one that does needs
+ * the mirroring added here.
  */
 internal class SfSymbolPainter(
     private val name: String,

@@ -35,6 +35,13 @@ class SfSymbolTableTest {
     }
 
     @Test
+    fun commentsAreNotScanned() {
+        val code = "/** Icons.Default.X */\nval a = Icons.Default.Add // Icons.Filled.Y\n/* Icons.Outlined.Z */"
+        val found = ICON_REFERENCE.findAll(withoutComments(code)).map { it.value }.toList()
+        assertEquals(listOf("Icons.Default.Add"), found)
+    }
+
+    @Test
     fun keysAreRealVectorNames() {
         assertEquals("Filled.Add", Icons.Default.Add.name)
         assertEquals("Filled.Home", Icons.Filled.Home.name)
@@ -87,8 +94,17 @@ class SfSymbolTableTest {
     private fun commonSources(): List<String> =
         moduleFile(SOURCE_ROOT).walkTopDown()
             .filter { it.isFile && it.extension == "kt" }
-            .map { it.readText() }
+            .map { withoutComments(it.readText()) }
             .toList()
+
+    /**
+     * [source] without its comments (`//` lines, `/* */` blocks and KDoc), so an icon named in a
+     * comment, such as the table's own KDoc, is not counted as in use. String literals are not
+     * parsed: a `//` inside one cuts the rest of that line, which can only drop references, and no
+     * icon reference sits after a URL on one line.
+     */
+    private fun withoutComments(source: String): String =
+        source.replace(BLOCK_COMMENT, " ").replace(LINE_COMMENT, "")
 
     private fun approvedTable(): File =
         listOf(File("../$APPROVED_TABLE"), File(APPROVED_TABLE)).firstOrNull { it.isFile }
@@ -98,6 +114,9 @@ class SfSymbolTableTest {
         const val SOURCE_ROOT = "src/commonMain/kotlin"
         const val APPROVED_TABLE = "docs/superpowers/plans/2026-11-16-iphone-phase-3d-sf-symbols.json"
         const val APPROVED_ROWS = 132
+
+        val BLOCK_COMMENT = Regex("""/\*.*?\*/""", RegexOption.DOT_MATCHES_ALL)
+        val LINE_COMMENT = Regex("""//[^\n]*""")
 
         val ICON_REFERENCE = Regex("""Icons\.(Default|Filled|Outlined|AutoMirrored\.(Filled|Outlined))\.(\w+)""")
 
