@@ -35,7 +35,8 @@ import org.jetbrains.compose.resources.Font
  * - onest_bold.ttf - Bold weight (700)
  *
  * They are Compose Multiplatform resources since MON-24 phase 2 (Task 9), in `:shared-ui`'s
- * `composeResources/font/`, so the iPhone draws the same files. On Android each is read from the
+ * `composeResources/font/`, so the iPhone can draw them too (its body is SF Pro since MON-24 phase 3,
+ * part D, and only its wordmark is Onest). On Android each is read from the
  * APK's assets (`composeResources/com.coparently.app.resources/font/`), where it used to be read
  * from `res/font`: the same bytes, through the same `Font.Builder`, with the same weights declared
  * here, so the glyphs are the ones the screenshot baselines hold. Composable because a resource is
@@ -57,7 +58,8 @@ fun onestFontFamily(): FontFamily {
  * The app's type scale: each role's weight, size, line height and spacing, **without a typeface**.
  *
  * A role's typeface is a resource, and a resource is resolved in composition, so the theme sets
- * this scale in Onest there ([rememberAppTypography]) and every screen reads the result from
+ * this scale in the platform's family there ([rememberAppTypography]: Onest on Android, SF Pro on
+ * the iPhone) and every screen reads the result from
  * `MaterialTheme.typography`. This value stays a plain one for what is not composed in the theme:
  * the home-screen widget, whose text takes these sizes and weights in the launcher's own font
  * (CLAUDE.md design item 18).
@@ -175,13 +177,14 @@ val Typography = Typography(
 )
 
 /**
- * [Typography] set in Onest: what the theme gives `MaterialTheme`.
+ * [Typography] set in the platform's body family ([appFontFamily]): what the theme gives
+ * `MaterialTheme`. Onest on Android, SF Pro on the iPhone (MON-24 phase 3, part D).
  *
- * @return The type scale, every role in [onestFontFamily]
+ * @return The type scale, every role in [appFontFamily]
  */
 @Composable
 internal fun rememberAppTypography(): Typography {
-    val family = onestFontFamily()
+    val family = appFontFamily()
     return remember(family) { Typography.withFontFamily(family) }
 }
 

@@ -21,13 +21,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.headlineSmallEmphasized
+import com.coparently.app.presentation.theme.onestFontFamily
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.brand_wordmark
 import com.coparently.app.resources.calendar_settings
@@ -82,9 +85,16 @@ private fun Wordmark() {
             withStyle(SpanStyle(color = ink)) { append(stringResource(Res.string.brand_wordmark)) }
             withStyle(SpanStyle(color = accent)) { append(".") }
         },
-        style = MaterialTheme.typography.headlineSmallEmphasized
+        style = wordmarkStyle(MaterialTheme.typography.headlineSmallEmphasized, onestFontFamily())
     )
 }
+
+/**
+ * The wordmark's style: [base] set in [onest], the brand's typeface on both platforms, whatever
+ * family the theme sets the body in (SF Pro on the iPhone, MON-24 phase 3, part D). On Android the
+ * theme's family is Onest already, so the style is the one the wordmark always had.
+ */
+internal fun wordmarkStyle(base: TextStyle, onest: FontFamily): TextStyle = base.copy(fontFamily = onest)
 
 @Composable
 internal fun ChildAvatarStack(children: List<ChildInfo>, size: Dp = AVATAR_SIZE) {
