@@ -5,8 +5,8 @@ package com.coparently.app.data.remote.google
  * `SyncViewModel` asks of it beside the connection itself. Google's sign-in screen is the shell's
  * (`GoogleCalendarSignIn` in `:shared-ui`), because on Android it is an activity result.
  *
- * The app's `CredentialManagerService`, which holds the stored tokens, answers it on Android; on
- * the iPhone, which has no Google sign-in yet, nothing is ever connected.
+ * The app's `CredentialManagerService`, which holds the stored tokens, answers it on Android, and
+ * `IosGoogleCalendarAccount` on the iPhone (MON-24 phase 4), under the same keys.
  */
 interface GoogleCalendarAccount : GoogleCalendarConnectionSource {
 

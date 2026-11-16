@@ -48,31 +48,26 @@ fun iosPlatformServices(buildValues: AppBuildValues): PlatformServices = Platfor
  * screen would fail before their `available` checks. The credential sheets are [credentialSignIn],
  * the app's own (`IosCredentialSignIn`, Task 9: Google's sheet where the app carries Google's
  * configuration, unavailable otherwise, so the sign-in then offers e-mail alone); Google Calendar's
- * is a stand-in that says it is not available, so Settings draws no Google Calendar row (the 11f
- * review's I1). The shell must also switch the family before it arms any link (CLAUDE.md item 15):
- * `AppLaunch` carries no family, so the order is the shell's.
+ * is [googleCalendarSignIn] (`IosGoogleCalendarSignIn`, phase 4's Task 7), which the shell builds
+ * because the answer goes to its `SyncViewModel`, and which is unavailable without the web client
+ * id, so Settings then draws no Google Calendar row. The shell must also switch the family before it
+ * arms any link (CLAUDE.md item 15): `AppLaunch` carries no family, so the order is the shell's.
  */
 @Composable
 fun ProvideIosShell(
     buildValues: AppBuildValues,
     credentialSignIn: CredentialSignIn,
+    googleCalendarSignIn: GoogleCalendarSignIn,
     content: @Composable () -> Unit
 ) {
     val services = remember(buildValues) { iosPlatformServices(buildValues) }
     ProvidePlatform(services) {
         CompositionLocalProvider(
             LocalCredentialSignIn provides credentialSignIn,
-            LocalGoogleCalendarSignIn provides NoGoogleCalendarSignIn,
+            LocalGoogleCalendarSignIn provides googleCalendarSignIn,
             content = content
         )
     }
-}
-
-/** No Google sign-in until phase 3: nothing to open. */
-internal object NoGoogleCalendarSignIn : GoogleCalendarSignIn {
-    override val available: Boolean = false
-
-    override fun open(): GoogleSignInStart = GoogleSignInStart.UNAVAILABLE
 }
 
 /** A launcher with nothing behind it. */

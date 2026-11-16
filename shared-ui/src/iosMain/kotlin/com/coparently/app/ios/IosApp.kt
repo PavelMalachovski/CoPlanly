@@ -85,6 +85,9 @@ object IosApp {
     /** Set by [start]: the credential sheets every screen is drawn with. */
     private var credentialSignIn: CredentialSignIn? = null
 
+    /** Set by [start]: Google's sheet, which also connects Google Calendar (the shell's sign-in). */
+    private var google: GoogleIdTokenSource? = null
+
     /** The shell, built by the first [rootViewController]. */
     private var shell: NativeShell? = null
 
@@ -100,8 +103,9 @@ object IosApp {
      * even after a first call that failed part-way: Firebase and Koin refuse to start twice.
      *
      * @param google Google's sign-in sheet, which the app's Swift side runs (`GoogleSignInBridge`);
-     *   the sign-in screen offers it only where it is available ([IosCredentialSignIn]), and its
-     *   session ends with ours ([SignInProviderSession]).
+     *   the sign-in screen offers it only where it is available ([IosCredentialSignIn]), Settings
+     *   connects Google Calendar through it where the build names the web client
+     *   (`IosGoogleCalendarSignIn`), and its session ends with ours ([SignInProviderSession]).
      * @param apple Apple's sign-in sheet, which the app's Swift side runs (`AppleSignInBridge`); the
      *   sign-in screen and the sign-in methods offer it only while the bundle's `CoplanlyAppleSignIn`
      *   flag is on ([IosCredentialSignIn.appleAvailable]).
@@ -119,6 +123,7 @@ object IosApp {
         }.koin
         startSession(koin)
         this.koin = koin
+        this.google = google
         val appleSignIn = bundleAppleSignIn()
         credentialSignIn = IosCredentialSignIn(
             google = google,
@@ -169,6 +174,7 @@ object IosApp {
             checkNotNull(koin),
             values,
             checkNotNull(credentialSignIn),
+            checkNotNull(google),
             pendingLinks.launch
         ).also {
             shell = it

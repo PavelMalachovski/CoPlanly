@@ -47,6 +47,33 @@ interface GoogleIdTokenSource {
      * (`clearPreviousInstall`). Does nothing when there is no session or no client id.
      */
     fun signOut()
+
+    /**
+     * Whether Google's sheet can also connect Google Calendar: [available], and the app's
+     * `Info.plist` names the web client Google issues the server's authorization code for
+     * (`GIDServerClientID`, the build setting `COPLANLY_GOOGLE_WEB_CLIENT_ID`). Blank in CI, so
+     * Settings offers no Google Calendar row there.
+     */
+    val calendarAvailable: Boolean
+
+    /**
+     * Opens Google's sheet asking for [scope] beside the sign-in (`GIDSignIn.signIn(withPresenting:
+     * hint:additionalScopes:)`, with the web client as the server client id for this request only),
+     * and calls [completion] once, on the main queue: the `serverAuthCode` the server redeems, with
+     * the account's address and name; `cancelled` when the parent dismissed it; otherwise an `error`
+     * for the log, which no screen shows. [scope] comes from `GoogleCalendarAccess.SCOPE`, the one
+     * place it is named (`tools/check-invariants.js` check 6), never from the Swift side.
+     */
+    fun requestCalendarAccess(
+        scope: String,
+        completion: (
+            serverAuthCode: String?,
+            email: String?,
+            displayName: String?,
+            cancelled: Boolean,
+            error: String?,
+        ) -> Unit
+    )
 }
 
 /**

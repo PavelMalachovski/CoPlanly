@@ -1,13 +1,6 @@
 package com.coparently.app.di.koin
 
 import com.coparently.app.data.remote.firebase.PushRegistration
-import com.coparently.app.data.remote.google.CredentialProvider
-import com.coparently.app.data.remote.google.GoogleAccess
-import com.coparently.app.data.remote.google.GoogleAccessException
-import com.coparently.app.data.remote.google.GoogleAccessFailure
-import com.coparently.app.data.remote.google.GoogleCalendarAccount
-import com.coparently.app.data.remote.google.GoogleCalendarConnection
-import com.coparently.app.data.remote.google.GoogleCredential
 import com.coparently.app.data.requests.RequestClockNotices
 import com.coparently.app.data.school.SchoolImportScheduler
 import com.coparently.app.data.support.SupportReminderScheduler
@@ -18,7 +11,7 @@ import com.coparently.app.domain.notification.RequestClockScheduler
 
 /*
  * What the data layer asks of the platform that the iPhone does not have yet (MON-24 phase 2, Task
- * 8j): each answers as a phone with nothing of the kind would — no Google Calendar connected, no
+ * 8j): each answers as a phone with nothing of the kind would — no
  * push token, nothing picked — or does nothing, so `platformDataModule` resolves
  * every definition of `dataModules` without promising a feature (design item 8). Each is replaced by
  * the real one as the iPhone app gains it (phase 3 and 4: the push token, the
@@ -32,7 +25,8 @@ import com.coparently.app.domain.notification.RequestClockScheduler
  * part C's Task 10 `NoStorageBucket`, for `IosStorageBucket`; in its Task 11 `NoPickedFiles` and
  * `NoRecordPhotoStorage`, for `IosPickedFiles` and `IosRecordPhotoStorage`; in its Task 12
  * `NoReceiptText`, `NoRecordFiles` and `NoExportVerifyAddress`, for `VisionReceiptText`,
- * `IosRecordFileWriter` and `InfoPlistExportVerifyAddress`.
+ * `IosRecordFileWriter` and `InfoPlistExportVerifyAddress`; in phase 4's Task 7 `NoGoogleCalendar`,
+ * for `IosGoogleCalendarAccount`.
  */
 
 /**
@@ -99,26 +93,6 @@ internal object NoRequestClockNotices : RequestClockNotices {
     override suspend fun remind(clock: RequestDeadline): Boolean = false
     override suspend fun deadlinePassed(clock: RequestDeadline) = Unit
     override suspend fun noAnswer(clock: RequestDeadline) = Unit
-}
-
-/**
- * Google Calendar is not connected here: the iPhone has no Google sign-in yet. Signing out or
- * disconnecting has nothing to end, so both succeed.
- */
-internal object NoGoogleCalendar : GoogleCalendarAccount, CredentialProvider {
-    override fun connection(): GoogleCalendarConnection = GoogleCalendarConnection.NOT_CONNECTED
-
-    override suspend fun accessToken(forceRefresh: Boolean): GoogleAccess =
-        GoogleAccess.Denied(GoogleAccessFailure.NOT_CONNECTED)
-
-    override suspend fun signOut(): Pair<Boolean, String?> = Pair(true, null)
-
-    override suspend fun disconnect() = Unit
-
-    override suspend fun getCredential(forceRefresh: Boolean): GoogleCredential =
-        throw GoogleAccessException(GoogleAccessFailure.NOT_CONNECTED)
-
-    override suspend fun <T> withCredential(call: suspend (GoogleCredential) -> T): T = call(getCredential())
 }
 
 private const val UNAVAILABLE = "Not available in this iPhone build yet"

@@ -8,8 +8,10 @@ import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.NavOptionsBuilder
+import com.coparently.app.data.remote.google.IosGoogleCalendarAccount
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.telemetry.TelemetryConsent
+import com.coparently.app.ios.GoogleIdTokenSource
 import com.coparently.app.ios.IosLifecycle
 import com.coparently.app.presentation.AppLaunch
 import com.coparently.app.presentation.changerequests.RequestsBadgeViewModel
@@ -26,6 +28,8 @@ import com.coparently.app.presentation.navigation.chatDeepLinkRoute
 import com.coparently.app.presentation.navigation.startDestinationFor
 import com.coparently.app.presentation.platform.AppBuildValues
 import com.coparently.app.presentation.platform.CredentialSignIn
+import com.coparently.app.presentation.platform.GoogleCalendarSignIn
+import com.coparently.app.presentation.platform.IosGoogleCalendarSignIn
 import com.coparently.app.presentation.platform.ProvideIosShell
 import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
@@ -69,6 +73,9 @@ internal interface ShellEnvironment {
 
     /** The credential sheets every screen is drawn with ([ProvideIosShell]). */
     val credentialSignIn: CredentialSignIn
+
+    /** Google Calendar's sign-in every screen is drawn with ([ProvideIosShell]), answering [syncViewModel]. */
+    val googleCalendarSignIn: GoogleCalendarSignIn
     val syncViewModel: SyncViewModel
     val authStateViewModel: AuthStateViewModel
     val connectivity: ConnectivityViewModel
@@ -143,6 +150,7 @@ internal class NativeShell(
     private val koin: Koin,
     override val buildValues: AppBuildValues,
     override val credentialSignIn: CredentialSignIn,
+    google: GoogleIdTokenSource,
     private val links: AppLaunch
 ) : ShellEnvironment, TabSwitcher {
 
@@ -160,6 +168,16 @@ internal class NativeShell(
     override val authStateViewModel: AuthStateViewModel = shellViewModel(store)
     override val syncViewModel: SyncViewModel = shellViewModel(store)
     override val connectivity: ConnectivityViewModel = shellViewModel(store)
+
+    /**
+     * Google Calendar's sign-in (phase 4, part A, Task 7): the sheet's answer goes to [syncViewModel],
+     * the one Settings shares, as `MainActivity` hands Android's to its own.
+     */
+    override val googleCalendarSignIn: GoogleCalendarSignIn = IosGoogleCalendarSignIn(
+        google = google,
+        account = koin.get<IosGoogleCalendarAccount>(),
+        answered = { answer -> scope.launch { syncViewModel.handleSignInResult(answer) } },
+    )
     override val messages: AppMessages = AppMessages(scope, SnackbarHostState())
     override val tabSwitcher: TabSwitcher get() = this
     override val visibility: ShellVisibility = ShellVisibility()
