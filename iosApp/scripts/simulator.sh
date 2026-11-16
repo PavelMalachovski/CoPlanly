@@ -176,7 +176,12 @@ ui_test() {
   shift 5
   mkdir -p "$out"
   out=$(cd "$out" && pwd)
-  seed=$(node tools/ios/seed-shell-family.js "$@")
+  # Checked here, not left to set -e, which is off where a caller writes `ui_test … || status=1`
+  # (the appearance tour): a failed seed must not go on to sign in with no account.
+  if ! seed=$(node tools/ios/seed-shell-family.js "$@"); then
+    echo "::notice::The $name run was skipped: seeding its family failed."
+    return 1
+  fi
   # xcodebuild hands the test runner every TEST_RUNNER_-prefixed variable, without the prefix.
   export TEST_RUNNER_COPLANLY_UITEST_EMAIL
   export TEST_RUNNER_COPLANLY_UITEST_PASSWORD
@@ -301,8 +306,14 @@ tour_appearance() {
   mkdir -p "$out"
   out=$(cd "$out" && pwd)
   rm -f "$out/tour-crashed"
-  # shellcheck disable=SC2064 # the UDID is fixed now, on purpose
-  trap "restore_ui '$udid'" EXIT INT TERM
+  # Restored however it ends; a cancel or the step's time limit also ends it there, rather than
+  # going on to the next variant. shellcheck disable=SC2064: the UDID is fixed now, on purpose.
+  # shellcheck disable=SC2064
+  trap "restore_ui '$udid'" EXIT
+  # shellcheck disable=SC2064
+  trap "restore_ui '$udid'; exit 130" INT
+  # shellcheck disable=SC2064
+  trap "restore_ui '$udid'; exit 143" TERM
   for variant in dark contrast large; do
     case "$variant" in
       dark) setting=appearance; value=dark ;;
@@ -314,7 +325,8 @@ tour_appearance() {
     xcrun simctl ui "$udid" "$setting" "$value"
     export TEST_RUNNER_COPLANLY_TOUR_VARIANT=$variant
     ui_test "$udid" "$out/$variant" "tour-$variant" testTourAppearance no --tour || status=1
-    keep_named_shots "$out/$variant"
+    keep_named_shots "$out/$variant" ||
+      echo "::notice::The appearance tour's $variant screenshots could not all be copied under their names."
     if [ -s "$out/$variant/tour-crashed" ]; then
       { echo "$variant:"; cat "$out/$variant/tour-crashed"; } >> "$out/tour-crashed"
     fi

@@ -1359,6 +1359,10 @@ final class ShellUITests: XCTestCase {
     /// always reaches its summary inside CI's step limit (50 minutes) even when every visit misses.
     private var tourDeadline = Date.distantFuture
 
+    /// The budget [tourDeadline] was set from, in seconds, for the message of a visit it skipped:
+    /// `tourBudget` for `testTour`, `appearanceBudget` for `testTourAppearance`.
+    private var activeTourBudget: TimeInterval = 0
+
     /// The tour's own time budget, from its first visit.
     private let tourBudget: TimeInterval = 35 * 60
 
@@ -1440,6 +1444,7 @@ final class ShellUITests: XCTestCase {
         }
 
         touring = true
+        activeTourBudget = tourBudget
         tourDeadline = Date().addingTimeInterval(tourBudget)
         // A walk that failed before its own sign-out leaves this simulator signed in, so the tour
         // may start on the tabs: it signs out through the app first, and a sign-out that fails is
@@ -1529,6 +1534,7 @@ final class ShellUITests: XCTestCase {
         }
 
         touring = true
+        activeTourBudget = appearanceBudget
         tourDeadline = Date().addingTimeInterval(appearanceBudget)
         // Each variant seeds an account of its own, so the app may still hold the previous one.
         do {
@@ -1791,7 +1797,7 @@ final class ShellUITests: XCTestCase {
     /// XCUITest recorded an issue, is skipped with the reason, a screenshot and the element tree.
     private func tourVisit(_ route: String, afterShot: (() -> Void)? = nil, _ reach: () throws -> Void) {
         if Date() > tourDeadline {
-            let outcome = "skipped: the tour's \(Int(tourBudget / 60)) minutes ran out before this visit"
+            let outcome = "skipped: the tour's \(Int(activeTourBudget / 60)) minutes ran out before this visit"
             print("COPLANLY_TOUR_VISIT \(route): \(outcome)")
             tourOutcomes.append((route, outcome))
             return
