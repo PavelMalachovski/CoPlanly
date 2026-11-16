@@ -142,6 +142,34 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    alert, a picker sheet, a page sheet) is its own window and needs neither; it is presented through
    `presentWhenSettled` (`ios/controls/PickerSheet.kt`), which waits out a transition and ends as a
    dismissal when UIKit drops it, so `onDismiss` is called once and a second open works.
+   **On the iPhone the type, the icons and the theme are the system's too** (MON-24 phase 3, part
+   D; owner rulings of 16 November 2026 and the canvas's fourth row). Still the redesign's look;
+   Android draws what it drew, and the 470 screenshots hold it. Four things not to undo.
+   **Text is SF Pro, the wordmark Onest**: `CoPlanlyTheme`'s scale takes `appFontFamily()` (Onest
+   on Android, `FontFamily.Default` on the iPhone, which Compose Multiplatform draws in SF Pro), and
+   `BrandHeader` sets its "coplanly." through `wordmarkStyle(…, onestFontFamily())`, so it stays
+   Onest Bold on both. **Every icon is drawn through `AppIcon`** (`common/AppIcon.kt`, an `expect`
+   with material3 `Icon`'s parameters; on Android exactly that `Icon` call): `AppIconGuardTest`
+   refuses Material's `Icon` called or imported in `commonMain`. On the iPhone `AppIcon` looks the
+   vector's `ImageVector.name` up in `SF_SYMBOLS` (`common/SfSymbolTable.kt`, 117 rows copied from
+   the owner-approved `docs/superpowers/plans/2026-11-16-iphone-phase-3d-sf-symbols.json`) and draws
+   that SF Symbol rasterised inside Compose, in the call site's tint, size and semantics, never a
+   native view; an icon with no row, or whose symbol the running iOS cannot load, draws its
+   Material vector, never another symbol. **A new icon gets a row in the approved table and
+   `SF_SYMBOLS`, or a keep-Material reason in the table's KDoc** (twelve today: Gavel, Balance,
+   DoneAll and the rest have no faithful symbol); `SfSymbolTableTest` fails on an icon in use with
+   neither, and on a table that drifts from the JSON. **The window follows the app's theme choice**
+   (`ios/shell/WindowAppearance.kt`): Settings' System, Dark or Light sets the window's
+   `overrideUserInterfaceStyle` to unspecified, dark or light — unspecified for System, never the
+   resolved style, which would feed the override back as "the system's" — so the bars, alerts,
+   menus, pickers, sheets and the status bar match the Compose content, and its `tintColor` is a
+   dynamic colour resolving to the active scheme's `primary` (`#4F46E5` light, `#C2C1FF` dark).
+   **Increase Contrast is `ContrastLevel.MEDIUM`, never HIGH** (owner: Apple's one switch is milder
+   than Material's high step; `ContrastLevel.ios.kt`, `iosContrastLevelChanges`), followed while the
+   app runs, the tint included. Dynamic Type needs nothing of ours: Compose Multiplatform 1.9.3
+   turns the content size category into `fontScale` itself (1.0 at Large, at most 1.8 at the
+   largest accessibility size; kept on purpose, though the largest sizes read smaller than a
+   native app's). Don't add a second mapping on top, which would scale the text twice.
 2. **Parent colours go through `presentation/theme/ParentColors.kt`**: `fill()` for dots,
    bars and tints; `text()` for anything that is a foreground (it picks the theme-aware
    `*Light`/`*Dark` partner). The raw `MomPink`/`DadBlue` are fill-only — using them as text
@@ -1587,7 +1615,9 @@ end of Task 11; returning them to `internal` is carried to phase 3 (ROADMAP MON-
   and №. Check that with fontTools against the file, not against a specimen page. The files are
   Compose Multiplatform resources in `shared-ui/src/commonMain/composeResources/font/` since MON-24
   phase 2 (they were `app/src/main/res/font/`), read with `Font(Res.font.…)`, so both apps draw
-  the same ones; see "Where a `presentation/theme/…` … path lives".
+  the same ones; see "Where a `presentation/theme/…` … path lives". **On the iPhone only the
+  wordmark is Onest** (MON-24 phase 3, part D): the text is SF Pro through `appFontFamily()`, and
+  SF Pro covers the same five languages, ₴ and № (device check §3.41 asks for them on a phone).
 - **Parent colours identify a person, not a role.** The app never shows the words "Mom" or
   "Dad": every parent label goes through `presentation/common/ParentLabels.kt` and renders
   that person's name. **One exception, by owner decision (October 2026): a sticker's own
@@ -1935,6 +1965,35 @@ shell alone, so Android reads a null and behaves as before:
   never fetches; the initial is drawn), PAY by square (no LZMA1 encoder until phase 4; QR Platba
   and EPC draw), the invitation's QR (`NoInviteQrCodes`), and everything ROADMAP MON-24 lists as a
   stand-in.
+
+**Part D's shapes** (November 2026, the theme; owner's check
+`docs/superpowers/plans/2026-11-16-iphone-phase-3d-owner-check.md`; design refresh item 1 states
+the rules):
+- **`WindowAppearance`** (`…/ios/shell/WindowAppearance.kt`) styles the shell's own window, which
+  `WindowReportingController`, the root container, reports when it appears. `NativeShell` collects
+  `PreferencesRepository.getDarkThemeFlow()` into `themeChoice` (every `ScreenController` hands it
+  to `AppProviders(darkTheme = …)`, as `MainActivity` does) and `iosContrastLevelChanges`, and
+  applies both again on every change; presented controllers inherit the window's style.
+- **`AppIcon.ios.kt`** (`presentation/common/`) draws a symbol through `SfSymbolPainter` in
+  `SfSymbolBitmaps.kt`: `UIImage.systemImageNamed` at the box's size and weight (semibold from
+  SemiBold up, else regular), rendered to a PNG and decoded by Skia, kept in an 8 MB LRU, tinted by
+  Material's colour-filter rule; with no bitmap at draw time it draws the Material vector.
+  `AutoMirrored` icons are not mirrored right to left (no such language ships).
+- **`testTourAppearance`** (`ShellUITests`, run by `simulator.sh tour-appearance`, its own step of
+  the `ios-app` job after the tour) shoots the seven board screens (Home, Calendar, Chat, New event,
+  Family, Expenses, Settings) once in dark, once with Increase Contrast and once at the
+  accessibility-extra-large text size, as `tour-<variant>-<route>` in the `ios-tour` artifact's
+  `appearance/`, then puts the simulator back to light, contrast off and Large. Only a crash fails it.
+- **Three Kotlin/Native lessons from its compiles.** A UIKit `NS_ENUM` is a Kotlin enum or a set of
+  top-level constants depending on how the klib maps it: `UIUserInterfaceStyle`'s are entries,
+  imported as `platform.UIKit.UIUserInterfaceStyle.UIUserInterfaceStyleDark`, while
+  `UIAlertActionStyleCancel` is a constant — look before guessing. **A method declared in an
+  Objective-C category is an extension function and needs its own import**:
+  `UIColor.colorWithDynamicProvider` (the `DynamicColors` category) needs
+  `import platform.UIKit.colorWithDynamicProvider`, and `resolvedColorWithTraitCollection` likewise.
+  And Compose's `SemanticsConfiguration.getOrNull` is an extension too
+  (`import androidx.compose.ui.semantics.getOrNull`). Gradle cannot resolve Google's Maven in some
+  cloud sessions, so a first iOS compile in CI is where these surface.
 
 **Where a `domain/…` path in this file lives** (MON-24 phase 1, November 2026). The domain moved
 to the shared module with every package unchanged, so a path this file writes as
