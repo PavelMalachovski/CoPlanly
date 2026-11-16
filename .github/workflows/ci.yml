@@ -2507,7 +2507,7 @@ jobs:
       # `simulator.sh tour` writes for those two; a timeout or a failed seed leaves a notice. The
       # step is `continue-on-error` and bounds its own visits (35 minutes) to finish inside its
       # limit. Its own account, since the walk ends by deleting the one it signed in as. The
-      # `ios-tour` artifact. It runs last, after the emulator tests and the write gate (part B's
+      # `ios-tour` artifact. It runs after the emulator tests and the write gate, followed only by the appearance tour (part B's
       # final review), so a slow run that reaches the job's limit loses the tour, never the write
       # gate; and on every run, not by request as the spec's §8 asked, because the owner check
       # reads the `ios-tour` artifact of the branch's own run (ROADMAP MON-24).
@@ -2528,6 +2528,32 @@ jobs:
             --project demo-coplanly \
             "iosApp/scripts/simulator.sh tour $UDID iosApp/build/tour" \
             2>&1 | tee "$RUNNER_TEMP/tour.log"
+
+      # The board screens in dark mode, under Increase Contrast and at the accessibility-extra-large
+      # text size (MON-24 phase 3, part D, Task 7): `ShellUITests.testTourAppearance`, run by
+      # `simulator.sh tour-appearance` once per variant, each on a freshly seeded `--tour` family,
+      # with the simulator's setting changed by `simctl ui` and put back after. It follows the tour's
+      # rules: a screen it cannot reach is a line in its variant's tour.txt, and only a crash or a
+      # failed launch counts, through the joined marker `appearance/tour-crashed` that "The iPhone
+      # tour ran" reads (the §3.40 known crash is a warning there too). Its PNGs, named
+      # `tour-<variant>-<route>.png`, go into the `ios-tour` artifact under `appearance/<variant>/`.
+      - name: The iPhone tour in dark, Increase Contrast and large text (XCUITest)
+        id: tour-appearance
+        if: ${{ !cancelled() && steps.shell-test.outcome != 'skipped' }}
+        continue-on-error: true
+        timeout-minutes: 25
+        env:
+          FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
+          FUNCTIONS_DISCOVERY_TIMEOUT: 60
+          UDID: ${{ steps.simulator.outputs.udid }}
+        run: |
+          set -o pipefail
+          export PATH="$FIREBASE_JAVA_HOME/bin:$PATH"
+          firestore-tests/node_modules/.bin/firebase emulators:exec \
+            --only auth,firestore,functions,storage \
+            --project demo-coplanly \
+            "iosApp/scripts/simulator.sh tour-appearance $UDID iosApp/build/tour/appearance" \
+            2>&1 | tee "$RUNNER_TEMP/tour-appearance.log"
 
       - name: Upload the shell's screenshots
         if: always()
@@ -2553,7 +2579,11 @@ jobs:
             iosApp/build/tour/shots/
             iosApp/build/tour/tour.txt
             iosApp/build/tour/tour-crashed
+            iosApp/build/tour/appearance/*/*.png
+            iosApp/build/tour/appearance/*/tour.txt
+            iosApp/build/tour/appearance/tour-crashed
             ${{ runner.temp }}/tour.log
+            ${{ runner.temp }}/tour-appearance.log
           if-no-files-found: ignore
           retention-days: 14
 
@@ -2603,18 +2633,29 @@ jobs:
       # writes `tour-crashed` only for testTour's own two failure texts. Any other failure of the
       # step (its time limit, the seed, the build) is a notice.
       - name: The iPhone tour ran
-        if: always() && steps.tour.outcome != 'skipped'
+        if: always() && (steps.tour.outcome != 'skipped' || steps.tour-appearance.outcome != 'skipped')
         env:
           OUTCOME: ${{ steps.tour.outcome }}
+          APPEARANCE_OUTCOME: ${{ steps.tour-appearance.outcome }}
         run: |
+          crashed=0
           if [ -s iosApp/build/tour/tour-crashed ]; then
             echo "::error::The iPhone tour found the app crashed or not launching:"
             cat iosApp/build/tour/tour-crashed
-            exit 1
+            crashed=1
+          fi
+          if [ -s iosApp/build/tour/appearance/tour-crashed ]; then
+            echo "::error::The iPhone appearance tour found the app crashed or not launching:"
+            cat iosApp/build/tour/appearance/tour-crashed
+            crashed=1
           fi
           if [ "$OUTCOME" = failure ]; then
             echo "::notice::The iPhone tour's step failed without a crash or a failed launch (a time limit, the seed or the build): see tour.log in the ios-tour artifact."
           fi
+          if [ "$APPEARANCE_OUTCOME" = failure ]; then
+            echo "::notice::The appearance tour's step failed without a crash or a failed launch (a time limit, the seed or the build): see tour-appearance.log in the ios-tour artifact."
+          fi
+          exit "$crashed"
 
       - name: Upload the build log
         if: failure()
