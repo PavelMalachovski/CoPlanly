@@ -154,7 +154,17 @@ class IosStorageBucket(
         /** `StorageErrorCode.objectNotFound` in Firebase iOS 11.8.0 (`FIRStorageErrorCodeObjectNotFound`). */
         const val OBJECT_NOT_FOUND = -13010L
 
-        fun NSError.isObjectNotFound(): Boolean = domain == FIRStorageErrorCodeDomain && code == OBJECT_NOT_FOUND
+        /**
+         * The domain the SDK's errors carry: Firebase iOS 11's `StorageErrorDomain`, a Swift constant
+         * the Objective-C headers do not export. `FIRStorageErrorCodeDomain`, which they do, is the
+         * Swift error enum's bridged domain, which the SDK's own `NSError`s do not use: CI run 11's
+         * emulator test got "FIRStorageErrorDomain -13010" for a missing object, so every missing
+         * object read as a failure and every first upload failed its existence check.
+         */
+        const val STORAGE_ERROR_DOMAIN = "FIRStorageErrorDomain"
+
+        fun NSError.isObjectNotFound(): Boolean =
+            (domain == STORAGE_ERROR_DOMAIN || domain == FIRStorageErrorCodeDomain) && code == OBJECT_NOT_FOUND
 
         /**
          * The failure as an [IOException] naming the path's first segment alone (its prefix, such as
