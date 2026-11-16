@@ -200,6 +200,11 @@ ui_test() {
     grep -E "COPLANLY_TOUR [^ ]+: |COPLANLY_TOUR_SUMMARY reached" "$out/xcodebuild-$name.log" > "$out/tour.txt" 2>/dev/null ||
       grep "COPLANLY_TOUR_VISIT" "$out/xcodebuild-$name.log" > "$out/tour.txt" 2>/dev/null || true
     echo "::group::the tour's destinations"; cat "$out/tour.txt"; echo "::endgroup::"
+    # A sign-in that never reached the tabs skips the whole tour while the step passes (run 12: the
+    # app stopped answering XCUITest for minutes after Sign In): where its main thread was then.
+    if grep -q "^COPLANLY_TOUR sign-in: skipped\|COPLANLY_TOUR_VISIT sign-in: skipped" "$out/tour.txt" 2>/dev/null; then
+      show_samples "$out"
+    fi
   fi
   # A crash the walk met, as the test recorded it, and the app's own lines from the system log: what
   # stopped it, for a reader of the log alone.
