@@ -525,11 +525,24 @@ final class ShellUITests: XCTestCase {
         _ = app.buttons["DatePicker.NextMonth"].waitForNonExistence(timeout: 5)
     }
 
-    /// What a failed step may leave over the next one: the date picker's calendar or the Repeat
-    /// menu (each closed by a tap outside, choosing nothing).
+    /// What a failed step may leave over the next one, closed choosing nothing: the date picker's
+    /// calendar, the Repeat menu (a tap outside), an action sheet (its Cancel), "Discard changes?"
+    /// (Discard: the step that asked has failed), and any sheet still up (swiped down from its
+    /// grabber). Run 13 left the event preview up after one failed swipe, and the five steps after
+    /// it failed only because the tab bar was under it.
     private func closeTransients() {
         closeCalendarPopover()
         if app.buttons["Weekly"].exists && app.buttons["Monthly"].exists { tapOutside() }
+        let sheetCancel = app.sheets.buttons["Cancel"]
+        if sheetCancel.exists { sheetCancel.tap() }
+        if app.staticTexts["Discard changes?"].exists { pressIfThere("Discard") }
+        for _ in 0..<3 {
+            guard let grabber = sheetGrabber() else { break }
+            grabber.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.98)))
+            sleep(1)
+            if app.staticTexts["Discard changes?"].exists { pressIfThere("Discard") }
+        }
     }
 
     /// The event form's Repeat row ends in the system's pop-up button (MON-24 phase 3, part C,
@@ -722,25 +735,42 @@ final class ShellUITests: XCTestCase {
         try require(calendarTab.isHittable, "Something was left presented after the second preview")
     }
 
-    /// The event's title in the preview sheet: the lowest label holding it in the lower part of the
-    /// screen above the sheet's [edit] button (the grid's own block of the event sits higher).
+    /// The event's title in the preview sheet: the highest label holding it below the sheet's top
+    /// (its grabber, or 40 % down the screen) and above the sheet's [edit] button. The highest, not
+    /// the lowest: the sheet's title sits right under its grabber, while the calendar under the
+    /// undimmed sheet may draw the event lower down (run 13, Week view's block).
     private func previewTitle(above edit: XCUIElement) throws -> XCUIElement {
         let titles = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", deleteCheckTitle))
+        let sheetTop = sheetGrabber()?.frame.maxY ?? app.frame.height * 0.4
         let inSheet = titles.allElementsBoundByIndex
-            .filter { $0.frame.minY > app.frame.height * 0.4 && $0.frame.minY < edit.frame.minY }
-            .max { $0.frame.minY < $1.frame.minY }
+            .filter { $0.frame.minY > sheetTop && $0.frame.minY < edit.frame.minY }
+            .min { $0.frame.minY < $1.frame.minY }
         guard let found = inSheet else {
             throw StepFailure(description: "The preview sheet does not show the event's title in the lower half")
         }
         return found
     }
 
-    /// Drags the preview sheet down from just above its [title], inside the sheet's top margin under
-    /// the grabber, to the bottom of the screen.
+    /// Drags the preview sheet down to the bottom of the screen from its grabber, the system's own
+    /// handle, or, where none is reported, from just above its [title], inside the sheet's top
+    /// margin. Run 13 dragged from above a "title" that was the Week view's block of the event under
+    /// the sheet, a point inside the sheet's content, which scrolled rather than closed it.
     private func swipePreviewDown(from title: XCUIElement) {
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.98))
+        if let grabber = sheetGrabber() {
+            grabber.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(forDuration: 0.05, thenDragTo: end)
+            return
+        }
         let start = app.coordinate(withNormalizedOffset: .zero)
             .withOffset(CGVector(dx: app.frame.width / 2, dy: title.frame.minY - 12))
-        start.press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.98)))
+        start.press(forDuration: 0.05, thenDragTo: end)
+    }
+
+    /// The grabber of the sheet on top (the lowest one drawn), if UIKit reports one.
+    private func sheetGrabber() -> XCUIElement? {
+        app.buttons.matching(NSPredicate(format: "label == %@", "Sheet Grabber")).allElementsBoundByIndex
+            .filter { $0.exists && !$0.frame.isEmpty }
+            .max { $0.frame.minY < $1.frame.minY }
     }
 
     /// Opens [title]'s preview from the calendar: a tap on its month cell opens Day view, and a tap
