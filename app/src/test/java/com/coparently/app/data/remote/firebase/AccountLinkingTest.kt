@@ -16,6 +16,9 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import io.mockk.verify
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -118,6 +121,33 @@ class AccountLinkingTest {
                 FirebaseAuthUserCollisionException("ERROR_EMAIL_ALREADY_IN_USE", "x")
             )
         )
+    }
+
+    @Test
+    fun refreshReadsALinkMadeAroundTheSeam() = runTest {
+        val seen = mutableListOf<Set<SignInMethod>>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { service.linkedMethods().toList(seen) }
+        assertEquals(setOf(SignInMethod.EMAIL), seen.last())
+
+        // Apple linked through Firebase's web flow, which this class never saw.
+        every { user.reload() } returns Tasks.forResult(null)
+        every { user.providerData } returns providers("firebase", "password", "apple.com")
+        service.refresh()
+
+        assertEquals(setOf(SignInMethod.EMAIL, SignInMethod.APPLE), seen.last())
+        verify { user.reload() }
+    }
+
+    @Test
+    fun refreshReadsAgainWhenTheReloadFails() = runTest {
+        val seen = mutableListOf<Set<SignInMethod>>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { service.linkedMethods().toList(seen) }
+
+        every { user.reload() } returns Tasks.forException(IllegalStateException("offline"))
+        every { user.providerData } returns providers("firebase", "password", "apple.com")
+        service.refresh()
+
+        assertEquals(setOf(SignInMethod.EMAIL, SignInMethod.APPLE), seen.last())
     }
 
     private fun providers(vararg ids: String): List<UserInfo> =

@@ -196,6 +196,7 @@ object AppDestinationCatalog {
         Screen.ProfessionalPlan.route to DestinationKind.PUSH,
         Screen.CustodySetup.route to DestinationKind.PUSH,
         Screen.MyProfile.route to DestinationKind.PUSH,
+        Screen.SignInMethods.route to DestinationKind.PUSH,
         Screen.CoParentProfile.route to DestinationKind.PUSH,
         Screen.Conversations.route to DestinationKind.TAB_ROOT,
         Screen.Chat.route to DestinationKind.PUSH,
@@ -1019,6 +1020,16 @@ internal fun appDestinations(
         )
     },
 
+    // The account's sign-in methods (MON-24 phase 4, part A). A Settings detail route.
+    destination(
+        route = Screen.SignInMethods.route,
+        transitions = DestinationTransitions.PUSH
+    ) {
+        com.coparently.app.presentation.settings.SignInMethodsScreen(
+            onNavigateUp = { navController.popBackStack() }
+        )
+    },
+
     destination(
         route = Screen.CoParentProfile.route,
         transitions = DestinationTransitions.PUSH
@@ -1344,6 +1355,9 @@ private fun SettingsDestination(
         },
         onNavigateToMyProfile = {
             navController.navigate(Screen.MyProfile.route)
+        },
+        onNavigateToSignInMethods = {
+            navController.navigate(Screen.SignInMethods.route)
         },
         onSignOut = {
             if (!shellDecides) {

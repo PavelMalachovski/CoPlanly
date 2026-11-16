@@ -101,6 +101,21 @@ class IosAccountLinking(
             .map { methodsOf(auth.currentUser) }
             .distinctUntilChanged()
 
+    /**
+     * Reloads the signed-in user and reads its methods again, for a link made around this class
+     * (Apple through the system's sheet, `IosCredentialSignIn.linkApple`, which links on the iOS
+     * SDK's own user). A reload that fails is logged by its code and the providers the phone holds
+     * are read anyway.
+     */
+    override suspend fun refresh() {
+        auth.currentUser?.let { user ->
+            attempt { user.reload() }.onFailure { e ->
+                logger.w(TAG, "Reloading the user before reading its methods failed: ${codeOf(e)}")
+            }
+        }
+        providerChanges.update { it + 1 }
+    }
+
     private fun methodsOf(user: FirebaseUser?): Set<SignInMethod> =
         user?.providerData.orEmpty().mapNotNull { SignInMethod.fromProviderId(it.providerId) }.toSet()
 

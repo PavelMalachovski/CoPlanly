@@ -30,4 +30,13 @@ interface AccountLinking {
      * and again after each link or unlink; empty while nobody is signed in.
      */
     fun linkedMethods(): Flow<Set<SignInMethod>>
+
+    /**
+     * Reads the signed-in account's methods again, so [linkedMethods] reports a link or unlink made
+     * around this seam: an Apple ID linked through the shell's sheet
+     * (`CredentialSignIn.linkApple`), on the iPhone or through Android's web flow. Reloads the user
+     * from the server first, on a best-effort basis: a reload that fails still re-reads what the
+     * phone holds.
+     */
+    suspend fun refresh()
 }

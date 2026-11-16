@@ -67,6 +67,7 @@ import com.coparently.app.presentation.school.ConnectSchoolViewModel
 import com.coparently.app.presentation.school.SchoolImportViewModel
 import com.coparently.app.presentation.settings.CalendarFeedViewModel
 import com.coparently.app.presentation.settings.SettingsViewModel
+import com.coparently.app.presentation.settings.SignInMethodsViewModel
 import com.coparently.app.presentation.stickers.StickersViewModel
 import com.coparently.app.presentation.support.SupportViewModel
 import com.coparently.app.presentation.sync.AuthStateViewModel
@@ -213,11 +214,13 @@ val supportUiModule: Module = module {
  * erasure go through `PushRegistration` and `AccountDeletion`, which the app binds on Android and
  * [platformDataModule] stands in for on the iPhone. Beside them, since Task 11, the sync group's
  * ViewModel: the co-parent sync and Google Calendar's connection (`GoogleCalendarAccount`), whose
- * sign-in screen the shell runs.
+ * sign-in screen the shell runs. And the account's sign-in methods (MON-24 phase 4, part A), linked
+ * and unlinked through `AccountLinking`, which both platforms bind.
  */
 val settingsUiModule: Module = module {
     viewModelOf(::CalendarFeedViewModel)
     viewModelOf(::SettingsViewModel)
+    viewModelOf(::SignInMethodsViewModel)
     viewModelOf(::SyncViewModel)
 }
 

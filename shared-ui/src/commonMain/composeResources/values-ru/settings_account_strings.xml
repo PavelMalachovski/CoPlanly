@@ -119,4 +119,22 @@
     <string name="family_switcher_professional_row">Доступ специалиста ждёт вашего согласия</string>
     <string name="family_switcher_plan_other">В другой семье ждут ответы в родительском плане</string>
     <string name="family_switcher_plan_row">Ждут ответы в родительском плане</string>
+    <!-- MON-24 phase 4, part A: Settings → Account → Sign-in methods (board 2). -->
+    <string name="sign_in_methods_title">Способы входа</string>
+    <string name="sign_in_methods_intro">Как можно войти в этот аккаунт. Добавьте способ, чтобы входить и на другом телефоне.</string>
+    <string name="sign_in_methods_group">Способы</string>
+    <string name="sign_in_methods_email">Эл. почта</string>
+    <string name="sign_in_methods_google">Google</string>
+    <string name="sign_in_methods_apple">Apple</string>
+    <string name="sign_in_methods_linked">Привязан</string>
+    <string name="sign_in_methods_not_linked">Не привязан</string>
+    <string name="sign_in_methods_add">Добавить</string>
+    <string name="sign_in_methods_remove">Удалить</string>
+    <string name="sign_in_methods_last_note">Можно удалить любой способ, кроме последнего.</string>
+    <string name="sign_in_methods_in_use">Этот способ входа уже принадлежит другому аккаунту CoPlanly. Войдите с ним, чтобы пользоваться тем аккаунтом.</string>
+    <string name="sign_in_methods_sign_in_again">В целях безопасности выйдите и войдите снова, затем повторите попытку.</string>
+    <string name="sign_in_methods_failed">Не получилось. Проверьте подключение и попробуйте ещё раз.</string>
+    <string name="sign_in_methods_add_email_title">Добавить эл. почту и пароль</string>
+    <string name="sign_in_methods_remove_title">Удалить способ «%1$s»?</string>
+    <string name="sign_in_methods_remove_message">Входить этим способом больше не получится. Аккаунт и его данные останутся без изменений.</string>
 </resources>

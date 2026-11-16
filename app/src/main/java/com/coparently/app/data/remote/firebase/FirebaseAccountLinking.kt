@@ -105,6 +105,22 @@ class FirebaseAccountLinking(
             .map { methodsOf(firebaseAuth.currentUser) }
             .distinctUntilChanged()
 
+    /**
+     * Reloads the signed-in user and reads its methods again, for a link made around this class
+     * (Apple through Firebase's web flow, `AndroidCredentialSignIn.linkApple`). A reload that fails
+     * is logged by its code and the providers the phone holds are read anyway.
+     */
+    override suspend fun refresh() {
+        try {
+            firebaseAuth.currentUser?.reload()?.await()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            logger.w(TAG, "Reloading the user before reading its methods failed: ${codeOf(e)}")
+        }
+        providerChanges.update { it + 1 }
+    }
+
     /** One value each time the sign-in state changes, as `FirebaseAuthService.getAuthStateFlow` reports it. */
     private fun authChanges(): Flow<Unit> = callbackFlow {
         val listener = FirebaseAuth.AuthStateListener { trySend(Unit) }

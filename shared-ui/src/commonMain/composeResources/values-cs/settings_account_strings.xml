@@ -119,4 +119,22 @@
     <string name="family_switcher_professional_row">Přístup odborníka čeká na váš souhlas</string>
     <string name="family_switcher_plan_other">V jiné rodině čekají odpovědi v rodičovském plánu</string>
     <string name="family_switcher_plan_row">Čekají odpovědi v rodičovském plánu</string>
+    <!-- MON-24 phase 4, part A: Settings → Account → Sign-in methods (board 2). -->
+    <string name="sign_in_methods_title">Metody přihlášení</string>
+    <string name="sign_in_methods_intro">Způsoby, jak se můžete k tomuto účtu přihlásit. Přidejte další, abyste se mohli přihlásit i na jiném telefonu.</string>
+    <string name="sign_in_methods_group">Metody</string>
+    <string name="sign_in_methods_email">E-mail</string>
+    <string name="sign_in_methods_google">Google</string>
+    <string name="sign_in_methods_apple">Apple</string>
+    <string name="sign_in_methods_linked">Propojeno</string>
+    <string name="sign_in_methods_not_linked">Nepropojeno</string>
+    <string name="sign_in_methods_add">Přidat</string>
+    <string name="sign_in_methods_remove">Odebrat</string>
+    <string name="sign_in_methods_last_note">Odebrat můžete kteroukoli metodu kromě poslední.</string>
+    <string name="sign_in_methods_in_use">Toto přihlášení už patří jinému účtu CoPlanly. Chcete-li ten účet používat, přihlaste se jím.</string>
+    <string name="sign_in_methods_sign_in_again">Z bezpečnostních důvodů se odhlaste a znovu přihlaste, pak to zkuste ještě jednou.</string>
+    <string name="sign_in_methods_failed">Nepodařilo se to. Zkontrolujte připojení a zkuste to znovu.</string>
+    <string name="sign_in_methods_add_email_title">Přidat e-mail a heslo</string>
+    <string name="sign_in_methods_remove_title">Odebrat %1$s?</string>
+    <string name="sign_in_methods_remove_message">Tímto způsobem se už nebudete moci přihlásit. Váš účet a jeho data zůstanou beze změny.</string>
 </resources>

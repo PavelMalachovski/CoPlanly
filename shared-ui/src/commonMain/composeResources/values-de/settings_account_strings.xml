@@ -119,4 +119,22 @@
     <string name="family_switcher_professional_row">Der Zugang für Fachleute wartet auf Ihre Zustimmung</string>
     <string name="family_switcher_plan_other">In einer anderen Familie warten Antworten im Elternplan</string>
     <string name="family_switcher_plan_row">Antworten im Elternplan warten</string>
+    <!-- MON-24 phase 4, part A: Settings → Account → Sign-in methods (board 2). -->
+    <string name="sign_in_methods_title">Anmeldemethoden</string>
+    <string name="sign_in_methods_intro">So kannst du dich bei diesem Konto anmelden. Füge eine Methode hinzu, damit du dich auch auf einem anderen Handy anmelden kannst.</string>
+    <string name="sign_in_methods_group">Methoden</string>
+    <string name="sign_in_methods_email">E-Mail</string>
+    <string name="sign_in_methods_google">Google</string>
+    <string name="sign_in_methods_apple">Apple</string>
+    <string name="sign_in_methods_linked">Verknüpft</string>
+    <string name="sign_in_methods_not_linked">Nicht verknüpft</string>
+    <string name="sign_in_methods_add">Hinzufügen</string>
+    <string name="sign_in_methods_remove">Entfernen</string>
+    <string name="sign_in_methods_last_note">Du kannst jede Methode außer der letzten entfernen.</string>
+    <string name="sign_in_methods_in_use">Diese Anmeldung gehört bereits zu einem anderen CoPlanly-Konto. Melde dich damit an, um dieses Konto zu nutzen.</string>
+    <string name="sign_in_methods_sign_in_again">Melde dich zur Sicherheit ab und wieder an und versuche es dann noch einmal.</string>
+    <string name="sign_in_methods_failed">Das hat nicht geklappt. Prüfe deine Verbindung und versuche es noch einmal.</string>
+    <string name="sign_in_methods_add_email_title">E-Mail und Passwort hinzufügen</string>
+    <string name="sign_in_methods_remove_title">%1$s entfernen?</string>
+    <string name="sign_in_methods_remove_message">Du kannst dich dann nicht mehr auf diese Weise anmelden. Dein Konto und seine Daten bleiben unverändert.</string>
 </resources>
