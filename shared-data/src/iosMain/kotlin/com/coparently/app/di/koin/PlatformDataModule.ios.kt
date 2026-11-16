@@ -41,12 +41,14 @@ import com.coparently.app.data.platform.IosDeviceRegion
 import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.platform.keychainSecurePreferences
 import com.coparently.app.data.receipts.VisionReceiptText
+import com.coparently.app.data.remote.firebase.AccountLinking
 import com.coparently.app.data.remote.firebase.AccountSignIn
 import com.coparently.app.data.remote.firebase.AuthSession
 import com.coparently.app.data.remote.firebase.CallableFunctions
 import com.coparently.app.data.remote.firebase.FirestoreClient
 import com.coparently.app.data.remote.firebase.FirestorePushQueue
 import com.coparently.app.data.remote.firebase.GitLiveFirestoreClient
+import com.coparently.app.data.remote.firebase.IosAccountLinking
 import com.coparently.app.data.remote.firebase.IosCallableFunctions
 import com.coparently.app.data.remote.firebase.IosFirebaseAuth
 import com.coparently.app.data.remote.firebase.PushDevice
@@ -148,10 +150,12 @@ actual val platformDataModule: Module = module {
     single { BakalariSchoolDirectory(httpClient(HttpTimeouts.SCHOOL)) }
 
     // One object under the three types, as `FirebaseAuthService` is on Android.
-    single { IosFirebaseAuth(Firebase.auth, appleTokens = get()) }
+    single { IosFirebaseAuth(Firebase.auth) }
     single<SignedInUser> { get<IosFirebaseAuth>() }
     single<AuthSession> { get<IosFirebaseAuth>() }
     single<AccountSignIn> { get<IosFirebaseAuth>() }
+    // The account's sign-in methods (phase 4, part A), Apple's unlink through `dataModules`' AppleTokens.
+    single<AccountLinking> { IosAccountLinking(Firebase.auth, appleTokens = get()) }
     // The provider session is the app's Google bridge, which `IosApp.start` binds (`iosAppModule`).
     single { IosAccountTraces(get(), get()) }
     single<AccountTraces> { get<IosAccountTraces>() }

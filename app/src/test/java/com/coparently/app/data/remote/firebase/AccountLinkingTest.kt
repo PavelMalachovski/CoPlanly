@@ -24,17 +24,18 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Linking and unlinking sign-in methods through Android's [FirebaseAuthService] (MON-24 phase 4,
+ * Linking and unlinking sign-in methods through Android's [FirebaseAccountLinking] (MON-24 phase 4,
  * part A; the plan's review focus 1): a credential another account holds links nothing and leaves
  * the signed-in account as it was, the methods are read from the user's providers, and a Google
- * sign-in says whether it created the account.
+ * sign-in ([FirebaseAuthService]) says whether it created the account.
  */
 class AccountLinkingTest {
 
     private val auth = mockk<FirebaseAuth>(relaxed = true)
     private val user = mockk<FirebaseUser>(relaxed = true)
     private val googleCredential = mockk<AuthCredential>()
-    private lateinit var service: FirebaseAuthService
+    private val appleTokens = mockk<AppleTokens>()
+    private lateinit var service: FirebaseAccountLinking
 
     @Before
     fun setUp() {
@@ -43,7 +44,7 @@ class AccountLinkingTest {
         every { auth.currentUser } returns user
         every { user.uid } returns "alice"
         every { user.providerData } returns providers("firebase", "password")
-        service = FirebaseAuthService(auth)
+        service = FirebaseAccountLinking(auth, appleTokens)
     }
 
     @After
@@ -62,7 +63,7 @@ class AccountLinkingTest {
         assertEquals(LinkFailure.InUseByAnotherAccount, (failure as LinkException).failure)
         verify(exactly = 0) { auth.signOut() }
         verify(exactly = 0) { auth.signInWithCredential(any()) }
-        assertEquals("alice", service.getCurrentUid())
+        assertEquals("alice", auth.currentUser?.uid)
         assertEquals(setOf(SignInMethod.EMAIL), service.linkedMethods().first())
     }
 
@@ -91,7 +92,8 @@ class AccountLinkingTest {
         every { result.additionalUserInfo } returns info
         every { auth.signInWithCredential(googleCredential) } returns Tasks.forResult(result)
 
-        assertEquals(SignInOutcome(isNewUser = true), service.signInWithGoogleIdToken("google-id-token").getOrThrow())
+        val signIn = FirebaseAuthService(auth)
+        assertEquals(SignInOutcome(isNewUser = true), signIn.signInWithGoogleIdToken("google-id-token").getOrThrow())
     }
 
     @Test
@@ -106,13 +108,13 @@ class AccountLinkingTest {
     fun aRecentSignInIsAskedForByName() {
         assertEquals(
             LinkFailure.NeedsRecentSignIn,
-            FirebaseAuthService.linkFailureOf(
+            FirebaseAccountLinking.linkFailureOf(
                 FirebaseAuthRecentLoginRequiredException("ERROR_REQUIRES_RECENT_LOGIN", "x")
             )
         )
         assertEquals(
             LinkFailure.InUseByAnotherAccount,
-            FirebaseAuthService.linkFailureOf(
+            FirebaseAccountLinking.linkFailureOf(
                 FirebaseAuthUserCollisionException("ERROR_EMAIL_ALREADY_IN_USE", "x")
             )
         )

@@ -2,7 +2,7 @@ package com.coparently.app.data.remote.firebase
 
 /**
  * A way to sign in to the app's own account (MON-24 phase 4, part A): what Settings' "Sign-in
- * methods" lists, links and unlinks through [AccountSignIn].
+ * methods" lists, links and unlinks through [AccountLinking].
  *
  * @property providerId Firebase Auth's provider id for the method, as a user's `providerData`
  *   names it.

@@ -108,6 +108,7 @@ class IosFirebaseAuthEmulatorTest {
     @Test
     fun `a Google account another account holds is not linked`() = AuthEmulator.run("google in use") { firebase ->
         val auth = IosFirebaseAuth(firebase)
+        val linking = IosAccountLinking(firebase, AppleTokens(NoCallables))
         val idToken = googleIdToken()
         GoogleAccessTokens.hold(idToken, "an-access-token")
         assertTrue(auth.signInWithGoogleIdToken(idToken).isSuccess)
@@ -116,11 +117,11 @@ class IosFirebaseAuthEmulatorTest {
         val uid = assertNotNull(auth.getCurrentUid())
 
         GoogleAccessTokens.hold(idToken, "an-access-token")
-        val failure = auth.linkGoogle(idToken).exceptionOrNull()
+        val failure = linking.linkGoogle(idToken).exceptionOrNull()
 
         assertEquals(LinkFailure.InUseByAnotherAccount, assertIs<LinkException>(failure).failure)
         assertEquals(uid, auth.getCurrentUid())
-        assertEquals(setOf(SignInMethod.EMAIL), auth.linkedMethods().first())
+        assertEquals(setOf(SignInMethod.EMAIL), linking.linkedMethods().first())
     }
 
     @Test
@@ -201,6 +202,12 @@ class IosFirebaseAuthEmulatorTest {
     }
 
     private fun newEmail(): String = "iphone-${NSUUID().UUIDString.lowercase()}@example.test"
+
+    /** No callable is reached by linking Google; Apple's unlink alone would call one. */
+    private object NoCallables : CallableFunctions {
+        override suspend fun call(name: String, payload: Map<String, Any>): Any? =
+            error("No callable is expected here: $name")
+    }
 
     private companion object {
         const val PASSWORD = "correct-horse-battery"

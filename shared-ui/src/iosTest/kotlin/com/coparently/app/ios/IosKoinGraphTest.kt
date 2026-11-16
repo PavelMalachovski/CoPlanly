@@ -27,6 +27,7 @@ import com.coparently.app.data.platform.Connectivity
 import com.coparently.app.data.platform.CrashReporter
 import com.coparently.app.data.platform.DeviceRegion
 import com.coparently.app.data.platform.SecurePreferences
+import com.coparently.app.data.remote.firebase.AccountLinking
 import com.coparently.app.data.remote.firebase.AccountSignIn
 import com.coparently.app.data.remote.firebase.AuthSession
 import com.coparently.app.data.remote.firebase.CallableFunctions
@@ -129,6 +130,7 @@ class IosKoinGraphTest {
             JournalDao::class, FamilyDocumentCacheDao::class, KnownFamilyDao::class,
             GoogleCalendarApi::class, BakalariClient::class, BakalariSchoolDirectory::class,
             IosFirebaseAuth::class, SignedInUser::class, AuthSession::class, AccountSignIn::class,
+            AccountLinking::class,
             IosAccountTraces::class, AccountTraces::class, LastSignedInUid::class, AccountConsistency::class,
             FirestorePushQueue::class, PushDevice::class, PushQueue::class, PushRegistration::class,
             AccountDeletion::class, ReminderScheduler::class, RequestClockScheduler::class,
