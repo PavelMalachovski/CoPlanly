@@ -2595,6 +2595,13 @@ and no real receipt. What is left:
       one and another euro account do.
 - [ ] **A Google account's picture** is drawn as its initial on the iPhone (a web address is not
       fetched); a record photo is drawn.
+- [ ] **VoiceOver while scrolling the Family tab.** Turn VoiceOver on (Settings → Accessibility),
+      open the Family tab and scroll it quickly from top to bottom and back, three-finger swipes and
+      flicks alike, while VoiceOver reads the rows. The app must not close. In CI run 11 the tour's
+      app crashed while XCUITest read the accessibility tree during that scroll: the crash is inside
+      Compose Multiplatform 1.9.3 (`AccessibilityElement.accessibilityValue` reading a disposed
+      element), which VoiceOver reads the same way. A crash here goes to the owner with the crash
+      report; it is not ours to work around.
 - **If it fails:** the control's adaptive composable in `presentation/common/` (`AdaptiveSwitch`,
   `AdaptiveSegmented`, `AdaptiveMenu`, `AdaptiveSheet`, `ConfirmationDialog`, `PickerDates`,
   `DatePickerField`, `DesignSystem`) and its iPhone half in `ios/controls/` (`:shared-ui`'s
