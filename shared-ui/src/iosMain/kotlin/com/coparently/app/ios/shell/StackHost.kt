@@ -394,6 +394,10 @@ internal class StackHost(
         )
     }
 
+    /** The route of the screen [controller] shows, for a log line ([swipeLog]). */
+    private fun routeOf(controller: UIViewController): String? =
+        screens.values.firstOrNull { it.viewController === controller }?.entry?.destination?.route
+
     private fun kindOf(entry: NavBackStackEntry): DestinationKind? =
         entry.destination.route?.let { AppDestinationCatalog.kindOf(it) }
 
@@ -415,7 +419,16 @@ internal class StackHost(
             if (showsBar != null) navigationController.setNavigationBarHidden(!showsBar, animated)
             // A back swipe can be let go of: the transition then ends without `didShow`, and with
             // the stacks as they were. Whatever the shared controller did meanwhile is mirrored then.
-            navigationController.transitionCoordinator?.animateAlongsideTransition(null) { context ->
+            val coordinator = navigationController.transitionCoordinator
+            swipeLog(
+                "willShow ${routeOf(willShowViewController)} animated=$animated " +
+                    "coordinator=${coordinator != null} interactive=${coordinator?.isInteractive()}"
+            )
+            coordinator?.animateAlongsideTransition(null) { context ->
+                swipeLog(
+                    "transition ended to ${routeOf(willShowViewController)} " +
+                        "cancelled=${context?.isCancelled()} interactive=${context?.isInteractive()}"
+                )
                 if (context?.isCancelled() == true) transitionCancelled()
             }
         }
@@ -426,6 +439,7 @@ internal class StackHost(
             didShowViewController: UIViewController,
             animated: Boolean
         ) {
+            swipeLog("didShow ${routeOf(didShowViewController)} animated=$animated")
             // The screen shown is seen from now; the rest follows once UIKit has let go of the
             // transition, on the next turn of the main loop.
             visibility.topIds = topIds(navigation, sheet?.navigationOrNull, screens)

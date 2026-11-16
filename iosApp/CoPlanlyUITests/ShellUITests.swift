@@ -208,8 +208,14 @@ final class ShellUITests: XCTestCase {
 
     private func backSwipe() throws {
         try goToExpenses()
+        // Diagnostics: an unchanged count means the swipe never began a pop; one more means UIKit
+        // cancelled it (the app's COPLANLY_SWIPE lines say which condition, or which state).
+        let before = cancelledTransitions()
+        print("COPLANLY_SWIPE test back swipe cancelledTransitions before=\(before)")
         swipeBack(to: 0.85)
-        try require(app.navigationBars["Family"].waitForExistence(timeout: timeout), "The back swipe did not pop Expenses")
+        let popped = app.navigationBars["Family"].waitForExistence(timeout: timeout)
+        print("COPLANLY_SWIPE test back swipe cancelledTransitions after=\(cancelledTransitions()) popped=\(popped)")
+        try require(popped, "The back swipe did not pop Expenses")
         // The shared stack followed: the money row opens Expenses again.
         try openExpenses()
     }
