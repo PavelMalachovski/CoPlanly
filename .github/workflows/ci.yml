@@ -1458,17 +1458,28 @@ jobs:
           # the cache still works within one job, just not across runs.
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
-      # In the foreground and first: it is the build that creates ~/.android/debug.keystore if the
-      # runner has none, and the branch's build below must find that same file, not race to make
-      # its own. Its own wrapper and Gradle version — it is the base commit's build, exactly.
+      # One debug keystore for every APK this job builds, made here when the runner has none, with
+      # AGP's default alias and passwords. Runs 43838187668 and 43856647583 still signed the base
+      # and the branch's APKs with different keys after --no-build-cache.
+      - name: One debug keystore
+        run: |
+          keystore="$HOME/.android/debug.keystore"
+          if [ ! -f "$keystore" ]; then
+            mkdir -p "$HOME/.android"
+            keytool -genkeypair -v -keystore "$keystore" -storetype PKCS12 \
+              -alias androiddebugkey -storepass android -keypass android \
+              -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
+          keytool -list -v -keystore "$keystore" -storepass android -alias androiddebugkey | grep "SHA256:"
+
+      # In the foreground and first. Its own wrapper and Gradle version: it is the base commit's
+      # build, exactly.
       - name: Build the base build (app APK)
         working-directory: upgrade-base
         # The base build's daemon would otherwise keep its 4 GB heap beside this branch's
-        # daemon and the emulator on a 16 GB runner. `--no-build-cache`: a signed APK is a
-        # cacheable output, so a base commit another runner already built (as that run's "new"
-        # APK) came back from the restored cache signed with that runner's debug keystore, and
-        # the signature check failed (run 43838187668). Built here, it is signed with this one's.
-        run: ./gradlew --no-build-cache :app:assembleDebug && ./gradlew --stop
+        # daemon and the emulator on a 16 GB runner. No build cache and no configuration cache:
+        # neither may bring another runner's signed APK or signing configuration.
+        run: ./gradlew --no-build-cache --no-configuration-cache :app:assembleDebug && ./gradlew --stop
 
       # "A co-parent on the previous build", for the Firestore wire format (CLAUDE.md, the rule
       # under item 5). This branch's `app/src/test/resources/wire/current/` is what it writes; the
@@ -1520,12 +1531,11 @@ jobs:
 
       # This branch's app and test APKs, while the AVD restores and the emulator boots; the
       # emulator script's first line waits for it (tools/ci-background-build.sh).
-      # `--no-build-cache` for the same reason as the base build: both APKs must be signed with
-      # this runner's debug keystore, never come back from another runner's cache. The other
-      # jobs keep the cache; only this one compares signatures.
+      # No build or configuration cache, as for the base build: both APKs are signed with the
+      # keystore above. The other jobs keep both caches; only this one compares signatures.
       - name: Start building this branch's APKs in the background
         env:
-          BACKGROUND_BUILD_TASKS: --no-build-cache :app:assembleDebug :app:assembleDebugAndroidTest
+          BACKGROUND_BUILD_TASKS: --no-build-cache --no-configuration-cache :app:assembleDebug :app:assembleDebugAndroidTest
         run: bash tools/ci-background-build.sh start
 
       # The API 30 AVD the `instrumented` job caches, snapshot included — restored only, so the
