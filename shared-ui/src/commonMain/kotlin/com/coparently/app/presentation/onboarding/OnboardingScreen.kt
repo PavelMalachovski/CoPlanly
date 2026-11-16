@@ -156,7 +156,7 @@ fun OnboardingScreen(
     onFinished: () -> Unit,
     onOpenCustodySetup: () -> Unit,
     onOpenPairing: (enterCode: Boolean) -> Unit,
-    onSignedOut: () -> Unit = {},
+    onSignedOut: () -> Unit,
     viewModel: OnboardingViewModel = koinViewModel(),
     scheduleViewModel: CustodySetupViewModel = koinViewModel(),
     newAccountAskViewModel: NewAccountAskViewModel = koinViewModel()

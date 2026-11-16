@@ -13,7 +13,7 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCAction
 import platform.AuthenticationServices.ASAuthorizationAppleIDButton
 import platform.AuthenticationServices.ASAuthorizationAppleIDButtonStyle
-import platform.AuthenticationServices.ASAuthorizationAppleIDButtonType
+import platform.AuthenticationServices.ASAuthorizationAppleIDButtonTypeSignIn
 import platform.Foundation.NSSelectorFromString
 import platform.UIKit.UIControlEventTouchUpInside
 
@@ -58,7 +58,7 @@ internal class TappedAppleIdButton(
     dark: Boolean,
     private val onTap: () -> Unit
 ) : ASAuthorizationAppleIDButton(
-    authorizationButtonType = ASAuthorizationAppleIDButtonType.ASAuthorizationAppleIDButtonTypeSignIn,
+    authorizationButtonType = ASAuthorizationAppleIDButtonTypeSignIn,
     authorizationButtonStyle = if (dark) {
         ASAuthorizationAppleIDButtonStyle.ASAuthorizationAppleIDButtonStyleWhite
     } else {

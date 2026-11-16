@@ -227,8 +227,10 @@ class AuthViewModel(
             credentials.signInWithApple().fold(
                 onSuccess = { result ->
                     analyticsManager.logLogin("apple")
-                    result.displayNameUpdate?.let { name -> seedAppleName(name, result.outcome) }
+                    // The mark first: it runs the account-switch wipe, which must not clear the
+                    // profile row the name is seeded into.
                     markIfNew(result.outcome)
+                    result.displayNameUpdate?.let { name -> seedAppleName(name, result.outcome) }
                     onAuthStateChanged?.invoke()
                     onAuthSuccess?.invoke()
                 },

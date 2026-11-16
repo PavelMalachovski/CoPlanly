@@ -45,12 +45,13 @@
     <string name="onboarding_coparent_found_set">Set up</string>
     <string name="onboarding_coparent_nothing_yet">Nothing has arrived yet. %1$s\u0027s phone sends their details the next time it is online — you can continue now, and whatever they entered will appear later.</string>
 
-    <!-- Asked when Skip would leave something typed on this step unsaved. -->
-
     <!-- Asked once of an account a Google or Apple sign-in just created (MON-24 phase 4, part A). -->
     <string name="new_account_ask_title">Already use CoPlanly?</string>
     <string name="new_account_ask_body">If you signed in another way before, sign in that way, then add this method in Settings.</string>
     <string name="new_account_ask_retry">Sign out and try again</string>
     <string name="new_account_ask_new">This is a new account</string>
     <string name="new_account_ask_retry_failed">The new account could not be removed. Check your connection and try again.</string>
+
+    <!-- Asked when Skip would leave something typed on this step unsaved. -->
+
 </resources>

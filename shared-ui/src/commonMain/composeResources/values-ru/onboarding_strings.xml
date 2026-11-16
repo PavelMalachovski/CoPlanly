@@ -42,12 +42,13 @@
     <string name="onboarding_coparent_found_set">Настроено</string>
     <string name="onboarding_coparent_nothing_yet">Пока ничего не пришло. Данные придут, когда телефон второго родителя (%1$s) будет в сети, — можно продолжать, а всё внесённое появится позже.</string>
 
-    <!-- Asked when Skip would leave something typed on this step unsaved. -->
-
     <!-- Asked once of an account a Google or Apple sign-in just created (MON-24 phase 4, part A). -->
     <string name="new_account_ask_title">Уже пользуетесь CoPlanly?</string>
     <string name="new_account_ask_body">Если раньше вы входили другим способом, войдите так, а затем добавьте этот способ в настройках.</string>
     <string name="new_account_ask_retry">Выйти и попробовать снова</string>
     <string name="new_account_ask_new">Это новый аккаунт</string>
     <string name="new_account_ask_retry_failed">Не удалось удалить новый аккаунт. Проверьте подключение и попробуйте снова.</string>
+
+    <!-- Asked when Skip would leave something typed on this step unsaved. -->
+
 </resources>
