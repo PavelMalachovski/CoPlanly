@@ -30,6 +30,8 @@ import com.coparently.app.presentation.platform.ProvideIosShell
 import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
 import com.coparently.app.presentation.theme.ContrastLevel
+import com.coparently.app.presentation.theme.currentIosContrastLevel
+import com.coparently.app.presentation.theme.iosContrastLevelChanges
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
@@ -169,10 +171,11 @@ internal class NativeShell(
     private var window: UIWindow? = null
 
     /**
-     * The contrast level the tint is drawn at, read each time the tint resolves: the standard level
-     * until the shell follows Increase Contrast.
+     * The contrast level Increase Contrast asks for ([iosContrastLevelChanges]), which the tint reads
+     * each time it resolves.
      */
-    private val contrast: () -> ContrastLevel = { ContrastLevel.STANDARD }
+    private var contrastLevel: ContrastLevel = currentIosContrastLevel()
+    private val contrast: () -> ContrastLevel = { contrastLevel }
 
     private var flow: StackHost? = null
 
@@ -198,6 +201,12 @@ internal class NativeShell(
         scope.launch {
             koin.get<PreferencesRepository>().getDarkThemeFlow().collect { value ->
                 choice.value = value
+                applyAppearance()
+            }
+        }
+        scope.launch {
+            iosContrastLevelChanges.collect { level ->
+                contrastLevel = level
                 applyAppearance()
             }
         }
@@ -327,7 +336,10 @@ internal class NativeShell(
         }
     }
 
-    /** Styles the shell's window, once there is one, for the theme choice and contrast level. */
+    /**
+     * Styles the shell's window, once there is one, for the theme choice and contrast level. Applied
+     * again on a contrast change so the tint, set anew, resolves at the new level.
+     */
     private fun applyAppearance() {
         val shown = window ?: return
         WindowAppearance.apply(shown, choice.value, contrast)
