@@ -22,11 +22,16 @@ class SfSymbolTableTest {
 
     @Test
     fun everyIconInUseHasARowOrIsKeptMaterial() {
-        val used = commonSources().flatMap { text -> ICON_REFERENCE.findAll(text).map { keyOf(it.value) } }.toSet()
+        val used = commonSources()
+            .flatMap { text -> ICON_REFERENCE.findAll(text).map { keyOf(it.value) } }
+            .toSet()
         assertTrue(used.isNotEmpty(), "no icon references found in commonMain")
 
         val missing = used.filterNot { it in SF_SYMBOLS || it in KEPT_MATERIAL }.sorted()
-        assertTrue(missing.isEmpty(), "icons with no SF Symbol row and not kept Material:\n${missing.joinToString("\n")}")
+        assertTrue(
+            missing.isEmpty(),
+            "icons with no SF Symbol row and not kept Material:\n${missing.joinToString("\n")}"
+        )
     }
 
     @Test
@@ -71,14 +76,19 @@ class SfSymbolTableTest {
 
     /** `Icons.Default.X` → `Filled.X`; every other form drops `Icons.`. */
     private fun keyOf(reference: String): String =
-        reference.removePrefix("Icons.").let { if (it.startsWith("Default.")) "Filled." + it.removePrefix("Default.") else it }
+        reference.removePrefix("Icons.").let {
+            if (it.startsWith("Default.")) "Filled." + it.removePrefix("Default.") else it
+        }
 
     private fun moduleFile(path: String): File =
         listOf(File(path), File("shared-ui", path)).firstOrNull { it.exists() }
             ?: error("$path is not under the shared-ui module")
 
     private fun commonSources(): List<String> =
-        moduleFile(SOURCE_ROOT).walkTopDown().filter { it.isFile && it.extension == "kt" }.map { it.readText() }.toList()
+        moduleFile(SOURCE_ROOT).walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
+            .map { it.readText() }
+            .toList()
 
     private fun approvedTable(): File =
         listOf(File("../$APPROVED_TABLE"), File(APPROVED_TABLE)).firstOrNull { it.isFile }
