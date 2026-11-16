@@ -48,7 +48,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -88,6 +87,7 @@ import com.coparently.app.presentation.ai.AiConsentSettingsEntry
 import com.coparently.app.presentation.chat.SendHold
 import com.coparently.app.presentation.common.AdaptiveOptionRow
 import com.coparently.app.presentation.common.AdaptiveSwitch
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.BarLeading
 import com.coparently.app.presentation.common.ConfirmationDialog
@@ -458,7 +458,7 @@ fun SettingsScreen(
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 syncViewModel.performFirestoreSync()
                             }) {
-                                Icon(
+                                AppIcon(
                                     imageVector = Icons.Default.Refresh,
                                     contentDescription = stringResource(Res.string.settings_sync)
                                 )
@@ -915,7 +915,7 @@ fun SettingsScreen(
                             supporting = stringResource(Res.string.privacy_policy_description),
                             onClick = { openUrl.open(policyUrl) },
                             trailing = {
-                                Icon(
+                                AppIcon(
                                     imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -934,7 +934,7 @@ fun SettingsScreen(
                             supporting = stringResource(Res.string.terms_of_service_description),
                             onClick = { openUrl.open(termsUrl) },
                             trailing = {
-                                Icon(
+                                AppIcon(
                                     imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1074,7 +1074,7 @@ private fun DisclosureChevron(expanded: Boolean) {
         animationSpec = tween(Motion.MEDIUM_MS, easing = FastOutSlowInEasing),
         label = "disclosure_chevron"
     )
-    Icon(
+    AppIcon(
         imageVector = Icons.Default.ExpandMore,
         // Named, unlike [Chevron]. A navigation chevron repeats what the row already
         // announces; this one carries the row's *state*, which nothing else says aloud.
@@ -1096,7 +1096,7 @@ private const val HALF_TURN_DEGREES = 180f
 private fun Chevron() {
     // The grouped row draws the one chevron under native controls (Grouped board).
     if (nativeControls() != null) return
-    Icon(
+    AppIcon(
         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
         contentDescription = null,
         tint = MaterialTheme.colorScheme.onSurfaceVariant,

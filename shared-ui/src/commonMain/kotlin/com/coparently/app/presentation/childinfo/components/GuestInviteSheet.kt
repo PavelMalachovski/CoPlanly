@@ -13,7 +13,6 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -27,6 +26,7 @@ import com.coparently.app.domain.guests.GuestAccessDuration
 import com.coparently.app.domain.guests.GuestInviteUri
 import com.coparently.app.presentation.childinfo.GuestInviteState
 import com.coparently.app.presentation.common.AdaptiveSheet
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.InviteCodeText
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SheetHeight
@@ -182,7 +182,7 @@ private fun MintedCode(code: String, grantEndsAtMillis: Long, onShare: ((String)
         onClick = { onShare(GuestInviteUri.build(code)) },
         modifier = Modifier.fillMaxWidth()
     ) {
-        Icon(Icons.Default.Share, contentDescription = null)
+        AppIcon(Icons.Default.Share, contentDescription = null)
         Text(
             text = stringResource(Res.string.guest_invite_share),
             modifier = Modifier.padding(start = Spacing.S)

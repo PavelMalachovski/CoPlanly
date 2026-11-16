@@ -16,7 +16,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,6 +28,7 @@ import com.coparently.app.domain.changerequests.HistoryEntry
 import com.coparently.app.domain.changerequests.RequestOutcome
 import com.coparently.app.domain.changerequests.RequestSubject
 import com.coparently.app.presentation.changerequests.swapDatesText
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.IconSizes
@@ -103,7 +103,7 @@ fun UpdatesCard(
             titleColor = MaterialTheme.colorScheme.primary,
             onClick = onOpenRequestHistory,
             trailing = {
-                Icon(
+                AppIcon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -166,7 +166,7 @@ private fun DiscIcon(container: Color, tint: Color, icon: ImageVector) {
             .background(container, CircleShape),
         contentAlignment = Alignment.Center
     ) {
-        Icon(
+        AppIcon(
             imageVector = icon,
             contentDescription = null,
             tint = tint,

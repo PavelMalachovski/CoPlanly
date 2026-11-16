@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudOff
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -72,7 +71,7 @@ fun ConnectivityBanner(offline: Boolean, modifier: Modifier = Modifier) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.S)
             ) {
-                Icon(
+                AppIcon(
                     imageVector = Icons.Default.CloudOff,
                     contentDescription = null,
                     modifier = Modifier.size(IconSizes.Small)

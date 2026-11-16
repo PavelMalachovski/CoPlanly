@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -16,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.coparently.app.presentation.calendar.MiniMonthModel
 import com.coparently.app.presentation.calendar.components.MiniMonth
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.resources.Res
@@ -38,7 +38,7 @@ internal fun FoldedMonth(model: MiniMonthModel, parentNames: ParentNames, key: S
     var open by rememberSaveable(key) { mutableStateOf(false) }
     Column(modifier = modifier) {
         TextButton(onClick = { open = !open }) {
-            Icon(
+            AppIcon(
                 imageVector = if (open) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                 contentDescription = null,
                 modifier = Modifier.size(IconSizes.Small)

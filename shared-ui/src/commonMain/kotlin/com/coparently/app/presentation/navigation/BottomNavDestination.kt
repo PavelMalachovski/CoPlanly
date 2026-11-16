@@ -12,7 +12,6 @@ import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationRail
@@ -25,6 +24,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.navigation.NavHostController
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.windowWidthDp
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.chat_unread_count_overflow
@@ -285,7 +285,7 @@ private fun TabIcon(
             homeBadgeCount,
             pluralStringResource(Res.plurals.home_requests_badge, homeBadgeCount, homeBadgeCount)
         )
-        else -> Icon(imageVector = icon, contentDescription = null)
+        else -> AppIcon(imageVector = icon, contentDescription = null)
     }
 }
 
@@ -304,6 +304,6 @@ private fun CountBadgedIcon(icon: ImageVector, count: Int, description: String) 
             }
         }
     ) {
-        Icon(imageVector = icon, contentDescription = null)
+        AppIcon(imageVector = icon, contentDescription = null)
     }
 }

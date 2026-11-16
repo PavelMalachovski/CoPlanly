@@ -17,7 +17,6 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -34,6 +33,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.model.PairingInvite
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.InviteCodeText
 import com.coparently.app.presentation.common.dashedRoundedBorder
 import com.coparently.app.presentation.theme.IconSizes
@@ -126,7 +126,7 @@ fun InviteCodeCard(
             ) {
                 InviteCodeText(code = invite.code, color = MaterialTheme.colorScheme.primary)
                 if (onCopy != null) {
-                    Icon(
+                    AppIcon(
                         imageVector = Icons.Default.ContentCopy,
                         contentDescription = stringResource(Res.string.pairing_copy_code),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -174,7 +174,7 @@ fun InviteCodeCard(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.S)
                 ) {
                     Button(onClick = onShare, modifier = Modifier.weight(1f)) {
-                        Icon(
+                        AppIcon(
                             imageVector = Icons.Default.Share,
                             contentDescription = null,
                             modifier = Modifier.size(IconSizes.Small)
@@ -188,7 +188,7 @@ fun InviteCodeCard(
             }
 
             TextButton(onClick = onRegenerate) {
-                Icon(Icons.Default.Refresh, contentDescription = null)
+                AppIcon(Icons.Default.Refresh, contentDescription = null)
                 Text(
                     text = stringResource(Res.string.pairing_new_code),
                     modifier = Modifier.padding(start = Spacing.S)

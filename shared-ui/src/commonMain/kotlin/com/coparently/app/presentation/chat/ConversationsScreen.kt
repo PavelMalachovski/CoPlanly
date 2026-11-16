@@ -19,7 +19,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -41,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.model.Conversation
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.EmptyState
@@ -280,7 +280,7 @@ private fun ConversationList(
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     } else {
-                        Icon(Icons.Default.Add, contentDescription = stringResource(Res.string.chat_new_conversation))
+                        AppIcon(Icons.Default.Add, stringResource(Res.string.chat_new_conversation))
                     }
                 }
             }

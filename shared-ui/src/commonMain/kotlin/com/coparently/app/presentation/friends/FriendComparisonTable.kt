@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
@@ -196,7 +196,7 @@ private fun StackedCell(column: String, cell: Cell, text: String) {
 @Composable
 private fun MarkIcon(cell: Cell) {
     if (cell !is Cell.Mark) return
-    Icon(
+    AppIcon(
         imageVector = if (cell.yes) Icons.Default.Check else Icons.Default.Close,
         contentDescription = null,
         tint = if (cell.yes) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,

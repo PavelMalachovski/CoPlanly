@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -65,7 +64,7 @@ fun BrandHeader(
             ChildAvatarStack(children)
             onSettingsClick?.let { onClick ->
                 IconButton(onClick = onClick) {
-                    Icon(
+                    AppIcon(
                         imageVector = Icons.Default.Settings,
                         contentDescription = stringResource(Res.string.calendar_settings),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant

@@ -6,7 +6,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
@@ -22,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.BarLeading
 import com.coparently.app.presentation.common.LocalBarHost
@@ -60,7 +60,7 @@ fun SwapDaysButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
         modifier = modifier
     ) {
         OutlinedIconButton(onClick = onClick) {
-            Icon(
+            AppIcon(
                 imageVector = Icons.Default.SwapHoriz,
                 contentDescription = label,
                 modifier = Modifier.size(IconSizes.Standard)
@@ -118,7 +118,7 @@ private fun SwapSelectionTopBar(
             // The month between its arrows, which no bar action can hold.
             trailingContent = {
                 IconButton(onClick = onPreviousMonth) {
-                    Icon(
+                    AppIcon(
                         Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                         contentDescription = stringResource(Res.string.day_swap_previous_month)
                     )
@@ -128,7 +128,7 @@ private fun SwapSelectionTopBar(
                     style = MaterialTheme.typography.labelLarge
                 )
                 IconButton(onClick = onNextMonth) {
-                    Icon(
+                    AppIcon(
                         Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = stringResource(Res.string.day_swap_next_month)
                     )

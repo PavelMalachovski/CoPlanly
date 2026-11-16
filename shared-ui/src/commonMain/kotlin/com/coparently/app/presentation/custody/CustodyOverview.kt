@@ -9,11 +9,11 @@ import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.EventRepeat
 import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.coparently.app.domain.custody.SeasonalLayer
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.BannerTone
 import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.SectionGroup
@@ -130,7 +130,7 @@ private fun ChildrenRow(childrenWithOwnSchedule: Int, onClick: () -> Unit) {
 private fun Chevron() {
     // The grouped row draws the one chevron under native controls (Grouped board).
     if (nativeControls() != null) return
-    Icon(
+    AppIcon(
         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
         contentDescription = null,
         tint = MaterialTheme.colorScheme.onSurfaceVariant

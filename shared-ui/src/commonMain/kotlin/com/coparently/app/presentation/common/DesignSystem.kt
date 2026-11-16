@@ -24,7 +24,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -234,7 +233,7 @@ fun SectionRow(
         if (leading != null) {
             leading()
         } else if (icon != null) {
-            Icon(
+            AppIcon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = iconTint,
@@ -252,7 +251,7 @@ fun SectionRow(
         )
         if (!trailingBelow) trailing?.invoke()
         if (native && onClick != null && nativeChevron) {
-            Icon(
+            AppIcon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 // Decorative: the row itself is the button. The tag is for tests only.
                 contentDescription = null,
@@ -426,7 +425,7 @@ fun PillChip(
             )
         }
         if (icon != null) {
-            Icon(
+            AppIcon(
                 imageVector = icon,
                 contentDescription = iconDescription,
                 tint = contentColor,
@@ -542,7 +541,7 @@ fun HeroIcon(icon: ImageVector) {
             .background(MaterialTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center
     ) {
-        Icon(
+        AppIcon(
             imageVector = icon,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onPrimaryContainer,

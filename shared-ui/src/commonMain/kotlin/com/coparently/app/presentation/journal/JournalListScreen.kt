@@ -17,7 +17,6 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -37,6 +36,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.coparently.app.domain.journal.JournalEntry
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.PushedTopBar
@@ -123,7 +123,7 @@ fun JournalListScreen(
         floatingActionButton = {
             if (hasEntries && !inShellBar) {
                 FloatingActionButton(onClick = onNewEntry) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = addLabel)
+                    AppIcon(imageVector = Icons.Default.Add, contentDescription = addLabel)
                 }
             }
         }
@@ -215,7 +215,7 @@ private fun SwipeableJournalRow(entry: JournalEntry, onOpen: () -> Unit, onDelet
                     .padding(horizontal = Spacing.XL),
                 contentAlignment = Alignment.CenterEnd
             ) {
-                Icon(
+                AppIcon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = stringResource(Res.string.journal_delete),
                     tint = MaterialTheme.colorScheme.onError

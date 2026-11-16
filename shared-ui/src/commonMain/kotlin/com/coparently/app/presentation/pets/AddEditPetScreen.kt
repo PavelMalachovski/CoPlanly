@@ -22,7 +22,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -48,6 +47,7 @@ import com.coparently.app.domain.model.PetSpecies
 import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.childinfo.components.DatePickerDialog
 import com.coparently.app.presentation.childinfo.components.MedicationEditor
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.DatePickerField
@@ -316,7 +316,7 @@ fun AddEditPetScreen(
                 androidActions = {
                     if (canDelete) {
                         IconButton(onClick = { showDeleteConfirm = true }) {
-                            Icon(
+                            AppIcon(
                                 imageVector = Icons.Default.Delete,
                                 contentDescription = deleteLabel,
                                 tint = MaterialTheme.colorScheme.error

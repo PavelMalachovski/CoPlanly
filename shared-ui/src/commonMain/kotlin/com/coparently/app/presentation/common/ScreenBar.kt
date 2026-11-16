@@ -10,7 +10,6 @@ import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
@@ -232,10 +231,10 @@ private fun BarLeadingButton(leading: BarLeading) {
     when (leading) {
         BarLeading.None -> Unit
         is BarLeading.Back -> IconButton(onClick = leading.onClick, enabled = leading.enabled) {
-            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = leading.label)
+            AppIcon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = leading.label)
         }
         is BarLeading.Close -> IconButton(onClick = leading.onClick, enabled = leading.enabled) {
-            Icon(imageVector = Icons.Default.Close, contentDescription = leading.label)
+            AppIcon(imageVector = Icons.Default.Close, contentDescription = leading.label)
         }
     }
 }
@@ -284,10 +283,10 @@ private fun BarMenuButton(action: BarAction, menu: List<BarMenuItem>) {
 private fun BarActionIcon(action: BarAction) {
     if (action.dot) {
         BadgedBox(badge = { Badge() }) {
-            Icon(imageVector = action.icon, contentDescription = action.label)
+            AppIcon(imageVector = action.icon, contentDescription = action.label)
         }
     } else {
-        Icon(imageVector = action.icon, contentDescription = action.label)
+        AppIcon(imageVector = action.icon, contentDescription = action.label)
     }
 }
 

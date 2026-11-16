@@ -7,7 +7,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -20,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.intl.Locale
 import com.coparently.app.presentation.ai.AiAssistState
 import com.coparently.app.presentation.ai.AiConsentDialog
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
@@ -74,7 +74,7 @@ fun ReplySuggestionRow(
     val failure = (state as? AiAssistState.Failed)?.message
     ListItem(
         leadingContent = {
-            Icon(
+            AppIcon(
                 imageVector = Icons.Default.AutoAwesome,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,

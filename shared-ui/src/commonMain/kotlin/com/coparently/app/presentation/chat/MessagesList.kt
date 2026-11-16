@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -52,6 +51,7 @@ import com.coparently.app.domain.chat.ChatAttachmentCodec
 import com.coparently.app.domain.chat.ChatScrollPolicy
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.Spacing
@@ -607,7 +607,7 @@ fun MessageItem(
                     )
                 }
                 if (onCardTap != null) {
-                    Icon(
+                    AppIcon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = null,
                         modifier = Modifier
@@ -660,7 +660,7 @@ fun MessageItem(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.XS)
             ) {
-                Icon(
+                AppIcon(
                     imageVector = Icons.Default.Error,
                     contentDescription = stringResource(Res.string.chat_status_error),
                     modifier = Modifier.size(RECEIPT_ICON_SIZE),
@@ -739,7 +739,7 @@ private fun BubbleMeta(
 private fun DeliveryReceipt(message: Message, baseTint: Color, readTint: Color) {
     when (message.status) {
         MessageSendStatus.SENDING -> {
-            Icon(
+            AppIcon(
                 imageVector = Icons.Default.Schedule,
                 contentDescription = stringResource(Res.string.chat_status_sending),
                 modifier = Modifier.size(RECEIPT_ICON_SIZE),
@@ -747,7 +747,7 @@ private fun DeliveryReceipt(message: Message, baseTint: Color, readTint: Color) 
             )
         }
         MessageSendStatus.ERROR -> {
-            Icon(
+            AppIcon(
                 imageVector = Icons.Default.Error,
                 contentDescription = stringResource(Res.string.chat_status_error),
                 modifier = Modifier.size(RECEIPT_ICON_SIZE),
@@ -755,7 +755,7 @@ private fun DeliveryReceipt(message: Message, baseTint: Color, readTint: Color) 
             )
         }
         MessageSendStatus.SENT -> {
-            Icon(
+            AppIcon(
                 imageVector = Icons.Default.Check,
                 contentDescription = stringResource(Res.string.chat_status_sent),
                 modifier = Modifier.size(RECEIPT_ICON_SIZE),
@@ -763,7 +763,7 @@ private fun DeliveryReceipt(message: Message, baseTint: Color, readTint: Color) 
             )
         }
         MessageSendStatus.DELIVERED -> {
-            Icon(
+            AppIcon(
                 imageVector = Icons.Default.DoneAll,
                 contentDescription = stringResource(Res.string.chat_status_delivered),
                 modifier = Modifier.size(RECEIPT_ICON_SIZE),
@@ -771,7 +771,7 @@ private fun DeliveryReceipt(message: Message, baseTint: Color, readTint: Color) 
             )
         }
         MessageSendStatus.READ -> {
-            Icon(
+            AppIcon(
                 imageVector = Icons.Default.DoneAll,
                 contentDescription = stringResource(Res.string.chat_status_read),
                 modifier = Modifier.size(RECEIPT_ICON_SIZE),

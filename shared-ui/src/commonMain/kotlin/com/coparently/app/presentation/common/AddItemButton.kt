@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -30,7 +29,7 @@ import com.coparently.app.presentation.theme.Spacing
 @Composable
 fun AddItemButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     FilledTonalButton(onClick = onClick, modifier = modifier) {
-        Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(IconSizes.Small))
+        AppIcon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(IconSizes.Small))
         Spacer(modifier = Modifier.width(Spacing.S))
         Text(label)
     }

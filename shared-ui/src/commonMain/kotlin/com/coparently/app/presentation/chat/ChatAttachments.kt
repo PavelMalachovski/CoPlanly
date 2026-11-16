@@ -20,7 +20,6 @@ import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -50,6 +49,7 @@ import com.coparently.app.domain.chat.ChatAttachmentCodec
 import com.coparently.app.domain.files.SharedFilePolicy
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.BarMenuItem
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.asString
@@ -165,7 +165,7 @@ fun ChatComposerMenu(
     } else {
         Box(modifier = modifier) {
             IconButton(onClick = { open = true }) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(Res.string.chat_composer_actions))
+                AppIcon(Icons.Default.Add, contentDescription = stringResource(Res.string.chat_composer_actions))
             }
             DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
                 if (filePicker.available) {
@@ -311,7 +311,7 @@ private fun ImageAttachment(attachment: ChatAttachment, file: Path?, onOpen: (()
                 modifier = Modifier.size(THUMBNAIL_SIZE)
             )
         } else {
-            Icon(Icons.Default.Image, contentDescription = attachment.fileName)
+            AppIcon(Icons.Default.Image, contentDescription = attachment.fileName)
         }
     }
 }
@@ -336,7 +336,7 @@ private fun FileAttachment(attachment: ChatAttachment, onOpen: (() -> Unit)?) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
-        Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        AppIcon(Icons.Default.PictureAsPdf, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
         Column {
             Text(
                 attachment.fileName,
@@ -376,7 +376,7 @@ private val THUMBNAIL_SIZE = 180.dp
 private fun ComposerMenuItem(icon: ImageVector, label: String, onClick: () -> Unit) {
     DropdownMenuItem(
         text = { Text(label) },
-        leadingIcon = { Icon(icon, contentDescription = null) },
+        leadingIcon = { AppIcon(icon, contentDescription = null) },
         onClick = onClick
     )
 }

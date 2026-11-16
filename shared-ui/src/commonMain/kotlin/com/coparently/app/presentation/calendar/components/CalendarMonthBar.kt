@@ -19,7 +19,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -36,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.coparently.app.presentation.calendar.CalendarViewMode
 import com.coparently.app.presentation.calendar.SwapDaysButton
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.LayoutConstants
@@ -132,7 +132,7 @@ private fun MonthBarActions(
     )
     onPrevious?.let { onClick ->
         IconButton(onClick = onClick) {
-            Icon(
+            AppIcon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                 contentDescription = stringResource(Res.string.calendar_previous_period),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -141,7 +141,7 @@ private fun MonthBarActions(
     }
     onNext?.let { onClick ->
         IconButton(onClick = onClick) {
-            Icon(
+            AppIcon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = stringResource(Res.string.calendar_next_period),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -151,7 +151,7 @@ private fun MonthBarActions(
     onSwapDays?.let { onClick -> SwapDaysButton(onClick = onClick) }
     onAddEvent?.let { onClick ->
         FilledTonalIconButton(onClick = onClick) {
-            Icon(
+            AppIcon(
                 imageVector = Icons.Default.Add,
                 contentDescription = stringResource(Res.string.calendar_add_event)
             )

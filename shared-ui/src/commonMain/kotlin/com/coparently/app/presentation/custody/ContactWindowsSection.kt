@@ -19,7 +19,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -37,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.presentation.common.AddItemButton
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.components.TimePickerDialog
 import com.coparently.app.presentation.theme.ParentColors
@@ -201,7 +201,7 @@ private fun ContactWindowRow(
             modifier = Modifier.weight(1f)
         )
         IconButton(onClick = onRemove) {
-            Icon(
+            AppIcon(
                 imageVector = Icons.Default.Close,
                 contentDescription = stringResource(Res.string.custody_window_remove)
             )

@@ -16,7 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -154,7 +153,7 @@ fun PhotoStrip(
                 enabled = enabled,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(Icons.Default.AddAPhoto, contentDescription = null)
+                AppIcon(Icons.Default.AddAPhoto, contentDescription = null)
                 Text(text = stringResource(strings.add), modifier = Modifier.padding(start = Spacing.S))
             }
             Text(
@@ -214,7 +213,7 @@ private fun Thumbnail(
                     .padding(Spacing.XS)
                     .size(28.dp)
             ) {
-                Icon(
+                AppIcon(
                     imageVector = Icons.Default.Close,
                     contentDescription = stringResource(strings.remove),
                     modifier = Modifier.size(IconSizes.Inline)
@@ -261,7 +260,7 @@ private fun FullScreenPhoto(
                     .align(Alignment.TopEnd)
                     .padding(Spacing.M)
             ) {
-                Icon(
+                AppIcon(
                     imageVector = Icons.Default.Close,
                     contentDescription = stringResource(strings.close),
                     tint = Color.White

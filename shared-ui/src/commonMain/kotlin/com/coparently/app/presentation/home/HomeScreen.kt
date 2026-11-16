@@ -24,7 +24,6 @@ import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -47,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.expenses.CurrencyBalance
 import com.coparently.app.presentation.changerequests.ChangeRequestViewModel
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.BrandHeader
 import com.coparently.app.presentation.common.FamilySwitcherChip
@@ -572,7 +572,7 @@ private fun StatTile(
         ) {
             if (badge != null) {
                 BadgedBox(badge = { Badge { Text(badge.toString()) } }) {
-                    Icon(
+                    AppIcon(
                         imageVector = icon,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
@@ -580,7 +580,7 @@ private fun StatTile(
                     )
                 }
             } else {
-                Icon(
+                AppIcon(
                     imageVector = icon,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,

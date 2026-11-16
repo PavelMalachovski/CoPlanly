@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -109,7 +108,7 @@ private fun MaterialDateField(
         readOnly = true,
         enabled = false,
         label = { Text(label) },
-        trailingIcon = { Icon(imageVector = Icons.Default.CalendarMonth, contentDescription = null) },
+        trailingIcon = { AppIcon(imageVector = Icons.Default.CalendarMonth, contentDescription = null) },
         colors = OutlinedTextFieldDefaults.colors(
             disabledTextColor = MaterialTheme.colorScheme.onSurface,
             disabledBorderColor = MaterialTheme.colorScheme.outline,

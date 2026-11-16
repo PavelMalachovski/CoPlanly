@@ -24,7 +24,6 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -48,6 +47,7 @@ import com.coparently.app.domain.events.AllDayEvent
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.AdaptiveSheet
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.ParentNames
@@ -318,7 +318,7 @@ private fun PreviewActions(onEdit: () -> Unit, onDelete: (() -> Unit)?) {
                 contentColor = MaterialTheme.colorScheme.error
             )
         ) {
-            Icon(
+            AppIcon(
                 imageVector = Icons.Default.Delete,
                 contentDescription = null,
                 modifier = Modifier.size(IconSizes.Small)
@@ -331,7 +331,7 @@ private fun PreviewActions(onEdit: () -> Unit, onDelete: (() -> Unit)?) {
     }
     val editButton: @Composable (Modifier) -> Unit = { modifier ->
         Button(onClick = onEdit, modifier = modifier) {
-            Icon(
+            AppIcon(
                 imageVector = Icons.Default.Edit,
                 contentDescription = null,
                 modifier = Modifier.size(IconSizes.Small)
@@ -406,7 +406,7 @@ private fun PreviewRow(
     content: @Composable () -> Unit
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
+        AppIcon(
             imageVector = icon,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,

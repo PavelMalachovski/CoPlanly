@@ -13,7 +13,6 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.SegmentedButton
@@ -29,6 +28,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.presentation.calendar.CalendarViewMode
 import com.coparently.app.presentation.common.AdaptiveSegmented
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.BrandHeader
 import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.IconSizes
@@ -129,7 +129,7 @@ private fun HeadingLines(childNames: List<String>) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f, fill = false)
                 )
-                Icon(
+                AppIcon(
                     imageVector = Icons.Default.Favorite,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
@@ -206,11 +206,11 @@ private fun FiltersButton(onClick: () -> Unit, active: Boolean) {
     val description = stringResource(Res.string.calendar_filters_button)
     if (active) {
         FilledTonalIconButton(onClick = onClick) {
-            Icon(Icons.Default.FilterList, contentDescription = description)
+            AppIcon(Icons.Default.FilterList, contentDescription = description)
         }
     } else {
         OutlinedIconButton(onClick = onClick) {
-            Icon(
+            AppIcon(
                 imageVector = Icons.Default.FilterList,
                 contentDescription = description,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant

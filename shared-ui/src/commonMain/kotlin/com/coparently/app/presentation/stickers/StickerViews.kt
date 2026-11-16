@@ -15,7 +15,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -39,6 +38,7 @@ import com.coparently.app.domain.stickers.ParentRoleAnswer
 import com.coparently.app.domain.stickers.Sticker
 import com.coparently.app.domain.stickers.StickerKind
 import com.coparently.app.presentation.common.AdaptiveSheet
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.HeroIcon
 import com.coparently.app.presentation.common.SectionGroup
@@ -339,7 +339,7 @@ fun SectionGroupScope.StickersRow(onOpen: () -> Unit) {
 private fun Chevron() {
     // The grouped row draws the one chevron under native controls (Grouped board).
     if (nativeControls() != null) return
-    Icon(
+    AppIcon(
         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
         contentDescription = null,
         tint = MaterialTheme.colorScheme.onSurfaceVariant,

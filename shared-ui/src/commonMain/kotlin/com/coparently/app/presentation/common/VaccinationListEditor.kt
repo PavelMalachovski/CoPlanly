@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -93,7 +92,7 @@ fun VaccinationListEditor(
                 }
                 if (enabled) {
                     IconButton(onClick = { onRemove(index) }) {
-                        Icon(
+                        AppIcon(
                             imageVector = Icons.Default.Close,
                             contentDescription = stringResource(Res.string.medical_vaccination_remove)
                         )

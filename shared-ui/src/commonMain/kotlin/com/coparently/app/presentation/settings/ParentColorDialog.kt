@@ -20,7 +20,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
@@ -43,6 +42,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.CustomHueRange
 import com.coparently.app.presentation.theme.IconSizes
@@ -209,7 +209,7 @@ internal fun GridSwatch(label: String, swatch: Color, selected: Boolean, onClick
         contentAlignment = Alignment.Center
     ) {
         if (selected) {
-            Icon(
+            AppIcon(
                 imageVector = Icons.Default.Check,
                 contentDescription = null,
                 tint = ParentColors.onFill(swatch),

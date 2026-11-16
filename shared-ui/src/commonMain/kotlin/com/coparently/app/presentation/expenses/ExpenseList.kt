@@ -19,7 +19,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
@@ -52,6 +51,7 @@ import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.files.ViewablePhoto
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.presentation.changerequests.splitSharesText
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.RecordPlaceMark
@@ -308,7 +308,7 @@ fun ExpenseItem(
                         .background(payerTint(payerColor)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
+                    AppIcon(
                         // Per-category, so a list of ten expenses says what the money went on.
                         imageVector = expense.category.iconVector,
                         contentDescription = null,
@@ -460,7 +460,7 @@ private fun SwipeToDeleteRow(
                     .padding(horizontal = Spacing.XL),
                 contentAlignment = Alignment.CenterEnd
             ) {
-                Icon(
+                AppIcon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = stringResource(Res.string.expenses_delete),
                     tint = MaterialTheme.colorScheme.onError

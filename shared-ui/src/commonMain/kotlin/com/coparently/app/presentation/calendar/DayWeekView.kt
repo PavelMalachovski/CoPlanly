@@ -38,7 +38,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -99,6 +98,7 @@ import com.coparently.app.domain.time.durationUntil
 import com.coparently.app.domain.time.minus
 import com.coparently.app.domain.time.plus
 import com.coparently.app.domain.time.wallClockNow
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.displayName
@@ -1336,7 +1336,7 @@ private fun EventChip(
                     MemberInitialDisc(initial = shownMark.initial)
                 }
                 if (event.isPrivate) {
-                    Icon(
+                    AppIcon(
                         imageVector = Icons.Default.Lock,
                         contentDescription = stringResource(Res.string.calendar_event_private),
                         tint = textColor,
@@ -1346,7 +1346,7 @@ private fun EventChip(
                 if (event.pickupConfirmedBy != null) {
                     // pickupConfirmedBy is a slot; it is shown as that parent's name.
                     val confirmedByName = parentNames.labelFor(event.pickupConfirmedBy)
-                    Icon(
+                    AppIcon(
                         imageVector = Icons.Default.CheckCircle,
                         contentDescription = stringResource(
                             Res.string.calendar_event_pickup_confirmed,
@@ -1512,7 +1512,7 @@ private fun OfferDayButton(onClick: () -> Unit) {
         onClick = onClick,
         contentPadding = PaddingValues(horizontal = Spacing.M, vertical = Spacing.XS)
     ) {
-        Icon(
+        AppIcon(
             imageVector = Icons.Default.SwapHoriz,
             contentDescription = null,
             modifier = Modifier.size(IconSizes.Small)

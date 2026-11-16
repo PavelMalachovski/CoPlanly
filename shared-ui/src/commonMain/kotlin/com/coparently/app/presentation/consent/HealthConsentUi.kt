@@ -10,13 +10,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.coparently.app.domain.consent.HealthConsent
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.IconSizes
@@ -84,7 +84,7 @@ fun LockedMedicalSection(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         TextButton(onClick = onAddMedicalDetails, enabled = enabled) {
-            Icon(
+            AppIcon(
                 imageVector = Icons.Default.Add,
                 contentDescription = null,
                 modifier = Modifier.size(IconSizes.Small)

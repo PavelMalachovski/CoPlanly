@@ -19,7 +19,6 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -50,6 +49,7 @@ import com.coparently.app.presentation.calendar.MiniMonthModel
 import com.coparently.app.presentation.common.AdaptiveSheet
 import com.coparently.app.presentation.common.AnswerByField
 import com.coparently.app.presentation.common.AnswerByPickSaver
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.LocalBarHost
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.SectionGroup
@@ -338,7 +338,7 @@ private fun SwapOptions(
                     onNeedRoom()
                 },
                 label = { Text(stringResource(Res.string.day_swap_add_note)) },
-                leadingIcon = { Icon(Icons.Default.EditNote, null, Modifier.size(IconSizes.Small)) }
+                leadingIcon = { AppIcon(Icons.Default.EditNote, null, Modifier.size(IconSizes.Small)) }
             )
         }
         AssistChip(
@@ -355,7 +355,7 @@ private fun SwapOptions(
                     }
                 )
             },
-            leadingIcon = { Icon(Icons.Default.Schedule, null, Modifier.size(IconSizes.Small)) }
+            leadingIcon = { AppIcon(Icons.Default.Schedule, null, Modifier.size(IconSizes.Small)) }
         )
     }
     if (noteOpen || note.isNotEmpty()) {

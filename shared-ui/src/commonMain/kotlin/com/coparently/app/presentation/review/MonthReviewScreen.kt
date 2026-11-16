@@ -22,7 +22,6 @@ import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.SyncAlt
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -41,6 +40,7 @@ import com.coparently.app.domain.review.MonthReview
 import com.coparently.app.domain.review.MonthStatsWire
 import com.coparently.app.presentation.ai.AiAssistState
 import com.coparently.app.presentation.ai.AiConsentDialog
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PushedTopBar
@@ -177,7 +177,7 @@ private fun MonthReviewTopBar(onNavigateUp: () -> Unit) {
 private fun MonthSwitcher(month: YearMonth, canGoForward: Boolean, onPrevious: () -> Unit, onNext: () -> Unit) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = onPrevious) {
-            Icon(
+            AppIcon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                 contentDescription = stringResource(Res.string.month_review_previous)
             )
@@ -191,7 +191,7 @@ private fun MonthSwitcher(month: YearMonth, canGoForward: Boolean, onPrevious: (
                 .semantics { heading() }
         )
         IconButton(onClick = onNext, enabled = canGoForward) {
-            Icon(
+            AppIcon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = stringResource(Res.string.month_review_next)
             )

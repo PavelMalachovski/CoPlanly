@@ -9,7 +9,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -30,6 +29,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import com.coparently.app.domain.chat.MessageReport
 import com.coparently.app.domain.model.Message
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.BarMenuItem
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.UiText
@@ -171,7 +171,7 @@ internal fun ReportableBubble(message: Message, isCurrentUser: Boolean, content:
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 DropdownMenuItem(
                     text = { Text(label) },
-                    leadingIcon = { Icon(Icons.Outlined.Flag, contentDescription = null) },
+                    leadingIcon = { AppIcon(Icons.Outlined.Flag, contentDescription = null) },
                     onClick = {
                         menuOpen = false
                         report(message)
@@ -197,7 +197,7 @@ internal fun ChatOverflowMenu(onOpenSettings: (() -> Unit)?, onBlock: (() -> Uni
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) {
-            Icon(
+            AppIcon(
                 imageVector = Icons.Default.MoreVert,
                 contentDescription = stringResource(Res.string.chat_more_actions)
             )
@@ -206,7 +206,7 @@ internal fun ChatOverflowMenu(onOpenSettings: (() -> Unit)?, onBlock: (() -> Uni
             onOpenSettings?.let { openSettings ->
                 DropdownMenuItem(
                     text = { Text(stringResource(Res.string.nav_settings)) },
-                    leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                    leadingIcon = { AppIcon(Icons.Default.Settings, contentDescription = null) },
                     onClick = {
                         open = false
                         openSettings()
@@ -255,7 +255,7 @@ private fun BlockMenuItem(onClick: () -> Unit) {
             )
         },
         leadingIcon = {
-            Icon(
+            AppIcon(
                 imageVector = Icons.Default.Block,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.error

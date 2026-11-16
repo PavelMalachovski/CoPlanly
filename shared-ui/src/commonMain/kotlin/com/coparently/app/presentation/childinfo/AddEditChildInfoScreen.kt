@@ -15,6 +15,7 @@ import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.*
 import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.childinfo.components.*
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.DatePickerField
@@ -310,7 +311,7 @@ fun AddEditChildInfoScreen(
                     // several it is a row nobody can remove. Same anatomy as the pet editor's.
                     if (canDelete) {
                         IconButton(onClick = { showDeleteConfirm = true }) {
-                            Icon(
+                            AppIcon(
                                 imageVector = Icons.Default.Delete,
                                 contentDescription = deleteLabel,
                                 tint = MaterialTheme.colorScheme.error
