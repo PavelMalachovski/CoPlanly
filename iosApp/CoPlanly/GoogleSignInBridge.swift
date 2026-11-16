@@ -122,6 +122,26 @@ final class GoogleSignInBridge: NSObject, GoogleIdTokenSource {
         }
     }
 
+    /// Ends Google Sign-In's session and revokes the grant it holds (`GIDSignIn.disconnect`), as Android's
+    /// `revokeAccess()` does when Google Calendar is disconnected or the app signs out; the shared code
+    /// has cleared the stored tokens first and revokes the server's grant itself. Best effort: with no
+    /// account held there is nothing to revoke, and a failure goes to the log only.
+    func disconnect() {
+        guard clientId != nil else { return }
+        let end = {
+            GIDSignIn.sharedInstance.disconnect { error in
+                if let error {
+                    NSLog("Google Sign-In's disconnect failed: %@", String(describing: error))
+                }
+            }
+        }
+        if Thread.isMainThread {
+            end()
+        } else {
+            DispatchQueue.main.async { end() }
+        }
+    }
+
     /// The URL Google's sheet returns through, handed on by the scene (`SceneDelegate`).
     @MainActor
     static func handle(_ url: URL) -> Bool {

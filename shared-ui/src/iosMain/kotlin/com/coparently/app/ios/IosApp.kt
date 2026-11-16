@@ -278,8 +278,15 @@ internal fun iosAppModule(google: GoogleIdTokenSource): Module = module {
     single<SignInProviderSession> { google.session() }
 }
 
-/** [google]'s own session, as the data layer ends it. */
-internal fun GoogleIdTokenSource.session(): SignInProviderSession = SignInProviderSession { signOut() }
+/** [google]'s own session, as the data layer ends it, and its grant, as Google Calendar revokes it. */
+internal fun GoogleIdTokenSource.session(): SignInProviderSession {
+    val google = this
+    return object : SignInProviderSession {
+        override fun signOut() = google.signOut()
+
+        override fun disconnect() = google.disconnect()
+    }
+}
 
 /**
  * A guard that lets one caller through and refuses every later one, claimed before the guarded work

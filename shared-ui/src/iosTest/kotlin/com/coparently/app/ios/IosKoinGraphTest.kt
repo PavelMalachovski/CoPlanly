@@ -160,6 +160,8 @@ class IosKoinGraphTest {
 
             override fun signOut() = Unit
 
+            override fun disconnect() = Unit
+
             override val calendarAvailable: Boolean = false
 
             override fun requestCalendarAccess(

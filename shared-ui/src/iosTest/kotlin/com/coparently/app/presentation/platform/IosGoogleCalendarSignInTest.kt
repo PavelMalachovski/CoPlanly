@@ -9,6 +9,7 @@ import com.coparently.app.data.remote.firebase.CallableFunctions
 import com.coparently.app.data.remote.firebase.GoogleOAuthFunctions
 import com.coparently.app.data.remote.google.GoogleCalendarAccess
 import com.coparently.app.data.remote.google.GoogleCalendarConnection
+import com.coparently.app.data.remote.google.GoogleGrantRevocation
 import com.coparently.app.data.remote.google.GoogleSignInFailure
 import com.coparently.app.data.remote.google.IosGoogleCalendarAccount
 import com.coparently.app.data.session.SignInProviderSession
@@ -31,7 +32,12 @@ class IosGoogleCalendarSignInTest {
     private val preferences = SealedSecurePreferences(MemoryStore())
     private val server = FakeFunctions()
     private val account =
-        IosGoogleCalendarAccount(preferences, GoogleOAuthFunctions(server), SignInProviderSession.None)
+        IosGoogleCalendarAccount(
+            preferences,
+            GoogleOAuthFunctions(server),
+            GoogleGrantRevocation { },
+            SignInProviderSession.None
+        )
     private val answers = mutableListOf<GoogleSignInAnswer>()
     private val record: (GoogleSignInAnswer) -> Unit = { answers += it }
 
@@ -120,6 +126,8 @@ class IosGoogleCalendarSignInTest {
 
     private class FakeSheet(
         override val available: Boolean = true,
+        override fun disconnect() = Unit
+
         override val calendarAvailable: Boolean = true,
         private val answer: SheetAnswer = SheetAnswer(),
     ) : GoogleIdTokenSource {

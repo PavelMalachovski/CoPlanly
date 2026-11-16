@@ -49,6 +49,15 @@ interface GoogleIdTokenSource {
     fun signOut()
 
     /**
+     * Ends Google Sign-In's session and revokes the grant it holds (`GIDSignIn.disconnect`), as
+     * Android's `revokeAccess()` does, when Google Calendar is disconnected or the app signs out
+     * (`IosGoogleCalendarAccount`, after the local store is cleared). Best effort: does nothing when
+     * Google Sign-In holds no account (the server-side grant is revoked through Google's revoke
+     * endpoint beside it), and never fails.
+     */
+    fun disconnect()
+
+    /**
      * Whether Google's sheet can also connect Google Calendar: [available], and the app's
      * `Info.plist` names the web client Google issues the server's authorization code for
      * (`GIDServerClientID`, the build setting `COPLANLY_GOOGLE_WEB_CLIENT_ID`). Blank in CI, so

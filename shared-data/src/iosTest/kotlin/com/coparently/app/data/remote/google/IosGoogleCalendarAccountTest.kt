@@ -7,6 +7,7 @@ import com.coparently.app.data.remote.firebase.GoogleOAuthFunctions
 import com.coparently.app.data.remote.firebase.RecordingCallableFunctions
 import com.coparently.app.data.session.SignInProviderSession
 import kotlinx.coroutines.test.runTest
+import kotlinx.io.IOException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -22,15 +23,28 @@ class IosGoogleCalendarAccountTest {
 
     private val preferences = SealedSecurePreferences(MemoryTextStore())
     private val functions = RecordingCallableFunctions()
-    private var sessionEnded = 0
 
-    /** What the store held when Google's session was ended: the order item 23 asks for. */
-    private var accessTokenWhenSessionEnded: String? = "unset"
-    private val session = SignInProviderSession {
-        sessionEnded++
-        accessTokenWhenSessionEnded = preferences.getAccessToken()
+    /**
+     * What reached the network side, in order, each with what the store held for Google then: the
+     * order item 23 asks for (the local clear first).
+     */
+    private val events = mutableListOf<String>()
+    private var revokeFailure: Exception? = null
+    private val revocation = GoogleGrantRevocation { token ->
+        events += "revoke $token; stored refresh ${preferences.getRefreshToken()}"
+        revokeFailure?.let { throw it }
     }
-    private val account = IosGoogleCalendarAccount(preferences, GoogleOAuthFunctions(functions), session) { NOW }
+    private val session = object : SignInProviderSession {
+        override fun signOut() {
+            events += "session sign-out"
+        }
+
+        override fun disconnect() {
+            events += "session disconnect; stored access ${preferences.getAccessToken()}"
+        }
+    }
+    private val account =
+        IosGoogleCalendarAccount(preferences, GoogleOAuthFunctions(functions), revocation, session) { NOW }
 
     @Test
     fun connectionReflectsStoredTokens() {
@@ -165,23 +179,76 @@ class IosGoogleCalendarAccountTest {
         assertNull(preferences.getUserEmail())
         assertEquals(GoogleCalendarConnection.NOT_CONNECTED, account.connection())
         assertEquals("kept", preferences.getString(OTHER_KEY))
-        // The local credential went first, then Google's session (item 23).
-        assertEquals(1, sessionEnded)
-        assertNull(accessTokenWhenSessionEnded)
     }
 
     @Test
-    fun signOutClearsTheStoreBeforeGooglesSession() = runTest {
+    fun disconnectRevokesAfterClearing() = runTest {
+        preferences.putAccessToken("access")
+        preferences.putRefreshToken("refresh")
+        preferences.putUserEmail("alice@example.com")
+
+        account.disconnect()
+
+        // The refresh token read before the clear is revoked, after the clear (item 23), then Google
+        // Sign-In's own session and grant end.
+        assertEquals(
+            listOf("revoke refresh; stored refresh null", "session disconnect; stored access null"),
+            events
+        )
+    }
+
+    @Test
+    fun revokeFailureStillDisconnects() = runTest {
+        preferences.putRefreshToken("refresh")
+        preferences.putUserEmail("alice@example.com")
+        revokeFailure = IOException("offline")
+
+        account.disconnect()
+
+        assertNull(preferences.getRefreshToken())
+        assertNull(preferences.getUserEmail())
+        assertEquals(GoogleCalendarConnection.NOT_CONNECTED, account.connection())
+        assertEquals(
+            listOf("revoke refresh; stored refresh null", "session disconnect; stored access null"),
+            events
+        )
+    }
+
+    @Test
+    fun anAccessTokenAloneIsRevokedWhenThereIsNoRefreshToken() = runTest {
+        preferences.putAccessToken("access")
+        preferences.putTokenExpiry(NOW + HOUR)
+
+        account.disconnect()
+
+        assertEquals(
+            listOf("revoke access; stored refresh null", "session disconnect; stored access null"),
+            events
+        )
+    }
+
+    @Test
+    fun nothingStoredRevokesNothingAndStillEndsGooglesSession() = runTest {
+        account.disconnect()
+
+        assertEquals(listOf("session disconnect; stored access null"), events)
+    }
+
+    @Test
+    fun signOutClearsTheStoreBeforeRevoking() = runTest {
         preferences.putRefreshToken("refresh")
         preferences.putAccessToken("access")
         preferences.putString(OTHER_KEY, "gone")
+        revokeFailure = IOException("offline")
 
         assertEquals(Pair(true, null), account.signOut())
 
         assertNull(preferences.getRefreshToken())
         assertNull(preferences.getString(OTHER_KEY))
-        assertEquals(1, sessionEnded)
-        assertNull(accessTokenWhenSessionEnded)
+        assertEquals(
+            listOf("revoke refresh; stored refresh null", "session disconnect; stored access null"),
+            events
+        )
     }
 
     @Test

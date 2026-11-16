@@ -59,6 +59,7 @@ import com.coparently.app.data.remote.google.CredentialProvider
 import com.coparently.app.data.remote.google.GoogleCalendarAccount
 import com.coparently.app.data.remote.google.GoogleCalendarApi
 import com.coparently.app.data.remote.google.GoogleCalendarConnectionSource
+import com.coparently.app.data.remote.google.GoogleRevokeEndpoint
 import com.coparently.app.data.remote.google.IosGoogleCalendarAccount
 import com.coparently.app.data.requests.RequestClockNotices
 import com.coparently.app.data.school.SchoolImportScheduler
@@ -210,7 +211,16 @@ actual val platformDataModule: Module = module {
     }
     // Google Calendar (phase 4, part A, Task 7): one object under the three types, its tokens in the
     // sealed store and renewed through the token function; Google's sheet is the shell's.
-    single { IosGoogleCalendarAccount(preferences = get(), oauth = get(), providerSession = get()) }
+    // The grant is revoked on disconnect and sign-out through Google's revoke endpoint, as Android's
+    // `revokeAccess()` ends it, so the next connect carries a refresh token.
+    single {
+        IosGoogleCalendarAccount(
+            preferences = get(),
+            oauth = get(),
+            revocation = GoogleRevokeEndpoint(httpClient(HttpTimeouts.GOOGLE_CALENDAR)),
+            providerSession = get(),
+        )
+    }
     single<GoogleCalendarAccount> { get<IosGoogleCalendarAccount>() }
     single<GoogleCalendarConnectionSource> { get<IosGoogleCalendarAccount>() }
     single<CredentialProvider> { get<IosGoogleCalendarAccount>() }

@@ -24,21 +24,34 @@ import kotlin.time.Clock
  *   reads as one to reconnect; any other failure keeps them for a later try ([accessToken]).
  * - A 401 from Google renews the token once and calls again; a second 401, or a 403 for the
  *   Calendar permission, ends the connection ([withCredential]).
- * - Signing out and disconnecting clear the local store **before** Google Sign-In's session ends
- *   (CLAUDE.md "Things that are easy to get wrong" item 23).
+ * - Signing out and disconnecting clear the local store **before** anything goes over the network
+ *   (CLAUDE.md "Things that are easy to get wrong" item 23), then revoke the grant, best effort, as
+ *   Android's `revokeAccess()` does ([endGrant]).
+ *
+ * **Why the revoke matters for the next connection.** Android asks Google for a refresh token on
+ * every connect (`requestServerAuthCode(webClientId, forceCodeForRefreshToken = true)`). Google
+ * Sign-In for iOS 9.2.0 has no such option: it issues the server's code as Google decides, and
+ * Google gives a refresh token at a grant's first consent and normally not again while the grant
+ * stands. So a disconnect here revokes the grant through Google's revoke endpoint ([revocation]),
+ * with the refresh token read before the local clear, and ends Google Sign-In's session and grant
+ * ([SignInProviderSession.disconnect]); the next connect is then a first consent again and carries
+ * a refresh token. A grant this phone cannot revoke (offline, or ended elsewhere without a token
+ * here) can still answer the next connect without one: the connection then lasts as long as its
+ * access token and reads as one to reconnect, which the device checklist checks on a phone.
  *
  * What is read with the token stays on the phone (CLAUDE.md Legal item 10): `CalendarSyncRepository`
  * stores every import as a private event, on the iPhone as on Android.
  *
- * @property providerSession Google Sign-In's own session ([SignInProviderSession]), ended after the
- *   local store is cleared. Google Sign-In for iOS revokes only the grant of the account it holds,
- *   which is the sign-in sheet's, not the one the server redeemed, so nothing is revoked here: the
- *   refresh token is forgotten on the phone, and a parent revokes the grant in their Google account.
+ * @property revocation Google's revoke endpoint ([GoogleRevokeEndpoint]); a failure is logged and
+ *   never stops a sign-out or a disconnect.
+ * @property providerSession Google Sign-In's own session ([SignInProviderSession]), ended and its
+ *   grant revoked after the local store is cleared.
  * @property now The clock, in epoch millis; a test's own.
  */
 class IosGoogleCalendarAccount(
     private val preferences: SecurePreferences,
     private val oauth: GoogleOAuthFunctions,
+    private val revocation: GoogleGrantRevocation,
     private val providerSession: SignInProviderSession,
     private val now: () -> Long = { Clock.System.now().toEpochMilliseconds() },
 ) : GoogleCalendarAccount, CredentialProvider {
@@ -108,17 +121,42 @@ class IosGoogleCalendarAccount(
         }
     }
 
-    /** Signs the whole app out of Google here: the local store first, then Google's session. */
+    /** Signs the whole app out of Google here: the local store first, then the grant ([endGrant]). */
     override suspend fun signOut(): Pair<Boolean, String?> {
+        val token = grantToken()
         preferences.clear()
-        providerSession.signOut()
+        endGrant(token)
         return Pair(true, null)
     }
 
-    /** Disconnects Google Calendar alone: Google's own keys first, then Google's session. */
+    /** Disconnects Google Calendar alone: Google's own keys first, then the grant ([endGrant]). */
     override suspend fun disconnect() {
+        val token = grantToken()
         preferences.removeGoogleCalendarAccount()
-        providerSession.signOut()
+        endGrant(token)
+    }
+
+    /** The token whose grant a disconnect revokes: the refresh token, else the access token, read before the clear. */
+    private fun grantToken(): String? =
+        preferences.getRefreshToken()?.takeIf { it.isNotEmpty() }
+            ?: preferences.getAccessToken()?.takeIf { it.isNotEmpty() }
+
+    /**
+     * Revokes [token]'s grant and ends Google Sign-In's session and grant, best effort: the
+     * credential is already gone from this phone, so a failure is logged and the caller goes on.
+     */
+    @Suppress("TooGenericExceptionCaught") // a revoke's failure must never stop a sign-out
+    private suspend fun endGrant(token: String?) {
+        if (token != null) {
+            try {
+                revocation.revoke(token)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logger.e(TAG, "Google revoke failed after the local credential was cleared", e)
+            }
+        }
+        providerSession.disconnect()
     }
 
     override suspend fun getCredential(forceRefresh: Boolean): GoogleCredential =
