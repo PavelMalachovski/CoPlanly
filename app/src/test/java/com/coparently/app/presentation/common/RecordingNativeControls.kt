@@ -118,6 +118,12 @@ class RecordingNativeControls : NativeControls {
     /** The latest sheet's dismiss, for a test that swipes it down. */
     var lastSheetDismiss: (() -> Unit)? = null
 
+    /** Whether each "Sign in with Apple" button drawn could be tapped, in the order of composition. */
+    val appleButtons = mutableListOf<Boolean>()
+
+    /** The latest "Sign in with Apple" button's callback, for a test that taps it. */
+    var lastAppleClick: (() -> Unit)? = null
+
     /** The colour each native control was told it sits on, in the order of composition. */
     val backgrounds = mutableListOf<Color>()
 
@@ -252,7 +258,18 @@ class RecordingNativeControls : NativeControls {
         Box(Modifier.testTag(SHEET_TAG)) { content() }
     }
 
+    @Composable
+    override fun AppleSignInButton(onClick: () -> Unit, enabled: Boolean, background: Color, modifier: Modifier) {
+        backgrounds += background
+        appleButtons += enabled
+        lastAppleClick = onClick
+        Box(modifier.testTag(APPLE_BUTTON_TAG))
+    }
+
     companion object {
+        /** The test tag of a "Sign in with Apple" button this fake drew. */
+        const val APPLE_BUTTON_TAG = "native-apple-button"
+
         /** The test tag of the box a sheet's content is drawn in by this fake. */
         const val SHEET_TAG = "native-sheet"
 

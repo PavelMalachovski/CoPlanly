@@ -4,6 +4,7 @@ import com.coparently.app.resources.Res
 import com.coparently.app.resources.auth_error_email_already_in_use
 import com.coparently.app.resources.auth_error_empty_email
 import com.coparently.app.resources.auth_error_empty_fields
+import com.coparently.app.resources.auth_error_exists_with_different_method
 import com.coparently.app.resources.auth_error_interrupted
 import com.coparently.app.resources.auth_error_invalid_credentials
 import com.coparently.app.resources.auth_error_invalid_email
@@ -43,5 +44,6 @@ fun AuthError.messageRes(): StringResource = when (this) {
     AuthError.Interrupted -> Res.string.auth_error_interrupted
     AuthError.NoGoogleAccount -> Res.string.auth_error_no_google_account
     AuthError.NoSavedPassword -> Res.string.auth_error_no_saved_password
+    AuthError.ExistsWithDifferentMethod -> Res.string.auth_error_exists_with_different_method
     AuthError.Unknown -> Res.string.auth_error_unknown
 }

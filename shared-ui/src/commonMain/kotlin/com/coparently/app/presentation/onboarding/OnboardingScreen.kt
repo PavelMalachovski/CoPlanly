@@ -144,17 +144,42 @@ import org.koin.compose.viewmodel.koinViewModel
  *   proposed with its deadline
  * @param onOpenPairing Opens the existing pairing screen — on code entry when the argument is
  *   true, on this account's own code otherwise
+ * @param onSignedOut Leaves for the sign-in screen once "Already use CoPlanly?" has deleted the
+ *   new account and signed out ([NewAccountQuestion])
  * @param viewModel Wizard state and mutations
  * @param scheduleViewModel The schedule step's form and its never-proposing save
+ * @param newAccountAskViewModel Whether to ask "Already use CoPlanly?" first, and its answers
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
+@Suppress("LongParameterList") // the wizard's three hand-offs, the sign-out's, and its three ViewModels
 fun OnboardingScreen(
     onFinished: () -> Unit,
     onOpenCustodySetup: () -> Unit,
     onOpenPairing: (enterCode: Boolean) -> Unit,
+    onSignedOut: () -> Unit = {},
     viewModel: OnboardingViewModel = koinViewModel(),
-    scheduleViewModel: CustodySetupViewModel = koinViewModel()
+    scheduleViewModel: CustodySetupViewModel = koinViewModel(),
+    newAccountAskViewModel: NewAccountAskViewModel = koinViewModel()
+) {
+    // An account a Google or Apple sign-in just created is asked once, before the first step,
+    // whether the parent already uses CoPlanly another way (MON-24 phase 4, part A).
+    val askFirst by newAccountAskViewModel.ask.collectAsState()
+    if (askFirst) {
+        NewAccountQuestion(viewModel = newAccountAskViewModel, onSignedOut = onSignedOut)
+    } else {
+        OnboardingWizard(onFinished, onOpenCustodySetup, onOpenPairing, viewModel, scheduleViewModel)
+    }
+}
+
+/** The wizard's four steps, once nothing is asked before them ([OnboardingScreen]). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun OnboardingWizard(
+    onFinished: () -> Unit,
+    onOpenCustodySetup: () -> Unit,
+    onOpenPairing: (enterCode: Boolean) -> Unit,
+    viewModel: OnboardingViewModel,
+    scheduleViewModel: CustodySetupViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val schedule by scheduleViewModel.uiState.collectAsState()

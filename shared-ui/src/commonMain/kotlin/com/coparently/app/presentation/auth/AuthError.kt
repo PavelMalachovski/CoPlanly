@@ -52,6 +52,14 @@ sealed interface AuthError {
     /** No password has been saved for this app yet. Distinct from [NoGoogleAccount]. */
     data object NoSavedPassword : AuthError
 
+    /**
+     * The address already signs in to an account another way (Firebase's
+     * `account-exists-with-different-credential`): nothing was signed in. The message is generic on
+     * purpose: it never names the method the address uses, because no lookup is made
+     * (MON-24 phase 4, spec §3.8 call 2).
+     */
+    data object ExistsWithDifferentMethod : AuthError
+
     /** Anything the mapping does not recognise. */
     data object Unknown : AuthError
 

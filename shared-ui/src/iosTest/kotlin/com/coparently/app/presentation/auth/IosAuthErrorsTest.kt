@@ -5,6 +5,8 @@ package com.coparently.app.presentation.auth
 import cocoapods.FirebaseAuth.FIRAuthErrorDomain
 import com.coparently.app.data.remote.firebase.IosFirebaseAuth
 import com.coparently.app.ios.TestFirebase
+import com.coparently.app.presentation.platform.AppleSignInCancelledException
+import com.coparently.app.presentation.platform.SignsInAnotherWayException
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.FirebaseNetworkException
 import dev.gitlive.firebase.FirebaseTooManyRequestsException
@@ -61,10 +63,16 @@ class IosAuthErrorsTest {
     @Test
     fun `an address already taken is said so`() {
         assertEquals(AuthError.EmailAlreadyInUse, IosAuthErrors.fromEmailPassword(gitLiveFailure(EMAIL_ALREADY_IN_USE)))
+    }
+
+    @Test
+    fun `an address that signs in another way gets the generic sentence`() {
         assertEquals(
-            AuthError.EmailAlreadyInUse,
-            IosAuthErrors.fromEmailPassword(gitLiveFailure(ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL))
+            AuthError.ExistsWithDifferentMethod,
+            IosAuthErrors.fromGoogle(gitLiveFailure(ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL))
         )
+        assertEquals(AuthError.ExistsWithDifferentMethod, IosAuthErrors.fromApple(SignsInAnotherWayException()))
+        assertNull(IosAuthErrors.fromApple(AppleSignInCancelledException()))
     }
 
     @Test

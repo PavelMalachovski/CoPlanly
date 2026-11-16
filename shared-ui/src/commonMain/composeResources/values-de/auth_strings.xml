@@ -36,4 +36,8 @@
     <string name="auth_error_unknown">Etwas ist schiefgelaufen. Bitte versuche es erneut.</string>
     <string name="auth_error_empty_email">Gib deine E-Mail-Adresse ein, um das Passwort zurückzusetzen</string>
     <string name="auth_reset_email_sent">Wir haben einen Link zum Zurücksetzen des Passworts an %1$s gesendet. Prüfe dein Postfach.</string>
+
+    <!-- Sign in with Apple (MON-24 phase 4, part A). -->
+    <string name="auth_sign_in_with_apple">Mit Apple anmelden</string>
+    <string name="auth_error_exists_with_different_method">Mit dieser E-Mail-Adresse meldest du dich schon anders an. Melde dich an wie bisher und füge diese Methode dann in den Einstellungen hinzu.</string>
 </resources>

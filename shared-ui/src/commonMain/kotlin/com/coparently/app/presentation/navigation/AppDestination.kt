@@ -316,6 +316,7 @@ internal fun appDestinations(
         route = Screen.Onboarding.route,
         transitions = DestinationTransitions.FADE
     ) {
+        val shellDecides = shellDrawsBars()
         OnboardingScreen(
             onFinished = {
                 navController.navigate(Screen.Calendar.route) {
@@ -335,6 +336,18 @@ internal fun appDestinations(
                         Screen.Pairing.routeWithCode(null)
                     }
                 )
+            },
+            // "Already use CoPlanly?" answered "Sign out and try again": the new account is
+            // deleted and the session ended. As after a deletion in Settings, the iPhone's shell
+            // is asked again and finds nobody signed in; Android goes to sign-in itself.
+            onSignedOut = {
+                if (shellDecides) {
+                    authStateViewModel.refreshAuthState()
+                } else {
+                    navController.navigate(Screen.Auth.route) {
+                        popUpTo(Screen.Onboarding.route) { inclusive = true }
+                    }
+                }
             }
         )
     },

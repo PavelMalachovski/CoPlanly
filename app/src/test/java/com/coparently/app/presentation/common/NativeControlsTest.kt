@@ -25,6 +25,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.coparently.app.presentation.auth.AppleSignInButton
 import com.coparently.app.presentation.components.TimePickerDialog
 import com.coparently.app.testing.RobolectricTestApplication
 import kotlinx.datetime.LocalDate
@@ -76,6 +77,34 @@ class NativeControlsTest {
         assertEquals(listOf(RecordingNativeControls.SwitchCall(checked = true, enabled = true)), fake.switches)
         rule.onNodeWithTag(RecordingNativeControls.SWITCH_TAG).assertExists()
         rule.onNode(materialSwitch).assertDoesNotExist()
+    }
+
+    @Test
+    fun `without native controls Apple's button is drawn in Compose`() {
+        rule.setContent {
+            AppleSignInButton(onClick = {}, enabled = true, background = Color.White)
+        }
+
+        rule.onNodeWithText("Sign in with Apple").assertIsDisplayed()
+        assertTrue(fake.appleButtons.isEmpty())
+    }
+
+    @Test
+    fun `with native controls Apple's button is the system's, told what it sits on`() {
+        var taps = 0
+        rule.setContent {
+            CompositionLocalProvider(LocalNativeControls provides fake) {
+                AppleSignInButton(onClick = { taps++ }, enabled = false, background = Color.White)
+            }
+        }
+        rule.waitForIdle()
+
+        assertEquals(listOf(false), fake.appleButtons)
+        assertEquals(listOf(Color.White), fake.backgrounds)
+        rule.onNodeWithTag(RecordingNativeControls.APPLE_BUTTON_TAG).assertExists()
+        rule.onNodeWithText("Sign in with Apple").assertDoesNotExist()
+        fake.lastAppleClick?.invoke()
+        assertEquals(1, taps)
     }
 
     @Test

@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
+import com.coparently.app.presentation.platform.LocalAppBuildValues
 import com.coparently.app.presentation.platform.LocalCredentialSignIn
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.IconSizes
@@ -95,6 +96,7 @@ fun AuthScreen(
     // Credential Manager hosts its UI on an Activity and refuses an application context, so the
     // shell holds the Activity and hands the screen its sheets (`CredentialSignIn`, MON-24 phase 2).
     val credentials = LocalCredentialSignIn.current
+    val buildValues = LocalAppBuildValues.current
 
     // Gradient background
     Box(
@@ -372,6 +374,22 @@ fun AuthScreen(
                     }
 
                     Spacer(modifier = Modifier.height(Spacing.S))
+
+                    // Sign in with Apple, above Google (boards 1 and 4): only where the shell runs
+                    // Apple's sign-in and the build offers it (the `APPLE_SIGN_IN` flag), since a
+                    // button that could do nothing is design item 8.
+                    if (credentials.appleAvailable && buildValues.appleSignIn) {
+                        AppleSignInButton(
+                            onClick = {
+                                coroutineScope.launch { viewModel.signInWithApple(credentials) }
+                            },
+                            enabled = !uiState.isLoading,
+                            background = CardDefaults.cardColors().containerColor,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(dims.buttonHeight)
+                        )
+                    }
 
                     // Google Sign-In Button — only where the phone has the credential sheets (the
                     // iPhone has no sign-in yet), as a button that could do nothing is design item 8.

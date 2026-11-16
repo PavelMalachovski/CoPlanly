@@ -46,6 +46,8 @@ import com.coparently.app.presentation.home.MonthSpendDependencies
 import com.coparently.app.presentation.home.PutOffAsksViewModel
 import com.coparently.app.presentation.journal.JournalEditorViewModel
 import com.coparently.app.presentation.journal.JournalListViewModel
+import com.coparently.app.presentation.onboarding.NewAccountAsk
+import com.coparently.app.presentation.onboarding.NewAccountAskViewModel
 import com.coparently.app.presentation.onboarding.OnboardingViewModel
 import com.coparently.app.presentation.pairing.CustodyConflictViewModel
 import com.coparently.app.presentation.pairing.PairingViewModel
@@ -233,10 +235,15 @@ val pairingUiModule: Module = module {
 /**
  * Onboarding (MON-24 phase 2, Task 10): the four-step wizard — the link and what it brought back,
  * the notification question, the profile with the country guessed from the phone's own region, and
- * the custody step's state beside the schedule editor [custodyUiModule] holds.
+ * the custody step's state beside the schedule editor [custodyUiModule] holds. Since MON-24 phase 4,
+ * part A, also "Already use CoPlanly?", asked once of an account a Google or Apple sign-in created:
+ * its per-uid mark ([NewAccountAsk], which the sign-in writes too) and its answers, which delete the
+ * new account through `AccountDeletion` before `AuthSession` ends the session.
  */
 val onboardingUiModule: Module = module {
     viewModelOf(::OnboardingViewModel)
+    factoryOf(::NewAccountAsk)
+    viewModelOf(::NewAccountAskViewModel)
 }
 
 /**

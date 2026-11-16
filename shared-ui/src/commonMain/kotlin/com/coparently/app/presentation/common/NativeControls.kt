@@ -19,6 +19,7 @@ import kotlinx.datetime.LocalTime
  * One `@Composable` member per control. A new control adds a member here, its iPhone half in
  * `IosNativeControls` and its recording in the tests' `RecordingNativeControls`.
  */
+@Suppress("TooManyFunctions") // one member per control the shell draws as the phone's own
 interface NativeControls {
 
     /**
@@ -255,6 +256,21 @@ interface NativeControls {
      */
     @Composable
     fun Sheet(height: SheetHeight, undimmed: Boolean, onDismiss: () -> Unit, content: @Composable () -> Unit)
+
+    /**
+     * The "Sign in with Apple" button (MON-24 phase 4, part A, boards 1 and 4): on the iPhone the
+     * system's `ASAuthorizationAppleIDButton`, in place, black on a light [background] and white on
+     * a dark one, with Apple's own wording in the phone's language. It fills the size [modifier]
+     * gives it. Only the parent's tap calls [onClick]; while not [enabled] it ignores taps.
+     *
+     * @param onClick Called when the parent taps the button
+     * @param enabled Whether the button can be tapped now
+     * @param background The colour of what the button sits on, as for [Switch], which also chooses
+     *   its style
+     * @param modifier Modifier applied to the button, which sets its size
+     */
+    @Composable
+    fun AppleSignInButton(onClick: () -> Unit, enabled: Boolean, background: Color, modifier: Modifier)
 }
 
 /**

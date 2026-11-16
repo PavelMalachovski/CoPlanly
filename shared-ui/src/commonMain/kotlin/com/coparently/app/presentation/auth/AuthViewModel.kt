@@ -7,6 +7,9 @@ import com.coparently.app.data.platform.CrashReporter
 import com.coparently.app.data.platform.logLogin
 import com.coparently.app.data.platform.logSignUp
 import com.coparently.app.data.remote.firebase.AccountSignIn
+import com.coparently.app.data.remote.firebase.SignInOutcome
+import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.presentation.onboarding.NewAccountAsk
 import com.coparently.app.presentation.platform.CredentialSignIn
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,12 +30,19 @@ import kotlinx.coroutines.launch
  * `AndroidAuthErrors`), and the events and reports through [Analytics] and [CrashReporter]. The
  * ordering rules are unchanged: the save prompt before `onSuccess`, the `finally` that clears
  * [AuthUiState.isLoading], cancellations rethrown.
+ *
+ * Since MON-24 phase 4, part A, Apple is a fifth way in ([signInWithApple]), and a Google or Apple
+ * sign-in that Firebase reports created the account marks it through [NewAccountAsk], so onboarding
+ * asks once whether the parent already uses CoPlanly another way. An e-mail account made through
+ * "Create account" was made on purpose and is never marked (spec §3.8 call 4).
  */
 class AuthViewModel(
     private val firebaseAuthService: AccountSignIn,
     private val authErrors: AuthErrors,
     private val analyticsManager: Analytics,
-    private val crashlyticsManager: CrashReporter
+    private val crashlyticsManager: CrashReporter,
+    private val newAccountAsk: NewAccountAsk,
+    private val userRepository: UserRepository
 ) : ViewModel() {
 
     /** Invoked after any successful authentication so the host can refresh its auth state. */
@@ -180,15 +190,49 @@ class AuthViewModel(
             credentials.googleIdToken().fold(
                 onSuccess = { idToken ->
                     firebaseAuthService.signInWithGoogleIdToken(idToken).fold(
-                        onSuccess = {
+                        onSuccess = { outcome ->
                             analyticsManager.logLogin("google")
+                            markIfNew(outcome)
                             onAuthStateChanged?.invoke()
                             onAuthSuccess?.invoke()
                         },
-                        onFailure = { error -> reportCredentialFailure(error, "firebase_google_auth") }
+                        onFailure = { error ->
+                            reportCredentialFailure(error, "firebase_google_auth", authErrors::fromGoogle)
+                        }
                     )
                 },
-                onFailure = { error -> reportCredentialFailure(error, "google_sign_in") }
+                onFailure = { error -> reportCredentialFailure(error, "google_sign_in", authErrors::fromGoogle) }
+            )
+        } finally {
+            _uiState.update { it.copy(isLoading = false) }
+        }
+    }
+
+    /**
+     * Runs Apple's sign-in (the shell's: the system's sheet on the iPhone, Firebase's web flow on
+     * Android) and signs in to Firebase with it, as [signInWithGoogle] does with Google's, with the
+     * same `finally` for the same reason.
+     *
+     * Apple shares the parent's name only at the first authorisation, and the shell sets it on the
+     * account only after the sign-in has returned, when the session may already have written a
+     * profile without it; so a name Apple shared is seeded into the profile here ([seedAppleName]),
+     * never over a name the profile already holds. A sheet the parent closed is no error; an address
+     * that already signs in another way is [AuthError.ExistsWithDifferentMethod].
+     *
+     * @param credentials The shell's credential sheets, to host Apple's UI
+     */
+    suspend fun signInWithApple(credentials: CredentialSignIn) {
+        _uiState.update { it.copy(isLoading = true, error = null) }
+        try {
+            credentials.signInWithApple().fold(
+                onSuccess = { result ->
+                    analyticsManager.logLogin("apple")
+                    result.displayNameUpdate?.let { name -> seedAppleName(name, result.outcome) }
+                    markIfNew(result.outcome)
+                    onAuthStateChanged?.invoke()
+                    onAuthSuccess?.invoke()
+                },
+                onFailure = { error -> reportCredentialFailure(error, "apple_sign_in", authErrors::fromApple) }
             )
         } finally {
             _uiState.update { it.copy(isLoading = false) }
@@ -270,9 +314,56 @@ class AuthViewModel(
         _uiState.update { it.copy(error = authErrors.fromEmailPassword(error)) }
     }
 
-    private fun reportCredentialFailure(error: Throwable, action: String) {
+    /**
+     * Records that the account a provider's sign-in just created is new, so onboarding asks "Already
+     * use CoPlanly?" once ([NewAccountAsk]). A failure to record it never fails the sign-in: the
+     * question is a net, not a gate.
+     */
+    private suspend fun markIfNew(outcome: SignInOutcome) {
+        if (!outcome.isNewUser) return
+        try {
+            val uid = userRepository.getCurrentUserId() ?: return
+            newAccountAsk.pending(uid)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (
+            @Suppress("TooGenericExceptionCaught") e: Exception
+        ) {
+            crashlyticsManager.recordWithContext(e, mapOf("action" to "new_account_mark"))
+        }
+    }
+
+    /**
+     * Makes sure the [name] Apple shared reaches the profile, which the session may have written
+     * before the shell set it on the account.
+     *
+     * For a new account the profile is ensured again, as the session does at every sign-in
+     * (`UserRepository.ensureProfile`), now that the account carries the name; an existing account
+     * is not, so its stored name is not re-derived here. Either way the name is written only into a
+     * profile whose name is still blank, so it never replaces one the parent already has. A failure
+     * never fails the sign-in: onboarding's Profile step asks for a missing name.
+     */
+    private suspend fun seedAppleName(name: String, outcome: SignInOutcome) {
+        try {
+            if (outcome.isNewUser) userRepository.ensureProfile()
+            val user = userRepository.getCurrentUser() ?: return
+            if (user.name.isBlank()) userRepository.updateUser(user.copy(name = name))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (
+            @Suppress("TooGenericExceptionCaught") e: Exception
+        ) {
+            crashlyticsManager.recordWithContext(e, mapOf("action" to "apple_name_seed"))
+        }
+    }
+
+    /**
+     * Reports a failure of a provider's sign-in, worded through [map] ([AuthErrors.fromGoogle] or
+     * [AuthErrors.fromApple]).
+     */
+    private fun reportCredentialFailure(error: Throwable, action: String, map: (Throwable) -> AuthError?) {
         rethrowIfCancellation(error)
-        val mapped = authErrors.fromGoogle(error)
+        val mapped = map(error)
         // A null mapping means the user dismissed the sheet. That is a decision, not a fault, and
         // recording it would bury real failures under a stream of cancellations.
         if (mapped != null) {
