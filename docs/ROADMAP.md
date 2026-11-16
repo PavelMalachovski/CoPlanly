@@ -3122,8 +3122,9 @@ drew. What it built, task by task:
   wordmark keeps Onest.
 - **One icon entry point** (Task 4): every shared icon through `AppIcon`, Material's own `Icon` on
   Android; `AppIconGuardTest` refuses a direct call in `commonMain`.
-- **SF Symbols** (Task 5): `SF_SYMBOLS`, 117 rows from the approved table, rasterised inside Compose
-  with the Material vector as the fallback; twelve icons keep Material, each with its reason.
+- **SF Symbols** (Task 5): `SF_SYMBOLS`, 117 symbols (120 mapped rows of the approved table's 132;
+  `Default` and `Filled` share a key), rasterised inside Compose in the regular weight only (ruling),
+  with the Material vector as the fallback; 12 keep Material, each with its reason.
 - **Dynamic Type** (Task 6): already followed by Compose Multiplatform 1.9.3 (`fontScale` from the
   content size category, at most 1.8); ruling: kept, with no mapping of ours on top.
 - **The tour in dark, Increase Contrast and large text** (Task 7): `testTourAppearance`, the seven

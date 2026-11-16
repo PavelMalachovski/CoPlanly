@@ -152,6 +152,7 @@ second store or a per-screen read would let the two disagree.
 - **Weight and size.** A symbol is drawn at the call site's size (from `IconSizes`), with the
   symbol weight that matches the surrounding text (regular by default, semibold in emphasised
   rows). The builder picks the exact mapping from text weight to symbol weight and writes it down.
+  *Built: regular only (every call site draws `FontWeight.Normal`), ruling 16 Nov 2026.*
 - **Mirroring.** `AutoMirrored` icons map to symbols that mirror in right-to-left layouts, or to
   the `.forward`/`.backward` variants. No right-to-left locale ships today; the rule is still kept.
 - **SF Pro.**

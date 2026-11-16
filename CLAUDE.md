@@ -151,12 +151,13 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    Onest Bold on both. **Every icon is drawn through `AppIcon`** (`common/AppIcon.kt`, an `expect`
    with material3 `Icon`'s parameters; on Android exactly that `Icon` call): `AppIconGuardTest`
    refuses Material's `Icon` called or imported in `commonMain`. On the iPhone `AppIcon` looks the
-   vector's `ImageVector.name` up in `SF_SYMBOLS` (`common/SfSymbolTable.kt`, 117 rows copied from
-   the owner-approved `docs/superpowers/plans/2026-11-16-iphone-phase-3d-sf-symbols.json`) and draws
-   that SF Symbol rasterised inside Compose, in the call site's tint, size and semantics, never a
+   vector's `ImageVector.name` up in `SF_SYMBOLS` (`common/SfSymbolTable.kt`: 117 symbols, 120
+   mapped rows of the 132 in the owner-approved
+   `docs/superpowers/plans/2026-11-16-iphone-phase-3d-sf-symbols.json`, where `Default` and `Filled`
+   share a key; 12 keep Material) and draws that SF Symbol rasterised inside Compose, in the call site's tint, size and semantics, never a
    native view; an icon with no row, or whose symbol the running iOS cannot load, draws its
    Material vector, never another symbol. **A new icon gets a row in the approved table and
-   `SF_SYMBOLS`, or a keep-Material reason in the table's KDoc** (twelve today: Gavel, Balance,
+   `SF_SYMBOLS`, or a keep-Material reason in the table's KDoc** (12 keep Material today: Gavel, Balance,
    DoneAll and the rest have no faithful symbol); `SfSymbolTableTest` fails on an icon in use with
    neither, and on a table that drifts from the JSON. **The window follows the app's theme choice**
    (`ios/shell/WindowAppearance.kt`): Settings' System, Dark or Light sets the window's
@@ -1303,14 +1304,16 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   emulators", `require_tests`) with the write gate: `IosWriteGateTest` writes every kind of shared
   record through the iPhone data layer and `tools/ios/check-ios-writes.js` reads each back from the
   Firestore emulator and compares its keys and types with what Android writes. A step then fails the
-  job if any emulator test skipped itself or the write gate did not report that it ran. **Last comes
+  job if any emulator test skipped itself or the write gate did not report that it ran. **Then comes
   the tour**, on a family of its own (`ShellUITests.testTour`: a screenshot per destination it
   reaches and a reason for each it skips, artifact `ios-tour`, with the `tour-crashed` marker;
   `continue-on-error` and a 50-minute step limit, and only a crash or a failed launch fails the job,
   at its end, through the `tour-crashed` marker `simulator.sh tour` writes for testTour's own two
   failure texts; a timeout or a failed seed is a notice). It runs after the write gate so a slow run
   loses the tour, never the gate, and on every run, not by request as part B's spec §8 asked,
-  because the owner check reads the branch's own `ios-tour` artifact (ROADMAP MON-24).
+  because the owner check reads the branch's own `ios-tour` artifact (ROADMAP MON-24). The
+  appearance tour (`testTourAppearance`, part D) follows it as the job's last step, under the same
+  rules.
   Its timeout is 240 minutes, for a cold Firebase pods build (77 minutes once), the walk, the
   emulator tests and the tour. It restores the
   pods' cache `shared-ios` saves and never saves it; it gets no secret, and CI never has a
@@ -1917,7 +1920,8 @@ shell alone, so Android reads a null and behaves as before:
 - **`StartOnce`** refuses a second `IosApp.start`.
 - **`StackHost`** ends a disposed stack's back-stack entries one second after their screens
   (`ENTRIES_END_AFTER_MS`), so a sign-out does not end an entry UIKit is still drawing.
-- **The iPhone tour** is `ShellUITests.testTour`, the `ios-app` job's last step, after the write gate, on a
+- **The iPhone tour** is `ShellUITests.testTour`, an `ios-app` step after the write gate (only part D's
+  appearance tour comes after it), on a
   family seeded with `tools/ios/seed-shell-family.js --tour`. It saves a screenshot per route it
   reaches (artifact `ios-tour`) and records each route it cannot reach in `tour.txt` with the
   reason, as the Android UI tour does. Only a crash or a failed launch fails the job (the
@@ -1975,8 +1979,8 @@ the rules):
   to `AppProviders(darkTheme = …)`, as `MainActivity` does) and `iosContrastLevelChanges`, and
   applies both again on every change; presented controllers inherit the window's style.
 - **`AppIcon.ios.kt`** (`presentation/common/`) draws a symbol through `SfSymbolPainter` in
-  `SfSymbolBitmaps.kt`: `UIImage.systemImageNamed` at the box's size and weight (semibold from
-  SemiBold up, else regular), rendered to a PNG and decoded by Skia, kept in an 8 MB LRU, tinted by
+  `SfSymbolBitmaps.kt`: `UIImage.systemImageNamed` at the box's size, always in the regular weight
+  (`AppIcon` passes `FontWeight.Normal`; ruling of 16 November 2026), rendered to a PNG and decoded by Skia, kept in an 8 MB LRU, tinted by
   Material's colour-filter rule; with no bitmap at draw time it draws the Material vector.
   `AutoMirrored` icons are not mirrored right to left (no such language ships).
 - **`testTourAppearance`** (`ShellUITests`, run by `simulator.sh tour-appearance`, its own step of

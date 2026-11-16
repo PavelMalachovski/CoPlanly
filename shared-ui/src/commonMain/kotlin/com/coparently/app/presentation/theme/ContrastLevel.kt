@@ -59,9 +59,9 @@ internal fun colorSchemeFor(darkTheme: Boolean, contrast: ContrastLevel): ColorS
  * with the app open, and does not recreate the activity.
  *
  * On Android (`ContrastLevel.android.kt`): [ContrastLevel.STANDARD] before Android 14, otherwise
- * the system's step. On the iPhone [ContrastLevel.STANDARD] for now: iOS has one "Increase
- * Contrast" switch rather than Material's three steps, and which step it means is decided with the
- * iPhone app (phase 3).
+ * the system's step. On the iPhone (`ContrastLevel.ios.kt`): [ContrastLevel.MEDIUM] while "Increase
+ * Contrast" is on, else [ContrastLevel.STANDARD]; iOS has one switch rather than Material's three
+ * steps, and it means the medium one (owner, 16 November 2026).
  *
  * @return The system's contrast level
  */
