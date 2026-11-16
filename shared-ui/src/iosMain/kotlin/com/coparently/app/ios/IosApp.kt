@@ -3,6 +3,7 @@ package com.coparently.app.ios
 import com.coparently.app.data.chat.ChatMirror
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.platform.logger
+import com.coparently.app.data.remote.firebase.AppleTokens
 import com.coparently.app.data.remote.firebase.PushDestination
 import com.coparently.app.data.session.SessionProfileSynchronizer
 import com.coparently.app.data.session.SignInProviderSession
@@ -22,6 +23,8 @@ import com.coparently.app.presentation.navigation.PendingDestinationOpen
 import com.coparently.app.presentation.navigation.PendingInviteCodes
 import com.coparently.app.presentation.platform.AppBuildValues
 import com.coparently.app.presentation.platform.CredentialSignIn
+import dev.gitlive.firebase.Firebase
+import dev.gitlive.firebase.auth.auth
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -99,10 +102,13 @@ object IosApp {
      * @param google Google's sign-in sheet, which the app's Swift side runs (`GoogleSignInBridge`);
      *   the sign-in screen offers it only where it is available ([IosCredentialSignIn]), and its
      *   session ends with ours ([SignInProviderSession]).
+     * @param apple Apple's sign-in sheet, which the app's Swift side runs (`AppleSignInBridge`); the
+     *   sign-in screen and the sign-in methods offer it only while the bundle's `CoplanlyAppleSignIn`
+     *   flag is on ([IosCredentialSignIn.appleAvailable]).
      * @throws IllegalStateException when called a second time.
      */
     @Throws(Throwable::class)
-    fun start(config: IosAppConfig, google: GoogleIdTokenSource) {
+    fun start(config: IosAppConfig, google: GoogleIdTokenSource, apple: AppleIdSource) {
         started.claim()
         reportUncaughtExceptions()
         IosFirebase.configure(config)
@@ -113,7 +119,13 @@ object IosApp {
         }.koin
         startSession(koin)
         this.koin = koin
-        credentialSignIn = IosCredentialSignIn(google)
+        val appleSignIn = bundleAppleSignIn()
+        credentialSignIn = IosCredentialSignIn(
+            google = google,
+            apple = apple,
+            appleSignIn = appleSignIn,
+            appleAccount = GitLiveAppleAccount(Firebase.auth, koin.get<AppleTokens>()),
+        )
         buildValues = AppBuildValues(
             versionName = config.versionName,
             privacyPolicyUrl = config.privacyPolicyUrl,
@@ -122,7 +134,7 @@ object IosApp {
             pairingWebLink = PAIRING_WEB_LINK,
             // The EduPage import is not offered on the iPhone yet (as `platformUiModule` binds it).
             edupageImport = false,
-            appleSignIn = bundleAppleSignIn(),
+            appleSignIn = appleSignIn,
         )
     }
 

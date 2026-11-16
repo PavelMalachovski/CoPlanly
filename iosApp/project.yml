@@ -152,9 +152,17 @@ targets:
         # bundled GoogleService-Info.plist when there is one. Set it only on your own Mac; never commit
         # a value.
         COPLANLY_GOOGLE_URL_SCHEME: ""
+        # Sign in with Apple (MON-24 phase 4, part A): the `CoplanlyAppleSignIn` Info.plist key the
+        # shared code reads (`AppleSignInFlag.kt`), on in Debug and off in Release until the owner
+        # turns it on, as Android's `APPLE_SIGN_IN` build flag. The sheet also needs the
+        # `com.apple.developer.applesignin` entitlement (CoPlanly.entitlements), which a device build
+        # signs with the team's profile; a simulator build signs it locally.
       configs:
         Debug:
           ONLY_ACTIVE_ARCH: YES
+          COPLANLY_APPLE_SIGN_IN: "YES"
+        Release:
+          COPLANLY_APPLE_SIGN_IN: "NO"
     scheme:
       testTargets:
         - CoPlanlyUITests

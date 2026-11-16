@@ -108,16 +108,19 @@ class IosAccountLinking(
     private inline fun <T> attempt(call: () -> T): Result<T> =
         runCatching(call).onFailure { if (it is CancellationException) throw it }
 
-    private companion object {
-        const val TAG = "IosAccountLinking"
+    companion object {
+        private const val TAG = "IosAccountLinking"
 
         // Firebase Auth's `AuthErrorCode` values in the iOS SDK 11.8.0, which GitLive copies as text
         // into `FirebaseAuthException.code` (see `IosAuthErrors`).
-        const val EMAIL_ALREADY_IN_USE = 17007L
-        const val REQUIRES_RECENT_LOGIN = 17014L
-        const val CREDENTIAL_ALREADY_IN_USE = 17025L
+        private const val EMAIL_ALREADY_IN_USE = 17007L
+        private const val REQUIRES_RECENT_LOGIN = 17014L
+        private const val CREDENTIAL_ALREADY_IN_USE = 17025L
 
-        /** The [LinkFailure] a failed link or unlink [e] stands for, by Firebase's error code. */
+        /**
+         * The [LinkFailure] a failed link or unlink [e] stands for, by Firebase's error code; also
+         * how the iPhone's Apple link (`IosCredentialSignIn.linkApple`, in `:shared-ui`) words one.
+         */
         fun linkFailureOf(e: Throwable): LinkFailure = when (codeOf(e).toLongOrNull()) {
             CREDENTIAL_ALREADY_IN_USE, EMAIL_ALREADY_IN_USE -> LinkFailure.InUseByAnotherAccount
             REQUIRES_RECENT_LOGIN -> LinkFailure.NeedsRecentSignIn
@@ -125,7 +128,7 @@ class IosAccountLinking(
         }
 
         /** Firebase's error code for [e], or its class name when it is not Firebase Auth's: what is logged. */
-        fun codeOf(e: Throwable): String =
+        private fun codeOf(e: Throwable): String =
             (e as? FirebaseAuthException)?.code ?: e::class.simpleName.orEmpty()
     }
 }
