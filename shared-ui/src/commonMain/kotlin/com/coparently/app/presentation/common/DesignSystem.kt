@@ -17,8 +17,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -32,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -78,12 +82,14 @@ fun GroupLabel(
     text: String,
     modifier: Modifier = Modifier
 ) {
+    // Under native controls a grouped list's header: small, grey, 20 dp in (the Grouped board).
+    val native = nativeControls() != null
     Text(
         text = text.toUpperCase(Locale.current),
-        style = MaterialTheme.typography.labelMediumEmphasized,
-        color = MaterialTheme.colorScheme.primary,
+        style = if (native) MaterialTheme.typography.bodySmall else MaterialTheme.typography.labelMediumEmphasized,
+        color = if (native) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
         modifier = modifier
-            .padding(start = Spacing.XS, end = Spacing.XS, bottom = Spacing.S)
+            .padding(start = if (native) 20.dp else Spacing.XS, end = Spacing.XS, bottom = Spacing.S)
             // A heading, so TalkBack can move from group to group instead of row by row, read in
             // the case it was written: a screen reader may spell an all-caps word out letter by
             // letter (docs/AUDIT-2026-10-design.md D-17).
@@ -137,10 +143,19 @@ interface SectionGroupScope {
 private class SectionGroupScopeImpl : SectionGroupScope {
     @Composable
     override fun Divider() {
-        HorizontalDivider(
-            thickness = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-        )
+        if (nativeControls() != null) {
+            // Grouped list: a hairline inset 16 dp from the start, in the border's colour.
+            HorizontalDivider(
+                modifier = Modifier.padding(start = 16.dp).testTag(DIVIDER_TAG),
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
+        } else {
+            HorizontalDivider(
+                thickness = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+            )
+        }
     }
 }
 
@@ -171,6 +186,19 @@ private class SectionGroupScopeImpl : SectionGroupScope {
  *   pill — which at 150 % squeezed the title and supporting line into a column one or two words
  *   wide. Still one trailing control; only where it sits changes. Leave it off for a switch or a
  *   chevron, which are narrow and belong at the row's end.
+ * @param onToggle For a row whose [trailing] control is a switch: what flipping it does. Used only
+ *   under native controls ([nativeControls]), where the whole row flips the switch, as a grouped
+ *   list's switch row does on the iPhone. Ignored where Material draws the row (Android), so the
+ *   row's semantics and its look stay as they were; and ignored when [onClick] is given.
+ * @param toggled The switch's current state, for [onToggle]: under native controls the row then
+ *   exposes it as a toggleable switch (on or off to VoiceOver) rather than a bare button. Null
+ *   keeps the plain click.
+ *
+ * @param nativeChevron Whether a clickable row draws the native chevron; false for a row whose own
+ *   trailing control is the mark (an expand arrow carrying state). Ignored without native controls.
+ *
+ * Under native controls a row with [onClick] ends in a chevron after [trailing] and is at least
+ * 50 dp high (the Grouped board); Android draws neither.
  */
 @Composable
 @Suppress("LongParameterList") // one row anatomy, expressed as one parameter list
@@ -186,14 +214,19 @@ fun SectionRow(
     onClick: (() -> Unit)? = null,
     leading: @Composable (() -> Unit)? = null,
     trailing: @Composable (() -> Unit)? = null,
-    stackTrailingAtLargeFont: Boolean = false
+    stackTrailingAtLargeFont: Boolean = false,
+    onToggle: (() -> Unit)? = null,
+    toggled: Boolean? = null,
+    nativeChevron: Boolean = true
 ) {
     val trailingBelow = stackTrailingAtLargeFont && stacksAtLargeFont()
+    val native = nativeControls() != null
+    val rowToggle = onToggle.takeIf { onClick == null && native }
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
-            .defaultMinSize(minHeight = 56.dp)
+            .sectionRowClicks(onClick, rowToggle, toggled)
+            .defaultMinSize(minHeight = if (native) 50.dp else 56.dp)
             .padding(horizontal = Spacing.L, vertical = Spacing.L),
         horizontalArrangement = Arrangement.spacedBy(Spacing.M),
         verticalAlignment = Alignment.CenterVertically
@@ -208,39 +241,102 @@ fun SectionRow(
                 modifier = Modifier.size(IconSizes.Standard)
             )
         }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = titleColor
-            )
-            if (supporting != null) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(5.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (supportingIcon != null) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(supportingIcon)
-                        )
-                    }
-                    Text(
-                        text = supporting,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = supportingColor
-                    )
-                }
-            }
-            if (trailingBelow && trailing != null) {
-                Box(modifier = Modifier.padding(top = Spacing.S)) { trailing() }
-            }
-        }
+        SectionRowText(
+            title = title,
+            titleColor = titleColor,
+            supporting = supporting,
+            supportingColor = supportingColor,
+            supportingIcon = supportingIcon,
+            below = trailing.takeIf { trailingBelow },
+            modifier = Modifier.weight(1f)
+        )
         if (!trailingBelow) trailing?.invoke()
+        if (native && onClick != null && nativeChevron) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                // Decorative: the row itself is the button. The tag is for tests only.
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(13.dp).testTag(CHEVRON_TAG)
+            )
+        }
     }
 }
+
+/** The click a [SectionRow] answers: its own [onClick], else the row-wide switch toggle. */
+private fun Modifier.sectionRowClicks(
+    onClick: (() -> Unit)?,
+    rowToggle: (() -> Unit)?,
+    toggled: Boolean?
+): Modifier = this
+    .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
+    .then(
+        when {
+            rowToggle == null -> Modifier
+            toggled == null -> Modifier.clickable(role = Role.Switch, onClick = rowToggle)
+            else -> Modifier.toggleable(
+                value = toggled,
+                role = Role.Switch,
+                onValueChange = { rowToggle() }
+            )
+        }
+    )
+
+/** A [SectionRow]'s title, its supporting line and, at large font, its trailing control below. */
+@Composable
+@Suppress("LongParameterList") // the row's own text parameters, passed through
+private fun SectionRowText(
+    title: String,
+    titleColor: Color,
+    supporting: String?,
+    supportingColor: Color,
+    supportingIcon: Color?,
+    below: @Composable (() -> Unit)?,
+    modifier: Modifier
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge,
+            color = titleColor
+        )
+        if (supporting != null) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (supportingIcon != null) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(supportingIcon)
+                    )
+                }
+                Text(
+                    text = supporting,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = supportingColor
+                )
+            }
+        }
+        if (below != null) {
+            Box(modifier = Modifier.padding(top = Spacing.S)) { below() }
+        }
+    }
+}
+
+/**
+ * Test tag of the chevron a clickable [SectionRow] draws under native controls. Public because the
+ * app's Robolectric tests look it up across the module boundary.
+ */
+const val CHEVRON_TAG = "chevron"
+
+/**
+ * Test tag of the inset divider a [SectionGroup] draws under native controls. Public because the
+ * app's Robolectric tests look it up across the module boundary.
+ */
+const val DIVIDER_TAG = "group-divider"
 
 /**
  * A small pill-shaped chip — the refresh's replacement for unlabelled icon actions.

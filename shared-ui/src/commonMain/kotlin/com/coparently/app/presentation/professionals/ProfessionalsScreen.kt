@@ -43,6 +43,7 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.nativeControls
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
@@ -293,6 +294,8 @@ private fun RedeemSection(
 
 @Composable
 private fun Chevron() {
+    // The grouped row draws the one chevron under native controls (Grouped board).
+    if (nativeControls() != null) return
     Icon(
         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
         contentDescription = null,

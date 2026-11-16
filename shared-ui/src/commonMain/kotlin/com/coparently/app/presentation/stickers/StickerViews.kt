@@ -38,11 +38,14 @@ import com.coparently.app.domain.stickers.ParentRole
 import com.coparently.app.domain.stickers.ParentRoleAnswer
 import com.coparently.app.domain.stickers.Sticker
 import com.coparently.app.domain.stickers.StickerKind
+import com.coparently.app.presentation.common.AdaptiveSheet
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.HeroIcon
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionGroupScope
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.SheetHeight
+import com.coparently.app.presentation.common.nativeControls
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.titleMediumEmphasized
@@ -164,6 +167,8 @@ fun HomeStickers(coParentName: String, viewModel: StickersViewModel = koinViewMo
  * The fixed phrases a parent may send — no free text, so nothing can be turned into sarcasm —
  * and where the sending stands.
  */
+// One sheet: its body and the two hosts (Material's sheet, the iPhone's) that hold it.
+@Suppress("LongMethod")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SendStickerSheet(
@@ -172,7 +177,7 @@ private fun SendStickerSheet(
     onSend: (StickerKind) -> Unit,
     onDismiss: () -> Unit
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    val body: @Composable () -> Unit = {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -226,6 +231,14 @@ private fun SendStickerSheet(
             }
         }
     }
+    AdaptiveSheet(
+        onDismiss = onDismiss,
+        height = SheetHeight.Large,
+        material = {
+            ModalBottomSheet(onDismissRequest = onDismiss) { body() }
+        },
+        content = body
+    )
 }
 
 /**
@@ -324,6 +337,8 @@ fun SectionGroupScope.StickersRow(onOpen: () -> Unit) {
 
 @Composable
 private fun Chevron() {
+    // The grouped row draws the one chevron under native controls (Grouped board).
+    if (nativeControls() != null) return
     Icon(
         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
         contentDescription = null,

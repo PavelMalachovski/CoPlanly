@@ -53,7 +53,6 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -93,6 +92,8 @@ import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.calendar.CalendarViewModel
+import com.coparently.app.presentation.common.AdaptiveOptionRow
+import com.coparently.app.presentation.common.AdaptiveSwitch
 import com.coparently.app.presentation.common.AnswerByField
 import com.coparently.app.presentation.common.AnswerByPickSaver
 import com.coparently.app.presentation.common.BarAction
@@ -110,6 +111,7 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.eventTypeLabel
+import com.coparently.app.presentation.common.nativeControls
 import com.coparently.app.presentation.common.rememberAnswerByOffer
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.rememberParentNames
@@ -418,10 +420,29 @@ fun AddEditEventScreen(
     // A description is one tap away rather than a box on every new event (UX audit H5); an event
     // that has one shows it.
     var descriptionOpen by rememberSaveable { mutableStateOf(false) }
-    var showRepeatDialog by remember { mutableStateOf(false) }
-    var showReminderDialog by remember { mutableStateOf(false) }
     var showStartTimePicker by remember { mutableStateOf(false) }
     var showEndTimePicker by remember { mutableStateOf(false) }
+
+    // What picking each date and time does, whether in Material's dialogs or in the iPhone's
+    // compact pickers on the rows themselves: one rule for both.
+    val pickStartDate: (LocalDate) -> Unit = { startDate = it }
+    // The span is what is kept, so a later start date carries the end along.
+    val pickEndDate: (LocalDate) -> Unit = {
+        endDaySpan = endDaySpanFor(startDate, it)
+        keepNoEnd = false
+    }
+    val pickStartTime: (LocalTime) -> Unit = { selectedTime ->
+        startTime = selectedTime
+        // Auto-adjust end time if it's before start time (on a same-day event: an
+        // overnight one ends earlier in the day than it starts)
+        if (endDaySpan == 0 && endTime < startTime) {
+            endTime = startTime.plusHour()
+        }
+    }
+    val pickEndTime: (LocalTime) -> Unit = { selectedTime ->
+        endTime = selectedTime
+        keepNoEnd = false
+    }
 
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
@@ -1232,16 +1253,22 @@ fun AddEditEventScreen(
                     title = allDayLabel,
                     icon = Icons.Default.Schedule,
                     trailing = {
-                        Switch(
+                        AdaptiveSwitch(
                             checked = allDay,
                             // Named for TalkBack, like the Important switch below.
                             modifier = Modifier.semantics { contentDescription = allDayLabel },
                             onCheckedChange = {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 allDay = it
-                            }
+                            },
+                            accessibilityLabel = allDayLabel
                         )
-                    }
+                    },
+                    onToggle = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        allDay = !allDay
+                    },
+                    toggled = allDay
                 )
                 Divider()
                 EventDateTimeRow(
@@ -1260,7 +1287,8 @@ fun AddEditEventScreen(
                     onTime = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         showStartTimePicker = true
-                    }
+                    },
+                    edit = EventDateTimeEdit(startDate, pickStartDate, startTime, pickStartTime)
                 )
                 Divider()
                 EventDateTimeRow(
@@ -1279,7 +1307,8 @@ fun AddEditEventScreen(
                     onTime = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         showEndTimePicker = true
-                    }
+                    },
+                    edit = EventDateTimeEdit(endDate, pickEndDate, endTime, pickEndTime)
                 )
             }
 
@@ -1328,11 +1357,40 @@ fun AddEditEventScreen(
             val reminderPermissionRequester =
                 com.coparently.app.presentation.common.rememberNotificationPermissionRequester()
             SectionGroup {
-                SectionRow(
-                    title = stringResource(Res.string.event_form_repeat),
+                val repeatTitle = stringResource(Res.string.event_form_repeat)
+                val onRepeat: (String?) -> Unit = { value ->
+                    recurrencePattern = value
+                    if (value == null) recurrenceEndDate = null
+                }
+                // A dialog of radio rows on Android, the system's menu from the row on the iPhone.
+                AdaptiveOptionRow(
+                    title = repeatTitle,
                     icon = Icons.Default.Repeat,
-                    onClick = { showRepeatDialog = true },
-                    trailing = { OptionValue(repeatOptions.firstOrNull { it.first == recurrencePattern }?.second) }
+                    options = repeatOptions,
+                    selected = recurrencePattern,
+                    onSelect = onRepeat,
+                    row = { open ->
+                        SectionRow(
+                            title = repeatTitle,
+                            icon = Icons.Default.Repeat,
+                            onClick = open,
+                            trailing = {
+                                OptionValue(repeatOptions.firstOrNull { it.first == recurrencePattern }?.second)
+                            }
+                        )
+                    },
+                    dialog = { dismiss ->
+                        EventOptionDialog(
+                            title = repeatTitle,
+                            options = repeatOptions,
+                            selected = recurrencePattern,
+                            onSelect = { value ->
+                                onRepeat(value)
+                                dismiss()
+                            },
+                            onDismiss = dismiss
+                        )
+                    }
                 )
                 // Recurrence end date (optional, only for recurring events)
                 if (recurrencePattern != null) {
@@ -1353,40 +1411,42 @@ fun AddEditEventScreen(
                     )
                 }
                 Divider()
-                SectionRow(
-                    title = stringResource(Res.string.event_form_reminder),
+                val reminderTitle = stringResource(Res.string.event_form_reminder)
+                val onReminder: (Int?) -> Unit = { value ->
+                    if (value == null) {
+                        reminderMinutes = null
+                    } else {
+                        reminderPermissionRequester.request { reminderMinutes = value }
+                    }
+                }
+                AdaptiveOptionRow(
+                    title = reminderTitle,
                     icon = Icons.Default.Notifications,
-                    onClick = { showReminderDialog = true },
-                    trailing = { OptionValue(reminderOptions.firstOrNull { it.first == reminderMinutes }?.second) }
-                )
-            }
-            if (showRepeatDialog) {
-                EventOptionDialog(
-                    title = stringResource(Res.string.event_form_repeat),
-                    options = repeatOptions,
-                    selected = recurrencePattern,
-                    onSelect = { value ->
-                        recurrencePattern = value
-                        if (value == null) recurrenceEndDate = null
-                        showRepeatDialog = false
-                    },
-                    onDismiss = { showRepeatDialog = false }
-                )
-            }
-            if (showReminderDialog) {
-                EventOptionDialog(
-                    title = stringResource(Res.string.event_form_reminder),
                     options = reminderOptions,
                     selected = reminderMinutes,
-                    onSelect = { value ->
-                        showReminderDialog = false
-                        if (value == null) {
-                            reminderMinutes = null
-                        } else {
-                            reminderPermissionRequester.request { reminderMinutes = value }
-                        }
+                    onSelect = onReminder,
+                    row = { open ->
+                        SectionRow(
+                            title = reminderTitle,
+                            icon = Icons.Default.Notifications,
+                            onClick = open,
+                            trailing = {
+                                OptionValue(reminderOptions.firstOrNull { it.first == reminderMinutes }?.second)
+                            }
+                        )
                     },
-                    onDismiss = { showReminderDialog = false }
+                    dialog = { dismiss ->
+                        EventOptionDialog(
+                            title = reminderTitle,
+                            options = reminderOptions,
+                            selected = reminderMinutes,
+                            onSelect = { value ->
+                                dismiss()
+                                onReminder(value)
+                            },
+                            onDismiss = dismiss
+                        )
+                    }
                 )
             }
 
@@ -1444,7 +1504,7 @@ fun AddEditEventScreen(
                             }
                         }
                         val importantLabel = stringResource(Res.string.event_form_important_title)
-                        Switch(
+                        AdaptiveSwitch(
                             checked = isImportant,
                             // Named for TalkBack: a bare switch beside its label reads as
                             // "Switch, off" with nothing to say what it toggles.
@@ -1452,7 +1512,8 @@ fun AddEditEventScreen(
                             onCheckedChange = {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 isImportant = it
-                            }
+                            },
+                            accessibilityLabel = importantLabel
                         )
                     }
                     // Only once the switch is on: the helper says what the mark will mean, and
@@ -1503,13 +1564,14 @@ fun AddEditEventScreen(
                             Res.string.friend_event_participates,
                             friend.name
                         )
-                        Switch(
+                        AdaptiveSwitch(
                             checked = friendParticipates == friend.friendUid,
                             modifier = Modifier.semantics { contentDescription = participatesLabel },
                             onCheckedChange = { on ->
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 friendParticipates = if (on) friend.friendUid else null
-                            }
+                            },
+                            accessibilityLabel = participatesLabel
                         )
                     }
                 }
@@ -1552,13 +1614,14 @@ fun AddEditEventScreen(
                         }
                     }
                     val privateLabel = stringResource(Res.string.event_form_private_title)
-                    Switch(
+                    AdaptiveSwitch(
                         checked = isPrivate,
                         modifier = Modifier.semantics { contentDescription = privateLabel },
                         onCheckedChange = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             isPrivate = it
-                        }
+                        },
+                        accessibilityLabel = privateLabel
                     )
                 }
             }
@@ -1703,21 +1766,18 @@ fun AddEditEventScreen(
             initialDate = startDate,
             confirmLabel = stringResource(Res.string.event_form_ok),
             dismissLabel = stringResource(Res.string.event_form_cancel),
-            onConfirm = { startDate = it },
+            onConfirm = pickStartDate,
             onDismiss = { showDatePicker = false }
         )
     }
 
-    // End date picker: the span is what is kept, so a later start date carries the end along
+    // End date picker
     if (showEndDatePicker) {
         LocalDatePickerDialog(
             initialDate = startDate.plus(endDaySpan, DateTimeUnit.DAY),
             confirmLabel = stringResource(Res.string.event_form_ok),
             dismissLabel = stringResource(Res.string.event_form_cancel),
-            onConfirm = {
-                endDaySpan = endDaySpanFor(startDate, it)
-                keepNoEnd = false
-            },
+            onConfirm = pickEndDate,
             onDismiss = { showEndDatePicker = false }
         )
     }
@@ -1726,14 +1786,7 @@ fun AddEditEventScreen(
     if (showStartTimePicker) {
         TimePickerDialog(
             initialTime = startTime,
-            onTimeSelected = { selectedTime ->
-                startTime = selectedTime
-                // Auto-adjust end time if it's before start time (on a same-day event: an
-                // overnight one ends earlier in the day than it starts)
-                if (endDaySpan == 0 && endTime < startTime) {
-                    endTime = startTime.plusHour()
-                }
-            },
+            onTimeSelected = pickStartTime,
             onDismiss = { showStartTimePicker = false }
         )
     }
@@ -1742,78 +1795,107 @@ fun AddEditEventScreen(
     if (showEndTimePicker) {
         TimePickerDialog(
             initialTime = endTime,
-            onTimeSelected = { selectedTime ->
-                endTime = selectedTime
-                keepNoEnd = false
-            },
+            onTimeSelected = pickEndTime,
             onDismiss = { showEndTimePicker = false }
         )
     }
 
     // Delete Confirmation Dialog
     if (showDeleteDialog && eventId != null) {
-        AlertDialog(
-            onDismissRequest = {
-                if (!isDeleting) {
-                    showDeleteDialog = false
-                }
-            },
-            title = {
-                Text(stringResource(Res.string.event_form_delete_dialog_title))
-            },
-            text = {
-                Text(stringResource(Res.string.event_form_delete_dialog_message))
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        isDeleting = true
-                        scope.launch {
-                            try {
-                                val event = viewModel.getEventById(eventId)
-                                event?.let {
-                                    viewModel.deleteEvent(it)
-                                    snackbarHostState.showSnackbar(
-                                        message = eventDeletedMessage,
-                                        duration = SnackbarDuration.Short
-                                    )
-                                    kotlinx.coroutines.delay(500)
-                                    onSave() // Navigate back
-                                } ?: run {
-                                    snackbarHostState.showSnackbar(
-                                        message = notFoundMessage,
-                                        duration = SnackbarDuration.Short
-                                    )
-                                    isDeleting = false
-                                    showDeleteDialog = false
-                                }
-                            } catch (e: Exception) {
-                                snackbarHostState.showSnackbar(
-                                    message = deleteFailedMessage,
-                                    duration = SnackbarDuration.Long
-                                )
-                                isDeleting = false
-                                showDeleteDialog = false
-                            }
+        DeleteEventDialog(
+            isDeleting = isDeleting,
+            onConfirm = {
+                isDeleting = true
+                scope.launch {
+                    try {
+                        val event = viewModel.getEventById(eventId)
+                        event?.let {
+                            viewModel.deleteEvent(it)
+                            snackbarHostState.showSnackbar(
+                                message = eventDeletedMessage,
+                                duration = SnackbarDuration.Short
+                            )
+                            kotlinx.coroutines.delay(500)
+                            onSave() // Navigate back
+                        } ?: run {
+                            snackbarHostState.showSnackbar(
+                                message = notFoundMessage,
+                                duration = SnackbarDuration.Short
+                            )
+                            isDeleting = false
+                            showDeleteDialog = false
                         }
-                    },
-                    enabled = !isDeleting
-                ) {
-                    Text(stringResource(Res.string.event_delete), color = MaterialTheme.colorScheme.error)
+                    } catch (e: Exception) {
+                        snackbarHostState.showSnackbar(
+                            message = deleteFailedMessage,
+                            duration = SnackbarDuration.Long
+                        )
+                        isDeleting = false
+                        showDeleteDialog = false
+                    }
                 }
             },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteDialog = false
-                    },
-                    enabled = !isDeleting
-                ) {
-                    Text(stringResource(Res.string.event_form_cancel))
-                }
-            }
+            onDismiss = { showDeleteDialog = false }
         )
     }
+}
+
+/**
+ * Asks before an event is deleted. Under the iPhone's native controls it is the system's action
+ * sheet, Delete in red, which goes away once answered; otherwise Material's dialog, whose answers
+ * are disabled while [isDeleting] and which stays up until the delete has run.
+ *
+ * @param isDeleting Whether the delete is under way: nothing may dismiss it then
+ * @param onConfirm Deletes the event
+ * @param onDismiss Closes the question
+ */
+@Composable
+private fun DeleteEventDialog(isDeleting: Boolean, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val title = stringResource(Res.string.event_form_delete_dialog_title)
+    val message = stringResource(Res.string.event_form_delete_dialog_message)
+    val native = nativeControls()
+    if (native != null) {
+        native.Confirm(
+            title = title,
+            message = message,
+            confirmText = stringResource(Res.string.event_delete),
+            dismissText = stringResource(Res.string.event_form_cancel),
+            destructive = true,
+            asActionSheet = true,
+            onConfirm = onConfirm,
+            onDismiss = { if (!isDeleting) onDismiss() }
+        )
+        return
+    }
+    AlertDialog(
+        onDismissRequest = {
+            if (!isDeleting) {
+                onDismiss()
+            }
+        },
+        title = {
+            Text(title)
+        },
+        text = {
+            Text(message)
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = !isDeleting
+            ) {
+                Text(stringResource(Res.string.event_delete), color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !isDeleting
+            ) {
+                Text(stringResource(Res.string.event_form_cancel))
+            }
+        }
+    )
 }
 
 /**

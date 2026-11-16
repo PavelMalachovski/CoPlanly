@@ -25,6 +25,12 @@ import org.jetbrains.compose.resources.stringResource
  * @param onDismiss Callback when user dismisses
  * @param modifier Optional modifier
  * @param isDestructive If true, uses error colors for confirm button
+ * @param asActionSheet Under the iPhone's native controls, whether it is an action sheet rather than
+ *   an alert: by default a destructive confirmation is one. A question with two answers that only
+ *   colours one red ("Discard changes?") passes false. Android ignores it.
+ *
+ * Under the shell's native controls ([nativeControls]) it is [NativeControls.Confirm], the
+ * iPhone's own alert or action sheet; otherwise Material's `AlertDialog`, as Android draws it.
  */
 @Composable
 @Suppress("LongParameterList") // the dialog's whole anatomy; every caller names its arguments
@@ -36,8 +42,23 @@ fun ConfirmationDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
-    isDestructive: Boolean = false
+    isDestructive: Boolean = false,
+    asActionSheet: Boolean = isDestructive
 ) {
+    val native = nativeControls()
+    if (native != null) {
+        native.Confirm(
+            title = title,
+            message = message,
+            confirmText = confirmText,
+            dismissText = dismissText,
+            destructive = isDestructive,
+            asActionSheet = asActionSheet,
+            onConfirm = onConfirm,
+            onDismiss = onDismiss
+        )
+        return
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {

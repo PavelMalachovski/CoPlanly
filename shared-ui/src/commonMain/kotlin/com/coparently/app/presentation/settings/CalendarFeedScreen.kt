@@ -40,6 +40,7 @@ import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.nativeControls
 import com.coparently.app.presentation.common.readerLanguage
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.platform.LocalSensitiveClipboard
@@ -335,9 +336,26 @@ private fun FeedLinkRow(link: CalendarFeedLink, enabled: Boolean, onRevoke: () -
     )
 }
 
-/** Revoking asks once, and says what it does and does not do. */
+/**
+ * Revoking asks once, and says what it does and does not do: under the iPhone's native controls as
+ * its own action sheet, with Revoke in red.
+ */
 @Composable
 private fun RevokeDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val native = nativeControls()
+    if (native != null) {
+        native.Confirm(
+            title = stringResource(Res.string.calendar_feed_revoke_confirm_title),
+            message = stringResource(Res.string.calendar_feed_revoke_confirm_text),
+            confirmText = stringResource(Res.string.calendar_feed_revoke_confirm),
+            dismissText = stringResource(Res.string.common_dialog_cancel),
+            destructive = true,
+            asActionSheet = true,
+            onConfirm = onConfirm,
+            onDismiss = onDismiss
+        )
+        return
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(Res.string.calendar_feed_revoke_confirm_title)) },

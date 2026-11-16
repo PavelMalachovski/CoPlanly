@@ -42,7 +42,6 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -68,6 +67,8 @@ import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.receipts.ReceiptScan
+import com.coparently.app.presentation.common.AdaptiveSegmented
+import com.coparently.app.presentation.common.AdaptiveSwitch
 import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.BarLeading
@@ -78,10 +79,13 @@ import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.LocalDateSaver
+import com.coparently.app.presentation.common.MenuFieldRow
+import com.coparently.app.presentation.common.NativeControls
 import com.coparently.app.presentation.common.ScreenBar
 import com.coparently.app.presentation.common.SideBySideOrStacked
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.nativeControls
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberRecordPhoto
@@ -426,7 +430,8 @@ fun AddExpenseScreen(
                 CurrencySelector(
                     selected = effectiveCurrency,
                     enabled = !isSaving,
-                    onSelect = { currency = it }
+                    onSelect = { currency = it },
+                    background = MaterialTheme.colorScheme.background
                 )
             }
 
@@ -445,7 +450,11 @@ fun AddExpenseScreen(
                 label = stringResource(Res.string.expense_field_date),
                 value = readerMediumDate(date),
                 onClick = { showDatePicker = true },
-                enabled = !isSaving
+                enabled = !isSaving,
+                date = date,
+                onDateChange = { date = it },
+                // The form sits on the screen's ground, not on a card.
+                background = MaterialTheme.colorScheme.background
             )
 
             FamilyMemberChips(
@@ -602,6 +611,11 @@ private fun ExpenseCategoryDropdown(
     onExpandedChange: (Boolean) -> Unit,
     onCategorySelected: (ExpenseCategory) -> Unit
 ) {
+    val native = nativeControls()
+    if (native != null) {
+        ExpenseCategoryMenu(native, category, onCategorySelected)
+        return
+    }
     ExposedDropdownMenuBox(
         expanded = expanded,
         onExpandedChange = { onExpandedChange(!expanded) },
@@ -633,6 +647,27 @@ private fun ExpenseCategoryDropdown(
             }
         }
     }
+}
+
+/**
+ * The category on the iPhone: the field's label and the system's pop-up button of categories
+ * ([MenuFieldRow]), the category chosen now checked. The form sits on the screen's ground.
+ */
+@Composable
+private fun ExpenseCategoryMenu(
+    native: NativeControls,
+    category: ExpenseCategory,
+    onCategorySelected: (ExpenseCategory) -> Unit
+) {
+    val options = ExpenseCategory.values().map { it to stringResource(it.labelRes) }
+    MenuFieldRow(
+        native = native,
+        label = stringResource(Res.string.expense_field_category),
+        options = options,
+        selected = category,
+        onSelect = onCategorySelected,
+        background = MaterialTheme.colorScheme.background
+    )
 }
 
 /** The category's colour, as the chart's own slice hue — a dot, not an icon tint. */
@@ -972,9 +1007,18 @@ private fun PaidBySection(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.XS)) {
         Text(text = stringResource(Res.string.expense_paid_by_title), style = MaterialTheme.typography.bodyLarge)
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            listOf(false to stringResource(Res.string.expense_paid_by_you), true to coParentName)
-                .forEachIndexed { index, (coParentPaid, label) ->
+        val options = listOf(false to stringResource(Res.string.expense_paid_by_you), true to coParentName)
+        AdaptiveSegmented(
+            // Behind the native control: the form sits on the screen's ground.
+            background = MaterialTheme.colorScheme.background,
+            labels = options.map { it.second },
+            selectedIndex = if (paidByCoParent) 1 else 0,
+            onSelect = { onChange(options[it].first) },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = enabled
+        ) {
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                options.forEachIndexed { index, (coParentPaid, label) ->
                     SegmentedButton(
                         selected = paidByCoParent == coParentPaid,
                         onClick = { onChange(coParentPaid) },
@@ -983,6 +1027,7 @@ private fun PaidBySection(
                         label = { Text(label) }
                     )
                 }
+            }
         }
     }
 }
@@ -1028,7 +1073,13 @@ private fun SplitSection(
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f)
             )
-            Switch(checked = shared, onCheckedChange = onSharedChange, enabled = enabled)
+            AdaptiveSwitch(
+                checked = shared,
+                onCheckedChange = onSharedChange,
+                enabled = enabled,
+                accessibilityLabel = stringResource(Res.string.expense_split_shared),
+                background = MaterialTheme.colorScheme.background
+            )
         }
 
         if (!shared) {
@@ -1046,21 +1097,24 @@ private fun SplitSection(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            val ratioText = stringResource(
+                Res.string.expense_split_ratio,
+                effective,
+                WHOLE_PERCENT - effective
+            )
             Text(
-                text = stringResource(
-                    Res.string.expense_split_ratio,
-                    effective,
-                    WHOLE_PERCENT - effective
-                ),
+                text = ratioText,
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f)
             )
-            Switch(
+            AdaptiveSwitch(
                 checked = overrideMomPercent != null,
                 onCheckedChange = { on ->
                     onOverrideChange(if (on) agreedRatio.momPercent else null)
                 },
-                enabled = enabled
+                enabled = enabled,
+                accessibilityLabel = ratioText,
+                background = MaterialTheme.colorScheme.background
             )
         }
         Text(

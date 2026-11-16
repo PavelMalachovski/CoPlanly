@@ -1,7 +1,12 @@
 package com.coparently.app.di.koin
 
 import com.coparently.app.data.export.ExportVerifyAddress
+import com.coparently.app.data.export.InfoPlistExportVerifyAddress
+import com.coparently.app.data.export.IosRecordFileWriter
 import com.coparently.app.data.export.RecordFileWriter
+import com.coparently.app.data.files.IosPickedFiles
+import com.coparently.app.data.files.IosRecordPhotoStorage
+import com.coparently.app.data.files.IosStorageBucket
 import com.coparently.app.data.files.PickedFiles
 import com.coparently.app.data.files.StorageBucket
 import com.coparently.app.data.http.HttpTimeouts
@@ -35,6 +40,7 @@ import com.coparently.app.data.platform.IosCrashReporter
 import com.coparently.app.data.platform.IosDeviceRegion
 import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.platform.keychainSecurePreferences
+import com.coparently.app.data.receipts.VisionReceiptText
 import com.coparently.app.data.remote.firebase.AccountSignIn
 import com.coparently.app.data.remote.firebase.AuthSession
 import com.coparently.app.data.remote.firebase.CallableFunctions
@@ -77,6 +83,7 @@ import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
 import dev.gitlive.firebase.firestore.firestore
 import dev.gitlive.firebase.functions.functions
+import dev.gitlive.firebase.storage.storage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -92,8 +99,11 @@ import org.koin.dsl.module
  * sign-in), the account switch's wipe ([IosAccountSwitch]) and sign-out's traces
  * ([IosAccountTraces]) — since Task 6, the push queue ([FirestorePushQueue]) and the sync while the
  * app is open ([ForegroundSyncRunner]), since part B's Task 11 account deletion
- * ([IosAccountDeletion]) — and, for what the iPhone does not have yet (a push token, Cloud Storage,
- * a file picker, Google Calendar, background jobs and notifications), the stand-ins in
+ * ([IosAccountDeletion]), since part C's Task 10 Cloud Storage ([IosStorageBucket]), since Task 11
+ * a record's photos ([IosRecordPhotoStorage]) and the pickers' copies ([IosPickedFiles]), since
+ * Task 12 a receipt read by Vision ([VisionReceiptText]), the record's file ([IosRecordFileWriter])
+ * and its verification address ([InfoPlistExportVerifyAddress]) — and, for what the iPhone does not
+ * have yet (a push token, Google Calendar, background jobs and notifications), the stand-ins in
  * `IosUnavailable.kt`, which answer as a phone with nothing of the kind would. The two wordings the
  * data layer writes into stored data read the app's strings, so `:shared-ui`'s `platformUiModule`
  * binds them (`IosPairingWording`, `IosSchoolImportWordings`); the graph resolves with both
@@ -195,10 +205,23 @@ actual val platformDataModule: Module = module {
     single<GoogleCalendarAccount> { NoGoogleCalendar }
     single<GoogleCalendarConnectionSource> { NoGoogleCalendar }
     single<CredentialProvider> { NoGoogleCalendar }
-    single<StorageBucket> { NoStorageBucket }
-    single<RecordPhotoStorage> { NoRecordPhotoStorage }
-    single<ReceiptTextRecognizer> { NoReceiptText }
-    single<PickedFiles> { NoPickedFiles }
-    single<ExportVerifyAddress> { NoExportVerifyAddress }
-    single<RecordFileWriter> { NoRecordFiles }
+    // Cloud Storage by path, never by download URL (part C, Task 10).
+    single<StorageBucket> { IosStorageBucket(Firebase.storage) }
+    // A record's photos re-encoded and stored under its family's path, and the copies the pickers
+    // keep of what was picked (part C, Task 11).
+    single<RecordPhotoStorage> {
+        IosRecordPhotoStorage(
+            authService = get(),
+            userDao = get(),
+            storage = get(),
+            cache = get(),
+            storedRecords = get(),
+        )
+    }
+    // A receipt read on the phone by Vision, and the record drawn and saved on the phone (Task 12).
+    single<ReceiptTextRecognizer> { VisionReceiptText() }
+    single { IosPickedFiles(get<AppDirectories>().cache.toString()) }
+    single<PickedFiles> { get<IosPickedFiles>() }
+    single<ExportVerifyAddress> { InfoPlistExportVerifyAddress }
+    single<RecordFileWriter> { IosRecordFileWriter(get<AppDirectories>().cache.toString()) }
 }

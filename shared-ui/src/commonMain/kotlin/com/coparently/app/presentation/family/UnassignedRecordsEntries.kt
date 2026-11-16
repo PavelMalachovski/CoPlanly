@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.SectionGroupScope
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.nativeControls
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.unassigned_records_count
@@ -50,12 +51,14 @@ fun SectionGroupScope.UnassignedRecordsRow(
         supporting = pluralStringResource(Res.plurals.unassigned_records_count, summary.count, summary.count),
         onClick = onOpen,
         trailing = {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(IconSizes.Standard)
-            )
+            if (nativeControls() == null) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(IconSizes.Standard)
+                )
+            }
         }
     )
     Divider()

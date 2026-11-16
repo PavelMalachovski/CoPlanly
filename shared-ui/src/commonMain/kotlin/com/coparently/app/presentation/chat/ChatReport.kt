@@ -34,6 +34,7 @@ import com.coparently.app.presentation.common.BarMenuItem
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.nativeControls
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.platform.LocalAppBuildValues
 import com.coparently.app.presentation.platform.LocalOpenUrl
@@ -107,12 +108,16 @@ fun ChatReportHost(content: @Composable () -> Unit) {
 /**
  * Wraps a message bubble so a long press (or TalkBack's actions menu) offers "Report message" —
  * only for a message [MessageReport.isReportable] accepts, and only inside a [ChatReportHost] that
- * has an address. Otherwise it draws [content] unchanged.
+ * has an address. Otherwise it draws [content] unchanged. Under the iPhone's native controls the
+ * entry is the system's action sheet (`NativeControls.ActionSheet`) rather than a dropdown.
  *
  * @param message The message the bubble shows
  * @param isCurrentUser Whether the reader sent it
  * @param content The bubble
  */
+// The bubble's long press in its two anatomies (Material's menu, the iPhone's action sheet) and the
+// report's dialog it opens: one gesture, read together.
+@Suppress("LongMethod")
 @Composable
 internal fun ReportableBubble(message: Message, isCurrentUser: Boolean, content: @Composable () -> Unit) {
     val report = LocalChatMessageReport.current
@@ -143,15 +148,36 @@ internal fun ReportableBubble(message: Message, isCurrentUser: Boolean, content:
             }
     ) {
         content()
-        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-            DropdownMenuItem(
-                text = { Text(label) },
-                leadingIcon = { Icon(Icons.Outlined.Flag, contentDescription = null) },
-                onClick = {
-                    menuOpen = false
-                    report(message)
-                }
-            )
+        val native = nativeControls()
+        if (native != null) {
+            // The iPhone: the long press is the system's action sheet with the same entry.
+            if (menuOpen) {
+                native.ActionSheet(
+                    title = null,
+                    items = listOf(
+                        BarMenuItem(
+                            label = label,
+                            sfSymbol = "flag",
+                            onClick = {
+                                menuOpen = false
+                                report(message)
+                            }
+                        )
+                    ),
+                    onDismiss = { menuOpen = false }
+                )
+            }
+        } else {
+            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                DropdownMenuItem(
+                    text = { Text(label) },
+                    leadingIcon = { Icon(Icons.Outlined.Flag, contentDescription = null) },
+                    onClick = {
+                        menuOpen = false
+                        report(message)
+                    }
+                )
+            }
         }
     }
 }

@@ -46,15 +46,42 @@ object PickerDates {
  * [PickerDates]). Confirming with a day selected reports it through [onConfirm]; confirming
  * without one, cancelling or dismissing only calls [onDismiss].
  *
+ * Where the shell has native controls (the iPhone) it is [NativeControls.DateDialog] instead, the
+ * system's own picker in a sheet, with the same labels and the same order of callbacks; its days
+ * cross as the calendar day the parent saw, never through these millis.
+ *
  * @param initialDate The day the picker opens on, highlighted.
  * @param confirmLabel The confirm button's text, from the calling feature's strings.
  * @param dismissLabel The cancel button's text.
  * @param onConfirm Receives the picked day. [onDismiss] is called right after it.
  * @param onDismiss Closes the dialog.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LocalDatePickerDialog(
+    initialDate: LocalDate,
+    confirmLabel: String,
+    dismissLabel: String,
+    onConfirm: (LocalDate) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val native = nativeControls()
+    if (native != null) {
+        native.DateDialog(
+            initial = initialDate,
+            confirmLabel = confirmLabel,
+            dismissLabel = dismissLabel,
+            onConfirm = onConfirm,
+            onDismiss = onDismiss
+        )
+    } else {
+        MaterialDatePickerDialog(initialDate, confirmLabel, dismissLabel, onConfirm, onDismiss)
+    }
+}
+
+/** The Material3 dialog [LocalDatePickerDialog] draws where the shell has no native controls. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MaterialDatePickerDialog(
     initialDate: LocalDate,
     confirmLabel: String,
     dismissLabel: String,

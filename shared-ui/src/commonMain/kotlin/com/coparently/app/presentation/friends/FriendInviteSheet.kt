@@ -30,8 +30,10 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.friends.FriendAccessDuration
+import com.coparently.app.presentation.common.AdaptiveSheet
 import com.coparently.app.presentation.common.InviteCodeText
 import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.common.SheetHeight
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberUiTextResolver
@@ -81,10 +83,7 @@ fun FriendInviteSheet(
     val shareSheet = LocalShareSheet.current
     val textResolver = rememberUiTextResolver()
     val scope = rememberCoroutineScope()
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ) {
+    val body: @Composable () -> Unit = {
         FriendInviteContent(
             state = state,
             onChooseDuration = onChooseDuration,
@@ -106,6 +105,18 @@ fun FriendInviteSheet(
             onDone = onDismiss
         )
     }
+    AdaptiveSheet(
+        onDismiss = onDismiss,
+        height = SheetHeight.Large,
+        material = {
+            ModalBottomSheet(
+                onDismissRequest = onDismiss,
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            ) { body() }
+        },
+        content = body,
+        scrollable = true
+    )
 }
 
 /**

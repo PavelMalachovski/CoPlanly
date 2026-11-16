@@ -2,10 +2,14 @@ package com.coparently.app.ios.shell
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
@@ -14,7 +18,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -28,14 +34,17 @@ import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.LocalOwnersProvider
+import com.coparently.app.ios.controls.IosNativeControls
 import com.coparently.app.presentation.AppProviders
 import com.coparently.app.presentation.common.BackSteps
 import com.coparently.app.presentation.common.ConnectivityBanner
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.LocalBackSteps
 import com.coparently.app.presentation.common.LocalBarHost
+import com.coparently.app.presentation.common.LocalNativeControls
 import com.coparently.app.presentation.common.LocalScreenVisible
 import com.coparently.app.presentation.common.LocalSheetGuard
+import com.coparently.app.presentation.common.ScreenBar
 import com.coparently.app.presentation.common.SheetGuard
 import com.coparently.app.presentation.navigation.AppDestination
 import com.coparently.app.presentation.navigation.LocalTabSwitcher
@@ -44,6 +53,7 @@ import com.coparently.app.presentation.platform.ProvideIosShell
 import com.coparently.app.presentation.theme.CoPlanlyTheme
 import com.coparently.app.presentation.theme.appGround
 import platform.UIKit.UIViewController
+import platform.UIKit.navigationController
 
 /**
  * One back-stack entry's screen on the iPhone (MON-24 phase 3): a Compose view controller that
@@ -66,9 +76,14 @@ import platform.UIKit.UIViewController
  * @property session The owner of the ViewModels the session's screens share, which ends with them.
  * @property nativeBar Whether the screen describes its bar to the navigation bar ([LocalBarHost]);
  *   otherwise it draws its own Compose bar and the navigation bar is hidden over it.
+ * @param barHiddenAtFirst Whether the screen's bar starts hidden ([StackHost.HIDDEN_BAR_ROUTES]),
+ *   until the screen hands its bar over: then [ScreenBar.hidden] decides ([showsBar]).
  * @property sheetGuard The sheet the screen is the first screen of, or null.
  * @property visible Whether the screen is seen now, provided as [LocalScreenVisible]: a hidden tab's
  *   screen stays composed here, where Android would have disposed it.
+ *
+ * Every screen, the first screen of a form's sheet included, draws the system's own controls:
+ * [IosNativeControls] is provided as `LocalNativeControls` beside the bar host.
  */
 @Suppress("LongParameterList") // the entry, what it draws, and what the stack and the shell share with it
 internal class ScreenController(
@@ -77,17 +92,29 @@ internal class ScreenController(
     private val shell: ShellEnvironment,
     private val session: ViewModelStoreOwner,
     val nativeBar: Boolean,
+    private val barHiddenAtFirst: Boolean,
     private val sheetGuard: SheetGuard?,
     private val visible: State<Boolean>
 ) {
     /** The screen's inner steps, which the shell's back asks before it pops the screen. */
     val backSteps = BackSteps()
 
+    /** Whether the screen's bar asks the shell to hide the navigation bar ([ScreenBar.hidden]). */
+    private var barHidden by mutableStateOf(barHiddenAtFirst)
+
+    /**
+     * Whether the navigation bar shows over this screen: it describes its bar ([nativeBar]) and the
+     * bar is not hidden. The navigation bar is one per stack, so the stack sets it from the answer
+     * of the screen it moves to: a screen pushed over the Calendar's root gets its bar back.
+     */
+    val showsBar: Boolean get() = nativeBar && !barHidden
+
     private val bars = NativeBars(
         // Settings is the one pushed screen whose title is large, as iOS's own Settings app shows it.
         largeTitle = entry.destination.route == Screen.Settings.route,
         sheetRoot = sheetGuard != null,
         backSteps = backSteps,
+        hiddenChanged = ::hiddenChanged,
         // The chip's ViewModel is the screen's, as on Android, where the chip is in the screen. The
         // theme alone, without the app's background surface, so the bar shows around the chip.
         chipFrame = { content ->
@@ -120,6 +147,8 @@ internal class ScreenController(
         Shared {
             CompositionLocalProvider(
                 LocalBarHost provides bars.takeIf { nativeBar },
+                // Every hosted screen, a form's sheet included, draws the system's own controls.
+                LocalNativeControls provides IosNativeControls,
                 LocalSheetGuard provides sheetGuard,
                 LocalBackSteps provides backSteps,
                 LocalScreenVisible provides visible
@@ -130,7 +159,10 @@ internal class ScreenController(
                         snapshotFlow { backSteps.hasEnabledStep }.collect { bars.stepPending(it) }
                     }
                 }
-                ScreenFrame(shell) {
+                // A screen that leads with its own header (the bar hidden now, or at first: the
+                // Calendar's root shows the bar over Day view) is inset by the frame, under the status
+                // bar alone or under the bar too.
+                ScreenFrame(shell, headerInContent = nativeBar && (barHidden || barHiddenAtFirst)) {
                     WhileAlive(entry) {
                         entry.LocalOwnersProvider(rememberSaveableStateHolder()) { destination.content(entry) }
                     }
@@ -141,6 +173,21 @@ internal class ScreenController(
 
     /** Lets go of what this screen holds beyond its view controller, once it has left its stack. */
     fun release() = bars.release()
+
+    /**
+     * The screen's bar now asks for the navigation bar [hidden] or shown: while this screen is on
+     * top of its stack, the navigation bar follows at once; otherwise the stack sets it when it
+     * moves to this screen ([showsBar]).
+     */
+    private fun hiddenChanged(hidden: Boolean) {
+        if (barHidden == hidden) return
+        barHidden = hidden
+        val navigation = viewController.navigationController ?: return
+        if (navigation.topViewController !== viewController) return
+        if (navigation.isNavigationBarHidden() == showsBar) {
+            navigation.setNavigationBarHidden(!showsBar, animated = false)
+        }
+    }
 
     /** What every hosted composition is drawn in: the platform, the theme and the shell's locals. */
     @Composable
@@ -163,7 +210,12 @@ internal class ScreenController(
  * A hosted screen's frame: the offline line at the top and the shell's messages at the bottom,
  * around [content]. While the line shows it takes the top inset, which [content] then does not
  * apply again; while it does not, [content] applies the top inset itself (the navigation bar's and
- * the status bar's), as Android's root Scaffold leaves it (design item 14).
+ * the status bar's), as Android's root Scaffold leaves it (design item 14). A screen whose bar
+ * starts hidden ([headerInContent]: the Calendar's and Home's roots) leads with a header in its own
+ * top bar slot, which no Scaffold insets, so the frame takes the top inset for it: the status bar's
+ * while there is no navigation bar, and the status bar's and the navigation bar's while one shows
+ * (the Calendar's Day view opened from a month cell, whose bar carries Back), so the header's
+ * Month/Week/Day control is not drawn under the bar.
  *
  * **The keyboard is taken here, once, for every hosted screen** (design item 14, as Android's
  * `NavHost` takes it): [content] is laid out above the keyboard while one is up, and the keyboard's
@@ -172,7 +224,7 @@ internal class ScreenController(
  * the keys.
  */
 @Composable
-private fun ScreenFrame(shell: ShellEnvironment, content: @Composable () -> Unit) {
+private fun ScreenFrame(shell: ShellEnvironment, headerInContent: Boolean, content: @Composable () -> Unit) {
     val offline by shell.connectivity.isOffline.collectAsState()
     Scaffold(
         // The app's ground behind every hosted screen, whose own Scaffold is transparent over it, as
@@ -188,6 +240,7 @@ private fun ScreenFrame(shell: ShellEnvironment, content: @Composable () -> Unit
                 .fillMaxSize()
                 .padding(inner)
                 .consumeWindowInsets(inner)
+                .then(if (headerInContent) Modifier.windowInsetsPadding(topSafeInset) else Modifier)
                 .imePadding()
         ) {
             content()
@@ -207,3 +260,10 @@ private fun WhileAlive(entry: NavBackStackEntry, content: @Composable () -> Unit
         content()
     }
 }
+
+/**
+ * The top of the safe area, which a screen leading with its own header starts under: the status
+ * bar's, and the navigation bar's while one shows over the screen.
+ */
+private val topSafeInset: WindowInsets
+    @Composable get() = WindowInsets.safeDrawing.only(WindowInsetsSides.Top)

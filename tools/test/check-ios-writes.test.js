@@ -10,7 +10,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const {
-  shapeOfJson, compareDocument, ruleFor, parseWritten, parseEmulator, run, REQUIRED_COLLECTIONS,
+  shapeOfJson, compareDocument, ruleFor, parseWritten, parseWrittenFiles, compareFile, parseEmulator, run,
+  REQUIRED_COLLECTIONS, REQUIRED_FILE_PREFIXES,
 } = require('../ios/check-ios-writes.js');
 
 const FIXTURES = path.join(__dirname, '..', '..', 'app', 'src', 'test', 'resources', 'wire', 'current');
@@ -103,7 +104,9 @@ async function runOver(written, documents, options = {}) {
     written: file,
     fixtures: FIXTURES,
     required: options.required || [],
+    requiredFiles: options.requiredFiles || [],
     fetchDocument: async (p) => documents[p] || null,
+    fetchFile: options.files ? async (p) => options.files[p] || null : null,
     log: (line) => lines.push(line),
   });
   return { ...result, lines };
@@ -313,5 +316,97 @@ test('a text message\'s attachments are compared, and an empty list no longer pa
   ]);
   assert.deepEqual(compareDocument(shape, storedFixture('messages/text.json', { attachments: arr(i(1)) })), [
     'attachments[0]: string expected, integer found',
+  ]);
+});
+
+// ---- Storage objects (part C, Task 10) ----
+
+const SHA = 'a'.repeat(64);
+const VAULT = 'family_documents/alice__bob/doc-1/order.pdf';
+/** An object's metadata as the Storage emulator answers it. */
+const object = (extra = {}) => Object.assign({
+  name: VAULT, bucket: 'demo-coplanly.appspot.com', contentType: 'application/pdf', size: '42',
+  metadata: { uploader: 'alice', sha256: SHA },
+}, extra);
+
+test('storage lines are read apart from the documents', () => {
+  const text = `events/a\nstorage:${VAULT}\nstorage:${VAULT}\n`;
+  assert.deepEqual(parseWritten(text), ['events/a']);
+  assert.deepEqual(parseWrittenFiles(text), [VAULT]);
+  assert.throws(() => parseWrittenFiles('storage:\n'), /Storage object path/);
+  assert.throws(() => parseWrittenFiles('storage:a//b\n'), /Storage object path/);
+});
+
+test('a vault object with Android\'s path and metadata has no mismatch', () => {
+  assert.deepEqual(compareFile(VAULT, object()), []);
+});
+
+test('a vault object with another key, a bad digest or a stranger as uploader is a mismatch', () => {
+  assert.deepEqual(compareFile(VAULT, object({ metadata: { uploader: 'alice', sha256: SHA, extra: 'x' } })), [
+    'metadata: keys [extra, sha256, uploader] where SharedFileStorage.upload at FamilyDocumentPaths.storagePath writes [sha256, uploader]',
+  ]);
+  assert.deepEqual(compareFile(VAULT, object({ metadata: { uploader: 'alice', sha256: 'ABC' } })), [
+    'metadata.sha256: not 64 lowercase hex digits',
+  ]);
+  assert.deepEqual(compareFile(VAULT, object({ metadata: { uploader: 'carol', sha256: SHA } })), [
+    'metadata.uploader: not one of the family the path names',
+  ]);
+});
+
+test('a vault object off the path shape, of a refused type or of an unknown prefix is a mismatch', () => {
+  assert.equal(compareFile('family_documents/alice__bob/order.pdf', object()).length, 1);
+  assert.deepEqual(compareFile('family_documents/alice/doc-1/order.pdf', object({ metadata: { uploader: 'alice', sha256: SHA } })), [
+    'path: "alice" is not a pair id of two uids, which storage.rules splits',
+  ]);
+  assert.deepEqual(compareFile(VAULT, object({ contentType: 'text/plain' })), [
+    'contentType: "text/plain" is not one storage.rules admits',
+  ]);
+  assert.match(compareFile('elsewhere/x/y/z', object())[0], /no Android shape is known/);
+});
+
+test('a listed object the Storage emulator lacks, or with no emulator to ask, fails', async () => {
+  const missing = await runOver(`events/e\nstorage:${VAULT}\n`, { 'events/e': null }, { files: {} });
+  assert.ok(missing.problems.includes(`storage:${VAULT}: not found on the Storage emulator`));
+  const noEmulator = await runOver(`storage:${VAULT}\nusers/u\n`, {});
+  assert.ok(noEmulator.problems.includes(`storage:${VAULT}: no Storage emulator to read it from`));
+});
+
+test('the gate must have uploaded a vault file and a pet photo', async () => {
+  assert.deepEqual(REQUIRED_FILE_PREFIXES, ['family_documents', 'pet_photos']);
+  const none = await runOver('users/u\n', {}, { requiredFiles: REQUIRED_FILE_PREFIXES, files: {} });
+  assert.ok(none.problems.includes('storage:family_documents: the gate uploaded no file to compare'));
+  assert.ok(none.problems.includes('storage:pet_photos: the gate uploaded no file to compare'));
+  const both = await runOver(`users/u\nstorage:${VAULT}\nstorage:${PET_PHOTO}\n`, {}, {
+    requiredFiles: REQUIRED_FILE_PREFIXES, files: { [VAULT]: object(), [PET_PHOTO]: photo() },
+  });
+  assert.ok(!both.problems.some((p) => p.startsWith('storage:')), both.problems.join('\n'));
+  assert.ok(both.lines.some((line) => line === `ok storage:${VAULT} against SharedFileStorage.upload at FamilyDocumentPaths.storagePath`));
+  assert.ok(both.lines.some((line) => line === `ok storage:${PET_PHOTO} against SharedFileStorage.uploadBytes at RecordPhotoPaths.build`));
+});
+
+// ---- Record photos (part C, Task 11) ----
+
+const PET_PHOTO = 'pet_photos/alice__bob/pet-1/0b1e3c9a-5d2f-4e6a-8b7c-1d2e3f4a5b6c.jpg';
+/** A pet photo's metadata as the Storage emulator answers it. */
+const photo = (extra = {}) => object(Object.assign({ name: PET_PHOTO, contentType: 'image/jpeg' }, extra));
+
+test('a pet photo in the family\'s or the uploader\'s own folder has no mismatch', () => {
+  assert.deepEqual(compareFile(PET_PHOTO, photo()), []);
+  assert.deepEqual(compareFile('pet_photos/solo_alice/pet-1/0b1e3c9a-5d2f-4e6a-8b7c-1d2e3f4a5b6c.jpg', photo()), []);
+});
+
+test('a pet photo off the shape, not a JPEG or in a stranger\'s folder is a mismatch', () => {
+  assert.equal(compareFile('pet_photos/alice__bob/pet-1/photo.png', photo()).length, 1);
+  assert.deepEqual(compareFile(PET_PHOTO, photo({ contentType: 'application/pdf' })), [
+    'contentType: "application/pdf" is not one storage.rules admits',
+  ]);
+  assert.deepEqual(compareFile('pet_photos/solo_carol/pet-1/0b1e3c9a-5d2f-4e6a-8b7c-1d2e3f4a5b6c.jpg', photo()), [
+    'metadata.uploader: not one of the family the path names',
+  ]);
+  assert.deepEqual(compareFile('pet_photos/solo_/pet-1/0b1e3c9a-5d2f-4e6a-8b7c-1d2e3f4a5b6c.jpg', photo()), [
+    'path: "solo_" names no uid',
+  ]);
+  assert.deepEqual(compareFile('pet_photos/alice/pet-1/0b1e3c9a-5d2f-4e6a-8b7c-1d2e3f4a5b6c.jpg', photo()), [
+    'path: "alice" is not a pair id of two uids, which storage.rules splits',
   ]);
 });

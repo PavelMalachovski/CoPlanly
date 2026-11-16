@@ -124,9 +124,13 @@ fun MedicalProfileEditor(
 }
 
 /**
- * Blood type field: an [ExposedDropdownMenuBox] over [BloodType.entries] when editable, a plain
- * label/value pair with no dropdown affordance at all when not.
+ * Blood type field: an [ExposedDropdownMenuBox] over [BloodType.entries] when editable (on the
+ * iPhone the label and the system's pop-up button, [MenuFieldRow]), a plain label/value pair with no
+ * dropdown affordance at all when not.
  */
+// One field in its three forms (Material's dropdown, the iPhone's pop-up button, read-only), each a
+// branch of the same choice.
+@Suppress("LongMethod")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun BloodTypeSection(
@@ -156,6 +160,16 @@ private fun BloodTypeSection(
     }
 
     var expanded by remember { mutableStateOf(false) }
+    val native = nativeControls()
+    if (native != null) {
+        // The iPhone: the label and the system's pop-up button, the blood type set now checked.
+        val options = listOf<Pair<BloodType?, String>>(null to notSetLabel) +
+            BloodType.entries.map { it to stringResource(it.labelRes()) }
+        // The editor sits in the child form's Material Card.
+        val card = MaterialTheme.colorScheme.surfaceContainerHighest
+        MenuFieldRow(native, fieldLabel, options, bloodType, onSelect, card, modifier)
+        return
+    }
 
     ExposedDropdownMenuBox(
         expanded = expanded,

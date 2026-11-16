@@ -10,7 +10,8 @@ import kotlin.test.assertTrue
 /**
  * Every screen's bar is the iPhone's navigation bar (MON-24 phase 3, part B, Task 9): the shell
  * hides it only over the screens that draw no bar at all, and shows it over every other route the
- * app declares.
+ * app declares. Two of those, the Calendar's and Home's tab roots, hand it a hidden bar (part C):
+ * they lead with the redesign's wordmark header in content, so their bar starts hidden.
  */
 class NativeBarRoutesTest {
 
@@ -38,5 +39,29 @@ class NativeBarRoutesTest {
             assertTrue(route in routes, "$route is not a destination")
             assertFalse(StackHost.showsNativeBar(route))
         }
+    }
+
+    @Test
+    fun `the Calendar and Home are the two routes whose root bar is hidden`() {
+        assertEquals(setOf(Screen.Calendar.route, Screen.Home.route), StackHost.HIDDEN_BAR_ROUTES)
+        assertTrue(StackHost.hidesNativeBar(Screen.Calendar.route))
+        assertTrue(StackHost.hidesNativeBar(Screen.Home.route))
+        StackHost.HIDDEN_BAR_ROUTES.forEach { route ->
+            assertTrue(route in routes, "$route is not a destination")
+            // A hidden bar is still described to the host: its title names the screen to the back
+            // button of a screen pushed over it.
+            assertTrue(StackHost.showsNativeBar(route), "$route describes its bar")
+        }
+    }
+
+    @Test
+    fun `every other route keeps its native bar`() {
+        val hidden = routes.filter { StackHost.hidesNativeBar(it) }
+
+        assertEquals(StackHost.HIDDEN_BAR_ROUTES, hidden.toSet())
+        (routes - StackHost.HIDDEN_BAR_ROUTES).forEach { route ->
+            assertFalse(StackHost.hidesNativeBar(route), "$route hides its bar")
+        }
+        assertFalse(StackHost.hidesNativeBar(Screen.Settings.route), "Settings, pushed from either, keeps its bar")
     }
 }

@@ -31,8 +31,45 @@
 
 'use strict';
 
-const {call, toFields, signUp, writeInvitation, functionsHost, DOCS, PROJECT} =
-    require('../e2e/pairing-smoke.js');
+const smoke = require('../e2e/pairing-smoke.js');
+const {toFields, signUp, writeInvitation, functionsHost, DOCS, PROJECT} = smoke;
+
+/** How long a call waits before its one retry, in milliseconds. */
+const RETRY_AFTER_MS = 5000;
+
+/**
+ * Whether a failed call is worth one retry: an emulator still loading its functions answers a
+ * callable with 404 "does not exist", and one not yet listening refuses the connection (the error
+ * then carries no HTTP status). Any other answer is the call's own and is not retried.
+ *
+ * @param {Error} error The failure `call` threw.
+ * @return {boolean} Whether to retry.
+ */
+function retryable(error) {
+  const message = String(error && error.message);
+  if (/ -> 404: .*does not exist/s.test(message)) return true;
+  return !/ -> \d{3}: /.test(message);
+}
+
+/**
+ * `pairing-smoke.js`' `call`, retried once after five seconds when the emulators were not ready
+ * ([retryable]): on a slow macOS runner the Functions emulator can still be loading when the seed
+ * starts.
+ *
+ * @param {string} url Absolute URL.
+ * @param {Object} options The request, as `call` takes it.
+ * @return {Promise<Object>} The parsed response.
+ */
+async function call(url, options) {
+  try {
+    return await smoke.call(url, options);
+  } catch (error) {
+    if (!retryable(error)) throw error;
+    console.error(`Retrying once in ${RETRY_AFTER_MS / 1000} s: ${error.message}`);
+    await new Promise((resolve) => setTimeout(resolve, RETRY_AFTER_MS));
+    return smoke.call(url, options);
+  }
+}
 
 /** The password `signUp` gives every account. */
 const PASSWORD = 'e2e-password-1';

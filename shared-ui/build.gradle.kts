@@ -47,6 +47,7 @@ val firebaseTestFrameworks = listOf(
     "FirebaseFirestoreInternal",
     "FirebaseFunctions",
     "FirebaseAuth",
+    "FirebaseStorage",
 )
 
 /** Where [gatherFirebaseFrameworks] puts them: links to the frameworks `:shared-data`'s pods built. */
@@ -266,6 +267,9 @@ kotlin {
             // Auth, which `IosFirebase` points at the emulators too and whose exceptions
             // `IosAuthErrors` reads (Task 5). The same version, for the same reason.
             implementation("dev.gitlive:firebase-auth:2.7.0")
+            // Storage, which `IosFirebase` points at the emulators too (part C, Task 10). The same
+            // version, for the same reason.
+            implementation("dev.gitlive:firebase-storage:2.7.0")
             // The native shell (Task 8) drives each stack's lifecycle and hands each screen its
             // owners itself, as `NavHost` does on Android: the versions the graph already resolves
             // through navigation-compose 2.9.2 and Compose Multiplatform 1.9.3.

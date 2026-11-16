@@ -255,7 +255,11 @@ private fun MyProfileContent(
     DatePickerField(
         label = stringResource(Res.string.profile_dob_label),
         value = person.dateOfBirth?.let(::readerMediumDate),
-        onClick = { showDatePicker = true }
+        onClick = { showDatePicker = true },
+        date = person.dateOfBirth,
+        onDateChange = onDateOfBirthChange,
+        // My details sit on the screen's ground.
+        background = MaterialTheme.colorScheme.background
     )
     if (showDatePicker) {
         // The kotlinx-datetime picker the child records' `DatePickerDialog` opens, with its labels

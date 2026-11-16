@@ -56,7 +56,6 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -87,6 +86,8 @@ import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.telemetry.TelemetryConsent
 import com.coparently.app.presentation.ai.AiConsentSettingsEntry
 import com.coparently.app.presentation.chat.SendHold
+import com.coparently.app.presentation.common.AdaptiveOptionRow
+import com.coparently.app.presentation.common.AdaptiveSwitch
 import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.BarLeading
 import com.coparently.app.presentation.common.ConfirmationDialog
@@ -104,6 +105,7 @@ import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.coverageNote
 import com.coparently.app.presentation.common.familyLabel
 import com.coparently.app.presentation.common.labelRes
+import com.coparently.app.presentation.common.nativeControls
 import com.coparently.app.presentation.common.regionLabelRes
 import com.coparently.app.presentation.common.regionName
 import com.coparently.app.presentation.common.regionSummaryRes
@@ -351,8 +353,6 @@ fun SettingsScreen(
     val defaultCurrency by settingsViewModel.defaultCurrency.collectAsState()
     val pauseBeforeSending by settingsViewModel.pauseBeforeSending.collectAsState()
 
-    var showCurrencyPicker by remember { mutableStateOf(false) }
-    var showLanguagePicker by remember { mutableStateOf(false) }
     var showThemePicker by remember { mutableStateOf(false) }
     var showSignOutConfirm by remember { mutableStateOf(false) }
     // Deletion asks twice, the same shape unpair uses: the first dialog says what is lost,
@@ -509,7 +509,9 @@ fun SettingsScreen(
                             // and because the toggle belongs with the sign-in and sync actions that
                             // govern whether it can be used at all. It costs one extra tap on a
                             // control a parent sets once.
-                            trailing = { DisclosureChevron(expanded = googleExpanded) }
+                            trailing = { DisclosureChevron(expanded = googleExpanded) },
+                            // The rotating arrow is this row's mark; a second chevron would double it.
+                            nativeChevron = false
                         )
                         AnimatedVisibility(visible = googleExpanded, enter = sectionEnter(), exit = sectionExit()) {
                             GoogleCalendarActions(
@@ -654,20 +656,76 @@ fun SettingsScreen(
                     // Settings app).
                     if (appLanguages.available) {
                         Divider()
-                        SectionRow(
+                        val languageOptions = AppLanguage.entries.map { it to stringResource(it.labelRes) }
+                        val onLanguage: (AppLanguage) -> Unit = { language ->
+                            if (language != currentLanguage) {
+                                currentLanguage = language
+                                // Recreates the activity with the new locale and persists the
+                                // choice (autoStoreLocales); below Android 13, "System default"
+                                // over a choice starts the app again (SystemDefaultRelaunch). The
+                                // phone's own half.
+                                appLanguages.apply(language)
+                            }
+                        }
+                        val languageTitle = stringResource(Res.string.settings_language_title)
+                        AdaptiveOptionRow(
+                            title = languageTitle,
                             icon = Icons.Default.Language,
-                            title = stringResource(Res.string.settings_language_title),
-                            onClick = { showLanguagePicker = true },
-                            trailing = { ValueLabel(stringResource(currentLanguage.labelRes)) }
+                            options = languageOptions,
+                            selected = currentLanguage,
+                            onSelect = onLanguage,
+                            row = { open ->
+                                SectionRow(
+                                    icon = Icons.Default.Language,
+                                    title = languageTitle,
+                                    onClick = open,
+                                    trailing = { ValueLabel(stringResource(currentLanguage.labelRes)) }
+                                )
+                            },
+                            dialog = { dismiss ->
+                                SingleChoiceDialog(
+                                    title = stringResource(Res.string.settings_language_picker_title),
+                                    options = languageOptions,
+                                    selected = currentLanguage,
+                                    onSelect = { language ->
+                                        dismiss()
+                                        onLanguage(language)
+                                    },
+                                    onDismiss = dismiss
+                                )
+                            }
                         )
                     }
                     Divider()
-                    SectionRow(
+                    val currencyOptions = SupportedCurrency.entries.map { it to "${it.code}  ${it.symbol}" }
+                    val currencyTitle = stringResource(Res.string.currency_settings_title)
+                    AdaptiveOptionRow(
+                        title = currencyTitle,
                         icon = Icons.Default.Payments,
-                        title = stringResource(Res.string.currency_settings_title),
-                        onClick = { showCurrencyPicker = true },
-                        trailing = {
-                            ValueLabel("${defaultCurrency.code} ${defaultCurrency.symbol}")
+                        options = currencyOptions,
+                        selected = defaultCurrency,
+                        onSelect = { settingsViewModel.setDefaultCurrency(it) },
+                        row = { open ->
+                            SectionRow(
+                                icon = Icons.Default.Payments,
+                                title = currencyTitle,
+                                onClick = open,
+                                trailing = {
+                                    ValueLabel("${defaultCurrency.code} ${defaultCurrency.symbol}")
+                                }
+                            )
+                        },
+                        dialog = { dismiss ->
+                            SingleChoiceDialog(
+                                title = stringResource(Res.string.currency_picker_title),
+                                options = currencyOptions,
+                                selected = defaultCurrency,
+                                onSelect = { currency ->
+                                    dismiss()
+                                    settingsViewModel.setDefaultCurrency(currency)
+                                },
+                                onDismiss = dismiss
+                            )
                         }
                     )
                     // Only where this phone can register for pushes (the iPhone's stand-in cannot
@@ -677,29 +735,34 @@ fun SettingsScreen(
                         // POST_NOTIFICATIONS is requested here, contextually, not on app start.
                         val notificationPermissionRequester =
                             com.coparently.app.presentation.common.rememberNotificationPermissionRequester()
+                        val pushOn = settingsUiState.notificationsEnabled &&
+                            permissions.isGranted(PlatformPermission.NOTIFICATIONS)
+                        val onPushChange: (Boolean) -> Unit = { enabled ->
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            if (enabled) {
+                                notificationPermissionRequester.request {
+                                    settingsViewModel.toggleNotifications(true)
+                                }
+                            } else {
+                                settingsViewModel.toggleNotifications(false)
+                            }
+                        }
                         SectionRow(
                             icon = Icons.Default.Notifications,
                             title = stringResource(Res.string.settings_push_notifications),
                             supporting = stringResource(Res.string.settings_push_notifications_description),
                             trailing = {
                                 val pushLabel = stringResource(Res.string.settings_push_notifications)
-                                Switch(
+                                AdaptiveSwitch(
                                     modifier = Modifier.semantics { contentDescription = pushLabel },
-                                    checked = settingsUiState.notificationsEnabled &&
-                                        permissions.isGranted(PlatformPermission.NOTIFICATIONS),
-                                    onCheckedChange = { enabled ->
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        if (enabled) {
-                                            notificationPermissionRequester.request {
-                                                settingsViewModel.toggleNotifications(true)
-                                            }
-                                        } else {
-                                            settingsViewModel.toggleNotifications(false)
-                                        }
-                                    },
-                                    enabled = !settingsUiState.isLoading
+                                    checked = pushOn,
+                                    onCheckedChange = onPushChange,
+                                    enabled = !settingsUiState.isLoading,
+                                    accessibilityLabel = pushLabel
                                 )
-                            }
+                            },
+                            onToggle = { onPushChange(!pushOn) }.takeIf { !settingsUiState.isLoading },
+                            toggled = pushOn
                         )
                     }
                 }
@@ -721,15 +784,21 @@ fun SettingsScreen(
                         ),
                         trailing = {
                             val pauseLabel = stringResource(Res.string.settings_pause_before_sending_title)
-                            Switch(
+                            AdaptiveSwitch(
                                 checked = pauseBeforeSending,
                                 modifier = Modifier.semantics { contentDescription = pauseLabel },
                                 onCheckedChange = { enabled ->
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     settingsViewModel.setPauseBeforeSending(enabled)
-                                }
+                                },
+                                accessibilityLabel = pauseLabel
                             )
-                        }
+                        },
+                        onToggle = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            settingsViewModel.setPauseBeforeSending(!pauseBeforeSending)
+                        },
+                        toggled = pauseBeforeSending
                     )
                 }
             }
@@ -750,16 +819,22 @@ fun SettingsScreen(
                         supporting = stringResource(Res.string.settings_telemetry_description),
                         trailing = {
                             val telemetryLabel = stringResource(Res.string.settings_telemetry_title)
-                            Switch(
+                            AdaptiveSwitch(
                                 checked = telemetryConsent == TelemetryConsent.GRANTED,
                                 // Named for TalkBack, which otherwise reads only "Switch, on".
                                 modifier = Modifier.semantics { contentDescription = telemetryLabel },
                                 onCheckedChange = { granted ->
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     telemetryConsentViewModel.answer(granted)
-                                }
+                                },
+                                accessibilityLabel = telemetryLabel
                             )
-                        }
+                        },
+                        onToggle = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            telemetryConsentViewModel.answer(telemetryConsent != TelemetryConsent.GRANTED)
+                        },
+                        toggled = telemetryConsent == TelemetryConsent.GRANTED
                     )
                     Divider()
                     // Beside telemetry, the other consent. It withdraws the child-health consent
@@ -987,38 +1062,6 @@ fun SettingsScreen(
             onDismiss = { showThemePicker = false }
         )
     }
-
-    if (showLanguagePicker) {
-        SingleChoiceDialog(
-            title = stringResource(Res.string.settings_language_picker_title),
-            options = AppLanguage.entries.map { it to stringResource(it.labelRes) },
-            selected = currentLanguage,
-            onSelect = { language ->
-                showLanguagePicker = false
-                if (language != currentLanguage) {
-                    currentLanguage = language
-                    // Recreates the activity with the new locale and persists the choice
-                    // (autoStoreLocales); below Android 13, "System default" over a choice
-                    // starts the app again (SystemDefaultRelaunch). The phone's own half.
-                    appLanguages.apply(language)
-                }
-            },
-            onDismiss = { showLanguagePicker = false }
-        )
-    }
-
-    if (showCurrencyPicker) {
-        SingleChoiceDialog(
-            title = stringResource(Res.string.currency_picker_title),
-            options = SupportedCurrency.entries.map { it to "${it.code}  ${it.symbol}" },
-            selected = defaultCurrency,
-            onSelect = { currency ->
-                showCurrencyPicker = false
-                settingsViewModel.setDefaultCurrency(currency)
-            },
-            onDismiss = { showCurrencyPicker = false }
-        )
-    }
 }
 
 /** The trailing chevron on a row that expands in place, showing which way it is now. */
@@ -1051,6 +1094,8 @@ private const val HALF_TURN_DEGREES = 180f
 /** The trailing chevron on a row that navigates elsewhere. */
 @Composable
 private fun Chevron() {
+    // The grouped row draws the one chevron under native controls (Grouped board).
+    if (nativeControls() != null) return
     Icon(
         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
         contentDescription = null,
@@ -1114,10 +1159,11 @@ private fun GoogleCalendarActions(
                 text = syncLabel,
                 style = MaterialTheme.typography.bodyLarge
             )
-            Switch(
+            AdaptiveSwitch(
                 checked = isSyncEnabled,
                 modifier = Modifier.semantics { contentDescription = syncLabel },
                 onCheckedChange = onToggleSync,
+                accessibilityLabel = syncLabel,
                 // On only while connected, off always. The switch is stored and survives a
                 // disconnect now, so "on with nothing connected" is reachable — and must stay
                 // switchable off. (This read `signedIn || !enabled`, the other way round.)

@@ -32,6 +32,7 @@ import platform.UIKit.UILayoutPriorityDefaultHigh
 import platform.UIKit.UIMenu
 import platform.UIKit.UIMenuElementAttributesDestructive
 import platform.UIKit.UIMenuElementAttributesDisabled
+import platform.UIKit.UIMenuElementState
 import platform.UIKit.UINavigationItemLargeTitleDisplayMode
 import platform.UIKit.UIScreen
 import platform.UIKit.UIViewController
@@ -61,12 +62,18 @@ import platform.darwin.dispatch_get_main_queue
  * @property backSteps The screen's inner steps ([BackSteps]): while one is enabled the back button
  *   undoes it rather than leaving the screen, so the system back button gives way to one of the
  *   shell's own that asks them first.
+ * @property hiddenChanged Told the bar's [ScreenBar.hidden] each time the bar is drawn: whether the
+ *   navigation bar is to be hidden over this screen, which leads with a header of its own in
+ *   content (the Calendar's and Home's roots). The navigation bar is one per stack, so it is the
+ *   screen's controller, not this bar, that sets it ([ScreenController.showsBar]). The item keeps
+ *   the title either way: it names the screen to the back button of a screen pushed over it.
  * @property chipFrame Wraps the chip and the title view in the providers the screen is composed in.
  */
 internal class NativeBars(
     private val largeTitle: Boolean,
     private val sheetRoot: Boolean,
     private val backSteps: BackSteps,
+    private val hiddenChanged: (Boolean) -> Unit,
     private val chipFrame: @Composable (content: @Composable () -> Unit) -> Unit
 ) : BarHost {
 
@@ -133,6 +140,7 @@ internal class NativeBars(
     // `NSSelectorFromString` is Kotlin/Native's C interop.
     @OptIn(ExperimentalForeignApi::class)
     private fun draw(bar: ScreenBar) {
+        hiddenChanged(bar.hidden)
         val item = viewController.navigationItem
         item.title = bar.title
         item.largeTitleDisplayMode = if (bar.largeTitle || largeTitle) {
@@ -250,7 +258,8 @@ internal class NativeBars(
 
     /**
      * An action whose tap opens its [menu] as a `UIMenu`: each entry a `UIAction` calling the
-     * latest bar's entry at the same place, a destructive one marked so, a disabled one dimmed.
+     * latest bar's entry at the same place, a destructive one marked so, a disabled one dimmed, a
+     * checked one ticked.
      */
     private fun menuItem(index: Int, action: BarAction, menu: List<BarMenuItem>): UIBarButtonItem {
         val entries = menu.mapIndexed { entry, menuItem ->
@@ -263,6 +272,7 @@ internal class NativeBars(
                 if (menuItem.destructive) flags = flags or UIMenuElementAttributesDestructive
                 if (!menuItem.enabled) flags = flags or UIMenuElementAttributesDisabled
                 attributes = flags
+                if (menuItem.checked) state = UIMenuElementState.UIMenuElementStateOn
             }
         }
         return UIBarButtonItem().apply {
@@ -389,7 +399,8 @@ private data class VisibleBar(
     val leading: VisibleLeading,
     val actions: List<VisibleAction>,
     val trailing: Boolean,
-    val titleContent: Boolean
+    val titleContent: Boolean,
+    val hidden: Boolean
 ) {
     companion object {
         fun of(bar: ScreenBar) = VisibleBar(
@@ -408,11 +419,14 @@ private data class VisibleBar(
                     enabled = action.enabled,
                     primary = action.primary,
                     dot = action.dot,
-                    menu = action.menu?.map { VisibleMenuItem(it.label, it.sfSymbol, it.destructive, it.enabled) }
+                    menu = action.menu?.map {
+                        VisibleMenuItem(it.label, it.sfSymbol, it.destructive, it.enabled, it.checked)
+                    }
                 )
             },
             trailing = bar.trailingContent != null,
-            titleContent = bar.titleContent != null
+            titleContent = bar.titleContent != null,
+            hidden = bar.hidden
         )
     }
 }
@@ -438,5 +452,6 @@ private data class VisibleMenuItem(
     val label: String,
     val sfSymbol: String?,
     val destructive: Boolean,
-    val enabled: Boolean
+    val enabled: Boolean,
+    val checked: Boolean
 )

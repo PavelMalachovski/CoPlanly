@@ -34,6 +34,7 @@ import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.nativeControls
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
@@ -128,7 +129,11 @@ fun EarlierFamiliesScreen(
                                 )
                             },
                             onClick = { onOpen(family.familyId) },
-                            trailing = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) }
+                            trailing = {
+                                if (nativeControls() == null) {
+                                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+                                }
+                            }
                         )
                     }
                 }

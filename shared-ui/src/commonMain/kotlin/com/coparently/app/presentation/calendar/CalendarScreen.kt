@@ -682,10 +682,11 @@ fun CalendarScreen(
     // Back from a day opened by tapping a month cell returns to that month instead of leaving the
     // tab (docs/AUDIT-2026-10-design.md D-11): the tap reads as drilling in, so Back has to read
     // as coming back out. A Day view reached through the view picker keeps the default Back.
-    ScreenBackStep(enabled = viewMode == CalendarViewMode.DAY && dayOpenedFromMonth) {
+    val returnToMonth: () -> Unit = {
         dayOpenedFromMonth = false
         calendarViewModel.setViewMode(CalendarViewMode.MONTH)
     }
+    ScreenBackStep(enabled = viewMode == CalendarViewMode.DAY && dayOpenedFromMonth, onBack = returnToMonth)
     // Every tap on the Calendar tab opens this month in Month view (tester feedback, 21 October
     // 2026), the tab's restored state notwithstanding. The count answered last is saved with the
     // screen, so a tap made from another tab is answered when the screen comes back.
@@ -736,24 +737,22 @@ fun CalendarScreen(
     Scaffold(
         containerColor = ScreenContainerColor,
         topBar = {
-            // The header, or the swap selection's; on the iPhone the month, Today, Filters, the gear
-            // and "+" are the navigation bar's (MON-24 phase 3, part B).
+            // The header, or the swap selection's, in content on both platforms: the iPhone hides its
+            // navigation bar over the Calendar's root (MON-24 phase 3, part C).
             CalendarTopBar(
                 state = CalendarTopBarState(
                     children = children,
                     viewMode = viewMode,
-                    titleDate = anchorDate,
                     filtersActive = parentFilter != ParentFilter.BOTH ||
                         hiddenEventTypes.isNotEmpty() ||
                         !showHolidays,
-                    swapMonth = displayedMonth.takeIf { swapHeaderShown }
+                    swapMonth = displayedMonth.takeIf { swapHeaderShown },
+                    backStep = returnToMonth.takeIf { viewMode == CalendarViewMode.DAY && dayOpenedFromMonth }
                 ),
                 actions = CalendarTopBarActions(
                     onViewModeChange = { mode -> calendarViewModel.setViewMode(mode) },
                     onFilters = { showTypeFilters = true },
-                    onSettings = onSettingsClick,
-                    onToday = showToday,
-                    onAddEvent = addEventOnScreenDay
+                    onSettings = onSettingsClick
                 ),
                 swapActions = SwapSelectionBarActions(
                     onPreviousMonth = { calendarViewModel.showMonth(displayedMonth.minusMonth()) },
@@ -1049,7 +1048,6 @@ fun CalendarScreen(
                             custodyModel != null && viewMode == CalendarViewMode.MONTH && !selectingSwap &&
                                 grid.followsFamily
                         }?.let { { selectingSwap = true } },
-                        // Drawn here on Android; the iPhone's bar carries it (CalendarTopBar).
                         onAddEvent = addEventOnScreenDay.takeUnless { swapHeaderShown }
                     )
                     // Whose colour is whose and what the marks mean, in every view (new-user review,
@@ -1209,7 +1207,9 @@ fun CalendarScreen(
                     previewEventId = null
                     deleteEventWithUndo(eventId)
                 },
-                onDismiss = { previewEventId = null }
+                onDismiss = { previewEventId = null },
+                // The grid above the iPhone's half-height sheet stays in reach.
+                undimmed = true
             )
         } else {
             // Event disappeared (deleted/synced away) — close the sheet

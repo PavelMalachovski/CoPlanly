@@ -93,8 +93,8 @@ class SharedFileStorage(
  *
  * Paths only, and **nothing that answers a download URL** (CLAUDE.md item 31): a reader fetches an
  * object as the signed-in user, so `storage.rules` decides. On Android it is the Firebase Storage
- * SDK (`FirebaseStorageBucket` in the app); the iPhone's is still to come (`NoStorageBucket`
- * until then).
+ * SDK (`FirebaseStorageBucket` in the app), on the iPhone the iOS SDK's (`IosStorageBucket`,
+ * MON-24 phase 3, part C).
  */
 interface StorageBucket {
 

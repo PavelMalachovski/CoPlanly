@@ -81,7 +81,9 @@ fun rememberDiscardGuard(dirty: Boolean, onLeave: () -> Unit): DiscardGuard {
                 currentOnLeave()
             },
             onDismiss = { asking = false },
-            isDestructive = true
+            isDestructive = true,
+            // A question with two answers is an alert on the iPhone; Discard is only coloured red.
+            asActionSheet = false
         )
     }
 

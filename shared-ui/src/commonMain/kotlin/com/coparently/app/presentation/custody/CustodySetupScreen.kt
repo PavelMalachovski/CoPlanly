@@ -38,7 +38,6 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -60,6 +59,8 @@ import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.CustodyModelType
+import com.coparently.app.presentation.common.AdaptiveSegmented
+import com.coparently.app.presentation.common.AdaptiveSwitch
 import com.coparently.app.presentation.common.AnswerByField
 import com.coparently.app.presentation.common.AnswerByPickSaver
 import com.coparently.app.presentation.common.FamilyMember
@@ -515,26 +516,35 @@ fun CustodyPatternForm(
             )
 
             // Two names, one chosen — a switch said only "on" for one of them (second audit).
-            SingleChoiceSegmentedButtonRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = dims.paddingSmall)
+            val firstOptions = listOf(true, false)
+            val rowModifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = dims.paddingSmall)
+            AdaptiveSegmented(
+                // Behind the native control: on the screen's ground.
+                background = MaterialTheme.colorScheme.background,
+                labels = firstOptions.map { parentNames.labelFor(if (it) "mom" else "dad") },
+                selectedIndex = firstOptions.indexOf(uiState.momFirst),
+                onSelect = { actions.setMomFirst(firstOptions[it]) },
+                modifier = rowModifier
             ) {
-                listOf(true, false).forEachIndexed { index, momFirst ->
-                    val slot = if (momFirst) "mom" else "dad"
-                    SegmentedButton(
-                        selected = uiState.momFirst == momFirst,
-                        onClick = { actions.setMomFirst(momFirst) },
-                        shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
-                        icon = {
-                            Box(
-                                modifier = Modifier
-                                    .size(12.dp)
-                                    .background(ParentColors.fill(slot), CircleShape)
-                            )
-                        },
-                        label = { Text(parentNames.labelFor(slot)) }
-                    )
+                SingleChoiceSegmentedButtonRow(modifier = rowModifier) {
+                    firstOptions.forEachIndexed { index, momFirst ->
+                        val slot = if (momFirst) "mom" else "dad"
+                        SegmentedButton(
+                            selected = uiState.momFirst == momFirst,
+                            onClick = { actions.setMomFirst(momFirst) },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
+                            icon = {
+                                Box(
+                                    modifier = Modifier
+                                        .size(12.dp)
+                                        .background(ParentColors.fill(slot), CircleShape)
+                                )
+                            },
+                            label = { Text(parentNames.labelFor(slot)) }
+                        )
+                    }
                 }
             }
 
@@ -832,9 +842,10 @@ private fun MidweekContactSection(
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f)
             )
-            Switch(
+            AdaptiveSwitch(
                 checked = uiState.midweekEnabled,
-                onCheckedChange = onEnabledChange
+                onCheckedChange = onEnabledChange,
+                accessibilityLabel = stringResource(Res.string.custody_midweek_enable)
             )
         }
 
@@ -874,20 +885,22 @@ private fun MidweekContactSection(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                val everyWeekText = stringResource(
+                    if (uiState.midweekEveryWeek) {
+                        Res.string.custody_midweek_every_week
+                    } else {
+                        Res.string.custody_midweek_off_week_only
+                    }
+                )
                 Text(
-                    text = stringResource(
-                        if (uiState.midweekEveryWeek) {
-                            Res.string.custody_midweek_every_week
-                        } else {
-                            Res.string.custody_midweek_off_week_only
-                        }
-                    ),
+                    text = everyWeekText,
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.weight(1f)
                 )
-                Switch(
+                AdaptiveSwitch(
                     checked = uiState.midweekEveryWeek,
-                    onCheckedChange = onEveryWeekChange
+                    onCheckedChange = onEveryWeekChange,
+                    accessibilityLabel = everyWeekText
                 )
             }
         }

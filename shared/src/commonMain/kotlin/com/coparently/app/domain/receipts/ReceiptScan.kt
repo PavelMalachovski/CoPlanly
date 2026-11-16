@@ -36,7 +36,8 @@ interface ReceiptTextRecognizer {
     /**
      * Whether this phone reads a receipt's text at all. The expense form scans a photo only when it
      * does, and says nothing about a scan otherwise (design item 8): ML Kit's recognizer on Android
-     * always does; the iPhone's stand-in does not yet (MON-24 phase 2, slice 11e).
+     * and Vision's on the iPhone (`VisionReceiptText`, MON-24 phase 3) always do; the iPhone's stand-in
+     * did not (slice 11e).
      */
     val available: Boolean get() = true
 

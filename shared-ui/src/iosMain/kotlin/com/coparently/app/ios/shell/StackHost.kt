@@ -19,14 +19,17 @@ import com.coparently.app.presentation.navigation.Screen
 import com.coparently.app.presentation.navigation.StackChange
 import com.coparently.app.presentation.navigation.StackMirror
 import com.coparently.app.presentation.navigation.appDestinations
+import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCSignatureOverride
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import platform.Foundation.NSSelectorFromString
 import platform.UIKit.UINavigationController
 import platform.UIKit.UINavigationControllerDelegateProtocol
 import platform.UIKit.UIViewController
+import platform.UIKit.presentationController
 import platform.UIKit.transitionCoordinator
 import platform.darwin.NSObject
 
@@ -55,7 +58,9 @@ import platform.darwin.NSObject
  * back. So whenever the host has mirrored the stack — after a push or pop it asked for, a transition
  * that ended, or one that was cancelled — [applyBars] sets each navigation controller's bar for the
  * screen actually on top: shown over a screen that describes its bar, hidden over one that draws
- * its own. A form's sheet gets its bar state the same way, as soon as it is built.
+ * its own or whose bar asks to be hidden ([ScreenController.showsBar]: the Calendar's and Home's
+ * roots, which lead with the redesign's header). A form's sheet gets its bar state the same way, as
+ * soon as it is built.
  *
  * **A tab never shows the screens before the app proper.** A tab's screen that navigates to one
  * (Settings' sign-out navigates to the sign-in screen) is not mirrored: [onRootFlowRequested] hands
@@ -74,6 +79,9 @@ import platform.darwin.NSObject
  * @property onRootFlowRequested A tab's way out: a screen there navigated to a root-flow route,
  *   which the shell then shows as the root flow. Null for the root flow.
  */
+// One stack mirrored into UIKit: its steps share the stack's state, and splitting them would only
+// hand that state around.
+@Suppress("TooManyFunctions")
 internal class StackHost(
     private val shell: ShellEnvironment,
     private val session: ViewModelStoreOwner,
@@ -139,6 +147,23 @@ internal class StackHost(
     fun popToStart() {
         navController.popBackStack(startRoute, inclusive = false)
     }
+
+    /** The stack's first screen, while UIKit shows one. */
+    private val rootScreen: ScreenController?
+        get() = (navigation.viewControllers.firstOrNull() as? UIViewController)?.let { root ->
+            // `isEqual`, Objective-C's identity, whatever Kotlin/Native's wrappers compare as.
+            screens.values.firstOrNull { root.isEqual(it.viewController) }
+        }
+
+    /** Whether the stack's first screen has an inner step its back undoes first. */
+    val rootStepPending: Boolean get() = rootScreen?.backSteps?.hasEnabledStep == true
+
+    /**
+     * Undoes the latest inner step of the stack's first screen, as its bar's back button would, and
+     * answers whether there was one: what a tap on the Calendar tab does to a Day view opened from a
+     * month cell, alongside `CalendarTabTaps`.
+     */
+    fun undoRootStep(): Boolean = rootScreen?.backSteps?.handle() == true
 
     /** Ends the stack: its screens leave, its entries are destroyed and their ViewModels cleared. */
     fun dispose() {
@@ -232,7 +257,7 @@ internal class StackHost(
             navigation.setViewControllers(controllers, animated)
         }
         main.lastOrNull()?.let { top ->
-            navigation.setNavigationBarHidden(!screens.getValue(top.id).nativeBar, animated)
+            navigation.setNavigationBarHidden(!screens.getValue(top.id).showsBar, animated)
         }
     }
 
@@ -247,9 +272,35 @@ internal class StackHost(
             sheetNavigation.applyBar(screens.values)
             sheetEdgeSwipe = EdgeSwipeBack(sheetNavigation, stepPendingOn)
             sheetMoving = true
-            navigation.presentViewController(sheetNavigation, animated) { transitionEnded() }
+            presentOverWhatIsUp(sheetNavigation, animated)
         } else if (!sameControllers(existing.viewControllers, controllers)) {
             existing.setViewControllers(controllers, animated)
+        }
+    }
+
+    /**
+     * Presents a form's sheet, first taking away what the screen presents already: a screen's own
+     * sheet (an event's preview, whose Edit opens this form) is still up when the form arrives, and
+     * UIKit drops a second presentation without a word, which would leave the stack waiting on a
+     * transition that never ends. What is up is dismissed without animation and the form presented
+     * once it has gone; one already being dismissed is waited for. A controller taken away in code
+     * tells its presentation delegate nothing, so its owner (a screen's sheet, a picker, a question)
+     * is told as a swipe down tells it ([tellDismissed]), and releases what it holds.
+     */
+    private fun presentOverWhatIsUp(sheetNavigation: UIViewController, animated: Boolean) {
+        val present = { navigation.presentViewController(sheetNavigation, animated) { transitionEnded() } }
+        val other = navigation.presentedViewController?.takeIf { it !== sheetNavigation }
+        when {
+            other == null -> present()
+            other.beingDismissed -> {
+                val coordinator = other.transitionCoordinator
+                val waits = coordinator?.animateAlongsideTransition(null, completion = { _ -> present() }) == true
+                if (!waits) present()
+            }
+            else -> other.dismissViewControllerAnimated(false) {
+                tellDismissed(other)
+                present()
+            }
         }
     }
 
@@ -337,6 +388,7 @@ internal class StackHost(
             shell = shell,
             session = session,
             nativeBar = showsNativeBar(route),
+            barHiddenAtFirst = hidesNativeBar(route),
             sheetGuard = form?.guard,
             visible = visibility.of(entry.id)
         )
@@ -356,9 +408,11 @@ internal class StackHost(
             // The edge swipe's delegate, once the navigation controller has made its gesture.
             edgeSwipe.attach()
             sheetEdgeSwipe?.attach()
-            // The bar shows for a screen that describes its bar, and hides over one that draws its own.
-            val nativeBar = screens.values.firstOrNull { it.viewController === willShowViewController }?.nativeBar
-            if (nativeBar != null) navigationController.setNavigationBarHidden(!nativeBar, animated)
+            // The bar shows for a screen that describes its bar, and hides over one that draws its own
+            // or whose bar asks to be hidden: each screen's own answer, so a screen pushed over the
+            // Calendar's root gets its bar back, and the root loses it again on the way back.
+            val showsBar = screens.values.firstOrNull { it.viewController === willShowViewController }?.showsBar
+            if (showsBar != null) navigationController.setNavigationBarHidden(!showsBar, animated)
             // A back swipe can be let go of: the transition then ends without `didShow`, and with
             // the stacks as they were. Whatever the shared controller did meanwhile is mirrored then.
             navigationController.transitionCoordinator?.animateAlongsideTransition(null) { context ->
@@ -405,6 +459,18 @@ internal class StackHost(
         /** Whether the navigation bar shows over [route]'s screen: every route but [NO_BAR_ROUTES]. */
         fun showsNativeBar(route: String): Boolean = route !in NO_BAR_ROUTES
 
+        /**
+         * The routes whose screens describe their bar but hand the shell a hidden one
+         * (`ScreenBar.hidden`), leading with the redesign's wordmark header in content: the
+         * Calendar's and Home's tab roots (MON-24 phase 3, part C). The bar starts hidden over them
+         * before they first compose, so it does not show for a frame; what the screen hands the
+         * host decides from then on.
+         */
+        val HIDDEN_BAR_ROUTES: Set<String> = setOf(Screen.Calendar.route, Screen.Home.route)
+
+        /** Whether [route]'s screen starts with its navigation bar hidden; see [HIDDEN_BAR_ROUTES]. */
+        fun hidesNativeBar(route: String): Boolean = route in HIDDEN_BAR_ROUTES
+
         /** Whether two lists hold the same view controllers, in order. */
         private fun sameControllers(current: List<*>, wanted: List<UIViewController>): Boolean =
             current.size == wanted.size && current.indices.all { current[it] === wanted[it] }
@@ -412,13 +478,29 @@ internal class StackHost(
 }
 
 /**
- * Shows this navigation controller's bar over a top screen that describes its bar, and hides it
- * over one that draws its own; [screens] are the stack's screens.
+ * Shows this navigation controller's bar over a top screen that shows one
+ * ([ScreenController.showsBar]), and hides it over one that does not; [screens] are the stack's
+ * screens.
  */
+/**
+ * Tells [controller]'s presentation delegate that it was dismissed, as UIKit tells it after a swipe
+ * down and never after a dismissal in code. The method is optional in the protocol, so it is called
+ * only on a delegate that implements it.
+ */
+// `respondsToSelector` and `NSSelectorFromString` are Kotlin/Native's C interop.
+@OptIn(ExperimentalForeignApi::class)
+private fun tellDismissed(controller: UIViewController) {
+    val presentation = controller.presentationController ?: return
+    val delegate = presentation.delegate ?: return
+    if (delegate.respondsToSelector(NSSelectorFromString("presentationControllerDidDismiss:"))) {
+        delegate.presentationControllerDidDismiss(presentation)
+    }
+}
+
 private fun UINavigationController.applyBar(screens: Collection<ScreenController>) {
     val top = topViewController ?: return
-    val nativeBar = screens.firstOrNull { it.viewController === top }?.nativeBar ?: return
-    if (isNavigationBarHidden() == nativeBar) setNavigationBarHidden(!nativeBar, animated = false)
+    val showsBar = screens.firstOrNull { it.viewController === top }?.showsBar ?: return
+    if (isNavigationBarHidden() == showsBar) setNavigationBarHidden(!showsBar, animated = false)
 }
 
 /**

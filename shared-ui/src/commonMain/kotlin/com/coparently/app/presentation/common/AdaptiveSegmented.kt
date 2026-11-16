@@ -1,0 +1,56 @@
+package com.coparently.app.presentation.common
+
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+
+/**
+ * A segmented choice of one among [labels]: the site's own Material row where the shell has no
+ * native controls (Android), the phone's where it has ([NativeControls.Segmented],
+ * `UISegmentedControl` on the iPhone).
+ *
+ * Without native controls it composes [material], the `SingleChoiceSegmentedButtonRow` the site drew
+ * before, unchanged, so Android's colours, icons, semantics and sizes are untouched; [labels],
+ * [selectedIndex], [onSelect], [enabled] and [modifier] are not used there, because the row carries
+ * its own. [labels] must be the strings the row's segments show.
+ *
+ * @param labels The segments' titles, in order
+ * @param selectedIndex The chosen segment, or -1 when none is chosen
+ * @param onSelect Called with the index of the segment the parent chose
+ * @param modifier Modifier applied to the native control
+ * @param enabled Whether the parent can choose now (the native control; the row has its own)
+ * @param background The colour of what the control sits on, behind the native control on the iPhone
+ *   (Compose clears its pixels under it): a card's `surfaceContainer` by default; a caller on the
+ *   screen's ground passes `colorScheme.background`
+ * @param accessibilityLabel What the choice is about, read by VoiceOver for the native control as a
+ *   whole (the Material row names itself through its own semantics), or null for none
+ * @param material The site's Material row, drawn where there are no native controls
+ */
+@Composable
+@Suppress("LongParameterList") // the control's values, its callback, its look and the site's row
+fun AdaptiveSegmented(
+    labels: List<String>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    background: Color = MaterialTheme.colorScheme.surfaceContainer,
+    accessibilityLabel: String? = null,
+    material: @Composable () -> Unit
+) {
+    val native = nativeControls()
+    if (native == null) {
+        material()
+    } else {
+        native.Segmented(
+            labels = labels,
+            selectedIndex = selectedIndex,
+            onSelect = onSelect,
+            enabled = enabled,
+            background = background,
+            accessibilityLabel = accessibilityLabel,
+            modifier = modifier
+        )
+    }
+}

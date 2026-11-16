@@ -26,7 +26,6 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -42,7 +41,11 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.calendar.ParentFilter
+import com.coparently.app.presentation.common.AdaptiveSegmented
+import com.coparently.app.presentation.common.AdaptiveSheet
+import com.coparently.app.presentation.common.AdaptiveSwitch
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.SheetHeight
 import com.coparently.app.presentation.common.eventTypeLabel
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.CoPlanlyCorners
@@ -93,10 +96,7 @@ fun EventTypeFilterSheet(
     val dims = dimensions()
     var newTypeName by remember { mutableStateOf("") }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState
-    ) {
+    val body: @Composable () -> Unit = {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -223,13 +223,27 @@ fun EventTypeFilterSheet(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Switch(
+                AdaptiveSwitch(
                     checked = showHolidays,
-                    onCheckedChange = onShowHolidaysChange
+                    onCheckedChange = onShowHolidaysChange,
+                    accessibilityLabel = stringResource(Res.string.calendar_filter_holidays_title),
+                    background = MaterialTheme.colorScheme.surfaceContainerLow
                 )
             }
         }
     }
+    AdaptiveSheet(
+        onDismiss = onDismiss,
+        height = SheetHeight.Large,
+        material = {
+            ModalBottomSheet(
+                onDismissRequest = onDismiss,
+                sheetState = sheetState
+            ) { body() }
+        },
+        content = body,
+        scrollable = true
+    )
 }
 
 /**
@@ -308,45 +322,59 @@ private fun ParentFilterSegments(
     parentNames: ParentNames,
     onSelected: (ParentFilter) -> Unit
 ) {
-    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-        // Fill hue for container and border; text-grade partner for the label (design item 2:
-        // the raw pink on a dark surface is under AA as a foreground).
-        data class Segment(val filter: ParentFilter, val label: String, val color: Color, val content: Color)
-        val primary = MaterialTheme.colorScheme.primary
-        val options = listOf(
-            Segment(ParentFilter.MOM, parentNames.labelFor("mom"), ParentColors.fill("mom"), ParentColors.text("mom")),
-            Segment(ParentFilter.BOTH, stringResource(Res.string.calendar_filter_both), primary, primary),
-            Segment(ParentFilter.DAD, parentNames.labelFor("dad"), ParentColors.fill("dad"), ParentColors.text("dad"))
-        )
-        options.forEachIndexed { index, segment ->
-            val filter = segment.filter
-            val color = segment.color
-            SegmentedButton(
-                selected = selected == filter,
-                onClick = { onSelected(filter) },
-                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
-                colors = SegmentedButtonDefaults.colors(
-                    activeContainerColor = color.copy(alpha = 0.15f),
-                    activeContentColor = segment.content,
-                    activeBorderColor = color
-                ),
-                icon = {}
-            ) {
-                // A segment is about a third of the sheet's width and SegmentedButton has a
-                // fixed height, so a long label clips rather than wrapping. Names are now
-                // arbitrary length, and the fallbacks are the worst case, not the best:
-                // "Второй родитель" is 15 characters, "Другий з батьків" 16.
-                Text(
-                    text = segment.label,
-                    style = if (selected == filter) {
-                        MaterialTheme.typography.labelMediumEmphasized
-                    } else {
-                        MaterialTheme.typography.labelMedium
-                    },
-                    maxLines = 1,
-                    softWrap = false,
-                    overflow = TextOverflow.Ellipsis
-                )
+    // On the iPhone the segments are UIKit's, named only: the parent colours stay with Material's.
+    val order = listOf(ParentFilter.MOM, ParentFilter.BOTH, ParentFilter.DAD)
+    val momLabel = parentNames.labelFor("mom")
+    val bothLabel = stringResource(Res.string.calendar_filter_both)
+    val dadLabel = parentNames.labelFor("dad")
+    AdaptiveSegmented(
+        // Behind the native control: the filters sheet's container.
+        background = MaterialTheme.colorScheme.surfaceContainerLow,
+        labels = listOf(momLabel, bothLabel, dadLabel),
+        selectedIndex = order.indexOf(selected),
+        onSelect = { onSelected(order[it]) },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            // Fill hue for container and border; text-grade partner for the label (design item 2:
+            // the raw pink on a dark surface is under AA as a foreground).
+            data class Segment(val filter: ParentFilter, val label: String, val color: Color, val content: Color)
+            val primary = MaterialTheme.colorScheme.primary
+            val options = listOf(
+                Segment(ParentFilter.MOM, momLabel, ParentColors.fill("mom"), ParentColors.text("mom")),
+                Segment(ParentFilter.BOTH, bothLabel, primary, primary),
+                Segment(ParentFilter.DAD, dadLabel, ParentColors.fill("dad"), ParentColors.text("dad"))
+            )
+            options.forEachIndexed { index, segment ->
+                val filter = segment.filter
+                val color = segment.color
+                SegmentedButton(
+                    selected = selected == filter,
+                    onClick = { onSelected(filter) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                    colors = SegmentedButtonDefaults.colors(
+                        activeContainerColor = color.copy(alpha = 0.15f),
+                        activeContentColor = segment.content,
+                        activeBorderColor = color
+                    ),
+                    icon = {}
+                ) {
+                    // A segment is about a third of the sheet's width and SegmentedButton has a
+                    // fixed height, so a long label clips rather than wrapping. Names are now
+                    // arbitrary length, and the fallbacks are the worst case, not the best:
+                    // "Второй родитель" is 15 characters, "Другий з батьків" 16.
+                    Text(
+                        text = segment.label,
+                        style = if (selected == filter) {
+                            MaterialTheme.typography.labelMediumEmphasized
+                        } else {
+                            MaterialTheme.typography.labelMedium
+                        },
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }

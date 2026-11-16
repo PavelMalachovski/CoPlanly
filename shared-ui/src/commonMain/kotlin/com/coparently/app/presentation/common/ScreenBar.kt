@@ -39,13 +39,17 @@ import com.coparently.app.presentation.theme.screenTopAppBarColors
  * @property destructive Whether the entry destroys something: drawn in the error colour on
  *   Android and as a destructive element on the iPhone
  * @property enabled Whether the entry can be chosen now
+ * @property checked Whether the entry is the option chosen now: a checkmark beside it on the
+ *   iPhone (`UIMenuElementStateOn`), as a choice opened from a row shows its value. Android's
+ *   bar menus set none, and draw none
  */
 data class BarMenuItem(
     val label: String,
     val sfSymbol: String?,
     val onClick: () -> Unit,
     val destructive: Boolean = false,
-    val enabled: Boolean = true
+    val enabled: Boolean = true,
+    val checked: Boolean = false
 )
 
 /**
@@ -117,6 +121,11 @@ sealed interface BarLeading {
  * @property titleContent A composable drawn in place of [title]'s text (a chat thread's header):
  *   Android draws it in the bar's title slot, the iPhone as the navigation item's title view.
  *   [title] still names the screen (the iPhone's back button and accessibility)
+ * @property hidden Whether a host hides its system bar over this screen, which then draws its own
+ *   header in content: the Calendar's and Home's tab roots on the iPhone, which lead with the
+ *   redesign's wordmark header (MON-24 phase 3, part C). The host still holds [title], which names
+ *   the screen to the back button of a screen pushed over it. Android draws its Material bar
+ *   whatever this says: a screen passes it only where a shell draws the bars
  */
 data class ScreenBar(
     val title: String,
@@ -125,7 +134,8 @@ data class ScreenBar(
     val leading: BarLeading = BarLeading.None,
     val actions: List<BarAction> = emptyList(),
     val trailingContent: (@Composable () -> Unit)? = null,
-    val titleContent: (@Composable () -> Unit)? = null
+    val titleContent: (@Composable () -> Unit)? = null,
+    val hidden: Boolean = false
 )
 
 /**
@@ -134,9 +144,9 @@ data class ScreenBar(
  * [show] is called when the screen's bar first composes and then only when something the host
  * would draw changes: the title, the subtitle, [ScreenBar.largeTitle], the leading's kind, label or
  * `enabled`, an action's label, icon, SF Symbol, `enabled`, `primary`, `dot` or menu (its entries'
- * labels, symbols, `destructive` and `enabled`), the actions' order, or whether there is trailing
- * content or title content. A recomposition that changes none of them hands the host
- * nothing, however fresh the screen's lambdas are, so a host may rebuild its bar on every call.
+ * labels, symbols, `destructive` and `enabled`), the actions' order, whether there is trailing
+ * content or title content, or [ScreenBar.hidden]. A recomposition that changes none of them hands
+ * the host nothing, however fresh the screen's lambdas are, so a host may rebuild its bar on every call.
  *
  * The bar the host holds stays live: its `onClick`s and its trailing content always run the
  * screen's latest lambdas, so a tap on a bar shown several recompositions ago does what the

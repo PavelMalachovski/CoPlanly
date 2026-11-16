@@ -18,6 +18,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,7 +28,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.parentingplan.ParentingPlanPair
+import com.coparently.app.presentation.common.AdaptiveSheet
 import com.coparently.app.presentation.common.ConfirmationDialog
+import com.coparently.app.presentation.common.LocalSheetGuard
+import com.coparently.app.presentation.common.SheetHeight
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.common_discard
@@ -95,10 +99,7 @@ fun PlanQuestionSheet(
         )
     }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState
-    ) {
+    val body: @Composable () -> Unit = {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -129,6 +130,36 @@ fun PlanQuestionSheet(
                 Text(stringResource(Res.string.parenting_plan_save))
             }
         }
+    }
+    AdaptiveSheet(
+        onDismiss = onDismiss,
+        height = SheetHeight.Large,
+        material = {
+            ModalBottomSheet(
+                onDismissRequest = onDismiss,
+                sheetState = sheetState
+            ) { body() }
+        },
+        content = {
+            ReportUnsaved(unsaved = draft != seeded, onRefused = { confirmDiscard = true })
+            body()
+        },
+        scrollable = true
+    )
+}
+
+/**
+ * Tells the iPhone's own sheet ([LocalSheetGuard]) whether the answer holds edits, so a swipe down
+ * over them asks [onRefused]'s question instead of closing, as the guarded sheet state does for
+ * Material's sheet. Without a sheet guard (Android) it does nothing.
+ */
+@Composable
+private fun ReportUnsaved(unsaved: Boolean, onRefused: () -> Unit) {
+    val guard = LocalSheetGuard.current ?: return
+    val ask by rememberUpdatedState(onRefused)
+    DisposableEffect(guard, unsaved) {
+        guard.report(unsaved) { ask() }
+        onDispose { guard.report(false) {} }
     }
 }
 

@@ -147,7 +147,7 @@ kotlin {
             baseName = "SharedData"
             isStatic = false
         }
-        listOf("FirebaseCore", "FirebaseFirestore", "FirebaseFirestoreInternal", "FirebaseFunctions", "FirebaseAuth").forEach { name ->
+        listOf("FirebaseCore", "FirebaseFirestore", "FirebaseFirestoreInternal", "FirebaseFunctions", "FirebaseAuth", "FirebaseStorage").forEach { name ->
             pod(name) {
                 version = firebaseIosVersion
                 linkOnly = true
@@ -231,6 +231,10 @@ kotlin {
             // Signing in on the iPhone (`IosFirebaseAuth`, MON-24 phase 3, Task 5): the e-mail path
             // and, from Task 9, Google's. Its pod is in the list above.
             implementation("dev.gitlive:firebase-auth:$gitliveVersion")
+            // Cloud Storage on the iPhone (`IosStorageBucket`, MON-24 phase 3, part C, Task 10): the
+            // vault, chat attachments and record photos. iOS only: Android keeps the app's own
+            // Firebase Storage SDK (`FirebaseStorageBucket`). Its pod is in the list above.
+            implementation("dev.gitlive:firebase-storage:$gitliveVersion")
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

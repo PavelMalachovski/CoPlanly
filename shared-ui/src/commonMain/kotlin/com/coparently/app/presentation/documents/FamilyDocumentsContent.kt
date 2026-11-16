@@ -39,7 +39,9 @@ import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.nativeControls
 import com.coparently.app.presentation.platform.LocalFileDetails
+import com.coparently.app.presentation.platform.LocalOpenUrl
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.documents_add_dialog_category_label
@@ -101,6 +103,7 @@ internal fun DocumentsBody(
     readOnly: Boolean = false
 ) {
     val documents = (list as? DocumentsList.Loaded)?.documents.orEmpty()
+    val canOpen = LocalOpenUrl.current.available
     if (list is DocumentsList.Loaded && documents.isEmpty() && !uploading) {
         EmptyState(
             icon = Icons.Default.Description,
@@ -135,7 +138,13 @@ internal fun DocumentsBody(
                                 document = document,
                                 addedBy = nameFor(document.createdByFirebaseUid),
                                 canDelete = !readOnly && document.createdByFirebaseUid == myUid,
-                                onOpen = { onOpen(document) },
+                                // Where nothing on the phone opens a file, a row offers no tap that
+                                // could only fail (design item 8), as a chat attachment does.
+                                onOpen = if (canOpen) {
+                                    { onOpen(document) }
+                                } else {
+                                    null
+                                },
                                 onDelete = { onDelete(document) }
                             )
                         }
@@ -176,7 +185,7 @@ private fun DocumentRow(
     document: FamilyDocument,
     addedBy: String,
     canDelete: Boolean,
-    onOpen: () -> Unit,
+    onOpen: (() -> Unit)?,
     onDelete: () -> Unit
 ) {
     val fileDetails = LocalFileDetails.current
@@ -261,9 +270,26 @@ private fun CategoryOption(category: DocumentCategory, selected: Boolean, onSele
     }
 }
 
-/** Confirms a delete, saying what it does on both phones and to the file. */
+/**
+ * Confirms a delete, saying what it does on both phones and to the file: under the iPhone's native
+ * controls as its own action sheet, with Delete in red.
+ */
 @Composable
 internal fun DeleteDocumentDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val native = nativeControls()
+    if (native != null) {
+        native.Confirm(
+            title = stringResource(Res.string.documents_delete_confirm_title),
+            message = stringResource(Res.string.documents_delete_confirm_body),
+            confirmText = stringResource(Res.string.documents_delete_confirm),
+            dismissText = stringResource(Res.string.shared_file_cancel),
+            destructive = true,
+            asActionSheet = true,
+            onConfirm = onConfirm,
+            onDismiss = onDismiss
+        )
+        return
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(Res.string.documents_delete_confirm_title)) },

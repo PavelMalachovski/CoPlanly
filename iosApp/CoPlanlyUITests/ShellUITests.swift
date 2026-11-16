@@ -10,8 +10,11 @@ import XCTest
 /// second tap on the selected tab popping two screens, the Chat tab's thread under the system bar with
 /// its overflow menu opening and closing, a sheet holding an edit swiped down, which
 /// must ask "Discard changes?" and stay open on "Keep editing", the event form as a sheet with Save in
-/// its bar (disabled until the event has a title), New event's description and the chat composer
-/// staying above the keyboard, a `coplanly://pair` link reaching the pairing screen with its code, and
+/// its bar (disabled until the event has a title), its Starts date picked in the system's own
+/// calendar, "Jump to date" as a sheet a swipe down closes, an event's delete asked in the system's
+/// action sheet and cancelled ("Discard changes?" being its alert), New event's description and the chat composer
+/// staying above the keyboard, a `coplanly://pair` link reaching the pairing screen with its code, the
+/// vault's document picker opened and cancelled, an invitation's share sheet opened and closed, and
 /// a sign-out reaching the sign-in screen with no tabs, then a
 /// sign-in landing on fresh tabs, and last, deleting the account from Settings, which reaches the
 /// sign-in screen.
@@ -64,7 +67,7 @@ final class ShellUITests: XCTestCase {
         step("Home", after: ["sign in"]) { try self.home() }
         step("Calendar and Chat tabs", after: ["sign in"]) { try self.otherTabs() }
         step("Chat thread's bar and overflow menu", after: ["Calendar and Chat tabs"]) { try self.chatThreadBar() }
-        step("Calendar's bar shows the month and its actions", after: ["Calendar and Chat tabs"]) { try self.calendarBar() }
+        step("Calendar leads with the redesign's header", after: ["Calendar and Chat tabs"]) { try self.calendarHeader() }
         step("Family", after: ["sign in"]) { try self.family() }
         step("Expenses", after: ["Family"]) { try self.expenses() }
         step("back swipe", after: ["Expenses"]) { try self.backSwipe() }
@@ -77,13 +80,35 @@ final class ShellUITests: XCTestCase {
         step("cancelled back swipe over a sub-screen", after: ["Settings"]) { try self.cancelledSwipeOverSubScreen() }
         step("a tab tap pops two screens", after: ["Settings"]) { try self.tabTapPopsTwo() }
         step("New event is a sheet with Save in its bar", after: ["Calendar and Chat tabs"]) { try self.eventFormSheet() }
+        step("New event's Starts date is the system's pill", after: ["New event is a sheet with Save in its bar"]) {
+            try self.startsDatePill()
+        }
+        step("New event's Repeat opens the system's menu", after: ["New event is a sheet with Save in its bar"]) {
+            try self.repeatMenu()
+        }
         step("a new event swiped down closes without asking", after: ["New event is a sheet with Save in its bar"]) {
             try self.newEventSwipeDown()
         }
         step("New event's description stays above the keyboard", after: ["New event is a sheet with Save in its bar"]) {
             try self.eventDescriptionAboveKeyboard()
         }
+        // After the event form's steps: they reuse its open sheet, and this one needs the calendar bare.
+        step("Jump to date is a sheet a swipe closes", after: ["Calendar and Chat tabs"]) { try self.jumpToDateSwipeDown() }
+        step("deleting an event asks in an action sheet, and Cancel keeps it", after: ["Jump to date is a sheet a swipe closes"]) {
+            try self.deleteEventAsks()
+        }
+        step("an event's preview is the system's half-height sheet, swiped away and opened again", after: [
+            "deleting an event asks in an action sheet, and Cancel keeps it",
+        ]) {
+            try self.eventPreviewSheet()
+        }
         step("a coplanly://pair link opens Pairing with its code", after: ["sign in"]) { try self.pairingLink() }
+        step("Documents' Add a file opens the document picker, and Cancel returns", after: ["Family"]) {
+            try self.documentPicker()
+        }
+        step("an invitation's Share opens the share sheet, and it closes", after: ["Family"]) {
+            try self.inviteShareSheet()
+        }
         step("sign out, and sign in to fresh tabs", after: ["Settings"]) {
             try self.signOutAndIn(email: email, password: password)
         }
@@ -123,8 +148,18 @@ final class ShellUITests: XCTestCase {
 
     private func home() throws {
         app.tabBars.firstMatch.buttons["Home"].tap()
-        try require(app.navigationBars["Home"].waitForExistence(timeout: timeout), "Home's navigation bar is missing")
+        try requireHeaderRoot("Home")
         shot("01-home")
+    }
+
+    /// The first screen of the Home or the Calendar tab (MON-24 phase 3, part C, Task 8): it leads
+    /// with the redesign's wordmark header, whose gear is a "Settings" button in content, and the
+    /// shell shows no navigation bar over it.
+    private func requireHeaderRoot(_ name: String) throws {
+        let gear = app.buttons.matching(NSPredicate(format: "label == %@", "Settings")).firstMatch
+        try require(gear.waitForExistence(timeout: timeout), "\(name)'s first screen has no Settings button")
+        // The bar of a screen just popped can still be animating away: wait for it rather than look once.
+        try require(waitForNoNavigationBar(), "\(name)'s first screen still shows a navigation bar")
     }
 
     private func otherTabs() throws {
@@ -210,6 +245,9 @@ final class ShellUITests: XCTestCase {
         dismissKeyboard()
         swipeSheetDown(from: sheetBar)
         try require(app.staticTexts["Discard changes?"].waitForExistence(timeout: timeout), "A swipe over edits did not ask first")
+        // A question with two answers is the system's alert, not an action sheet (part C, Task 5).
+        try require(app.alerts["Discard changes?"].exists, "Discard changes? is not the system's alert")
+        try require(!app.sheets.firstMatch.exists, "Discard changes? was asked in an action sheet")
         shot("05-discard-question")
     }
 
@@ -285,22 +323,31 @@ final class ShellUITests: XCTestCase {
         shot("08-family-again")
     }
 
-    /// The Calendar tab's system bar (MON-24 phase 3, part B, Task 8): titled with the month on
-    /// screen, this month at first, with Today, Filters, Settings and "+" as its buttons; the brand
-    /// row and its heading are not drawn, and the Month/Week/Day control stays under the bar.
-    private func calendarBar() throws {
+    /// The Calendar tab leads with the redesign's header (MON-24 phase 3, part C, Task 8), under no
+    /// navigation bar: the wordmark row's Settings, "Your family calendar", the Month/Week/Day control
+    /// and Filters, then the month card, whose own bar holds the month, Today and "+".
+    private func calendarHeader() throws {
         try goToCalendarRoot()
-        let bar = app.navigationBars[calendarMonthTitle]
-        try require(bar.waitForExistence(timeout: 60), "The calendar's bar is not titled \(calendarMonthTitle)")
-        shot("17-calendar-bar")
-        for label in ["Today", "Filters", "Settings", "Add event"] {
-            try require(bar.buttons[label].exists, "The calendar's bar has no \(label) button")
+        try require(calendarHeading.waitForExistence(timeout: 60), "The calendar does not lead with \"Your family calendar\"")
+        shot("17-calendar-header")
+        try requireHeaderRoot("The Calendar")
+        for label in ["Settings", "Filters", "Today", "Add event"] {
+            let button = app.buttons.matching(NSPredicate(format: "label == %@", label)).firstMatch
+            try require(button.exists, "The calendar has no \(label) button in content")
         }
-        try require(!labelExists(containing: "Your family calendar"), "The calendar still draws its heading under the bar")
-        try require(element(labelledContaining: "Week").exists, "The Month/Week/Day control is missing under the bar")
+        try require(calendarMonthButton.exists, "The month card's title is not \(calendarMonthTitle)")
+        try require(element(labelledContaining: "Week").exists, "The Month/Week/Day control is missing")
     }
 
-    /// The month the calendar opens on, as its bar titles it: this month's name, in English.
+    /// The calendar's heading, the second row of its header.
+    private var calendarHeading: XCUIElement { element(labelledContaining: "Your family calendar") }
+
+    /// The month card's title, a button that opens "Jump to date": this month while nothing moved it.
+    private var calendarMonthButton: XCUIElement {
+        app.buttons.matching(NSPredicate(format: "label == %@", calendarMonthTitle)).firstMatch
+    }
+
+    /// The month the calendar opens on, as its card's bar titles it: this month's name, in English.
     ///
     /// Two assumptions, both true of CI's simulator: the app speaks English (the simulator's
     /// language, so the shared `calendarMonthTitle` names the month as `en` does, with no year for
@@ -314,7 +361,7 @@ final class ShellUITests: XCTestCase {
         return formatter.string(from: Date())
     }
 
-    /// The event form, opened from the calendar's bar, is a sheet whose bar carries a cross
+    /// The event form, opened from the "+" of the calendar's month card, is a sheet whose bar carries a cross
     /// and Save (MON-24 phase 3, part B): Save is disabled until the event has a title, and no second
     /// Save is drawn under the form.
     private func eventFormSheet() throws {
@@ -322,9 +369,8 @@ final class ShellUITests: XCTestCase {
         press(try element(labelled: "Add event", in: app.buttons))
         let sheetBar = app.navigationBars["New event"]
         try require(sheetBar.waitForExistence(timeout: timeout), "The event form did not open as a sheet")
-        // The calendar's own bar may still be in the hierarchy under the sheet; nothing else may be.
-        let underSheet = app.navigationBars[calendarMonthTitle].exists ? 1 : 0
-        try require(app.navigationBars.count - underSheet == 1, "More than one bar over the event form")
+        // The calendar shows no navigation bar of its own under the sheet: the sheet's is the one bar.
+        try require(app.navigationBars.count == 1, "More than one bar over the event form")
         let save = sheetBar.buttons["Save event"]
         try require(save.waitForExistence(timeout: timeout), "The sheet's bar carries no Save")
         try require(!save.isEnabled, "Save was enabled on an event with no title")
@@ -338,6 +384,411 @@ final class ShellUITests: XCTestCase {
         shot("10b-event-form-with-title")
     }
 
+    /// The event form's Starts date is the system's compact date picker (MON-24 phase 3, part C,
+    /// Task 3): tapping it opens the system's own calendar, and the day chosen there is the day the
+    /// pill reads. The day is the 20th, or the 21st when today is the 20th, so the pick is a change.
+    private func startsDatePill() throws {
+        let sheetBar = app.navigationBars["New event"]
+        if !sheetBar.exists { try eventFormSheet() }
+        dismissKeyboard()
+        let byStarts = app.datePickers.matching(NSPredicate(format: "label == %@", "Starts")).firstMatch
+        let pill = byStarts.waitForExistence(timeout: 5) ? byStarts : app.datePickers.firstMatch
+        try require(pill.waitForExistence(timeout: timeout), "The Starts date is not the system's date picker")
+        // The title's keyboard may stay up (its key is Next, not Done): the pill is brought above it.
+        try bringIntoForm(pill, what: "the Starts pill")
+        let day = Calendar.current.component(.day, from: Date()) == 20 ? 21 : 20
+        // The calendar grid behind the sheet has buttons for the day too: what is on screen now is
+        // not the system's calendar, which opens on the tap.
+        let before = Set(dayButtons(day).map { "\($0.label)@\($0.frame)" })
+        press(pill)
+        // Opened or not, the calendar is closed again if the step fails, so it does not cascade.
+        do {
+            let dayButton = try calendarDay(day, excluding: before)
+            shot("10c-starts-system-calendar")
+            press(dayButton)
+            // On some releases the calendar closes on a pick; on iOS 26 it stays up until a tap
+            // outside it, and its dismiss region carries no "PopoverDismissRegion" name.
+            closeCalendarPopover()
+            try require(!calendarPopoverOpen, "The system's calendar stayed open after a tap outside it")
+        } catch {
+            closeCalendarPopover()
+            throw error
+        }
+        // VoiceOver reads the pill as the value of its "Date Picker" child ("11/20/26", or
+        // "Nov 20, 2026"), which is a button while the calendar is closed and another element
+        // while it is open: every child is read, whatever its type.
+        let children = pill.descendants(matching: .any).allElementsBoundByIndex
+        let reads = [pill.label, pill.value as? String ?? ""]
+            + children.flatMap { [$0.label, $0.value as? String ?? ""] }.filter { !$0.isEmpty }
+        try require(
+            reads.contains { $0.range(of: "\\b\(day)\\b", options: .regularExpression) != nil },
+            "The Starts pill does not read the \(day)th: \(reads)"
+        )
+        shot("10d-starts-pill-picked")
+    }
+
+    /// Scrolls the open form until [element] is drawn between the sheet's bar and the keyboard (or
+    /// the screen's bottom): the form's viewport ends above a keyboard that stays up, and a native
+    /// control outside it is not even in the tree.
+    private func bringIntoForm(_ element: XCUIElement, what: String) throws {
+        let barBottom = app.navigationBars.firstMatch.exists ? app.navigationBars.firstMatch.frame.maxY : 0
+        for _ in 0..<10 {
+            let keyboard = app.keyboards.firstMatch
+            let limit = keyboard.exists ? keyboard.frame.minY - 60 : app.windows.firstMatch.frame.maxY - 160
+            if element.exists {
+                let frame = element.frame
+                if frame.minY >= barBottom && frame.maxY <= limit { return }
+                if frame.minY < barBottom {
+                    dragForm(from: 0.3, to: 0.42)
+                    continue
+                }
+            }
+            dragForm(from: 0.42, to: 0.3)
+        }
+        try require(element.exists, "\(what) is not in the form")
+    }
+
+    /// Drags the form from [from] to [to] (fractions of the screen's height, at its middle): a short
+    /// drag, so an element in view is not scrolled past the bar.
+    private func dragForm(from: CGFloat, to: CGFloat) {
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: from))
+        start.press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: to)))
+        usleep(500_000)
+    }
+
+    /// The buttons whose label names [day], wholly inside the window.
+    private func dayButtons(_ day: Int) -> [XCUIElement] {
+        let predicate = NSPredicate(format: "label MATCHES %@", ".*\\b\(day)\\b.*")
+        let window = app.windows.firstMatch.frame
+        return app.buttons.matching(predicate).allElementsBoundByIndex.filter { element in
+            let f = element.frame
+            return element.exists && !f.isEmpty && f.minX >= 0 && f.maxX <= window.width
+                && f.minY >= 0 && f.maxY <= window.height
+        }
+    }
+
+    /// The button of the opened calendar for [day], chosen by frame: wholly inside the window, not
+    /// one of [excluding] (what was on screen before the calendar opened: the grid behind the
+    /// sheet), and preferably inside the system's date picker and of the month the pill shows.
+    /// Neighbouring months are kept as off-screen pages whose days match the label too, and
+    /// Compose's elements are not reliably reported hittable.
+    private func calendarDay(_ day: Int, excluding: Set<String>) throws -> XCUIElement {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "MMMM"
+        let month = formatter.string(from: Date())
+        let predicate = NSPredicate(format: "label MATCHES %@", ".*\\b\(day)\\b.*")
+        var listed: [String] = []
+        let deadline = Date().addingTimeInterval(TimeInterval(timeout))
+        repeat {
+            let inPicker = app.datePickers.buttons.matching(predicate).allElementsBoundByIndex
+            let window = app.windows.firstMatch.frame
+            let pickerDays = inPicker.filter { element in
+                let f = element.frame
+                return element.exists && !f.isEmpty && f.minX >= 0 && f.maxX <= window.width
+                    && f.minY >= 0 && f.maxY <= window.height
+            }
+            let new = dayButtons(day).filter { !excluding.contains("\($0.label)@\($0.frame)") }
+            let onScreen = pickerDays.isEmpty ? new : pickerDays
+            if let best = onScreen.first(where: { $0.label.contains(month) }) ?? onScreen.first { return best }
+            listed = (inPicker + new).map { "\($0.label) @ \($0.frame)" }
+            usleep(500_000)
+        } while Date() < deadline
+        let detail = String(listed.joined(separator: "; ").prefix(450))
+        let opened = calendarPopoverOpen ? "open" : "not open"
+        throw StepFailure(description: "No new calendar day \(day) on screen (\(month), the popover \(opened)); candidates: \(detail)")
+    }
+
+    /// Whether the compact date picker's calendar is open: its month arrows show. The form's pills
+    /// have none, and no other calendar (Jump to date's sheet) is up during the form's steps.
+    private var calendarPopoverOpen: Bool {
+        app.buttons["DatePicker.NextMonth"].exists
+    }
+
+    /// Closes the compact date picker's calendar, if it is up, by a tap outside it: on the dismiss
+    /// region where it is named, else on the sheet's bar title, outside the calendar (a tap there
+    /// does nothing if it reaches the form), else at the top of the screen.
+    private func closeCalendarPopover() {
+        guard calendarPopoverOpen else { return }
+        let outside = app.otherElements["PopoverDismissRegion"]
+        if outside.exists {
+            outside.tap()
+        } else {
+            let calendar = app.datePickers.allElementsBoundByIndex.map(\.frame).max { $0.height < $1.height } ?? .zero
+            let title = app.navigationBars.staticTexts.firstMatch
+            if title.exists && !title.frame.intersects(calendar) {
+                title.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            } else {
+                app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.12)).tap()
+            }
+        }
+        _ = app.buttons["DatePicker.NextMonth"].waitForNonExistence(timeout: 5)
+    }
+
+    /// What a failed step may leave over the next one, closed choosing nothing: the date picker's
+    /// calendar, the Repeat menu (a tap outside), an action sheet (its Cancel), "Discard changes?"
+    /// (Discard: the step that asked has failed), and any sheet still up (swiped down from its
+    /// grabber). Run 13 left the event preview up after one failed swipe, and the five steps after
+    /// it failed only because the tab bar was under it.
+    private func closeTransients() {
+        closeCalendarPopover()
+        if app.buttons["Weekly"].exists && app.buttons["Monthly"].exists { tapOutside() }
+        let sheetCancel = app.sheets.buttons["Cancel"]
+        if sheetCancel.exists { sheetCancel.tap() }
+        if app.staticTexts["Discard changes?"].exists { pressIfThere("Discard") }
+        for _ in 0..<3 {
+            guard let grabber = sheetGrabber() else { break }
+            grabber.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.98)))
+            sleep(1)
+            if app.staticTexts["Discard changes?"].exists { pressIfThere("Discard") }
+        }
+    }
+
+    /// The event form's Repeat row ends in the system's pop-up button (MON-24 phase 3, part C,
+    /// Task 4), not a row that opens a dialog: VoiceOver reads it as "Repeat, <value>", its menu
+    /// lists the options, and the one picked is what the button then reads. The labels are the
+    /// shared strings in English ("Weekly" is `event_repeat_weekly`).
+    private func repeatMenu() throws {
+        let sheetBar = app.navigationBars["New event"]
+        if !sheetBar.exists { try eventFormSheet() }
+        dismissKeyboard()
+        let repeatButton = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Repeat,")).firstMatch
+        // A native control below the form's viewport (under a keyboard that stayed up) is not in the
+        // tree until it is scrolled into view.
+        if !repeatButton.waitForExistence(timeout: 5) || repeatButton.frame.maxY > app.windows.firstMatch.frame.maxY - 160 {
+            try bringIntoForm(repeatButton, what: "Repeat's pop-up button")
+        }
+        try require(repeatButton.waitForExistence(timeout: timeout), "Repeat has no pop-up button named \"Repeat, …\"")
+        sleep(1)
+        press(repeatButton)
+        let weekly = app.buttons.matching(NSPredicate(format: "label == %@", "Weekly")).firstMatch
+        try require(weekly.waitForExistence(timeout: timeout), "Repeat did not open a menu with \"Weekly\"")
+        try require(app.buttons["Monthly"].exists, "The Repeat menu does not list every option")
+        try require(!app.alerts.firstMatch.exists, "Repeat opened a dialog as well as the menu")
+        shot("10e-repeat-menu")
+        weekly.tap()
+        try require(app.buttons["Monthly"].waitForNonExistence(timeout: timeout), "The Repeat menu stayed open after a pick")
+        let picked = app.buttons.matching(
+            NSPredicate(format: "label BEGINSWITH %@ AND label CONTAINS %@", "Repeat,", "Weekly")
+        ).firstMatch
+        try require(picked.waitForExistence(timeout: timeout), "The Repeat button does not read \"Weekly\" after the pick")
+        shot("10f-repeat-picked")
+    }
+
+    /// "Jump to date", opened from the month title on the calendar's card, is the system's inline
+    /// calendar in a sheet (MON-24 phase 3, part C, Task 3). A swipe down closes it without moving
+    /// the calendar, leaves nothing presented, and it opens again.
+    private func jumpToDateSwipeDown() throws {
+        // The tab bar is under a sheet still up, so a tab tap would not reach the calendar: close it.
+        let eventSheet = app.navigationBars["New event"]
+        if eventSheet.exists {
+            dismissKeyboard()
+            swipeSheetDown(from: eventSheet)
+            try require(eventSheet.waitForNonExistence(timeout: timeout), "The event form did not close before the jump")
+        }
+        try goToCalendarRoot()
+        try require(calendarHeading.waitForExistence(timeout: timeout), "The calendar's first screen is missing")
+        let title = calendarMonthButton
+        try require(title.waitForExistence(timeout: timeout), "The card's month title is not a button")
+
+        press(title)
+        let sheetBar = app.navigationBars.containing(NSPredicate(format: "label == %@", "Cancel")).firstMatch
+        try require(sheetBar.waitForExistence(timeout: timeout), "Jump to date did not open as a sheet with Cancel")
+        try require(app.datePickers.firstMatch.exists, "The jump-to-date sheet holds no date picker")
+        shot("17b-jump-to-date-sheet")
+        swipeSheetDown(from: sheetBar)
+        try require(sheetBar.waitForNonExistence(timeout: timeout), "A swipe down did not close the jump-to-date sheet")
+        try require(title.waitForExistence(timeout: timeout), "The calendar moved after a dismissed jump")
+        try require(app.navigationBars.count == 0, "Something was left presented over the calendar")
+
+        press(title)
+        try require(sheetBar.waitForExistence(timeout: timeout), "Jump to date did not open a second time")
+        press(sheetBar.buttons.matching(NSPredicate(format: "label == %@", "Cancel")).firstMatch)
+        try require(sheetBar.waitForNonExistence(timeout: timeout), "Cancel did not close the jump-to-date sheet")
+        try require(title.exists, "The calendar moved after a cancelled jump")
+    }
+
+    /// Deleting an event asks first, in the system's action sheet (MON-24 phase 3, part C, Task 5):
+    /// "Delete event" over a red Delete and a separate Cancel. It saves an event of its own, opens
+    /// it from the calendar into its form, asks to delete it from the form's bar, and cancels: the
+    /// form stays open, and once closed the event is still on the calendar.
+    private func deleteEventAsks() throws {
+        try goToCalendarRoot()
+        press(try element(labelled: "Add event", in: app.buttons))
+        let newBar = app.navigationBars["New event"]
+        try require(newBar.waitForExistence(timeout: timeout), "The event form did not open")
+        // The new event's draft may still hold the earlier steps' title; the check's words are
+        // appended to it, and everything below looks the event up by what its label contains.
+        try type(deleteCheckTitle, into: field(labelled: "Event title"))
+        dismissKeyboard()
+        let save = newBar.buttons["Save event"]
+        try require(waitUntilEnabled(save), "Save stayed disabled once the event had a title")
+        press(save)
+        try require(newBar.waitForNonExistence(timeout: timeout), "Saving did not close the event form")
+
+        // A tap on the month cell opens Day view; a tap on the event there opens its preview.
+        let edit = app.buttons.matching(NSPredicate(format: "label == %@", "Edit")).firstMatch
+        for _ in 0..<3 where !edit.exists {
+            guard let event = tourTopmost(containing: deleteCheckTitle) else {
+                throw StepFailure(description: "Nothing on the calendar reads \"\(deleteCheckTitle)\"")
+            }
+            press(event)
+            _ = edit.waitForExistence(timeout: 5)
+        }
+        try require(edit.exists, "The saved event's preview did not open")
+        press(edit)
+        let editBar = app.navigationBars["Edit event"]
+        try require(editBar.waitForExistence(timeout: timeout), "Edit did not open the event's form")
+
+        press(try element(labelled: "Delete event", in: editBar.buttons))
+        let sheet = app.sheets.firstMatch
+        try require(sheet.waitForExistence(timeout: timeout), "Delete did not ask in the system's action sheet")
+        try require(!app.alerts.firstMatch.exists, "Delete asked in an alert, not an action sheet")
+        try require(sheet.staticTexts["Delete event"].exists, "The action sheet is not titled Delete event")
+        try require(sheet.buttons["Delete"].exists, "The action sheet has no Delete")
+        let cancel = sheet.buttons["Cancel"]
+        try require(cancel.exists, "The action sheet has no Cancel")
+        shot("17c-delete-event-action-sheet")
+        cancel.tap()
+        try require(sheet.waitForNonExistence(timeout: timeout), "Cancel left the action sheet up")
+        try require(editBar.exists, "Cancel closed the event's form")
+
+        closeButton(of: editBar).tap()
+        try require(editBar.waitForNonExistence(timeout: timeout), "The event's form did not close")
+        try require(
+            element(labelledContaining: deleteCheckTitle).waitForExistence(timeout: timeout),
+            "The event was deleted although the parent cancelled"
+        )
+    }
+
+    /// An event's preview is the system's own sheet at half the screen (MON-24 phase 3, part C,
+    /// Task 6): opened from the month grid, it shows the event's title in the lower half while the
+    /// calendar above it stays in reach (the Month/Week/Day control can still be touched). A swipe
+    /// down closes it and leaves nothing presented, and the event opens it again. It uses the event
+    /// `deleteEventAsks` saved and kept.
+    private func eventPreviewSheet() throws {
+        try goToCalendarRoot()
+        // The step before left Day view open (opened from a month cell): a tap on the Calendar tab
+        // opens Month on today (`CalendarTabTaps`), and its bar, which Day view's Back needed, goes.
+        let month = app.segmentedControls.buttons["Month"]
+        // The shell logs what it saw of the tap (COPLANLY_TABTAP); the job prints those lines.
+        try require(
+            month.waitForExistence(timeout: timeout) && waitUntilSelected(month),
+            "A tap on the Calendar tab did not return Day view to Month"
+        )
+        try require(waitForNoNavigationBar(), "The Calendar's Month still shows a navigation bar")
+        let edit = app.buttons.matching(NSPredicate(format: "label == %@", "Edit")).firstMatch
+        // A failure leaves no preview over the tab bar, so the steps after it start from a tab.
+        do {
+            try previewChecks(edit: edit)
+        } catch {
+            // The sheet leaves the calendar above it undimmed and in reach, so it is swiped away, not
+            // tapped outside: a tap there would land on the calendar.
+            if edit.exists, let title = try? previewTitle(above: edit) { swipePreviewDown(from: title) }
+            _ = edit.waitForNonExistence(timeout: 5)
+            throw error
+        }
+    }
+
+    /// Waits a little for [element] to read as selected.
+    private func waitUntilSelected(_ element: XCUIElement) -> Bool {
+        let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == 1"), object: element)
+        return XCTWaiter().wait(for: [selected], timeout: 10) == .completed
+    }
+
+    /// Waits a little for no navigation bar to be drawn (one leaving may still be animating away).
+    private func waitForNoNavigationBar() -> Bool {
+        let noBar = XCTNSPredicateExpectation(predicate: NSPredicate(format: "count == 0"), object: app.navigationBars)
+        return XCTWaiter().wait(for: [noBar], timeout: 10) == .completed
+    }
+
+    /// The preview's checks: opened from the month grid (through Day view, whose bar carries Back
+    /// and leaves the header's Month/Week/Day control below it), swiped away, and opened again.
+    private func previewChecks(edit: XCUIElement) throws {
+        try openPreview(of: deleteCheckTitle, edit: edit)
+
+        let title = try previewTitle(above: edit)
+        let control = app.segmentedControls.buttons["Week"]
+        try require(control.exists, "The calendar's Month/Week/Day is not above the preview sheet")
+        try require(control.frame.maxY < title.frame.minY, "The preview sheet covers the calendar's top")
+        shot("17d-event-preview-sheet")
+        // In reach means a tap on it works: `isHittable` reads false for every element under an
+        // undimmed sheet's pass-through container (run 10), so the segment is tapped where it is
+        // drawn and must then read as selected; the calendar shows Week under the sheet.
+        control.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        try require(waitUntilSelected(control), "The calendar above the preview sheet is out of reach")
+        shot("17d2-event-preview-sheet-week-tapped")
+        // Looked up again: the calendar under the sheet changed, and with it the elements' order.
+        // (The week's events load anew, so the sheet may have gone and come back meanwhile.)
+        _ = edit.waitForExistence(timeout: 5)
+        if edit.exists { swipePreviewDown(from: try previewTitle(above: edit)) }
+        try require(edit.waitForNonExistence(timeout: timeout), "A swipe down did not close the event's preview")
+        // The sheet covers the tab bar while it is up, so a tab bar within reach means it has gone.
+        let calendarTab = app.tabBars.firstMatch.buttons["Calendar"]
+        try require(calendarTab.isHittable, "Something was left presented over the calendar")
+
+        try openPreview(of: deleteCheckTitle, edit: edit)
+        shot("17e-event-preview-sheet-again")
+        swipePreviewDown(from: try previewTitle(above: edit))
+        try require(edit.waitForNonExistence(timeout: timeout), "The second preview did not close")
+        try require(calendarTab.isHittable, "Something was left presented after the second preview")
+    }
+
+    /// The event's title in the preview sheet: the highest label holding it below the sheet's top
+    /// (its grabber, or 40 % down the screen) and above the sheet's [edit] button. The highest, not
+    /// the lowest: the sheet's title sits right under its grabber, while the calendar under the
+    /// undimmed sheet may draw the event lower down (run 13, Week view's block).
+    private func previewTitle(above edit: XCUIElement) throws -> XCUIElement {
+        let titles = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", deleteCheckTitle))
+        let sheetTop = sheetGrabber()?.frame.maxY ?? app.frame.height * 0.4
+        let inSheet = titles.allElementsBoundByIndex
+            .filter { $0.frame.minY > sheetTop && $0.frame.minY < edit.frame.minY }
+            .min { $0.frame.minY < $1.frame.minY }
+        guard let found = inSheet else {
+            throw StepFailure(description: "The preview sheet does not show the event's title in the lower half")
+        }
+        return found
+    }
+
+    /// Drags the preview sheet down to the bottom of the screen from its grabber, the system's own
+    /// handle, or, where none is reported, from just above its [title], inside the sheet's top
+    /// margin. Run 13 dragged from above a "title" that was the Week view's block of the event under
+    /// the sheet, a point inside the sheet's content, which scrolled rather than closed it.
+    private func swipePreviewDown(from title: XCUIElement) {
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.98))
+        if let grabber = sheetGrabber() {
+            grabber.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(forDuration: 0.05, thenDragTo: end)
+            return
+        }
+        let start = app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: app.frame.width / 2, dy: title.frame.minY - 12))
+        start.press(forDuration: 0.05, thenDragTo: end)
+    }
+
+    /// The grabber of the sheet on top (the lowest one drawn), if UIKit reports one.
+    private func sheetGrabber() -> XCUIElement? {
+        app.buttons.matching(NSPredicate(format: "label == %@", "Sheet Grabber")).allElementsBoundByIndex
+            .filter { $0.exists && !$0.frame.isEmpty }
+            .max { $0.frame.minY < $1.frame.minY }
+    }
+
+    /// Opens [title]'s preview from the calendar: a tap on its month cell opens Day view, and a tap
+    /// on the event there opens the preview, whose [edit] button then shows.
+    private func openPreview(of title: String, edit: XCUIElement) throws {
+        for _ in 0..<3 where !edit.exists {
+            guard let event = tourTopmost(containing: title) else {
+                throw StepFailure(description: "Nothing on the calendar reads \"\(title)\"")
+            }
+            press(event)
+            _ = edit.waitForExistence(timeout: 5)
+        }
+        try require(edit.exists, "The event's preview did not open")
+    }
+
+    /// The title of the event `deleteEventAsks` saves and then does not delete.
+    private let deleteCheckTitle = "Shell delete check"
+
     /// A new event asks nothing when it is left: its draft is kept as the parent types and comes
     /// back on the next "+" (CLAUDE.md design item 16), so a swipe down closes the sheet at once.
     private func newEventSwipeDown() throws {
@@ -346,8 +797,8 @@ final class ShellUITests: XCTestCase {
         swipeSheetDown(from: sheetBar)
         try require(sheetBar.waitForNonExistence(timeout: timeout), "A swipe down did not close the new event's sheet")
         try require(!app.staticTexts["Discard changes?"].exists, "A new event asked before closing")
-        try require(app.navigationBars[calendarMonthTitle].waitForExistence(timeout: timeout), "The calendar's bar did not come back after the event form")
-        try require(app.navigationBars.count == 1, "A second bar over the calendar after the event form")
+        try require(calendarHeading.waitForExistence(timeout: timeout), "The calendar did not come back after the event form")
+        try require(app.navigationBars.count == 0, "A bar was left over the calendar after the event form")
         try require(app.tabBars.firstMatch.buttons["Calendar"].isSelected, "The calendar was not under the sheet")
     }
 
@@ -414,17 +865,110 @@ final class ShellUITests: XCTestCase {
     /// shared strings in English.
     private func pairingLink() throws {
         try goToFamilyRoot()
-        app.open(URL(string: "coplanly://pair?code=ABC234")!)
-        let refused = element(labelledContaining: "No invitation matches that code")
-        let asked = element(labelledContaining: "Link with")
+        let code = "ABC234"
+        // XCUITest relaunches the app to open a link (a new process), so this is the cold start's
+        // path: the link waits for the signed-in tabs and then pushes Pairing onto the tab shown.
+        app.open(URL(string: "coplanly://pair?code=\(code)")!)
+        let answer = app.descendants(matching: .any).matching(NSPredicate(
+            format: "label CONTAINS %@ OR label CONTAINS %@", "No invitation matches that code", "Link with"
+        )).firstMatch
+        let paired = element(labelledContaining: "Add another co-parent")
+        // The refusal is a snackbar of a few seconds, which a snapshot taken while it animates can
+        // miss: it is looked for until Pairing has been up a while, and then the code is looked for
+        // where it stays, in the screen's own code field.
         var reached = false
-        for _ in 0..<60 where !reached {
-            reached = refused.exists || asked.exists
-            if !reached { sleep(1) }
+        var pairingSince: Date?
+        let deadline = Date().addingTimeInterval(120)
+        while !reached && Date() < deadline {
+            reached = answer.exists
+            if !reached && pairingSince == nil && paired.exists { pairingSince = Date() }
+            if let since = pairingSince, Date().timeIntervalSince(since) > 15 { break }
         }
         shot("16-pairing-link")
+        if !reached && paired.exists { reached = codeInField(code, under: paired) }
         try require(reached, "The link did not reach the pairing screen with its code")
-        if asked.exists { pressIfThere("Cancel") }
+        if app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Link with")).firstMatch.exists {
+            pressIfThere("Cancel")
+        }
+        try goToFamilyRoot()
+    }
+
+    /// Whether Pairing holds [code] after a link: its "Enter a code" field, opened from [row] ("Add
+    /// another co-parent"), shows it, or the field's refusal of it shows under it.
+    private func codeInField(_ code: String, under row: XCUIElement) -> Bool {
+        press(row)
+        let enter = app.buttons["Enter a code"]
+        guard enter.waitForExistence(timeout: timeout) else { return false }
+        press(enter)
+        let holding = NSPredicate(format: "value CONTAINS %@ OR label CONTAINS %@", code, "No invitation matches that code")
+        let field = app.textViews.matching(holding).firstMatch
+        let plain = app.textFields.matching(holding).firstMatch
+        let refusal = element(labelledContaining: "No invitation matches that code")
+        for _ in 0..<20 {
+            if field.exists || plain.exists || refusal.exists { return true }
+            usleep(500_000)
+        }
+        return false
+    }
+
+    /// The vault's Add a file presents the system's document picker (MON-24 phase 3, part C,
+    /// Task 11), and its Cancel takes it away and leaves Documents as it was, picking nothing; a
+    /// second tap opens it again. The simulator has no camera, so Take a photo is not offered.
+    private func documentPicker() throws {
+        try goToFamilyRoot()
+        let row = try element(containing: "Court orders, school letters")
+        let screenBottom = app.windows.firstMatch.frame.maxY - 120
+        for _ in 0..<6 where row.frame.maxY > screenBottom {
+            app.swipeUp()
+        }
+        sleep(1)
+        press(row)
+        if !app.navigationBars["Family"].waitForNonExistence(timeout: 3) { press(row) }
+        try require(app.navigationBars["Documents"].waitForExistence(timeout: timeout), "Documents did not open")
+        try require(!app.buttons["Take a photo"].exists, "Take a photo was offered on a phone with no camera")
+        for attempt in 1...2 {
+            press(try element(labelled: "Add a file", in: app.buttons))
+            let cancel = app.buttons["Cancel"]
+            try require(cancel.waitForExistence(timeout: timeout), "The document picker did not appear (open \(attempt))")
+            if attempt == 1 { shot("17-document-picker") }
+            cancel.tap()
+            try require(cancel.waitForNonExistence(timeout: timeout), "Cancel did not close the document picker")
+            try require(app.navigationBars["Documents"].waitForExistence(timeout: timeout), "Cancel left the Documents screen")
+        }
+        try goToFamilyRoot()
+    }
+
+    /// The pairing screen's Share, under "Add another co-parent", presents the system's share sheet
+    /// with the invitation (MON-24 phase 3, part C, Task 11), and its Close takes it away and leaves
+    /// the pairing screen as it was. Opening the row mints a code on the emulators.
+    private func inviteShareSheet() throws {
+        try goToFamilyRoot()
+        let row = try element(containing: "Linked: ")
+        press(row)
+        if !app.navigationBars["Family"].waitForNonExistence(timeout: 3) { press(row) }
+        press(try element(containing: "Add another co-parent"))
+        // The code card's button is `pairing_share_link`, "Share link" in English.
+        let share = app.buttons.matching(NSPredicate(format: "label == %@", "Share link")).firstMatch
+        try require(share.waitForExistence(timeout: 60), "The invitation's Share link button did not appear")
+        press(share)
+        let sheet = app.otherElements["ActivityListView"]
+        let copy = app.buttons["Copy"]
+        var shown = false
+        for _ in 0..<30 where !shown {
+            shown = sheet.exists || copy.exists
+            if !shown { sleep(1) }
+        }
+        shot("18-invite-share-sheet")
+        try require(shown, "The share sheet did not appear")
+        let close = app.buttons["Close"]
+        if close.exists {
+            close.tap()
+        } else {
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45))
+                .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.98)))
+        }
+        try require(sheet.waitForNonExistence(timeout: timeout) && !copy.exists, "The share sheet did not close")
+        try require(labelExists(containing: "Add another co-parent"), "Closing the share sheet left the pairing screen")
         try goToFamilyRoot()
     }
 
@@ -443,11 +987,12 @@ final class ShellUITests: XCTestCase {
         }
         sleep(1)
         press(row)
-        // The confirmation's button reads as the row does; it is the last one drawn.
-        let named = app.buttons.matching(NSPredicate(format: "label == %@", "Sign out of app"))
-        try require(named.element(boundBy: 0).waitForExistence(timeout: timeout), "No sign-out confirmation")
-        sleep(1)
-        press(named.element(boundBy: named.count - 1))
+        // The confirmation is the system's action sheet (a destructive question, design item 1),
+        // whose button reads as the row does. It is tapped in the sheet, once it can be touched: an
+        // index among every "Sign out of app" could name the row under the sheet, and a tap there
+        // lands on the sheet's dimming and cancels it.
+        let confirm = try signOutConfirmation()
+        confirm.tap()
         try require(app.staticTexts["Welcome back!"].waitForExistence(timeout: 120), "Signing out did not reach the sign-in screen")
         try require(!app.tabBars.firstMatch.exists, "The tab bar is still there on the sign-in screen")
         shot("11-signed-out")
@@ -466,6 +1011,39 @@ final class ShellUITests: XCTestCase {
         shot("12-fresh-tabs")
     }
 
+    /// The sign-out question's confirming button: in the system's action sheet, or an alert should
+    /// a release draw the question as one, waited for until it can be touched.
+    private func signOutConfirmation() throws -> XCUIElement {
+        let byLabel = NSPredicate(format: "label == %@", "Sign out of app")
+        let inSheet = app.sheets.buttons.matching(byLabel).firstMatch
+        let inAlert = app.alerts.buttons.matching(byLabel).firstMatch
+        let deadline = Date().addingTimeInterval(TimeInterval(timeout))
+        repeat {
+            for button in [inSheet, inAlert] where button.exists && button.isHittable { return button }
+            usleep(500_000)
+        } while Date() < deadline
+        throw StepFailure(description: "No sign-out confirmation in an action sheet or an alert")
+    }
+
+    /// Waits up to two minutes for a relaunched app to show its Family tab. A snapshot taken while
+    /// the starting app keeps its main thread busy fails after 30 s with "Timed out while evaluating
+    /// UI query", which XCUITest does not report as a false answer but as a failure that ends the
+    /// test at once (the walk's summary was then never printed). So no element is asked for until
+    /// the app runs in the foreground and has had a moment to start; `app.state` needs no snapshot.
+    private func waitForRelaunchedTabs() -> Bool {
+        let deadline = Date().addingTimeInterval(120)
+        guard app.wait(for: .runningForeground, timeout: 60) else { return false }
+        sleep(15)
+        let family = app.tabBars.buttons["Family"]
+        // Bounded: two minutes in all, each wait 10 s, and over at once if the app stopped.
+        repeat {
+            guard app.state == .runningForeground else { return false }
+            if family.waitForExistence(timeout: 10) { return true }
+            sleep(2)
+        } while Date() < deadline
+        return false
+    }
+
     /// Settings → Delete account → both confirmations (MON-24 phase 3, part B, Task 11): the
     /// `deleteAccount` callable erases the account on the emulators, the phone is wiped and signed
     /// out, and the app shows the sign-in screen with no tabs. The labels are the shared strings in
@@ -473,7 +1051,7 @@ final class ShellUITests: XCTestCase {
     private func deleteAccount() throws {
         app.terminate()
         app.launch()
-        try require(app.tabBars.firstMatch.buttons["Family"].waitForExistence(timeout: 120), "No tab bar after relaunching")
+        try require(waitForRelaunchedTabs(), "No tab bar after relaunching")
         try settings()
         let row = try element(labelled: "Delete account", in: app.buttons)
         let screenBottom = app.windows.firstMatch.frame.maxY - 120
@@ -502,11 +1080,12 @@ final class ShellUITests: XCTestCase {
     private func goToHomeRoot() throws {
         let home = app.tabBars.firstMatch.buttons["Home"]
         home.tap()
-        if !app.navigationBars["Home"].waitForExistence(timeout: 3) { home.tap() }
-        try require(app.navigationBars["Home"].waitForExistence(timeout: timeout), "Home's first screen is missing")
+        // A pushed screen shows a bar, Home's first screen none: a second tap pops to it.
+        if app.navigationBars.firstMatch.waitForExistence(timeout: 3) { home.tap() }
+        try requireHeaderRoot("Home")
     }
 
-    /// The Calendar tab's first screen, under its system bar (MON-24 phase 3, part B, Task 8).
+    /// The Calendar tab's first screen, which shows no system bar (MON-24 phase 3, part C, Task 8).
     private func goToCalendarRoot() throws {
         let calendar = app.tabBars.firstMatch.buttons["Calendar"]
         calendar.tap()
@@ -644,8 +1223,12 @@ final class ShellUITests: XCTestCase {
         if outcome != "passed" {
             shot("zz-failed-" + name.replacingOccurrences(of: " ", with: "-"))
             print("COPLANLY_UI_HIERARCHY_BEGIN \(name)\n\(app.debugDescription)\nCOPLANLY_UI_HIERARCHY_END")
+            // After the record, so it shows what the step left; the next step then starts clean.
+            closeTransients()
         }
         outcomes.append((name, outcome))
+        // As it goes too, for a walk that XCUITest ends before its summary.
+        print("COPLANLY_STEP_DONE \(name): \(outcome)")
     }
 
     // MARK: - Finding and touching
@@ -674,6 +1257,17 @@ final class ShellUITests: XCTestCase {
         guard keyboard.exists else { return }
         app.typeText("\n")
         _ = keyboard.waitForNonExistence(timeout: 5)
+    }
+
+    /// The first element of [query] that can be touched, waiting a little for one: a query may also
+    /// match elements kept off screen (a calendar's neighbouring months), which a tap cannot reach.
+    private func hittable(in query: XCUIElementQuery, what: String) throws -> XCUIElement {
+        for _ in 0..<10 {
+            let candidates = query.allElementsBoundByIndex
+            if let match = candidates.first(where: { $0.exists && $0.isHittable }) { return match }
+            usleep(500_000)
+        }
+        throw StepFailure(description: "Nothing on screen can be touched for \(what)")
     }
 
     /// Taps [element] where it is drawn. Compose's elements are not always reported hittable, so a
@@ -788,6 +1382,14 @@ final class ShellUITests: XCTestCase {
         "add_expense", "edit_expense/{expenseId}",
     ]
 
+    /// The system's controls the tour shows in use (MON-24 phase 3, part C), each a visit of its own
+    /// after the destinations, shot as `tour-control-…`. They are not routes: the summary counts
+    /// them apart, and one the tour cannot show is skipped with the reason, as a route is.
+    private let tourControls = [
+        "control-switch", "control-segment", "control-date-sheet", "control-option-menu",
+        "control-action-sheet", "control-preview-sheet",
+    ]
+
     /// The destinations no signed-in parent of the seeded family can reach, each with the reason.
     private let tourUnreachable: [String: String] = [
         "loading": "shown only until the start destination is known, a moment no tap leads to",
@@ -809,7 +1411,9 @@ final class ShellUITests: XCTestCase {
     /// `tools/ios/seed-shell-family.js --tour` seeded on fresh emulators (an event today with a
     /// change request about it, a child, a pet, an expense and a vault document), visits every
     /// destination it can reach from there and attaches a screenshot named `tour-<route>` for each,
-    /// the route as `AppDestinationCatalog` writes it up to its first `/` or `?`.
+    /// the route as `AppDestinationCatalog` writes it up to its first `/` or `?`. Since part C it also
+    /// shows the system's controls in use (`tourControls`: a switch, a segment, the date sheet, an
+    /// option menu, an action sheet and the event preview sheet), each shot as `tour-control-…`.
     ///
     /// As the Android UI tour (`e2e/UiTourTest`), a destination it cannot reach is recorded with
     /// the reason, never as a failure: a `COPLANLY_TOUR <route>: skipped: …` line, in a text
@@ -833,6 +1437,14 @@ final class ShellUITests: XCTestCase {
 
         touring = true
         tourDeadline = Date().addingTimeInterval(tourBudget)
+        // A walk that failed before its own sign-out leaves this simulator signed in, so the tour
+        // may start on the tabs: it signs out through the app first, and a sign-out that fails is
+        // only printed, the sign-in screen's visit then recording why it was not reached.
+        do {
+            try tourSignOutIfSignedIn()
+        } catch {
+            print("COPLANLY_TOUR_SIGN_OUT_FIRST failed: \(error)")
+        }
         tourVisit("auth") {
             try self.require(self.app.staticTexts["Welcome back!"].waitForExistence(timeout: 120), "The sign-in screen did not show")
         }
@@ -848,13 +1460,20 @@ final class ShellUITests: XCTestCase {
         for route in tourRoutes where !tourOutcomes.contains(where: { $0.route == route }) {
             tourOutcomes.append((route, "skipped: " + (tourUnreachable[route] ?? cause)))
         }
+        for control in tourControls where !tourOutcomes.contains(where: { $0.route == control }) {
+            tourOutcomes.append((control, "skipped: " + cause))
+        }
         touring = false
 
         let lines = tourOutcomes.map { "COPLANLY_TOUR \($0.route): \($0.outcome)" }
         print("COPLANLY_TOUR_SUMMARY_BEGIN")
         lines.forEach { print($0) }
-        let reached = tourOutcomes.filter { $0.outcome == "reached" }.count
-        print("COPLANLY_TOUR_SUMMARY reached \(reached) of \(tourRoutes.count) destinations")
+        let reached = tourOutcomes.filter { tourRoutes.contains($0.route) && $0.outcome == "reached" }.count
+        let shown = tourOutcomes.filter { tourControls.contains($0.route) && $0.outcome == "reached" }.count
+        print(
+            "COPLANLY_TOUR_SUMMARY reached \(reached) of \(tourRoutes.count) destinations, " +
+                "\(shown) of \(tourControls.count) controls in use"
+        )
         print("COPLANLY_TOUR_SUMMARY_END")
         let log = XCTAttachment(string: lines.joined(separator: "\n") + "\n")
         log.name = "tour-log"
@@ -863,6 +1482,37 @@ final class ShellUITests: XCTestCase {
         if !tourCrashes.isEmpty {
             XCTFail("The app stopped running while the tour visited: " + tourCrashes.joined(separator: ", "))
         }
+    }
+
+    /// Signs out through the app when the tour starts signed in: no sign-in screen within 15 s,
+    /// but the tab bar. The steps are the walk's own (`signOutAndIn`): Settings from the Family
+    /// tab's bar, "Sign out of app", and its confirmation.
+    private func tourSignOutIfSignedIn() throws {
+        if app.staticTexts["Welcome back!"].waitForExistence(timeout: 15) { return }
+        let tabs = app.tabBars.firstMatch
+        guard tabs.waitForExistence(timeout: 30) else { return }
+        print("COPLANLY_TOUR_SIGN_OUT_FIRST the app started signed in; signing out")
+        let family = tabs.buttons["Family"]
+        try require(family.waitForExistence(timeout: timeout), "No Family tab to sign out from")
+        family.tap()
+        sleep(1)
+        family.tap()
+        let gear = app.navigationBars["Family"].buttons["Settings"]
+        try require(gear.waitForExistence(timeout: timeout), "The Family tab's bar has no Settings")
+        gear.tap()
+        try require(app.navigationBars["Settings"].waitForExistence(timeout: timeout), "Settings did not open")
+        let row = try element(labelled: "Sign out of app", in: app.buttons)
+        let screenBottom = app.windows.firstMatch.frame.maxY - 120
+        for _ in 0..<12 where row.frame.maxY > screenBottom {
+            app.swipeUp()
+        }
+        sleep(1)
+        press(row)
+        try signOutConfirmation().tap()
+        try require(
+            app.staticTexts["Welcome back!"].waitForExistence(timeout: 120),
+            "Signing out did not reach the sign-in screen"
+        )
     }
 
     /// Every visit after signing in, each from a known place. The order keeps the ones that leave
@@ -877,10 +1527,10 @@ final class ShellUITests: XCTestCase {
         }
         tourVisit("calendar") { try self.tourTab("Calendar") }
 
-        // Home.
+        // Home, whose first screen shows no navigation bar: the push is told by a bar appearing.
         tourVisit("change_requests?eventId={eventId}&section={section}") {
             try self.tourTab("Home")
-            try self.tourOpen(containing: "See all", from: "Home")
+            try self.tourOpen(containing: "See all", from: nil)
         }
 
         // The Family tab's rows.
@@ -961,7 +1611,7 @@ final class ShellUITests: XCTestCase {
             try self.tourOpen(containing: "Connect a school", from: nil)
         }
 
-        // The calendar's forms, from its bar and from today's event.
+        // The calendar's forms, from its month card's "+" and from today's event.
         tourVisit("add_event?date={date}&hour={hour}") {
             try self.tourTab("Calendar")
             try self.tourOpenSheet(labelled: "Add event")
@@ -972,6 +1622,9 @@ final class ShellUITests: XCTestCase {
             try self.tourOpenSheet(labelled: "Request change")
         }
 
+        // The system's controls in use (part C), each from a known place; reset closes what it opens.
+        tourControlVisits()
+
         // A link: a guest invitation's code, which the emulators do not hold.
         tourVisit("guest_accept?code={code}") {
             try self.tourTab("Family")
@@ -980,9 +1633,81 @@ final class ShellUITests: XCTestCase {
         }
     }
 
-    /// Runs one visit to [route]: back to a known place, [reach], a screenshot, then nothing more.
-    /// A visit that throws, or during which XCUITest recorded an issue, is skipped with the reason.
-    private func tourVisit(_ route: String, _ reach: () throws -> Void) {
+    /// The six controls of `tourControls`, each left open for its screenshot (MON-24 phase 3, part C,
+    /// Task 13). None saves or deletes anything: the switch is flipped back after its own shot, the
+    /// option menu and the action sheet are left for `tourReset` to cancel, and the segment needs no
+    /// undoing, since a tap on the Calendar tab opens Month again (CLAUDE.md design item 5).
+    private func tourControlVisits() {
+        // A switch: New event's "All day", a UISwitch, flipped on for a shot and back off.
+        tourVisit("control-switch") {
+            try self.tourTab("Calendar")
+            try self.tourOpenSheet(labelled: "Add event")
+            self.dismissKeyboard()
+            let byLabel = self.app.switches.matching(NSPredicate(format: "label CONTAINS %@", "All day")).firstMatch
+            let toggle = byLabel.waitForExistence(timeout: 8) ? byLabel : self.app.switches.firstMatch
+            try self.require(toggle.waitForExistence(timeout: 8), "The event form shows no system switch")
+            toggle.tap()
+            sleep(1)
+            self.shot("tour-control-switch-on")
+            toggle.tap()
+        }
+        // A segmented control: the calendar's Month/Week/Day, with Week chosen.
+        tourVisit("control-segment") {
+            try self.tourTab("Calendar")
+            let week = self.app.segmentedControls.buttons["Week"]
+            try self.require(week.waitForExistence(timeout: 8), "The calendar's Month/Week/Day is not a segmented control")
+            week.tap()
+            try self.require(week.isSelected, "Week did not select")
+        }
+        // The date sheet: "Jump to date", the inline calendar at half the screen.
+        tourVisit("control-date-sheet") {
+            try self.tourTab("Calendar")
+            let title = self.calendarMonthButton
+            try self.require(title.waitForExistence(timeout: 8), "The card's month title is not a button")
+            self.press(title)
+            let sheetBar = self.app.navigationBars.containing(NSPredicate(format: "label == %@", "Cancel")).firstMatch
+            try self.require(sheetBar.waitForExistence(timeout: 8), "Jump to date did not open as a sheet with Cancel")
+            try self.require(self.app.datePickers.firstMatch.exists, "The jump-to-date sheet holds no date picker")
+        }
+        // An option menu: New event's Repeat, the system's pop-up button, with its menu open; a tap
+        // outside it after the shot closes it choosing nothing, as `tourReset` cannot (it has no Close).
+        tourVisit("control-option-menu", afterShot: { self.tapOutside() }) {
+            try self.tourTab("Calendar")
+            try self.tourOpenSheet(labelled: "Add event")
+            self.dismissKeyboard()
+            let repeatButton = self.app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Repeat,")).firstMatch
+            try self.require(repeatButton.waitForExistence(timeout: 8), "Repeat has no pop-up button named \"Repeat, …\"")
+            let screenBottom = self.app.windows.firstMatch.frame.maxY - 160
+            for _ in 0..<8 where repeatButton.frame.maxY > screenBottom {
+                self.app.swipeUp()
+            }
+            sleep(1)
+            self.press(repeatButton)
+            let weekly = self.app.buttons.matching(NSPredicate(format: "label == %@", "Weekly")).firstMatch
+            try self.require(weekly.waitForExistence(timeout: 8), "Repeat did not open a menu with \"Weekly\"")
+        }
+        // An action sheet: deleting today's seeded event asks; the tour never answers it.
+        tourVisit("control-action-sheet") {
+            try self.tourOpenEvent()
+            let editBar = self.app.navigationBars["Edit event"]
+            try self.require(editBar.waitForExistence(timeout: 8), "The event's form has no Edit event bar")
+            let delete = editBar.buttons.matching(NSPredicate(format: "label == %@", "Delete event")).firstMatch
+            try self.require(delete.waitForExistence(timeout: 8), "The event's form has no Delete event in its bar")
+            self.press(delete)
+            try self.require(self.app.sheets.firstMatch.waitForExistence(timeout: 8), "Delete did not ask in the system's action sheet")
+        }
+        // The event preview: the system's sheet at half the screen, the calendar above it.
+        tourVisit("control-preview-sheet") {
+            try self.tourTab("Calendar")
+            let edit = self.app.buttons.matching(NSPredicate(format: "label == %@", "Edit")).firstMatch
+            try self.openPreview(of: self.tourEventTitle, edit: edit)
+        }
+    }
+
+    /// Runs one visit to [route]: back to a known place, [reach], a screenshot, then [afterShot]
+    /// (what a visit leaves open that `tourReset` cannot close). A visit that throws, or during which
+    /// XCUITest recorded an issue, is skipped with the reason, a screenshot and the element tree.
+    private func tourVisit(_ route: String, afterShot: (() -> Void)? = nil, _ reach: () throws -> Void) {
         if Date() > tourDeadline {
             let outcome = "skipped: the tour's \(Int(tourBudget / 60)) minutes ran out before this visit"
             print("COPLANLY_TOUR_VISIT \(route): \(outcome)")
@@ -1004,6 +1729,8 @@ final class ShellUITests: XCTestCase {
             } catch {
                 outcome = "skipped: \(error)"
             }
+            if outcome.hasPrefix("skipped") { tourDiagnose(route) }
+            afterShot?()
         }
         if app.state != .runningForeground {
             tourCrashes.append(route)
@@ -1016,6 +1743,27 @@ final class ShellUITests: XCTestCase {
         tourOutcomes.append((route, outcome))
     }
 
+    /// What was on screen when [route] was skipped: a screenshot and the element tree, so a skip can
+    /// be told apart from a screen that is not there without running the tour again.
+    private func tourDiagnose(_ route: String) {
+        guard app.state == .runningForeground else { return }
+        let name = "skip-" + tourShotName(route)
+        let screen = XCTAttachment(screenshot: app.screenshot())
+        screen.name = name
+        screen.lifetime = .keepAlways
+        add(screen)
+        let tree = XCTAttachment(string: app.debugDescription)
+        tree.name = name + "-tree"
+        tree.lifetime = .keepAlways
+        add(tree)
+    }
+
+    /// A tap at the top of the screen, outside a menu or an action sheet, which closes it choosing nothing.
+    private func tapOutside() {
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.06)).tap()
+        sleep(1)
+    }
+
     /// [route] up to its first `/` or `?`: `edit_event/{eventId}` is shot as `tour-edit_event`.
     private func tourShotName(_ route: String) -> String {
         String(route.prefix { $0 != "/" && $0 != "?" })
@@ -1024,16 +1772,60 @@ final class ShellUITests: XCTestCase {
     /// Closes what an earlier visit left open — a question, a sheet, the event preview — so the
     /// next starts from a tab.
     private func tourReset() {
+        var tappedOutside = false
         for _ in 0..<4 {
+            // A question in the system's action sheet: its Cancel, never its action.
+            let sheetCancel = app.sheets.firstMatch.buttons["Cancel"]
+            if sheetCancel.exists {
+                sheetCancel.tap()
+                sleep(1)
+            }
+            // A picker's sheet (Jump to date) closes with its bar's Cancel, which saves nothing; only a
+            // picker's, never another bar's Cancel, which may be a form's own.
+            let pickerCancel = app.navigationBars.buttons.matching(NSPredicate(format: "label == %@", "Cancel")).firstMatch
+            let pickerShown = app.datePickers.firstMatch.exists || app.pickers.firstMatch.exists
+            if pickerShown && pickerCancel.exists && pickerCancel.isHittable {
+                pickerCancel.tap()
+                sleep(1)
+            }
             if app.staticTexts["Discard changes?"].exists { pressIfThere("Discard") }
             let closes = app.navigationBars.buttons.matching(NSPredicate(format: "label == %@", "Close"))
             // The sheet on top is the one whose cross can be touched.
             let top = (0..<closes.count).reversed().map { closes.element(boundBy: $0) }.first { $0.isHittable }
-            guard let top else { break }
+            guard let top else {
+                // A sheet is up but its cross does not read as touchable: something over it (a menu)
+                // takes the touches. A tap outside closes that, and the next round finds the cross.
+                if closes.count > 0 && !tappedOutside {
+                    tappedOutside = true
+                    tapOutside()
+                    continue
+                }
+                // Still not "hittable" after that: XCUITest's hit test can misread a native sheet
+                // (run 10 left New event up under every later visit this way), so the topmost cross
+                // is tapped where it is drawn; a menu still over it takes that tap and closes, and the
+                // next round taps the cross again.
+                if closes.count > 0 {
+                    press(closes.element(boundBy: closes.count - 1))
+                    sleep(1)
+                    continue
+                }
+                break
+            }
             top.tap()
             sleep(1)
         }
         if app.staticTexts["Discard changes?"].exists { pressIfThere("Discard") }
+        // A sheet still over the tab bar after its crosses (run 11: every later tab tap computed the
+        // hit point {-1, -1}, so the Calendar's and the Family tab's visits were skipped): swiped down
+        // from its bar, as a parent would close it, answering "Discard" if it asks.
+        let calendarTab = app.tabBars.firstMatch.buttons["Calendar"]
+        for _ in 0..<3 where calendarTab.exists && !calendarTab.isHittable {
+            let bar = app.navigationBars.firstMatch
+            guard bar.exists else { break }
+            swipeSheetDown(from: bar)
+            sleep(1)
+            if app.staticTexts["Discard changes?"].exists { pressIfThere("Discard") }
+        }
         // The calendar's event preview is a sheet of the calendar's own: a tap on its scrim, above
         // it, closes it.
         if app.buttons.matching(NSPredicate(format: "label == %@", "Edit")).firstMatch.exists &&
@@ -1053,9 +1845,11 @@ final class ShellUITests: XCTestCase {
         tab.tap()
         sleep(1)
         try require(tab.isSelected, "The \(name) tab did not select")
-        if name == "Home" || name == "Family" {
+        if name == "Family" {
             try require(app.navigationBars[name].waitForExistence(timeout: timeout), "\(name)'s first screen is missing")
         }
+        // Home and the Calendar lead with the wordmark header, under no navigation bar.
+        if name == "Home" || name == "Calendar" { try requireHeaderRoot(name) }
     }
 
     /// The Family tab's row reading [row], opened.
@@ -1074,16 +1868,17 @@ final class ShellUITests: XCTestCase {
     }
 
     /// Scrolls the element reading [text] onto the screen and taps it; it is reached once the bar
-    /// titled [from] has gone (a push), or, with no [from], once the screen's bar title changed.
+    /// titled [from] has gone (a push), or, with no [from], once the screen's bar title changed (a
+    /// bar appearing counts, over a first screen that shows none).
     private func tourOpen(containing text: String, from: String?) throws {
         let target = try tourScrolledTo(text)
-        let bar = app.navigationBars.firstMatch
-        let before = bar.identifier
+        // Home's and the Calendar's first screens show no bar: a push is then a bar appearing.
+        let before = tourBarTitle()
         press(target)
         let gone: () -> Bool = {
             if let from { return self.app.navigationBars[from].waitForNonExistence(timeout: 4) }
             for _ in 0..<8 {
-                if self.app.navigationBars.firstMatch.identifier != before { return true }
+                if self.tourBarTitle() != before { return true }
                 usleep(500_000)
             }
             return false
@@ -1094,6 +1889,12 @@ final class ShellUITests: XCTestCase {
             if target.exists { press(target) }
             try require(gone(), "Tapping \"\(text)\" opened no other screen")
         }
+    }
+
+    /// The identifier of the navigation bar on screen, or nil while there is none.
+    private func tourBarTitle() -> String? {
+        let bar = app.navigationBars.firstMatch
+        return bar.exists ? bar.identifier : nil
     }
 
     /// Taps the button labelled [label] (or else whatever reads it) and requires a form sheet: a
@@ -1133,17 +1934,32 @@ final class ShellUITests: XCTestCase {
         throw StepFailure(description: "Tapping \"\(what)\" opened no form sheet")
     }
 
-    /// The element reading [text], scrolled until it is above the tab bar.
+    /// The element reading [text], scrolled until all of it is on the screen: below the navigation
+    /// bar (a list left scrolled down by an earlier visit holds rows above it, which a tap would miss)
+    /// and above the tab bar. It looks further down first, then back up.
     private func tourScrolledTo(_ text: String) throws -> XCUIElement {
         let match = element(labelledContaining: text)
-        let bottom = app.windows.firstMatch.frame.maxY - 120
-        for attempt in 0..<6 {
+        let window = app.windows.firstMatch.frame
+        let bottom = window.maxY - 120
+        for attempt in 0..<12 {
+            let bar = app.navigationBars.firstMatch
+            let top = bar.exists ? max(bar.frame.maxY, window.minY) : window.minY + 60
             // The screen's first frame may take a moment; after a swipe the list is already there.
-            if match.waitForExistence(timeout: attempt == 0 ? 8 : 1) && !match.frame.isEmpty && match.frame.maxY <= bottom {
-                sleep(1)
-                return match
+            if match.waitForExistence(timeout: attempt == 0 ? 8 : 1) && !match.frame.isEmpty {
+                let frame = match.frame
+                if frame.minY >= top && frame.maxY <= bottom {
+                    sleep(1)
+                    return match
+                }
+                if frame.minY < top {
+                    app.swipeDown()
+                    continue
+                }
+                app.swipeUp()
+                continue
             }
-            app.swipeUp()
+            // Not in the tree: further down for six swipes, then back up.
+            if attempt < 6 { app.swipeUp() } else { app.swipeDown() }
         }
         try require(match.exists, "Nothing on screen reads \"\(text)\"")
         return match

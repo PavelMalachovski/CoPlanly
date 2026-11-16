@@ -34,6 +34,7 @@ import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.nativeControls
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
@@ -277,11 +278,13 @@ private fun FamilyCalendarRow(grant: CalendarFriendGrant, onOpen: () -> Unit) {
         },
         onClick = onOpen,
         trailing = {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (nativeControls() == null) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     )
 }
@@ -311,11 +314,13 @@ private fun FriendRow(grant: CalendarFriendGrant, onOpen: () -> Unit) {
         // The one control on the row, per the design language's "at most one trailing control".
         onClick = onOpen,
         trailing = {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (nativeControls() == null) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     )
 }

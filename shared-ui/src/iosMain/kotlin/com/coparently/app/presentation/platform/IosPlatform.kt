@@ -1,13 +1,12 @@
 package com.coparently.app.presentation.platform
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
+import com.coparently.app.data.files.IosPickedFiles
 import com.coparently.app.presentation.settings.AppLanguage
+import kotlinx.io.files.Path
+import kotlinx.io.files.SystemFileSystem
 import platform.Foundation.NSByteCountFormatter
 import platform.Foundation.NSByteCountFormatterCountStyleFile
 
@@ -15,8 +14,10 @@ import platform.Foundation.NSByteCountFormatterCountStyleFile
  * The iPhone's platform capabilities (MON-24 phase 2, Task 11): what the iPhone app's view
  * controller will hand `ProvidePlatform` (phase 3). Until each capability is built there, it is a
  * stand-in that says it is not available, so the shared screens draw no affordance for it (design
- * item 8): camera, QR scanning and dictation until phase 4, the rest until phase 3. A launch that
- * comes anyway does nothing and reports nothing it did not do. Images are not loaded yet either.
+ * item 8): QR scanning and dictation until phase 4, the rest until phase 3. A launch that
+ * comes anyway does nothing and reports nothing it did not do. Images (`IosImages`) and payment
+ * codes (`IosQrCodes`) are the iPhone's own since part C, and since its Task 11 the share sheet
+ * (`IosShareSheet`), the pickers (`IosFilePicker`) and the camera (`IosCameraCapture`).
  */
 
 /**
@@ -24,18 +25,18 @@ import platform.Foundation.NSByteCountFormatterCountStyleFile
  * version, and the hosted addresses it ships with).
  */
 fun iosPlatformServices(buildValues: AppBuildValues): PlatformServices = PlatformServices(
-    shareSheet = NoShareSheet,
-    filePicker = NoFilePicker,
-    cameraCapture = NoCameraCapture,
+    shareSheet = IosShareSheet,
+    filePicker = IosFilePicker,
+    cameraCapture = IosCameraCapture,
     qrScanner = NoQrScanner,
     dictation = NoDictation,
     permissions = NoPermissions,
     openUrl = NoOpenUrl,
     clipboard = NoClipboard,
     buildValues = buildValues,
-    images = NoImages,
+    images = IosImages.fromKoin(),
     fileDetails = IosFileDetails,
-    qrCodes = NoQrCodes,
+    qrCodes = IosQrCodes(shareSheet = IosShareSheet),
     appLanguages = NoAppLanguages,
 )
 
@@ -76,38 +77,6 @@ internal object NoGoogleCalendarSignIn : GoogleCalendarSignIn {
 
 /** A launcher with nothing behind it. */
 private val NothingToLaunch = PlatformLauncher { }
-
-/** No share sheet until phase 3 (`UIActivityViewController`). */
-private object NoShareSheet : ShareSheet {
-    override val available: Boolean = false
-
-    override fun shareText(text: String, chooserTitle: String) = Unit
-
-    override fun shareFile(contentUri: String, mimeType: String, chooserTitle: String) = Unit
-}
-
-/** No pickers until phase 3 (`PHPickerViewController`, the document picker). */
-private object NoFilePicker : FilePicker {
-    override val available: Boolean = false
-
-    @Composable
-    override fun rememberImagePicker(onPicked: (contentUri: String) -> Unit): PlatformLauncher = NothingToLaunch
-
-    @Composable
-    override fun rememberDocumentPicker(
-        contentTypes: List<String>,
-        onPicked: (contentUri: String) -> Unit
-    ): PlatformLauncher = NothingToLaunch
-}
-
-/** No camera until phase 4. */
-private object NoCameraCapture : CameraCapture {
-    override val available: Boolean = false
-
-    @Composable
-    override fun rememberCapture(target: CaptureTarget, onResult: (CaptureResult) -> Unit): PlatformLauncher =
-        NothingToLaunch
-}
 
 /** No QR scanning until phase 4: the code and the link are how an invitation arrives. */
 private object NoQrScanner : QrScanner {
@@ -162,48 +131,25 @@ private object NoClipboard : SensitiveClipboard {
 }
 
 /**
- * No image loading until phase 3, so [available] is false and a photo strip or an attachment's
- * thumbnail is left out. An image drawn anyway keeps its size and shows its placeholder (an
- * account's initial, for example), so the screen around it lays out as it will.
- */
-private object NoImages : PlatformImages {
-    override val available: Boolean = false
-
-    @Composable
-    override fun Image(
-        model: Any?,
-        contentDescription: String?,
-        modifier: Modifier,
-        contentScale: ContentScale,
-        fullResolution: Boolean,
-        placeholder: (@Composable () -> Unit)?,
-    ) {
-        Box(modifier = modifier, contentAlignment = Alignment.Center) { placeholder?.invoke() }
-    }
-}
-
-/**
- * Sizes as Foundation writes a file's (`NSByteCountFormatter`, file style, the phone's locale).
- * Nothing is picked on the iPhone yet ([NoFilePicker]), so [describe] only says what an address's
- * last segment says, with no size: what Android falls back to when the resolver knows nothing.
+ * A picked file's name and size, and sizes, as Foundation writes a file's (`NSByteCountFormatter`,
+ * file style, the phone's locale). A picked item is the copy [IosFilePicker] kept, so its name is
+ * the one the parent picked (`IosPickedFiles.displayNameOf`) and its size the copy's; a file whose
+ * size cannot be read shows its name alone, as Android does when the resolver knows nothing.
  */
 private object IosFileDetails : FileDetails {
     override val available: Boolean = true
 
-    override fun describe(contentUri: String): PickedFileDescription =
-        PickedFileDescription(name = contentUri.substringAfterLast('/'), size = "")
+    private val files = IosPickedFiles.forApp()
+
+    override fun describe(contentUri: String): PickedFileDescription {
+        val name = files.displayNameOf(contentUri) ?: contentUri.substringAfterLast('/')
+        val bytes = runCatching { SystemFileSystem.metadataOrNull(Path(IosPickedFiles.pathOf(contentUri)))?.size }
+            .getOrNull()
+        return PickedFileDescription(name = name, size = bytes?.takeIf { it >= 0 }?.let(::formatSize).orEmpty())
+    }
 
     override fun formatSize(bytes: Long): String =
         NSByteCountFormatter.stringFromByteCount(bytes, NSByteCountFormatterCountStyleFile)
-}
-
-/** No QR codes until phase 3 (Core Image's generator), so no payment code is drawn or shared. */
-private object NoQrCodes : QrCodes {
-    override val available: Boolean = false
-
-    override fun encode(content: String): QrMatrix? = null
-
-    override fun shareImage(matrix: QrMatrix, chooserTitle: String) = Unit
 }
 
 /**

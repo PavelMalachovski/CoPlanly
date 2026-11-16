@@ -28,8 +28,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.presentation.calendar.CalendarViewMode
+import com.coparently.app.presentation.common.AdaptiveSegmented
 import com.coparently.app.presentation.common.BrandHeader
-import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
@@ -55,9 +55,10 @@ import org.jetbrains.compose.resources.stringResource
  * picker became a visible segmented control, because a parent new to the app never found it in
  * the title.
  *
- * Where a shell draws the bars (the iPhone, MON-24 phase 3, part B) the bar carries the month, Today,
- * Filters, the gear and "+" ([CalendarTopBar]), so the header draws only its third row, the
- * Month/Week/Day control, under the bar; no brand row, no heading lines and no Filters button.
+ * The iPhone draws every row too (MON-24 phase 3, part C): its shell hides the navigation bar over
+ * the Calendar's root ([CalendarTopBar]), so this header leads the screen there as on Android. Part
+ * B had moved the gear and Filters into the navigation bar and left only the third row here; the
+ * redesign's board for the iPhone keeps the wordmark header instead.
  *
  * @param children The family on screen's children, in display order. With none, the together
  *   line is left out.
@@ -85,11 +86,8 @@ fun CalendarHeader(
             .padding(horizontal = Spacing.L, vertical = Spacing.XS),
         verticalArrangement = Arrangement.spacedBy(Spacing.XS)
     ) {
-        val inShellBar = shellDrawsBars()
-        if (!inShellBar) {
-            BrandHeader(children = children, onSettingsClick = onSettingsClick)
-            HeadingLines(childNames = children.map { it.childName })
-        }
+        BrandHeader(children = children, onSettingsClick = onSettingsClick)
+        HeadingLines(childNames = children.map { it.childName })
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -100,10 +98,8 @@ fun CalendarHeader(
                 onViewModeChange = onViewModeChange,
                 modifier = Modifier.weight(1f, fill = false)
             )
-            if (!inShellBar) {
-                Spacer(modifier = Modifier.width(Spacing.S))
-                FiltersButton(onClick = onFiltersClick, active = filtersActive)
-            }
+            Spacer(modifier = Modifier.width(Spacing.S))
+            FiltersButton(onClick = onFiltersClick, active = filtersActive)
         }
     }
 }
@@ -173,18 +169,27 @@ private fun ViewModeControl(
     modifier: Modifier = Modifier
 ) {
     val modes = CalendarViewMode.entries
-    SingleChoiceSegmentedButtonRow(modifier = modifier) {
-        modes.forEachIndexed { index, mode ->
-            SegmentedButton(
-                selected = mode == viewMode,
-                onClick = { onViewModeChange(mode) },
-                shape = SegmentedButtonDefaults.itemShape(index = index, count = modes.size),
-                // No check mark at any size, so the label has the segment's whole width: three
-                // labels already fit badly at 200 % in German. A label, not money, so it may end
-                // in an ellipsis (design item 15).
-                icon = {},
-                label = { Text(text = viewModeLabel(mode), maxLines = 1, overflow = TextOverflow.Ellipsis) }
-            )
+    AdaptiveSegmented(
+        // Behind the native control: on the screen's ground.
+        background = MaterialTheme.colorScheme.background,
+        labels = modes.map { viewModeLabel(it) },
+        selectedIndex = modes.indexOf(viewMode),
+        onSelect = { onViewModeChange(modes[it]) },
+        modifier = modifier
+    ) {
+        SingleChoiceSegmentedButtonRow(modifier = modifier) {
+            modes.forEachIndexed { index, mode ->
+                SegmentedButton(
+                    selected = mode == viewMode,
+                    onClick = { onViewModeChange(mode) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = modes.size),
+                    // No check mark at any size, so the label has the segment's whole width: three
+                    // labels already fit badly at 200 % in German. A label, not money, so it may end
+                    // in an ellipsis (design item 15).
+                    icon = {},
+                    label = { Text(text = viewModeLabel(mode), maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                )
+            }
         }
     }
 }

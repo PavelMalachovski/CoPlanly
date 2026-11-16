@@ -18,6 +18,7 @@ import com.coparently.app.presentation.common.BannerTone
 import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.nativeControls
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.custody_child_schedules_title
@@ -127,6 +128,8 @@ private fun ChildrenRow(childrenWithOwnSchedule: Int, onClick: () -> Unit) {
 /** The row's "opens a screen" mark. */
 @Composable
 private fun Chevron() {
+    // The grouped row draws the one chevron under native controls (Grouped board).
+    if (nativeControls() != null) return
     Icon(
         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
         contentDescription = null,

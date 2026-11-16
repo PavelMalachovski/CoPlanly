@@ -26,8 +26,10 @@ import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.guests.GuestAccessDuration
 import com.coparently.app.domain.guests.GuestInviteUri
 import com.coparently.app.presentation.childinfo.GuestInviteState
+import com.coparently.app.presentation.common.AdaptiveSheet
 import com.coparently.app.presentation.common.InviteCodeText
 import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.common.SheetHeight
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.guest_invite_create
@@ -63,6 +65,8 @@ import org.jetbrains.compose.resources.stringResource
  *   which leaves the code on screen to read out and no button that does nothing (design item 8).
  * @param onDismiss Closes the sheet.
  */
+// One sheet: its body and the two hosts (Material's sheet, the iPhone's) that hold it.
+@Suppress("LongMethod")
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun GuestInviteSheet(
@@ -75,7 +79,7 @@ fun GuestInviteSheet(
     if (!state.isOpen) return
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+    val body: @Composable () -> Unit = {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -124,6 +128,15 @@ fun GuestInviteSheet(
             }
         }
     }
+    AdaptiveSheet(
+        onDismiss = onDismiss,
+        height = SheetHeight.Large,
+        material = {
+            ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) { body() }
+        },
+        content = body,
+        scrollable = true
+    )
 }
 
 /** The three lengths, as chips. The chosen one is filled; the rest are outlined. */

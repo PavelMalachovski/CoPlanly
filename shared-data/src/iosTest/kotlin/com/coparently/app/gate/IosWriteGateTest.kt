@@ -22,8 +22,12 @@ import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideTransition
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SharedCustody
+import com.coparently.app.domain.documents.FamilyDocumentPaths
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.family.FamilyMemberRef
+import com.coparently.app.domain.files.RecordPhotoCodec
+import com.coparently.app.domain.files.RecordPhotoKind
+import com.coparently.app.domain.files.toHex
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.CustodyModel
@@ -39,6 +43,7 @@ import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.model.PetSpecies
 import com.coparently.app.domain.model.SchoolInfo
 import com.coparently.app.domain.model.Vaccination
+import com.coparently.app.domain.platform.Sha256
 import com.coparently.app.domain.time.IsoText
 import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.domain.versions.EventVersionKind
@@ -57,6 +62,10 @@ import kotlinx.datetime.atTime
 import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
+import kotlinx.io.buffered
+import kotlinx.io.files.Path
+import kotlinx.io.files.SystemFileSystem
+import kotlinx.io.readByteArray
 import kotlin.test.Test
 import kotlin.test.fail
 import kotlin.time.Duration.Companion.minutes
@@ -71,16 +80,18 @@ import kotlin.uuid.Uuid
  * emulators, its own Room database, the production repositories), pair through the real
  * `acceptPairingInvitation` callable. Alice's production repositories then write, in the pair's
  * family, a shared event, an important event (and its `event_important` push), an expense, a child
- * with a medical profile, a pet, a chat message, a change request, a custody schedule (with a
- * contact window, a seasonal layer and the child's own schedule) with a day swap answered on Bob's
- * phone and two proposals (one declined), and the swap's request deadline. A second pair, Carol and
+ * with a medical profile, a pet with a photo, a vault document's file in Cloud Storage (part C), a
+ * chat message, a change request, a custody schedule (with a contact window, a seasonal layer and the child's own
+ * schedule) with a day swap answered on Bob's phone and two proposals (one declined), and the swap's
+ * request deadline. A second pair, Carol and
  * Dan, writes the same kind of schedule and nothing over it, so one custody document is compared
  * as a pattern write and the other as a swap write.
  * After each write Bob's production reader reads it back, and the test holds the domain value Bob
  * reads to the one Alice's phone holds — timestamps aside where the wire keeps only seconds.
  *
- * Every write either phone's production code makes passes through [RecordingFirestoreClient]: a
- * write the real `firestore.rules` refuse fails the test, and every document written is listed in
+ * Every write either phone's production code makes passes through [RecordingFirestoreClient] (and
+ * every upload through [RecordingStorageBucket]): a write the real `firestore.rules` or
+ * `storage.rules` refuse fails the test, and every document and file written is listed in
  * the file `COPLANLY_GATE_OUTPUT` names (`build/ios-gate/written.txt` in CI), which
  * `tools/ios/check-ios-writes.js` then compares, key for key and type for type, with what Android
  * writes. The two halves together are the gate.
@@ -162,6 +173,7 @@ private class GateScenario(
         step("expense") { expense() }
         step("child") { child() }
         step("pet") { pet() }
+        step("vault document") { vaultDocument() }
         step("message") { message() }
         step("change request") { changeRequest() }
         step("custody") { custody() }
@@ -346,10 +358,27 @@ private class GateScenario(
         same("child", alices.copy(syncedToFirestore = false), bobs.copy(syncedToFirestore = false))
     }
 
+    /**
+     * A pet with a photo (part C, Task 11): the photo goes up through the production
+     * `IosRecordPhotoStorage` to the family's `pet_photos/` path, stamped with Alice's uid and its
+     * digest (the `storage:` line `check-ios-writes.js` compares with Android's), and the pet carries
+     * the `ph1|` reference to it, which Bob reads back with the pet and finds stored.
+     */
     private suspend fun pet() {
         val now = nowToTheSecond()
+        val petId = Uuid.random().toString()
+        val family = FamilyKey.of(alice.uid, bob.uid)
+        val picked = GateImages.writeJpeg(Path(alice.directories.cache, "gate-pet.jpg"), PHOTO_WIDTH, PHOTO_HEIGHT)
+        val reference = alice.recordPhotoStorage.upload(RecordPhotoKind.PET, petId, family, picked)
+        val photo = checkNotNull(RecordPhotoCodec.decode(reference)) { "Not a record photo reference: $reference" }
+        expectThat(photo.storagePath.startsWith("pet_photos/$family/$petId/") && photo.contentType == JPEG) {
+            "the pet's photo went to ${photo.storagePath} as ${photo.contentType}"
+        }
+        expectThat(bob.sharedFileStorage.isStored(photo.storagePath, photo.sha256)) {
+            "Bob reads no object with the digest at ${photo.storagePath}"
+        }
         val pet = Pet(
-            id = Uuid.random().toString(),
+            id = petId,
             name = "Rex",
             species = PetSpecies.DOG,
             breed = "Beagle",
@@ -357,6 +386,7 @@ private class GateScenario(
             medications = listOf(Medication(name = "Wormer", dosage = "1 tablet", frequency = "quarterly")),
             vaccinations = listOf(Vaccination(name = "Rabies", date = LocalDate(VACCINATION_YEAR, 2, 1))),
             vetName = "Dr. Novak",
+            photos = listOf(reference),
             createdAt = now,
             updatedAt = now,
             createdByFirebaseUid = alice.uid,
@@ -367,6 +397,7 @@ private class GateScenario(
         val bobs = checkNotNull(bob.petRepository.getPetById(pet.id)) { "Bob's pull brought no pet" }
         val alices = checkNotNull(alice.petRepository.getPetById(pet.id))
         same("pet", alices.copy(syncedToFirestore = false), bobs.copy(syncedToFirestore = false))
+        expectThat(bobs.photos == listOf(reference)) { "Bob's pet carries ${bobs.photos}, not $reference" }
     }
 
     private suspend fun message() {
@@ -379,8 +410,8 @@ private class GateScenario(
             content = "Pick-up moved to 17:30",
             // A reference with no upload (part B, Task 12): it names another message's file, so the
             // attachment gate (`ChatAttachmentOutbox.ensureUploaded`, which keeps only references
-            // stored under their own message) uploads nothing, and the iPhone, with no Cloud
-            // Storage yet, still writes a non-empty list for the checker to compare.
+            // stored under their own message) uploads nothing, and the message still carries a
+            // non-empty list for the checker to compare.
             attachments = listOf(ATTACHMENT_REFERENCE)
         )
         alice.messageRepository.sendMessage(message)
@@ -520,6 +551,32 @@ private class GateScenario(
         expectThat(bobsClock.responderUid == bob.uid && bobsClock.firstDate == date) { "Bob read $bobsClock" }
     }
 
+    /**
+     * A vault document's file (part C, Task 10): Alice uploads it through the production
+     * `SharedFileStorage` to the family's path, stamped with her uid and its digest, and Bob opens it
+     * through the production cache, which keeps a copy only when the digest matches. The object's
+     * metadata is compared with Android's by `check-ios-writes.js` (the `storage:` line).
+     */
+    private suspend fun vaultDocument() {
+        val bytes = ("%PDF-1.4\n% gate " + Uuid.random() + "\n%%EOF\n").encodeToByteArray()
+        val sha256 = Sha256.digest(bytes).toHex()
+        val family = FamilyKey.of(alice.uid, bob.uid)
+        val path = FamilyDocumentPaths.storagePath(family, Uuid.random().toString(), VAULT_FILE)
+        val source = Path(alice.directories.cache, "gate-$VAULT_FILE")
+        SystemFileSystem.createDirectories(alice.directories.cache)
+        SystemFileSystem.sink(source).buffered().use { it.write(bytes) }
+        val progress = mutableListOf<Float>()
+        alice.sharedFileStorage.upload(path, source, PDF, sha256, alice.uid) { progress += it }
+        // The SDK may report no progress for a body this small; what it reports ends at the whole file.
+        expectThat(progress.all { it in 0f..1f } && (progress.isEmpty() || progress.last() == 1f)) {
+            "the vault upload's progress is not fractions ending at 1: $progress"
+        }
+        expectThat(bob.sharedFileStorage.isStored(path, sha256)) { "Bob reads no object with the digest at $path" }
+        val copy = bob.sharedFileCache.localCopy(path, VAULT_FILE, sha256)
+        val read = SystemFileSystem.source(copy).buffered().use { it.readByteArray() }
+        expectThat(read.contentEquals(bytes)) { "Bob's copy of the vault document differs from Alice's" }
+    }
+
     private suspend fun awaitShared(phone: GatePhone, condition: (SharedCustody) -> Boolean): SharedCustody =
         withTimeout(GatePhone.WAIT_MS) {
             checkNotNull(phone.custodyRepository.observeShared().first { it != null && condition(it) })
@@ -566,6 +623,11 @@ private class GateScenario(
         const val BIRTH_YEAR = 2019
         const val PET_BIRTH_YEAR = 2021
         const val VACCINATION_YEAR = 2026
+        const val VAULT_FILE = "order.pdf"
+        const val PDF = "application/pdf"
+        const val JPEG = "image/jpeg"
+        const val PHOTO_WIDTH = 64
+        const val PHOTO_HEIGHT = 48
 
         /** A `ChatAttachmentCodec` reference to a file stored under another thread's message. */
         const val ATTACHMENT_REFERENCE = "att1|chat_attachments/another-thread/another-message/receipt.pdf|" +

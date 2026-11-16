@@ -136,7 +136,9 @@ iOS 26.5 so far). Then, in order:
    minutes, so it always writes its summary. The screenshots, `manifest.json` (from `xcrun xcresulttool export attachments`) and `tour.txt` are
    the `ios-tour` artifact. To read it against the app's destinations, compare `tour.txt` with
    `AppDestinationCatalog.all` (`shared-ui/.../navigation/AppDestination.kt`); every route is on
-   it, reached or skipped.
+   it, reached or skipped. Since part C it also shows six of the system's controls in use (a switch,
+   a segment, the date sheet, an option menu, an action sheet and the event preview sheet), shot as
+   `tour-control-…` and listed in `tour.txt` the same way.
 
 CI never has a `GoogleService-Info.plist`, so it never offers Google sign-in and never reaches the
 real project.

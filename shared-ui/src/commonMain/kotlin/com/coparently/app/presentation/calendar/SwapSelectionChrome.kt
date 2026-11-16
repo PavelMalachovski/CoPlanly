@@ -16,17 +16,17 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import com.coparently.app.presentation.common.AppTopBar
-import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.BarLeading
+import com.coparently.app.presentation.common.LocalBarHost
 import com.coparently.app.presentation.common.ScreenBackStep
 import com.coparently.app.presentation.common.ScreenBar
-import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.day_swap_choose_title
@@ -74,11 +74,10 @@ fun SwapDaysButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
  * and the month with arrows either side, so paging while choosing needs no swipe. Back closes it
  * too.
  *
- * Where a shell draws the bars (the iPhone, MON-24 phase 3, part B) the same content goes to its
- * bar: the title, a close button (`xmark`) and the two arrows (`chevron.left`, `chevron.right`); the
- * grid card's title already names the month.
+ * The iPhone draws it in content too (MON-24 phase 3, part C): its shell hides the navigation bar
+ * over the Calendar's root, so the header's close button and arrows are Compose's there as well,
+ * drawn here with no bar host however the screen is hosted.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SwapSelectionHeader(
     month: YearMonth,
@@ -87,10 +86,21 @@ internal fun SwapSelectionHeader(
     onClose: () -> Unit
 ) {
     ScreenBackStep(onBack = onClose)
-    if (shellDrawsBars()) {
-        SwapSelectionShellBar(onPreviousMonth = onPreviousMonth, onNextMonth = onNextMonth, onClose = onClose)
-        return
+    // Drawn here on every platform: a host would take the bar out of the content (see the KDoc).
+    CompositionLocalProvider(LocalBarHost provides null) {
+        SwapSelectionTopBar(month, onPreviousMonth, onNextMonth, onClose)
     }
+}
+
+/** [SwapSelectionHeader]'s Material top bar. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SwapSelectionTopBar(
+    month: YearMonth,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit,
+    onClose: () -> Unit
+) {
     val title = stringResource(Res.string.day_swap_choose_title)
     AppTopBar(
         ScreenBar(
@@ -124,34 +134,6 @@ internal fun SwapSelectionHeader(
                     )
                 }
             }
-        )
-    )
-}
-
-/** [SwapSelectionHeader]'s content as the iPhone's navigation bar draws it. */
-@Composable
-private fun SwapSelectionShellBar(onPreviousMonth: () -> Unit, onNextMonth: () -> Unit, onClose: () -> Unit) {
-    AppTopBar(
-        ScreenBar(
-            title = stringResource(Res.string.day_swap_choose_title),
-            leading = BarLeading.Close(
-                label = stringResource(Res.string.day_swap_close_selection),
-                onClick = onClose
-            ),
-            actions = listOf(
-                BarAction(
-                    label = stringResource(Res.string.day_swap_previous_month),
-                    icon = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    sfSymbol = "chevron.left",
-                    onClick = onPreviousMonth
-                ),
-                BarAction(
-                    label = stringResource(Res.string.day_swap_next_month),
-                    icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    sfSymbol = "chevron.right",
-                    onClick = onNextMonth
-                )
-            )
         )
     )
 }

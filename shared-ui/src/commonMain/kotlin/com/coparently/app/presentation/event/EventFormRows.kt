@@ -20,10 +20,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import com.coparently.app.presentation.common.NativeControls
+import com.coparently.app.presentation.common.nativeControls
 import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.event_form_cancel
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -41,6 +45,10 @@ import org.jetbrains.compose.resources.stringResource
  * @param timeDescription What TalkBack says for the time button.
  * @param onDate Opens the date picker.
  * @param onTime Opens the time picker.
+ * @param edit The row's day and time as values, for the native pills: where the shell has native
+ *   controls (the iPhone) the row draws the system's compact date and time pickers side by side
+ *   ([NativeControls.CompactDate], [NativeControls.CompactTime]), the time left out with [time],
+ *   and [onDate] and [onTime] are unused. Android ignores it.
  */
 @Composable
 @Suppress("LongParameterList") // a label, two values, their two descriptions and two pickers
@@ -51,17 +59,27 @@ internal fun EventDateTimeRow(
     dateDescription: String,
     timeDescription: String,
     onDate: () -> Unit,
-    onTime: () -> Unit
+    onTime: () -> Unit,
+    edit: EventDateTimeEdit? = null
 ) {
-    val values: @Composable () -> Unit = {
-        TextButton(onClick = onDate, modifier = Modifier.semantics { contentDescription = dateDescription }) {
-            Text(date, style = MaterialTheme.typography.bodyLarge)
-        }
-        time?.let {
-            TextButton(onClick = onTime, modifier = Modifier.semantics { contentDescription = timeDescription }) {
-                Text(it, style = MaterialTheme.typography.bodyLarge)
+    val native = nativeControls()
+    // The row sits in the form's SectionGroup, on its card's colour.
+    val card = MaterialTheme.colorScheme.surfaceContainer
+    val values: @Composable () -> Unit = if (native != null && edit != null) {
+        {
+            native.CompactDate(
+                value = edit.date,
+                onChange = edit.onDate,
+                label = label,
+                background = card,
+                modifier = Modifier
+            )
+            if (time != null) {
+                native.CompactTime(value = edit.time, onChange = edit.onTime, background = card, modifier = Modifier)
             }
         }
+    } else {
+        { MaterialDateTimeValues(date, time, dateDescription, timeDescription, onDate, onTime) }
     }
     if (stacksAtLargeFont()) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.L, vertical = Spacing.XS)) {
@@ -75,6 +93,43 @@ internal fun EventDateTimeRow(
         ) {
             Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
             values()
+        }
+    }
+}
+
+/**
+ * A row's day and time as values, with what changing each does: what the iPhone's compact pickers
+ * edit in place of the two buttons ([EventDateTimeRow]'s `edit`).
+ *
+ * @property date The row's day.
+ * @property onDate Called with the day picked.
+ * @property time The row's time, shown unless the event is all day.
+ * @property onTime Called with the time picked.
+ */
+internal class EventDateTimeEdit(
+    val date: LocalDate,
+    val onDate: (LocalDate) -> Unit,
+    val time: LocalTime,
+    val onTime: (LocalTime) -> Unit
+)
+
+/** The date and time buttons Material draws, each opening its picker. */
+@Composable
+@Suppress("LongParameterList") // two values, their two descriptions and two pickers
+private fun MaterialDateTimeValues(
+    date: String,
+    time: String?,
+    dateDescription: String,
+    timeDescription: String,
+    onDate: () -> Unit,
+    onTime: () -> Unit
+) {
+    TextButton(onClick = onDate, modifier = Modifier.semantics { contentDescription = dateDescription }) {
+        Text(date, style = MaterialTheme.typography.bodyLarge)
+    }
+    time?.let {
+        TextButton(onClick = onTime, modifier = Modifier.semantics { contentDescription = timeDescription }) {
+            Text(it, style = MaterialTheme.typography.bodyLarge)
         }
     }
 }
