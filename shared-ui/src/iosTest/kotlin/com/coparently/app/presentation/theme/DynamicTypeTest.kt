@@ -2,7 +2,7 @@ package com.coparently.app.presentation.theme
 
 import platform.UIKit.UIContentSizeCategoryLarge
 import platform.UIKit.UIContentSizeCategoryUnspecified
-import platform.UIKit.UITraitCollection
+import platform.UIKit.UIScreen
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -28,7 +28,7 @@ class DynamicTypeTest {
 
     @Test
     fun cmpFontScaleFollowsCategory() {
-        val category = UITraitCollection.currentTraitCollection.preferredContentSizeCategory
+        val category = UIScreen.mainScreen.traitCollection.preferredContentSizeCategory
         assertTrue(
             category == UIContentSizeCategoryLarge || category == UIContentSizeCategoryUnspecified,
             "the simulator's default text size is $category, which CMP does not read as a font scale of 1"
