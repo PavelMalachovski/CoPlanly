@@ -14,9 +14,9 @@ import platform.CoreGraphics.CGRectMake
 import platform.UIKit.UIColor
 import platform.UIKit.UITraitCollection
 import platform.UIKit.UIUserInterfaceStyle
-import platform.UIKit.UIUserInterfaceStyleDark
-import platform.UIKit.UIUserInterfaceStyleLight
-import platform.UIKit.UIUserInterfaceStyleUnspecified
+import platform.UIKit.UIUserInterfaceStyle.UIUserInterfaceStyleDark
+import platform.UIKit.UIUserInterfaceStyle.UIUserInterfaceStyleLight
+import platform.UIKit.UIUserInterfaceStyle.UIUserInterfaceStyleUnspecified
 import platform.UIKit.UIViewController
 import platform.UIKit.UIWindow
 import kotlin.math.abs

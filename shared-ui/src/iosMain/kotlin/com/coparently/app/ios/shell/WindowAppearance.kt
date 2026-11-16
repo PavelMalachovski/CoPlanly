@@ -6,9 +6,9 @@ import com.coparently.app.presentation.theme.colorSchemeFor
 import platform.UIKit.UIColor
 import platform.UIKit.UITraitCollection
 import platform.UIKit.UIUserInterfaceStyle
-import platform.UIKit.UIUserInterfaceStyleDark
-import platform.UIKit.UIUserInterfaceStyleLight
-import platform.UIKit.UIUserInterfaceStyleUnspecified
+import platform.UIKit.UIUserInterfaceStyle.UIUserInterfaceStyleDark
+import platform.UIKit.UIUserInterfaceStyle.UIUserInterfaceStyleLight
+import platform.UIKit.UIUserInterfaceStyle.UIUserInterfaceStyleUnspecified
 import platform.UIKit.UIViewController
 import platform.UIKit.UIWindow
 
@@ -53,9 +53,9 @@ internal object WindowAppearance {
 
     /** The scheme's `primary` for whichever style the traits resolve to, at [contrast]'s level. */
     fun tintColor(contrast: () -> ContrastLevel): UIColor =
-        UIColor.colorWithDynamicProvider { traits ->
+        UIColor(dynamicProvider = { traits: UITraitCollection? ->
             uiColorOf(colorSchemeFor(darkTheme = isDark(traits), contrast = contrast()).primary)
-        }
+        })
 
     private fun isDark(traits: UITraitCollection?): Boolean = traits?.userInterfaceStyle == UIUserInterfaceStyleDark
 }
