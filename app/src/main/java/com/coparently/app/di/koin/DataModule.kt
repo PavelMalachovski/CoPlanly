@@ -103,7 +103,7 @@ val dataModule = module {
     single<PushDevice> { get<FcmService>() }
     // The Settings switch and sign-out's detach, which the ViewModels in `:shared-ui` ask for.
     single<PushRegistration> { get<FcmService>() }
-    singleOf(::FirebaseAuthService)
+    single { FirebaseAuthService(firebaseAuth = get(), appleTokens = get()) }
     // The one question the repositories in `:shared-data` ask of the signed-in account.
     single<SignedInUser> { get<FirebaseAuthService>() }
     // The start's wait and sign-out's end, which the session's ViewModel in `:shared-ui` asks for.

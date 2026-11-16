@@ -2,13 +2,21 @@ package com.coparently.app.data.remote.firebase
 
 import com.coparently.app.data.platform.logger
 import com.coparently.app.data.session.ProfileIdentity
+import com.google.firebase.auth.AuthCredential
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.tasks.await
 
 /**
@@ -19,11 +27,21 @@ import kotlinx.coroutines.tasks.await
  * the signed-in account, and the Android [AuthSession], the start's wait and sign-out's end that
  * `AuthStateViewModel` in `:shared-ui` asks for (Task 10).
  *
+ * Since MON-24 phase 4 (part A) it also links and unlinks the account's sign-in methods
+ * ([AccountSignIn]); Apple's unlink goes through the server ([AppleTokens]).
+ *
  * @property firebaseAuth Firebase Authentication instance
+ * @property appleTokens The server's Apple token callables; null where nothing unlinks Apple (the
+ *   e2e parents and the R8 probe build this class by hand), which then fails that unlink.
  */
 class FirebaseAuthService(
-    private val firebaseAuth: FirebaseAuth
+    private val firebaseAuth: FirebaseAuth,
+    private val appleTokens: AppleTokens? = null
 ) : SignedInUser, AuthSession, AccountSignIn {
+
+    /** Bumped after each link or unlink, so [linkedMethods] reads the providers again. */
+    private val providerChanges = MutableStateFlow(0L)
+
     /**
      * Gets the current Firebase user.
      */
@@ -132,13 +150,14 @@ class FirebaseAuthService(
      * Signs in with Google ID token.
      *
      * @param idToken Google ID token from Google Sign-In
-     * @return Result containing FirebaseUser on success or error message on failure
+     * @return whether Firebase created the account at this sign-in, or the failure
      */
-    override suspend fun signInWithGoogleIdToken(idToken: String): Result<FirebaseUser> {
+    override suspend fun signInWithGoogleIdToken(idToken: String): Result<SignInOutcome> {
         return try {
             val credential = GoogleAuthProvider.getCredential(idToken, null)
             val result = firebaseAuth.signInWithCredential(credential).await()
-            Result.success(result.user!!)
+            checkNotNull(result.user)
+            Result.success(SignInOutcome(isNewUser = result.additionalUserInfo?.isNewUser == true))
         } catch (e: Exception) {
             logger.e("FirebaseAuthService", "Google sign-in failed", e)
             Result.failure(e)
@@ -159,6 +178,78 @@ class FirebaseAuthService(
             Result.failure(e)
         }
     }
+
+    /** Links the Google account [idToken] names to the signed-in account. */
+    override suspend fun linkGoogle(idToken: String): Result<Unit> =
+        link(GoogleAuthProvider.getCredential(idToken, null))
+
+    /** Links an e-mail address and a password to the signed-in account. */
+    override suspend fun linkEmail(email: String, password: String): Result<Unit> =
+        link(EmailAuthProvider.getCredential(email, password))
+
+    /**
+     * Links [credential] to the signed-in user. A credential another account holds fails with
+     * [LinkFailure.InUseByAnotherAccount]: nothing is linked, and the signed-in account stays as it
+     * was — no sign-out, no switch to the other account.
+     */
+    private suspend fun link(credential: AuthCredential): Result<Unit> {
+        val user = firebaseAuth.currentUser ?: return Result.failure(LinkException(LinkFailure.Other))
+        return try {
+            user.linkWithCredential(credential).await()
+            providerChanges.update { it + 1 }
+            Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            logger.e("FirebaseAuthService", "Linking a sign-in method failed", e)
+            Result.failure(LinkException(linkFailureOf(e), e))
+        }
+    }
+
+    /**
+     * Removes [method] from the signed-in account; never its last one ([unlinkRefusal]). E-mail and
+     * Google go to the SDK's `unlink`; Apple to the server, which revokes Apple's token and unlinks
+     * it, after which the user is reloaded so its providers say so.
+     */
+    override suspend fun unlink(method: SignInMethod): Result<Unit> {
+        val user = firebaseAuth.currentUser
+        val refusal = unlinkRefusal(user?.let(::methodsOf), method)
+        return if (user == null || refusal != null) {
+            Result.failure(LinkException(refusal ?: LinkFailure.Other))
+        } else {
+            unlinkFrom(user, method)
+        }
+    }
+
+    private suspend fun unlinkFrom(user: FirebaseUser, method: SignInMethod): Result<Unit> = try {
+        if (method == SignInMethod.APPLE) {
+            checkNotNull(appleTokens) { "Apple's token callables are not bound here" }.unlink().getOrThrow()
+            user.reload().await()
+        } else {
+            user.unlink(method.providerId).await()
+        }
+        providerChanges.update { it + 1 }
+        Result.success(Unit)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: LinkException) {
+        logger.e("FirebaseAuthService", "The server refused to unlink Apple", e)
+        Result.failure(e)
+    } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+        logger.e("FirebaseAuthService", "Unlinking a sign-in method failed", e)
+        // Apple's server unlink may have landed before a failed reload: read the providers again.
+        providerChanges.update { it + 1 }
+        Result.failure(LinkException(linkFailureOf(e), e))
+    }
+
+    /** The signed-in account's methods, read again on every sign-in change and after each link or unlink. */
+    override fun linkedMethods(): Flow<Set<SignInMethod>> =
+        merge(providerChanges, getAuthStateFlow())
+            .map { methodsOf(firebaseAuth.currentUser) }
+            .distinctUntilChanged()
+
+    private fun methodsOf(user: FirebaseUser?): Set<SignInMethod> =
+        user?.providerData.orEmpty().mapNotNull { SignInMethod.fromProviderId(it.providerId) }.toSet()
 
     /**
      * Signs out the current user.
@@ -232,5 +323,17 @@ class FirebaseAuthService(
 
         // Timeout reached, return whatever we have
         return getCurrentUser()
+    }
+
+    companion object {
+        private val IN_USE_CODES = setOf("ERROR_CREDENTIAL_ALREADY_IN_USE", "ERROR_EMAIL_ALREADY_IN_USE")
+        private const val RECENT_LOGIN_CODE = "ERROR_REQUIRES_RECENT_LOGIN"
+
+        /** The [LinkFailure] a failed link or unlink [e] stands for, by Firebase's error code. */
+        fun linkFailureOf(e: Throwable): LinkFailure = when {
+            e is FirebaseAuthException && e.errorCode in IN_USE_CODES -> LinkFailure.InUseByAnotherAccount
+            e is FirebaseAuthException && e.errorCode == RECENT_LOGIN_CODE -> LinkFailure.NeedsRecentSignIn
+            else -> LinkFailure.Other
+        }
     }
 }

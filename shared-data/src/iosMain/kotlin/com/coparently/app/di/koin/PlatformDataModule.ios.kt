@@ -148,7 +148,7 @@ actual val platformDataModule: Module = module {
     single { BakalariSchoolDirectory(httpClient(HttpTimeouts.SCHOOL)) }
 
     // One object under the three types, as `FirebaseAuthService` is on Android.
-    single { IosFirebaseAuth(Firebase.auth) }
+    single { IosFirebaseAuth(Firebase.auth, appleTokens = get()) }
     single<SignedInUser> { get<IosFirebaseAuth>() }
     single<AuthSession> { get<IosFirebaseAuth>() }
     single<AccountSignIn> { get<IosFirebaseAuth>() }

@@ -29,6 +29,7 @@ import com.coparently.app.data.money.CurrencyHints
 import com.coparently.app.data.payment.PaymentAccounts
 import com.coparently.app.data.payment.PaymentStore
 import com.coparently.app.data.payment.SettleUpMessages
+import com.coparently.app.data.remote.firebase.AppleTokens
 import com.coparently.app.data.remote.firebase.FirestoreChangeRequestDataSource
 import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
@@ -150,6 +151,7 @@ val remoteDataModule: Module = module {
     singleOf(::FirestoreRequestDeadlineDataSource)
     singleOf(::FirestoreUserDataSource)
     singleOf(::GoogleOAuthFunctions)
+    singleOf(::AppleTokens)
     singleOf(::PairingFunctions)
 }
 
