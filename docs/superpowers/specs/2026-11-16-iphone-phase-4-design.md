@@ -66,8 +66,9 @@ brings a new kind of screen (phase 3's rule, spec `2026-11-10` §2).
 4. **The Apple token is revoked when the account is deleted.**
    - Apple requires it. `deleteAccount` revokes the Apple refresh token through Apple's REST API
      (`/auth/revoke`), with the client secret signed on the server by the Apple key held in
-     `functions/.env`. A failed revoke is logged and retried by the next run; it never blocks the
-     erasure.
+     `functions/.env`. A failed revoke never blocks the erasure: it is logged with the uid, and
+     the token document is deleted anyway (least retention; the parent can still remove the app
+     under their Apple ID's settings).
    - To have a refresh token to revoke, Apple's authorization code is exchanged on the server at
      sign-in or linking (`exchangeAppleAuthCode`, a new callable) and the refresh token is kept in
      a server-only document, `apple_tokens/{uid}`, closed to every client and deleted with the

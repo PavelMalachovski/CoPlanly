@@ -17,6 +17,18 @@ const ALICE = 'alice';
 const BOB = 'bob';
 const NOW = Date.parse('2026-11-16T10:00:00Z');
 const TOKEN = 'rt-secret-alice';
+const APPLE_SUB = '001234.alice.apple';
+
+/**
+ * An identity token as Apple's token endpoint returns it, for the Apple ID [sub].
+ *
+ * @param {string} sub The Apple ID's stable id.
+ * @return {string} A JWT whose payload names [sub] (its signature is not read).
+ */
+function idTokenFor(sub) {
+  const part = (value) => Buffer.from(JSON.stringify(value)).toString('base64url');
+  return `${part({alg: 'RS256', kid: 'apple'})}.${part({iss: 'https://appleid.apple.com', sub})}.sig`;
+}
 
 const KEYS = crypto.generateKeyPairSync('ec', {namedCurve: 'P-256'});
 
@@ -34,12 +46,15 @@ function config() {
 /**
  * A `fetch` that answers Apple's two endpoints and records each request.
  *
- * @param {!{token: (number|undefined), revoke: (number|string|undefined)}=} answers The status
- *     each endpoint answers (200 by default); `'throw'` makes the revoke unreachable.
+ * @param {!{token: (number|undefined), revoke: (number|string|undefined),
+ *     revokeError: (string|undefined), sub: (string|undefined)}=} answers The status each
+ *     endpoint answers (200 by default; `'throw'` makes the revoke unreachable), the revoke's
+ *     error code, and the Apple ID the identity token names.
  * @return {function(string, !Object): !Promise<!Object>} The fake, carrying `calls`.
  */
 function appleFetch(answers) {
-  const statuses = Object.assign({token: 200, revoke: 200}, answers || {});
+  const statuses = Object.assign(
+      {token: 200, revoke: 200, revokeError: 'server_error', sub: APPLE_SUB}, answers || {});
   const calls = [];
   const fetch = async (url, init) => {
     const form = Object.fromEntries(new URLSearchParams(init.body));
@@ -48,14 +63,16 @@ function appleFetch(answers) {
       return {
         status: statuses.token,
         text: async () => (statuses.token === 200 ?
-          JSON.stringify({access_token: 'at', refresh_token: TOKEN, id_token: 'it'}) :
+          JSON.stringify(
+              {access_token: 'at', refresh_token: TOKEN, id_token: idTokenFor(statuses.sub)}) :
           JSON.stringify({error: 'invalid_grant'})),
       };
     }
     if (statuses.revoke === 'throw') throw new Error('timeout');
     return {
       status: statuses.revoke,
-      text: async () => (statuses.revoke === 200 ? '' : JSON.stringify({error: 'server_error'})),
+      text: async () =>
+        (statuses.revoke === 200 ? '' : JSON.stringify({error: statuses.revokeError})),
     };
   };
   fetch.calls = calls;
@@ -65,14 +82,19 @@ function appleFetch(answers) {
 /**
  * A fake of the Admin SDK's `auth()`, holding the user's linked providers.
  *
- * @param {!Array<string>} providers The provider ids linked to the user.
+ * @param {!Array<string>} providers The provider ids linked to the user; `apple.com` carries
+ *     [APPLE_SUB] as its `uid`.
  * @return {!Object} The fake, carrying `unlinked` (each `providersToUnlink` it was given).
  */
 function fakeAuth(providers) {
   const auth = {
     unlinked: [],
     async getUser(uid) {
-      return {uid, providerData: providers.map((providerId) => ({providerId}))};
+      return {
+        uid,
+        providerData: providers.map((providerId) =>
+          ({providerId, uid: providerId === 'apple.com' ? APPLE_SUB : `${providerId}-id`})),
+      };
     },
     async updateUser(uid, update) {
       auth.unlinked.push(...(update.providersToUnlink || []));
@@ -131,7 +153,7 @@ describe('apple tokens', () => {
       const fetch = appleFetch();
 
       const result = await myFunctions.exchangeAppleAuthCodeImpl(
-          db, config(), fetch, ALICE, 'code-1', 'app.coplanly', NOW);
+          db, fakeAuth(['apple.com']), config(), fetch, ALICE, 'code-1', 'app.coplanly', NOW);
 
       assert.deepStrictEqual(result, {stored: true});
       assert.deepStrictEqual(db._store.apple_tokens,
@@ -141,8 +163,8 @@ describe('apple tokens', () => {
 
     it('accepts a code issued to the Services ID', async () => {
       const db = fakeDb({});
-      await myFunctions.exchangeAppleAuthCodeImpl(
-          db, config(), appleFetch(), ALICE, 'code-1', 'app.coplanly.signin', NOW);
+      await myFunctions.exchangeAppleAuthCodeImpl(db, fakeAuth(['apple.com']), config(),
+          appleFetch(), ALICE, 'code-1', 'app.coplanly.signin', NOW);
       assert.strictEqual(db._store.apple_tokens[0].clientId, 'app.coplanly.signin');
     });
 
@@ -152,7 +174,7 @@ describe('apple tokens', () => {
           const fetch = appleFetch();
           await assert.rejects(
               myFunctions.exchangeAppleAuthCodeImpl(
-                  db, null, fetch, ALICE, 'code-1', 'app.coplanly', NOW),
+                  db, fakeAuth(['apple.com']), null, fetch, ALICE, 'code-1', 'app.coplanly', NOW),
               (err) => err.code === 'failed-precondition' &&
                 err.details.reason === 'apple-not-configured');
           assert.strictEqual(fetch.calls.length, 0);
@@ -163,7 +185,8 @@ describe('apple tokens', () => {
       const fetch = appleFetch();
       await assert.rejects(
           myFunctions.exchangeAppleAuthCodeImpl(
-              fakeDb({}), config(), fetch, ALICE, 'code-1', 'com.example.other', NOW),
+              fakeDb({}), fakeAuth(['apple.com']), config(), fetch, ALICE, 'code-1',
+              'com.example.other', NOW),
           (err) => err.code === 'invalid-argument');
       assert.strictEqual(fetch.calls.length, 0);
     });
@@ -172,9 +195,61 @@ describe('apple tokens', () => {
       const db = fakeDb({});
       await assert.rejects(
           myFunctions.exchangeAppleAuthCodeImpl(
-              db, config(), appleFetch({token: 400}), ALICE, 'code-1', 'app.coplanly', NOW),
+              db, fakeAuth(['apple.com']), config(), appleFetch({token: 400}), ALICE, 'code-1',
+              'app.coplanly', NOW),
           (err) => err.code === 'failed-precondition' && err.details.reason === 'apple-refused');
       assert.strictEqual((db._store.apple_tokens || []).length, 0);
+    });
+    it('refuses a code for another Apple ID, stores nothing and revokes nothing', async () => {
+      const db = fakeDb({});
+      const fetch = appleFetch({sub: '009999.mallory.apple'});
+      await assert.rejects(
+          myFunctions.exchangeAppleAuthCodeImpl(db, fakeAuth(['password', 'apple.com']), config(),
+              fetch, ALICE, 'code-1', 'app.coplanly', NOW),
+          (err) => err.code === 'failed-precondition' &&
+            err.details.reason === 'apple-account-mismatch');
+      assert.strictEqual((db._store.apple_tokens || []).length, 0);
+      assert.deepStrictEqual(fetch.calls.map((call) => call.url),
+          ['https://appleid.apple.com/auth/token']);
+    });
+
+    it('refuses a caller with no Apple ID linked, before asking Apple', async () => {
+      const db = fakeDb({});
+      const fetch = appleFetch();
+      await assert.rejects(
+          myFunctions.exchangeAppleAuthCodeImpl(db, fakeAuth(['password', 'google.com']), config(),
+              fetch, ALICE, 'code-1', 'app.coplanly', NOW),
+          (err) => err.code === 'failed-precondition' &&
+            err.details.reason === 'apple-account-mismatch');
+      assert.strictEqual(fetch.calls.length, 0);
+      assert.strictEqual((db._store.apple_tokens || []).length, 0);
+    });
+
+    it('refuses an identity token it cannot read', async () => {
+      const db = fakeDb({});
+      const fetch = async () => ({
+        status: 200,
+        text: async () => JSON.stringify({refresh_token: TOKEN, id_token: 'not-a-jwt'}),
+      });
+      await assert.rejects(
+          myFunctions.exchangeAppleAuthCodeImpl(db, fakeAuth(['apple.com']), config(), fetch,
+              ALICE, 'code-1', 'app.coplanly', NOW),
+          (err) => err.details.reason === 'apple-account-mismatch');
+      assert.strictEqual((db._store.apple_tokens || []).length, 0);
+    });
+
+    it('answers apple-not-configured, and logs no key, when the key cannot sign', async () => {
+      const fetch = appleFetch();
+      const broken = Object.assign(config(), {privateKey: '-----BEGIN PRIVATE KEY-----\nnope'});
+      await assert.rejects(
+          myFunctions.exchangeAppleAuthCodeImpl(fakeDb({}), fakeAuth(['apple.com']), broken,
+              fetch, ALICE, 'code-1', 'app.coplanly', NOW),
+          (err) => err.code === 'failed-precondition' &&
+            err.details.reason === 'apple-not-configured');
+      assert.strictEqual(fetch.calls.length, 0);
+      const lines = spies.flatMap((spy) => spy.getCalls()).map((call) => call.args.join(' '));
+      assert.ok(lines.some((line) => line.includes('apple key unusable') && line.includes(ALICE)));
+      assert.ok(lines.every((line) => !line.includes('nope') && !line.includes('PRIVATE KEY')));
     });
   });
 
@@ -235,6 +310,35 @@ describe('apple tokens', () => {
           assert.strictEqual(db._store.apple_tokens.length, 1);
           assert.deepStrictEqual(auth.unlinked, []);
         });
+
+    it('finishes the unlink when Apple says the token is already dead (400 invalid_grant)',
+        async () => {
+          const db = fakeDb(aliceWithToken());
+          const auth = fakeAuth(['password', 'apple.com']);
+          const result = await myFunctions.unlinkAppleImpl(db, auth, config(),
+              appleFetch({revoke: 400, revokeError: 'invalid_grant'}), ALICE);
+          assert.deepStrictEqual(result, {unlinked: true});
+          assert.deepStrictEqual(db._store.apple_tokens, []);
+          assert.deepStrictEqual(auth.unlinked, ['apple.com']);
+        });
+
+    for (const [label, answers, code] of [
+      ['400 invalid_client', {revoke: 400, revokeError: 'invalid_client'}, 'failed-precondition'],
+      ['another 4xx', {revoke: 401, revokeError: 'invalid_grant'}, 'failed-precondition'],
+      ['429', {revoke: 429}, 'unavailable'],
+      ['a 5xx', {revoke: 503}, 'unavailable'],
+      ['no answer', {revoke: 'throw'}, 'unavailable'],
+    ]) {
+      it(`keeps everything as it was when the revoke fails with ${label}`, async () => {
+        const db = fakeDb(aliceWithToken());
+        const auth = fakeAuth(['password', 'apple.com']);
+        await assert.rejects(
+            myFunctions.unlinkAppleImpl(db, auth, config(), appleFetch(answers), ALICE),
+            (err) => err.code === code);
+        assert.strictEqual(db._store.apple_tokens.length, 1);
+        assert.deepStrictEqual(auth.unlinked, []);
+      });
+    }
 
     it('refuses with apple-not-configured when a token is kept but cannot be revoked',
         async () => {

@@ -5645,7 +5645,8 @@ function appleNotConfigured() {
 /**
  * What the app is told when Apple's endpoint fails: `unavailable` when Apple could not be reached
  * or is struggling (try again), `failed-precondition` / `apple-refused` otherwise. Apple's error
- * code goes to the log with the uid; its body never does.
+ * code goes to the log with the uid; its body never does. A failure before any request (a key
+ * that cannot sign) is `failed-precondition` / `apple-not-configured`.
  *
  * @param {string} uid The caller, for the log.
  * @param {string} step `exchange` or `revoke`, for the log.
@@ -5653,6 +5654,12 @@ function appleNotConfigured() {
  * @return {!functions.https.HttpsError} The error the callable throws.
  */
 function appleFailure(uid, step, err) {
+  if (!(err instanceof appleAuth.AppleTokenError)) {
+    // The request was never made: signing the client secret failed, so the key in
+    // `functions/.env` is malformed. Not Apple's outage, and nothing of the key is logged.
+    console.error(`Apple ${step} for ${uid}: apple key unusable`);
+    return appleNotConfigured();
+  }
   const status = err && Number.isInteger(err.status) ? err.status : 0;
   const appleError = err && typeof err.appleError === 'string' ? err.appleError : '';
   console.warn(`Apple ${step} failed for ${uid} (status ${status}, error ${appleError || 'none'})`);
@@ -5666,12 +5673,47 @@ function appleFailure(uid, step, err) {
 }
 
 /**
+ * The `uid` Firebase Auth records for the caller's linked Apple ID, or '' when none is linked.
+ *
+ * @param {!Object} auth The Admin SDK's `auth()`, or a fake with `getUser`.
+ * @param {string} uid The signed-in caller.
+ * @return {!Promise<string>} Apple's `sub` for this account, or ''.
+ */
+async function linkedAppleSubject(auth, uid) {
+  const user = await auth.getUser(uid);
+  const apple = (user.providerData || [])
+      .find((info) => info && info.providerId === appleAuth.APPLE_PROVIDER_ID);
+  return apple && typeof apple.uid === 'string' ? apple.uid : '';
+}
+
+/**
+ * The HttpsError for a code that is not the caller's own Apple ID.
+ *
+ * @return {!functions.https.HttpsError} `failed-precondition` / `apple-account-mismatch`.
+ */
+function appleAccountMismatch() {
+  return new functions.https.HttpsError(
+      'failed-precondition', 'This Apple ID is not the one linked to this account',
+      {reason: 'apple-account-mismatch'});
+}
+
+/**
  * Redeems Apple's authorization code and keeps the refresh token in `apple_tokens/{uid}`.
+ *
+ * **Only the caller's own Apple ID.** The code is a bearer credential, so a caller could send one
+ * issued to somebody else's Apple ID and have the server keep — and later revoke — that person's
+ * grant. The exchange therefore requires the `sub` of the identity token Apple returns with the
+ * tokens to equal the `apple.com` provider's `uid` Firebase Auth holds for the caller, and refuses
+ * a caller with no Apple ID linked before asking Apple anything. A mismatch stores nothing and
+ * revokes nothing: the grant is somebody else's. Decoding the identity token without checking its
+ * signature is sound here because it came from Apple's token endpoint over TLS, in answer to this
+ * server's own request ([appleAuth.subjectOf]).
  *
  * A later exchange replaces the document: Apple issues a new refresh token for each authorization,
  * and revoking any one of them ends the app's authorization as a whole, so the newest is enough.
  *
  * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {!Object} auth The Admin SDK's `auth()`, or a fake with `getUser`.
  * @param {?Object} config The Apple configuration, or null when the deployment has none.
  * @param {function(string, !Object): !Promise<!Object>} fetchFn `fetch`, or a fake.
  * @param {string} uid The signed-in caller.
@@ -5680,20 +5722,31 @@ function appleFailure(uid, step, err) {
  * @param {number=} nowMillis The current time; `Date.now()` when omitted.
  * @return {!Promise<{stored: boolean}>} `{stored: true}`.
  */
-async function exchangeAppleAuthCodeImpl(db, config, fetchFn, uid, code, clientId, nowMillis) {
+async function exchangeAppleAuthCodeImpl(
+    db, auth, config, fetchFn, uid, code, clientId, nowMillis) {
   if (!config) throw appleNotConfigured();
   if (!appleAuth.isKnownClientId(config, clientId)) {
     throw new functions.https.HttpsError(
         'invalid-argument', 'clientId is not this app\'s', {reason: 'unknown-client-id'});
   }
+  const linkedSubject = await linkedAppleSubject(auth, uid);
+  if (!linkedSubject) {
+    console.warn(`Apple exchange for ${uid}: no Apple ID linked`);
+    throw appleAccountMismatch();
+  }
   const now = typeof nowMillis === 'number' ? nowMillis : Date.now();
 
   let refreshToken;
+  let idToken;
   try {
-    ({refreshToken} = await appleAuth.exchangeCode(
+    ({refreshToken, idToken} = await appleAuth.exchangeCode(
         config, clientId, code, {fetch: fetchFn, nowSeconds: now / 1000}));
   } catch (err) {
     throw appleFailure(uid, 'exchange', err);
+  }
+  if (appleAuth.subjectOf(idToken) !== linkedSubject) {
+    console.warn(`Apple exchange for ${uid}: the code is for another Apple ID`);
+    throw appleAccountMismatch();
   }
   if (!refreshToken) {
     console.warn(`Apple exchange for ${uid}: no refresh token`);
@@ -5714,9 +5767,10 @@ exports.exchangeAppleAuthCodeImpl = exchangeAppleAuthCodeImpl;
  * then removes the `apple.com` provider from the Firebase user.
  *
  * Refused with `failed-precondition` / `last-method` when Apple is the account's only provider,
- * before anything changes. When a kept token cannot be revoked (Apple unreachable, or no Apple
- * configuration), nothing changes either and the parent tries again: unlinking with the token
- * still alive would leave an authorization the app no longer knows of.
+ * before anything changes. When a kept token cannot be revoked (Apple unreachable or refusing, or
+ * no usable Apple configuration), nothing changes either and the parent tries again: unlinking
+ * with the token still alive would leave an authorization the app no longer knows of. Apple's
+ * 400 `invalid_grant` is the exception: the token is already dead, so the unlink goes on.
  *
  * @param {FirebaseFirestore.Firestore} db Firestore instance.
  * @param {!Object} auth The Admin SDK's `auth()`, or a fake: `getUser` and `updateUser`.
@@ -5738,6 +5792,7 @@ async function unlinkAppleImpl(db, auth, config, fetchFn, uid, nowMillis) {
   const ref = db.collection(appleAuth.APPLE_TOKENS_COLLECTION).doc(uid);
   const snap = await ref.get();
   const stored = snap.exists ? (snap.data() || {}) : null;
+  let tokenOutcome = stored ? 'revoked' : 'none kept';
   if (stored && stored.refreshToken) {
     if (!config) throw appleNotConfigured();
     const now = typeof nowMillis === 'number' ? nowMillis : Date.now();
@@ -5745,7 +5800,9 @@ async function unlinkAppleImpl(db, auth, config, fetchFn, uid, nowMillis) {
       await appleAuth.revoke(config, stored.clientId || config.bundleId, stored.refreshToken,
           {fetch: fetchFn, nowSeconds: now / 1000});
     } catch (err) {
-      throw appleFailure(uid, 'revoke', err);
+      // Apple saying the token is no longer valid means there is nothing left to revoke.
+      if (!isDeadToken(err)) throw appleFailure(uid, 'revoke', err);
+      tokenOutcome = 'already revoked';
     }
   }
   if (snap.exists) await ref.delete();
@@ -5753,11 +5810,24 @@ async function unlinkAppleImpl(db, auth, config, fetchFn, uid, nowMillis) {
   if (providers.includes(appleAuth.APPLE_PROVIDER_ID)) {
     await auth.updateUser(uid, {providersToUnlink: [appleAuth.APPLE_PROVIDER_ID]});
   }
-  console.log(`Apple unlinked for ${uid} (token ${stored ? 'revoked' : 'none kept'})`);
+  console.log(`Apple unlinked for ${uid} (token ${tokenOutcome})`);
   return {unlinked: true};
 }
 
 exports.unlinkAppleImpl = unlinkAppleImpl;
+
+/**
+ * Whether a revoke failed because Apple no longer knows the token (400 `invalid_grant`): it was
+ * already revoked in the Apple ID's settings, or has expired, so the revocation has nothing left
+ * to do. Every other failure is a real one.
+ *
+ * @param {*} err What the revoke rejected with.
+ * @return {boolean} True for a dead token.
+ */
+function isDeadToken(err) {
+  return err instanceof appleAuth.AppleTokenError &&
+    err.status === 400 && err.appleError === 'invalid_grant';
+}
 
 /**
  * Account deletion's Apple step: revokes the kept token when it can, and deletes
@@ -5787,7 +5857,8 @@ async function eraseAppleToken(db, uid, apple, now) {
           stored.refreshToken, {fetch: apple.fetch, nowSeconds: now / 1000});
     } catch (err) {
       const status = err && Number.isInteger(err.status) ? err.status : 0;
-      outcome = `revoke-failed (status ${status})`;
+      outcome = err instanceof appleAuth.AppleTokenError ?
+        `revoke-failed (status ${status})` : 'revoke-failed (apple key unusable)';
     }
   }
   await ref.delete();
@@ -5796,6 +5867,9 @@ async function eraseAppleToken(db, uid, apple, now) {
   return 1;
 }
 
+/** The longest authorization code the callable accepts; Apple's are far shorter. */
+const APPLE_CODE_MAX_LENGTH = 1024;
+
 /** Keeps Apple's refresh token after a sign-in on the iPhone. See [exchangeAppleAuthCodeImpl]. */
 exports.exchangeAppleAuthCode = regional.https.onCall(async (data, context) => {
   if (!context.auth) {
@@ -5803,11 +5877,12 @@ exports.exchangeAppleAuthCode = regional.https.onCall(async (data, context) => {
   }
   const code = data && typeof data.code === 'string' ? data.code : '';
   const clientId = data && typeof data.clientId === 'string' ? data.clientId : '';
-  if (!code || !clientId) {
-    throw new functions.https.HttpsError('invalid-argument', 'code and clientId are required');
+  if (!code || code.length > APPLE_CODE_MAX_LENGTH || !clientId) {
+    throw new functions.https.HttpsError(
+        'invalid-argument', 'code (1-1024 characters) and clientId are required');
   }
-  return exchangeAppleAuthCodeImpl(
-      admin.firestore(), appleConfigFromEnv(), fetch, context.auth.uid, code, clientId);
+  return exchangeAppleAuthCodeImpl(admin.firestore(), admin.auth(), appleConfigFromEnv(), fetch,
+      context.auth.uid, code, clientId);
 });
 
 /** Unlinks Apple from the caller's account. See [unlinkAppleImpl]. */

@@ -191,7 +191,8 @@ async function postForm(fetchFn, url, form) {
  * @param {string} code The authorization code.
  * @param {!{fetch: function(string, !Object): !Promise<!Object>, nowSeconds: number}} io
  *     The `fetch` to post with and the current time.
- * @return {!Promise<{refreshToken: string}>} The refresh token, '' when Apple sent none.
+ * @return {!Promise<{refreshToken: string, idToken: string}>} The refresh token and the identity
+ *     token, each '' when Apple sent none.
  * @throws {AppleTokenError} When Apple refused or could not be reached.
  */
 async function exchangeCode(config, clientId, code, io) {
@@ -210,7 +211,30 @@ async function exchangeCode(config, clientId, code, io) {
   }
   const refreshToken = parsed && typeof parsed.refresh_token === 'string' ?
     parsed.refresh_token : '';
-  return {refreshToken};
+  const idToken = parsed && typeof parsed.id_token === 'string' ? parsed.id_token : '';
+  return {refreshToken, idToken};
+}
+
+/**
+ * The `sub` claim of Apple's identity token: the stable id of the Apple ID the code belongs to,
+ * the same value Firebase Auth records as the `apple.com` provider's `uid`.
+ *
+ * The payload is decoded without checking the signature, which is enough **only** for a token
+ * this server received from Apple's token endpoint itself, over TLS, in answer to its own
+ * request. Never call this on an identity token a client sent.
+ *
+ * @param {string} idToken The `id_token` of Apple's token response.
+ * @return {string} The `sub` claim, or '' when the token cannot be read.
+ */
+function subjectOf(idToken) {
+  const parts = typeof idToken === 'string' ? idToken.split('.') : [];
+  if (parts.length !== 3) return '';
+  try {
+    const claims = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+    return claims && typeof claims.sub === 'string' ? claims.sub : '';
+  } catch (err) {
+    return '';
+  }
 }
 
 /**
@@ -247,5 +271,6 @@ module.exports = {
   isKnownClientId,
   clientSecret,
   exchangeCode,
+  subjectOf,
   revoke,
 };

@@ -109,7 +109,7 @@ describe('apple-auth', () => {
       const result = await apple.exchangeCode(
           config(), 'app.coplanly', 'code-1', {fetch, nowSeconds: NOW});
 
-      assert.deepStrictEqual(result, {refreshToken: 'rt-1'});
+      assert.deepStrictEqual(result, {refreshToken: 'rt-1', idToken: 'it'});
       assert.strictEqual(fetch.calls.length, 1);
       const {url, init, form} = fetch.calls[0];
       assert.strictEqual(url, 'https://appleid.apple.com/auth/token');
@@ -127,7 +127,7 @@ describe('apple-auth', () => {
       const fetch = fakeFetch(200, JSON.stringify({access_token: 'at'}));
       const result = await apple.exchangeCode(
           config(), 'app.coplanly', 'code-1', {fetch, nowSeconds: NOW});
-      assert.deepStrictEqual(result, {refreshToken: ''});
+      assert.deepStrictEqual(result, {refreshToken: '', idToken: ''});
     });
 
     it('carries Apple\'s error code, and no body, on a refusal', async () => {
@@ -145,6 +145,22 @@ describe('apple-auth', () => {
       await assert.rejects(
           apple.exchangeCode(config(), 'app.coplanly', 'code-1', {fetch, nowSeconds: NOW}),
           (err) => err instanceof apple.AppleTokenError && err.status === 0);
+    });
+  });
+
+  describe('subjectOf', () => {
+    const jwt = (payload) => ['{}', JSON.stringify(payload)]
+        .map((part) => Buffer.from(part).toString('base64url')).join('.') + '.sig';
+
+    it('reads the sub claim of an identity token', () => {
+      assert.strictEqual(apple.subjectOf(jwt({sub: '001234.abc', aud: 'app.coplanly'})),
+          '001234.abc');
+    });
+
+    it('is empty for anything it cannot read', () => {
+      for (const bad of ['', 'a.b', 'a.b.c', jwt({aud: 'x'}), jwt({sub: 42}), null]) {
+        assert.strictEqual(apple.subjectOf(bad), '');
+      }
     });
   });
 
