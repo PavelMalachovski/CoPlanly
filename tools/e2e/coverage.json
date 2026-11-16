@@ -79,6 +79,9 @@
     "ai_usage": {
       "exempt": "Closed to every client; only the aiAssist callable (listed under functions) reads and writes it, and firestore-tests/rules/ai-assist.test.js pins the closed rule."
     },
+    "apple_tokens": {
+      "exempt": "Apple's real authorization cannot run on the emulators; closed to every client, written only by the Apple callables listed under functions. functions/test/apple-tokens.test.js covers the store, the revoke and the deletion, firestore-tests/rules/apple-tokens.test.js the closed rule."
+    },
     "family_settings": {
       "e2e": [
         "TwoParentAgreementsTest#firstRatioOnAFreshPairAppliesAndIsAnnouncedAsAgreed",
@@ -456,6 +459,12 @@
     },
     "refreshGoogleAccessToken": {
       "exempt": "Needs a real Google refresh token; functions/test covers the oracle check."
+    },
+    "exchangeAppleAuthCode": {
+      "exempt": "Apple's real authorization cannot run on the emulators; functions/test/apple-tokens.test.js and apple-auth.test.js cover the exchange, the client secret and the stored token."
+    },
+    "unlinkApple": {
+      "exempt": "Apple's real authorization cannot run on the emulators; functions/test/apple-tokens.test.js covers the revoke, the deletion and the last-method refusal."
     },
     "aiAssist": {
       "exempt": "Calls a paid external model (Claude on Vertex AI) that no Firebase emulator provides, and is off until the owner configures it; one parent asks for a draft only they see, so no second phone is involved. functions/test/ai-assist.test.js covers the consent gate, the thread and pairing checks, the 20-message cap, the numbers-only summary, the quota and the no-text logging."
