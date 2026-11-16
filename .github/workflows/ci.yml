@@ -1464,8 +1464,11 @@ jobs:
       - name: Build the base build (app APK)
         working-directory: upgrade-base
         # The base build's daemon would otherwise keep its 4 GB heap beside this branch's
-        # daemon and the emulator on a 16 GB runner.
-        run: ./gradlew :app:assembleDebug && ./gradlew --stop
+        # daemon and the emulator on a 16 GB runner. `--no-build-cache`: a signed APK is a
+        # cacheable output, so a base commit another runner already built (as that run's "new"
+        # APK) came back from the restored cache signed with that runner's debug keystore, and
+        # the signature check failed (run 43838187668). Built here, it is signed with this one's.
+        run: ./gradlew --no-build-cache :app:assembleDebug && ./gradlew --stop
 
       # "A co-parent on the previous build", for the Firestore wire format (CLAUDE.md, the rule
       # under item 5). This branch's `app/src/test/resources/wire/current/` is what it writes; the
@@ -1517,7 +1520,12 @@ jobs:
 
       # This branch's app and test APKs, while the AVD restores and the emulator boots; the
       # emulator script's first line waits for it (tools/ci-background-build.sh).
+      # `--no-build-cache` for the same reason as the base build: both APKs must be signed with
+      # this runner's debug keystore, never come back from another runner's cache. The other
+      # jobs keep the cache; only this one compares signatures.
       - name: Start building this branch's APKs in the background
+        env:
+          BACKGROUND_BUILD_TASKS: --no-build-cache :app:assembleDebug :app:assembleDebugAndroidTest
         run: bash tools/ci-background-build.sh start
 
       # The API 30 AVD the `instrumented` job caches, snapshot included — restored only, so the
