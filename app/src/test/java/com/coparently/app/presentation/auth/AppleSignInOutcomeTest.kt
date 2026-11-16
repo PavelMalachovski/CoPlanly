@@ -1,13 +1,27 @@
 package com.coparently.app.presentation.auth
 
+import com.coparently.app.data.remote.firebase.LinkException
+import com.coparently.app.data.remote.firebase.LinkFailure
 import com.coparently.app.data.remote.firebase.SignInOutcome
 import com.coparently.app.data.session.ProfileIdentity
+import com.coparently.app.presentation.platform.AppleSignInCancelledException
 import com.coparently.app.presentation.platform.AppleSignInResult
 import com.coparently.app.presentation.platform.SignsInAnotherWayException
+import com.google.android.gms.tasks.Tasks
+import com.google.firebase.auth.AuthResult
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.OAuthProvider
+import com.google.firebase.auth.UserInfo
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
+import io.mockk.verify
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -76,11 +90,96 @@ class AppleSignInOutcomeTest {
     }
 
     @Test
-    fun anyOtherFailureIsTheSdksOwn() {
-        val error = mockk<FirebaseAuthException> {
-            every { errorCode } returns "ERROR_WEB_CONTEXT_CANCELED"
+    fun aClosedSignInSheetIsACancel() {
+        for (code in listOf("ERROR_WEB_CONTEXT_CANCELED", "ERROR_WEB_CONTEXT_ALREADY_PRESENTED")) {
+            val error = authError(code)
+
+            val failure = AndroidCredentialSignIn.signInFailureOf(error)
+
+            assertTrue(code, failure is AppleSignInCancelledException)
+            assertSame(error, failure.cause)
         }
+    }
+
+    @Test
+    fun anyOtherSignInFailureIsTheSdksOwn() {
+        val error = authError("ERROR_INTERNAL_ERROR")
 
         assertSame(error, AndroidCredentialSignIn.signInFailureOf(error))
+    }
+
+    @Test
+    fun aClosedLinkSheetIsACancel() {
+        val failure = AndroidCredentialSignIn.linkFailureOf(authError("ERROR_WEB_CONTEXT_CANCELED"))
+
+        assertTrue(failure is AppleSignInCancelledException)
+    }
+
+    @Test
+    fun anAppleIdAnotherAccountHoldsLinksNothing() {
+        val failure = AndroidCredentialSignIn.linkFailureOf(authError("ERROR_CREDENTIAL_ALREADY_IN_USE"))
+
+        assertEquals(LinkFailure.InUseByAnotherAccount, (failure as LinkException).failure)
+    }
+
+    @Test
+    fun aPendingResultCountsOnlyAsThisAccountsAppleLink() {
+        assertTrue(AndroidCredentialSignIn.isOwnAppleLink(authResult("alice", "password", "apple.com"), "alice"))
+        assertFalse(AndroidCredentialSignIn.isOwnAppleLink(authResult("bob", "apple.com"), "alice"))
+        assertFalse(AndroidCredentialSignIn.isOwnAppleLink(authResult("alice", "password"), "alice"))
+        assertFalse(AndroidCredentialSignIn.isOwnAppleLink(mockk { every { user } returns null }, "alice"))
+    }
+
+    @Test
+    fun anotherAccountsPendingResultIsSetAsideForAFreshLink() = runTest {
+        mockkStatic(OAuthProvider::class)
+        try {
+            every { OAuthProvider.newBuilder("apple.com") } returns mockk(relaxed = true)
+            val alice = user("alice", "password")
+            val auth = mockk<FirebaseAuth> {
+                every { currentUser } returns alice
+                every { pendingAuthResult } returns Tasks.forResult(authResult("bob", "apple.com"))
+            }
+            every { alice.startActivityForLinkWithProvider(any(), any()) } returns
+                Tasks.forResult(authResult("alice", "password", "apple.com"))
+
+            val result = AndroidCredentialSignIn(mockk(relaxed = true), mockk(relaxed = true), auth).linkApple()
+
+            assertTrue(result.isSuccess)
+            verify(exactly = 1) { alice.startActivityForLinkWithProvider(any(), any()) }
+        } finally {
+            unmockkStatic(OAuthProvider::class)
+        }
+    }
+
+    @Test
+    fun thisAccountsPendingLinkIsTakenWithoutAFreshOne() = runTest {
+        val alice = user("alice", "password")
+        val auth = mockk<FirebaseAuth> {
+            every { currentUser } returns alice
+            every { pendingAuthResult } returns Tasks.forResult(authResult("alice", "password", "apple.com"))
+        }
+
+        val result = AndroidCredentialSignIn(mockk(relaxed = true), mockk(relaxed = true), auth).linkApple()
+
+        assertTrue(result.isSuccess)
+        verify(exactly = 0) { alice.startActivityForLinkWithProvider(any(), any()) }
+    }
+
+    private fun authError(code: String): FirebaseAuthException = mockk {
+        every { errorCode } returns code
+    }
+
+    private fun user(uid: String, vararg providers: String): FirebaseUser {
+        val infos = providers.map { id -> mockk<UserInfo> { every { providerId } returns id } }
+        return mockk(relaxed = true) {
+            every { this@mockk.uid } returns uid
+            every { providerData } returns infos
+        }
+    }
+
+    private fun authResult(uid: String, vararg providers: String): AuthResult {
+        val signedIn = user(uid, *providers)
+        return mockk { every { user } returns signedIn }
     }
 }

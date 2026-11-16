@@ -6,8 +6,8 @@ import com.coparently.app.domain.ai.AiAssistAvailability
 import com.coparently.app.domain.ai.AiAssistRepository
 import com.coparently.app.domain.dictation.SpeechDictation
 import com.coparently.app.ios.IosPairingWording
-import com.coparently.app.ios.bundleAppleSignIn
 import com.coparently.app.ios.IosSchoolImportWordings
+import com.coparently.app.ios.bundleAppleSignIn
 import com.coparently.app.presentation.auth.AuthErrors
 import com.coparently.app.presentation.auth.IosAuthErrors
 import com.coparently.app.presentation.pairing.InviteQrCodes

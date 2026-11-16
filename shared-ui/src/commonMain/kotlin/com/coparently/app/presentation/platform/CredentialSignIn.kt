@@ -46,8 +46,10 @@ interface CredentialSignIn : PlatformCapability {
 
     /**
      * Signs in to Firebase with an Apple ID and answers whether the account is new and the name
-     * Apple shared, or the failure. An address that already signs in another way fails with
-     * [SignsInAnotherWayException], which the screen words generically (spec §3.8 call 2).
+     * Apple shared, or the failure. A sheet the parent closed fails with
+     * [AppleSignInCancelledException], which the screen passes over in silence; an address that
+     * already signs in another way with [SignsInAnotherWayException], which the screen words
+     * generically (spec §3.8 call 2).
      */
     suspend fun signInWithApple(): Result<AppleSignInResult> =
         Result.failure(UnsupportedOperationException("Sign in with Apple is not offered here"))
@@ -55,7 +57,7 @@ interface CredentialSignIn : PlatformCapability {
     /**
      * Links an Apple ID to the signed-in account. One that belongs to another account fails with a
      * `LinkException` of `LinkFailure.InUseByAnotherAccount`: nothing is linked and the signed-in
-     * account stays as it was.
+     * account stays as it was. A sheet the parent closed fails with [AppleSignInCancelledException].
      */
     suspend fun linkApple(): Result<Unit> =
         Result.failure(UnsupportedOperationException("Sign in with Apple is not offered here"))
@@ -112,3 +114,10 @@ data class SavedCredential(val email: String, val password: String) {
 val LocalCredentialSignIn = staticCompositionLocalOf<CredentialSignIn> {
     error("LocalCredentialSignIn was read outside the shell: MainActivity provides the credential sheets")
 }
+
+/**
+ * A sign-in with Apple, or a link of one, that the parent closed before it finished (or that could
+ * not open because another was already showing). Nothing changed, and it is not an error to show.
+ */
+class AppleSignInCancelledException(cause: Throwable? = null) :
+    Exception("Sign in with Apple was closed", cause)

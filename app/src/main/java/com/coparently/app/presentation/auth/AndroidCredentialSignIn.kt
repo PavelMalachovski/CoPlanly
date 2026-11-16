@@ -8,10 +8,12 @@ import com.coparently.app.data.remote.firebase.LinkException
 import com.coparently.app.data.remote.firebase.LinkFailure
 import com.coparently.app.data.remote.firebase.SignInOutcome
 import com.coparently.app.data.remote.google.CredentialAuthenticator
+import com.coparently.app.presentation.platform.AppleSignInCancelledException
 import com.coparently.app.presentation.platform.AppleSignInResult
 import com.coparently.app.presentation.platform.CredentialSignIn
 import com.coparently.app.presentation.platform.SavedCredential
 import com.coparently.app.presentation.platform.SignsInAnotherWayException
+import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.OAuthProvider
@@ -60,9 +62,9 @@ class AndroidCredentialSignIn(
 
     /**
      * Signs in with Apple through Firebase's web flow. A result the flow left pending (the activity
-     * was recreated while the browser was open) is taken first, as Firebase asks. An address that
-     * signs in another way fails with [SignsInAnotherWayException]; any other failure is the
-     * SDK's own, a closed browser included.
+     * was recreated while the browser was open) is taken first, as Firebase asks. A closed sheet
+     * fails with [AppleSignInCancelledException], an address that signs in another way with
+     * [SignsInAnotherWayException]; any other failure is the SDK's own.
      */
     override suspend fun signInWithApple(): Result<AppleSignInResult> = try {
         val flow = firebaseAuth.pendingAuthResult
@@ -86,20 +88,43 @@ class AndroidCredentialSignIn(
     /**
      * Links an Apple ID to the signed-in account through Firebase's web flow. One another account
      * holds fails with [LinkFailure.InUseByAnotherAccount], mapped as `FirebaseAccountLinking` maps
-     * Google's: nothing is linked and the signed-in account stays as it was.
+     * Google's: nothing is linked and the signed-in account stays as it was. A closed sheet fails
+     * with [AppleSignInCancelledException].
+     *
+     * A result the flow left pending is accepted only when it is this account's Apple link
+     * ([isOwnAppleLink]): after a recreation it may be a sign-in, or another account's, and is then
+     * set aside and a fresh link started.
      */
     override suspend fun linkApple(): Result<Unit> {
         val user = firebaseAuth.currentUser ?: return Result.failure(LinkException(LinkFailure.Other))
+        val uid = user.uid
         return try {
-            val flow = firebaseAuth.pendingAuthResult
-                ?: user.startActivityForLinkWithProvider(activity, appleProvider())
-            flow.await()
+            if (!pendingLinkLanded(uid)) {
+                user.startActivityForLinkWithProvider(activity, appleProvider()).await()
+            }
             Result.success(Unit)
         } catch (e: CancellationException) {
             throw e
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             logger.e(TAG, "Linking Apple failed: ${codeOf(e)}")
-            Result.failure(LinkException(FirebaseAccountLinking.linkFailureOf(e), e))
+            Result.failure(linkFailureOf(e))
+        }
+    }
+
+    /**
+     * Whether a result the web flow left pending is this account's own Apple link ([isOwnAppleLink]).
+     * A pending result that is something else, or that failed, is set aside: the caller starts a
+     * fresh link.
+     */
+    private suspend fun pendingLinkLanded(uid: String): Boolean {
+        val pending = firebaseAuth.pendingAuthResult ?: return false
+        return try {
+            isOwnAppleLink(pending.await(), uid)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            logger.w(TAG, "A pending Apple result was set aside: ${codeOf(e)}")
+            false
         }
     }
 
@@ -109,6 +134,12 @@ class AndroidCredentialSignIn(
         /** Firebase Auth's provider id for Apple. */
         private const val APPLE_PROVIDER_ID = "apple.com"
 
+        /**
+         * Firebase's codes for a web flow the parent closed, or one that could not open because
+         * another was already showing: neither is an error to show.
+         */
+        private val CANCELLED_CODES = setOf("ERROR_WEB_CONTEXT_CANCELED", "ERROR_WEB_CONTEXT_ALREADY_PRESENTED")
+
         /** Firebase's code for a sign-in whose address already signs in another way. */
         private const val EXISTS_WITH_DIFFERENT_CREDENTIAL = "ERROR_ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL"
 
@@ -117,11 +148,32 @@ class AndroidCredentialSignIn(
             OAuthProvider.newBuilder(APPLE_PROVIDER_ID).setScopes(listOf("email", "name")).build()
 
         /**
-         * The failure an Apple sign-in [e] is answered with: [SignsInAnotherWayException] when the
-         * address already signs in another way, the SDK's own exception otherwise.
+         * The failure an Apple sign-in [e] is answered with: [AppleSignInCancelledException] for a
+         * closed sheet, [SignsInAnotherWayException] when the address already signs in another way,
+         * the SDK's own exception otherwise.
          */
-        fun signInFailureOf(e: Throwable): Throwable =
-            if (codeOf(e) == EXISTS_WITH_DIFFERENT_CREDENTIAL) SignsInAnotherWayException(e) else e
+        fun signInFailureOf(e: Throwable): Throwable = when (codeOf(e)) {
+            in CANCELLED_CODES -> AppleSignInCancelledException(e)
+            EXISTS_WITH_DIFFERENT_CREDENTIAL -> SignsInAnotherWayException(e)
+            else -> e
+        }
+
+        /**
+         * The failure an Apple link [e] is answered with: [AppleSignInCancelledException] for a closed
+         * sheet, otherwise a [LinkException] mapped as `FirebaseAccountLinking` maps Google's.
+         */
+        fun linkFailureOf(e: Throwable): Throwable =
+            if (codeOf(e) in CANCELLED_CODES) {
+                AppleSignInCancelledException(e)
+            } else {
+                LinkException(FirebaseAccountLinking.linkFailureOf(e), e)
+            }
+
+        /** Whether [result] is an Apple link of the account [uid]: the same user, now holding `apple.com`. */
+        fun isOwnAppleLink(result: AuthResult, uid: String): Boolean {
+            val user = result.user ?: return false
+            return user.uid == uid && user.providerData.any { it.providerId == APPLE_PROVIDER_ID }
+        }
 
         /** Firebase's error code for [e], or its class name: what is logged, never the message. */
         private fun codeOf(e: Throwable): String =
