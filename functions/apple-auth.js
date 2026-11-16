@@ -156,10 +156,12 @@ function appleErrorOf(body) {
  * @param {string} url Apple's endpoint.
  * @param {!Object<string, string>} form The form fields.
  * @return {!Promise<string>} The body of a 2xx answer.
- * @throws {AppleTokenError} When Apple did not answer in time, or answered otherwise.
+ * @throws {AppleTokenError} When Apple did not answer in time (or its body could not be read),
+ *     or answered otherwise.
  */
 async function postForm(fetchFn, url, form) {
   let response;
+  let body;
   try {
     response = await fetchFn(url, {
       method: 'POST',
@@ -167,10 +169,11 @@ async function postForm(fetchFn, url, form) {
       body: new URLSearchParams(form).toString(),
       signal: AbortSignal.timeout(APPLE_REQUEST_TIMEOUT_MS),
     });
+    // Inside the try: a connection dropped while the body is read is Apple out of reach too.
+    body = await response.text();
   } catch (err) {
     throw new AppleTokenError(`Could not reach Apple: ${err && err.name}`, 0, '');
   }
-  const body = await response.text();
   if (response.status < 200 || response.status >= 300) {
     throw new AppleTokenError(
         `Apple answered ${response.status}`, response.status, appleErrorOf(body));

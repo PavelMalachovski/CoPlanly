@@ -35,7 +35,11 @@ import kotlin.time.Clock
  * stands. So a disconnect here revokes the grant through Google's revoke endpoint ([revocation]),
  * with the refresh token read before the local clear, and ends Google Sign-In's session and grant
  * ([SignInProviderSession.disconnect]); the next connect is then a first consent again and carries
- * a refresh token. A grant this phone cannot revoke (offline, or ended elsewhere without a token
+ * a refresh token. Google Sign-In's session is disconnected only when this phone held a Calendar
+ * connection (a token or the connected address, read before the clear): with none, the session is
+ * the app's own Google sign-in, whose grant a sign-out must not revoke (it is left to
+ * `IosAccountTraces`, which only signs it out), as Android's sign-out revokes only the Calendar
+ * client it holds. A grant this phone cannot revoke (offline, or ended elsewhere without a token
  * here) can still answer the next connect without one: the connection then lasts as long as its
  * access token and reads as one to reconnect, which the device checklist checks on a phone.
  *
@@ -45,7 +49,7 @@ import kotlin.time.Clock
  * @property revocation Google's revoke endpoint ([GoogleRevokeEndpoint]); a failure is logged and
  *   never stops a sign-out or a disconnect.
  * @property providerSession Google Sign-In's own session ([SignInProviderSession]), ended and its
- *   grant revoked after the local store is cleared.
+ *   grant revoked after the local store is cleared, only when a Calendar connection was held.
  * @property now The clock, in epoch millis; a test's own.
  */
 class IosGoogleCalendarAccount(
@@ -124,16 +128,18 @@ class IosGoogleCalendarAccount(
     /** Signs the whole app out of Google here: the local store first, then the grant ([endGrant]). */
     override suspend fun signOut(): Pair<Boolean, String?> {
         val token = grantToken()
+        val calendarHeld = calendarHeld(token)
         preferences.clear()
-        endGrant(token)
+        endGrant(token, calendarHeld)
         return Pair(true, null)
     }
 
     /** Disconnects Google Calendar alone: Google's own keys first, then the grant ([endGrant]). */
     override suspend fun disconnect() {
         val token = grantToken()
+        val calendarHeld = calendarHeld(token)
         preferences.removeGoogleCalendarAccount()
-        endGrant(token)
+        endGrant(token, calendarHeld)
     }
 
     /** The token whose grant a disconnect revokes: the refresh token, else the access token, read before the clear. */
@@ -142,11 +148,20 @@ class IosGoogleCalendarAccount(
             ?: preferences.getAccessToken()?.takeIf { it.isNotEmpty() }
 
     /**
-     * Revokes [token]'s grant and ends Google Sign-In's session and grant, best effort: the
-     * credential is already gone from this phone, so a failure is logged and the caller goes on.
+     * Whether this phone held a Google Calendar connection, read before the clear: a [token], or the
+     * address a connect stored (a connection Google has since ended, whose grant may still stand).
+     * Only the Calendar connect writes that address, so neither is there for an app sign-in alone.
+     */
+    private fun calendarHeld(token: String?): Boolean = token != null || preferences.getUserEmail() != null
+
+    /**
+     * Revokes [token]'s grant and, when [calendarHeld], ends Google Sign-In's session and grant, best
+     * effort: the credential is already gone from this phone, so a failure is logged and the caller
+     * goes on. Without a Calendar connection the session is the app's own Google sign-in, and its
+     * grant is left standing.
      */
     @Suppress("TooGenericExceptionCaught") // a revoke's failure must never stop a sign-out
-    private suspend fun endGrant(token: String?) {
+    private suspend fun endGrant(token: String?, calendarHeld: Boolean) {
         if (token != null) {
             try {
                 revocation.revoke(token)
@@ -156,7 +171,7 @@ class IosGoogleCalendarAccount(
                 logger.e(TAG, "Google revoke failed after the local credential was cleared", e)
             }
         }
-        providerSession.disconnect()
+        if (calendarHeld) providerSession.disconnect()
     }
 
     override suspend fun getCredential(forceRefresh: Boolean): GoogleCredential =

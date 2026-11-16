@@ -146,6 +146,18 @@ describe('apple-auth', () => {
           apple.exchangeCode(config(), 'app.coplanly', 'code-1', {fetch, nowSeconds: NOW}),
           (err) => err instanceof apple.AppleTokenError && err.status === 0);
     });
+
+    it('is a status-0 failure when the body cannot be read', async () => {
+      const fetch = async () => ({
+        status: 200,
+        text: async () => {
+          throw new Error('ECONNRESET');
+        },
+      });
+      await assert.rejects(
+          apple.exchangeCode(config(), 'app.coplanly', 'code-1', {fetch, nowSeconds: NOW}),
+          (err) => err instanceof apple.AppleTokenError && err.status === 0);
+    });
   });
 
   describe('subjectOf', () => {

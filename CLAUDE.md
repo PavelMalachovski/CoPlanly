@@ -2006,7 +2006,9 @@ the rules):
   blank draws no Google Calendar row), and the server code goes through `exchangeGoogleAuthCode` as
   on Android, into the same `SecurePreferences` keys. Disconnect and sign-out read the token, clear
   the store, then revoke at Google's revoke endpoint (`GoogleGrantRevocation`) and call
-  `GIDSignIn.disconnect`, best effort (item 23's order). GoogleSignIn-iOS cannot force a refresh
+  `GIDSignIn.disconnect`, best effort (item 23's order) — the disconnect only when a Calendar token
+  or address was held before the clear, so a sign-out never revokes the grant of the app's own
+  Google sign-in (`signOutWithoutCalendarLeavesGoogleSessionGranted`). GoogleSignIn-iOS cannot force a refresh
   token, so after a revoke that failed (offline) a reconnect may get none and the connection falls
   to "reconnect" after about an hour (device check §3.42). The import runs on the button and on
   the foreground; the background one is part D's.

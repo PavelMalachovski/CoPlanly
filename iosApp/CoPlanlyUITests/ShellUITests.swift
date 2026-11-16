@@ -1111,10 +1111,18 @@ final class ShellUITests: XCTestCase {
     private func signInMethods() throws {
         if !app.navigationBars["Settings"].exists { try settings() }
         try openFromSettings(signInMethodsTitle)
-        try require(element(labelledContaining: "E-mail").waitForExistence(timeout: timeout), "Sign-in methods lists no e-mail row")
-        // Case-sensitive, so "Not linked" does not count: the e-mail the walk signed in with is the
-        // one method this account holds (Google needs a bundled plist, Apple is not linked).
-        try require(labelExists(containing: "Linked"), "Sign-in methods does not show the e-mail as linked")
+        let email = element(labelledContaining: "E-mail")
+        try require(email.waitForExistence(timeout: timeout), "Sign-in methods lists no e-mail row")
+        // The e-mail the walk signed in with is the one method this account holds (Google needs a
+        // bundled plist, Apple is not linked), so the e-mail row itself must read "Linked": its own
+        // label when the row is one element, else its status line, the exact "Linked" ("Not linked"
+        // does not count) on the same row, within 30 pt of the title (a row is 50 pt or more).
+        let emailLinked = email.label.contains("Linked") ||
+            app.descendants(matching: .any)
+                .matching(NSPredicate(format: "label == %@", "Linked"))
+                .allElementsBoundByIndex
+                .contains { abs($0.frame.midY - email.frame.midY) < 30 }
+        try require(emailLinked, "Sign-in methods does not show the e-mail row as linked")
         shot("09b-sign-in-methods")
         app.navigationBars[signInMethodsTitle].buttons.element(boundBy: 0).tap()
         try require(app.navigationBars["Settings"].waitForExistence(timeout: timeout), "Back from Sign-in methods did not return to Settings")

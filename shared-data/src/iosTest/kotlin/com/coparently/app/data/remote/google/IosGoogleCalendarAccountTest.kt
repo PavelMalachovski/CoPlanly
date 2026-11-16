@@ -228,10 +228,45 @@ class IosGoogleCalendarAccountTest {
     }
 
     @Test
-    fun nothingStoredRevokesNothingAndStillEndsGooglesSession() = runTest {
+    fun nothingStoredRevokesNothingAndLeavesGooglesSession() = runTest {
+        account.disconnect()
+
+        assertTrue(events.isEmpty())
+    }
+
+    @Test
+    fun aConnectionGoogleEndedStillEndsGooglesSessionOnDisconnect() = runTest {
+        // Connected once, tokens dropped since: the grant behind the address may still stand.
+        preferences.putUserEmail("alice@example.com")
+
         account.disconnect()
 
         assertEquals(listOf("session disconnect; stored access null"), events)
+    }
+
+    @Test
+    fun signOutWithoutCalendarLeavesGoogleSessionGranted() = runTest {
+        // The app's own Google sign-in, Calendar never connected: nothing is revoked, and the
+        // session's grant is left to IosAccountTraces, which only signs it out.
+        preferences.putString(OTHER_KEY, "gone")
+
+        assertEquals(Pair(true, null), account.signOut())
+
+        assertNull(preferences.getString(OTHER_KEY))
+        assertTrue(events.isEmpty())
+    }
+
+    @Test
+    fun signOutWithACalendarTokenDisconnectsGooglesSession() = runTest {
+        preferences.putAccessToken("access")
+        preferences.putTokenExpiry(NOW + HOUR)
+
+        account.signOut()
+
+        assertEquals(
+            listOf("revoke access; stored refresh null", "session disconnect; stored access null"),
+            events
+        )
     }
 
     @Test
