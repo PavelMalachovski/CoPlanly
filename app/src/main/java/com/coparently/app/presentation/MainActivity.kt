@@ -350,7 +350,13 @@ class MainActivity : AppCompatActivity() {
             }
             // The sign-in screen's credential sheets (`presentation/platform/CredentialSignIn`), on
             // this activity, which Credential Manager hosts them on; the ViewModel keeps none of it.
-            val credentialSignIn = remember { AndroidCredentialSignIn(this@MainActivity, credentialAuthenticator, firebaseAuth) }
+            val credentialSignIn = remember {
+                AndroidCredentialSignIn(
+                    this@MainActivity,
+                    credentialAuthenticator,
+                    firebaseAuth
+                )
+            }
 
             // Every platform capability the shared screens read (`presentation/platform/`, MON-24
             // phase 2, Task 11), from this activity, and the two sign-ins only an activity can
