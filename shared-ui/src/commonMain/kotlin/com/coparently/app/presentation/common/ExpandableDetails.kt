@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -58,7 +57,7 @@ fun ExpandableDetails(
         TextButton(onClick = { open = !open }, modifier = Modifier.semantics { stateDescription = state }) {
             Text(label)
             Spacer(Modifier.width(Spacing.XS))
-            Icon(
+            AppIcon(
                 imageVector = if (open) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                 contentDescription = null,
                 modifier = Modifier.size(IconSizes.Small)

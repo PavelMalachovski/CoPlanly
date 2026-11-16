@@ -36,6 +36,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.platform.LocalCredentialSignIn
@@ -137,7 +138,7 @@ fun AuthScreen(
                 // Decoration that loops forever stands still when animations are switched off.
                 val pulse = if (rememberReducedMotion()) 1f else pulsing
 
-                Icon(
+                AppIcon(
                     imageVector = Icons.Default.ChildCare,
                     contentDescription = stringResource(Res.string.auth_cd_logo),
                     modifier = Modifier
@@ -206,7 +207,7 @@ fun AuthScreen(
                         label = { Text(stringResource(Res.string.auth_email_label)) },
                         placeholder = { Text(stringResource(Res.string.auth_email_placeholder)) },
                         leadingIcon = {
-                            Icon(
+                            AppIcon(
                                 imageVector = Icons.Default.Email,
                                 contentDescription = null
                             )
@@ -233,14 +234,14 @@ fun AuthScreen(
                         label = { Text(stringResource(Res.string.auth_password_label)) },
                         placeholder = { Text(stringResource(Res.string.auth_password_placeholder)) },
                         leadingIcon = {
-                            Icon(
+                            AppIcon(
                                 imageVector = Icons.Default.Lock,
                                 contentDescription = null
                             )
                         },
                         trailingIcon = {
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(
+                                AppIcon(
                                     imageVector = if (passwordVisible) {
                                         Icons.Default.VisibilityOff
                                     } else {
@@ -315,7 +316,7 @@ fun AuthScreen(
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.S),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
+                                AppIcon(
                                     imageVector = Icons.Default.Email,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -355,7 +356,7 @@ fun AuthScreen(
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.S),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
+                                AppIcon(
                                     imageVector = Icons.Default.Error,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.error,

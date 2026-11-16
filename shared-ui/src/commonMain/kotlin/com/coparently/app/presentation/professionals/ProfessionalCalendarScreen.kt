@@ -15,7 +15,6 @@ import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -28,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.professionals.ProfessionalGrant
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.PushedTopBar
@@ -145,13 +145,13 @@ internal fun WindowPager(onPrevious: () -> Unit, onNext: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         IconButton(onClick = onPrevious) {
-            Icon(
+            AppIcon(
                 imageVector = Icons.Default.ChevronLeft,
                 contentDescription = stringResource(Res.string.professional_calendar_previous)
             )
         }
         IconButton(onClick = onNext) {
-            Icon(
+            AppIcon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = stringResource(Res.string.professional_calendar_next)
             )

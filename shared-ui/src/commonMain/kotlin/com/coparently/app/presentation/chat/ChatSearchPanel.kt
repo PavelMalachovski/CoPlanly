@@ -14,7 +14,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.coparently.app.domain.chat.ChatSearchHit
 import com.coparently.app.domain.chat.SearchSnippet
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.Spacing
@@ -81,7 +81,7 @@ fun ChatSearchField(query: String, onQueryChange: (String) -> Unit, onClear: () 
         trailingIcon = {
             if (query.isNotEmpty()) {
                 IconButton(onClick = onClear) {
-                    Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.chat_search_clear))
+                    AppIcon(Icons.Default.Close, contentDescription = stringResource(Res.string.chat_search_clear))
                 }
             }
         },

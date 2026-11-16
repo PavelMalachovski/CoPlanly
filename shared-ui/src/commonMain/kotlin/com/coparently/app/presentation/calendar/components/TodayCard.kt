@@ -14,7 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Today
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +24,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.events.AllDayEvent
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
@@ -86,14 +86,14 @@ fun TodayCard(
                 .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
+            AppIcon(
                 imageVector = Icons.Default.Today,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
         TodayLines(today, parentNames, Modifier.weight(1f))
-        Icon(
+        AppIcon(
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -117,7 +117,7 @@ private fun TodayLines(today: TodayModel, parentNames: ParentNames, modifier: Mo
             horizontalArrangement = Arrangement.spacedBy(Spacing.XS)
         ) {
             if (today.nextEvent != null) {
-                Icon(
+                AppIcon(
                     imageVector = Icons.Default.Schedule,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,

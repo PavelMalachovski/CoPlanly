@@ -15,7 +15,6 @@ import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -30,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.friends.CalendarFriendGrant
 import com.coparently.app.domain.friends.FriendAccessDuration
 import com.coparently.app.presentation.common.AccountAvatar
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.SectionGroup
@@ -279,7 +279,7 @@ private fun FamilyCalendarRow(grant: CalendarFriendGrant, onOpen: () -> Unit) {
         onClick = onOpen,
         trailing = {
             if (nativeControls() == null) {
-                Icon(
+                AppIcon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -315,7 +315,7 @@ private fun FriendRow(grant: CalendarFriendGrant, onOpen: () -> Unit) {
         onClick = onOpen,
         trailing = {
             if (nativeControls() == null) {
-                Icon(
+                AppIcon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant

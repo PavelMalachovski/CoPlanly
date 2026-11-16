@@ -15,7 +15,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -31,6 +30,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.friends.FriendAccessDuration
 import com.coparently.app.presentation.common.AdaptiveSheet
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.InviteCodeText
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SheetHeight
@@ -208,7 +208,7 @@ fun FriendInviteContent(
 private fun ScopeLine(icon: ImageVector, lead: String, body: String) {
     val emphasis = MaterialTheme.typography.bodyMediumEmphasized.toSpanStyle()
     Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(Spacing.M)) {
-        Icon(
+        AppIcon(
             imageVector = icon,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,

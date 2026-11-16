@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.outlined.Lightbulb
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -23,6 +22,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import com.coparently.app.domain.chat.ToneNudge
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
@@ -54,7 +54,7 @@ fun PendingSendNotice(pending: PendingSend, onUndo: () -> Unit, modifier: Modifi
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
-        Icon(
+        AppIcon(
             imageVector = Icons.Default.HourglassTop,
             contentDescription = null,
             modifier = Modifier.size(IconSizes.Small),
@@ -104,7 +104,7 @@ fun ToneNudgeHint(nudge: ToneNudge, modifier: Modifier = Modifier) {
             .semantics { liveRegion = LiveRegionMode.Polite },
         horizontalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
-        Icon(
+        AppIcon(
             imageVector = Icons.Outlined.Lightbulb,
             contentDescription = null,
             modifier = Modifier.size(IconSizes.Small),

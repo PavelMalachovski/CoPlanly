@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.PersonOutline
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -47,6 +46,7 @@ import com.coparently.app.data.repository.RatioSubmission
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.FamilyKind
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.ChildAvatarStack
@@ -590,7 +590,7 @@ private fun SectionGroupScope.NavRow(
 private fun Chevron() {
     // The grouped row draws the one chevron under native controls (Grouped board).
     if (nativeControls() != null) return
-    Icon(
+    AppIcon(
         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
         contentDescription = null,
         tint = MaterialTheme.colorScheme.onSurfaceVariant,

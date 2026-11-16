@@ -2618,6 +2618,47 @@ and no real receipt. What is left:
   `IosShareSheet.kt`, `IosImages.kt`; the receipt in `data/receipts/VisionReceiptText.kt`; the
   export in `data/export/IosRecordFileWriter.kt`.
 
+### 3.41 The iPhone's theme: dark mode, contrast, text size and icons · 1P, iPhone
+
+MON-24 phase 3, part D. The boards are the canvas's fourth row
+(https://claude.ai/artifact/732JJxDHeHtUp8zLFAdUTH); the owner's walk of them is
+`docs/superpowers/plans/2026-11-16-iphone-phase-3d-owner-check.md`. `WindowAppearanceTest`,
+`IosContrastLevelTest`, `IosTypographyTest` and `SfSymbolIconTest` prove the mechanics on the
+simulator, and the tour shoots the seven board screens in dark, with Increase Contrast and at the
+accessibility-extra-large text size (artifact `ios-tour`, `appearance/`). What only a phone shows:
+
+- [ ] **Dark mode switched while the app runs.** With Settings → Theme on System, open an event's
+      preview sheet, then switch the phone to dark in Control Centre. The sheet, the screen under it,
+      the tab bar, the navigation bar and the status bar all turn dark at once, with no relaunch;
+      none stays light. Switch back: all turn light. Open an alert ("Discard changes?") and do the
+      same.
+- [ ] **The app's choice over the phone's.** Phone in dark, Settings → Theme → Light: every screen,
+      bar, menu, picker and sheet is light, and the status bar's text is dark. Then Dark over a
+      light phone: the reverse. The tint of buttons and chevrons is the indigo in light and the pale
+      lavender in dark, never the indigo on a black bar.
+- [ ] **Increase Contrast** (Settings → Accessibility → Display & Text Size). Turned on while the
+      app is open, the text and outlines darken at once (the medium level, not the high one); the
+      lavender ground and the white cards stay; the parent colours do not change. Turn it off: as
+      before.
+- [ ] **The largest text size** (Settings → Accessibility → Display & Text Size → Larger Text, the
+      largest Accessibility size). On Home, Expenses and the event form nothing is cut: an amount
+      wraps rather than ends in "…" (design item 15), side-by-side pairs stack, the form's Save is
+      reachable, and the native bars and the date pill still fit. Compose stops growing the text at
+      1.8 times; note whether that reads too small next to the system's own screens.
+- [ ] **VoiceOver reads the icons as before.** With VoiceOver on, the icon buttons of the tab bar,
+      the calendar's card (Today, "⇄", "+"), the chat composer and Settings' rows read the same
+      names they read on Android; no icon reads as "image" alone, and a decorative icon reads
+      nothing.
+- [ ] **SF Pro draws every language.** Set the phone to Ukrainian, then Russian, Czech and German:
+      no letter falls back to another font mid-line (і ї є ґ ʼ, ř ů, ß). An amount in hryvnias shows
+      ₴, and a document number with № draws the sign. The "coplanly." wordmark stays in its own
+      typeface, not SF Pro.
+- **If it fails:** the window's style and tint in `ios/shell/WindowAppearance.kt` and `NativeShell.kt`;
+  the contrast level in `presentation/theme/ContrastLevel.ios.kt`; the type in
+  `presentation/theme/AppFontFamily.ios.kt` and `Type.kt`; an icon's symbol in
+  `presentation/common/SfSymbolTable.kt` (change the approved JSON first) and its drawing in
+  `AppIcon.ios.kt` and `SfSymbolBitmaps.kt` (`:shared-ui`'s `iosMain`).
+
 ---
 
 ## After the session

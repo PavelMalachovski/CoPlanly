@@ -18,7 +18,6 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -51,6 +50,7 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.presentation.common.AdaptiveSheet
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.BarLeading
@@ -563,7 +563,7 @@ private fun MaterialChatBar(
             titleContent = header,
             trailingContent = {
                 IconButton(onClick = onOpenSearch) {
-                    Icon(
+                    AppIcon(
                         imageVector = Icons.Default.Search,
                         contentDescription = stringResource(Res.string.chat_search)
                     )

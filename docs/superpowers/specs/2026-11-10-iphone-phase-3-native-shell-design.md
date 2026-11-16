@@ -42,6 +42,7 @@ and again on 10 November. This phase is where that look is first built.
 | The switch's colour | The system's green, not the tint (the Switch board). | Owner, 15 Nov 2026 |
 | A choice of more than five | Stays chips (currencies, countries, contact-window days, "Answer by"); only segmented rows become `UISegmentedControl`. | Part C plan, 15 Nov 2026 |
 | A dialog that carries content | Stays a Compose dialog (the colour picker, the region, family kind and split dialogs, Settle up, a proposal); only a question with buttons becomes an alert or action sheet. | Part C plan, 15 Nov 2026 |
+| Part D's boards (fourth row) | Approved, with the 12 keep-Material icons. | Owner, 16 Nov 2026 |
 
 How design is agreed from here on:
 

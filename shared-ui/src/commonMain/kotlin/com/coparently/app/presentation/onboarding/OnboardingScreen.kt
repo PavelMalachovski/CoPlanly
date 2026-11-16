@@ -31,7 +31,6 @@ import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -52,6 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.CountryPicker
 import com.coparently.app.presentation.common.STACK_CONTROLS_FONT_SCALE
@@ -310,7 +310,7 @@ private fun CoParentStep(
         CoParentLink.None, CoParentLink.Unknown -> {
             StepHeading(title = Res.string.onboarding_coparent_title, body = Res.string.onboarding_coparent_body)
             Button(onClick = { onOpenPairing(true) }, modifier = Modifier.fillMaxWidth()) {
-                Icon(
+                AppIcon(
                     imageVector = Icons.Default.Link,
                     contentDescription = null,
                     modifier = Modifier.size(IconSizes.Small)
@@ -319,7 +319,7 @@ private fun CoParentStep(
                 Text(stringResource(Res.string.onboarding_coparent_enter_code))
             }
             OutlinedButton(onClick = { onOpenPairing(false) }, modifier = Modifier.fillMaxWidth()) {
-                Icon(
+                AppIcon(
                     imageVector = Icons.Default.PersonAdd,
                     contentDescription = null,
                     modifier = Modifier.size(IconSizes.Small)
@@ -349,7 +349,7 @@ private fun NotificationsStep(onAnswered: () -> Unit) {
     StepHeading(title = Res.string.onboarding_notifications_title, body = Res.string.onboarding_notifications_body)
     if (granted) {
         StatusRow(text = stringResource(Res.string.onboarding_notifications_on)) {
-            Icon(
+            AppIcon(
                 imageVector = Icons.Default.CheckCircle,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary
@@ -365,7 +365,7 @@ private fun NotificationsStep(onAnswered: () -> Unit) {
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Icon(
+            AppIcon(
                 imageVector = Icons.Default.Notifications,
                 contentDescription = null,
                 modifier = Modifier.size(IconSizes.Small)
@@ -385,7 +385,7 @@ private fun NotificationsStep(onAnswered: () -> Unit) {
 @Composable
 private fun LinkedCoParent(name: String, fetch: CoParentFetch) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
-        Icon(
+        AppIcon(
             imageVector = Icons.Default.CheckCircle,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary
@@ -417,7 +417,7 @@ private fun LinkedCoParent(name: String, fetch: CoParentFetch) {
         }
         is CoParentFetch.Done -> if (fetch.found.isEmpty) {
             StatusRow(text = stringResource(Res.string.onboarding_coparent_nothing_yet, name)) {
-                Icon(
+                AppIcon(
                     imageVector = Icons.Default.Info,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,

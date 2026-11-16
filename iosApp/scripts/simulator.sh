@@ -27,6 +27,17 @@
 #       not launch (its own failure texts in the log), it also writes <out-dir>/tour-crashed with
 #       those lines: that marker, not this command's exit status, is what fails the CI job, since a
 #       step timeout or a failed seed fails this command too and is no crash.
+#
+#   iosApp/scripts/simulator.sh tour-appearance <udid> <out-dir>
+#       The board screens under the system's appearance settings (MON-24 phase 3, part D, Task 7),
+#       inside a fresh `firebase emulators:exec`: for each variant, `dark` (`simctl ui appearance
+#       dark`), `contrast` (`increase_contrast enabled`) and `large` (`content_size
+#       accessibility-extra-large`), it sets that one setting, seeds a `--tour` family and runs
+#       `testTourAppearance`, keeping <out-dir>/<variant>/ as `tour` keeps its folder (tour.txt and
+#       tour-crashed, by the same rules) with each screenshot copied there under its own name
+#       (`tour-<variant>-<route>.png`). The crashed variants' markers are joined in
+#       <out-dir>/tour-crashed. Light, contrast off and the Large size are restored after each
+#       variant and when it exits, however it exits.
 set -euo pipefail
 
 BUNDLE_ID=app.coplanly
@@ -165,7 +176,12 @@ ui_test() {
   shift 5
   mkdir -p "$out"
   out=$(cd "$out" && pwd)
-  seed=$(node tools/ios/seed-shell-family.js "$@")
+  # Checked here, not left to set -e, which is off where a caller writes `ui_test … || status=1`
+  # (the appearance tour): a failed seed must not go on to sign in with no account.
+  if ! seed=$(node tools/ios/seed-shell-family.js "$@"); then
+    echo "::notice::The $name run was skipped: seeding its family failed."
+    return 1
+  fi
   # xcodebuild hands the test runner every TEST_RUNNER_-prefixed variable, without the prefix.
   export TEST_RUNNER_COPLANLY_UITEST_EMAIL
   export TEST_RUNNER_COPLANLY_UITEST_PASSWORD
@@ -190,8 +206,9 @@ ui_test() {
   mkdir -p "$out/shots"
   xcrun xcresulttool export attachments --path "$out/$name.xcresult" --output-path "$out/shots" || true
   # The tour's own record of every destination, reached or skipped with the reason, for a reader
-  # of the artifact: its summary, or, when it never got there, the lines it printed as it went.
-  if [ "$name" = tour ]; then
+  # of the artifact: its summary, or, when it never got there, the lines it printed as it went. The
+  # appearance tour's runs (`tour-<variant>`) are tours by the same rules.
+  if [ "$name" = tour ] || [[ "$name" == tour-* ]]; then
     rm -f "$out/tour-crashed"
     # testTour's two XCTFail texts, the only failures that count against the app.
     grep -E "The app stopped running while the tour visited|The app did not launch" \
@@ -256,10 +273,73 @@ ui_test() {
   return "$status"
 }
 
+# The simulator's appearance, contrast and text size as every other run uses them: light, Increase
+# Contrast off, the Large text size (the default).
+restore_ui() {
+  local udid=$1
+  xcrun simctl ui "$udid" appearance light || true
+  xcrun simctl ui "$udid" increase_contrast disabled || true
+  xcrun simctl ui "$udid" content_size large || true
+}
+
+# Copies each PNG <dir>/shots holds to <dir> under the name the test gave it, without the
+# "_<n>_<UUID>" xcresulttool adds (`tour-dark-home.png`), so the artifact reads by screen.
+keep_named_shots() {
+  local dir=$1 file shot
+  [ -f "$dir/shots/manifest.json" ] || return 0
+  node -e '
+    const manifest = require(process.argv[1]);
+    for (const test of manifest) {
+      for (const a of test.attachments || []) {
+        if (!a.exportedFileName.endsWith(".png")) continue;
+        const name = a.suggestedHumanReadableName.replace(/_\d+_[0-9A-Fa-f-]{36}(\.png)$/, "$1");
+        console.log(a.exportedFileName + " " + name);
+      }
+    }' "$dir/shots/manifest.json" 2>/dev/null | while read -r file shot; do
+    cp "$dir/shots/$file" "$dir/$shot"
+  done
+}
+
+# The appearance tour: see the comment at the top.
+tour_appearance() {
+  local udid=$1 out=$2 variant setting value status=0
+  mkdir -p "$out"
+  out=$(cd "$out" && pwd)
+  rm -f "$out/tour-crashed"
+  # Restored however it ends; a cancel or the step's time limit also ends it there, rather than
+  # going on to the next variant. shellcheck disable=SC2064: the UDID is fixed now, on purpose.
+  # shellcheck disable=SC2064
+  trap "restore_ui '$udid'" EXIT
+  # shellcheck disable=SC2064
+  trap "restore_ui '$udid'; exit 130" INT
+  # shellcheck disable=SC2064
+  trap "restore_ui '$udid'; exit 143" TERM
+  for variant in dark contrast large; do
+    case "$variant" in
+      dark) setting=appearance; value=dark ;;
+      contrast) setting=increase_contrast; value=enabled ;;
+      large) setting=content_size; value=accessibility-extra-large ;;
+    esac
+    restore_ui "$udid"
+    echo "The appearance tour: $variant ($setting $value)"
+    xcrun simctl ui "$udid" "$setting" "$value"
+    export TEST_RUNNER_COPLANLY_TOUR_VARIANT=$variant
+    ui_test "$udid" "$out/$variant" "tour-$variant" testTourAppearance no --tour || status=1
+    keep_named_shots "$out/$variant" ||
+      echo "::notice::The appearance tour's $variant screenshots could not all be copied under their names."
+    if [ -s "$out/$variant/tour-crashed" ]; then
+      { echo "$variant:"; cat "$out/$variant/tour-crashed"; } >> "$out/tour-crashed"
+    fi
+  done
+  restore_ui "$udid"
+  return "$status"
+}
+
 case "${1:-}" in
   pick) pick ;;
   launch) shift; launch "$@" ;;
   shell-test) shift; shell_test "$@" ;;
   tour) shift; tour "$@" ;;
-  *) echo "usage: $0 pick | launch <udid> <app> <out-dir> | shell-test <udid> <out-dir> | tour <udid> <out-dir>" >&2; exit 2 ;;
+  tour-appearance) shift; tour_appearance "$@" ;;
+  *) echo "usage: $0 pick | launch <udid> <app> <out-dir> | shell-test <udid> <out-dir> | tour <udid> <out-dir> | tour-appearance <udid> <out-dir>" >&2; exit 2 ;;
 esac

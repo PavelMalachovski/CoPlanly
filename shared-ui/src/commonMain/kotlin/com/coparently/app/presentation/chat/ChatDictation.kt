@@ -16,7 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.outlined.MicOff
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +29,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import com.coparently.app.domain.dictation.DictationFailure
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.platform.LocalOpenUrl
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Motion
@@ -78,7 +78,7 @@ fun DictationMicButton(listening: Boolean, onClick: () -> Unit, modifier: Modifi
     }
     IconButton(onClick = onClick, modifier = modifier, colors = colors) {
         if (listening) {
-            Icon(
+            AppIcon(
                 imageVector = Icons.Filled.Stop,
                 contentDescription = stringResource(Res.string.voice_stop),
                 modifier = Modifier
@@ -86,7 +86,7 @@ fun DictationMicButton(listening: Boolean, onClick: () -> Unit, modifier: Modifi
                     .alpha(listeningPulse())
             )
         } else {
-            Icon(
+            AppIcon(
                 imageVector = Icons.Filled.Mic,
                 contentDescription = stringResource(Res.string.voice_start),
                 modifier = Modifier.size(IconSizes.Standard)
@@ -131,7 +131,7 @@ fun DictationFailureNotice(failure: DictationFailure, modifier: Modifier = Modif
         horizontalArrangement = Arrangement.spacedBy(Spacing.S),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
+        AppIcon(
             imageVector = Icons.Outlined.MicOff,
             contentDescription = null,
             modifier = Modifier.size(IconSizes.Small),

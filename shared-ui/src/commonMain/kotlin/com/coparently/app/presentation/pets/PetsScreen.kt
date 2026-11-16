@@ -13,7 +13,6 @@ import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +24,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.model.Pet
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ErrorState
 import com.coparently.app.presentation.common.GroupLabel
@@ -95,7 +95,7 @@ fun PetsScreen(
             if (hasPets && !inShellBar) {
                 ExtendedFloatingActionButton(
                     onClick = addPet,
-                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                    icon = { AppIcon(Icons.Default.Add, contentDescription = null) },
                     text = { Text(addLabel) }
                 )
             }

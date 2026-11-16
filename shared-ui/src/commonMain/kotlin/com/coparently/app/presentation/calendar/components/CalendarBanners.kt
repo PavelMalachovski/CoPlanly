@@ -16,7 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -31,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.events.AllDayEvent
 import com.coparently.app.domain.model.Event
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.CoPlanlyCorners
@@ -112,7 +112,7 @@ fun ChangeRequestBanner(
         // rhythm of their own that the release audit reviewed on device and kept.
         horizontalArrangement = Arrangement.spacedBy(9.dp)
     ) {
-        Icon(
+        AppIcon(
             imageVector = Icons.Default.SwapHoriz,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary,
@@ -239,7 +239,7 @@ fun CustodyChangedBanner(byName: String, onDismiss: () -> Unit, modifier: Modifi
             modifier = Modifier.weight(1f)
         )
         IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
-            Icon(
+            AppIcon(
                 imageVector = Icons.Default.Close,
                 contentDescription = stringResource(Res.string.common_dismiss),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -354,7 +354,7 @@ fun DayAgendaCard(
                             // mark on its own does not say "the co-parent is expected" to
                             // anyone who cannot see it.
                             if (event.isImportant) {
-                                Icon(
+                                AppIcon(
                                     imageVector = Icons.Default.PriorityHigh,
                                     contentDescription = stringResource(
                                         Res.string.event_important_mark_description

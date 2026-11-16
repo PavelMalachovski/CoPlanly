@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.coparently.app.presentation.common.AddItemButton
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.theme.IconSizes
@@ -63,7 +64,7 @@ fun AllergyEditor(
                         onClick = { onRemove(index) },
                         label = { Text(allergy) },
                         trailingIcon = {
-                            Icon(
+                            AppIcon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = null,
                                 modifier = Modifier.size(IconSizes.Small)

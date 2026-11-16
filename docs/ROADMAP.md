@@ -97,7 +97,7 @@ invocation is yours.
 | **MON-20** | **Built** (read-only card in custody settings, pure calculator); left: a look on a phone | P2 | — |
 | **MON-21** | **Built** (a proposal from an agreed plan answer, citing it; rules and rules tests); left: the rules deploy and a look on two phones — see the 👁 table | P2 | — |
 | **MON-22** | **Built** (schema 41, PR #101): a local-only journal and an opt-in export section; left: the device check (DEVICE-CHECKLIST §6) | P2 | — |
-| **MON-24** | The iPhone app: one Kotlin codebase (Compose Multiplatform), iOS-adapted on the iPhone, full parity. **Phases 1 and 2 built** (the domain in `:shared`; the data layer in `:shared-data`, the UI in `:shared-ui` and a thin Android shell; wire and stored bytes unchanged; on one branch, merged after the Android release). **Phase 3's part A built and CI-proven** (the Xcode project, the native shell, sign-in by e-mail and Google, the foreground sync, the write gate), awaiting the owner's check on their Mac. **Phase 3's part B built** (every destination under a system bar, forms as sheets, inner back steps, `coplanly://` links, account deletion on the iPhone, the iPhone tour), its branch-wide CI run and the owner's check pending. **Phase 3's part C built** (the system's controls behind `LocalNativeControls`, Calendar and Home led by the redesign's header, photos, files, the camera, sharing, payment codes, receipt reading and the export on the iPhone), its branch-wide CI run and the owner's check pending; next: part D (the theme). Design: `docs/superpowers/specs/2026-10-27-iphone-app-design.md` | P1 | L |
+| **MON-24** | The iPhone app: one Kotlin codebase (Compose Multiplatform), iOS-adapted on the iPhone, full parity. **Phases 1 and 2 built** (the domain in `:shared`; the data layer in `:shared-data`, the UI in `:shared-ui` and a thin Android shell; wire and stored bytes unchanged; on one branch, merged after the Android release). **Phase 3's part A built and CI-proven** (the Xcode project, the native shell, sign-in by e-mail and Google, the foreground sync, the write gate), awaiting the owner's check on their Mac. **Phase 3's part B built** (every destination under a system bar, forms as sheets, inner back steps, `coplanly://` links, account deletion on the iPhone, the iPhone tour), its branch-wide CI run and the owner's check pending. **Phase 3's part C built** (the system's controls behind `LocalNativeControls`, Calendar and Home led by the redesign's header, photos, files, the camera, sharing, payment codes, receipt reading and the export on the iPhone), its branch-wide CI run and the owner's check pending. **Phase 3's part D built** (the theme: SF Pro with the Onest wordmark, SF Symbols through `AppIcon`, the app's theme choice and tint in the window, Increase Contrast as the medium scheme), its branch-wide CI run and the owner's check pending; what remains is phase 4, unchanged. Design: `docs/superpowers/specs/2026-10-27-iphone-app-design.md` | P1 | L |
 | **MON-25** | Request clocks' on-time steps (deadline notice, end) move to a scheduled Cloud Function, for both platforms; needed by MON-24 before an iPhone build reaches a user (planned before phase 2, which went ahead without it by owner decision, 1 November 2026). Needs its own design pass | P1 | L |
 | **REL-4 (drafting)** | Done as far as the code can answer: every placeholder left is a fact only the owner has, listed at the top of each document. The deletion page and the privacy link in the app are written | P0 | S |
 | **L-4 (photos)** | **Built** (family-keyed Storage paths, no download URLs, pre-pairing photos moved by the server, legacy purge callable; rules, functions, unit and e2e tests); left: `firebase deploy --only storage`, the functions deploy, `purgeLegacyPhotoPaths` once, and DEVICE-CHECKLIST §3.10 on two phones | P0 | S |
@@ -3102,6 +3102,48 @@ previous Material call. What it built, task by task:
   the ground callers' background matching only the gradient's top, `storage.rules`' "at most 1600
   px" comment (Android's rule reaches 3199 px; no rules change was in scope), and the test-tightness
   minors.
+
+**Phase 3, part D — the theme: built, awaiting the branch-wide CI run and the owner's check**
+(November 2026; spec `docs/superpowers/specs/2026-11-16-iphone-phase-3d-theme-design.md`, plan
+`docs/superpowers/plans/2026-11-16-iphone-phase-3d-theme.md`, owner's check
+`docs/superpowers/plans/2026-11-16-iphone-phase-3d-owner-check.md`). The owner approved the canvas's
+fourth row on 16 November 2026: the seven boards in dark, the type, the icon table with its twelve
+keep-Material rows, and Increase Contrast. The iPhone keeps the redesign's look; Android draws what it
+drew. What it built, task by task:
+
+- **The theme choice in the window** (Task 1): `WindowAppearance` sets the window's interface style
+  from Settings' System, Dark or Light (unspecified for System), so the native bars, alerts, menus,
+  pickers, sheets and status bar follow it, and its tint is a dynamic colour resolving to the
+  active scheme's `primary` (ruling: `#C2C1FF` in dark, where `#4F46E5` on a black bar is about
+  2.6:1). The shell passes the choice to every `AppProviders`.
+- **Increase Contrast** (Task 2): `ContrastLevel.MEDIUM` while it is on, followed while the app runs
+  (owner: medium, not high).
+- **SF Pro** (Task 3): `appFontFamily()`, Onest on Android and the system font on the iPhone; the
+  wordmark keeps Onest.
+- **One icon entry point** (Task 4): every shared icon through `AppIcon`, Material's own `Icon` on
+  Android; `AppIconGuardTest` refuses a direct call in `commonMain`.
+- **SF Symbols** (Task 5): `SF_SYMBOLS`, 117 symbols (120 mapped rows of the approved table's 132;
+  `Default` and `Filled` share a key), rasterised inside Compose in the regular weight only (ruling),
+  with the Material vector as the fallback; 12 keep Material, each with its reason.
+- **Dynamic Type** (Task 6): already followed by Compose Multiplatform 1.9.3 (`fontScale` from the
+  content size category, at most 1.8); ruling: kept, with no mapping of ours on top.
+- **The tour in dark, Increase Contrast and large text** (Task 7): `testTourAppearance`, the seven
+  board screens per variant, in the `ios-tour` artifact's `appearance/`.
+- **The record** (Task 8): CLAUDE.md, this entry, the phase-3 spec's decisions, device check §3.41
+  and the owner's check.
+
+**Open after part D:**
+- **The branch-wide CI run.** Each task's iOS code was compiled only by early CI runs on the branch;
+  the iOS tests (`WindowAppearanceTest`, `IosContrastLevelTest`, `IosTypographyTest`,
+  `SfSymbolIconTest`, `DynamicTypeTest`) and the appearance tour have not run on a simulator yet.
+- **The owner's check** and device check §3.41: dark mode switched live, Increase Contrast and the
+  largest text size on a phone, VoiceOver on the icons, and ₴ and № in SF Pro.
+- **Known iPhone-only differences the check should judge**: at the largest accessibility sizes the
+  text stops at 1.8 times (Compose Multiplatform's cap), smaller than the system's own screens; and
+  `AutoMirrored` icons are not mirrored right to left (no such language ships).
+
+The stand-ins listed after part C are unchanged: what remains is phase 4 and the parent design's
+later phases.
 
 Still owed from part A, beyond the stand-ins listed above: ~~in-app account deletion on the iPhone
 before the App Store~~ (done in part B's Task 11, `IosAccountDeletion`), and the minor findings the

@@ -15,7 +15,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -84,6 +83,7 @@ import com.coparently.app.presentation.calendar.components.TodayCard
 import com.coparently.app.presentation.calendar.components.TodayModel
 import com.coparently.app.presentation.calendar.components.steppedDay
 import com.coparently.app.presentation.changerequests.RequestsState
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.FamilyMemberFilterStrip
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.ScreenBackStep
@@ -814,7 +814,7 @@ fun CalendarScreen(
                             .onGloballyPositioned { deleteButtonBounds = it.boundsInWindow() }
                     ) {
                         DisposableEffect(Unit) { onDispose { deleteButtonBounds = null } }
-                        Icon(
+                        AppIcon(
                             imageVector = Icons.Default.Close,
                             contentDescription = stringResource(Res.string.calendar_delete_event),
                             modifier = Modifier.size(IconSizes.Standard)

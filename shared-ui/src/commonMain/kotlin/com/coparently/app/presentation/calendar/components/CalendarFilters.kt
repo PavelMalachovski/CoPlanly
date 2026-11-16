@@ -18,7 +18,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -44,6 +43,7 @@ import com.coparently.app.presentation.calendar.ParentFilter
 import com.coparently.app.presentation.common.AdaptiveSegmented
 import com.coparently.app.presentation.common.AdaptiveSheet
 import com.coparently.app.presentation.common.AdaptiveSwitch
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.SheetHeight
 import com.coparently.app.presentation.common.eventTypeLabel
@@ -161,7 +161,7 @@ fun EventTypeFilterSheet(
                         },
                         leadingIcon = if (isVisible) {
                             {
-                                Icon(
+                                AppIcon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = stringResource(Res.string.calendar_filter_type_visible),
                                     modifier = Modifier.size(IconSizes.Small)
@@ -197,7 +197,7 @@ fun EventTypeFilterSheet(
                     },
                     enabled = newTypeName.isNotBlank()
                 ) {
-                    Icon(
+                    AppIcon(
                         imageVector = Icons.Default.Add,
                         contentDescription = null,
                         modifier = Modifier.size(IconSizes.Small)

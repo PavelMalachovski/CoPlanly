@@ -22,7 +22,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -48,6 +47,7 @@ import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.model.activeInviteOrNull
 import com.coparently.app.presentation.common.AdaptiveSegmented
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.SectionGroup
@@ -770,7 +770,7 @@ private fun TrustPanel() {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.S)
             ) {
-                Icon(
+                AppIcon(
                     imageVector = Icons.Default.Lock,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.tertiary,
@@ -797,7 +797,7 @@ private const val TRUST_PANEL_ALPHA = 0.10f
 @Composable
 private fun ScanQrButton(onClick: () -> Unit) {
     OutlinedButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Icon(Icons.Default.QrCodeScanner, contentDescription = null)
+        AppIcon(Icons.Default.QrCodeScanner, contentDescription = null)
         Text(
             text = stringResource(Res.string.pairing_scan_qr_code),
             modifier = Modifier.padding(start = Spacing.S)

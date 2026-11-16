@@ -1351,9 +1351,17 @@ final class ShellUITests: XCTestCase {
     /// The destinations during which the app stopped running.
     private var tourCrashes: [String] = []
 
+    /// The appearance `testTourAppearance` shoots under (`dark`, `contrast`, `large`), which its
+    /// screenshots' names carry after `tour-`; null for `testTour`.
+    private var tourVariant: String?
+
     /// When the tour stops visiting: the visits left are skipped with that reason, so the tour
     /// always reaches its summary inside CI's step limit (50 minutes) even when every visit misses.
     private var tourDeadline = Date.distantFuture
+
+    /// The budget [tourDeadline] was set from, in seconds, for the message of a visit it skipped:
+    /// `tourBudget` for `testTour`, `appearanceBudget` for `testTourAppearance`.
+    private var activeTourBudget: TimeInterval = 0
 
     /// The tour's own time budget, from its first visit.
     private let tourBudget: TimeInterval = 35 * 60
@@ -1436,6 +1444,7 @@ final class ShellUITests: XCTestCase {
         }
 
         touring = true
+        activeTourBudget = tourBudget
         tourDeadline = Date().addingTimeInterval(tourBudget)
         // A walk that failed before its own sign-out leaves this simulator signed in, so the tour
         // may start on the tabs: it signs out through the app first, and a sign-out that fails is
@@ -1464,15 +1473,23 @@ final class ShellUITests: XCTestCase {
             tourOutcomes.append((control, "skipped: " + cause))
         }
         touring = false
+        tourFinish(routes: tourRoutes, controls: tourControls)
+    }
 
+    /// The tour's summary, printed and attached: one `COPLANLY_TOUR <route>: <outcome>` line per
+    /// destination and control visited, and how many of [routes] and [controls] were reached; then
+    /// the one failure the tour has, the app having stopped running during a visit. `simulator.sh`
+    /// reads both texts (`tour.txt`, `tour-crashed`), so `testTour` and `testTourAppearance` share
+    /// them.
+    private func tourFinish(routes: [String], controls: [String]) {
         let lines = tourOutcomes.map { "COPLANLY_TOUR \($0.route): \($0.outcome)" }
         print("COPLANLY_TOUR_SUMMARY_BEGIN")
         lines.forEach { print($0) }
-        let reached = tourOutcomes.filter { tourRoutes.contains($0.route) && $0.outcome == "reached" }.count
-        let shown = tourOutcomes.filter { tourControls.contains($0.route) && $0.outcome == "reached" }.count
+        let reached = tourOutcomes.filter { routes.contains($0.route) && $0.outcome == "reached" }.count
+        let shown = tourOutcomes.filter { controls.contains($0.route) && $0.outcome == "reached" }.count
         print(
-            "COPLANLY_TOUR_SUMMARY reached \(reached) of \(tourRoutes.count) destinations, " +
-                "\(shown) of \(tourControls.count) controls in use"
+            "COPLANLY_TOUR_SUMMARY reached \(reached) of \(routes.count) destinations, " +
+                "\(shown) of \(controls.count) controls in use"
         )
         print("COPLANLY_TOUR_SUMMARY_END")
         let log = XCTAttachment(string: lines.joined(separator: "\n") + "\n")
@@ -1482,6 +1499,77 @@ final class ShellUITests: XCTestCase {
         if !tourCrashes.isEmpty {
             XCTFail("The app stopped running while the tour visited: " + tourCrashes.joined(separator: ", "))
         }
+    }
+
+    /// The seven screens of part D's boards, as `testTourAppearance` visits them: Home, Calendar,
+    /// Chat, New event, Family, Expenses and Settings, by their routes.
+    private let appearanceRoutes = [
+        "home", "calendar", "conversations?draft={draft}", "add_event?date={date}&hour={hour}",
+        "family", "expenses", "settings",
+    ]
+
+    /// The appearance tour's own budget: seven visits and a sign-in, inside a third of its CI step.
+    private let appearanceBudget: TimeInterval = 7 * 60
+
+    /// The board screens under one of the simulator's appearance settings (MON-24 phase 3, part D,
+    /// Task 7): `simulator.sh tour-appearance` sets dark mode, Increase Contrast or the
+    /// accessibility-extra-large text size with `simctl ui`, names it in `COPLANLY_TOUR_VARIANT`
+    /// (`dark`, `contrast`, `large`) and runs this once per variant on a freshly seeded `--tour`
+    /// family. It signs in as `testTour` does and shoots each of `appearanceRoutes` as
+    /// `tour-<variant>-<route>`, with `testTour`'s visits, reset and rules: a screen it cannot reach is
+    /// a `COPLANLY_TOUR <route>: skipped: …` line with the reason, never a failure, and the only
+    /// failures are the app not launching or stopping during a visit (`tourFinish`).
+    func testTourAppearance() throws {
+        let environment = ProcessInfo.processInfo.environment
+        let email = try XCTUnwrap(environment["COPLANLY_UITEST_EMAIL"], "No seeded account was handed to the tour")
+        let password = try XCTUnwrap(environment["COPLANLY_UITEST_PASSWORD"])
+        tourVariant = environment["COPLANLY_TOUR_VARIANT"] ?? "appearance"
+
+        app.launchEnvironment["COPLANLY_EMULATOR_HOST"] = "127.0.0.1"
+        app.launch()
+        // `simulator.sh` tells a crash or a failed launch by testTour's two failure texts: the same here.
+        guard app.wait(for: .runningForeground, timeout: 60) else {
+            XCTFail("The app did not launch")
+            return
+        }
+
+        touring = true
+        activeTourBudget = appearanceBudget
+        tourDeadline = Date().addingTimeInterval(appearanceBudget)
+        // Each variant seeds an account of its own, so the app may still hold the previous one.
+        do {
+            try tourSignOutIfSignedIn()
+        } catch {
+            print("COPLANLY_TOUR_SIGN_OUT_FIRST failed: \(error)")
+        }
+        var signedIn = true
+        do {
+            try signIn(email: email, password: password)
+        } catch {
+            signedIn = false
+            tourOutcomes.append(("sign-in", "skipped: \(error)"))
+        }
+        if signedIn {
+            tourVisit("home") { try self.tourTab("Home") }
+            tourVisit("calendar") { try self.tourTab("Calendar") }
+            tourVisit("conversations?draft={draft}") {
+                try self.tourTab("Chat")
+                _ = self.element(labelledContaining: "Bob").waitForExistence(timeout: 30)
+            }
+            tourVisit("add_event?date={date}&hour={hour}") {
+                try self.tourTab("Calendar")
+                try self.tourOpenSheet(labelled: "Add event")
+            }
+            tourVisit("family") { try self.tourTab("Family") }
+            tourVisit("expenses") { try self.tourFamilyRow("This month") }
+            tourVisit("settings") { try self.tourSettings() }
+        }
+        let cause = signedIn ? "the appearance tour has no way written to it" : "signing in failed, so no board screen was reached"
+        for route in appearanceRoutes where !tourOutcomes.contains(where: { $0.route == route }) {
+            tourOutcomes.append((route, "skipped: " + cause))
+        }
+        touring = false
+        tourFinish(routes: appearanceRoutes, controls: [])
     }
 
     /// Signs out through the app when the tour starts signed in: no sign-in screen within 15 s,
@@ -1709,7 +1797,7 @@ final class ShellUITests: XCTestCase {
     /// XCUITest recorded an issue, is skipped with the reason, a screenshot and the element tree.
     private func tourVisit(_ route: String, afterShot: (() -> Void)? = nil, _ reach: () throws -> Void) {
         if Date() > tourDeadline {
-            let outcome = "skipped: the tour's \(Int(tourBudget / 60)) minutes ran out before this visit"
+            let outcome = "skipped: the tour's \(Int(activeTourBudget / 60)) minutes ran out before this visit"
             print("COPLANLY_TOUR_VISIT \(route): \(outcome)")
             tourOutcomes.append((route, outcome))
             return
@@ -1724,7 +1812,7 @@ final class ShellUITests: XCTestCase {
                 if let issue = tourIssue {
                     outcome = "skipped: \(issue)"
                 } else {
-                    shot("tour-" + tourShotName(route))
+                    shot("tour-" + (tourVariant.map { "\($0)-" } ?? "") + tourShotName(route))
                 }
             } catch {
                 outcome = "skipped: \(error)"

@@ -43,7 +43,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -96,6 +95,7 @@ import com.coparently.app.presentation.common.AdaptiveOptionRow
 import com.coparently.app.presentation.common.AdaptiveSwitch
 import com.coparently.app.presentation.common.AnswerByField
 import com.coparently.app.presentation.common.AnswerByPickSaver
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.FamilyMemberChips
 import com.coparently.app.presentation.common.FamilyMemberRefListSaver
@@ -890,7 +890,7 @@ fun AddEditEventScreen(
                     // Propose a time change to the co-parent (only for existing shared events)
                     if (canRequestChange) {
                         IconButton(onClick = requestChange, enabled = !isDeleting && !isSaving) {
-                            Icon(
+                            AppIcon(
                                 imageVector = Icons.Default.SwapHoriz,
                                 contentDescription = requestChangeLabel
                             )
@@ -907,7 +907,7 @@ fun AddEditEventScreen(
                                     strokeWidth = 2.dp
                                 )
                             } else {
-                                Icon(
+                                AppIcon(
                                     imageVector = Icons.Default.Delete,
                                     contentDescription = deleteLabel,
                                     tint = MaterialTheme.colorScheme.error
@@ -968,7 +968,7 @@ fun AddEditEventScreen(
                 label = { Text(stringResource(Res.string.event_form_field_title_label)) },
                 placeholder = { Text(stringResource(Res.string.event_form_field_title_placeholder)) },
                 leadingIcon = {
-                    Icon(
+                    AppIcon(
                         imageVector = Icons.Default.Title,
                         contentDescription = stringResource(Res.string.event_form_cd_title_icon)
                     )
@@ -1006,7 +1006,7 @@ fun AddEditEventScreen(
                     label = { Text(stringResource(Res.string.event_form_field_description_label)) },
                     placeholder = { Text(stringResource(Res.string.event_form_field_description_placeholder)) },
                     leadingIcon = {
-                        Icon(
+                        AppIcon(
                             imageVector = Icons.Default.Description,
                             contentDescription = stringResource(Res.string.event_form_cd_description_icon)
                         )
@@ -1058,7 +1058,7 @@ fun AddEditEventScreen(
                 )
             } else {
                 TextButton(onClick = { descriptionOpen = true }) {
-                    Icon(
+                    AppIcon(
                         imageVector = Icons.Default.Add,
                         contentDescription = null,
                         modifier = Modifier.size(IconSizes.Small)
@@ -1173,7 +1173,7 @@ fun AddEditEventScreen(
                                 // too. A per-parent glyph is a third channel asserting exactly the
                                 // distinction this app stopped asserting; the name and the colour
                                 // carry the identity.
-                                Icon(
+                                AppIcon(
                                     imageVector = Icons.Default.Person,
                                     contentDescription = stringResource(Res.string.event_form_cd_label_icon, label),
                                     tint = when (value) {
@@ -1229,7 +1229,7 @@ fun AddEditEventScreen(
                         label = { Text(label) },
                         leadingIcon = {
                             if (eventType == value) {
-                                Icon(
+                                AppIcon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = stringResource(Res.string.event_form_cd_selected_icon),
                                     modifier = Modifier.size(IconSizes.Small)
@@ -1327,7 +1327,7 @@ fun AddEditEventScreen(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.M),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
+                        AppIcon(
                             imageVector = Icons.Default.Schedule,
                             contentDescription = stringResource(Res.string.event_form_cd_error),
                             tint = MaterialTheme.colorScheme.error,
@@ -1476,7 +1476,7 @@ fun AddEditEventScreen(
                             horizontalArrangement = Arrangement.spacedBy(dims.paddingSmall * 1.5f),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Icon(
+                            AppIcon(
                                 imageVector = Icons.Default.PriorityHigh,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary
@@ -1596,7 +1596,7 @@ fun AddEditEventScreen(
                         horizontalArrangement = Arrangement.spacedBy(dims.paddingSmall * 1.5f),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Icon(
+                        AppIcon(
                             imageVector = Icons.Default.Lock,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary
@@ -1674,7 +1674,7 @@ fun AddEditEventScreen(
                             horizontalArrangement = Arrangement.spacedBy(dims.paddingSmall * 1.5f),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Icon(
+                            AppIcon(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = null,
                                 tint = if (confirmedBy != null) {
@@ -2104,7 +2104,7 @@ private fun EventPhotoSection(
                     enabled = enabled,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Default.AddAPhoto, contentDescription = null)
+                    AppIcon(Icons.Default.AddAPhoto, contentDescription = null)
                     Spacer(modifier = Modifier.size(dims.paddingSmall))
                     Text(stringResource(Res.string.event_form_attach_photo))
                 }
@@ -2135,7 +2135,7 @@ private fun EventPhotoSection(
                             .align(Alignment.TopEnd)
                             .padding(dims.paddingSmall)
                     ) {
-                        Icon(
+                        AppIcon(
                             Icons.Default.Close,
                             contentDescription = stringResource(Res.string.event_form_cd_remove_photo)
                         )

@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.NavOptionsBuilder
+import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.telemetry.TelemetryConsent
 import com.coparently.app.ios.IosLifecycle
 import com.coparently.app.presentation.AppLaunch
@@ -28,12 +29,16 @@ import com.coparently.app.presentation.platform.CredentialSignIn
 import com.coparently.app.presentation.platform.ProvideIosShell
 import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
+import com.coparently.app.presentation.theme.ContrastLevel
+import com.coparently.app.presentation.theme.currentIosContrastLevel
+import com.coparently.app.presentation.theme.iosContrastLevelChanges
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -46,6 +51,7 @@ import platform.UIKit.UITabBarItem
 import platform.UIKit.UIViewAutoresizingFlexibleHeight
 import platform.UIKit.UIViewAutoresizingFlexibleWidth
 import platform.UIKit.UIViewController
+import platform.UIKit.UIWindow
 import platform.UIKit.addChildViewController
 import platform.UIKit.didMoveToParentViewController
 import platform.UIKit.removeFromParentViewController
@@ -77,6 +83,12 @@ internal interface ShellEnvironment {
 
     /** A stack's transition was cancelled (a back swipe let go of); see [NativeShell]. */
     fun transitionCancelled()
+
+    /**
+     * The app's theme choice (`PreferencesRepository.getDarkThemeFlow`: null System, true Dark,
+     * false Light), which every hosted composition passes to `AppProviders`.
+     */
+    val themeChoice: StateFlow<Boolean?>
 }
 
 /**
@@ -134,8 +146,14 @@ internal class NativeShell(
     private val links: AppLaunch
 ) : ShellEnvironment, TabSwitcher {
 
-    /** The window's root: a container that holds the root flow or the tabs. */
-    val root: UIViewController = UIViewController()
+    /**
+     * The window's root: a container that holds the root flow or the tabs, and reports the window
+     * it appears in, which the shell then styles ([WindowAppearance]).
+     */
+    val root: UIViewController = WindowReportingController { shown ->
+        window = shown
+        applyAppearance()
+    }
 
     private val scope: CoroutineScope = MainScope()
     private val store = ViewModelStore()
@@ -145,6 +163,19 @@ internal class NativeShell(
     override val messages: AppMessages = AppMessages(scope, SnackbarHostState())
     override val tabSwitcher: TabSwitcher get() = this
     override val visibility: ShellVisibility = ShellVisibility()
+
+    private val choice = MutableStateFlow<Boolean?>(null)
+    override val themeChoice: StateFlow<Boolean?> = choice.asStateFlow()
+
+    /** The window holding [root], once it has appeared in one. */
+    private var window: UIWindow? = null
+
+    /**
+     * The contrast level Increase Contrast asks for ([iosContrastLevelChanges]), which the tint reads
+     * each time it resolves.
+     */
+    private var contrastLevel: ContrastLevel = currentIosContrastLevel()
+    private val contrast: () -> ContrastLevel = { contrastLevel }
 
     private var flow: StackHost? = null
 
@@ -166,6 +197,18 @@ internal class NativeShell(
     fun start() {
         scope.launch {
             IosLifecycle.foreground.collect { visibility.foreground = it }
+        }
+        scope.launch {
+            koin.get<PreferencesRepository>().getDarkThemeFlow().collect { value ->
+                choice.value = value
+                applyAppearance()
+            }
+        }
+        scope.launch {
+            iosContrastLevelChanges.collect { level ->
+                contrastLevel = level
+                applyAppearance()
+            }
         }
         scope.launch {
             combine(
@@ -291,6 +334,15 @@ internal class NativeShell(
             oldFlow?.dispose()
             oldSession?.clear()
         }
+    }
+
+    /**
+     * Styles the shell's window, once there is one, for the theme choice and contrast level. Applied
+     * again on a contrast change so the tint, set anew, resolves at the new level.
+     */
+    private fun applyAppearance() {
+        val shown = window ?: return
+        WindowAppearance.apply(shown, choice.value, contrast)
     }
 
     // `bounds` is a C struct, read through Kotlin/Native's C interop.

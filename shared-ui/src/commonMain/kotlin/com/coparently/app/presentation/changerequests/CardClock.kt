@@ -11,7 +11,6 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,6 +25,7 @@ import com.coparently.app.domain.changerequests.ClockState
 import com.coparently.app.domain.changerequests.RequestClock
 import com.coparently.app.domain.changerequests.RequestKind
 import com.coparently.app.domain.changerequests.TimedRequest
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.BannerTone
 import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.PillChip
@@ -320,7 +320,7 @@ private fun ClockRow(icon: ImageVector, text: String, color: Color = MaterialThe
         horizontalArrangement = Arrangement.spacedBy(Spacing.S),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(IconSizes.Small))
+        AppIcon(icon, contentDescription = null, tint = color, modifier = Modifier.size(IconSizes.Small))
         Text(text = text, style = MaterialTheme.typography.bodyMedium, color = color, modifier = Modifier.weight(1f))
     }
 }

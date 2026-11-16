@@ -22,6 +22,7 @@ import com.coparently.app.domain.model.Medication
 import com.coparently.app.domain.model.SchoolInfo
 import com.coparently.app.domain.model.Vaccination
 import com.coparently.app.presentation.childinfo.components.MedicalPhotoStrip
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ErrorState
@@ -136,7 +137,7 @@ fun ChildInfoScreen(
             if (children.isNotEmpty() && !inShellBar) {
                 ExtendedFloatingActionButton(
                     onClick = addChild,
-                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                    icon = { AppIcon(Icons.Default.Add, contentDescription = null) },
                     text = { Text(addLabel) }
                 )
             }

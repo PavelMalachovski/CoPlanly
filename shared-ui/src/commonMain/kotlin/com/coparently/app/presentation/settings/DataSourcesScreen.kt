@@ -14,13 +14,13 @@ import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.SectionGroup
@@ -234,7 +234,7 @@ private fun NoticeRow(notice: DataSourceNotice, onOpen: (() -> Unit)?) {
         onClick = onOpen,
         trailing = if (onOpen != null) {
             {
-                Icon(
+                AppIcon(
                     imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,

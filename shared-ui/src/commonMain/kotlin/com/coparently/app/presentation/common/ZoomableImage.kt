@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -201,7 +200,7 @@ fun FullScreenImageDialog(
                     .align(Alignment.TopEnd)
                     .padding(Spacing.M)
             ) {
-                Icon(
+                AppIcon(
                     imageVector = Icons.Default.Close,
                     contentDescription = stringResource(Res.string.image_viewer_close),
                     tint = Color.White

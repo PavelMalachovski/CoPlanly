@@ -29,7 +29,6 @@ import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -69,6 +68,7 @@ import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.receipts.ReceiptScan
 import com.coparently.app.presentation.common.AdaptiveSegmented
 import com.coparently.app.presentation.common.AdaptiveSwitch
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.BarLeading
@@ -939,14 +939,14 @@ private fun ReceiptPicker(
         // label broken inside a word.
         val takePhoto: @Composable (Modifier) -> Unit = { modifier ->
             OutlinedButton(onClick = onTakePhoto, enabled = enabled, modifier = modifier) {
-                Icon(Icons.Default.PhotoCamera, contentDescription = null)
+                AppIcon(Icons.Default.PhotoCamera, contentDescription = null)
                 Spacer(modifier = Modifier.size(8.dp))
                 Text(stringResource(Res.string.receipt_take_photo))
             }
         }
         val pickPhoto: @Composable (Modifier) -> Unit = { modifier ->
             OutlinedButton(onClick = onPickPhoto, enabled = enabled, modifier = modifier) {
-                Icon(Icons.Default.AddAPhoto, contentDescription = null)
+                AppIcon(Icons.Default.AddAPhoto, contentDescription = null)
                 Spacer(modifier = Modifier.size(8.dp))
                 Text(stringResource(Res.string.receipt_pick_photo))
             }
@@ -975,7 +975,7 @@ private fun ReceiptPicker(
                     .align(Alignment.TopEnd)
                     .padding(Spacing.S)
             ) {
-                Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.expense_remove_receipt))
+                AppIcon(Icons.Default.Close, contentDescription = stringResource(Res.string.expense_remove_receipt))
             }
         }
         if (viewingFullScreen) {

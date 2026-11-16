@@ -20,7 +20,6 @@ import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -44,6 +43,7 @@ import com.coparently.app.data.family.AssignOutcome
 import com.coparently.app.data.family.FamilyOption
 import com.coparently.app.data.family.UnassignedKind
 import com.coparently.app.data.family.UnassignedRecord
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.PushedTopBar
@@ -247,7 +247,7 @@ private fun RecordRow(record: UnassignedRecord, onClick: (() -> Unit)?) {
         onClick = onClick,
         trailing = {
             if (nativeControls() == null) {
-                Icon(
+                AppIcon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,

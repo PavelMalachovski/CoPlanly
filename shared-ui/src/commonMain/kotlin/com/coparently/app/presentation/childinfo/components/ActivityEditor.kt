@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import com.coparently.app.domain.model.Activity
 import com.coparently.app.presentation.common.AddItemButton
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.theme.Spacing
@@ -171,10 +172,10 @@ private fun ActivityCard(
 
             Row {
                 IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit, contentDescription = stringResource(Res.string.childinfo_edit))
+                    AppIcon(Icons.Default.Edit, contentDescription = stringResource(Res.string.childinfo_edit))
                 }
                 IconButton(onClick = onDelete) {
-                    Icon(
+                    AppIcon(
                         Icons.Default.Delete,
                         contentDescription = stringResource(Res.string.childinfo_delete),
                         tint = MaterialTheme.colorScheme.error

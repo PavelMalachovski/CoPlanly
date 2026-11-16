@@ -19,7 +19,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -36,6 +35,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.expenses.ExpenseBalance
 import com.coparently.app.domain.payments.PaymentState
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.theme.CoPlanlyCorners
@@ -259,7 +259,7 @@ internal fun MonthSwitcherBar(navigation: MonthNavigation, modifier: Modifier = 
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = navigation.onPrevious, modifier = Modifier.size(32.dp)) {
-            Icon(
+            AppIcon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                 contentDescription = stringResource(Res.string.expenses_prev_month),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -281,7 +281,7 @@ internal fun MonthSwitcherBar(navigation: MonthNavigation, modifier: Modifier = 
             modifier = Modifier.weight(1f)
         )
         IconButton(onClick = navigation.onNext, modifier = Modifier.size(32.dp)) {
-            Icon(
+            AppIcon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = stringResource(Res.string.expenses_next_month),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -555,7 +555,7 @@ private fun BalanceStrip(
         .background(accent.copy(alpha = BALANCE_STRIP_ALPHA))
         .padding(horizontal = Spacing.M, vertical = Spacing.M)
     val sentence: @Composable RowScope.() -> Unit = {
-        Icon(
+        AppIcon(
             imageVector = Icons.Default.AccountBalanceWallet,
             contentDescription = null,
             tint = accent,

@@ -9,7 +9,6 @@ import androidx.compose.material.icons.filled.FolderShared
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -26,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.coparently.app.domain.documents.FamilyDocument
 import com.coparently.app.domain.files.SharedFilePolicy
+import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.PushedTopBar
@@ -201,7 +201,7 @@ private fun AddActions(enabled: Boolean, onPickFile: (() -> Unit)?, onTakePhoto:
         if (onPickFile != null) {
             add { modifier ->
                 Button(onClick = onPickFile, enabled = enabled, modifier = modifier) {
-                    Icon(Icons.Default.AttachFile, contentDescription = null)
+                    AppIcon(Icons.Default.AttachFile, contentDescription = null)
                     Text(
                         stringResource(Res.string.documents_add_file),
                         modifier = Modifier.padding(start = Spacing.S)
@@ -212,7 +212,7 @@ private fun AddActions(enabled: Boolean, onPickFile: (() -> Unit)?, onTakePhoto:
         if (onTakePhoto != null) {
             add { modifier ->
                 OutlinedButton(onClick = onTakePhoto, enabled = enabled, modifier = modifier) {
-                    Icon(Icons.Default.PhotoCamera, contentDescription = null)
+                    AppIcon(Icons.Default.PhotoCamera, contentDescription = null)
                     Text(
                         stringResource(Res.string.documents_take_photo),
                         modifier = Modifier.padding(start = Spacing.S)

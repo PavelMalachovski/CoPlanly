@@ -1,0 +1,1058 @@
+[
+ {
+  "material": "AutoMirrored.Filled.KeyboardArrowRight",
+  "sfSymbol": "chevron.forward",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.Close",
+  "sfSymbol": "xmark",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.Add",
+  "sfSymbol": "plus",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.Lock",
+  "sfSymbol": "lock.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.Delete",
+  "sfSymbol": "trash.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.SwapHoriz",
+  "sfSymbol": "arrow.left.arrow.right",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.Check",
+  "sfSymbol": "checkmark",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.Edit",
+  "sfSymbol": "pencil",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.Settings",
+  "sfSymbol": "gearshape.fill",
+  "minIos": "14.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.ExpandMore",
+  "sfSymbol": "chevron.down",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "AutoMirrored.Filled.KeyboardArrowLeft",
+  "sfSymbol": "chevron.backward",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.VisibilityOff",
+  "sfSymbol": "eye.slash.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.Search",
+  "sfSymbol": "magnifyingglass",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.EditNote",
+  "sfSymbol": "square.and.pencil",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "AutoMirrored.Filled.OpenInNew",
+  "sfSymbol": "arrow.up.forward.square",
+  "minIos": "14.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.Visibility",
+  "sfSymbol": "eye.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.SyncAlt",
+  "sfSymbol": "arrow.left.arrow.right",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.Sync",
+  "sfSymbol": "arrow.triangle.2.circlepath",
+  "minIos": "14.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.Repeat",
+  "sfSymbol": "repeat",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.Refresh",
+  "sfSymbol": "arrow.clockwise",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.MoreVert",
+  "sfSymbol": "ellipsis",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.Key",
+  "sfSymbol": "key.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.FilterList",
+  "sfSymbol": "line.3.horizontal.decrease",
+  "minIos": "15.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.ExpandLess",
+  "sfSymbol": "chevron.up",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Outlined.Home",
+  "sfSymbol": "house",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Filled.Home",
+  "sfSymbol": "house.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.SearchOff",
+  "sfSymbol": null,
+  "minIos": null,
+  "keepMaterial": true,
+  "reason": "no crossed-out magnifying glass in SF Symbols",
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.QrCodeScanner",
+  "sfSymbol": "qrcode.viewfinder",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.Home",
+  "sfSymbol": "house.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.DeleteForever",
+  "sfSymbol": "xmark.bin.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.ChevronRight",
+  "sfSymbol": "chevron.right",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.ChevronLeft",
+  "sfSymbol": "chevron.left",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.Block",
+  "sfSymbol": "nosign",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "AutoMirrored.Filled.Undo",
+  "sfSymbol": "arrow.uturn.backward",
+  "minIos": "14.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "AutoMirrored.Filled.Logout",
+  "sfSymbol": "rectangle.portrait.and.arrow.right",
+  "minIos": "16.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "AutoMirrored.Filled.ArrowForward",
+  "sfSymbol": "arrow.forward",
+  "minIos": "14.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "AutoMirrored.Filled.ArrowBack",
+  "sfSymbol": "chevron.backward",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Navigation and actions"
+ },
+ {
+  "material": "Default.Schedule",
+  "sfSymbol": "clock.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Calendar and time"
+ },
+ {
+  "material": "Default.DateRange",
+  "sfSymbol": "calendar",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Calendar and time"
+ },
+ {
+  "material": "Default.CalendarMonth",
+  "sfSymbol": "calendar",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Calendar and time"
+ },
+ {
+  "material": "Default.Event",
+  "sfSymbol": "calendar",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Calendar and time"
+ },
+ {
+  "material": "Default.Notifications",
+  "sfSymbol": "bell.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Calendar and time"
+ },
+ {
+  "material": "Default.EventBusy",
+  "sfSymbol": "calendar.badge.minus",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Calendar and time"
+ },
+ {
+  "material": "Default.HourglassTop",
+  "sfSymbol": "hourglass.tophalf.fill",
+  "minIos": "14.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Calendar and time"
+ },
+ {
+  "material": "Default.History",
+  "sfSymbol": "clock.arrow.circlepath",
+  "minIos": "14.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Calendar and time"
+ },
+ {
+  "material": "Default.Celebration",
+  "sfSymbol": "party.popper.fill",
+  "minIos": "17.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Calendar and time"
+ },
+ {
+  "material": "Outlined.CalendarMonth",
+  "sfSymbol": "calendar",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Calendar and time"
+ },
+ {
+  "material": "Filled.CalendarMonth",
+  "sfSymbol": "calendar",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Calendar and time"
+ },
+ {
+  "material": "Default.Today",
+  "sfSymbol": "calendar",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Calendar and time"
+ },
+ {
+  "material": "Default.NotificationsActive",
+  "sfSymbol": "bell.and.waves.left.and.right.fill",
+  "minIos": "16.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Calendar and time"
+ },
+ {
+  "material": "Default.EventRepeat",
+  "sfSymbol": null,
+  "minIos": null,
+  "keepMaterial": true,
+  "reason": "no calendar-with-repeat symbol; repeat alone already means Repeat",
+  "area": "Calendar and time"
+ },
+ {
+  "material": "Default.EventAvailable",
+  "sfSymbol": "calendar.badge.checkmark",
+  "minIos": "17.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Calendar and time"
+ },
+ {
+  "material": "Default.ChildCare",
+  "sfSymbol": "figure.and.child.holdinghands",
+  "minIos": "16.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.School",
+  "sfSymbol": "graduationcap.fill",
+  "minIos": "14.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.Person",
+  "sfSymbol": "person.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.Pets",
+  "sfSymbol": "pawprint.fill",
+  "minIos": "14.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.PersonAdd",
+  "sfSymbol": "person.fill.badge.plus",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.Groups",
+  "sfSymbol": "person.3.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.FamilyRestroom",
+  "sfSymbol": "figure.2.and.child.holdinghands",
+  "minIos": "16.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.Diversity3",
+  "sfSymbol": null,
+  "minIos": null,
+  "keepMaterial": true,
+  "reason": "no three-joined-people symbol; person.3 already stands for Groups",
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.Phone",
+  "sfSymbol": "phone.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.MedicalServices",
+  "sfSymbol": "cross.case.fill",
+  "minIos": "14.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.Email",
+  "sfSymbol": "envelope.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.Contacts",
+  "sfSymbol": "person.text.rectangle.fill",
+  "minIos": "14.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.Bloodtype",
+  "sfSymbol": "drop.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.AccountCircle",
+  "sfSymbol": "person.crop.circle.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Outlined.Groups",
+  "sfSymbol": "person.3",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Filled.Groups",
+  "sfSymbol": "person.3.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.Vaccines",
+  "sfSymbol": "syringe.fill",
+  "minIos": "16.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.Toys",
+  "sfSymbol": "teddybear.fill",
+  "minIos": "16.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.SportsSoccer",
+  "sfSymbol": "soccerball",
+  "minIos": "16.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.Restaurant",
+  "sfSymbol": "fork.knife",
+  "minIos": "15.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.PersonRemove",
+  "sfSymbol": "person.fill.badge.minus",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.PersonOutline",
+  "sfSymbol": "person",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.NoFood",
+  "sfSymbol": null,
+  "minIos": null,
+  "keepMaterial": true,
+  "reason": "no crossed-out food symbol (allergies)",
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.LocationCity",
+  "sfSymbol": "building.2.fill",
+  "minIos": "14.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.Group",
+  "sfSymbol": "person.2.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.DirectionsBus",
+  "sfSymbol": "bus.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.Checkroom",
+  "sfSymbol": "hanger",
+  "minIos": "15.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.Call",
+  "sfSymbol": "phone.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.Book",
+  "sfSymbol": "book.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Family and people"
+ },
+ {
+  "material": "Default.Payments",
+  "sfSymbol": "banknote.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Money"
+ },
+ {
+  "material": "Default.Balance",
+  "sfSymbol": null,
+  "minIos": null,
+  "keepMaterial": true,
+  "reason": "no scales of justice in SF Symbols; scalemass reads as weight",
+  "area": "Money"
+ },
+ {
+  "material": "AutoMirrored.Filled.ReceiptLong",
+  "sfSymbol": "receipt",
+  "minIos": "17.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Money"
+ },
+ {
+  "material": "Default.TableChart",
+  "sfSymbol": "tablecells",
+  "minIos": "14.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Money"
+ },
+ {
+  "material": "Default.Insights",
+  "sfSymbol": "chart.line.uptrend.xyaxis",
+  "minIos": "16.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Money"
+ },
+ {
+  "material": "Default.AccountBalanceWallet",
+  "sfSymbol": null,
+  "minIos": null,
+  "keepMaterial": true,
+  "reason": "SF wallet is iOS 18 (wallet.bifold); wallet.pass means an Apple Wallet pass",
+  "area": "Money"
+ },
+ {
+  "material": "Default.Description",
+  "sfSymbol": "doc.text.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Files and sharing"
+ },
+ {
+  "material": "Default.Link",
+  "sfSymbol": "link",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Files and sharing"
+ },
+ {
+  "material": "Default.LinkOff",
+  "sfSymbol": null,
+  "minIos": null,
+  "keepMaterial": true,
+  "reason": "no broken-link symbol in SF Symbols",
+  "area": "Files and sharing"
+ },
+ {
+  "material": "AutoMirrored.Filled.Assignment",
+  "sfSymbol": "list.clipboard.fill",
+  "minIos": "16.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Files and sharing"
+ },
+ {
+  "material": "Default.Share",
+  "sfSymbol": "square.and.arrow.up",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Files and sharing"
+ },
+ {
+  "material": "Default.PhotoCamera",
+  "sfSymbol": "camera.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Files and sharing"
+ },
+ {
+  "material": "Default.AddAPhoto",
+  "sfSymbol": "photo.badge.plus",
+  "minIos": "16.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Files and sharing"
+ },
+ {
+  "material": "Default.PictureAsPdf",
+  "sfSymbol": null,
+  "minIos": null,
+  "keepMaterial": true,
+  "reason": "no PDF-labelled document symbol",
+  "area": "Files and sharing"
+ },
+ {
+  "material": "Default.Image",
+  "sfSymbol": "photo.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Files and sharing"
+ },
+ {
+  "material": "Default.FolderShared",
+  "sfSymbol": "folder.fill.badge.person.crop",
+  "minIos": "14.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Files and sharing"
+ },
+ {
+  "material": "Default.ContentCopy",
+  "sfSymbol": "doc.on.doc",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Files and sharing"
+ },
+ {
+  "material": "Default.AttachFile",
+  "sfSymbol": "paperclip",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Files and sharing"
+ },
+ {
+  "material": "Default.Source",
+  "sfSymbol": null,
+  "minIos": null,
+  "keepMaterial": true,
+  "reason": "no folder-with-code symbol",
+  "area": "Files and sharing"
+ },
+ {
+  "material": "Default.FileDownload",
+  "sfSymbol": "square.and.arrow.down",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Files and sharing"
+ },
+ {
+  "material": "Default.AddLink",
+  "sfSymbol": "link.badge.plus",
+  "minIos": "14.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Files and sharing"
+ },
+ {
+  "material": "Default.CheckCircle",
+  "sfSymbol": "checkmark.circle.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Status and alerts"
+ },
+ {
+  "material": "Default.Favorite",
+  "sfSymbol": "heart.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Status and alerts"
+ },
+ {
+  "material": "Default.Info",
+  "sfSymbol": "info.circle.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Status and alerts"
+ },
+ {
+  "material": "Default.PriorityHigh",
+  "sfSymbol": "exclamationmark",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Status and alerts"
+ },
+ {
+  "material": "Default.Error",
+  "sfSymbol": "exclamationmark.circle.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Status and alerts"
+ },
+ {
+  "material": "Default.Star",
+  "sfSymbol": "star.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Status and alerts"
+ },
+ {
+  "material": "Default.ErrorOutline",
+  "sfSymbol": "exclamationmark.circle",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Status and alerts"
+ },
+ {
+  "material": "Default.CloudOff",
+  "sfSymbol": "icloud.slash.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Status and alerts"
+ },
+ {
+  "material": "Default.Warning",
+  "sfSymbol": "exclamationmark.triangle.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Status and alerts"
+ },
+ {
+  "material": "Default.ThumbUp",
+  "sfSymbol": "hand.thumbsup.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Status and alerts"
+ },
+ {
+  "material": "Default.PrivacyTip",
+  "sfSymbol": "hand.raised.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Status and alerts"
+ },
+ {
+  "material": "Default.Bolt",
+  "sfSymbol": "bolt.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Status and alerts"
+ },
+ {
+  "material": "Default.AutoAwesome",
+  "sfSymbol": "sparkles",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Chat"
+ },
+ {
+  "material": "AutoMirrored.Filled.Chat",
+  "sfSymbol": "bubble.left.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Chat"
+ },
+ {
+  "material": "Default.DoneAll",
+  "sfSymbol": null,
+  "minIos": null,
+  "keepMaterial": true,
+  "reason": "no double checkmark (read ticks)",
+  "area": "Chat"
+ },
+ {
+  "material": "Outlined.MicOff",
+  "sfSymbol": "mic.slash",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Chat"
+ },
+ {
+  "material": "Filled.Stop",
+  "sfSymbol": "stop.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Chat"
+ },
+ {
+  "material": "Filled.Mic",
+  "sfSymbol": "mic.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Chat"
+ },
+ {
+  "material": "AutoMirrored.Outlined.Chat",
+  "sfSymbol": "bubble.left",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Chat"
+ },
+ {
+  "material": "AutoMirrored.Filled.Send",
+  "sfSymbol": "paperplane.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Chat"
+ },
+ {
+  "material": "AutoMirrored.Filled.Message",
+  "sfSymbol": "text.bubble.fill",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Chat"
+ },
+ {
+  "material": "Default.Gavel",
+  "sfSymbol": null,
+  "minIos": null,
+  "keepMaterial": true,
+  "reason": "no gavel; hammer reads as tools, not law",
+  "area": "Misc"
+ },
+ {
+  "material": "Default.Public",
+  "sfSymbol": "globe.europe.africa.fill",
+  "minIos": "14.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Misc"
+ },
+ {
+  "material": "Default.Palette",
+  "sfSymbol": "paintpalette.fill",
+  "minIos": "14.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Misc"
+ },
+ {
+  "material": "Default.Language",
+  "sfSymbol": "globe",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Misc"
+ },
+ {
+  "material": "Outlined.Lightbulb",
+  "sfSymbol": "lightbulb",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Misc"
+ },
+ {
+  "material": "Outlined.Flag",
+  "sfSymbol": "flag",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Misc"
+ },
+ {
+  "material": "Default.VolunteerActivism",
+  "sfSymbol": null,
+  "minIos": null,
+  "keepMaterial": true,
+  "reason": "no hand-holding-heart symbol (the thank-you sticker)",
+  "area": "Misc"
+ },
+ {
+  "material": "Default.Title",
+  "sfSymbol": "textformat",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Misc"
+ },
+ {
+  "material": "Default.TextFields",
+  "sfSymbol": "textformat.size",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Misc"
+ }
+]
