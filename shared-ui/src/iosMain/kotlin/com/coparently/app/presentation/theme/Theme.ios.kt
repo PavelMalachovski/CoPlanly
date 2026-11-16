@@ -3,13 +3,13 @@ package com.coparently.app.presentation.theme
 import androidx.compose.runtime.Composable
 
 /**
- * Nothing yet: on the iPhone the status bar's style belongs to the view controller that hosts the
- * Compose view, which the iPhone app creates in phase 3 (docs/superpowers/plans/
- * 2026-11-01-iphone-phase-2-multiplatform-app.md).
+ * Nothing to do on the iPhone: the window's interface style decides the status bar's style (MON-24
+ * phase 3, part D). The shell sets that style from the app's theme choice (`WindowAppearance`), and
+ * the hosting controllers keep UIKit's default `preferredStatusBarStyle`, which follows it.
  *
  * @param darkTheme Whether the app is drawing its dark theme
  */
 @Composable
 internal actual fun SystemBarsAppearance(darkTheme: Boolean) {
-    // The hosting view controller decides the status bar's style (phase 3).
+    // The window's interface style decides the status bar's style (`WindowAppearance`).
 }

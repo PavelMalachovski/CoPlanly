@@ -194,7 +194,8 @@ internal class ScreenController(
     private fun Shared(content: @Composable () -> Unit) {
         CompositionLocalProvider(LocalViewModelStoreOwner provides session) {
             ProvideIosShell(shell.buildValues, shell.credentialSignIn) {
-                AppProviders(darkTheme = null) {
+                val darkTheme by shell.themeChoice.collectAsState()
+                AppProviders(darkTheme = darkTheme) {
                     CompositionLocalProvider(
                         LocalAppMessages provides shell.messages,
                         LocalTabSwitcher provides shell.tabSwitcher,
