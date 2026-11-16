@@ -2,7 +2,9 @@ package com.coparently.app.ios.controls
 
 import androidx.compose.ui.graphics.Color
 import com.coparently.app.presentation.common.BarMenuItem
+import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.objcPtr
 import platform.Foundation.NSSelectorFromString
 import platform.UIKit.UIAction
 import platform.UIKit.UIColor
@@ -17,7 +19,7 @@ import platform.darwin.NSObject
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNotSame
+import kotlin.test.assertNotEquals
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import kotlin.test.fail
@@ -130,16 +132,20 @@ class NativeControlsIosTest {
         assertEquals(3, button.menu?.children?.size)
     }
 
+    @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
     @Test
     fun `a menu button keeps its menu while the items look the same`() {
         val button = MenuButtonView {}
         button.show(MENU, OPTION_LOOK, "Repeat, Weekly", UIColor.whiteColor)
-        val first = button.menu
+        // Compared by the Objective-C object's address: Kotlin/Native hands out a new wrapper for
+        // a pure Objective-C object (a `UIMenu`) on each read, so `===` and `assertSame` said "not
+        // the same" for one menu at one address (CI run 12), and `assertNotSame` passed whatever.
+        val first = checkNotNull(button.menu).objcPtr()
         button.show(MENU.map { it.copy(onClick = {}) }, OPTION_LOOK, "Repeat, Weekly", UIColor.whiteColor)
-        assertSame(first, button.menu)
+        assertEquals(first, checkNotNull(button.menu).objcPtr(), "the menu was rebuilt for the same items")
 
         button.show(MENU.map { it.copy(checked = false) }, OPTION_LOOK, "Repeat", UIColor.whiteColor)
-        assertNotSame(first, button.menu)
+        assertNotEquals(first, checkNotNull(button.menu).objcPtr(), "the menu was kept for changed items")
     }
 
     @Test

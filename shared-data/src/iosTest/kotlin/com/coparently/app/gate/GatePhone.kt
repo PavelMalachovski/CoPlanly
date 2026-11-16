@@ -314,7 +314,6 @@ internal class GatePhone private constructor(
         private const val FUNCTIONS_PORT = 5001
         private const val AUTH_PORT = 9099
 
-
         /**
          * Starts a phone named [name] on the emulators at [host] — a Firebase app called [appName],
          * once per process — and signs a fresh account up on it, with the profile

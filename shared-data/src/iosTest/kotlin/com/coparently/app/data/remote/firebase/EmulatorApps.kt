@@ -43,6 +43,18 @@ internal object EmulatorApps {
         gcmSenderId = "000000000000",
     )
 
+    /**
+     * The bucket `IosStorageBucketEmulatorTest` uses, apart from the default one the write gate and
+     * the checker (`tools/ios/check-ios-writes.js`) use. Firebase iOS 11.8.0's Storage keeps one
+     * request service per bucket for the whole process, with the credentials of the app that made
+     * the first reference to it: in CI run 12 the bucket test, signed out at its end, had made it,
+     * and every request the gate's phones then sent went without a signed-in user, which
+     * `storage.rules` refuses (`-13021`, unauthorized, on the pet's first read). The same sharing
+     * is why one app's late `useEmulator` ended the process for another (run 11). The emulator
+     * serves any bucket under the same rules.
+     */
+    private const val TEST_BUCKET = "demo-coplanly-storage-test"
+
     /** `IosStorageBucketEmulatorTest`'s app. */
     const val STORAGE_BUCKET_TEST = "storage_bucket_test"
 
@@ -60,7 +72,13 @@ internal object EmulatorApps {
     private fun all(host: String): Map<String, Pair<FirebaseApp, FirebaseStorage>> = apps ?: run {
         val made = NAMES.associateWith { name ->
             val app = Firebase.initialize(context = null, options = OPTIONS, name = name)
-            app to Firebase.storage(app).also { it.useEmulator(host, STORAGE_PORT) }
+            // The bucket test on a bucket of its own: see [TEST_BUCKET].
+            val storage = if (name == STORAGE_BUCKET_TEST) {
+                Firebase.storage(app, "gs://$TEST_BUCKET")
+            } else {
+                Firebase.storage(app)
+            }
+            app to storage.also { it.useEmulator(host, STORAGE_PORT) }
         }
         made.also { apps = it }
     }
