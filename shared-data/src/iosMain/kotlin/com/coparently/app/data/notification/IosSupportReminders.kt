@@ -135,6 +135,7 @@ class SupportReminderPlanner(
         val lastReminded = reminders.lastReminded(account, family)
         // This month, else the next one; each read from the server, the next one only if needed.
         val months = listOf(thisMonth, thisMonth.plusMonth()).filter { it >= terms.fromMonth && it != lastReminded }
+
         // A month is taken when unpaid and its reminder still fits inside it; a failed read stops here.
         fun decided(month: YearMonth, paid: Result<Payment?>): Boolean =
             paid.isFailure || (paid.getOrNull() == null && instantOf(terms, month, days, nowMillis, zone) != null)
