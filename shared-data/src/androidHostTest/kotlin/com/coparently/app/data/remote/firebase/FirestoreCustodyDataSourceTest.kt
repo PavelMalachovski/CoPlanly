@@ -356,36 +356,6 @@ class FirestoreCustodyDataSourceTest {
         assertTrue(proposal?.model?.contactWindows.orEmpty().isEmpty())
     }
 
-    // ---- the transaction (phase 3a) ---------------------------------------------
-
-    @Test
-    fun `a transaction writes what its transform answers, sorted, and nothing when it answers null`() =
-        runTest {
-            // Firestore runs the function inside its own transaction; here it runs it once.
-            client.put(PATH, document("proposal" to proposalMap()))
-            var seen: SharedCustody? = null
-
-            val written = dataSource.transact(DOCUMENT_ID, listOf(LATER_UID, EARLIER_UID)) { current ->
-                seen = current
-                current?.copy(proposal = null)
-            }
-
-            // The transform saw the document as it stood, parsed as every read parses it.
-            assertEquals(proposal(), seen?.proposal)
-            // What it answered is what was written and what comes back.
-            assertNull(written?.proposal)
-            val sets = client.operations.filterIsInstance<RecordingFirestoreClient.Operation.Set>()
-            assertEquals(1, sets.size)
-            assertTrue("the write is the transaction's", sets.single().inTransaction)
-            val document = sets.single().data
-            assertEquals(listOf(EARLIER_UID, LATER_UID), document["participants"])
-            assertFalse(document.containsKey("proposal"))
-
-            // Answering null writes nothing.
-            assertNull(dataSource.transact(DOCUMENT_ID, listOf(EARLIER_UID, LATER_UID)) { null })
-            assertEquals(1, client.operations.filterIsInstance<RecordingFirestoreClient.Operation.Set>().size)
-        }
-
     // ---- fixtures -----------------------------------------------------------
 
     /** Runs [FirestoreCustodyDataSource.setCustody] and returns the document it wrote. */

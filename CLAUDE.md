@@ -2016,6 +2016,10 @@ the rules):
   device or Release build signs only once the App ID has the capability (console step 1,
   `iosApp/README.md`).
 
+**Phase 4's part B** (November 2026, MON-25; item 42 states the rules): a request's deadline
+notice and its "No answer" end run in the scheduled `sweepRequestClocks` for both platforms, so the
+iPhone needs no job at a set time for them; a phone keeps only the answering parent's reminders.
+
 **Where a `domain/…` path in this file lives** (MON-24 phase 1, November 2026). The domain moved
 to the shared module with every package unchanged, so a path this file writes as
 `domain/<package>/<File>.kt` is `shared/src/commonMain/kotlin/com/coparently/app/domain/<package>/<File>.kt`,
@@ -2276,10 +2280,11 @@ another module builds a fixed clock through `RequestTime.of` — today `Requests
 `:shared-ui` since slice 10c — the primary constructor staying `internal` for `KoinGraphTest`),
 `RequestClocks`, `RequestClockActions`, `RequestClockKeeper` (its in-flight set a compare-and-set
 over an immutable set where it took a JVM lock; the sweep's bound, its `NonCancellable` tail and
-everything else unchanged), `RequestClockSteps` and `RequestRecords`, and from `data/family/`,
+everything else unchanged; the bound and the tail went with the end in MON-25), `RequestClockSteps` and `RequestRecords`, and from `data/family/`,
 `OtherFamiliesSignals` (its "today" and "now" from `kotlin.time`'s system clock in the system zone,
 what `LocalDate.now()` and `System.currentTimeMillis()` read). The steps post through the new
-**`RequestClockNotices`** (`data/requests/`: `remind`, `deadlinePassed` and `noAnswer`; the app's
+**`RequestClockNotices`** (`data/requests/`: `remind`, `deadlinePassed` and `noAnswer`, the last two
+gone since MON-25 put them on the server; the app's
 `RequestNotices` implements it; `remind` answers whether it was shown since the notification audit
 of 9 November 2026, and the iPhone's stand-in answers false, so a reminder is counted only when
 shown) and keep their jobs through the domain's `RequestClockScheduler`, as
@@ -2288,7 +2293,7 @@ are bound in `requestsDataModule` (with `RequestClockSweep`, which the app bound
 `familyDataModule`, and the app binds `RequestClockNotices`. Still in the app from `data/requests/`
 and `data/notification/`: `RequestNotices` (the notification manager, the strings and the
 `BigTextStyle` of item 15), `RequestClockWorker`, `RequestClockWork` and `WorkRequestClockScheduler`
-(WorkManager: the `KEEP` names and `needsNetwork`). Task 8i, the school import (item 35), the
+(WorkManager: the `KEEP` names and, until MON-25 left the phones only reminders, `needsNetwork`). Task 8i, the school import (item 35), the
 export's sources (item 26) and the records of no family (item 46), once their domain had left the
 stay list: in `commonMain`, from `data/school/`, `SchoolAccounts`,
 `SchoolConnectionStore` (its `@Synchronized` methods under the data layer's reentrant `Monitor`,
@@ -2376,7 +2381,9 @@ Android's, the grant revoked through `GoogleGrantRevocation`) and, in `:shared-u
 code). Still stand-ins on the iPhone:
 `NoPush` as `PushRegistration` alone (the push switch; the phone holds no token until phase 4),
 `NoEventReminders`,
-`NoRequestClockJobs`, `NoRequestClockNotices`, `NoSchoolImportJob`, `NoSupportReminderJob`,
+`NoRequestClockJobs` and `NoRequestClockNotices` (the answering parent's reminders alone since
+MON-25, which runs a request's deadline notice and end on the server for both platforms),
+`NoSchoolImportJob`, `NoSupportReminderJob`,
 and in `:shared-ui` `NoSpeechDictation`, `NoAiAssist`,
 `NoInviteQrCodes` and the platform interfaces' `NoQrScanner`, `NoDictation`, `NoPermissions`,
 `NoOpenUrl`, `NoClipboard` and `NoAppLanguages` in `IosPlatform.kt`.
@@ -3490,9 +3497,10 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     fallback for an unrecognised type — that fallback is the forgery, not a nicety, and
     `firestore.rules` refuses both keys from a client precisely so nothing legitimate needs
     one. Two halves, and both are load-bearing: the rule's **allow-list** of client types keeps
-    `pairing_accepted`, `pairing_removed` and `chat_message` producible only by Cloud Functions
+    `pairing_accepted`, `pairing_removed`, `chat_message` and the request clock's
+    `request_deadline_passed` and `request_no_answer` (MON-25) producible only by Cloud Functions
     (which write as admin and bypass rules), so a co-parent cannot announce a pairing that did
-    not happen. Adding a type means four places agreeing — `PushPayload`, the rule's allow-list,
+    not happen, or an end that did not come. Adding a type means four places agreeing — `PushPayload`, the rule's allow-list,
     `PushNotifier.PUSH_TEXT`, and the five `push_strings.xml` — and a type missing
     from any of them is a push that silently never appears. This is also why service-layer
     string extraction (**CQ-14**) was *not* a prerequisite: the string is read on the receiving
@@ -4615,74 +4623,100 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
 
 42. **A request's deadline is a clock beside the request, and only its end is stored** (October
     2026, tester feedback phase 3a; spec
-    `docs/superpowers/specs/2026-10-15-zuzana-feedback-phase-3a-requests-never-hang-design.md`).
+    `docs/superpowers/specs/2026-10-15-zuzana-feedback-phase-3a-requests-never-hang-design.md`;
+    the deadline notice and the end on the server since MON-25, November 2026, spec
+    `docs/superpowers/specs/2026-11-17-iphone-phase-4b-server-clocks-design.md`).
     A change request, a day swap, an event awaiting an answer, a custody proposal and an expense
     split proposal (`RequestKind.SPLIT`, October 2026) may carry a deadline the proposer picks (`AnswerByField`, `domain/changerequests/AnswerBy`, capped by
     `RequestCap`). It lives in **one document per request**, `request_deadlines/{id}`
-    (`RequestDeadlineDocument` is the wire form, `data/requests/` the steps), never in the record:
+    (`RequestDeadlineDocument` is the wire form, `data/requests/` the phone's steps,
+    `functions/request-clocks.js` and `request-clock-steps.js` the server's), never in the record:
     a change request's update admits three keys, the custody writes are `hasOnly` lists, and an older
     build rewrites a whole change request when it answers. Nothing is added to `change_requests`,
     `custody_models` or `events` (a one-day swap only fills its existing `DayOverride.groupId`), and
-    no Room table holds a clock. Eight things not to undo.
+    no Room table holds a clock. Ten things not to undo.
     - **States are derived, the end alone is stored.** Open, no answer with a last chance possible,
       last chance, no answer and answered come from `RequestClock` over the clock, the record and the
       phone's time, the one decision the inbox, Home, the banner, the switcher's dot (design item
-      13) and every job read. The proposer writes `outcome: "no_answer"` once; an orphaned clock
-      without one (its request withdrawn or replaced) shows nothing. Each field has one writer and
-      is written once (`firestore.rules`' five update shapes): delivery with the reminder plan, the
-      first opening, each reminder shown, the last chance, the closure. The server stamps
-      `createdAt`, `lastChanceAt` and `closedAt` (read with `ESTIMATE`, so the proposer's phone holds
-      its own estimate until the server answers); a phone's own times get five minutes of skew both
-      ways, and the client clamps delivered and seen to `createdAt` so "opened" never precedes
-      "sent".
+      13) and the server read (`functions/request-clocks.js` ports it; the fixture
+      `functions/test/fixtures/request-clock-cases.json` is read by both suites, so change the
+      arithmetic in both). The server writes `outcome: "no_answer"` once (an older build's phone
+      may still write it first); an orphaned clock without one (its request withdrawn or replaced)
+      shows nothing. Each phone field has one writer and is written once (`firestore.rules`' five
+      update shapes): delivery with the reminder plan, the first opening, each reminder shown, the
+      last chance, and the closure an older build writes. The server stamps `createdAt`,
+      `lastChanceAt` and `closedAt` (read with `ESTIMATE`); a phone's own times get five minutes of
+      skew both ways, and the client clamps delivered and seen to `createdAt` so "opened" never
+      precedes "sent".
+    - **The deadline notice and the end run on the server, for both platforms** (MON-25, owner
+      decision of 27 October 2026: an iPhone cannot run work at a set time). `sweepRequestClocks`
+      runs every five minutes (UTC) and steps every clock whose `serverNextStepAt` is due, oldest
+      first, within a four-minute budget; `onRequestClockWritten` keeps that field from the clock
+      after every phone write (`nextStepAt`: the deadline, then the end once the deadline was told, a
+      last chance's end, or a phone-closed proposal's `closedAt` to check its withdrawal);
+      `backfillRequestClockSchedule` (operator-only) fills it for the clocks open at deploy. **Four
+      fields are the server's alone** — `serverNextStepAt`, `serverToldDeadlineAt`,
+      `serverToldNoAnswerAt`, `serverSettledAt` — written as admin; no client write may carry one,
+      which the rules get from each shape's `hasOnly` without naming them. **One step is one
+      transaction** (`stepClock`): it re-reads the clock, acts only while it is still due, reads the
+      record, and commits the closure, the `REQUEST_UNANSWERED` card (`srv_unanswered_<clockId>`),
+      the push (`srv_<type>_<clockId>`) and a proposal's withdrawal together, so two sweeps cannot
+      both act and a last-minute answer is never closed over. The trigger ignores a write of only
+      those four fields, so it never re-arms what a step settled. The phones keep only the answering
+      parent's reminders: a phone schedules no deadline or end job, and one an older build left
+      queued finishes without acting (`runRequestClockStep`).
+    - **The proposer is told by a push, at any hour** (`request_deadline_passed` while a last
+      chance can still be given, `request_no_answer` at the end; item 15). Server-only types, each
+      carrying `familyId` and the answering parent's first name (`previewFirstName`), opening the
+      Requests inbox on the schedule channel. A proposer who switched pushes off gets neither and
+      reads the state in the inbox and the card in the thread; there is no local fallback. An
+      iPhone receives them once phase 4 registers its push token.
     - **The proposer's uid is in the id** (`RequestDeadlineId`: `swap_`, `change_` or
       `event_<uid>_<ref>`, `proposal_<uid>_<familyId>_<proposedAt>`,
       `split_<uid>_<familyId>_<proposedAtMillis>`), the create rule rebuilds it
       from the caller, and a phone ignores a clock whose id does not spell its own fields — otherwise the other parent
-      could create the clock first and strip the deadline, or fake an early "No answer".
+      could create the clock first and strip the deadline, or have this phone deliver and remind a
+      clock of their own making.
     - **The read is keyed on `participants` alone, on purpose**: a clock outlives an unpair, as
       `event_versions` and the chat do. Creating one needs a live family; account deletion removes
       every clock naming the departing uid, for both parents (`deleteAccountDataImpl`).
-    - **Every background step acts in the clock's `familyId`, never the family on screen** — the
-      reminder, the deadline notice, the end's card and the proposal's withdrawal
-      (`RequestRecords`, `CustodyModelRepository.withdrawUnanswered`, `ActivityAnnouncer.announce`
-      with the clock's responder). Nothing here may go through `currentPair()`.
-    - **The deadline notice and the end decide on a `Source.SERVER` read of the record**, because
-      what they write cannot be taken back and this phone may not hold the co-parent's answer yet;
-      a server out of reach is `StepResult.RETRY`, never "No answer". So is a clock or record that
-      cannot be read. A reminder reads the local copy: a wrong one costs a notice. A last chance
-      reads the server too, and a refused one is reported to the proposer, never retried.
-    - **Jobs are `KEEP` by unique name (tag `request_clock`), so a step never re-enqueues its own
-      name**: one that fires early retries only when its moment is a minute away and otherwise
-      finishes, and `RequestClockKeeper.sweep`, run on every full sync, arms again the reminders
-      still ahead, a deadline still ahead and the end (running an end already due for at most
-      `SWEEP_STEP_TIMEOUT_MILLIS`, so a server that does not answer cannot hold the sync; the bound
-      cancels only the reads, since the closure and its tail run under `NonCancellable`, and an end
-      that ran out of time goes back to its own job). **The deadline
-      and end jobs wait for a network** (`RequestClockWork.needsNetwork`): they read the server, and
-      unconstrained they spent their three runs in about ninety seconds offline, so a proposer
-      offline at the deadline was never told. A deadline already passed is not armed again, so its
-      notice is lost only when every run fails online. A reminder is unconstrained; one more than half
-      an hour late posts nothing, nor does one whose job fires in the quiet hours of the phone's zone
+    - **Every step acts in the clock's `familyId`, never the family on screen** — the phone's
+      reminder (`RequestRecords`) and the server's deadline push, end card and withdrawal, which
+      read the family as live only while the clock's id names the two parents and the proposer's
+      profile still names the responder. Nothing here may go through `currentPair()`.
+    - **What cannot be taken back is decided on the server's own copy of the record**: the server
+      reads it inside the step's transaction, and a record it cannot read leaves the clock due for
+      the next run, never "No answer". A reminder reads the phone's local copy: a wrong one costs a
+      notice. A last chance reads the server (`ReadSource.SERVER`), and a refused one is reported
+      to the proposer, never retried.
+    - **Reminders are jobs `KEEP` by unique name (tag `request_clock`), so a step never re-enqueues
+      its own name**: `RequestClockSteps.reminder` has no early-fire branch (it acts or finishes,
+      and a failed read retries through the worker's bounded runs), and `RequestClockKeeper.sweep`, run on every full sync, delivers the
+      clocks this parent must answer and arms again the reminders still ahead; it does nothing for a
+      clock this parent proposed. A reminder is unconstrained; one more than half an hour late posts
+      nothing, nor does one whose job fires in the quiet hours of the phone's zone
       (`ReminderPlan.isQuietAt`, checked again at fire time because Doze delays jobs). No reminders
       at night, none during a last chance — the last-chance push is the reminder.
     - **An older build's late answer counts.** No rule refuses an answer because a clock says "No
       answer" — that would put a read into three hot rules for an edge only an older build reaches
       — and History shows the answer it is. Only a custody or an expense split proposal is
-      withdrawn at the end (`RequestKind.withdrawnAtEnd`; the split through
-      `FamilySettingsRepository.withdrawUnanswered`), in a transaction checking it is the same
+      withdrawn at the end (`withdrawnAtEnd`), by an `update()` that deletes only the proposal (and
+      a custody proposal's plan citation), and only while the stored proposal is still the clock's
       `proposedAt`: a change request is never set `CANCELLED`
-      (`updateStatus`'s `set()` from Room would overwrite a last-minute answer). Past a proposal's (custody or
+      (`updateStatus`'s `set()` from Room would overwrite a last-minute answer). A withdrawal the
+      server could not make stays due and is retried, and a proposal an older phone closed is
+      checked once for its withdrawal. Past a proposal's (custody or
       split) deadline, before any last chance, the answering parent's card keeps **Decline** and never
       Accept (`CardClock.declineOnly`), because the waiting proposal refuses their every schedule
-      change until the proposer's phone withdraws it; swaps, change requests and events show no
+      change until the server withdraws it; swaps, change requests and events show no
       answer then (`hidesAnswers`).
     - **The two chat cards push nobody.** `REQUEST_LAST_CHANCE` and `REQUEST_UNANSWERED` are in
       `functions/index.js`' `SILENT_CARD_KINDS` (with the cards item 15 lists, whose news has a push
-      type of its own), which `notifyOfChatMessage` skips: the last chance
-      has its own push (`request_last_chance`, item 15's four places), and "No answer" must not
-      wake the parent who was just told nothing more comes. Until the functions are deployed they
-      are pushed like any message. Opening a request pushes nobody either; DPIA R22.
+      type of its own), which `notifyOfChatMessage` skips: the last chance has its own push
+      (`request_last_chance`) and the end its own (`request_no_answer`). Opening a request pushes
+      nobody either; DPIA R22. An older build beside the server may post a second "No answer" card
+      on a slow network, and its proposer may be told twice until they update (spec §5.5, accepted
+      for the transition).
 
 43. **A family's records are read for the family on screen** (October 2026, tester report: the
     family with Carol showed the family with Igor's expenses). `data/family/FamilyView.kt`'s

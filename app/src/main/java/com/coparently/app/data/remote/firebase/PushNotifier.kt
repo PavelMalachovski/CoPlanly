@@ -144,7 +144,12 @@ class PushNotifier(private val context: Context) {
         // indexing it with the nullable value straight off the payload does not compile.
         val spec = type?.let { PUSH_TEXT[it] } ?: return null
         return bodyOf(spec, data)?.let { body ->
-            PushText(context.getString(spec.title), withDeadline(type, body, data))
+            val title = if (spec.titleTakesActor) {
+                context.getString(spec.title, actorOf(data))
+            } else {
+                context.getString(spec.title)
+            }
+            PushText(title, withDeadline(type, body, data))
         }
     }
 
@@ -205,10 +210,14 @@ class PushNotifier(private val context: Context) {
             )
         }
 
+    /** The name a push carries for the person it is about, or the co-parent fallback when blank. */
+    private fun actorOf(data: Map<String, String>): String =
+        data[PushPayload.ACTOR]?.takeIf { it.isNotBlank() }
+            ?: context.getString(R.string.push_actor_fallback)
+
     /** The text of a push worded by [spec], filled from [data]; null when [data] cannot fill it. */
     private fun bodyOf(spec: PushTextSpec, data: Map<String, String>): String? {
-        val actor = data[PushPayload.ACTOR]?.takeIf { it.isNotBlank() }
-            ?: context.getString(R.string.push_actor_fallback)
+        val actor = actorOf(data)
         return when (spec.args) {
             BodyArgs.ACTOR_AND_SUBJECT -> context.getString(spec.body, actor, data[PushPayload.SUBJECT].orEmpty())
             BodyArgs.ACTOR -> context.getString(spec.body, actor)
@@ -429,7 +438,9 @@ class PushNotifier(private val context: Context) {
     internal data class PushTextSpec(
         @StringRes val title: Int,
         val body: Int,
-        val args: BodyArgs
+        val args: BodyArgs,
+        /** True when the title, not the body, names the person (`%1$s` = the payload's actor). */
+        val titleTakesActor: Boolean = false
     )
 
     internal companion object {
@@ -641,6 +652,20 @@ class PushNotifier(private val context: Context) {
                 R.string.push_request_last_chance_title,
                 R.string.push_request_last_chance_body,
                 BodyArgs.ACTOR_AND_ANSWER_BY
+            ),
+            // Server-only (MON-25): the scheduled clock function's two pushes to the proposer. The
+            // title names who did not answer; the body is a fixed sentence.
+            PushPayload.REQUEST_DEADLINE_PASSED to PushTextSpec(
+                R.string.push_request_deadline_passed_title,
+                R.string.push_request_deadline_passed_body,
+                BodyArgs.NONE,
+                titleTakesActor = true
+            ),
+            PushPayload.REQUEST_NO_ANSWER to PushTextSpec(
+                R.string.push_request_no_answer_title,
+                R.string.push_request_no_answer_body,
+                BodyArgs.NONE,
+                titleTakesActor = true
             ),
             PushPayload.PAIRING_ACCEPTED to PushTextSpec(
                 R.string.push_pairing_accepted_title,

@@ -439,6 +439,11 @@ const RULES = [
       'S/values*/request_deadline_strings.xml'],
   },
   {
+    sections: ['5.9', '5.10'],
+    why: 'the server\'s request clock steps (MON-25): a request\'s end, and the proposer\'s two pushes',
+    paths: ['functions/request-clock*.js'],
+  },
+  {
     sections: ['5.6'],
     why: 'a calendar friend, whose grants are one per family',
     paths: ['K/presentation/friends/**', 'K/domain/friends/**', 'K/data/repository/Friend*',

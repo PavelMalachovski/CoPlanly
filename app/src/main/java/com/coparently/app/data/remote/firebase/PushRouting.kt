@@ -57,7 +57,10 @@ object PushRouting {
         PushPayload.CHANGE_REQUEST_DECLINED,
         PushPayload.CHANGE_REQUEST_CANCELLED,
         // A last chance is answered in the Requests inbox, like the request it gives another go.
-        PushPayload.REQUEST_LAST_CHANCE -> PushDestination.CHANGE_REQUESTS
+        PushPayload.REQUEST_LAST_CHANCE,
+        // The server's clock pushes (MON-25) say a request closed or lapsed; the inbox shows it.
+        PushPayload.REQUEST_DEADLINE_PASSED,
+        PushPayload.REQUEST_NO_ANSWER -> PushDestination.CHANGE_REQUESTS
         // Asks are answered on Home, where the pop-up and the inline card wait for this parent;
         // outcomes are read on the grid they changed.
         PushPayload.CUSTODY_PROPOSAL_PROPOSED,
@@ -106,7 +109,9 @@ object PushRouting {
         PushPayload.DAY_SWAP_GROUP_OFFERED,
         PushPayload.DAY_SWAP_GROUP_ACCEPTED,
         PushPayload.DAY_SWAP_GROUP_DECLINED,
-        PushPayload.REQUEST_LAST_CHANCE -> PushChannel.SCHEDULE
+        PushPayload.REQUEST_LAST_CHANCE,
+        PushPayload.REQUEST_DEADLINE_PASSED,
+        PushPayload.REQUEST_NO_ANSWER -> PushChannel.SCHEDULE
         PushPayload.SPLIT_RATIO_PROPOSED,
         PushPayload.SPLIT_RATIO_ACCEPTED,
         PushPayload.SPLIT_RATIO_DECLINED,

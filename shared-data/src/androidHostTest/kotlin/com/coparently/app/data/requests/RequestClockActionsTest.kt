@@ -5,14 +5,12 @@ import com.coparently.app.domain.changerequests.RequestClock
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.changerequests.RequestKind
-import com.coparently.app.domain.notification.RequestClockScheduler
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.TimeZone
@@ -34,11 +32,10 @@ class RequestClockActionsTest {
     private val repository = mockk<RequestDeadlineRepository>()
     private val records = mockk<RequestRecords>()
     private val telling = mockk<RequestTelling>(relaxed = true)
-    private val scheduler = mockk<RequestClockScheduler>(relaxed = true)
     private var now = SENT
     private val time = RequestTime(now = { now }, zoneOf = { TimeZone.UTC }, ticks = emptyFlow())
 
-    private val actions = RequestClockActions(repository, records, telling, scheduler, time)
+    private val actions = RequestClockActions(repository, records, telling, time)
 
     @Before
     fun setUp() {
@@ -75,7 +72,7 @@ class RequestClockActionsTest {
     }
 
     @Test
-    fun `the proposer gives one last chance — the clock, the push, the card, the end, in that order`() = runTest {
+    fun `the proposer gives one last chance — the clock, then the push and the card`() = runTest {
         val clock = clock()
         signedInAs(ALICE)
         coEvery { repository.get(clock.id) } returns clock
@@ -88,8 +85,8 @@ class RequestClockActionsTest {
         coVerifyOrder {
             repository.giveLastChance(clock, until)
             telling.lastChance(clock, CARD, until)
-            scheduler.scheduleEnd(clock.id, until)
         }
+        // The moved end is the server's to run (MON-25): this phone keeps no scheduler for it.
     }
 
     @Test
@@ -123,14 +120,12 @@ class RequestClockActionsTest {
 
             coVerify(exactly = 0) { repository.giveLastChance(any(), any()) }
             coVerify(exactly = 0) { telling.lastChance(any(), any(), any()) }
-            verify(exactly = 0) { scheduler.scheduleEnd(any(), any()) }
 
-            // A write the rules refuse — a phone clock running fast — tells nobody and schedules nothing.
+            // A write the rules refuse — a phone clock running fast — tells nobody.
             signedInAs(ALICE)
             coEvery { repository.giveLastChance(any(), any()) } returns false
             assertFalse("refused", actions.giveLastChance(clock.id))
             coVerify(exactly = 0) { telling.lastChance(any(), any(), any()) }
-            verify(exactly = 0) { scheduler.scheduleEnd(any(), any()) }
         }
 
     private fun signedInAs(uid: String) {

@@ -1733,6 +1733,14 @@ service cloud.firestore {
     // such a phone for good. The reminders get none: they are planned from the document's own
     // `createdAt` and deadline, so they are checked against those, exactly.
 
+    // **Four fields are the scheduled function's alone** (MON-25): `serverNextStepAt`,
+    // `serverToldDeadlineAt`, `serverToldNoAnswerAt` and `serverSettledAt`. It writes them as
+    // admin, which bypasses these rules. No client write may carry or change one, and nothing
+    // here has to name them: the create's key list excludes them and each update shape is a
+    // `hasOnly` of its own keys over `diff().affectedKeys()`. A clock that already holds them
+    // still takes every shape an older build writes, because the diff of an unrelated update
+    // never contains them. `request-deadlines.test.js` pins both directions.
+
     // The farthest deadline a clock may carry: 31 days past the write. The app clamps itself to
     // 30 (`AnswerBy.MAX_AHEAD_MILLIS`); the day between is for a phone whose clock runs fast.
     function requestClockMaxAheadMillis() {

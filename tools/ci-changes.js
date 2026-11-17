@@ -81,6 +81,13 @@ const BUILD = /^(build\.gradle\.kts$|settings\.gradle\.kts$|gradle\.properties$|
 const SHARED = /^shared(-data|-ui)?\//;
 
 /**
+ * Cloud Functions files `:shared`'s own tests read (MON-25): `RequestClockFixtureTest` runs the
+ * server's request clock rules and their fixture through the Kotlin ones, so a change to either
+ * runs the `shared` jobs as well as the jobs `functions/` already runs.
+ */
+const SHARED_FUNCTION_INPUTS = /^functions\/(request-clocks\.js|test\/fixtures\/request-clock-cases\.json)$/;
+
+/**
  * `:shared-ui` (MON-24 phase 2, from Task 9) holds what the app's `res/` and `presentation/` held:
  * the strings (and, later, the fonts and drawables) in `composeResources/`, and the screens. A path
  * there is decided as the app path it stands for, so a screen-only or string-only change skips e2e
@@ -291,7 +298,7 @@ function decide(paths) {
   const r8runtime = build || changed.some((p) => !NON_ANDROID.test(p) && !NON_R8_RUNTIME.test(p));
   const web = changed.some((p) => !NON_WEB.test(p));
   // Every `:shared-ui` path, screens and strings included: the iPhone compiles them.
-  const shared = build || kept.some((p) => /^shared-ui\//.test(p));
+  const shared = build || kept.some((p) => /^shared-ui\//.test(p) || SHARED_FUNCTION_INPUTS.test(p));
   // The iPhone app links the shared modules' framework, so it runs whenever they do, and on its own project.
   // And on what the write gate is held to, and on any path it is not known to skip.
   const ios = shared || kept.some((p) => IOS_APP.test(p) || IOS_GATE_INPUTS.test(p) || !NON_IOS.test(p));

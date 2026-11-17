@@ -182,6 +182,21 @@ test('a real fixture compared with itself as the emulator would store it, server
 });
 
 
+test('a request clock may carry the server\'s four fields, as integers (MON-25)', () => {
+  const text = fs.readFileSync(path.join(FIXTURES, 'request_deadlines/create.json'), 'utf8');
+  const fields = Object.assign(restFieldsOf(JSON.parse(text).document, text), {
+    createdAt: { timestampValue: '2026-11-17T07:00:00Z' },
+  });
+  const shape = ruleFor('request_deadlines', doc(fields), FIXTURES).shape;
+  assert.deepEqual(compareDocument(shape, doc(fields)), []);
+  const stepped = doc(Object.assign({}, fields, {
+    serverNextStepAt: i(1), serverToldDeadlineAt: i(2), serverToldNoAnswerAt: i(3), serverSettledAt: i(4),
+  }));
+  assert.deepEqual(compareDocument(shape, stepped), []);
+  const asDouble = doc(Object.assign({}, fields, { serverNextStepAt: d(1.5) }));
+  assert.deepEqual(compareDocument(shape, asDouble), ['serverNextStepAt: integer expected, double found']);
+});
+
 test('an event carries the server cursor its data source adds, as a timestamp', () => {
   const text = fs.readFileSync(path.join(FIXTURES, 'events/repository-save.json'), 'utf8');
   const fields = restFieldsOf(JSON.parse(text).document, text);

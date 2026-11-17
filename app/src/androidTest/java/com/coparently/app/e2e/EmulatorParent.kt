@@ -326,11 +326,10 @@ class EmulatorParent private constructor(
      */
     val requestScheduler = RecordingClockScheduler()
 
-    /** The production request clocks (phase 3a), over this phone's Firestore and [requestScheduler]. */
+    /** The production request clocks (phase 3a), over this phone's Firestore. */
     val requestDeadlineRepository: RequestDeadlineRepository = RequestDeadlineRepositoryImpl(
         dataSource = FirestoreRequestDeadlineDataSource(documents),
-        authService = authService,
-        scheduler = requestScheduler
+        authService = authService
     )
 
     val changeRequestRepository = ChangeRequestRepositoryImpl(
@@ -353,10 +352,7 @@ class EmulatorParent private constructor(
 
     private val familySettingsDataSource = FirestoreFamilySettingsDataSource(documents)
 
-    /**
-     * The money agreement, built before [requestRecords], which withdraws an expense split nobody
-     * answered through it; it starts a proposal's clock through [requestDeadlineRepository].
-     */
+    /** The money agreement; it starts a proposal's clock through [requestDeadlineRepository]. */
     val familySettingsRepository = FamilySettingsRepository(
         dataSource = familySettingsDataSource,
         userRepository = userRepository,
@@ -367,18 +363,17 @@ class EmulatorParent private constructor(
     )
 
     /**
-     * The request clocks' background steps (phase 3a), over this phone's repositories and
-     * [requestScheduler]: a test runs a step itself where the app would wait for its job.
+     * The request clocks' records and reminder step (phase 3a), over this phone's repositories: a
+     * test runs a step itself where the app would wait for its job. The deadline notice and the end
+     * are the server's since MON-25.
      */
     private val requestRecords = RequestRecords(
         changeRequestRepository = changeRequestRepository,
         eventRepository = eventRepository,
         eventDataSource = eventDataSource,
         custodyDataSource = custodyDataSource,
-        custodyModelRepository = custodyRepository,
         userRepository = userRepository,
-        familySettingsDataSource = familySettingsDataSource,
-        familySettingsRepository = familySettingsRepository
+        familySettingsDataSource = familySettingsDataSource
     )
 
     private val requestTelling = RequestTelling(announcer, fcmService, authService)
@@ -387,8 +382,6 @@ class EmulatorParent private constructor(
         repository = requestDeadlineRepository,
         records = requestRecords,
         notices = RequestNotices(context, pairingRepository),
-        telling = requestTelling,
-        scheduler = requestScheduler,
         time = RequestTime()
     )
 
@@ -400,7 +393,6 @@ class EmulatorParent private constructor(
         repository = requestDeadlineRepository,
         records = requestRecords,
         telling = requestTelling,
-        scheduler = requestScheduler,
         time = RequestTime()
     )
 
@@ -422,7 +414,6 @@ class EmulatorParent private constructor(
     /** What each full sync does with this phone's open clocks (phase 3a). */
     val requestClockKeeper = RequestClockKeeper(
         repository = requestDeadlineRepository,
-        steps = requestClockSteps,
         scheduler = requestScheduler,
         time = RequestTime()
     )

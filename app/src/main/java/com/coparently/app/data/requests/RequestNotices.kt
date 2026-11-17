@@ -20,14 +20,13 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * The local notifications a request's clock posts on this phone (phase 3a, spec §4.3–§4.4, §5.3):
- * a reminder to the answering parent, and to the proposer that the deadline passed and that the
- * request ended with no answer.
+ * The local notification a request's clock posts on this phone (phase 3a, spec §4.3, §5.3): a
+ * reminder to the answering parent. What the proposer is told — the deadline passed, the request
+ * ended with no answer — is pushed by the server since MON-25 and worded by [PushNotifier].
  *
- * Local, not pushes: the reminder needs the answering parent's own clock for its quiet hours, and
- * the proposer's phone knows both of its times from the clock it wrote. Each is worded here, in
- * this phone's language, and names the other parent by name — never by role — or "Your co-parent"
- * when no name can be read in time.
+ * Local, not a push: the reminder needs the answering parent's own clock for its quiet hours. It is
+ * worded here, in this phone's language, and names the other parent by name — never by role — or
+ * "Your co-parent" when no name can be read in time.
  *
  * They post on the schedule channel, so a parent who muted money still hears about a handover, and
  * a tap opens the Requests inbox in the clock's family, like the request's own push (CLAUDE.md
@@ -65,32 +64,6 @@ class RequestNotices(
             words,
             words.getString(R.string.request_notice_reminder_title),
             words.getString(R.string.request_notice_reminder_body, name, until)
-        )
-    }
-
-    /** Tells the proposer that the answering parent did not answer by the deadline. */
-    override suspend fun deadlinePassed(clock: RequestDeadline) {
-        val words = context.inAppLanguage()
-        val name = nameOf(clock.responderUid, words)
-        post(
-            clock,
-            STEP_DEADLINE,
-            words,
-            words.getString(R.string.request_notice_deadline_title, name),
-            words.getString(R.string.request_notice_deadline_body)
-        )
-    }
-
-    /** Tells the proposer that the request is closed with no answer. */
-    override suspend fun noAnswer(clock: RequestDeadline) {
-        val words = context.inAppLanguage()
-        val name = nameOf(clock.responderUid, words)
-        post(
-            clock,
-            STEP_NO_ANSWER,
-            words,
-            words.getString(R.string.request_notice_no_answer_title, name),
-            words.getString(R.string.request_notice_no_answer_body)
         )
     }
 
@@ -161,7 +134,5 @@ class RequestNotices(
         const val NAME_WAIT_MILLIS = 3_000L
 
         const val STEP_REMINDER = "reminder"
-        const val STEP_DEADLINE = "deadline"
-        const val STEP_NO_ANSWER = "no_answer"
     }
 }

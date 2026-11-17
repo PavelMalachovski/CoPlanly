@@ -97,8 +97,8 @@ invocation is yours.
 | **MON-20** | **Built** (read-only card in custody settings, pure calculator); left: a look on a phone | P2 | — |
 | **MON-21** | **Built** (a proposal from an agreed plan answer, citing it; rules and rules tests); left: the rules deploy and a look on two phones — see the 👁 table | P2 | — |
 | **MON-22** | **Built** (schema 41, PR #101): a local-only journal and an opt-in export section; left: the device check (DEVICE-CHECKLIST §6) | P2 | — |
-| **MON-24** | The iPhone app: one Kotlin codebase (Compose Multiplatform), iOS-adapted on the iPhone, full parity. **Phases 1 and 2 built** (the domain in `:shared`; the data layer in `:shared-data`, the UI in `:shared-ui` and a thin Android shell; wire and stored bytes unchanged; on one branch, merged after the Android release). **Phase 3's part A built and CI-proven** (the Xcode project, the native shell, sign-in by e-mail and Google, the foreground sync, the write gate), awaiting the owner's check on their Mac. **Phase 3's part B built** (every destination under a system bar, forms as sheets, inner back steps, `coplanly://` links, account deletion on the iPhone, the iPhone tour), its branch-wide CI run and the owner's check pending. **Phase 3's part C built** (the system's controls behind `LocalNativeControls`, Calendar and Home led by the redesign's header, photos, files, the camera, sharing, payment codes, receipt reading and the export on the iPhone), its branch-wide CI run and the owner's check pending. **Phase 3's part D built** (the theme: SF Pro with the Onest wordmark, SF Symbols through `AppIcon`, the app's theme choice and tint in the window, Increase Contrast as the medium scheme), its branch-wide CI run and the owner's check pending. **Phase 4's part A built** (accounts: Sign in with Apple on both platforms behind a flag, Sign-in methods in Settings, Apple's tokens revoked on the server, Google Calendar on the iPhone), its branch-wide CI run, the owner's console steps and the device check pending; parts B–E of phase 4 remain. Design: `docs/superpowers/specs/2026-10-27-iphone-app-design.md` | P1 | L |
-| **MON-25** | Request clocks' on-time steps (deadline notice, end) move to a scheduled Cloud Function, for both platforms; needed by MON-24 before an iPhone build reaches a user (planned before phase 2, which went ahead without it by owner decision, 1 November 2026). Needs its own design pass | P1 | L |
+| **MON-24** | The iPhone app: one Kotlin codebase (Compose Multiplatform), iOS-adapted on the iPhone, full parity. **Phases 1 and 2 built** (the domain in `:shared`; the data layer in `:shared-data`, the UI in `:shared-ui` and a thin Android shell; wire and stored bytes unchanged; on one branch, merged after the Android release). **Phase 3's part A built and CI-proven** (the Xcode project, the native shell, sign-in by e-mail and Google, the foreground sync, the write gate), awaiting the owner's check on their Mac. **Phase 3's part B built** (every destination under a system bar, forms as sheets, inner back steps, `coplanly://` links, account deletion on the iPhone, the iPhone tour), its branch-wide CI run and the owner's check pending. **Phase 3's part C built** (the system's controls behind `LocalNativeControls`, Calendar and Home led by the redesign's header, photos, files, the camera, sharing, payment codes, receipt reading and the export on the iPhone), its branch-wide CI run and the owner's check pending. **Phase 3's part D built** (the theme: SF Pro with the Onest wordmark, SF Symbols through `AppIcon`, the app's theme choice and tint in the window, Increase Contrast as the medium scheme), its branch-wide CI run and the owner's check pending. **Phase 4's part A built** (accounts: Sign in with Apple on both platforms behind a flag, Sign-in methods in Settings, Apple's tokens revoked on the server, Google Calendar on the iPhone), its branch-wide CI run, the owner's console steps and the device check pending. **Phase 4's part B built** (MON-25: request clocks' deadline notice and end on the server), not deployed; parts C–E of phase 4 remain. Design: `docs/superpowers/specs/2026-10-27-iphone-app-design.md` | P1 | L |
+| **MON-25** | Request clocks' on-time steps (deadline notice, end) move to a scheduled Cloud Function, for both platforms; needed by MON-24 before an iPhone build reaches a user. **Built** (November 2026, iPhone phase 4 part B), not deployed: functions and rules, then `backfillRequestClockSchedule`, then the clients | P1 | L |
 | **REL-4 (drafting)** | Done as far as the code can answer: every placeholder left is a fact only the owner has, listed at the top of each document. The deletion page and the privacy link in the app are written | P0 | S |
 | **L-4 (photos)** | **Built** (family-keyed Storage paths, no download URLs, pre-pairing photos moved by the server, legacy purge callable; rules, functions, unit and e2e tests); left: `firebase deploy --only storage`, the functions deploy, `purgeLegacyPhotoPaths` once, and DEVICE-CHECKLIST §3.10 on two phones | P0 | S |
 
@@ -2798,7 +2798,7 @@ notes list each file):
   wins).
 - Built before the Android release and before MON-25, on one branch (above). So the request
   clocks' on-time steps moved into `commonMain`, their WorkManager scheduler staying in the app;
-  MON-25 still has to move them to the server (spec §9.2).
+  MON-25 has since moved them to the server (phase 4 part B, November 2026; spec §9.2).
 - Task 13 (AGP 9 and Kotlin 2.4) joined the plan, because phase 3 needs Kotlin 2.4.
 
 **Carried to phase 3** (nothing here changes what an Android parent sees):
@@ -2835,7 +2835,8 @@ notes list each file):
   ~~`NoPickedFiles`, `NoRecordPhotoStorage`~~ (part C's Task 11: `IosPickedFiles`,
   `IosRecordPhotoStorage`), ~~`NoReceiptText`, `NoRecordFiles`~~ (Task 12: `VisionReceiptText`,
   `IosRecordFileWriter`),
-  `NoEventReminders`, `NoRequestClockJobs`, `NoRequestClockNotices`, `NoSchoolImportJob`,
+  `NoEventReminders`, `NoRequestClockJobs`, `NoRequestClockNotices` (the answering parent's reminders
+  alone since MON-25 put the deadline notice and the end on the server), `NoSchoolImportJob`,
   `NoSupportReminderJob` and ~~`NoExportVerifyAddress`~~ (Task 12: `InfoPlistExportVerifyAddress`). In
   `:shared-ui`: `NoSpeechDictation`, `NoAiAssist` with `AiAssistAvailability(false)`,
   and `NoInviteQrCodes` (`di/koin/IosUiUnavailable.kt`), and in
@@ -2920,7 +2921,8 @@ resolve higher.
    entitlements), `IosDatabaseTest` on a real iPhone and the device checks of the toolchain list below.
 4. **Before any iPhone build reaches a user:** the privacy documents describe the iPhone's storage
    (toolchain, below), and MON-25 has moved the request clocks' on-time steps to the server (spec
-   §9.2), since the iPhone schedules none of them.
+   §9.2), since the iPhone schedules none of them. **Built** in phase 4 part B (November 2026);
+   it counts once deployed.
 5. **Phase 3's own first step is the spike of spec §5.2** (native or Compose navigation bars inside
    a tab), then the shell, the adaptive controls and the theme (spec §6).
 
@@ -3196,6 +3198,14 @@ fifth row, approved 16 November 2026). CLAUDE.md item 51 holds the rules. What i
 Still owed from part A, beyond the stand-ins listed above: ~~in-app account deletion on the iPhone
 before the App Store~~ (done in part B's Task 11, `IosAccountDeletion`), and the minor findings the
 task reviews deferred to the final review of part A.
+
+**Phase 4, part B — request clocks on the server: built, not deployed** (November 2026; MON-25, spec
+`docs/superpowers/specs/2026-11-17-iphone-phase-4b-server-clocks-design.md`, plan
+`docs/superpowers/plans/2026-11-17-iphone-phase-4b-server-clocks.md`). A request's deadline notice
+and its "No answer" end run in the scheduled `sweepRequestClocks` for both platforms, so the iPhone
+needs no job at a set time for them; MON-25's entry says what was built and the deploy order. The
+stand-ins `NoRequestClockJobs` and `NoRequestClockNotices` now stand for the answering parent's
+reminders alone, and the server's two pushes reach an iPhone once it registers a push token.
 
 **Phase 1's stay list** — the domain files still under `app/src/main/java/com/coparently/app/domain/`,
 each with what keeps it there. Phase 2 moves them with Hilt's replacement and the data layer, or
@@ -3824,19 +3834,52 @@ the Kotlin 2.4 step above. The spike used the app's toolchain: Kotlin 2.3.21, AG
 3. Merge after the Android release and its first feedback round (spec §2), and only once step 2
    is green.
 
-### MON-25 · **PLANNED** · P1 · L · Request clocks decided on the server
+### MON-25 · **BUILT** · P1 · L · Request clocks decided on the server
 
-**Where:** ☁️ cloud (functions, rules, client), 👁 two phones.
+**Where:** ☁️ **Built** (November 2026, iPhone phase 4 part B; spec
+`docs/superpowers/specs/2026-11-17-iphone-phase-4b-server-clocks-design.md`, plan
+`docs/superpowers/plans/2026-11-17-iphone-phase-4b-server-clocks.md`), not deployed; 👁 two phones
+for the pushes as drawn (`docs/DEVICE-CHECKLIST.md` §5.10).
 
 **Answers:** iOS does not run background work at a given time, so a request's deadline notice and
-its "No answer" end (CLAUDE.md item 42) cannot stay on the proposer's phone once there is an
+its "No answer" end (CLAUDE.md item 42) could not stay on the proposer's phone once there is an
 iPhone. Owner decision of 27 October 2026: a scheduled Cloud Function decides them for both
-platforms. Needs its own design pass first: the clock document's server-only fields, the rules'
-update shapes, the proposal withdrawal at the end, the silent chat cards, and the DPIA (R22).
-MON-24's phase 2 was built before it (owner, 1 November 2026): the clock's steps
-(`RequestClockSteps`, `RequestClockKeeper`) are in `:shared-data`'s `commonMain`, their WorkManager
-jobs and notices still in the Android app, and the iPhone schedules none of them yet. This item
-moves the deadline notice and the end to the server and removes them from both phones.
+platforms; of 17 November 2026: the proposer is told by a push from the server, and the check runs
+every five minutes.
+
+**Built.**
+- **Server.** `functions/request-clocks.js` ports `RequestClock`'s arithmetic (a shared fixture,
+  `functions/test/fixtures/request-clock-cases.json`, is read by `RequestClockFixtureTest` too);
+  `functions/request-clock-steps.js` ports the deadline and end steps, one transaction per step:
+  the closure, the `REQUEST_UNANSWERED` card, the push and a custody or split proposal's
+  withdrawal, in the clock's own family, deciding on the record read in the same transaction. In
+  `functions/index.js`: `onRequestClockWritten` keeps `serverNextStepAt`, `sweepRequestClocks`
+  (every five minutes, UTC) steps what is due, `backfillRequestClockSchedule` (operator-only)
+  schedules the clocks open at deploy, and `sweepRequestClocksOnEmulator` runs a sweep for the
+  two-parent tests. Four server-only fields: `serverNextStepAt`, `serverToldDeadlineAt`,
+  `serverToldNoAnswerAt`, `serverSettledAt` (no client write may carry one,
+  `request-deadlines.test.js`).
+- **Pushes.** `request_deadline_passed` and `request_no_answer`, server-only, to the proposer
+  alone, carrying `familyId` and the answering parent's first name, worded on the phone and opening
+  the Requests inbox on the schedule channel. A proposer with pushes off gets neither.
+- **Phones.** `RequestClockScheduler` keeps `scheduleReminder` and `cancelAll`,
+  `RequestClockNotices` keeps `remind`; the steps' deadline and end, the phone's closure and
+  withdrawal and the proposer's two local notices (and their strings) are gone. A deadline or end
+  job an older build left queued finishes without acting.
+- **Tests.** `functions/test/request-clocks.test.js`, `request-clock-steps.test.js` and
+  `request-clock-sweep.test.js`; `TwoParentServerClocksTest` (e2e) runs the sweep on the emulators
+  for a change request, a day swap, a custody and a split proposal, and the two pushes.
+
+**Deploy, in this order** (spec §5.7; `functions/README.md`, "Request clocks on the server"):
+1. `firebase deploy --only functions,firestore:rules`.
+2. Invoke `backfillRequestClockSchedule` once as an operator (`BACKFILL_ADMIN_UIDS`); safe to run
+   again.
+3. Release the client builds that leave the steps to the server. Until then an older Android build
+   runs its own steps beside the server: one closure, but possibly a second "No answer" card on a
+   slow network and a proposer told twice (spec §5.5, accepted for the transition).
+
+**Left:** the device check §5.10; on the iPhone the pushes arrive once phase 4 registers its push
+token, and the answering parent's reminders are still `NoRequestClockJobs`.
 
 ## 8. [FAM] More than one child, more than one pet
 

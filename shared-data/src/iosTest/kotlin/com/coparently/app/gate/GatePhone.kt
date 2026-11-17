@@ -50,7 +50,6 @@ import com.coparently.app.data.repository.UserRepositoryImpl
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.di.koin.FUNCTIONS_REGION
-import com.coparently.app.di.koin.NoRequestClockJobs
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.model.PairingState
 import dev.gitlive.firebase.Firebase
@@ -78,8 +77,7 @@ import platform.Foundation.NSUUID
  * production data layer wired over both as the iPhone's `platformDataModule` wires it — GitLive's
  * Firestore, Functions and Auth ([IosFirebaseAuth]), Cloud Storage ([IosStorageBucket], part C), a
  * record's photos ([IosRecordPhotoStorage]) and the pickers' copies ([IosPickedFiles], Task 11), the
- * push queue ([FirestorePushQueue]) and the stand-in for what the iPhone does not have yet
- * (`NoRequestClockJobs`). Every class that writes to Firestore or Storage is the
+ * push queue ([FirestorePushQueue]). Every class that writes to Firestore or Storage is the
  * production class.
  *
  * Built by hand, as the Android e2e job's `EmulatorParent` is, because one process has one Koin
@@ -244,11 +242,10 @@ internal class GatePhone private constructor(
         firestorePetDataSource = FirestorePetDataSource(documents)
     )
 
-    /** Request clocks, their jobs the iPhone's stand-in. */
+    /** Request clocks. */
     val requestDeadlineRepository = RequestDeadlineRepositoryImpl(
         dataSource = FirestoreRequestDeadlineDataSource(documents),
-        authService = signedIn,
-        scheduler = NoRequestClockJobs
+        authService = signedIn
     )
 
     /** Change requests. */

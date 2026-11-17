@@ -105,8 +105,8 @@ data class FamilySplit(
  * **A proposal is a request** (October 2026, owner decision), like a custody proposal: it may carry
  * a deadline, whose clock starts once the proposal is written ([submitRatio]), and each step — the
  * proposal, the answer, a withdrawal — is a card in the family's thread as well as a push, so the
- * proposer sees it delivered and read, and the export keeps it. At "No answer" the clock's end
- * withdraws it ([withdrawUnanswered]).
+ * proposer sees it delivered and read, and the export keeps it. At "No answer" the server's end
+ * of the clock withdraws it (MON-25, `functions/request-clock-steps.js`).
  *
  * @param activityAnnouncer Posts the chat cards, each to the thread of the family it is about.
  * @param fcmService Queues the pushes, a type and nothing else (SEC-3).
@@ -462,30 +462,6 @@ class FamilySettingsRepository(
         )
     }
 
-    /**
-     * Withdraws this parent's expense split proposal in [familyId] when it is still the one made at
-     * [proposedAtMillis]: the end of a proposal nobody answered (phase 3a, spec §4.4, applied to the
-     * split in October 2026).
-     *
-     * A step of a clock acts on the clock's family, never the one on screen, so [familyId] is read
-     * against this parent's families, once: it must still be a family they are in. The read and the
-     * write are one transaction, so a proposal answered, withdrawn or replaced a moment before is
-     * left as it is — an answer racing the end wins. Nothing is announced here: the end posts its
-     * own "No answer" card, never [ActivityKind.SPLIT_WITHDRAWN].
-     *
-     * @return Whether the proposal was withdrawn: false when the family has ended, when the proposal
-     *   is no longer this one, and when the document could not be written, for the caller to retry.
-     */
-    suspend fun withdrawUnanswered(familyId: String, proposedAtMillis: Long): Boolean {
-        val pair = families.current().pairIn(familyId) ?: return false
-        val written = documents.transact(pair.documentId) { current ->
-            withdrawnIfUnanswered(current, proposedAtMillis, pair.myUid)
-        } ?: return false
-        // As every write of the agreement does; a withdrawal leaves the agreed ratio where it was.
-        cacheAgreedRatio(pair.documentId, written.ratio)
-        return true
-    }
-
     private suspend fun decide(familyId: String, accept: Boolean): Result<Unit> {
         val pair = families.current().pairIn(familyId) ?: return noCoParent()
         val existing = documents.read(pair.documentId)
@@ -541,19 +517,6 @@ private class SettingsDocuments(private val dataSource: FirestoreFamilySettingsD
     } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
         logger.w(TAG, "The family settings write was refused", e)
         Result.failure(e)
-    }
-
-    /**
-     * [FirestoreFamilySettingsDataSource.transact], with a refused or failed transaction — offline
-     * among them — read as nothing written.
-     */
-    suspend fun transact(documentId: String, transform: (FamilySettings?) -> FamilySettings?): FamilySettings? = try {
-        dataSource.transact(documentId, transform)
-    } catch (e: CancellationException) {
-        throw e
-    } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-        logger.w(TAG, "The family settings transaction did not go through", e)
-        null
     }
 
     private companion object {
@@ -654,17 +617,6 @@ private fun splitClock(pair: CustodyPair, proposal: SplitRatioProposal, answerBy
         answerByMillis = deadline,
         capMillis = null
     )
-}
-
-/**
- * [current] with [myUid]'s proposal withdrawn when it is still the one made at [proposedAtMillis], or
- * null — nothing to write — when it is not: answered, withdrawn or replaced meanwhile, or the
- * co-parent's.
- */
-private fun withdrawnIfUnanswered(current: FamilySettings?, proposedAtMillis: Long, myUid: String): FamilySettings? {
-    val proposal = current?.proposal ?: return null
-    if (proposal.proposedAtMillis != proposedAtMillis || proposal.proposedBy != myUid) return null
-    return SplitRatioTransition.withdraw(current, myUid).getOrNull()
 }
 
 /** The other parent of [this] pair, the parent a request made here waits on; null for a malformed pair. */

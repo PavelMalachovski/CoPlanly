@@ -51,27 +51,6 @@ class FirestoreFamilySettingsDataSource(
         firestore.get(DocumentPath(COLLECTION, documentId), source).data?.toSettings()
 
     /**
-     * Reads the pair's settings and writes [transform]'s answer back, in one transaction, so a
-     * proposal answered, withdrawn or replaced a moment before is never overwritten by a write built
-     * on an older copy. Firestore runs [transform] again on the newer document when the one it read
-     * changes before the write, so [transform] must be pure. It needs the server, so it fails
-     * offline; the caller tries again later.
-     *
-     * @param documentId The pair's id.
-     * @param transform The document as it stands, or null when there is none or it cannot describe
-     *   an agreement, to the document to write — a whole document, as [setSettings] writes it — or
-     *   null to write nothing.
-     * @return The document as written, or null when [transform] answered null and nothing was written.
-     */
-    suspend fun transact(documentId: String, transform: (FamilySettings?) -> FamilySettings?): FamilySettings? {
-        val document = DocumentPath(COLLECTION, documentId)
-        return firestore.transaction {
-            val current = get(document).data?.toSettings()
-            transform(current)?.also { next -> set(document, next.toDocument()) }
-        }
-    }
-
-    /**
      * Writes the whole document.
      *
      * A whole-document `set()` rather than a merge, matching the custody source: a key omitted

@@ -62,8 +62,6 @@ internal object NoEventReminders : ReminderScheduler {
 /** No background jobs yet: a request clock's steps are not scheduled. */
 internal object NoRequestClockJobs : RequestClockScheduler {
     override fun scheduleReminder(clockId: String, atMillis: Long) = Unit
-    override fun scheduleDeadline(clockId: String, atMillis: Long) = Unit
-    override fun scheduleEnd(clockId: String, atMillis: Long) = Unit
     override fun cancelAll() = Unit
 }
 
@@ -91,8 +89,6 @@ internal object NoSupportReminderJob : SupportReminderScheduler {
 /** No notifications yet: a request clock's notice is not shown, so a reminder is never counted. */
 internal object NoRequestClockNotices : RequestClockNotices {
     override suspend fun remind(clock: RequestDeadline): Boolean = false
-    override suspend fun deadlinePassed(clock: RequestDeadline) = Unit
-    override suspend fun noAnswer(clock: RequestDeadline) = Unit
 }
 
 private const val UNAVAILABLE = "Not available in this iPhone build yet"

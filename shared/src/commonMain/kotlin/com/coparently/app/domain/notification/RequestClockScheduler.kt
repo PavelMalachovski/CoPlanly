@@ -1,8 +1,9 @@
 package com.coparently.app.domain.notification
 
 /**
- * Schedules the steps of a request's clock to run when their time comes (phase 3a, spec §5.3):
- * a reminder to the answering parent, the deadline and the end on the proposer's phone.
+ * Schedules the steps of a request's clock that run on a phone when their time comes (phase 3a,
+ * spec §5.3): the reminders to the answering parent. The deadline notice and the end run on the
+ * server since MON-25 (`functions/request-clock-steps.js`), so no phone schedules them.
  *
  * Implemented in the data layer (WorkManager); the domain layer only depends on this abstraction,
  * as it does for [ReminderScheduler]. A step is a job that carries the clock's id, never the
@@ -18,15 +19,6 @@ interface RequestClockScheduler {
 
     /** Schedules a reminder planned for [atMillis]. One job per planned time. */
     fun scheduleReminder(clockId: String, atMillis: Long)
-
-    /** Schedules the step that runs when the deadline [atMillis] passes. One job per clock. */
-    fun scheduleDeadline(clockId: String, atMillis: Long)
-
-    /**
-     * Schedules the step that closes the request at [atMillis]. One job per time: the end moves
-     * when a last chance is given, and the new end is another job beside the old one.
-     */
-    fun scheduleEnd(clockId: String, atMillis: Long)
 
     /**
      * Cancels every pending step on this device — for when the account's local data is wiped or its

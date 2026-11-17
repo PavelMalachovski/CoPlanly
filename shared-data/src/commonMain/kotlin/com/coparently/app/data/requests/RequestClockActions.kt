@@ -2,7 +2,6 @@ package com.coparently.app.data.requests
 
 import com.coparently.app.domain.changerequests.RequestClock
 import com.coparently.app.domain.changerequests.RequestDeadline
-import com.coparently.app.domain.notification.RequestClockScheduler
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
@@ -21,14 +20,14 @@ import kotlinx.coroutines.withContext
  * - **A last chance** is given only by the proposer, only while the button is offered
  *   ([RequestClock.lastChanceWindowMillis]), and only while the server says the request still waits
  *   — this phone's copy may not yet hold the co-parent's answer. A server out of reach gives
- *   nothing, and nothing is written. Once the clock has it, the push, the card and the end follow
- *   even when the screen that asked has gone.
+ *   nothing, and nothing is written. Once the clock has it, the push and the card follow even when
+ *   the screen that asked has gone. The moved end is the server's to run (MON-25): it reschedules
+ *   the clock's next step from the clock it is handed, so this phone schedules nothing.
  */
 class RequestClockActions(
     private val repository: RequestDeadlineRepository,
     private val records: RequestRecords,
     private val telling: RequestTelling,
-    private val scheduler: RequestClockScheduler,
     private val time: RequestTime
 ) {
 
@@ -48,19 +47,16 @@ class RequestClockActions(
 
     /**
      * Gives the answering parent one last chance on the request clock [clockId] times: the clock,
-     * then the push and the "Last chance" card, then the job that ends it, in that order.
+     * then the push and the "Last chance" card, in that order.
      *
      * @return Whether it was given: false when the signed-in parent is not the proposer, the button
      *   is not offered now, the request no longer waits or the server cannot say, and when the
-     *   clock's write was refused — then nobody is told and nothing is scheduled.
+     *   clock's write was refused — then nobody is told.
      */
     suspend fun giveLastChance(clockId: String): Boolean {
         val grant = grantFor(clockId) ?: return false
         if (!repository.giveLastChance(grant.clock, grant.untilMillis)) return false
-        withContext(NonCancellable) {
-            telling.lastChance(grant.clock, grant.card, grant.untilMillis)
-            scheduler.scheduleEnd(grant.clock.id, grant.untilMillis)
-        }
+        withContext(NonCancellable) { telling.lastChance(grant.clock, grant.card, grant.untilMillis) }
         return true
     }
 

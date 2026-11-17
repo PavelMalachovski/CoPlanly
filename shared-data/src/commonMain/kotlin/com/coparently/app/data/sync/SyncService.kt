@@ -156,9 +156,9 @@ class SyncService(
             messageRepository.flushOutbox()
             changeRequestRepository.flushOutbox()
             // The request clocks (phase 3a), after the change requests went up: this is how a
-            // phone that was not running delivers a clock and arms its reminders, and how the
-            // proposer's deadline and end come back after a job was lost. Given every co-parent,
-            // not the family on screen (spec §5.6). A failure never fails the sync.
+            // phone that was not running delivers a clock and arms its reminders again after a job
+            // was lost; the proposer's deadline and end are the server's (MON-25). Given every
+            // co-parent, not the family on screen (spec §5.6). A failure never fails the sync.
             runCatching {
                 val me = userDao.getUserById(currentUid)
                 requestClockKeeper.sweep(currentUid, coParentsOf(currentUid, me))

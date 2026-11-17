@@ -554,32 +554,6 @@ constructor(
     }
 
     /**
-     * Withdraws this parent's proposal in [familyId] when it is still the one made at [proposedAt].
-     *
-     * The end of a proposal nobody answered (phase 3a, spec §4.4). A step of a clock acts on the
-     * clock's family, never the one on screen (spec §5.6), so [familyId] is read against this
-     * parent's families, once, and never through [currentPair]: it must still be a family they are
-     * in. The read and the write are one transaction, so a proposal answered, withdrawn or replaced
-     * a moment before is left as it is — an answer racing the end wins. Nothing is announced here;
-     * the end posts its own card. Once the server has the withdrawal, Room is mirrored even if the
-     * caller is cancelled, as [decideProposal]'s tail is.
-     *
-     * @return Whether the proposal was withdrawn: false when the family has ended, when the proposal
-     *   is no longer this one, and when the document could not be written, for the caller to retry.
-     */
-    suspend fun withdrawUnanswered(familyId: String, proposedAt: String): Boolean {
-        val pair = currentFamilies().pairIn(familyId) ?: return false
-        val written = guarded("unanswered withdrawal") {
-            firestoreCustodyDataSource.transact(pair.documentId, pair.participants) { current ->
-                withdrawnIfUnanswered(current, proposedAt, pair.myUid)
-            }
-        } ?: return false
-        // The server has the withdrawal: the mirror runs to its end even if the job is stopped now.
-        withContext(NonCancellable) { mirrorIntoRoom(pair.documentId, written) }
-        return true
-    }
-
-    /**
      * Reads the shared document, applies [transform], writes it back, mirrors the result into Room,
      * and — when the write recorded a decision — tells the proposer ([decisionCard]).
      *
@@ -1578,16 +1552,6 @@ private fun proposalClock(
         answerByMillis = deadline,
         capMillis = cap
     )
-}
-
-/**
- * [current] with [myUid]'s proposal withdrawn when it is still the one made at [proposedAt], or null —
- * nothing to write — when it is not: answered, withdrawn or replaced meanwhile, or the co-parent's.
- */
-private fun withdrawnIfUnanswered(current: SharedCustody?, proposedAt: String, myUid: String): SharedCustody? {
-    val proposal = current?.proposal ?: return null
-    if (proposal.proposedAt != proposedAt || proposal.proposedBy != myUid) return null
-    return CustodyProposalTransition.withdraw(current, myUid).getOrNull()
 }
 
 /**

@@ -501,6 +501,53 @@ needs the authorization code redeemed with a client secret signed by the Apple k
    Until then only debug builds offer Apple (design item 8: no button that fails). Run device
    check §3.42 first.
 
+## Request clocks on the server (MON-25, iPhone phase 4 part B)
+
+A request sent with a deadline has a clock, `request_deadlines/{id}` (CLAUDE.md item 42). Its
+deadline notice and its "No answer" end ran on the proposer's phone until November 2026; an iPhone
+cannot run work at a set time, so they run here for both platforms. `request-clocks.js` is the
+arithmetic (a port of the Kotlin `RequestClock`, held to it by the shared fixture
+`test/fixtures/request-clock-cases.json`), `request-clock-steps.js` the steps.
+
+- **`onRequestClockWritten`** (Firestore trigger) keeps the clock's `serverNextStepAt` after every
+  phone write: the deadline, then the end once the deadline was told, a last chance's end, or a
+  phone-closed proposal's closing (to check its withdrawal); nothing once the clock is settled. It
+  ignores a write of only the server's fields, so it never fires on its own writes.
+- **`sweepRequestClocks`** (every 5 minutes, UTC; 300 s timeout) steps each clock whose
+  `serverNextStepAt` is due, oldest first, a page of 100 at a time, for at most four minutes. One
+  step is one transaction (`stepClock`): it re-reads the clock and the request's record and, while
+  the record still waits, either pushes `request_deadline_passed` to the proposer (when a last chance
+  can still be given) or ends the clock — `outcome: "no_answer"`, `closedAt`, the
+  `REQUEST_UNANSWERED` card in the family's thread (`messages/srv_unanswered_<clockId>`), the
+  `request_no_answer` push (`notification_queue/srv_<type>_<clockId>`) and, for a custody or split
+  proposal still the clock's, its withdrawal. An answered or missing record settles the clock; a
+  record it cannot read leaves the clock due for the next run. The log line says how many were
+  stepped and how many were left due.
+- **`backfillRequestClockSchedule`** (operator-only, `BACKFILL_ADMIN_UIDS`) fills
+  `serverNextStepAt` for the clocks open at deploy, which no write has given the trigger a chance to
+  schedule, and for a closed proposal whose withdrawal is still owed. Safe to run again; it returns
+  `{scanned, scheduled, unchanged, skipped, failed}`.
+- **`sweepRequestClocksOnEmulator`** exists only on the emulators, for the two-parent tests.
+
+The four fields `serverNextStepAt`, `serverToldDeadlineAt`, `serverToldNoAnswerAt` and
+`serverSettledAt` are written here alone; `firestore.rules` refuses them from every client. The two
+pushes are server-only types carrying `familyId` and the answering parent's first name; a proposer
+whose push switch is off has no token and gets neither.
+
+### Deploying it (order matters)
+
+1. `firebase deploy --only functions,firestore:rules`.
+2. Invoke `backfillRequestClockSchedule` once, as an operator, with no arguments. Until it has run, a
+   clock written before the deploy is never stepped (nothing triggered its schedule).
+   **Expect a burst afterwards.** The first sweeps after the backfill close, in one go, every clock
+   already past its end whose proposer's phone never ran the end (iPhone test builds, uninstalled or
+   offline Android phones). Each gets a "No answer" card dated then and a `request_no_answer` push,
+   possibly for a request days old. That is intended; it is not a fault to chase.
+3. Release the client builds that leave the deadline and end to the server. Until every phone has
+   updated, an older Android build still runs its own steps beside the server: the clock is closed
+   once, but on a slow network a second "No answer" card may be posted and the proposer may be told
+   twice (spec §5.5, accepted for the transition).
+
 ## Region: europe-west3 (September 2026)
 
 Every function is declared through `regional` (`functions.region(FUNCTIONS_REGION)` at the top of
@@ -775,6 +822,8 @@ Seven daily jobs, spread so they never contend (all UTC):
 | 05:00 | `sweepLapsedCalendarFriends` | `calendar_friends/{uid}` grants whose `expiresAtMillis` has passed |
 | 06:00 | `sweepLapsedProfessionalGrants` | `professional_grants/{familyId}__{proUid}` grants whose `expiresAtMillis` has passed (MON-18) |
 | 07:00 | `sweepRetentionLimits` | a departed parent's retained conversation once its 30 days are up, files included (L-5); export receipts 10 years after registration and reservations never registered after 7 days; invitations never accepted, 30 days after expiry or 90 after creation when undated |
+
+Beside them, `sweepRequestClocks` runs every five minutes (above, "Request clocks on the server").
 
 The grant sweeps enforce nothing: the rules already refuse an expired guest or friend from the
 instant the grant ends, and an idle feed link is refused only once it is deleted.

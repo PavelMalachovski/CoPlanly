@@ -9,10 +9,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.PatternSubmission
-import com.coparently.app.data.requests.RequestClockSteps
-import com.coparently.app.data.requests.StepResult
 import com.coparently.app.domain.changerequests.AnswerByPick
-import com.coparently.app.domain.changerequests.RequestClockOutcome
 import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.changerequests.RequestKind
 import com.coparently.app.domain.changerequests.RequestStart
@@ -44,13 +41,12 @@ import java.util.UUID
 /**
  * Day swaps between the two parents, with a deadline — Zuzana's "a month without an answer".
  * Both screens: the one that proposes (Zuzana) and the one that answers (Igor, `…AsIgor`); then
- * the request nobody answers, from its deadline to "No answer" in History on both phones, and the
- * one last chance the proposer may give.
+ * the one last chance the proposer may give once the deadline has passed. The end of a request
+ * nobody answers is the server's since MON-25, so no phone runs it here.
  *
  * A deadline on screen is never shorter than three days, so the expiry runs on a short clock
- * started through the data layer, and the clock's steps are run directly, as WorkManager would run
- * them (`TwoParentRequestDeadlinesTest` does the same). No step waits for a reminder: reminders are
- * kept out of the night on the runner's clock, and the run may be at night.
+ * started through the data layer (`TwoParentRequestDeadlinesTest` does the same). No step waits for
+ * a reminder: reminders are kept out of the night on the runner's clock, and the run may be at night.
  */
 @UsesFakeFirebase
 @RunWith(AndroidJUnit4::class)
@@ -59,8 +55,6 @@ class SwapScenarioTest : QaOnScreenTest() {
     val custodyRepository: CustodyModelRepository by lazy { koinRule.get() }
 
     val requestDeadlineRepository: RequestDeadlineRepository by lazy { koinRule.get() }
-
-    val requestClockSteps: RequestClockSteps by lazy { koinRule.get() }
 
     @Test
     fun answerOnScreenAsIgor() {
@@ -147,30 +141,6 @@ class SwapScenarioTest : QaOnScreenTest() {
             }
             openTab(BottomNavDestination.CALENDAR)
             viewMode(R.string.calendar_viewmode_month)
-        }
-    }
-
-    @Test
-    fun noAnswer() {
-        val day = LocalDate.now().plusDays(FIRST_OFFSET)
-        lateinit var clockId: String
-        report.step("offer_short_clock", "Zuzana offers a day; its deadline is a minute away", "The request waits on Igor") {
-            clockId = runBlocking { offerWithShortClock(day) }
-        }
-        report.step("deadline_passes", "The deadline passes with no answer", "Zuzana's Requests offer her one last chance") {
-            runBlocking { waitPast(checkNotNull(requestDeadlineRepository.get(clockId)).answerByMillis) }
-            openRequests()
-            waitFor("the last-chance button", lastChanceButton)
-        }
-        report.step("no_answer_history_proposer", "The request ends without an answer", "History says No answer on Zuzana's phone") {
-            runBlocking { awaitStep { requestClockSteps.end(clockId) } }
-            driver.back()
-            openRequests()
-            waitFor("No answer in History", hasText(string(R.string.request_clock_no_answer), substring = true))
-        }
-        report.step("no_answer_coparent", "What Igor's phone reads", "The request is closed as No answer for Igor too", independent = true) {
-            val clock = runBlocking { bob.requestDeadlineRepository.get(clockId) }
-            check(clock?.outcome == RequestClockOutcome.NO_ANSWER) { "Igor reads the request as ${clock?.outcome}" }
         }
     }
 
@@ -273,15 +243,6 @@ class SwapScenarioTest : QaOnScreenTest() {
     private suspend fun waitPast(millis: Long) {
         val wait = millis + PAST_MARGIN_MS - System.currentTimeMillis()
         if (wait > 0) delay(wait)
-    }
-
-    private suspend fun awaitStep(block: suspend () -> StepResult): StepResult = withTimeout(EmulatorParent.WAIT_MS) {
-        var result = block()
-        while (result == StepResult.RETRY) {
-            delay(POLL_MS)
-            result = block()
-        }
-        result
     }
 
     /** Home's swap pop-up for [date] offered by the co-parent: the day's chip, dated as `SwapSideGroup` dates it. */

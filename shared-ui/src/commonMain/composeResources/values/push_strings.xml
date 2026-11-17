@@ -117,4 +117,9 @@
     <string name="push_day_swap_asks_body">To %2$s: %1$s.</string>
     <string name="push_day_swap_both_title">%1$s proposes a day swap</string>
     <string name="push_day_swap_both_body">You: %1$s. %2$s: %3$s.</string>
+    <!-- The server's request clock (MON-25), to the proposer: %1$s = the parent who did not answer. -->
+    <string name="push_request_deadline_passed_title">%1$s didn\u0027t answer by the deadline</string>
+    <string name="push_request_deadline_passed_body">Nothing has changed in the calendar. You can give more time.</string>
+    <string name="push_request_no_answer_title">No answer from %1$s</string>
+    <string name="push_request_no_answer_body">The request is closed as “No answer”. Nothing has changed in the calendar.</string>
 </resources>

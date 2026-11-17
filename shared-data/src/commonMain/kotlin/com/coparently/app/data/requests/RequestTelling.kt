@@ -11,7 +11,8 @@ import com.coparently.app.domain.changerequests.RequestDeadline
 
 /**
  * What the proposer's phone tells the answering parent about a request's clock (phase 3a, spec
- * §4.4, §4.6, §5.4): the last-chance push and its card, and the "No answer" card.
+ * §4.4, §4.6, §5.4): the last-chance push and its card. The "No answer" card is the server's since
+ * MON-25, posted by the end it runs.
  *
  * **Always the clock's family** (spec §5.6). The push is addressed to the clock's responder and
  * carries the clock's `familyId`, and the card goes to the thread with that same parent — never the
@@ -42,14 +43,6 @@ class RequestTelling(
             )
         ).onFailure { logger.w(TAG, "The last-chance push was not queued", it) }
         announce(clock, card, ActivityKind.REQUEST_LAST_CHANCE, actor)
-    }
-
-    /**
-     * Posts the "No answer" card about [card] to the answering parent's thread. No push: nothing
-     * more is sent to a parent whose time has run out (`notifyOfChatMessage` skips the card too).
-     */
-    suspend fun unanswered(clock: RequestDeadline, card: CardSubject) {
-        announce(clock, card, ActivityKind.REQUEST_UNANSWERED, senderName())
     }
 
     private suspend fun announce(clock: RequestDeadline, card: CardSubject, kind: ActivityKind, actor: String) {

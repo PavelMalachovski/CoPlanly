@@ -6,6 +6,7 @@
 
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
+const util = require('util');
 // The sentinels and `Timestamp` come from the modular entry point, never through
 // `admin.firestore.FieldValue`. They are the same classes — `instanceof` against either holds, so
 // the tests are unaffected — but the Functions emulator wraps `firebase-admin` in a proxy that
@@ -14,7 +15,7 @@ const admin = require('firebase-admin');
 // therefore `undefined`, and `acceptPairingInvitation` died with "Cannot read properties of
 // undefined (reading 'arrayUnion')" — found the first time anything ran the callable end to end
 // (`tools/e2e/pairing-smoke.js`). Production never saw it, because production has no proxy.
-const {FieldValue, Timestamp} = require('firebase-admin/firestore');
+const {FieldValue, FieldPath, Timestamp} = require('firebase-admin/firestore');
 const exportReceipts = require('./export-receipts');
 const recordPhotos = require('./record-photos');
 const aiAssist = require('./ai-assist');
@@ -580,19 +581,8 @@ const PAIRING_PREVIEW_MAX_INSTANCES = 10;
 const pairingPreviewLimiter = exportReceipts.rateLimiter(
     PAIRING_PREVIEW_RATE_LIMIT, PAIRING_PREVIEW_WINDOW_MS);
 
-/**
- * The part of a profile name a preview shows: the first word, and nothing that looks like an
- * address. `users/{uid}.name` is what the person typed or what Google gave them; some accounts
- * carry an email there, and the preview must never be a way to read one.
- *
- * @param {*} name The stored name.
- * @return {string} The first name, or '' when there is none to show.
- */
-function previewFirstName(name) {
-  const first = String(name || '').trim().split(/\s+/)[0] || '';
-  if (first.includes('@')) return '';
-  return first.slice(0, 40);
-}
+// The rule lives in `first-name.js`, which `request-clock-steps.js` shares.
+const {previewFirstName} = require('./first-name');
 
 exports.previewFirstName = previewFirstName;
 
@@ -6400,3 +6390,280 @@ exports.aiAssist = regional
         throw err;
       }
     });
+
+// ---- Request clocks on the server (MON-25) -------------------------------------------------
+// The steps live in `request-clock-steps.js` and the arithmetic in `request-clocks.js`; this
+// section keeps the schedule (spec §5.1), sweeps it (§5.2) and fills it for the clocks open at
+// deploy (§5.6).
+
+const requestClocks = require('./request-clocks');
+const requestClockSteps = require('./request-clock-steps');
+
+/** The clocks' collection. */
+const REQUEST_CLOCKS = 'request_deadlines';
+
+/** The four fields only the server writes on a clock (spec §5.1). */
+const REQUEST_CLOCK_SERVER_FIELDS = new Set([
+  'serverNextStepAt', 'serverToldDeadlineAt', 'serverToldNoAnswerAt', 'serverSettledAt',
+]);
+
+/** How many due clocks the sweep reads per page. */
+const REQUEST_CLOCK_SWEEP_PAGE = 100;
+
+/**
+ * How long one sweep run may keep starting steps: four minutes of the function's five, so a run
+ * ends before the next one starts. What it leaves stays due for the next run.
+ */
+const REQUEST_CLOCK_SWEEP_BUDGET_MILLIS = 4 * 60 * 1000;
+
+/**
+ * Whether a write changed nothing but the server's four fields: the sweep's writes and the
+ * trigger's own. Values are compared deeply, so a Firestore `Timestamp` read twice is the same.
+ *
+ * @param {!Object} before the data before the write.
+ * @param {!Object} after the data after it.
+ * @return {boolean}
+ */
+function onlyServerFieldsChanged(before, after) {
+  const keys = new Set(Object.keys(before).concat(Object.keys(after)));
+  for (const key of keys) {
+    if (REQUEST_CLOCK_SERVER_FIELDS.has(key)) continue;
+    if (!util.isDeepStrictEqual(before[key], after[key])) return false;
+  }
+  return true;
+}
+
+/**
+ * Keeps a clock's `serverNextStepAt` (spec §5.1) after a write.
+ *
+ * - a deleted clock: nothing, `deleted`;
+ * - a write of only the server's fields (a step's, or this trigger's own): nothing, `ignored`, so
+ *   it never re-arms what a step settled and never fires itself;
+ * - a clock the server closed but has not settled (`serverToldNoAnswerAt` without
+ *   `serverSettledAt`): nothing, `ownedByStep` — the close kept the field due for its step to try
+ *   again, which [requestClocks.nextStepAt] would clear;
+ * - otherwise [requestClocks.nextStepAt] of the clock as it stands, written only when it differs
+ *   from the stored value (`scheduled`, `cleared` or `unchanged`).
+ *
+ * It decides from the clock re-read inside a transaction, not from the write's snapshot, so a step
+ * that committed between the write and this trigger is never undone.
+ *
+ * @param {!Object} db Firestore.
+ * @param {{clockId: string, before: ?Object, after: ?Object}} write the clock's id and its data
+ *   before and after the write (null where it did not exist).
+ * @return {!Promise<{action: string}>}
+ */
+async function onRequestClockWrittenImpl(db, write) {
+  if (!write.after) return {action: 'deleted'};
+  if (write.before && onlyServerFieldsChanged(write.before, write.after)) return {action: 'ignored'};
+  const ref = db.collection(REQUEST_CLOCKS).doc(write.clockId);
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return {action: 'deleted'};
+    const doc = snap.data() || {};
+    const has = (value) => value !== undefined && value !== null;
+    if (has(doc.serverToldNoAnswerAt) && !has(doc.serverSettledAt)) return {action: 'ownedByStep'};
+    const next = requestClocks.nextStepAt(doc);
+    const stored = has(doc.serverNextStepAt) ? doc.serverNextStepAt : null;
+    if (next === stored) return {action: 'unchanged'};
+    tx.update(ref, {serverNextStepAt: next === null ? FieldValue.delete() : next});
+    return {action: next === null ? 'cleared' : 'scheduled'};
+  });
+}
+
+exports.onRequestClockWrittenImpl = onRequestClockWrittenImpl;
+
+/**
+ * Keeps each request clock's `serverNextStepAt` as phones write the clock. See
+ * [onRequestClockWrittenImpl].
+ *
+ * Never throws: a schedule that could not be written is logged, and the next write of the clock,
+ * or the operator backfill, writes it again.
+ */
+exports.onRequestClockWritten = regional.firestore
+    .document(`${REQUEST_CLOCKS}/{id}`)
+    .onWrite(async (change, context) => {
+      const clockId = context.params.id;
+      try {
+        await onRequestClockWrittenImpl(admin.firestore(), {
+          clockId,
+          before: change.before.exists ? change.before.data() : null,
+          after: change.after.exists ? change.after.data() : null,
+        });
+      } catch (err) {
+        console.error(`onRequestClockWritten failed for ${clockId}`, err);
+      }
+      return null;
+    });
+
+/**
+ * Steps every clock due at [nowMillis] (spec §5.2): `serverNextStepAt <= nowMillis`, oldest first,
+ * a page at a time. Each step is its own transaction ([requestClockSteps.stepClock]), so two
+ * overlapping runs cannot both act on a clock, and a step that throws is logged and passed over.
+ *
+ * Pages resume after the last clock read, by the value it was read with, so a clock whose step
+ * left it due (a read failed) is not taken again in the same run. Once the time budget is spent no
+ * new step starts: what is left stays due for the next run.
+ *
+ * @param {!Object} db Firestore.
+ * @param {number} nowMillis the moment to sweep at.
+ * @param {{serverTimestamp: (function(): *|undefined), pageSize: (number|undefined),
+ *   budgetMillis: (number|undefined), elapsedMillis: (function(): number|undefined)}=} deps
+ *   the steps' timestamp sentinel, the page size, the time budget and the clock it is measured
+ *   on (`Date.now` by default).
+ * @return {!Promise<{stepped: number, left: number}>} how many clocks were stepped, and how many
+ *   this run read as due but did not reach (a lower bound on what is left).
+ */
+async function sweepRequestClocksImpl(db, nowMillis, deps) {
+  const opts = deps || {};
+  const pageSize = opts.pageSize || REQUEST_CLOCK_SWEEP_PAGE;
+  const budget = opts.budgetMillis !== undefined ? opts.budgetMillis : REQUEST_CLOCK_SWEEP_BUDGET_MILLIS;
+  const elapsed = opts.elapsedMillis || Date.now;
+  const started = elapsed();
+  let stepped = 0;
+  let last = null;
+  for (;;) {
+    let query = db.collection(REQUEST_CLOCKS)
+        .where('serverNextStepAt', '<=', nowMillis)
+        .orderBy('serverNextStepAt')
+        .limit(pageSize);
+    if (last) query = query.startAfter(last);
+    const page = await query.get();
+    for (let i = 0; i < page.docs.length; i++) {
+      if (elapsed() - started >= budget) return {stepped, left: page.docs.length - i};
+      const doc = page.docs[i];
+      try {
+        await requestClockSteps.stepClock(db, doc.id, nowMillis, opts);
+      } catch (err) {
+        console.error(`Request clock ${doc.id} could not be stepped`, err);
+      }
+      stepped++;
+      last = doc;
+    }
+    if (page.docs.length < pageSize) return {stepped, left: 0};
+  }
+}
+
+exports.sweepRequestClocksImpl = sweepRequestClocksImpl;
+
+/**
+ * Every five minutes, the request clocks' deadline and end steps that the proposer's phone ran
+ * until MON-25. See [sweepRequestClocksImpl].
+ */
+exports.sweepRequestClocks = regional.runWith({timeoutSeconds: 300}).pubsub
+    .schedule('every 5 minutes')
+    .timeZone('UTC')
+    .onRun(async () => {
+      const result = await sweepRequestClocksImpl(admin.firestore(), Date.now());
+      console.log(`Stepped ${result.stepped} request clocks, ${result.left} left due`);
+      return null;
+    });
+
+/**
+ * Whether this process is the Functions emulator talking to the Firestore emulator: both variables
+ * are set by `firebase emulators:exec` and by nothing in production, and with the second one set the
+ * Admin SDK reaches only the emulator, so code behind this can never touch the live project.
+ *
+ * @return {boolean}
+ */
+function onFirestoreEmulator() {
+  return process.env.FUNCTIONS_EMULATOR === 'true' && Boolean(process.env.FIRESTORE_EMULATOR_HOST);
+}
+
+if (onFirestoreEmulator()) {
+  /**
+   * **Emulator only**: runs [sweepRequestClocksImpl] at once, for the two-parent tests
+   * (`TwoParentServerClocksTest`), where waiting five minutes for the schedule — and a day for a
+   * clock's end — is not possible. `atMillis`, when a safe integer, is the moment to sweep at;
+   * otherwise the function's clock.
+   *
+   * Exported only when [onFirestoreEmulator], so a deploy, which loads this file without those
+   * variables, never sees it; the handler asks again in case it is ever reached some other way.
+   * In production only the schedule runs the sweep.
+   */
+  exports.sweepRequestClocksOnEmulator = regional.https.onCall(async (data) => {
+    if (!onFirestoreEmulator()) {
+      throw new functions.https.HttpsError('failed-precondition', 'Emulator only', {reason: 'not-emulator'});
+    }
+    const at = data && Number.isSafeInteger(data.atMillis) ? data.atMillis : Date.now();
+    return sweepRequestClocksImpl(admin.firestore(), at);
+  });
+}
+
+/**
+ * Fills `serverNextStepAt` for the clocks open at deploy (spec §5.6), which no write has yet given
+ * the trigger a chance to schedule:
+ * - a clock with no outcome: [requestClocks.nextStepAt], unless it is settled;
+ * - a custody or split clock a phone closed, whose proposal still waits
+ *   ([requestClockSteps.lookRecord] says pending): its closing, or [nowMillis] when that cannot be
+ *   read, so the sweep checks the withdrawal;
+ * - anything else (closed otherwise, settled, or closed by the server): skipped.
+ *
+ * Writes only a value that differs from the stored one, so it is safe to run again. A closed
+ * proposal whose record could not be read is counted as failed and left for a rerun.
+ *
+ * @param {!Object} db Firestore.
+ * @param {number} nowMillis the moment of the run.
+ * @param {{pageSize: (number|undefined)}=} options the page size of the scan.
+ * @return {!Promise<{scanned: number, scheduled: number, unchanged: number, skipped: number,
+ *   failed: number}>}
+ */
+async function backfillRequestClockScheduleImpl(db, nowMillis, options) {
+  const pageSize = (options && options.pageSize) || 300;
+  const counts = {scanned: 0, scheduled: 0, unchanged: 0, skipped: 0, failed: 0};
+  const has = (value) => value !== undefined && value !== null;
+  let last = null;
+  for (;;) {
+    let query = db.collection(REQUEST_CLOCKS).orderBy(FieldPath.documentId()).limit(pageSize);
+    if (last) query = query.startAfter(last);
+    const page = await query.get();
+    for (const snap of page.docs) {
+      counts.scanned++;
+      last = snap;
+      const doc = snap.data() || {};
+      let next = null;
+      if (has(doc.serverSettledAt) || has(doc.serverToldNoAnswerAt)) {
+        next = null;
+      } else if (!has(doc.outcome)) {
+        next = requestClocks.nextStepAt(doc);
+      } else if (requestClocks.withdrawnAtEnd(doc.kind)) {
+        const look = await requestClockSteps.lookRecord(db, doc);
+        if (look.status === 'unknown') {
+          counts.failed++;
+          continue;
+        }
+        if (look.status === 'pending') {
+          const closedAt = requestClocks.nextStepAt(doc);
+          next = closedAt === null ? nowMillis : closedAt;
+        }
+      }
+      if (typeof next !== 'number') {
+        counts.skipped++;
+      } else if (doc.serverNextStepAt === next) {
+        counts.unchanged++;
+      } else {
+        await db.collection(REQUEST_CLOCKS).doc(snap.id).update({serverNextStepAt: next});
+        counts.scheduled++;
+      }
+    }
+    if (page.docs.length < pageSize) return counts;
+  }
+}
+
+exports.backfillRequestClockScheduleImpl = backfillRequestClockScheduleImpl;
+
+/**
+ * Schedules the request clocks open at deploy. See [backfillRequestClockScheduleImpl].
+ *
+ * Operator-only on the same allow-list as the other backfills. Run once right after the functions
+ * and rules deploy (spec §5.7); safe to run again.
+ */
+exports.backfillRequestClockSchedule = regional.runWith({timeoutSeconds: 540}).https.onCall(
+    async (data, context) => {
+      if (!isBackfillOperator(context)) {
+        throw new functions.https.HttpsError(
+            'permission-denied', 'Operator access only', {reason: 'not-operator'});
+      }
+      return backfillRequestClockScheduleImpl(admin.firestore(), Date.now());
+    },
+);

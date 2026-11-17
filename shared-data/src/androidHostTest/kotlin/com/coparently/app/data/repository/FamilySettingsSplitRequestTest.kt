@@ -34,15 +34,14 @@ import org.junit.Before
 import org.junit.Test
 import java.io.IOException
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
  * An expense split proposal as a request (October 2026, owner decision): a proposal given a
  * deadline starts its clock once it is written, every step is a card in the family's thread, the
- * proposal's push says when to answer by, and the clock's end withdraws a proposal nobody answered
- * — only that proposal, in a transaction, and with no card of its own (the end posts "No answer").
+ * proposal's push says when to answer by. A proposal nobody answered is withdrawn by the server's
+ * end of its clock since MON-25 (`functions/request-clock-steps.js`), tested there.
  */
 class FamilySettingsSplitRequestTest {
 
@@ -212,47 +211,6 @@ class FamilySettingsSplitRequestTest {
         coVerify(exactly = 0) { fcmService.queueNotificationForUser(any(), any()) }
     }
 
-    // ---- The end of a proposal nobody answered -------------------------------------------------
-
-    @Test
-    fun `the end withdraws the same proposal in a transaction, keeps the agreed split and posts nothing`() =
-        runTest {
-            transactingOver(agreedEven().copy(proposal = proposalBy(ME, at = PROPOSED_AT)))
-
-            assertTrue(repository.withdrawUnanswered(FAMILY, PROPOSED_AT))
-
-            val after = checkNotNull(transacted)
-            assertNull(after.proposal, "the proposal is gone")
-            assertEquals(SplitRatio.EVEN, after.ratio, "the agreed split stays")
-            // The end posts its own "No answer" card; a withdrawal card here would tell twice.
-            coVerify(exactly = 0) { announcer.announce(any(), any(), any(), any()) }
-            coVerify(exactly = 0) { fcmService.queueNotificationForUser(any(), any()) }
-        }
-
-    @Test
-    fun `the end leaves a newer, answered or co-parent's proposal alone`() = runTest {
-        transactingOver(agreedEven().copy(proposal = proposalBy(ME, at = PROPOSED_AT + 1)))
-        assertFalse(repository.withdrawUnanswered(FAMILY, PROPOSED_AT), "replaced by a newer one")
-
-        transactingOver(agreedEven())
-        assertFalse(repository.withdrawUnanswered(FAMILY, PROPOSED_AT), "answered or withdrawn meanwhile")
-
-        transactingOver(agreedEven().copy(proposal = proposalBy(PARTNER, at = PROPOSED_AT)))
-        assertFalse(repository.withdrawUnanswered(FAMILY, PROPOSED_AT), "the co-parent's")
-
-        assertNull(transacted, "nothing was written")
-    }
-
-    @Test
-    fun `the end acts in its own family only, and a failed transaction is tried again`() = runTest {
-        // A family this parent is no longer in is not theirs to write.
-        assertFalse(repository.withdrawUnanswered(CustodyKey.of(ME, "uid-ex"), PROPOSED_AT))
-        coVerify(exactly = 0) { dataSource.transact(any(), any()) }
-
-        coEvery { dataSource.transact(FAMILY, any()) } throws IOException("offline")
-        assertFalse(repository.withdrawUnanswered(FAMILY, PROPOSED_AT))
-    }
-
     // ---- The Requests source ------------------------------------------------------------------
 
     @Test
@@ -275,16 +233,6 @@ class FamilySettingsSplitRequestTest {
         }
 
     // ---- Helpers ------------------------------------------------------------------------------
-
-    /** What the last transaction wrote, or null while none wrote anything. */
-    private var transacted: FamilySettings? = null
-
-    /** Runs every transaction's transform over [current], as Firestore would over the stored document. */
-    private fun transactingOver(current: FamilySettings) {
-        coEvery { dataSource.transact(FAMILY, any()) } answers {
-            secondArg<(FamilySettings?) -> FamilySettings?>().invoke(current)?.also { transacted = it }
-        }
-    }
 
     /** The last card posted to the co-parent. */
     private fun postedCard(): ActivityAnnouncement {

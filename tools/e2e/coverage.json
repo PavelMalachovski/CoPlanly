@@ -87,7 +87,7 @@
         "TwoParentAgreementsTest#firstRatioOnAFreshPairAppliesAndIsAnnouncedAsAgreed",
         "TwoParentAgreementsTest#proposalIsSeenPendingAcceptedAndBothPhonesHoldTheNewRatio",
         "TwoParentAgreementsTest#proposerWithdrawsAndTheCoParentCannot",
-        "TwoParentRequestDeadlinesTest#aSplitProposalWithADeadlineReachesAliceAndIsWithdrawnAtNoAnswer"
+        "TwoParentRequestDeadlinesTest#aSplitProposalWithADeadlineReachesAlice"
       ]
     },
     "parenting_plans": {
@@ -180,8 +180,7 @@
     "request_deadlines": {
       "e2e": [
         "TwoParentRequestDeadlinesTest#aSwapWithADeadlineIsDeliveredOpenedGivenALastChanceAndAnswered",
-        "TwoParentRequestDeadlinesTest#aProposalNobodyAnswersClosesAsNoAnswerAndIsWithdrawn",
-        "TwoParentRequestDeadlinesTest#aSplitProposalWithADeadlineReachesAliceAndIsWithdrawnAtNoAnswer"
+        "TwoParentRequestDeadlinesTest#aSplitProposalWithADeadlineReachesAlice"
       ],
       "checklist": ["5.9"]
     },
@@ -430,6 +429,22 @@
       ],
       "checklist": ["5.9"]
     },
+    "request_deadline_passed": {
+      "e2e": [
+        "TwoParentServerClocksTest#theProposerIsPushedAtTheDeadlineAndAtTheEnd"
+      ],
+      "checklist": ["5.10"]
+    },
+    "request_no_answer": {
+      "e2e": [
+        "TwoParentServerClocksTest#aChangeRequestPastItsEndIsClosedByTheServer",
+        "TwoParentServerClocksTest#aCustodyProposalPastItsEndIsWithdrawnByTheServer",
+        "TwoParentServerClocksTest#aSplitProposalPastItsEndIsWithdrawnByTheServer",
+        "TwoParentServerClocksTest#aDaySwapPastItsEndIsClosedAsNoAnswer",
+        "TwoParentServerClocksTest#theProposerIsPushedAtTheDeadlineAndAtTheEnd"
+      ],
+      "checklist": ["5.10"]
+    },
     "sticker_received": {
       "e2e": [
         "TwoParentStickersTest#aStickerReachesTheCoParentWithItsPushAndIsSeen"
@@ -471,6 +486,15 @@
     },
     "backfillRecordFamilyIds": {
       "exempt": "Operator-only maintenance callable, not a phone-to-phone feature; functions/test covers it."
+    },
+    "sweepRequestClocksOnEmulator": {
+      "e2e": [
+        "TwoParentServerClocksTest",
+        "TwoParentRequestDeadlinesTest#aSwapWithADeadlineIsDeliveredOpenedGivenALastChanceAndAnswered"
+      ]
+    },
+    "backfillRequestClockSchedule": {
+      "exempt": "Operator-only maintenance callable, not a phone-to-phone feature; functions/test/request-clock-sweep.test.js covers it."
     },
     "backfillFamilyDocuments": {
       "exempt": "Operator-only maintenance callable, not a phone-to-phone feature; functions/test covers it."

@@ -1,9 +1,7 @@
 package com.coparently.app.data.notification
 
 import android.content.Context
-import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
-import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
@@ -14,41 +12,24 @@ import java.util.concurrent.TimeUnit
 /**
  * WorkManager-based implementation of [RequestClockScheduler].
  *
- * One one-time job per step, named by [RequestClockWork.uniqueName] and kept rather than replaced,
- * so asking twice for the same step at the same time leaves one. The delay is the time left to the
- * step's moment; a moment that has passed runs the job at once. The deadline and the end wait for a
- * network ([RequestClockWork.needsNetwork]): they read the server, and a job that ran offline spent
- * its retries and was lost. A reminder reads this phone's copy and runs on time, online or not.
- * The work is run by [RequestClockWorker].
+ * One one-time job per reminder, named by [RequestClockWork.uniqueName] and kept rather than
+ * replaced, so asking twice for the same reminder leaves one. The delay is the time left to the
+ * reminder's moment; a moment that has passed runs the job at once. A reminder reads this phone's
+ * copy and runs on time, online or not. The work is run by [RequestClockWorker]. The deadline and
+ * the end are the server's since MON-25, so no job is enqueued for them; one an older build left is
+ * finished without acting by the worker, and cancelled with the rest by [cancelAll].
  */
 class WorkRequestClockScheduler(
     private val context: Context
 ) : RequestClockScheduler {
 
-    override fun scheduleReminder(clockId: String, atMillis: Long) =
-        enqueue(RequestClockWork.STEP_REMINDER, clockId, atMillis)
-
-    override fun scheduleDeadline(clockId: String, atMillis: Long) =
-        enqueue(RequestClockWork.STEP_DEADLINE, clockId, atMillis)
-
-    override fun scheduleEnd(clockId: String, atMillis: Long) =
-        enqueue(RequestClockWork.STEP_END, clockId, atMillis)
-
-    /**
-     * By tag rather than by name: the names are per clock and per time, and the clocks that would
-     * list them belong to the account whose session is ending.
-     */
-    override fun cancelAll() {
-        WorkManager.getInstance(context).cancelAllWorkByTag(RequestClockWork.TAG)
-    }
-
-    private fun enqueue(step: String, clockId: String, atMillis: Long) {
+    override fun scheduleReminder(clockId: String, atMillis: Long) {
+        val step = RequestClockWork.STEP_REMINDER
         val request = OneTimeWorkRequestBuilder<RequestClockWorker>()
             .apply {
                 val delayMillis = atMillis - System.currentTimeMillis()
                 if (delayMillis > 0) setInitialDelay(delayMillis, TimeUnit.MILLISECONDS)
             }
-            .setConstraints(constraintsFor(step))
             .addTag(RequestClockWork.TAG)
             .setInputData(
                 workDataOf(
@@ -65,10 +46,11 @@ class WorkRequestClockScheduler(
         )
     }
 
-    private fun constraintsFor(step: String): Constraints =
-        Constraints.Builder()
-            .setRequiredNetworkType(
-                if (RequestClockWork.needsNetwork(step)) NetworkType.CONNECTED else NetworkType.NOT_REQUIRED
-            )
-            .build()
+    /**
+     * By tag rather than by name: the names are per clock and per time, and the clocks that would
+     * list them belong to the account whose session is ending.
+     */
+    override fun cancelAll() {
+        WorkManager.getInstance(context).cancelAllWorkByTag(RequestClockWork.TAG)
+    }
 }

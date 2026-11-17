@@ -69,7 +69,6 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -1548,60 +1547,6 @@ class CustodyModelRepositoryTest {
         assertEquals(PatternSubmission.ACTIVATED, result)
         coVerify(exactly = 0) { requestDeadlines.start(any()) }
     }
-
-    @Test
-    fun `withdrawUnanswered withdraws only the same pending proposal of this parent`() = runTest(dispatcher) {
-        val mine = remoteCustody().copy(proposal = proposalBy(MY_UID, PROPOSED_AT))
-        val transform = slot<(SharedCustody?) -> SharedCustody?>()
-        coEvery { firestoreCustodyDataSource.transact(DOCUMENT_ID, PARTICIPANTS, capture(transform)) } answers {
-            transform.captured(mine)
-        }
-
-        assertTrue(repository.withdrawUnanswered(DOCUMENT_ID, PROPOSED_AT))
-
-        // Review Focus 5. Only the first of these four is written: the proposal this clock timed,
-        // still pending and still this parent's. Withdrawn, it leaves no decision behind.
-        val withdrawn = transform.captured(mine)
-        assertNotNull(withdrawn)
-        assertNull(withdrawn?.proposal)
-        assertNull(withdrawn?.lastDecision)
-        assertEquals(mine.model, withdrawn?.model)
-        // Replaced by a newer proposal of this parent's.
-        assertNull(transform.captured(remoteCustody().copy(proposal = proposalBy(MY_UID, "2026-10-16T09:00:00"))))
-        // Decided meanwhile: no proposal is pending any more.
-        assertNull(transform.captured(remoteCustody()))
-        // The co-parent's own proposal, made at the same moment.
-        assertNull(transform.captured(remoteCustody().copy(proposal = proposalBy(PARTNER_UID, PROPOSED_AT))))
-        // What was written is mirrored into the family's own row.
-        coVerify(exactly = 1) { custodyModelDao.insertModel(match { it.familyId == DOCUMENT_ID }) }
-
-        // A transaction that wrote nothing withdrew nothing.
-        coEvery { firestoreCustodyDataSource.transact(any(), any(), capture(transform)) } answers {
-            transform.captured(remoteCustody())
-        }
-        assertFalse(repository.withdrawUnanswered(DOCUMENT_ID, PROPOSED_AT))
-    }
-
-    @Test
-    fun `withdrawUnanswered acts on the clock's family while another is on screen, and not on an ended one`() =
-        runTest(dispatcher) {
-            inTwoFamilies(onScreen = OTHER_PARTNER_UID)
-            val mine = remoteCustody().copy(proposal = proposalBy(MY_UID, PROPOSED_AT))
-            val transform = slot<(SharedCustody?) -> SharedCustody?>()
-            coEvery { firestoreCustodyDataSource.transact(any(), any(), capture(transform)) } answers {
-                transform.captured(mine)
-            }
-
-            // uidC's family is on screen; the clock is uidB's family's.
-            assertTrue(repository.withdrawUnanswered(DOCUMENT_ID, PROPOSED_AT))
-            coVerify(exactly = 1) { firestoreCustodyDataSource.transact(DOCUMENT_ID, PARTICIPANTS, any()) }
-            coVerify(exactly = 0) { firestoreCustodyDataSource.transact(OTHER_DOCUMENT_ID, any(), any()) }
-
-            // uidB's family has ended; uidC's is the only one left. Nothing is withdrawn there.
-            pairedWith(OTHER_PARTNER_UID)
-            assertFalse(repository.withdrawUnanswered(DOCUMENT_ID, PROPOSED_AT))
-            coVerify(exactly = 1) { firestoreCustodyDataSource.transact(any(), any(), any()) }
-        }
 
     // A clock waits for the server for up to ten seconds (ruling 14). A push tap can switch the
     // family on screen in that time, so the card is posted to the thread of the pair the request was

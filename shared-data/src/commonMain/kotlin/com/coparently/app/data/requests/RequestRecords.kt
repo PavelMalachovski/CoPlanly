@@ -7,8 +7,6 @@ import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
 import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
 import com.coparently.app.data.remote.firebase.FirestoreFamilySettingsDataSource
 import com.coparently.app.data.remote.firebase.ReadSource
-import com.coparently.app.data.repository.CustodyModelRepository
-import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.sync.EventDocument
 import com.coparently.app.data.sync.Tombstone
 import com.coparently.app.domain.InternalSharedApi
@@ -41,25 +39,22 @@ import kotlinx.coroutines.CancellationException
  * **Two ways to look.** [look] reads what this phone holds — the change request and the event from
  * Room, the custody document from Firestore, which answers from its cache offline — and is enough
  * for a reminder, where a wrong answer costs one notice. [lookOnServer] reads each record from the
- * server, past every cache, for the steps whose answer cannot be taken back: the deadline notice
- * and the end, which writes "No answer" into the clock, the chat and the record a court may read.
- * The proposer's copy of a change request is refreshed only while the inbox listens, and an event
- * only by the periodic sync, so the co-parent's answer in time may not have reached it.
+ * server, past every cache, for the proposer's last chance, which is given only while the request
+ * still waits. The proposer's copy of a change request is refreshed only while the inbox listens,
+ * and an event only by the periodic sync, so the co-parent's answer in time may not have reached
+ * it. (The deadline notice and the end, which also decided on the server's copy, are the server's
+ * own since MON-25.)
  *
- * A read that fails — offline, for [lookOnServer] — is [RecordStatus.UNKNOWN], never "gone": a step
- * must not close a request it could not see.
+ * A read that fails — offline, for [lookOnServer] — is [RecordStatus.UNKNOWN], never "gone": a
+ * caller must not act on a request it could not see.
  */
-class RequestRecords
-@Suppress("LongParameterList") // one reader and one writer per kind of record, and the signed-in parent
-constructor(
+class RequestRecords(
     private val changeRequestRepository: ChangeRequestRepository,
     private val eventRepository: EventRepository,
     private val eventDataSource: FirestoreEventDataSource,
     private val custodyDataSource: FirestoreCustodyDataSource,
-    private val custodyModelRepository: CustodyModelRepository,
     private val userRepository: UserRepository,
-    private val familySettingsDataSource: FirestoreFamilySettingsDataSource,
-    private val familySettingsRepository: FamilySettingsRepository
+    private val familySettingsDataSource: FirestoreFamilySettingsDataSource
 ) {
 
     /** Where the request [clock] times stands by this phone's copy, and what its cards name. */
@@ -101,24 +96,6 @@ constructor(
     /** The money agreement of the clock's family, from the server when [fromServer] says so. */
     private suspend fun settingsOf(clock: RequestDeadline, fromServer: Boolean): FamilySettings? =
         familySettingsDataSource.getSettings(clock.familyId, if (fromServer) ReadSource.SERVER else ReadSource.DEFAULT)
-
-    /**
-     * Withdraws the proposal [clock] times — custody or expense split ([RequestKind.withdrawnAtEnd]) —
-     * in the clock's family, when it is still the same pending proposal
-     * (`CustodyModelRepository.withdrawUnanswered`, `FamilySettingsRepository.withdrawUnanswered`).
-     *
-     * @return Whether it was withdrawn: false for any other kind, for a family this parent is no
-     *   longer in, for a proposal answered or replaced meanwhile, and for a write that failed.
-     */
-    suspend fun withdrawUnansweredProposal(clock: RequestDeadline): Boolean =
-        clock.kind.withdrawnAtEnd &&
-            familyIsLive(clock) == true &&
-            when (clock.kind) {
-                RequestKind.PROPOSAL -> custodyModelRepository.withdrawUnanswered(clock.familyId, clock.ref)
-                RequestKind.SPLIT -> clock.ref.toLongOrNull()
-                    ?.let { familySettingsRepository.withdrawUnanswered(clock.familyId, it) } == true
-                RequestKind.SWAP, RequestKind.CHANGE, RequestKind.EVENT -> false
-            }
 
     /**
      * Whether [clock]'s family is one the signed-in parent is still in: they are one of its two
