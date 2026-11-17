@@ -1,3 +1,5 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.di.koin
 
 import com.coparently.app.data.export.ExportVerifyAddress
@@ -28,6 +30,16 @@ import com.coparently.app.data.local.dao.MessageDao
 import com.coparently.app.data.local.dao.ParentingPlanDao
 import com.coparently.app.data.local.dao.PetDao
 import com.coparently.app.data.local.dao.UserDao
+import com.coparently.app.data.notification.EventReminderPlanner
+import com.coparently.app.data.notification.IosEventReminders
+import com.coparently.app.data.notification.IosLocalReminders
+import com.coparently.app.data.notification.IosSupportReminders
+import com.coparently.app.data.notification.LocalNotificationCenter
+import com.coparently.app.data.notification.SupportReminderPlanner
+import com.coparently.app.data.notification.UserNotificationCenter
+import com.coparently.app.data.notification.appReminderWording
+import com.coparently.app.data.notification.toReminderEvent
+import com.coparently.app.data.payment.PaymentStore
 import com.coparently.app.data.platform.Analytics
 import com.coparently.app.data.platform.AppDirectories
 import com.coparently.app.data.platform.Connectivity
@@ -76,14 +88,18 @@ import com.coparently.app.data.session.IosAccountSwitch
 import com.coparently.app.data.session.IosAccountTraces
 import com.coparently.app.data.session.LastSignedInUid
 import com.coparently.app.data.session.UserDefaultsLastSignedInUid
+import com.coparently.app.data.support.SupportAgreementStore
 import com.coparently.app.data.support.SupportReminderScheduler
+import com.coparently.app.data.support.SupportReminders
 import com.coparently.app.data.sync.ForegroundSyncRunner
 import com.coparently.app.data.sync.GoogleCalendarAutoImport
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.data.sync.SyncService
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.notification.RequestClockScheduler
 import com.coparently.app.domain.receipts.ReceiptTextRecognizer
+import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.RecordPhotoStorage
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
@@ -93,6 +109,7 @@ import dev.gitlive.firebase.storage.storage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import org.koin.core.module.Module
 import org.koin.dsl.module
 
@@ -110,8 +127,9 @@ import org.koin.dsl.module
  * Task 12 a receipt read by Vision ([VisionReceiptText]), the record's file ([IosRecordFileWriter])
  * and its verification address ([InfoPlistExportVerifyAddress]), since phase 4's Task 7 Google
  * Calendar ([IosGoogleCalendarAccount]), since phase 4 part C's Task 5 the push token
- * ([IosPushRegistration]) — and, for what the iPhone does not have yet (background jobs and
- * notifications), the stand-ins in
+ * ([IosPushRegistration]), since its Task 7 the event and child support reminders as local
+ * notifications ([IosLocalReminders]) — and, for what the iPhone does not have yet (background
+ * jobs), the stand-ins in
  * `IosUnavailable.kt`, which answer as a phone with nothing of the kind would. The two wordings the
  * data layer writes into stored data read the app's strings, so `:shared-ui`'s `platformUiModule`
  * binds them (`IosPairingWording`, `IosSchoolImportWordings`); the graph resolves with both
@@ -209,17 +227,59 @@ actual val platformDataModule: Module = module {
             authSession = get(),
         )
     }
-    single<ReminderScheduler> { NoEventReminders }
+    // The event and child support reminders as local notifications (phase 4 part C, Task 7): one
+    // book for both, because iOS keeps at most 64 pending and the nearest 60 are armed, a support
+    // reminder first. Each plan reads at run time, so the stores' own graph is no cycle here.
+    single<LocalNotificationCenter> { UserNotificationCenter }
+    single {
+        EventReminderPlanner(
+            events = {
+                get<EventDao>().getAllEvents().first()
+                    .filter { it.reminderMinutes != null }
+                    .map { it.toReminderEvent().copy(familyId = it.familyId) }
+            },
+            uid = { get<SignedInUser>().getCurrentUid() },
+            wording = ::appReminderWording,
+        )
+    }
+    single {
+        SupportReminderPlanner(
+            reminders = get(),
+            uid = { get<SignedInUser>().getCurrentUid() },
+            agreement = { familyId -> get<SupportAgreementStore>().readFromServer(familyId) },
+            payment = { id -> get<PaymentStore>().readFromServer(id) },
+            payeeName = { uid -> get<PairingRepository>().observeCoParentProfile(uid).first().name },
+            wording = ::appReminderWording,
+        )
+    }
+    single {
+        IosLocalReminders(
+            center = get(),
+            events = { now -> get<EventReminderPlanner>().plan(now) },
+            support = { now -> get<SupportReminderPlanner>().plan(now) },
+            onCancelAll = { get<SupportReminders>().forgetArmed() },
+            scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+        )
+    }
+    single<ReminderScheduler> { IosEventReminders(get()) }
     single<RequestClockScheduler> { NoRequestClockJobs }
     single<SchoolImportScheduler> { NoSchoolImportJob }
-    single<SupportReminderScheduler> { NoSupportReminderJob }
+    single<SupportReminderScheduler> { IosSupportReminders(get()) }
     // A sync while the app is open, one at a time, with the Google import after each (Task 6;
     // the iPhone has no background job until phase 4). The lambdas resolve at run time, so the
     // sync's own need of a `SyncRequester` (the pairing transition asks for one) is no cycle.
     single<SyncRequester> {
         ForegroundSyncRunner(
             sync = { get<SyncService>().performFullSync() },
-            afterSync = { get<GoogleCalendarAutoImport>().importIfDue() },
+            // Then the local reminders are planned again from what the sync brought (design §7.4):
+            // an event deleted on the other phone loses its reminder, a month paid there its own.
+            afterSync = {
+                try {
+                    get<GoogleCalendarAutoImport>().importIfDue()
+                } finally {
+                    get<IosLocalReminders>().requestRearm()
+                }
+            },
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
         )
     }

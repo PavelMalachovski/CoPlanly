@@ -84,6 +84,11 @@ object LaunchLinks {
      * [parse] reads `ChatUri.build`'s link), and every other type the screen
      * [PushDestination.forType] names, or nothing more than the app for a type this build does not
      * know. The family rides beside it, never inside the chat link, as on Android.
+     *
+     * The iPhone's local reminders (phase 4 part C) carry no type, and name their screen as Android's
+     * reminders put it on the launcher intent: [PushDestination.EXTRA] with a key [PushDestination.fromKey]
+     * reads — the calendar for an event's, Family → Child support for the payer's. Read only where the
+     * type names no screen, and only ever picks one.
      */
     fun forPush(data: Map<String, String>, signedInUid: String?): PushTap? {
         val addressee = data[PushPayload.TARGET_USER_ID]?.takeIf { it.isNotBlank() }
@@ -98,7 +103,11 @@ object LaunchLinks {
         return PushTap(
             familyId = data[PushPayload.FAMILY_ID]?.takeIf { it.isNotBlank() },
             link = link,
-            destination = if (link == null) PushDestination.forType(type) else null
+            destination = if (link == null) {
+                PushDestination.forType(type) ?: PushDestination.fromKey(data[PushDestination.EXTRA])
+            } else {
+                null
+            }
         )
     }
 

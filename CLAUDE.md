@@ -2383,12 +2383,16 @@ with `IosStorageBucket` (the iOS SDK's Storage by path, Task 10), `NoPickedFiles
 `IosGoogleCalendarAccount` (`data/remote/google/`, the same tokens, keys and server exchange as
 Android's, the grant revoked through `GoogleGrantRevocation`) and, in `:shared-ui`,
 `NoGoogleCalendarSignIn` with `IosGoogleCalendarSignIn` (Google's sheet asking for a server auth
-code). Still stand-ins on the iPhone:
+code). Phase 4's part C (pushes) replaced `NoEventReminders` and `NoSupportReminderJob` with
+local notifications (`data/notification/` in `shared-data`'s `iosMain`: `IosEventReminders` and
+`IosSupportReminders` over one book, `IosLocalReminders`, which plans both again on start, on every
+change of the signed-in uid and after every sync, and keeps the nearest 60 pending, a child support
+reminder first; `LocalNotificationCenter` is its narrow seam over `UNUserNotificationCenter`).
+Still stand-ins on the iPhone:
 `NoPush` as `PushRegistration` alone (the push switch; the phone holds no token until phase 4),
-`NoEventReminders`,
 `NoRequestClockJobs` and `NoRequestClockNotices` (the answering parent's reminders alone since
 MON-25, which runs a request's deadline notice and end on the server for both platforms),
-`NoSchoolImportJob`, `NoSupportReminderJob`,
+`NoSchoolImportJob`,
 and in `:shared-ui` `NoSpeechDictation`, `NoAiAssist`,
 `NoInviteQrCodes` and the platform interfaces' `NoQrScanner`, `NoDictation`, `NoPermissions`,
 `NoOpenUrl`, `NoClipboard` and `NoAppLanguages` in `IosPlatform.kt`.

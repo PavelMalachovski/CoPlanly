@@ -158,7 +158,7 @@ class SupportViewModel(
 
     /**
      * Whether this phone reminds the payer at all ([SupportReminderScheduler.available]); the screen
-     * offers the reminder only when it does (MON-24 phase 2, slice 11e: the iPhone's stand-in does not).
+     * offers the reminder only when it does (MON-24 phase 2, slice 11e; the iPhone does since phase 4 part C).
      */
     val remindersAvailable: Boolean
         get() = reminderScheduler.available
@@ -168,6 +168,8 @@ class SupportViewModel(
         val uid = myUid ?: return
         reminders.set(uid, familyId, days)
         if (days != null) reminderScheduler.schedule()
+        // The iPhone arms its notification ahead of time, so it decides again, on and off alike.
+        reminderScheduler.refresh()
         reminderChanged.value += 1
     }
 
@@ -182,7 +184,8 @@ class SupportViewModel(
         viewModelScope.launch {
             val landed = block()
             _busy.value = false
-            if (!landed) _error.value = UiText.Res(Res.string.payment_error_not_saved)
+            // A month paid or an agreement accepted here changes what the iPhone's reminder says.
+            if (landed) reminderScheduler.refresh() else _error.value = UiText.Res(Res.string.payment_error_not_saved)
         }
     }
 

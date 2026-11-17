@@ -2,6 +2,7 @@ package com.coparently.app.ios
 
 import com.coparently.app.data.chat.ChatMirror
 import com.coparently.app.data.family.SelectedFamilySource
+import com.coparently.app.data.notification.IosLocalReminders
 import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.AppleTokens
 import com.coparently.app.data.remote.firebase.IosPushRegistration
@@ -173,7 +174,8 @@ object IosApp {
      * on the foreground) and the notification permission read without asking
      * ([NotificationPermission.refresh], on start and on the foreground, where the Settings switch
      * and the push registration read it), and the push registration is told of every change of
-     * the uid ([IosPushRegistration.sessionChanged]). Each is harmless while nobody is signed in,
+     * the uid ([IosPushRegistration.sessionChanged]), as the local reminders are planned again
+     * ([IosLocalReminders.requestRearm]). Each is harmless while nobody is signed in,
      * as on Android: the mirror waits for a co-parent, the profile for an account, and a sync with
      * nobody signed in ends at once. Telemetry, the widget and the periodic job are not here: the
      * iPhone collects nothing, has no widget yet and no background job until phase 4.
@@ -192,6 +194,10 @@ object IosApp {
         // A sign-out's detach holds until the uid changes (a token refreshed mid-sign-out is not kept).
         val registration = koin.get<IosPushRegistration>()
         scope.launch { signedIn.observeCurrentUid().collect { registration.sessionChanged(it) } }
+        // The local reminders are planned on start and again for every account that signs in or out
+        // (phase 4 part C, Task 7): signed out, none stays armed; the sync's re-arm follows each sync.
+        val reminders = koin.get<IosLocalReminders>()
+        scope.launch { signedIn.observeCurrentUid().collect { reminders.requestRearm() } }
         scope.launch { permission.refresh() }
         IosLifecycle.observe {
             sync.requestSyncNow()

@@ -5,14 +5,16 @@ package com.coparently.app.data.support
  *
  * In `:shared-data` since MON-24 phase 2 (Task 10, slice 10d), where the child support screen's
  * ViewModel, now in `:shared-ui`, reaches it; the app's `WorkManagerSupportReminderScheduler` (beside
- * `SupportReminderWorker`) answers it on Android, and the iPhone schedules nothing yet.
+ * `SupportReminderWorker`) answers it on Android, and since iPhone phase 4 part C the iPhone's
+ * `IosSupportReminders`, which arms a local notification ahead of time.
  */
 interface SupportReminderScheduler {
 
     /**
      * Whether this phone runs the reminder's job at all. The child support screen offers the payer
      * a reminder only when it does (design item 8): WorkManager's job on Android always does; the
-     * iPhone's stand-in does not yet (MON-24 phase 2, slice 11e).
+     * iPhone's local notifications do too since phase 4 part C (its stand-in did not, MON-24 phase 2,
+     * slice 11e).
      */
     val available: Boolean get() = true
 
@@ -21,4 +23,12 @@ interface SupportReminderScheduler {
 
     /** Stops the job. */
     fun cancel()
+
+    /**
+     * The reminder, the agreement or a month's payment changed on this phone (iPhone phase 4 part
+     * C). A scheduler that decides ahead of time — the iPhone's, whose notification runs no code when
+     * shown — decides again, so a month just paid is not reminded of; WorkManager's job reads them
+     * on its next run, so Android does nothing.
+     */
+    fun refresh() = Unit
 }

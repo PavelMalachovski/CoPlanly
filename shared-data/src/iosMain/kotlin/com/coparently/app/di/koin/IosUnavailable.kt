@@ -1,9 +1,6 @@
 package com.coparently.app.di.koin
 
 import com.coparently.app.data.school.SchoolImportScheduler
-import com.coparently.app.data.support.SupportReminderScheduler
-import com.coparently.app.domain.model.Event
-import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.notification.RequestClockScheduler
 
 /*
@@ -24,15 +21,10 @@ import com.coparently.app.domain.notification.RequestClockScheduler
  * `NoReceiptText`, `NoRecordFiles` and `NoExportVerifyAddress`, for `VisionReceiptText`,
  * `IosRecordFileWriter` and `InfoPlistExportVerifyAddress`; in phase 4's Task 7 `NoGoogleCalendar`,
  * for `IosGoogleCalendarAccount`; in phase 4 part C's Task 5 `NoPush`, for `IosPushRegistration`
- * (the token's registration and its unregistration replaced together, CLAUDE.md item 23).
+ * (the token's registration and its unregistration replaced together, CLAUDE.md item 23); in its
+ * Task 7 `NoEventReminders` and `NoSupportReminderJob`, for the local notifications of
+ * `IosEventReminders` and `IosSupportReminders`.
  */
-
-/** No background jobs yet: no event reminder is scheduled, so none is cancelled either. */
-internal object NoEventReminders : ReminderScheduler {
-    override fun schedule(event: Event) = Unit
-    override fun cancel(eventId: String) = Unit
-    override fun cancelAll() = Unit
-}
 
 /**
  * No request clock's job on the iPhone, ever: the reminders, the deadline notice and the end are
@@ -44,21 +36,6 @@ internal object NoRequestClockJobs : RequestClockScheduler {
 
 /** No background jobs yet: the school import's daily run is not scheduled. */
 internal object NoSchoolImportJob : SchoolImportScheduler {
-    override fun schedule() = Unit
-    override fun cancel() = Unit
-}
-
-/**
- * No background jobs yet: the child support reminder's job is not scheduled, so the iPhone reminds
- * nobody (slice 10d: the child support screen's ViewModel asks for it when the payer turns the
- * reminder on). [available] says so, so the shared screen offers no reminder here (slice 11e); a
- * choice made elsewhere is still kept, in the sealed store, for the job phase 3 brings.
- */
-internal object NoSupportReminderJob : SupportReminderScheduler {
-
-    /** Says so, so the shared child support screen offers no reminder here. */
-    override val available: Boolean = false
-
     override fun schedule() = Unit
     override fun cancel() = Unit
 }

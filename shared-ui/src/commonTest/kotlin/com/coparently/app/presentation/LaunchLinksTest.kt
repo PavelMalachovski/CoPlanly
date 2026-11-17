@@ -200,4 +200,28 @@ class LaunchLinksTest {
             LaunchLinks.forPush(mapOf("type" to "from_the_future", "familyId" to "alice__bob"), "bob")
         )
     }
+
+    @Test
+    fun `a local reminder opens the screen it names on its family`() {
+        val support = mapOf(
+            "targetUserId" to "bob",
+            "coplanly.destination" to "support",
+            "familyId" to "alice__bob",
+        )
+        val event = mapOf("targetUserId" to "bob", "coplanly.destination" to "calendar")
+
+        assertEquals(
+            PushTap(familyId = "alice__bob", link = null, destination = PushDestination.SUPPORT),
+            LaunchLinks.forPush(support, "bob")
+        )
+        assertEquals(PushDestination.CALENDAR, LaunchLinks.forPush(event, "bob")?.destination)
+        assertNull(LaunchLinks.forPush(event, "carol"))
+    }
+
+    @Test
+    fun `a screen named beside a type that names one is not read`() {
+        val data = mapOf("type" to "expense_added", "coplanly.destination" to "support")
+
+        assertEquals(PushDestination.EXPENSES, LaunchLinks.forPush(data, "bob")?.destination)
+    }
 }
