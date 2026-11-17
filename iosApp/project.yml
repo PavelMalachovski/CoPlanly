@@ -58,6 +58,10 @@ targets:
       # Cloud Storage (MON-24 phase 3, part C, Task 10): GitLive's Storage bindings in `Shared` call it.
       - package: Firebase
         product: FirebaseStorage
+      # Pushes (MON-24 phase 4, part C, Task 5): the FCM token the app keeps on the profile
+      # (PushTokenBridge.swift). From the same Firebase package, never a CocoaPod.
+      - package: Firebase
+        product: FirebaseMessaging
       - package: GoogleSignIn
         product: GoogleSignIn
     preBuildScripts:
@@ -158,6 +162,12 @@ targets:
         # offers no Google Calendar row (GoogleSignInBridge.calendarAvailable), as in CI. A client id is
         # not a secret, but set it on your own Mac or the release build only, as the URL scheme.
         COPLANLY_GOOGLE_WEB_CLIENT_ID: ""
+        # Pushes (MON-24 phase 4, part C): `CoPlanly.entitlements` carries `aps-environment`
+        # (`development`; the release build's signing decides production) and the App Group
+        # `group.app.coplanly`, where the app shares the signed-in uid and its language with the
+        # notification extension (`AppGroupShare.kt`). Both need the App ID's capabilities and the
+        # APNs key in the Firebase console (owner steps, iosApp/README.md); a simulator build signs
+        # them locally. No `remote-notification` background mode: every push carries an alert.
         # Sign in with Apple (MON-24 phase 4, part A): the `CoplanlyAppleSignIn` Info.plist key the
         # shared code reads (`AppleSignInFlag.kt`), on in Debug and off in Release until the owner
         # turns it on, as Android's `APPLE_SIGN_IN` build flag. The sheet also needs the

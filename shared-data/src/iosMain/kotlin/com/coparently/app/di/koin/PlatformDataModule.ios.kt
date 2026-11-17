@@ -51,10 +51,13 @@ import com.coparently.app.data.remote.firebase.GitLiveFirestoreClient
 import com.coparently.app.data.remote.firebase.IosAccountLinking
 import com.coparently.app.data.remote.firebase.IosCallableFunctions
 import com.coparently.app.data.remote.firebase.IosFirebaseAuth
+import com.coparently.app.data.remote.firebase.IosPushRegistration
+import com.coparently.app.data.remote.firebase.NotificationPermission
 import com.coparently.app.data.remote.firebase.PushDevice
 import com.coparently.app.data.remote.firebase.PushQueue
 import com.coparently.app.data.remote.firebase.PushRegistration
 import com.coparently.app.data.remote.firebase.SignedInUser
+import com.coparently.app.data.remote.firebase.UserNotificationsPermission
 import com.coparently.app.data.remote.google.CredentialProvider
 import com.coparently.app.data.remote.google.GoogleCalendarAccount
 import com.coparently.app.data.remote.google.GoogleCalendarApi
@@ -106,8 +109,9 @@ import org.koin.dsl.module
  * a record's photos ([IosRecordPhotoStorage]) and the pickers' copies ([IosPickedFiles]), since
  * Task 12 a receipt read by Vision ([VisionReceiptText]), the record's file ([IosRecordFileWriter])
  * and its verification address ([InfoPlistExportVerifyAddress]), since phase 4's Task 7 Google
- * Calendar ([IosGoogleCalendarAccount]) — and, for what the iPhone does not have yet (a push token,
- * background jobs and notifications), the stand-ins in
+ * Calendar ([IosGoogleCalendarAccount]), since phase 4 part C's Task 5 the push token
+ * ([IosPushRegistration]) — and, for what the iPhone does not have yet (background jobs and
+ * notifications), the stand-ins in
  * `IosUnavailable.kt`, which answer as a phone with nothing of the kind would. The two wordings the
  * data layer writes into stored data read the app's strings, so `:shared-ui`'s `platformUiModule`
  * binds them (`IosPairingWording`, `IosSchoolImportWordings`); the graph resolves with both
@@ -173,13 +177,25 @@ actual val platformDataModule: Module = module {
             lastUid = get(),
         )
     }
-    // The co-parent is told through the queue, as `FcmService` tells them on Android; this phone
-    // holds no push token yet, so the switch and sign-out's detach are still `NoPush` (phase 4
-    // replaces it with the token's registration and unregistration together).
-    single { FirestorePushQueue(get(), get()) }
+    // The co-parent is told through the queue, as `FcmService` tells them on Android, and this
+    // phone's own token (phase 4 part C) is registered and detached by `IosPushRegistration`, which
+    // the queue reads it through: the switch, the sync's write and sign-out's detach in one place
+    // (CLAUDE.md item 23). The token is the app's Swift side's (`IosPushToken`, which `IosApp.start`
+    // binds in `iosAppModule`), the permission the system's.
+    single<NotificationPermission> { UserNotificationsPermission }
+    single {
+        IosPushRegistration(
+            firestore = get(),
+            signedInUser = get(),
+            preferences = get(),
+            token = get(),
+            permission = get(),
+        )
+    }
+    single<PushRegistration> { get<IosPushRegistration>() }
+    single { FirestorePushQueue(get(), get(), tokens = get<IosPushRegistration>()) }
     single<PushDevice> { get<FirestorePushQueue>() }
     single<PushQueue> { get<PushDevice>() }
-    single<PushRegistration> { NoPush }
     // The `deleteAccount` callable, then this phone's wipe and the session's end (part B, Task 11).
     single<AccountDeletion> {
         IosAccountDeletion(

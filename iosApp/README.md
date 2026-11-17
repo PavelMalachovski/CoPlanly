@@ -12,7 +12,7 @@ and the data layer are the Kotlin Multiplatform modules', compiled into one stat
 | `CoPlanly/GoogleSignInBridge.swift` | Google's sign-in sheet (Google Sign-In for iOS 9.2.0) for the shared sign-in screen and for connecting Google Calendar; see "Google sign-in" and "Google Calendar" below. |
 | `CoPlanly/AppleSignInBridge.swift` | Apple's sign-in sheet (AuthenticationServices) for the sign-in screen and the sign-in methods, behind the `CoplanlyAppleSignIn` flag (YES in Debug, NO in Release; `project.yml`). |
 | `CoPlanly/Info.plist` | Bundle `app.coplanly`, display name CoPlanly, iPhone only, portrait only, iOS 17.0 and later. Two build settings reach it: `CoplanlyAppleSignIn` (from `COPLANLY_APPLE_SIGN_IN`) and `GIDServerClientID` (from `COPLANLY_GOOGLE_WEB_CLIENT_ID`). |
-| `CoPlanly/CoPlanly.entitlements` | Sign in with Apple (`com.apple.developer.applesignin`); push adds its own. |
+| `CoPlanly/CoPlanly.entitlements` | Sign in with Apple (`com.apple.developer.applesignin`), pushes (`aps-environment`) and the App Group `group.app.coplanly`. |
 | `CoPlanly/Assets.xcassets` | The icon (made from the Android launcher icon by `tools/generate-ios-icon.py`; never edit the PNG by hand) and the indigo accent colour. |
 | `CoPlanlyUITests/` | The XCUITest walk of the native shell (`ShellUITests.testShellWalk`) and the tour of every screen (`testTour`), run in CI on the emulators. |
 | `scripts/simulator.sh` | CI's simulator steps (the `ios-app` job): pick, launch, the shell's walk and the tour. |
@@ -149,6 +149,29 @@ Disconnecting, and signing out, clear the stored tokens first and then revoke th
 revoke endpoint and call `GIDSignIn.disconnect`, best effort. GoogleSignIn-iOS has no way to force
 a refresh token: if that revoke failed (for example offline), a reconnect may come back without
 one, and the connection then falls to "reconnect" after about an hour (device check §3.42).
+
+## Pushes
+
+The app registers with Apple's push service at launch (no permission is asked for that), hands the
+device token to Firebase Messaging (`PushTokenBridge.swift`, with Firebase's app-delegate swizzling
+off in `Info.plist`) and the shared code keeps the FCM token on the profile, `users/{uid}.fcmToken`,
+as Android does (`IosPushRegistration`). The notification permission is asked only where it is
+needed: the Settings switch, an event's reminder, onboarding's notifications step. Settings' switch
+reads on only with the permission given; off, sign-out and account deletion delete the field and
+the token. A push that arrives while the app is open shows as a banner; a tapped one opens the
+screen it is about, after switching to its family (`IosApp.openPush`). The app shares the signed-in
+uid and its language with the notification extension through the App Group `group.app.coplanly`
+(`AppGroupShare.kt`), cleared at sign-out. On the emulators (CI, no `GoogleService-Info.plist`)
+Firebase Messaging is never touched and the switch's "on" fails for want of a token.
+
+**The owner's steps**, before pushes reach a phone:
+
+1. **In the Apple Developer account**: the Push Notifications and App Groups capabilities on
+   `app.coplanly`, the group `group.app.coplanly`, and an APNs authentication key.
+2. **In the Firebase console**: the APNs key uploaded under Cloud Messaging for the iOS app.
+3. `aps-environment` is `development` in `CoPlanly.entitlements`; an App Store or TestFlight
+   build's distribution profile signs it as `production`. Device check: a push reaches a phone
+   built for development and one from TestFlight.
 
 ## In CI
 

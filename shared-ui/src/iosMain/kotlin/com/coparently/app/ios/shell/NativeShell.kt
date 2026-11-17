@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.NavOptionsBuilder
+import com.coparently.app.data.remote.firebase.PushDestination
 import com.coparently.app.data.remote.google.IosGoogleCalendarAccount
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.telemetry.TelemetryConsent
@@ -144,7 +145,9 @@ internal class ShellSession {
  * cleared once opened, as Android's `NavGraph` opens and clears `MainActivity`'s: a pairing or guest
  * code pushes its screen onto the selected tab (a pairing screen already there is replaced, so a
  * second link re-arms its question), a chat link selects the Chat tab and pushes the thread it
- * names. A link that arrives before sign-in or during onboarding waits for the tabs.
+ * names. A link that arrives before sign-in or during onboarding waits for the tabs. A tapped
+ * push's screen ([PushDestination], phase 4 part C, armed by `IosApp.openPush` after the family
+ * switch the push names) opens the same way, where Android's `PushDestinationEffect` opens it.
  */
 internal class NativeShell(
     private val koin: Koin,
@@ -263,6 +266,32 @@ internal class NativeShell(
                 }
             }
         }
+        handOff(links.destinationOpen.destination, links.destinationOpen.onConsumed, ::openDestination)
+    }
+
+    /**
+     * Opens a tapped push's screen, as Android's `PushDestinationEffect` does: Home and the
+     * calendar are tabs, Expenses and child support are pushed over the Family tab (so Back lands
+     * on the tab they belong to), and the rest are pushed onto the selected tab.
+     */
+    private fun openDestination(shown: TabShell, destination: PushDestination) {
+        when (destination) {
+            PushDestination.HOME -> shown.select(BottomNavDestination.HOME)
+            PushDestination.CALENDAR -> shown.select(BottomNavDestination.CALENDAR)
+            PushDestination.EXPENSES -> shown.openOverFamily(Screen.Expenses.route)
+            PushDestination.SUPPORT -> shown.openOverFamily(Screen.Support.route)
+            PushDestination.CHANGE_REQUESTS ->
+                shown.navigateOnSelected(Screen.ChangeRequests.createRoute()) { launchSingleTop = true }
+            PushDestination.CHILD_INFO -> shown.navigateOnSelected(Screen.ChildInfo.route) { launchSingleTop = true }
+            PushDestination.PROFESSIONALS ->
+                shown.navigateOnSelected(Screen.Professionals.route) { launchSingleTop = true }
+            PushDestination.FRIENDS -> shown.navigateOnSelected(Screen.Friends.route) { launchSingleTop = true }
+        }
+    }
+
+    private fun TabShell.openOverFamily(route: String) {
+        select(BottomNavDestination.FAMILY)
+        navigateOn(BottomNavDestination.FAMILY, route) { launchSingleTop = true }
     }
 
     /** Opens [pending]'s value with [open] once the tabs show a signed-in account, then [consume]s it. */

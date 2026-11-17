@@ -4,7 +4,11 @@ import com.coparently.app.data.chat.ChatMirror
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.AppleTokens
+import com.coparently.app.data.remote.firebase.IosPushToken
+import com.coparently.app.data.remote.firebase.NotificationPermission
+import com.coparently.app.data.remote.firebase.PushDevice
 import com.coparently.app.data.remote.firebase.PushDestination
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.session.SessionProfileSynchronizer
 import com.coparently.app.data.session.SignInProviderSession
 import com.coparently.app.data.session.clearPreviousInstall
@@ -17,12 +21,14 @@ import com.coparently.app.ios.shell.NativeShell
 import com.coparently.app.presentation.AppLaunch
 import com.coparently.app.presentation.LaunchLink
 import com.coparently.app.presentation.LaunchLinks
+import com.coparently.app.presentation.PushTap
 import com.coparently.app.presentation.navigation.PendingChatLink
 import com.coparently.app.presentation.navigation.PendingChatOpen
 import com.coparently.app.presentation.navigation.PendingDestinationOpen
 import com.coparently.app.presentation.navigation.PendingInviteCodes
 import com.coparently.app.presentation.platform.AppBuildValues
 import com.coparently.app.presentation.platform.CredentialSignIn
+import com.coparently.app.utils.readerLanguageTag
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
 import kotlinx.coroutines.MainScope
@@ -64,7 +70,8 @@ data class IosAppConfig(
  *
  * The root is the native shell (Task 8): UIKit's tab and navigation bars around the shared screens,
  * each screen its own Compose view controller ([NativeShell]). A `coplanly://` link the app is
- * opened with reaches [openUrl], which arms it for the shell (part B, Task 10).
+ * opened with reaches [openUrl], which arms it for the shell (part B, Task 10), and a tapped push
+ * reaches [openPush] (phase 4 part C).
  */
 object IosApp {
     /** The links waiting for the shell to open them, filled by [openUrl]. */
@@ -91,6 +98,9 @@ object IosApp {
     /** The shell, built by the first [rootViewController]. */
     private var shell: NativeShell? = null
 
+    /** A push tapped before [start] has finished, opened once it has ([openPush]). */
+    private var pendingPush: Map<String, String>? = null
+
     /**
      * Starts Firebase ([IosFirebase]), clears what an earlier install left in the Keychain on the
      * first launch after an install (`clearPreviousInstall`: the sealed preferences, Firebase Auth's
@@ -109,17 +119,22 @@ object IosApp {
      * @param apple Apple's sign-in sheet, which the app's Swift side runs (`AppleSignInBridge`); the
      *   sign-in screen and the sign-in methods offer it only while the bundle's `CoplanlyAppleSignIn`
      *   flag is on ([IosCredentialSignIn.appleAvailable]).
+     * @param pushToken This iPhone's Firebase Messaging token, which the app's Swift side holds
+     *   (`PushTokenBridge`): what the push registration keeps on the profile and detaches at
+     *   sign-out (phase 4 part C).
      * @throws IllegalStateException when called a second time.
      */
     @Throws(Throwable::class)
-    fun start(config: IosAppConfig, google: GoogleIdTokenSource, apple: AppleIdSource) {
+    fun start(config: IosAppConfig, google: GoogleIdTokenSource, apple: AppleIdSource, pushToken: IosPushToken) {
         started.claim()
         reportUncaughtExceptions()
         IosFirebase.configure(config)
         // After Firebase, which the sign-out needs; before Koin builds the preference store.
         clearPreviousInstall(google.session())
         val koin = startKoin {
-            modules(dataModules + platformDataModule + uiModules + platformUiModule + iosAppModule(google))
+            modules(
+                dataModules + platformDataModule + uiModules + platformUiModule + iosAppModule(google, pushToken)
+            )
         }.koin
         startSession(koin)
         this.koin = koin
@@ -141,12 +156,21 @@ object IosApp {
             edupageImport = false,
             appleSignIn = appleSignIn,
         )
+        // A push tapped while the app was not running reaches the delegate before this returns.
+        pendingPush?.let { data ->
+            pendingPush = null
+            openPush(data)
+        }
     }
 
     /**
      * What Android's `CoPlanlyApplication.onCreate` starts once the graph is up, on the iPhone (Task
      * 6), and in its order: the chat mirror, the signed-in account's profile, a sync now and one on
-     * every return to the foreground ([IosLifecycle]). Each is harmless while nobody is signed in,
+     * every return to the foreground ([IosLifecycle]). Since phase 4 part C also the signed-in account
+     * shared with the notification extension ([AppGroupShare]: on every change of the uid, and again
+     * on the foreground) and the notification permission read without asking
+     * ([NotificationPermission.refresh], on start and on the foreground, where the Settings switch
+     * and the push registration read it). Each is harmless while nobody is signed in,
      * as on Android: the mirror waits for a co-parent, the profile for an account, and a sync with
      * nobody signed in ends at once. Telemetry, the widget and the periodic job are not here: the
      * iPhone collects nothing, has no widget yet and no background job until phase 4.
@@ -159,7 +183,16 @@ object IosApp {
         koin.get<SessionProfileSynchronizer>().start()
         val sync = koin.get<SyncRequester>()
         sync.requestSyncNow()
-        IosLifecycle.observe { sync.requestSyncNow() }
+        val signedIn = koin.get<SignedInUser>()
+        val permission = koin.get<NotificationPermission>()
+        scope.launch { shareSignedInAccount(signedIn.observeCurrentUid()) { readerLanguageTag() } }
+        scope.launch { permission.refresh() }
+        IosLifecycle.observe {
+            sync.requestSyncNow()
+            scope.launch { permission.refresh() }
+            val uid = signedIn.getCurrentUid()
+            AppGroupShare.write(uid, uid?.let { readerLanguageTag() })
+        }
     }
 
     /**
@@ -209,6 +242,49 @@ object IosApp {
         return true
     }
 
+    /**
+     * Opens what a tapped notification names (phase 4 part C, spec §7.2), from the push's data
+     * (`userInfo`, its string keys and values), as Android's `MainActivity.readLaunchIntent` reads
+     * the intent `PushNotifier` built ([LaunchLinks.forPush]): nothing when nobody is signed in or
+     * the push names another account (CLAUDE.md item 23: the server's neutral alert of a push for
+     * the account that signed out still shows, and opens nothing); otherwise the family it names is
+     * switched to **first**, and only then is its link or screen armed for the shell (CLAUDE.md item
+     * 15), with [openTap]. A family this phone does not know yet is deferred by
+     * [SelectedFamilySource.select], as for a chat link ([openUrl]).
+     *
+     * A push tapped before [start] has finished (the app launched from the notification) is held
+     * and opened at its end, as the shell holds a link until the tabs show.
+     */
+    fun openPush(data: Map<String, String>) {
+        val graph = koin
+        if (graph == null) {
+            pendingPush = data
+            return
+        }
+        val tap = LaunchLinks.forPush(data, graph.get<SignedInUser>().getCurrentUid())
+        if (tap == null) {
+            logger.i(TAG, "A tapped push for an account not signed in here opens nothing")
+            return
+        }
+        val families = graph.get<SelectedFamilySource>()
+        scope.launch {
+            openTap(tap, { familyId -> families.showFamily(familyId) }, pendingLinks::arm, pendingLinks::armDestination)
+        }
+    }
+
+    /**
+     * A new or refreshed Firebase Messaging token (the Swift side's `PushTokenBridge`, as Android's
+     * `onNewToken`): kept on the signed-in profile through the push device, which writes nothing
+     * while pushes are off or nobody is signed in. Before [start] there is no graph, and the next
+     * sync keeps the token instead.
+     */
+    fun pushTokenChanged(token: String) {
+        val device = koin?.get<PushDevice>() ?: return
+        scope.launch {
+            device.updateUserToken(token).onFailure { logger.w(TAG, "Could not keep the push token", it) }
+        }
+    }
+
     private const val TAG = "IosApp"
 
     /** The longest line [reportUncaughtExceptions] writes; the system log keeps about a kilobyte. */
@@ -241,6 +317,22 @@ object IosApp {
      */
     internal suspend fun openLink(link: LaunchLink, switchTo: suspend (String) -> Unit, arm: (LaunchLink) -> Unit) {
         val familyId = (link as? LaunchLink.Chat)?.familyId
+        openTap(PushTap(familyId = familyId, link = link, destination = null), switchTo, arm) {}
+    }
+
+    /**
+     * [openPush]'s order, apart for its test, and [openLink]'s: the family [tap] names is switched to
+     * first ([switchTo] has returned, or failed, which is logged, and the tap then opens on the
+     * family showing, as on Android), and only then is its link [arm]ed and its screen
+     * [armDestination]ed.
+     */
+    internal suspend fun openTap(
+        tap: PushTap,
+        switchTo: suspend (String) -> Unit,
+        arm: (LaunchLink) -> Unit,
+        armDestination: (PushDestination) -> Unit,
+    ) {
+        val familyId = tap.familyId
         if (familyId != null) {
             try {
                 switchTo(familyId)
@@ -249,10 +341,11 @@ object IosApp {
             } catch (
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
-                logger.w(TAG, "Could not switch to the family a link named", e)
+                logger.w(TAG, "Could not switch to the family a link or a push named", e)
             }
         }
-        arm(link)
+        tap.link?.let(arm)
+        tap.destination?.let(armDestination)
     }
 
     /** Shows [familyId] unless it already shows. */
@@ -272,10 +365,13 @@ object IosApp {
  * ([SignInProviderSession]), which sign-out ends (`IosAccountTraces`, part B, Task 12). The sign-in
  * (Task 5) and the sync, push queue and wordings (Task 6) went into the platform modules, where the
  * shared graph asks for them, the native shell (Task 8) resolves what it needs itself, and Google's
- * sheet (Task 9) is handed to [IosApp.start] and reaches the screens through the shell.
+ * sheet (Task 9) is handed to [IosApp.start] and reaches the screens through the shell. Since phase
+ * 4 part C also the Swift side's push token ([IosPushToken]), which `platformDataModule`'s push
+ * registration reads.
  */
-internal fun iosAppModule(google: GoogleIdTokenSource): Module = module {
+internal fun iosAppModule(google: GoogleIdTokenSource, pushToken: IosPushToken): Module = module {
     single<SignInProviderSession> { google.session() }
+    single<IosPushToken> { pushToken }
 }
 
 /** [google]'s own session, as the data layer ends it, and its grant, as Google Calendar revokes it. */
@@ -304,9 +400,8 @@ internal class StartOnce(private val refusal: String) {
 
 /**
  * What a launch hands the shell on the iPhone: the pending holders `MainActivity` keeps on Android,
- * in the same shape and with the same meaning ([AppLaunch]). [IosApp.openUrl] fills them ([arm]),
- * and the shell clears each once it has opened it. A push's screen is never armed yet: the iPhone
- * receives no push until phase 4.
+ * in the same shape and with the same meaning ([AppLaunch]). [IosApp.openUrl] and [IosApp.openPush]
+ * fill them ([arm], [armDestination]), and the shell clears each once it has opened it.
  */
 internal class IosLaunch {
     /** A pairing code; empty for a link with none, as on Android. */
@@ -334,5 +429,10 @@ internal class IosLaunch {
             is LaunchLink.Guest -> guest.value = link.code
             is LaunchLink.Chat -> chat.value = PendingChatLink(link.conversationId)
         }
+    }
+
+    /** Arms the screen a tapped push names, replacing one still waiting. */
+    fun armDestination(destination: PushDestination) {
+        this.destination.value = destination
     }
 }

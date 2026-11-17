@@ -1,13 +1,24 @@
 import Shared
 import UIKit
+import UserNotifications
 
 /// The iPhone app's entry point (MON-24 phase 3). It reads what the build hands the shared code and
 /// starts it (`IosApp`, in the `Shared` framework `:shared-ui` builds), with Google's sign-in sheet
 /// (`GoogleSignInBridge`) and Apple's (`AppleSignInBridge`). The window is the scene's
 /// (`SceneDelegate`, named in `Info.plist`'s scene manifest), which shows the shared code's root
 /// view controller. Every screen is the shared code's; nothing the user reads is written here.
+///
+/// Pushes (iPhone phase 4 part C): the app registers with Apple's service and hands the device
+/// token to Firebase Messaging (`PushTokenBridge`), whose token the shared code keeps on the profile.
+/// It is the notification center's delegate: a push that arrives while the app is open shows as a
+/// banner with its sound, and a tapped one hands its data to `IosApp.openPush`, which switches the
+/// family it names before it opens the screen (CLAUDE.md item 15). The notification permission is
+/// never asked here: the shared screens ask it in context (UX overhaul item 7).
 @main
-final class AppDelegate: UIResponder, UIApplicationDelegate {
+final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    /// This iPhone's Firebase Messaging token, for the shared code.
+    private var pushToken: PushTokenBridge?
+
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -19,12 +30,74 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
             termsUrl: Self.infoString("CoPlanlyTermsURL"),
             supportEmail: Self.infoString("CoPlanlySupportEmail")
         )
+        let push = PushTokenBridge(enabled: config.emulatorHost == nil)
+        pushToken = push
         do {
-            try IosApp.shared.start(config: config, google: GoogleSignInBridge(), apple: AppleSignInBridge())
+            try IosApp.shared.start(
+                config: config,
+                google: GoogleSignInBridge(),
+                apple: AppleSignInBridge(),
+                pushToken: push
+            )
         } catch {
             fatalError("The shared code did not start: \(error)")
         }
+        // Before this method returns, so a tap that launched the app reaches the delegate.
+        UNUserNotificationCenter.current().delegate = self
+        push.start()
+        if push.enabled {
+            // Asks for no permission: an APNs token is issued without one.
+            application.registerForRemoteNotifications()
+        }
         return true
+    }
+
+    func application(
+        _ application: UIApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+        pushToken?.setApnsToken(deviceToken)
+    }
+
+    func application(
+        _ application: UIApplication,
+        didFailToRegisterForRemoteNotificationsWithError error: Error
+    ) {
+        let ns = error as NSError
+        NSLog("CoPlanly could not register for pushes: %@ %ld", ns.domain, ns.code)
+    }
+
+    /// A push that arrives while the app is open: shown as a banner with its sound, as in the tray.
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .list, .sound])
+    }
+
+    /// A tapped push: its data, string keys and values only (the `aps` block is Apple's), to the
+    /// shared code, which drops one for another account and switches the family before opening.
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
+            IosApp.shared.openPush(data: Self.stringData(response.notification.request.content.userInfo))
+        }
+        completionHandler()
+    }
+
+    /// The push's data as the shared code reads it: every string key with a string value.
+    private static func stringData(_ userInfo: [AnyHashable: Any]) -> [String: String] {
+        var data: [String: String] = [:]
+        for (key, value) in userInfo {
+            if let key = key as? String, let value = value as? String {
+                data[key] = value
+            }
+        }
+        return data
     }
 
     /// Where the Firebase emulators run, or nil for the real project.

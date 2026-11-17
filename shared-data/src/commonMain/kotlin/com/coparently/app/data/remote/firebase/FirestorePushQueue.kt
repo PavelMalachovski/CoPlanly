@@ -20,17 +20,20 @@ import kotlin.time.Clock
  * both are in), so this writes no key of its own. A new id is made on the phone and the document
  * written whole, which is the create `collection.add()` makes on Android.
  *
- * This phone has **no push token yet** (the iPhone registers with Apple's service in phase 4), so
- * [getCurrentToken] answers null and [updateUserToken] writes nothing: the sync then leaves the
- * profile's `fcmToken` as it was, and the iPhone receives no push until it has one. Android keeps
- * `FcmService`.
+ * The token is [tokens]' (iPhone phase 4 part C: `IosPushRegistration`, over Apple's service and
+ * Firebase Messaging), which the sync reads ([getCurrentToken]) and keeps on the profile
+ * ([updateUserToken]) as it does Android's. Without one, [getCurrentToken] answers null and
+ * [updateUserToken] writes nothing: the sync then leaves the profile's `fcmToken` as it was.
+ * Android keeps `FcmService`.
  *
  * @property firestore Where the queue document is written.
  * @property signedInUser Who sends it: the family is the sender's with the addressee.
+ * @property tokens This device's push token, or null where there is none to keep.
  */
 class FirestorePushQueue(
     private val firestore: FirestoreClient,
-    private val signedInUser: SignedInUser
+    private val signedInUser: SignedInUser,
+    private val tokens: PushTokenKeeper? = null,
 ) : PushDevice {
 
     /**
@@ -63,11 +66,12 @@ class FirestorePushQueue(
         Result.failure(e)
     }
 
-    /** No push token on the iPhone yet (phase 4 registers with Apple's service). */
-    override suspend fun getCurrentToken(): String? = null
+    /** This device's push token from [tokens], or null without them. */
+    override suspend fun getCurrentToken(): String? = tokens?.currentToken()
 
-    /** Nothing to keep: there is no token, so nothing is written and nothing fails. */
-    override suspend fun updateUserToken(token: String): Result<Unit> = Result.success(Unit)
+    /** Keeps [token] on the profile through [tokens]; without them nothing is written and nothing fails. */
+    override suspend fun updateUserToken(token: String): Result<Unit> =
+        tokens?.keepToken(token) ?: Result.success(Unit)
 
     private companion object {
         /** The queue the Cloud Function `sendNotification` reads. */

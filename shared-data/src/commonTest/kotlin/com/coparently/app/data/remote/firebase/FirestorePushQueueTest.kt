@@ -76,7 +76,21 @@ class FirestorePushQueueTest {
     }
 
     @Test
-    fun `there is no token yet and keeping one writes nothing`() = runTest {
+    fun `the token is read and kept through the keeper`() = runTest {
+        val kept = mutableListOf<String>()
+        val keeper = object : PushTokenKeeper {
+            override suspend fun currentToken(): String = "fcm-1"
+            override suspend fun keepToken(token: String): Result<Unit> = Result.success(Unit).also { kept += token }
+        }
+        val withTokens = FirestorePushQueue(firestore, signedIn, keeper)
+
+        assertEquals("fcm-1", withTokens.getCurrentToken())
+        assertTrue(withTokens.updateUserToken("fcm-1").isSuccess)
+        assertEquals(listOf("fcm-1"), kept)
+    }
+
+    @Test
+    fun `without a keeper there is no token and keeping one writes nothing`() = runTest {
         assertNull(queue.getCurrentToken())
 
         val result = queue.updateUserToken("token")

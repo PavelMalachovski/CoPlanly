@@ -34,6 +34,9 @@ import com.coparently.app.data.remote.firebase.CallableFunctions
 import com.coparently.app.data.remote.firebase.FirestoreClient
 import com.coparently.app.data.remote.firebase.FirestorePushQueue
 import com.coparently.app.data.remote.firebase.IosFirebaseAuth
+import com.coparently.app.data.remote.firebase.IosPushRegistration
+import com.coparently.app.data.remote.firebase.IosPushToken
+import com.coparently.app.data.remote.firebase.NotificationPermission
 import com.coparently.app.data.remote.firebase.PushDevice
 import com.coparently.app.data.remote.firebase.PushQueue
 import com.coparently.app.data.remote.firebase.PushRegistration
@@ -105,7 +108,10 @@ class IosKoinGraphTest {
                 ?: "127.0.0.1"
         )
         val koin = startKoin {
-            modules(dataModules + platformDataModule + uiModules + platformUiModule + iosAppModule(NoGoogle))
+            modules(
+                dataModules + platformDataModule + uiModules + platformUiModule +
+                    iosAppModule(NoGoogle, NoTestPushToken)
+            )
         }.koin
         try {
             val missing = SEAMS.mapNotNull { type ->
@@ -133,6 +139,7 @@ class IosKoinGraphTest {
             AccountLinking::class,
             IosAccountTraces::class, AccountTraces::class, LastSignedInUid::class, AccountConsistency::class,
             FirestorePushQueue::class, PushDevice::class, PushQueue::class, PushRegistration::class,
+            IosPushRegistration::class, NotificationPermission::class,
             AccountDeletion::class, ReminderScheduler::class, RequestClockScheduler::class,
             SchoolImportScheduler::class, SupportReminderScheduler::class,
             SyncRequester::class, GoogleCalendarAccount::class, GoogleCalendarConnectionSource::class,
@@ -146,7 +153,7 @@ class IosKoinGraphTest {
             ChatMirror::class, SessionProfileSynchronizer::class, SyncService::class,
             GoogleCalendarAutoImport::class, PairingRepository::class,
             // iosAppModule
-            SignInProviderSession::class,
+            SignInProviderSession::class, IosPushToken::class,
         )
 
         /** Google's sheet as a phone without a `GoogleService-Info.plist` has it: unavailable. */

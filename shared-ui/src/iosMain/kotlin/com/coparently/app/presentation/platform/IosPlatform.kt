@@ -2,9 +2,15 @@ package com.coparently.app.presentation.platform
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import com.coparently.app.data.files.IosPickedFiles
+import com.coparently.app.data.remote.firebase.NotificationPermission
+import com.coparently.app.data.remote.firebase.UserNotificationsPermission
 import com.coparently.app.presentation.settings.AppLanguage
+import kotlinx.coroutines.launch
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 import platform.Foundation.NSByteCountFormatter
@@ -17,7 +23,8 @@ import platform.Foundation.NSByteCountFormatterCountStyleFile
  * item 8): QR scanning and dictation until phase 4, the rest until phase 3. A launch that
  * comes anyway does nothing and reports nothing it did not do. Images (`IosImages`) and payment
  * codes (`IosQrCodes`) are the iPhone's own since part C, and since its Task 11 the share sheet
- * (`IosShareSheet`), the pickers (`IosFilePicker`) and the camera (`IosCameraCapture`).
+ * (`IosShareSheet`), the pickers (`IosFilePicker`) and the camera (`IosCameraCapture`), and since
+ * phase 4 part C the notification permission (`IosPermissions`).
  */
 
 /**
@@ -30,7 +37,7 @@ fun iosPlatformServices(buildValues: AppBuildValues): PlatformServices = Platfor
     cameraCapture = IosCameraCapture,
     qrScanner = NoQrScanner,
     dictation = NoDictation,
-    permissions = NoPermissions,
+    permissions = IosPermissions(UserNotificationsPermission),
     openUrl = NoOpenUrl,
     clipboard = NoClipboard,
     buildValues = buildValues,
@@ -90,17 +97,36 @@ private object NoDictation : Dictation {
 }
 
 /**
- * No runtime permission can be asked yet: nothing is granted, and a request is refused at once, so
- * a screen that asked anyway takes its "denied" path rather than waiting.
+ * The runtime permissions on the iPhone (phase 4 part C, spec §7.6): notifications are asked of
+ * `UNUserNotificationCenter` for alerts, sounds and badges ([NotificationPermission.request]), where
+ * Android asks for `POST_NOTIFICATIONS`, and only from the screens that need them (UX overhaul item
+ * 7). The answer is the one the push registration reads too ([UserNotificationsPermission]), and
+ * `IosApp` reads it on start and on every return to the foreground, so a change made in the phone's
+ * Settings shows.
+ *
+ * The microphone is part E's and the camera `IosCameraCapture`'s own, so neither is asked here: as
+ * before, neither reads granted and a request for one takes its "denied" path at once.
  */
-private object NoPermissions : PermissionRequester {
-    override val available: Boolean = false
+internal class IosPermissions(private val notifications: NotificationPermission) : PermissionRequester {
+    override val available: Boolean = true
 
-    override fun isGranted(permission: PlatformPermission): Boolean = false
+    override fun isGranted(permission: PlatformPermission): Boolean =
+        permission == PlatformPermission.NOTIFICATIONS && notifications.granted
 
     @Composable
-    override fun rememberRequest(permission: PlatformPermission, onDenied: () -> Unit): PermissionRequest =
-        PermissionRequest { onDenied() }
+    override fun rememberRequest(permission: PlatformPermission, onDenied: () -> Unit): PermissionRequest {
+        val scope = rememberCoroutineScope()
+        val denied by rememberUpdatedState(onDenied)
+        return remember(permission, scope) {
+            PermissionRequest { action ->
+                if (permission != PlatformPermission.NOTIFICATIONS) {
+                    denied()
+                } else {
+                    scope.launch { if (notifications.request()) action() else denied() }
+                }
+            }
+        }
+    }
 }
 
 /** Nothing is handed to another app until phase 3: every call answers that no app took it. */
