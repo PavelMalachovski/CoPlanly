@@ -232,7 +232,12 @@ class TwoParentServerClocksTest : TwoParentTest() {
         assertEquals(date, awaitCard(ActivityKind.REQUEST_UNANSWERED, alice).activity?.entityId)
         assertNoAnswerPushed(familyId)
 
-        val overrides = alice.custodyRepository.observeDayOverrides().first()
+        // The family's document as the server holds it, not the first Room emission: Room's row
+        // can be between the mirror's rewrites at this moment and read briefly without the day.
+        val shared = withTimeout(EmulatorParent.WAIT_MS) {
+            alice.custodyRepository.observeSharedOf(familyId).first { it?.dayOverrides?.containsKey(date) == true }
+        }
+        val overrides = checkNotNull(shared).dayOverrides
         assertTrue("a swap is never withdrawn at its end: ${overrides[date]}", overrides[date]?.isPending == true)
         val inbox = RequestInbox.build(
             scope = checkNotNull(RequestScope.of(alice.uid, bob.uid, setOf(bob.uid))),
