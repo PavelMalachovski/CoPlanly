@@ -5,9 +5,10 @@ import com.coparently.app.domain.changerequests.RequestStart
 import kotlinx.coroutines.flow.Flow
 
 /**
- * The clocks of requests that wait on the other parent: reading them, starting one, and the five
- * writes each phone makes as a request is received, opened, reminded about, given a last chance and
- * closed (phase 3a, spec §5.1).
+ * The clocks of requests that wait on the other parent: reading them, starting one, and the four
+ * writes each phone makes as a request is received, opened, reminded about and given a last chance
+ * (phase 3a, spec §5.1). The closure is the server's since MON-25: it closes a clock nobody
+ * answered, and no phone writes the outcome.
  *
  * **Nothing here throws, and nothing here waits long on the server** (cancellation aside, which is
  * never swallowed). A read that cannot be answered reads as "no clock"; a write answers whether it
@@ -46,11 +47,11 @@ interface RequestDeadlineRepository {
     suspend fun get(id: String): RequestDeadline?
 
     /**
-     * Writes the clock for [start] as the signed-in parent, then schedules its deadline and its end.
+     * Writes the clock for [start] as the signed-in parent. Its deadline and its end are the
+     * server's to run (MON-25), so nothing is scheduled on this phone.
      *
      * @return The clock as written, with no creation time yet — the server stamps that — or null
-     *   when it was not written: nobody is signed in, or the rules refused it. Nothing is scheduled
-     *   then.
+     *   when it was not written: nobody is signed in, or the rules refused it.
      */
     suspend fun start(start: RequestStart): RequestDeadline?
 
@@ -81,11 +82,4 @@ interface RequestDeadlineRepository {
      * @return Whether the write was accepted, or is queued.
      */
     suspend fun giveLastChance(clock: RequestDeadline, untilMillis: Long): Boolean
-
-    /**
-     * Closes the clock as "No answer"; the server stamps when.
-     *
-     * @return Whether the write was accepted, or is queued.
-     */
-    suspend fun close(clock: RequestDeadline): Boolean
 }

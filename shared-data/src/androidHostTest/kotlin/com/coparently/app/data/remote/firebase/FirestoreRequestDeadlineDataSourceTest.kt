@@ -151,18 +151,6 @@ class FirestoreRequestDeadlineDataSourceTest {
     }
 
     @Test
-    fun `a closure is the one outcome and the server's time for when`() = runTest {
-        client.put(PATH, mapOf("kind" to "change"))
-
-        dataSource.close(ID)
-
-        val update = client.writes.single() as Operation.Update
-        assertEquals(setOf("outcome", "closedAt"), update.fields.keys)
-        assertEquals("no_answer", update.fields["outcome"])
-        assertEquals(ServerValue.ServerTimestamp, update.fields["closedAt"])
-    }
-
-    @Test
     fun `a reminder shown is counted by an integer increment, not by a number this phone read`() = runTest {
         dataSource.reportShown(ID)
 

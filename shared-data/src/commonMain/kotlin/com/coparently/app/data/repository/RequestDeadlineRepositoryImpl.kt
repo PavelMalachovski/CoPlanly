@@ -4,11 +4,9 @@ import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirestoreRequestDeadlineDataSource
 import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.requests.RequestDeadlineDocument
-import com.coparently.app.domain.changerequests.RequestClock
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.changerequests.RequestStart
-import com.coparently.app.domain.notification.RequestClockScheduler
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -31,15 +29,15 @@ import kotlinx.coroutines.withTimeoutOrNull
  *   a growing pause, as the switcher's dot is (`OtherFamiliesSignals`), then reads as no clocks;
  *   the one-shot reads answer null and an empty list. A request whose clock cannot be read
  *   behaves as one without a clock, which is what it was before this feature.
- * - **A start is a write, then two jobs.** The deadline and the end are scheduled only once the
- *   clock was written, so a refused clock leaves nothing behind.
+ * - **A start is a write and nothing more.** The deadline notice and the end run on the server
+ *   since MON-25 (`functions/request-clock-steps.js`), which schedules them from the clock it is
+ *   handed, so this phone schedules no job for them.
  *
  * No log line names a clock: its id spells the proposer's uid, and a proposal's the family's two more.
  */
 class RequestDeadlineRepositoryImpl(
     private val dataSource: FirestoreRequestDeadlineDataSource,
-    private val authService: SignedInUser,
-    private val scheduler: RequestClockScheduler
+    private val authService: SignedInUser
 ) : RequestDeadlineRepository {
 
     override fun signedInUid(): String? = authService.getCurrentUid()
@@ -69,7 +67,7 @@ class RequestDeadlineRepositoryImpl(
         val id = RequestDeadlineId.of(start.kind, uid, start.ref, start.familyId)
         val fields = RequestDeadlineDocument.createFields(start, uid)
         if (!write("The request clock") { dataSource.create(id, fields) }) return null
-        val clock = RequestDeadline(
+        return RequestDeadline(
             id = id,
             kind = start.kind,
             ref = start.ref,
@@ -81,9 +79,6 @@ class RequestDeadlineRepositoryImpl(
             firstDate = start.firstDate,
             dayCount = start.dayCount
         )
-        scheduler.scheduleDeadline(id, clock.answerByMillis)
-        scheduler.scheduleEnd(id, RequestClock.endMillis(clock))
-        return clock
     }
 
     override suspend fun markDelivered(
@@ -104,9 +99,6 @@ class RequestDeadlineRepositoryImpl(
 
     override suspend fun giveLastChance(clock: RequestDeadline, untilMillis: Long): Boolean =
         write("The last chance") { dataSource.giveLastChance(clock.id, untilMillis) }
-
-    override suspend fun close(clock: RequestDeadline): Boolean =
-        write("The closure") { dataSource.close(clock.id) }
 
     /**
      * Runs a Firestore write: true when it was accepted, or when the server had not answered after

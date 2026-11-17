@@ -11,7 +11,6 @@ import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.changerequests.RequestKind
 import io.mockk.coEvery
-import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
@@ -19,10 +18,11 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
 /**
- * [RequestTelling]: the last-chance push and the two cards go to the clock's family, never the
- * family on screen (phase 3a, spec §5.6, Review Focus 1).
+ * [RequestTelling]: the last-chance push and its card go to the clock's family, never the family
+ * on screen (phase 3a, spec §5.6, Review Focus 1).
  *
- * Alice co-parents with Bob and with Carol, and shows Carol's family while Bob's request ends. The
+ * Alice co-parents with Bob and with Carol, and shows Carol's family while she gives Bob's request
+ * its last chance. The
  * announcer is handed Bob explicitly — its fourth argument — because without one it posts to the
  * family on screen.
  */
@@ -70,21 +70,6 @@ class RequestTellingTest {
                 BOB
             )
         }
-    }
-
-    @Test
-    fun `no answer posts its card to the clock's family and pushes nobody`() = runTest {
-        telling.unanswered(clock, card)
-
-        coVerify(exactly = 1) {
-            announcer.announce(
-                announcement(ActivityKind.REQUEST_UNANSWERED),
-                "Alice",
-                false,
-                BOB
-            )
-        }
-        coVerify(exactly = 0) { fcmService.queueNotificationForUser(any(), any()) }
     }
 
     private fun announcement(kind: ActivityKind) =

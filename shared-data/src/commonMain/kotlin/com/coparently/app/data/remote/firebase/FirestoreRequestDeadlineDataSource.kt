@@ -1,7 +1,6 @@
 package com.coparently.app.data.remote.firebase
 
 import com.coparently.app.data.requests.RequestDeadlineDocument
-import com.coparently.app.domain.changerequests.RequestClockOutcome
 import com.coparently.app.domain.changerequests.RequestDeadline
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -95,20 +94,6 @@ class FirestoreRequestDeadlineDataSource(
             mapOf(
                 RequestDeadlineDocument.LAST_CHANCE_AT to ServerValue.ServerTimestamp,
                 RequestDeadlineDocument.LAST_CHANCE_UNTIL_MILLIS to untilMillis
-            )
-        )
-    }
-
-    /**
-     * Closes the clock as "No answer", with the server's time for when. The outcome is the only
-     * state a clock stores.
-     */
-    suspend fun close(id: String) {
-        update(
-            id,
-            mapOf(
-                RequestDeadlineDocument.OUTCOME to RequestClockOutcome.NO_ANSWER.wire,
-                RequestDeadlineDocument.CLOSED_AT to ServerValue.ServerTimestamp
             )
         )
     }

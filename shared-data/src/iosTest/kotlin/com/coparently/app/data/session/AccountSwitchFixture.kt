@@ -163,10 +163,6 @@ internal class CountingClocks : RequestClockScheduler {
 
     override fun scheduleReminder(clockId: String, atMillis: Long) = Unit
 
-    override fun scheduleDeadline(clockId: String, atMillis: Long) = Unit
-
-    override fun scheduleEnd(clockId: String, atMillis: Long) = Unit
-
     override fun cancelAll() {
         cancelledAll++
     }

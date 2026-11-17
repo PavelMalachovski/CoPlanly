@@ -87,7 +87,7 @@
         "TwoParentAgreementsTest#firstRatioOnAFreshPairAppliesAndIsAnnouncedAsAgreed",
         "TwoParentAgreementsTest#proposalIsSeenPendingAcceptedAndBothPhonesHoldTheNewRatio",
         "TwoParentAgreementsTest#proposerWithdrawsAndTheCoParentCannot",
-        "TwoParentRequestDeadlinesTest#aSplitProposalWithADeadlineReachesAliceAndIsWithdrawnAtNoAnswer"
+        "TwoParentRequestDeadlinesTest#aSplitProposalWithADeadlineReachesAlice"
       ]
     },
     "parenting_plans": {
@@ -180,8 +180,7 @@
     "request_deadlines": {
       "e2e": [
         "TwoParentRequestDeadlinesTest#aSwapWithADeadlineIsDeliveredOpenedGivenALastChanceAndAnswered",
-        "TwoParentRequestDeadlinesTest#aProposalNobodyAnswersClosesAsNoAnswerAndIsWithdrawn",
-        "TwoParentRequestDeadlinesTest#aSplitProposalWithADeadlineReachesAliceAndIsWithdrawnAtNoAnswer"
+        "TwoParentRequestDeadlinesTest#aSplitProposalWithADeadlineReachesAlice"
       ],
       "checklist": ["5.9"]
     },

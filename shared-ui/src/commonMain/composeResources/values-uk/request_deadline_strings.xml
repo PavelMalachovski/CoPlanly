@@ -3,10 +3,6 @@
     <string name="request_clock_no_answer">Немає відповіді</string>
     <string name="request_notice_reminder_title">Очікується ваша відповідь</string>
     <string name="request_notice_reminder_body">%1$s чекає на вашу відповідь до %2$s.</string>
-    <string name="request_notice_deadline_title">%1$s: немає відповіді до терміну</string>
-    <string name="request_notice_deadline_body">У календарі нічого не змінилося. Можна дати більше часу.</string>
-    <string name="request_notice_no_answer_title">%1$s: немає відповіді</string>
-    <string name="request_notice_no_answer_body">Запит закрито як «Немає відповіді». У календарі нічого не змінилося.</string>
     <string name="answer_by_title">Відповісти до</string>
     <string name="answer_by_tomorrow">Завтра</string>
     <string name="answer_by_three_days">3 дні</string>

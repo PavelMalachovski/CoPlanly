@@ -4,8 +4,6 @@ import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
 import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
 import com.coparently.app.data.remote.firebase.FirestoreFamilySettingsDataSource
 import com.coparently.app.data.remote.firebase.ReadSource
-import com.coparently.app.data.repository.CustodyModelRepository
-import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestDeadlineId
@@ -38,8 +36,6 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
 import java.time.LocalDateTime
@@ -51,7 +47,7 @@ import java.time.LocalDateTime
  * Every step reads the record again rather than trusting the moment it was scheduled, so a request
  * answered, withdrawn or replaced meanwhile finds nothing to do. A family the parent is no longer in
  * reads as gone (Review Focus 1), and a custody document that cannot be read reads as unknown, so
- * the step tries again rather than closing a request it could not see.
+ * the step tries again rather than acting on a request it could not see.
  */
 class RequestRecordsTest {
 
@@ -59,20 +55,16 @@ class RequestRecordsTest {
     private val events = mockk<EventRepository>()
     private val eventDataSource = mockk<FirestoreEventDataSource>()
     private val custodyDataSource = mockk<FirestoreCustodyDataSource>()
-    private val custodyRepository = mockk<CustodyModelRepository>()
     private val users = mockk<UserRepository>()
     private val settingsDataSource = mockk<FirestoreFamilySettingsDataSource>()
-    private val settingsRepository = mockk<FamilySettingsRepository>()
 
     private val records = RequestRecords(
         changeRequests,
         events,
         eventDataSource,
         custodyDataSource,
-        custodyRepository,
         users,
-        settingsDataSource,
-        settingsRepository
+        settingsDataSource
     )
 
     private fun signedInAs(uid: String, partnerIds: List<String>, partnerId: String? = partnerIds.firstOrNull()) {
@@ -147,9 +139,7 @@ class RequestRecordsTest {
 
         assertEquals(RecordStatus.GONE, records.look(clock(RequestKind.CHANGE, "cr-1")).status)
         assertEquals(RecordStatus.GONE, records.look(clock(RequestKind.PROPOSAL, PROPOSED_AT)).status)
-        assertFalse(records.withdrawUnansweredProposal(clock(RequestKind.PROPOSAL, PROPOSED_AT)))
         coVerify(exactly = 0) { custodyDataSource.getCustody(any()) }
-        coVerify(exactly = 0) { custodyRepository.withdrawUnanswered(any(), any()) }
     }
 
     @Test
@@ -199,8 +189,8 @@ class RequestRecordsTest {
 
     @Test
     fun `the server's copy decides when the server is asked, whatever this phone holds`() = runTest {
-        // Bob answered on his phone; Alice's phone has not heard. The end and the deadline notice ask
-        // the server, so neither tells her he did not answer.
+        // Bob answered on his phone; Alice's phone has not heard. The last chance asks the server,
+        // so it is not offered over his answer.
         signedInAs(ALICE, listOf(BOB))
         coEvery { changeRequests.getChangeRequestById("cr-1") } returns changeRequest(ChangeRequestStatus.PENDING)
         coEvery { changeRequests.fetchFromServer("cr-1") } returns changeRequest(ChangeRequestStatus.ACCEPTED)
@@ -257,19 +247,6 @@ class RequestRecordsTest {
     }
 
     @Test
-    fun `withdrawing a proposal acts in the clock's family`() = runTest {
-        signedInAs(ALICE, listOf(BOB, CAROL), partnerId = CAROL)
-        coEvery { custodyRepository.withdrawUnanswered(FAMILY, PROPOSED_AT) } returns true
-
-        assertTrue(records.withdrawUnansweredProposal(clock(RequestKind.PROPOSAL, PROPOSED_AT)))
-        assertFalse(
-            "only a proposal is withdrawn",
-            records.withdrawUnansweredProposal(clock(RequestKind.CHANGE, "cr-1"))
-        )
-        coVerify(exactly = 1) { custodyRepository.withdrawUnanswered(FAMILY, PROPOSED_AT) }
-    }
-
-    @Test
     fun `an expense split reads pending, answered or gone from the family's settings, on the server when asked`() =
         runTest {
             signedInAs(ALICE, listOf(BOB))
@@ -298,21 +275,6 @@ class RequestRecordsTest {
             coEvery { settingsDataSource.getSettings(FAMILY, ReadSource.SERVER) } throws IOException("offline")
             assertEquals(RecordStatus.UNKNOWN, serverStatusOf(RequestKind.SPLIT, ref))
         }
-
-    @Test
-    fun `withdrawing an expense split acts in the clock's family, by the proposal's time`() = runTest {
-        signedInAs(ALICE, listOf(BOB, CAROL), partnerId = CAROL)
-        coEvery { settingsRepository.withdrawUnanswered(FAMILY, SPLIT_AT) } returns true
-
-        assertTrue(records.withdrawUnansweredProposal(clock(RequestKind.SPLIT, SPLIT_AT.toString())))
-        coVerify(exactly = 1) { settingsRepository.withdrawUnanswered(FAMILY, SPLIT_AT) }
-        coVerify(exactly = 0) { custodyRepository.withdrawUnanswered(any(), any()) }
-
-        // A family the parent has left withdraws nothing.
-        signedInAs(ALICE, listOf(CAROL))
-        assertFalse(records.withdrawUnansweredProposal(clock(RequestKind.SPLIT, SPLIT_AT.toString())))
-        coVerify(exactly = 1) { settingsRepository.withdrawUnanswered(any(), any()) }
-    }
 
     private suspend fun statusOf(kind: RequestKind, ref: String): RecordStatus = records.look(clock(kind, ref)).status
 

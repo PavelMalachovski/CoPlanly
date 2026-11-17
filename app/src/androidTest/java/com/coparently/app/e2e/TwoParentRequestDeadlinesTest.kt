@@ -5,12 +5,10 @@ import com.coparently.app.data.notification.RequestClockWork
 import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.data.repository.PatternSubmission
 import com.coparently.app.data.repository.RatioSubmission
-import com.coparently.app.data.requests.StepResult
 import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.ClocksAt
-import com.coparently.app.domain.changerequests.RequestClockOutcome
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.changerequests.RequestInbox
@@ -23,10 +21,8 @@ import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.custody.CustodyKey
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideTransition
-import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.expenses.FamilySettings
 import com.coparently.app.domain.expenses.SplitRatio
-import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.Message
 import kotlinx.coroutines.delay
@@ -53,36 +49,34 @@ import java.util.UUID
 /**
  * Request deadlines between two phones (phase 3a, "no request is left hanging"): a clock started
  * with an offer, received and opened on the other phone, given a last chance after its deadline,
- * and ended — answered in time, or with nobody answering.
+ * and answered under it.
  *
  * Every clock write goes through the production `RequestDeadlineRepositoryImpl` against the real
- * `firestore.rules`, and every step through the production `RequestClockKeeper`,
- * `RequestClockActions` and `RequestClockSteps` of the phone that runs it. What WorkManager would do
- * at a step's time the test does itself: each phone's [RecordingClockScheduler] records the steps,
- * and the test runs the one it wants when it wants it.
+ * `firestore.rules`, and every step through the production `RequestClockKeeper` and
+ * `RequestClockActions` of the phone that runs it. What WorkManager would do at a reminder's time
+ * the test does itself: each phone's [RecordingClockScheduler] records the reminders.
+ *
+ * **The deadline notice and the end are the server's since MON-25**, so a request nobody answers is
+ * closed, withdrawn and carded by the scheduled function, not by a phone; `TwoParentServerClocksTest`
+ * runs that between two parents.
  *
  * What it proves:
  * - **An offer with a deadline starts its clock, and its push says when** (`answerBy`), and the
  *   answering phone records the delivery with the reminders it planned, and schedules those.
  * - **Opening the request is recorded** on the proposer's side.
  * - **The last chance is given only after the deadline**, reaches the answering parent as the
- *   `request_last_chance` push read back from `notification_queue`, and an answer under it wins:
- *   the end closes nothing, and the inbox's history says Accepted.
- * - **A proposal nobody answers is closed as "No answer"** at its deadline when the cap leaves no
- *   room for a last chance (ruling 2), withdrawn so it stops blocking the co-parent, posted to the
- *   thread as a `REQUEST_UNANSWERED` card, listed as No answer in the co-parent's history — and the
- *   co-parent can propose again.
+ *   `request_last_chance` push read back from `notification_queue`, and an answer under it is
+ *   listed as Accepted in the inbox's history, with the clock left unclosed.
  * - **An expense split proposal is a request too** (October 2026): proposed through the production
  *   `FamilySettingsRepository` with a deadline, its clock reaches the co-parent, its push says when
- *   to answer by, and its `SPLIT_PROPOSED` card reaches their thread; nobody answering, the clock's
- *   end withdraws it on the server, keeps the agreed split, and posts the `REQUEST_UNANSWERED` card.
+ *   to answer by, and its `SPLIT_PROPOSED` card reaches their thread.
  *
  * **Short deadlines, started directly.** A preset is three days at the least, so the clocks this
  * test lets run out are written straight through `RequestDeadlineRepository.start`, with a deadline
  * [SHORT_DEADLINE_MILLIS] ahead. `firestore.rules` asks only that a deadline be after the server's
  * time and that a cap come after it, so the start goes through the same rule an offer's does.
  *
- * What it cannot: the reminders' and the deadline's jobs firing on their own (WorkManager's time),
+ * What it cannot: the reminders' jobs firing on their own (WorkManager's time),
  * the notifications and cards as drawn, and FCM's delivery of the push.
  */
 @RunWith(AndroidJUnit4::class)
@@ -124,72 +118,7 @@ class TwoParentRequestDeadlinesTest : TwoParentTest() {
     }
 
     @Test
-    fun aProposalNobodyAnswersClosesAsNoAnswerAndIsWithdrawn() = runBlocking<Unit> {
-        agreeFirstPattern()
-        val familyId = CustodyKey.of(alice.uid, bob.uid)
-
-        EmulatorEnvironment.step("deadlines: Alice proposes a 2-2-3 with no deadline")
-        assertEquals(
-            PatternSubmission.PROPOSED,
-            alice.custodyRepository.createTwoTwoThree(START, momStartsFirst = true)
-        )
-        val proposedAt = checkNotNull(awaitShared(alice) { it.proposal?.proposedBy == alice.uid }.proposal).proposedAt
-
-        EmulatorEnvironment.step("deadlines: Alice starts a clock that leaves no room for a last chance")
-        val now = System.currentTimeMillis()
-        val clock = checkNotNull(
-            alice.requestDeadlineRepository.start(
-                RequestStart(
-                    kind = RequestKind.PROPOSAL,
-                    ref = proposedAt,
-                    familyId = familyId,
-                    responderUid = bob.uid,
-                    answerByMillis = now + SHORT_DEADLINE_MILLIS,
-                    capMillis = now + SHORT_CAP_MILLIS
-                )
-            )
-        ) { "the rules refused the proposal's clock" }
-        assertEquals(RequestDeadlineId.of(RequestKind.PROPOSAL, alice.uid, proposedAt, familyId), clock.id)
-
-        EmulatorEnvironment.step("deadlines: the deadline passes and Alice's phone ends the proposal")
-        waitUntilPast(clock.answerByMillis)
-        assertEquals(StepResult.DONE, awaitStep { alice.requestClockSteps.end(clock.id) })
-        val closed = awaitClock(alice, clock.id) { it.outcome != null }
-        assertEquals(RequestClockOutcome.NO_ANSWER, closed.outcome)
-        assertNotNull(closed.closedAtMillis)
-
-        EmulatorEnvironment.step("deadlines: the proposal is withdrawn and Bob is told")
-        val shared = awaitShared(bob) { it.proposal == null }
-        awaitCard(ActivityKind.REQUEST_UNANSWERED)
-        val bobsClock = awaitClock(bob, clock.id) { it.outcome != null }
-        val inbox = RequestInbox.build(
-            scope = checkNotNull(RequestScope.of(bob.uid, alice.uid, setOf(alice.uid))),
-            changeRequests = emptyList(),
-            events = emptyList(),
-            overrides = bob.custodyRepository.observeDayOverrides().first(),
-            shared = shared,
-            today = currentDay(),
-            clocks = ClocksAt.of(listOf(bobsClock), System.currentTimeMillis())
-        )
-        assertTrue(
-            "Bob's history lists the proposal as No answer: ${inbox.history}",
-            inbox.history.any {
-                it.outcome == RequestOutcome.NO_ANSWER && it.subject == RequestSubject.CustodySchedule &&
-                    it.key == "custody_$proposedAt"
-            }
-        )
-        assertNull(inbox.waitingOnMe.proposal)
-
-        EmulatorEnvironment.step("deadlines: Bob can propose again")
-        assertEquals(
-            PatternSubmission.PROPOSED,
-            bob.custodyRepository.createWeekOnWeekOff(START, momFirst = false)
-        )
-        awaitShared(alice) { it.proposal?.proposedBy == bob.uid }
-    }
-
-    @Test
-    fun aSplitProposalWithADeadlineReachesAliceAndIsWithdrawnAtNoAnswer() = runBlocking<Unit> {
+    fun aSplitProposalWithADeadlineReachesAlice() = runBlocking<Unit> {
         val familyId = CustodyKey.of(alice.uid, bob.uid)
 
         EmulatorEnvironment.step("deadlines: Alice sets the pair's first split")
@@ -200,8 +129,6 @@ class TwoParentRequestDeadlinesTest : TwoParentTest() {
         awaitSettings(bob, familyId) { it.ratio == SplitRatio.EVEN }
 
         proposeASplitWithADeadline(familyId)
-        val (second, clock) = correctTheSplitUnderAShortClock(familyId)
-        endTheSplitWithNoAnswer(familyId, second, clock)
     }
 
     // ---- the expense split ----------------------------------------------------------------------
@@ -229,79 +156,6 @@ class TwoParentRequestDeadlinesTest : TwoParentTest() {
         assertEquals(familyId, card.activity?.entityId)
         assertEquals(SIXTY_FORTY.momShareBasisPoints.toString(), card.activity?.amount)
         assertTrue(card.content, card.content.startsWith("Proposed a new expense split"))
-    }
-
-    /**
-     * Bob corrects his proposal with no deadline and starts its clock directly, a deadline moments
-     * away: a preset is three days at the least. The cap is there only to leave no room for a last
-     * chance, as for the custody proposal.
-     *
-     * @return The corrected proposal and its clock.
-     */
-    private suspend fun correctTheSplitUnderAShortClock(familyId: String): Pair<SplitRatioProposal, RequestDeadline> {
-        EmulatorEnvironment.step("deadlines: Bob corrects his proposal and starts a short clock")
-        assertEquals(
-            RatioSubmission.PROPOSED,
-            bob.familySettingsRepository.submitRatio(SEVENTY_THIRTY, familyId).getOrThrow()
-        )
-        val second = checkNotNull(
-            awaitSettings(alice, familyId) { it.proposal?.ratio == SEVENTY_THIRTY }.proposal
-        )
-        val now = System.currentTimeMillis()
-        val clock = checkNotNull(
-            bob.requestDeadlineRepository.start(
-                RequestStart(
-                    kind = RequestKind.SPLIT,
-                    ref = second.proposedAtMillis.toString(),
-                    familyId = familyId,
-                    responderUid = alice.uid,
-                    answerByMillis = now + SHORT_DEADLINE_MILLIS,
-                    capMillis = now + SHORT_CAP_MILLIS
-                )
-            )
-        ) { "the rules refused the split's clock" }
-        assertEquals(RequestDeadlineId.forSplit(second, familyId), clock.id)
-        return second to clock
-    }
-
-    /**
-     * The deadline passes with nobody answering: Bob's phone ends the proposal, which is withdrawn on
-     * the server with the agreed split kept, Alice's thread gets the "No answer" card, and her
-     * inbox lists the split as No answer.
-     */
-    private suspend fun endTheSplitWithNoAnswer(familyId: String, second: SplitRatioProposal, clock: RequestDeadline) {
-        EmulatorEnvironment.step("deadlines: the deadline passes and Bob's phone ends the proposal")
-        waitUntilPast(clock.answerByMillis)
-        assertEquals(StepResult.DONE, awaitStep { bob.requestClockSteps.end(clock.id) })
-        assertEquals(RequestClockOutcome.NO_ANSWER, awaitClock(bob, clock.id) { it.outcome != null }.outcome)
-
-        EmulatorEnvironment.step("deadlines: the split is withdrawn on the server and Alice is told")
-        val settings = awaitSettings(alice, familyId) { it.proposal == null }
-        assertEquals("the agreed split stays", SplitRatio.EVEN, settings.ratio)
-        assertNull("nobody answered, so nothing was decided", settings.lastDecision)
-        assertEquals(
-            ActivityEntityType.SPLIT_PROPOSAL,
-            awaitCard(ActivityKind.REQUEST_UNANSWERED, reader = alice).activity?.entityType
-        )
-        val alicesClock = awaitClock(alice, clock.id) { it.outcome != null }
-        val inbox = RequestInbox.build(
-            scope = checkNotNull(RequestScope.of(alice.uid, bob.uid, setOf(bob.uid))),
-            changeRequests = emptyList(),
-            events = emptyList(),
-            overrides = emptyMap(),
-            shared = null,
-            today = currentDay(),
-            clocks = ClocksAt.of(listOf(alicesClock), System.currentTimeMillis()),
-            settings = settings
-        )
-        assertTrue(
-            "Alice's history lists the split as No answer: ${inbox.history}",
-            inbox.history.any {
-                it.outcome == RequestOutcome.NO_ANSWER && it.subject == RequestSubject.SplitRatio &&
-                    it.key == "split_${second.proposedAtMillis}"
-            }
-        )
-        assertNull(inbox.waitingOnMe.split)
     }
 
     // ---- the last chance ------------------------------------------------------------------------
@@ -345,7 +199,7 @@ class TwoParentRequestDeadlinesTest : TwoParentTest() {
         return id
     }
 
-    /** Bob accepts [day] under its last chance: the end closes nothing, and the history says Accepted. */
+    /** Bob accepts [day] under its last chance: the clock stays unclosed, and the history says Accepted. */
     private suspend fun answerTheLastChance(familyId: String, day: LocalDate, id: String) {
         EmulatorEnvironment.step("deadlines: Bob accepts under the last chance")
         val date = day.toString()
@@ -362,7 +216,6 @@ class TwoParentRequestDeadlinesTest : TwoParentTest() {
         ).getOrThrow()
         val overrides = awaitOverrides(alice) { it[date]?.isAccepted == true }
 
-        assertEquals(StepResult.DONE, alice.requestClockSteps.end(id))
         val clock = checkNotNull(alice.requestDeadlineRepository.get(id))
         assertNull("an answered request is never closed", clock.outcome)
 
@@ -440,12 +293,6 @@ class TwoParentRequestDeadlinesTest : TwoParentTest() {
         }.filterNotNull().first { condition(it) }
     }
 
-    /** The pair's document as [parent]'s shared listener delivers it, once [condition] holds. */
-    private suspend fun awaitShared(parent: EmulatorParent, condition: (SharedCustody) -> Boolean): SharedCustody =
-        withTimeout(EmulatorParent.WAIT_MS) {
-            checkNotNull(parent.custodyRepository.observeShared().first { it != null && condition(it) })
-        }
-
     /** [parent]'s day swaps, as its Room holds them, once [condition] holds. */
     private suspend fun awaitOverrides(
         parent: EmulatorParent,
@@ -492,16 +339,6 @@ class TwoParentRequestDeadlinesTest : TwoParentTest() {
         true
     }
 
-    /** Runs a clock step until it is no longer [StepResult.RETRY], as the worker's retries would. */
-    private suspend fun awaitStep(block: suspend () -> StepResult): StepResult = withTimeout(EmulatorParent.WAIT_MS) {
-        var result = block()
-        while (result == StepResult.RETRY) {
-            delay(POLL_MS)
-            result = block()
-        }
-        result
-    }
-
     private companion object {
         /** A Monday; the pattern's anchor, as in `TwoParentCustodyTest`. */
         val START: LocalDate = LocalDate(2026, 10, 5)
@@ -518,9 +355,6 @@ class TwoParentRequestDeadlinesTest : TwoParentTest() {
         /** A deadline the test waits out: 45 seconds after the clock is started. */
         const val SHORT_DEADLINE_MILLIS = 45_000L
 
-        /** A cap 60 seconds out: under two hours past the deadline, so no last chance is offered. */
-        const val SHORT_CAP_MILLIS = 60_000L
-
         /** How far past a deadline this phone's clock must be before the test acts on it. */
         const val PAST_MARGIN_MS = 1_000L
 
@@ -529,8 +363,7 @@ class TwoParentRequestDeadlinesTest : TwoParentTest() {
 
         const val POLL_MS = 500L
 
-        /** The two splits Bob proposes, as slot 1's share. */
+        /** The split Bob proposes, as slot 1's share. */
         val SIXTY_FORTY = SplitRatio(6_000)
-        val SEVENTY_THIRTY = SplitRatio(7_000)
     }
 }

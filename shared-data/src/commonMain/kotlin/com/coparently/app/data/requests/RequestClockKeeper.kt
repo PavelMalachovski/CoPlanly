@@ -3,7 +3,6 @@
 package com.coparently.app.data.requests
 
 import com.coparently.app.domain.changerequests.ReminderPlan
-import com.coparently.app.domain.changerequests.RequestClock
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.notification.RequestClockScheduler
@@ -13,26 +12,24 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
- * Keeps this phone's part of every open request clock in hand (phase 3a, spec §4.3, §4.5, §5.3).
+ * Keeps this phone's part of every open request clock in hand (phase 3a, spec §4.3, §5.3): the
+ * answering parent's.
  *
- * - **The answering phone delivers a clock once.** When it first sees one, it plans the reminders
- *   in its own zone — only it knows the zone, and only reminders still ahead (ruling 6) — records
- *   the delivery together with the plan, and schedules them. The delivery time is never before the
- *   clock was created, so a slow phone never says "delivered" before "sent".
- * - **The proposer's phone keeps the deadline and the end scheduled**, and runs an end that is
- *   already due; a closed proposal goes back to [RequestClockSteps.end] so a failed withdrawal is
- *   tried again.
+ * **The answering phone delivers a clock once.** When it first sees one, it plans the reminders in
+ * its own zone — only it knows the zone, and only reminders still ahead (ruling 6) — records the
+ * delivery together with the plan, and schedules them. The delivery time is never before the clock
+ * was created, so a slow phone never says "delivered" before "sent".
+ *
+ * **The proposer's phone keeps nothing** since MON-25: the deadline notice and the end are the
+ * server's (`functions/request-clock-steps.js`), which schedules them from the clock itself.
  *
  * [sweep] runs on every full sync, which is how a phone that was not running learns of a clock, and
- * how the reminders still ahead, a deadline still ahead and the end are armed again after a job was
- * lost. A deadline that has already passed is not armed again: its job waits for a network rather
- * than failing offline, so it is lost only when every run fails online. [deliverSoon] runs while
- * the app is open, for each snapshot of the family's clocks the screens are listening to.
+ * how the reminders still ahead are armed again after a job was lost. [deliverSoon] runs while the
+ * app is open, for each snapshot of the family's clocks the screens are listening to.
  *
  * Only a clock this phone can trust is acted on: its id must spell its own fields, as
  * [RequestDeadlineId] derives it, so the other parent cannot set or close this parent's request
@@ -45,7 +42,6 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
  */
 class RequestClockKeeper internal constructor(
     private val repository: RequestDeadlineRepository,
-    private val steps: RequestClockSteps,
     private val scheduler: RequestClockScheduler,
     private val time: RequestTime,
     private val scope: CoroutineScope
@@ -54,28 +50,23 @@ class RequestClockKeeper internal constructor(
     /** The production keeper: its deliveries run for as long as the process does. */
     constructor(
         repository: RequestDeadlineRepository,
-        steps: RequestClockSteps,
         scheduler: RequestClockScheduler,
         time: RequestTime
-    ) : this(repository, steps, scheduler, time, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+    ) : this(repository, scheduler, time, CoroutineScope(SupervisorJob() + Dispatchers.IO))
 
     /** The ids of the clocks a delivery is running for, so one listener seen by three screens writes once. */
     private val inFlight = AtomicReference(emptySet<String>())
 
     /**
-     * Keeps every open clock of [myUid] whose other parent is in [coParents]: delivers what this
-     * parent must answer, and schedules or runs what they asked.
+     * Keeps every open clock that [myUid] must answer and whose proposer is in [coParents]: delivers
+     * it, or arms its reminders still ahead again. A clock this parent proposed is left alone: what
+     * remains of it is the server's.
      */
     override suspend fun sweep(myUid: String, coParents: Set<String>) {
         val now = time.nowMillis()
         repository.openFor(myUid, now - LOOKBACK_MILLIS)
-            .filter { isGenuine(it) }
-            .forEach { clock ->
-                when (myUid) {
-                    clock.responderUid -> if (clock.proposerUid in coParents) keepAsResponder(clock, now)
-                    clock.proposerUid -> if (clock.responderUid in coParents) keepAsProposer(clock, now)
-                }
-            }
+            .filter { it.responderUid == myUid && it.proposerUid in coParents && isGenuine(it) }
+            .forEach { keepAsResponder(it, now) }
     }
 
     /**
@@ -111,30 +102,6 @@ class RequestClockKeeper internal constructor(
             clock.outcome == null ->
                 clock.reminderTimesMillis.filter { it > now }.forEach { scheduler.scheduleReminder(clock.id, it) }
         }
-    }
-
-    private suspend fun keepAsProposer(clock: RequestDeadline, now: Long) {
-        if (clock.outcome != null) {
-            // A closed proposal may still wait for its withdrawal, the end's last part.
-            if (clock.kind.withdrawnAtEnd) endWithin(clock)
-            return
-        }
-        if (now < clock.answerByMillis) scheduler.scheduleDeadline(clock.id, clock.answerByMillis)
-        val endAt = RequestClock.endMillis(clock)
-        if (endAt <= now) endWithin(clock) else scheduler.scheduleEnd(clock.id, endAt)
-    }
-
-    /**
-     * Runs [clock]'s due end inside the sweep for at most [SWEEP_STEP_TIMEOUT_MILLIS], so a server
-     * that does not answer cannot hold the full sync it runs in (final review M-3). The bound
-     * cancels only the step's reads: its closure and everything after it run under
-     * `NonCancellable` once started, so a timeout never leaves a clock closed with its card unsent,
-     * and never closes one either. A step that ran out of time, or asked to be tried again, is left
-     * to the end's own job, which waits for a network.
-     */
-    private suspend fun endWithin(clock: RequestDeadline) {
-        val result = withTimeoutOrNull(SWEEP_STEP_TIMEOUT_MILLIS) { steps.end(clock.id) }
-        if (result != StepResult.DONE) scheduler.scheduleEnd(clock.id, RequestClock.endMillis(clock))
     }
 
     /**
@@ -177,17 +144,12 @@ class RequestClockKeeper internal constructor(
         }
     }
 
-    internal companion object {
+    private companion object {
         /**
-         * How long the sweep gives a step it runs itself, inside a full sync, before leaving it to
-         * the step's own job (final review M-3).
+         * How far back a sweep reads deadlines: a request stays open at most two days past its
+         * deadline, so four days catch every clock this phone may still have to deliver — the
+         * delivery is recorded for the proposer's card even when no reminder is left to plan.
          */
-        internal const val SWEEP_STEP_TIMEOUT_MILLIS = 30_000L
-
-        /**
-         * How far back a sweep reads deadlines: an end comes at most two days after its deadline, so
-         * four days catch every clock that can still need a step.
-         */
-        private const val LOOKBACK_MILLIS = 4 * 24 * 3_600_000L
+        const val LOOKBACK_MILLIS = 4 * 24 * 3_600_000L
     }
 }

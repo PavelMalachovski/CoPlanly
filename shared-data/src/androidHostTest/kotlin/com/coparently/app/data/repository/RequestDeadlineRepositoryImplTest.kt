@@ -3,11 +3,9 @@ package com.coparently.app.data.repository
 import com.coparently.app.data.remote.firebase.FirestoreRequestDeadlineDataSource
 import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.requests.RequestDeadlineDocument
-import com.coparently.app.domain.changerequests.RequestClock
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestKind
 import com.coparently.app.domain.changerequests.RequestStart
-import com.coparently.app.domain.notification.RequestClockScheduler
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.FirebaseFirestoreException.Code
 import io.mockk.Runs
@@ -35,20 +33,17 @@ import org.junit.Test
  * [RequestDeadlineRepositoryImpl]: what a request's clock does between the app and Firestore
  * (phase 3a, spec §5.1 and ruling 14).
  *
- * The data source is mocked and the scheduler is a recording one, so these tests state the
- * repository's own rules: the order of a start, the ten seconds a background write may wait, what a
- * refusal means, and how long a failing listener is retried before it reads as "no clocks".
+ * The data source is mocked, so these tests state the repository's own rules: what a start writes,
+ * the ten seconds a background write may wait, what a refusal means, and how long a failing
+ * listener is retried before it reads as "no clocks". The repository holds no scheduler: the
+ * deadline notice and the end are the server's since MON-25, so a start schedules nothing here.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class RequestDeadlineRepositoryImplTest {
 
     private lateinit var dataSource: FirestoreRequestDeadlineDataSource
     private lateinit var authService: SignedInUser
-    private lateinit var scheduler: RecordingScheduler
     private lateinit var repository: RequestDeadlineRepositoryImpl
-
-    /** What happened, in order, across the data source and the scheduler. */
-    private val events = mutableListOf<String>()
 
     private val swapStart = RequestStart(
         kind = RequestKind.SWAP,
@@ -65,16 +60,15 @@ class RequestDeadlineRepositoryImplTest {
     fun setUp() {
         dataSource = mockk()
         authService = mockk()
-        scheduler = RecordingScheduler(events)
-        repository = RequestDeadlineRepositoryImpl(dataSource, authService, scheduler)
+        repository = RequestDeadlineRepositoryImpl(dataSource, authService)
         every { authService.getCurrentUid() } returns ME
     }
 
     // ---- starting a clock --------------------------------------------------------------------
 
     @Test
-    fun `start writes the clock under its derived id, then schedules the deadline and the end`() = runTest {
-        coEvery { dataSource.create(any(), any()) } coAnswers { events.add("create") }
+    fun `start writes the clock under its derived id and nothing else`() = runTest {
+        coEvery { dataSource.create(any(), any()) } just Runs
 
         val clock = repository.start(swapStart)
 
@@ -98,16 +92,7 @@ class RequestDeadlineRepositoryImplTest {
             ),
             clock
         )
-        assertEquals(
-            "written first; then the deadline, and the end a day later (the last chance's button)",
-            listOf("create", "deadline $SWAP_ID @ $ANSWER_BY", "end $SWAP_ID @ ${ANSWER_BY + DAY}"),
-            events
-        )
-        assertEquals(
-            "the end is the clock's own, not a second opinion",
-            RequestClock.endMillis(clock!!),
-            ANSWER_BY + DAY
-        )
+        coVerify(exactly = 0) { dataSource.update(any(), any()) }
     }
 
     @Test
@@ -115,14 +100,12 @@ class RequestDeadlineRepositoryImplTest {
         coEvery { dataSource.create(any(), any()) } throws denied()
 
         assertNull("the rules refused it", repository.start(swapStart))
-        assertEquals("a refused clock schedules nothing", emptyList<String>(), events)
         coVerify(exactly = 1) { dataSource.create(any(), any()) }
 
         every { authService.getCurrentUid() } returns null
 
         assertNull("nobody is signed in", repository.start(swapStart))
         coVerify(exactly = 1) { dataSource.create(any(), any()) }
-        assertEquals(emptyList<String>(), events)
     }
 
     @Test
@@ -133,10 +116,6 @@ class RequestDeadlineRepositoryImplTest {
 
         assertNotNull("queued by Firestore, which delivers it later (ruling 14)", clock)
         assertEquals(10_000L, testScheduler.currentTime)
-        assertEquals(
-            listOf("deadline $SWAP_ID @ $ANSWER_BY", "end $SWAP_ID @ ${ANSWER_BY + DAY}"),
-            events
-        )
     }
 
     // ---- the later writes --------------------------------------------------------------------
@@ -157,22 +136,19 @@ class RequestDeadlineRepositoryImplTest {
         coEvery { dataSource.update(any(), any()) } throws denied()
         coEvery { dataSource.reportShown(any()) } throws denied()
         coEvery { dataSource.giveLastChance(any(), any()) } throws denied()
-        coEvery { dataSource.close(any()) } throws denied()
         val clock = openClock()
 
         assertFalse(repository.markDelivered(clock, DELIVERED_AT, listOf(ANSWER_BY - DAY)))
         assertFalse(repository.markSeen(clock, SEEN_AT))
         assertFalse(repository.reportReminderShown(clock))
         assertFalse(repository.giveLastChance(clock, ANSWER_BY + DAY))
-        assertFalse(repository.close(clock))
     }
 
     @Test
-    fun `each write is a targeted update of its own fields, and schedules nothing`() = runTest {
+    fun `each write is a targeted update of its own fields`() = runTest {
         coEvery { dataSource.update(any(), any()) } just Runs
         coEvery { dataSource.reportShown(any()) } just Runs
         coEvery { dataSource.giveLastChance(any(), any()) } just Runs
-        coEvery { dataSource.close(any()) } just Runs
         val clock = openClock()
         val reminders = listOf(ANSWER_BY - 2 * DAY, ANSWER_BY - DAY)
 
@@ -180,7 +156,6 @@ class RequestDeadlineRepositoryImplTest {
         assertTrue(repository.markSeen(clock, SEEN_AT))
         assertTrue(repository.reportReminderShown(clock))
         assertTrue(repository.giveLastChance(clock, ANSWER_BY + DAY))
-        assertTrue(repository.close(clock))
 
         coVerify(exactly = 1) {
             dataSource.update(CHANGE_ID, RequestDeadlineDocument.deliveredFields(DELIVERED_AT, reminders))
@@ -188,12 +163,6 @@ class RequestDeadlineRepositoryImplTest {
         coVerify(exactly = 1) { dataSource.update(CHANGE_ID, mapOf("seenAtMillis" to SEEN_AT)) }
         coVerify(exactly = 1) { dataSource.reportShown(CHANGE_ID) }
         coVerify(exactly = 1) { dataSource.giveLastChance(CHANGE_ID, ANSWER_BY + DAY) }
-        coVerify(exactly = 1) { dataSource.close(CHANGE_ID) }
-        assertEquals(
-            "only a start schedules; the caller of a step schedules what follows",
-            emptyList<String>(),
-            events
-        )
     }
 
     @Test
@@ -297,25 +266,6 @@ class RequestDeadlineRepositoryImplTest {
         "Failed to get document because the client is offline.",
         Code.UNAVAILABLE
     )
-
-    /** A [RequestClockScheduler] that writes what it is asked to into [log], in order. */
-    private class RecordingScheduler(private val log: MutableList<String>) : RequestClockScheduler {
-        override fun scheduleReminder(clockId: String, atMillis: Long) {
-            log += "reminder $clockId @ $atMillis"
-        }
-
-        override fun scheduleDeadline(clockId: String, atMillis: Long) {
-            log += "deadline $clockId @ $atMillis"
-        }
-
-        override fun scheduleEnd(clockId: String, atMillis: Long) {
-            log += "end $clockId @ $atMillis"
-        }
-
-        override fun cancelAll() {
-            log += "cancelAll"
-        }
-    }
 
     private companion object {
         const val ME = "uidA"

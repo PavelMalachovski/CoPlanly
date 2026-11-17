@@ -315,7 +315,6 @@ val requestsDataModule: Module = module {
     single {
         RequestClockKeeper(
             get<RequestDeadlineRepository>(),
-            get<RequestClockSteps>(),
             get<RequestClockScheduler>(),
             get<RequestTime>()
         )
