@@ -9,6 +9,7 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import kotlinx.datetime.TimeZone
 
 /**
  * Keeps the signed-in user's profile document in existence and up to date, for the whole
@@ -72,6 +73,10 @@ class SessionProfileSynchronizer(
                 accountSwitchGuard.ensureAccountConsistency()
                 logger.d(TAG, "Ensuring the profile document for the signed-in user")
                 userRepository.ensureProfile()
+                // After the profile exists: the zone the server plans this parent's request
+                // reminders in (iPhone phase 4 part C), once per signed-in account per process,
+                // written only when it differs from the stored one.
+                userRepository.recordTimeZone(TimeZone.currentSystemDefault().id)
             }
     }
 

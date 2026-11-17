@@ -60,7 +60,9 @@ object PushRouting {
         PushPayload.REQUEST_LAST_CHANCE,
         // The server's clock pushes (MON-25) say a request closed or lapsed; the inbox shows it.
         PushPayload.REQUEST_DEADLINE_PASSED,
-        PushPayload.REQUEST_NO_ANSWER -> PushDestination.CHANGE_REQUESTS
+        PushPayload.REQUEST_NO_ANSWER,
+        // The server's reminder (phase 4 part C) is answered where the request waits.
+        PushPayload.REQUEST_REMINDER -> PushDestination.CHANGE_REQUESTS
         // Asks are answered on Home, where the pop-up and the inline card wait for this parent;
         // outcomes are read on the grid they changed.
         PushPayload.CUSTODY_PROPOSAL_PROPOSED,
@@ -111,7 +113,8 @@ object PushRouting {
         PushPayload.DAY_SWAP_GROUP_DECLINED,
         PushPayload.REQUEST_LAST_CHANCE,
         PushPayload.REQUEST_DEADLINE_PASSED,
-        PushPayload.REQUEST_NO_ANSWER -> PushChannel.SCHEDULE
+        PushPayload.REQUEST_NO_ANSWER,
+        PushPayload.REQUEST_REMINDER -> PushChannel.SCHEDULE
         PushPayload.SPLIT_RATIO_PROPOSED,
         PushPayload.SPLIT_RATIO_ACCEPTED,
         PushPayload.SPLIT_RATIO_DECLINED,

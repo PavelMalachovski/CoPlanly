@@ -95,23 +95,85 @@ function buildFcmMessage(token, data) {
     return acc;
   }, {});
 
+  const messageData = Object.assign(
+      {
+        type: 'general',
+        eventId: '',
+        childInfoId: '',
+      },
+      stringified,
+      // A present-but-empty type must still fall back to 'general', matching the
+      // previous `notificationData.data.type || 'general'` behaviour.
+      stringified.type ? {} : {type: 'general'},
+  );
+
   return {
     token: token,
-    data: Object.assign(
-        {
-          type: 'general',
-          eventId: '',
-          childInfoId: '',
-        },
-        stringified,
-        // A present-but-empty type must still fall back to 'general', matching the
-        // previous `notificationData.data.type || 'general'` behaviour.
-        stringified.type ? {} : {type: 'general'},
-    ),
+    data: messageData,
     android: {
       priority: 'high',
     },
+    apns: apnsAlertFor(messageData),
   };
+}
+
+/** The alert an iPhone shows when its notification extension cannot word a push (design §7.2). */
+const APNS_FALLBACK_TITLE = 'CoPlanly';
+const APNS_FALLBACK_BODY = 'You have a new update in CoPlanly.';
+
+/** The longest `apns-collapse-id` APNs accepts, in bytes. */
+const APNS_COLLAPSE_ID_MAX_BYTES = 64;
+
+/**
+ * The `apns` block of a push (iPhone phase 4 part C, design §7.2). A data-only push is not
+ * reliably delivered to an iPhone in the background, so every message is also an alert with
+ * `mutable-content: 1`: the phone's Notification Service Extension replaces its text with the
+ * sentence it words from `data` in the reader's language, and drops a push for another account.
+ * When the extension fails or runs out of time, iOS shows this alert as it is — a fixed, neutral,
+ * English text decided here, never by a client and never from the payload (SEC-3, item 15).
+ *
+ * The thread id and the collapse id play the role of Android's tray id (`PushNotifier`): a chat
+ * message is grouped and replaced per conversation, a chat card per entity, and every other push
+ * is grouped by its type and kept. Android ignores the block, so its delivery is unchanged.
+ *
+ * @param {!Object<string, string>} data The message's stringified `data`, type already defaulted.
+ * @return {!Object} The `apns` block.
+ */
+function apnsAlertFor(data) {
+  const isChat = data.type === 'chat_message';
+  const conversationId = isChat ? data.conversationId || '' : '';
+  const entityId = isChat ? data.activityEntityId || '' : '';
+  let collapseId = '';
+  if (entityId) collapseId = `card_${entityId}`;
+  else if (conversationId) collapseId = conversationId;
+  const headers = {'apns-push-type': 'alert'};
+  if (collapseId) headers['apns-collapse-id'] = truncateToBytes(collapseId, APNS_COLLAPSE_ID_MAX_BYTES);
+  return {
+    payload: {
+      aps: {
+        'alert': {title: APNS_FALLBACK_TITLE, body: APNS_FALLBACK_BODY},
+        'mutable-content': 1,
+        'thread-id': conversationId || data.type,
+      },
+    },
+    headers,
+  };
+}
+
+/**
+ * [text] cut to at most [maxBytes] bytes of UTF-8, never inside a character.
+ *
+ * @param {string} text The text.
+ * @param {number} maxBytes The limit.
+ * @return {string} The text, or its longest prefix that fits.
+ */
+function truncateToBytes(text, maxBytes) {
+  let out = '';
+  for (const ch of text) {
+    if (Buffer.byteLength(out + ch) > maxBytes) break;
+    out += ch;
+  }
+  return out;
 }
 
 exports.buildFcmMessage = buildFcmMessage;

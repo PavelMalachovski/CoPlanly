@@ -76,6 +76,14 @@ class PushRoutingTest {
     }
 
     @Test
+    fun `the server's request reminder opens the inbox, on the schedule channel`() {
+        assertEquals(PushDestination.CHANGE_REQUESTS, PushRouting.destinationOf(PushPayload.REQUEST_REMINDER))
+        assertEquals(PushChannel.SCHEDULE, PushRouting.channelOf(PushPayload.REQUEST_REMINDER))
+        assertTrue(PushPayload.REQUEST_REMINDER in PushWording.PUSH_TEXT, "the reminder is worded")
+        assertTrue(PushPayload.REQUEST_REMINDER !in PushPayload.CLIENT_TYPES, "no client may queue it")
+    }
+
+    @Test
     fun `money, schedule and chat each have their own channel, so one can be muted alone`() {
         assertEquals(PushChannel.CHAT, PushRouting.channelOf(PushPayload.CHAT_MESSAGE))
         val familyTypes = setOf(

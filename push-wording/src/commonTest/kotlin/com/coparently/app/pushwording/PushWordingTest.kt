@@ -113,6 +113,22 @@ class PushWordingTest {
     }
 
     @Test
+    fun theServersRequestReminderSaysWhatThePhonesOwnReminderSays() {
+        val reminders = ReminderWording(Strings, Clock)
+        for (name in listOf("Lana", null, " ")) {
+            val data = buildMap {
+                name?.let { put("actorName", it) }
+                put("requestKind", "swap")
+                put("answerBy", "42")
+                put("familyId", "a__b")
+            }
+            assertEquals(reminders.request(name, 42L), wording.compose("request_reminder", data), "$name")
+        }
+        assertNull(wording.compose("request_reminder", mapOf("actorName" to "Lana", "answerBy" to "soon")))
+        assertTrue("request_reminder" !in PushWording.ANSWER_BY_TYPES)
+    }
+
+    @Test
     fun everyFramedTypeAndTheChatMessageAreWorded() {
         assertTrue("chat_message" in PushWording.TYPES)
         assertTrue(PushWording.TYPES.containsAll(PushWording.PUSH_TEXT.keys))

@@ -712,6 +712,16 @@ service cloud.firestore {
       return !('parentRole' in data) || data.parentRole in ['dad', 'mom', 'parent'];
     }
 
+    // `timeZone` (iPhone phase 4 part C): the IANA zone the parent's phone is in, written by both
+    // apps with the profile (`UserRepository.recordTimeZone`). The server plans a request's
+    // reminders in it when no phone delivered the clock, and keeps its quiet hours (21:00-08:00),
+    // so it is text of at most 64 characters (the longest IANA name is 32) and the owner's alone,
+    // which `allow create`/`update` already require of every key here.
+    function timeZoneValid(data) {
+      return !('timeZone' in data) ||
+             (data.timeZone is string && data.timeZone.size() > 0 && data.timeZone.size() <= 64);
+    }
+
     match /users/{userId} {
       allow read: if isOwner(userId) || isPartnerOf(userId);
 
@@ -742,6 +752,7 @@ service cloud.firestore {
                       aiConsentCreateValid() &&
                       paymentIbanValid(request.resource.data) &&
                       parentRoleValid(request.resource.data) &&
+                      timeZoneValid(request.resource.data) &&
                       (!('firebaseUid' in request.resource.data) ||
                        request.resource.data.firebaseUid == null ||
                        request.resource.data.firebaseUid == request.auth.uid);
@@ -783,6 +794,7 @@ service cloud.firestore {
                       aiConsentUpdateValid() &&
                       paymentIbanValid(request.resource.data) &&
                       parentRoleValid(request.resource.data) &&
+                      timeZoneValid(request.resource.data) &&
                       isValidLength(request.resource.data.get('name', ''), 0, 100) &&
                       (!('firebaseUid' in request.resource.data) ||
                        request.resource.data.firebaseUid == null ||

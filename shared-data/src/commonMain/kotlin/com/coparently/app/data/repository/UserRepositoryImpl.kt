@@ -606,6 +606,30 @@ class UserRepositoryImpl(
         updateUser(updatedUser)
     }
 
+    /**
+     * One read of the profile and, when its `timeZone` is not [zone], a merge of that key alone.
+     * Never into a document that is missing (the create rule asks for a name, which this does
+     * not write) or that could not be read: [ensureProfile] runs first and makes it, and the next
+     * start retries. `firestore.rules` bounds the value to a non-empty text of 64 characters at
+     * most, so a longer one is not sent.
+     */
+    override suspend fun recordTimeZone(zone: String) {
+        if (zone.isBlank() || zone.length > TIME_ZONE_MAX_LENGTH) return
+        try {
+            val uid = firebaseAuthService.getCurrentUid() ?: return
+            val stored = firestoreUserDataSource.readUserOrThrow(uid) ?: return
+            if (stored[TIME_ZONE_KEY] == zone) return
+            firestoreUserDataSource.updateUser(uid, mapOf(TIME_ZONE_KEY to zone))
+                .onFailure { logger.e(TAG, "Failed to write the time zone to Firestore", it) }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (
+            @Suppress("TooGenericExceptionCaught") e: Exception
+        ) {
+            logger.e(TAG, "Failed to record the time zone", e)
+        }
+    }
+
     override suspend fun getRemoteUserProfile(uid: String): User? {
         return try {
             firestoreUserDataSource.getUserById(uid)?.toUser()
@@ -766,6 +790,10 @@ class UserRepositoryImpl(
 
         /** The pause after the first failed read; each later one waits that much longer. */
         const val PROFILE_READ_RETRY_MILLIS = 1_000L
+
+        /** `users/{uid}.timeZone`: an IANA zone name, at most this long (`firestore.rules`). */
+        const val TIME_ZONE_KEY = "timeZone"
+        const val TIME_ZONE_MAX_LENGTH = 64
 
         /** `users/{uid}.healthDataConsent` and its two keys; `firestore.rules` bounds the shape. */
         const val HEALTH_CONSENT_KEY = "healthDataConsent"

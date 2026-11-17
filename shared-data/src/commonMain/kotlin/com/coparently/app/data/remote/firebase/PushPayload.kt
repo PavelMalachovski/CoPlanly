@@ -98,6 +98,13 @@ object PushPayload {
      */
     const val ANSWER_BY = "answerBy"
 
+    /**
+     * Which kind of request a [REQUEST_REMINDER] is about: `RequestKind.wire` (`swap`, `change`,
+     * `event`, `proposal`, `split`). Server-written only (iPhone phase 4 part C). The sentence does
+     * not name it; it is there for the tap and for a later wording.
+     */
+    const val REQUEST_KIND = "requestKind"
+
     /** The longest [SUBJECT] `firestore.rules` accepts. */
     const val SUBJECT_MAX = 200
 
@@ -296,6 +303,16 @@ object PushPayload {
      * tap opens the Requests inbox.
      */
     const val REQUEST_NO_ANSWER = "request_no_answer"
+
+    /**
+     * Queued by the scheduled request-clock function (iPhone phase 4 part C) for the **answering**
+     * parent at each of their reminder times: "<name> is waiting for your answer until <time>.",
+     * the sentence the phone's own reminder said. Carries [FAMILY_ID], [ACTOR] (the proposer's
+     * first name), [REQUEST_KIND] and [ANSWER_BY], the deadline; the tap opens the Requests inbox.
+     * The server sends it only after re-reading the request, outside the quiet hours of the
+     * parent's stored zone, so no client may produce it.
+     */
+    const val REQUEST_REMINDER = "request_reminder"
 
     /** Queued by `onChatMessageCreated`, which is the only thing that has seen the message. */
     const val CHAT_MESSAGE = "chat_message"

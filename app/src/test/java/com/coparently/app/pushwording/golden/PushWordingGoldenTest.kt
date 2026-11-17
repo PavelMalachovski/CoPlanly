@@ -121,12 +121,41 @@ class PushWordingGoldenTest {
     }
 
     @Test
+    fun theServersRequestReminderIsWordedAsThePhonesOwn() {
+        // `request_reminder` came after the move (phase 4 part C, Task 3), so the legacy copy has
+        // no wording for it: its oracle is the phone's own reminder, whose sentence it repeats.
+        forEveryReader { context, label ->
+            val push = context.pushWording()
+            val local = context.reminderWording()
+            for (proposer in NAMES) {
+                for (millis in DEADLINES) {
+                    val data = buildMap {
+                        put(PushPayload.TYPE, PushPayload.REQUEST_REMINDER)
+                        proposer?.let { put(PushPayload.ACTOR, it) }
+                        put(PushPayload.REQUEST_KIND, "swap")
+                        put(PushPayload.ANSWER_BY, "$millis")
+                        put(PushPayload.FAMILY_ID, "a__b")
+                    }
+                    assertEquals(
+                        local.request(proposer, millis),
+                        push.compose(PushPayload.REQUEST_REMINDER, data),
+                        "$label: request reminder from $proposer until $millis"
+                    )
+                }
+            }
+            val unreadable = mapOf(PushPayload.ACTOR to "Lana", PushPayload.ANSWER_BY to "soon")
+            assertEquals(null, push.compose(PushPayload.REQUEST_REMINDER, unreadable), "$label: unreadable deadline")
+        }
+    }
+
+    @Test
     fun theCorpusReachesEveryWordedTypeAndEveryCardKind() {
         val types = pushCorpus().mapNotNull { it.second[PushPayload.TYPE] }.toSet()
-        assertTrue(types.containsAll(PushWording.PUSH_TEXT.keys), "missing ${PushWording.PUSH_TEXT.keys - types}")
+        val legacyTypes = PushWording.PUSH_TEXT.keys - NEWER_THAN_THE_MOVE
+        assertTrue(types.containsAll(legacyTypes), "missing ${legacyTypes - types}")
         val kinds = cardCorpus().mapNotNull { it.second[PushPayload.ACTIVITY_KIND] }.toSet()
         assertTrue(kinds.containsAll(ActivityKind.entries.map { it.name }))
-        assertEquals(LegacyPushText.PushNotifier.PUSH_TEXT.keys, PushWording.PUSH_TEXT.keys)
+        assertEquals(LegacyPushText.PushNotifier.PUSH_TEXT.keys, legacyTypes)
         assertEquals(LegacyPushText.PushNotifier.ANSWER_BY_TYPES, PushWording.ANSWER_BY_TYPES)
     }
 
@@ -184,7 +213,7 @@ class PushWordingGoldenTest {
 
     @Suppress("LongMethod")
     private fun pushCorpus(): List<Pair<String, Map<String, String>>> = buildList {
-        for (type in PushWording.PUSH_TEXT.keys) {
+        for (type in PushWording.PUSH_TEXT.keys - NEWER_THAN_THE_MOVE) {
             add("$type full" to full(type))
             add("$type no actor" to full(type) - PushPayload.ACTOR)
             add("$type blank actor" to full(type) + (PushPayload.ACTOR to "  "))
@@ -339,6 +368,12 @@ class PushWordingGoldenTest {
 
     private companion object {
         val LANGUAGES = listOf("en", "cs", "de", "ru", "uk")
+
+        /**
+         * Types worded after the move, which the legacy copy never knew: each has an oracle of its
+         * own ([theServersRequestReminderIsWordedAsThePhonesOwn]).
+         */
+        val NEWER_THAN_THE_MOVE = setOf(PushPayload.REQUEST_REMINDER)
 
         /**
          * In Prague: 13 October 2026 at 10:00 and at 19:00 (a 12-hour clock's PM), and midnight

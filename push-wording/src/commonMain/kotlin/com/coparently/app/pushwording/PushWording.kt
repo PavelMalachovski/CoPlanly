@@ -389,6 +389,15 @@ class PushWording(private val strings: WordingStrings, private val clock: Reader
                 BodyArgs.NONE,
                 titleTakesActor = true
             ),
+            // Server-only (phase 4 part C): the answering parent's reminder, sent by the scheduled
+            // clock function at the times their phone planned. Worded exactly as the phone's own
+            // reminder (`ReminderWording.request`): the same two strings, the proposer's name or
+            // the fallback, and the deadline; an unreadable deadline words nothing.
+            "request_reminder" to PushTextSpec(
+                "request_notice_reminder_title",
+                "request_notice_reminder_body",
+                BodyArgs.ACTOR_AND_ANSWER_BY
+            ),
             "pairing_accepted" to PushTextSpec(
                 "push_pairing_accepted_title",
                 "push_pairing_accepted_body",
