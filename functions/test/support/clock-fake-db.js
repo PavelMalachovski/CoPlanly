@@ -1,4 +1,4 @@
-// For `request-clock-steps.test.js`.
+// For `request-clock-steps.test.js` and `request-clock-sweep.test.js`.
 
 /**
  * A Firestore fake for the request clock's steps. Documents live by path (`collection/id`), so a
@@ -16,6 +16,12 @@
  *
  * `FieldValue.delete()` and `FieldValue.serverTimestamp()` are applied, not stored: a delete removes
  * the key, a server timestamp is stored as `{__serverTimestamp: true}`.
+ *
+ * A collection answers the queries the sweep and the backfill make, and nothing more:
+ * `where(field, '<=', value)`, `orderBy(field)` (a field name, or anything else for the document
+ * id), `limit(n)`, `startAfter(snapshot)` and `get()`. As in Firestore, a range filter matches only
+ * a document whose field is a number, ties order by id, and `startAfter` resumes after the values
+ * the snapshot was read with, whatever the document holds now.
  *
  * @param {!Object<string, !Object>} seed documents by path.
  * @return {!Object} a Firestore-shaped fake exposing its documents as `store`.
@@ -92,9 +98,37 @@ function fakeDb(seed) {
     return run;
   };
 
+  const query = (name, spec) => ({
+    where: (field, op, value) => {
+      if (op !== '<=') throw new Error(`fakeDb: unsupported operator ${op}`);
+      return query(name, Object.assign({}, spec, {where: {field, value}}));
+    },
+    orderBy: (field) => query(name, Object.assign({}, spec, {orderBy: field})),
+    limit: (n) => query(name, Object.assign({}, spec, {limit: n})),
+    startAfter: (snap) => query(name, Object.assign({}, spec, {after: snap.orderKey})),
+    get: async () => {
+      const keyOf = (id, data) => (typeof spec.orderBy === 'string' ? [data[spec.orderBy], id] : [id, id]);
+      const before = (a, b) => (a[0] < b[0] || (a[0] === b[0] && a[1] < b[1]));
+      let docs = Object.keys(store)
+          .filter((path) => path.startsWith(`${name}/`) && path.split('/').length === 2)
+          .map((path) => ({id: path.split('/')[1], data: store[path]}))
+          .filter(({data}) => !spec.where ||
+            (typeof data[spec.where.field] === 'number' && data[spec.where.field] <= spec.where.value))
+          .map(({id, data}) => ({id, data, orderKey: keyOf(id, data)}))
+          .sort((a, b) => (before(a.orderKey, b.orderKey) ? -1 : 1));
+      if (spec.after) docs = docs.filter((doc) => before(spec.after, doc.orderKey));
+      if (spec.limit !== undefined) docs = docs.slice(0, spec.limit);
+      const out = docs.map(({id, data, orderKey}) => {
+        const copy = JSON.parse(JSON.stringify(data));
+        return {id, ref: refOf(name, id), exists: true, orderKey, data: () => JSON.parse(JSON.stringify(copy))};
+      });
+      return {docs: out, size: out.length, empty: out.length === 0};
+    },
+  });
+
   return {
     store,
-    collection: (name) => ({doc: (id) => refOf(name, id)}),
+    collection: (name) => Object.assign({doc: (id) => refOf(name, id)}, query(name, {})),
     runTransaction,
     failRead(path) {
       failing.add(path);

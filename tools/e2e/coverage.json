@@ -478,6 +478,9 @@
     "backfillRecordFamilyIds": {
       "exempt": "Operator-only maintenance callable, not a phone-to-phone feature; functions/test covers it."
     },
+    "backfillRequestClockSchedule": {
+      "exempt": "Operator-only maintenance callable, not a phone-to-phone feature; functions/test/request-clock-sweep.test.js covers it."
+    },
     "backfillFamilyDocuments": {
       "exempt": "Operator-only maintenance callable, not a phone-to-phone feature; functions/test covers it."
     },
