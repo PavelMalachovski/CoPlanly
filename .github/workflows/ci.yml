@@ -2442,10 +2442,11 @@ jobs:
       #
       # Then, in the same step and on a family seeded for it, the pushes (iPhone phase 4 part C,
       # Task 6): `PushUITests` has `simctl push` deliver the server's neutral alert with an
-      # `expense_added`, one for another uid and a `chat_message`, and reads the banners the
-      # Notification Service Extension words (or leaves as the fallback), tapping the chat one into
-      # its thread; the extension's memory, from its `COPLANLY_NSE_MEMORY` lines in the simulator's
-      # log, fails the step above 20 MB (`simulator.sh push-test`). Its screenshots are in
+      # `expense_added`, one for another uid and a `chat_message`, and reads the banners, tapping the
+      # chat one into its thread. The simulator does not run the Notification Service Extension for
+      # a `simctl push`, so the banners read the server's alert; its wording is `:push-wording`'s
+      # simulator tests' to hold, and its memory (`COPLANLY_NSE_MEMORY`, failing above 20 MB once
+      # logged) a phone's (`simulator.sh push-test`). Its screenshots are in
       # `ios-shell` under `push/`.
       #
       # `continue-on-error`, so the emulator tests and the write gate after it run whatever the walk

@@ -2811,8 +2811,9 @@ done and the functions deployed; a device build will not sign before step 1.
 MON-24 phase 4, part C. The rules are CLAUDE.md items 9, 15 and 42 and "Phase 4's part C". The
 wording is held to Android's byte for byte on the JVM (`PushWordingGoldenTest`) and run on the
 simulator (`PushWordingIosTest`, `ExtensionEntryTest`); the `ios-app` job pushes with `simctl push`
-(`PushUITests`: a worded banner, one for another uid left neutral, a chat push tapped into its
-thread) and fails above 20 MB of extension memory; the local reminders run against a fake center
+(`PushUITests`: the banners delivered, one for another uid never worded, a chat push tapped into
+its thread). The simulator does not run the Notification Service Extension for a `simctl push`, so
+**a worded banner and the extension's memory are checked only here**; the local reminders run against a fake center
 (`IosEventRemindersTest`, `IosSupportRemindersTest`); the server's reminders run on the emulators
 (`TwoParentServerClocksTest`). **APNs works only on a device**, so the delivery, the lock screen,
 the extension's real memory and a reminder firing are checked here. **First:** §0's part C steps

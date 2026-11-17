@@ -1300,9 +1300,11 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   completed and one let go of, a tab tap popping two screens, a dirty sheet swiped down asking
   "Discard changes?", sign-out to fresh tabs; artifact `ios-shell`) and, on a family seeded for
   it, the push test (`PushUITests`, `simulator.sh push-test`, phase 4 part C: `simctl push` with the
-  server's neutral alert, the banner the Notification Service Extension `CoPlanlyNotifications`
-  words read back, one for another uid left neutral, a chat push tapped into its thread, and the
-  extension's logged memory, `COPLANLY_NSE_MEMORY`, failing the step above 20 MB), then, on
+  server's neutral alert, the banners read back, one for another uid never worded, a chat push
+  tapped into its thread; **the simulator does not run the Notification Service Extension for a
+  `simctl push`**, so the banners read the server's alert and the extension's wording is held by
+  `:push-wording`'s simulator tests and device check §3.43, and its logged memory,
+  `COPLANLY_NSE_MEMORY`, would fail the step above 20 MB but is never logged there), then, on
   emulators again,
   `:shared-data:iosSimulatorArm64Test` and `:shared-ui:iosSimulatorArm64Test` on the same booted
   simulator (`COPLANLY_SIMULATOR_UDID`, so the Keychain tests run; check run "iPhone tests on the
@@ -2074,7 +2076,8 @@ rules; spec `docs/superpowers/specs/2026-11-17-iphone-phase-4c-pushes-design.md`
   `com.apple.developer.usernotifications.filtering` (owner step, applied for), a push for another
   uid or of a type it cannot word shows that fallback, which names nothing (owner decision); once
   granted, it is suppressed, as Android drops it. Its memory is the physical footprint (and its
-  peak), logged once per push as `COPLANLY_NSE_MEMORY` and failing the `ios-app` job above 20 MB.
+  peak), logged once per push as `COPLANLY_NSE_MEMORY`; the `ios-app` job fails above 20 MB once a
+  simulator runs the extension (none does for a `simctl push` today, so a phone measures it).
 - **A tap** goes to `IosApp.openPush(data)` → `LaunchLinks.forPush`, which opens nothing for another
   uid, switches the family first and then arms the screen (`PushDestination.forType`, the one table
   Android's `PushRouting` delegates to); a local reminder names its screen as

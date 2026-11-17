@@ -28,6 +28,8 @@
 #       log into <out-dir>/extension-memory.log and fails when its footprint, or the footprint's
 #       peak, passed 20 MB (iOS ends an extension past about 24 MB). With no such line it warns and
 #       does not fail: the measurement is then missing, which says nothing of the extension's size.
+#       (The simulator does not run a Notification Service Extension for `simctl push`, so today the
+#       line is always missing and the extension's memory is measured on a phone.)
 #
 #   iosApp/scripts/simulator.sh tour <udid> <out-dir>
 #       The same inside a fresh `firebase emulators:exec`, for the tour (MON-24 phase 3, part B,

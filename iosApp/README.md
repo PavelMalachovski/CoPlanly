@@ -175,7 +175,8 @@ neutral text, as does an extension that runs out of time: suppressing them needs
 entitlement (owner step 4). Its strings are `<lang>.lproj/PushStrings.strings|.stringsdict`, which
 `tools/ios/generate-push-strings.js` writes into the extension at build time — and into the app,
 which words its local notifications with them. Node must be on the build's `PATH` (Homebrew's
-prefixes are added). Once per push it logs its memory (`COPLANLY_NSE_MEMORY`); CI fails above 20 MB.
+prefixes are added). Once per push it logs its memory (`COPLANLY_NSE_MEMORY`); CI would fail above
+20 MB, but the simulator does not run the extension for a `simctl push`, so a phone measures it.
 
 **The owner's steps**, before pushes reach a phone:
 
@@ -209,8 +210,9 @@ iOS 26.5 so far). Then, in order:
    with edits swiped down asking "Discard changes?", sign-out to fresh tabs, a `coplanly://pair`
    link and, last, deleting the account. Then, on a family seeded for it, the push test
    (`PushUITests`, `simulator.sh push-test`): `simctl push` delivers an `expense_added`, one for
-   another uid and a `chat_message`, the banners are read (worded, the neutral fallback, and the
-   chat one tapped into its thread), and the extension's logged memory must stay under 20 MB.
+   another uid and a `chat_message`, the banners are read (the server's alert, since the simulator
+   does not run the extension for a `simctl push`; none worded for another uid; the chat one
+   tapped into its thread). The extension's wording runs in `:push-wording`'s simulator tests.
    Its screenshots are the `ios-shell` artifact (the pushes' under `push/`).
 4. On emulators again, the shared modules' iOS tests run on the same booted simulator (the
    Keychain tests included), with the write gate (`IosWriteGateTest` and
