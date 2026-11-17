@@ -24,6 +24,9 @@ final class NotificationService: UNNotificationServiceExtension {
     private static let uidKey = "coplanly.push.uid"
     private static let languageKey = "coplanly.push.language"
 
+    /// Guards [contentHandler] and [fallback]: `serviceExtensionTimeWillExpire` may run on another
+    /// thread than `didReceive`, and the handler must be taken exactly once.
+    private let lock = NSLock()
     private var contentHandler: ((UNNotificationContent) -> Void)?
     private var fallback: UNNotificationContent?
 
@@ -31,8 +34,10 @@ final class NotificationService: UNNotificationServiceExtension {
         _ request: UNNotificationRequest,
         withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
     ) {
+        lock.lock()
         self.contentHandler = contentHandler
         fallback = request.content
+        lock.unlock()
         let shared = UserDefaults(suiteName: Self.suite)
         let text = ExtensionEntryKt.wordPush(
             data: Self.stringData(request.content.userInfo),
@@ -51,14 +56,19 @@ final class NotificationService: UNNotificationServiceExtension {
 
     /// Out of time: the push as it came, the server's neutral alert.
     override func serviceExtensionTimeWillExpire() {
-        if let fallback { deliver(fallback) }
+        lock.lock()
+        let original = fallback
+        lock.unlock()
+        if let original { deliver(original) }
     }
 
     /// Hands [content] to iOS once; a second call (the time running out after delivery) does nothing.
     private func deliver(_ content: UNNotificationContent) {
-        guard let handler = contentHandler else { return }
+        lock.lock()
+        let handler = contentHandler
         contentHandler = nil
-        handler(content)
+        lock.unlock()
+        handler?(content)
     }
 
     /// The push's data as the wording reads it: every string key with a string value (FCM puts the

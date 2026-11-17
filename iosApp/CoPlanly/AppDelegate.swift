@@ -46,10 +46,13 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         UNUserNotificationCenter.current().delegate = self
         // The push UI test only (PushUITests): it sets this variable to have the system's question
         // asked at once, which it answers, since no screen it walks to asks it and the simulator has
-        // no command that grants it. Never set otherwise: the app asks in context (UX item 7).
+        // no command that grants it. Never set otherwise: the app asks in context (UX item 7). Debug
+        // builds only (CI builds its UI tests in Debug), so a Release build has no such hook.
+        #if DEBUG
         if ProcessInfo.processInfo.environment["COPLANLY_UITEST_ASK_NOTIFICATIONS"] == "1" {
             UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
         }
+        #endif
         push.start()
         if push.enabled {
             // Asks for no permission: an APNs token is issued without one.

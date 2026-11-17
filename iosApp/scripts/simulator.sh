@@ -207,7 +207,7 @@ check_extension_memory() {
   echo "::group::the notification extension's memory (COPLANLY_NSE_MEMORY)"
   grep "COPLANLY_NSE_MEMORY" "$out/extension-memory.log" || true
   echo "::endgroup::"
-  largest=$( { grep -o 'footprint=[0-9]*\|peak=[0-9]*' "$out/extension-memory.log" || true; } |
+  largest=$( { grep -oE 'footprint=[0-9]+|peak=[0-9]+' "$out/extension-memory.log" || true; } |
     cut -d= -f2 | sort -n | tail -n 1)
   if [ -z "$largest" ]; then
     echo "::warning::The notification extension's memory was not measured: no COPLANLY_NSE_MEMORY line in the simulator's log."
