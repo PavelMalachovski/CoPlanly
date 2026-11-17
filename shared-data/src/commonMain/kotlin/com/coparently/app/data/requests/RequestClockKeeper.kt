@@ -32,8 +32,8 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
  * app is open, for each snapshot of the family's clocks the screens are listening to.
  *
  * Only a clock this phone can trust is acted on: its id must spell its own fields, as
- * [RequestDeadlineId] derives it, so the other parent cannot set or close this parent's request
- * under an id of their own; and the sweep keeps only clocks whose other parent is still one of this
+ * [RequestDeadlineId] derives it, so a clock written under somebody else's id is never delivered
+ * or reminded here; and the sweep keeps only clocks whose other parent is still one of this
  * parent's co-parents (CLAUDE.md items 38, 41).
  *
  * The sync runs [sweep] as its [RequestClockSweep]. Both are in `:shared-data` since MON-24 phase 2

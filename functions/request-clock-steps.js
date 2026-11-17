@@ -445,8 +445,8 @@ function writeWithdrawal(tx, plan) {
 /**
  * Withdraws the custody or split proposal a clock times, in a transaction, only while the stored
  * proposal is still the clock's (its `proposedAt`/`proposedAtMillis` equals the clock's `ref`, and
- * its proposer is the clock's), as `CustodyModelRepository.withdrawUnanswered` and
- * `FamilySettingsRepository.withdrawUnanswered` do.
+ * its proposer is the clock's), as the phones' `withdrawUnanswered` in `CustodyModelRepository` and
+ * `FamilySettingsRepository` did until MON-25.
  *
  * @param {!Object} db Firestore.
  * @param {!Object} clock the clock document's data.

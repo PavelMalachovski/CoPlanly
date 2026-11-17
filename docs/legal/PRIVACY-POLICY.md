@@ -119,8 +119,14 @@ decide what each of you may read. **Legal basis:** performance of our contract w
   when. **The parent who
   sent the request sees when the other opened it** — as they see a message's read mark. Opening a
   request notifies nobody, and the reminders are notifications on the answering parent's own phone,
-  not messages from our servers. A request sent without a deadline, or from an older version of
-  the app, carries none of this.
+  not messages from our servers. **Our server watches the deadline**: it checks the request every
+  few minutes, and when the deadline passes without an answer it sends **you, the parent who sent
+  it,** a notification, and a second one if the request then ends with no answer, when it also
+  closes the request, notes it in your conversation and withdraws a waiting custody or expense
+  split proposal. These two notifications name your co-parent by first name and say nothing else
+  about the request; they are not sent if you switched notifications off, and your co-parent gets
+  none of them. A request sent without a deadline, or from an older version of the app, carries
+  none of this.
 - **The parenting plan** — each parent's written answers to the plan's questions and which of
   the other parent's answers they marked as agreed. Each of you can change only your own half.
 - **Your bank account for settling up (optional)** — an IBAN you type when you ask your co-parent

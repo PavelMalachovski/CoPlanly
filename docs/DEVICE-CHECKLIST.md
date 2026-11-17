@@ -157,6 +157,10 @@ them the evening before, from the commit you will build the app from.
 - [ ] **REL-3 accounts:** set `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET` in
       `functions/.env` before the functions deploy. Without them, connecting Google Calendar
       cannot work.
+- [ ] **MON-25 request clocks:** with the functions and rules deployed, invoke
+      `backfillRequestClockSchedule` once (`functions/README.md`, "Request clocks on the server").
+      Until the functions are deployed, a request that nobody answers is never told or ended on a
+      build from MON-25 on (§5.9, §5.10).
 - [ ] **Accounts:** at least two test accounts (A = you, B = co-parent). For the M-8 checks,
       add a third (C = a second co-parent). Also create one throwaway account for the deletion
       check in §7.
@@ -2195,9 +2199,13 @@ to another time zone.
 > `firestore.rules` and the real callables and keepers: the clock written with an offer, its `answerBy`
 > in the `day_swap_offered` push, the delivery with the reminders the answering phone planned and
 > scheduled, the opened mark, the last chance given only after the deadline and read back as the
-> `request_last_chance` push, an answer under it (the end closes nothing, History says Accepted), and a
-> proposal ending as "No answer", withdrawn, posted to the thread as its card and listed in the
-> co-parent's History. The pure rules are unit tests (`RequestClockTest`, `ReminderPlanTest`,
+> `request_last_chance` push, and an answer under it (the server's sweep closes nothing, History says
+> Accepted). The end is the server's since MON-25: `TwoParentServerClocksTest` runs the scheduled
+> sweep on the emulators and covers a change request, a day swap, a custody proposal and a split
+> proposal ending as "No answer" — closed, the proposals withdrawn, the card posted to the thread,
+> listed in the co-parent's History — and the proposer's `request_deadline_passed` and
+> `request_no_answer` pushes read back from `notification_queue`. How those two pushes look is
+> §5.10. The pure rules are unit tests (`RequestClockTest`, `ReminderPlanTest`,
 > `RequestCapTest`, `AnswerByTest`) and the cards render in the screenshot matrix. What only phones show
 > is below; a step marked **[CI]** has its mechanism covered, so run it only for what is drawn, posted
 > or timed.
@@ -2225,13 +2233,10 @@ to another time zone.
 - [ ] **A proposal past its deadline can still be declined.** With A's custody proposal past its deadline and no last chance given, B's card offers **Decline** alone (no Accept, unlike a swap or a change request, which show no answer); B declines, A's History says Declined, and B can save a schedule change at once.
 - [ ] **An answer under the last chance wins.** B accepts before the new time: A's History says
       Accepted, never "No answer", and nothing closes it afterwards. **[CI]**
-- [ ] **Both proposer notices.** Both go to A, the proposer, and B gets no notice at all. When the
-      deadline passes unanswered, A is told "<B> didn't answer by the deadline" (nothing has changed in
-      the calendar, a last chance can be given); when the request is closed with no answer, A is told
-      "No answer from <B>". Each posts once, on the schedule channel. The card goes to History on an
-      outlined, neutral chip (not the red of "Declined"), and a "No answer" proposal is withdrawn, so B
-      can propose again. **[CI]** for the end, the withdrawn proposal, the chat card and History; the
-      two notices as drawn are the check.
+- [ ] **The end.** Within five minutes of the end, with neither phone open, the card goes to History
+      on an outlined, neutral chip (not the red of "Declined"), the thread has one "No answer" card,
+      and a "No answer" proposal is withdrawn, so B can propose again. **[CI]** for the end, the
+      withdrawn proposal, the chat card and History; the two pushes A gets are §5.10.
 - [ ] **An older build answering after "No answer".** With B on the build before this one (a day swap
       cannot be refused by a clock): B answers A's swap after it ended as "No answer". The answer is
       kept, the swap is agreed, and A's phone shows it as accepted, with no error on either phone.
@@ -2239,11 +2244,49 @@ to another time zone.
       requests pop-up again after a restart, a sync or a family switch, and the switcher's dot goes
       out for it.
 - **Fallback (1P):** sign in as B on the same phone to open and answer, then back as A. The reminders
-  and the notices need the phone to stay B's, so only the cards, the last chance and the end can be
+  need the phone to stay B's, so only the cards, the last chance and the end can be
   seen; run the time zone and older-build steps with a second device if there is one.
 - **If it fails:** tag `RequestClockSteps`, `RequestClockKeeper`, `RequestClockActions`; `data/requests/`,
   `domain/changerequests/` (`RequestClock*`, `RequestDeadline*`, `ReminderPlan*`, `RequestCap*`),
-  `presentation/changerequests/CardClock*`, `request_deadlines` in `firestore.rules`.
+  `presentation/changerequests/CardClock*`, `request_deadlines` in `firestore.rules`; for the end,
+  the functions' log of `sweepRequestClocks` ("Stepped N request clocks, M left due") and
+  `functions/request-clock-steps.js`.
+
+### 5.10 The server's two request pushes, as drawn (MON-25) · 2P, Android, two languages
+
+A and B paired, A on an Android phone with notifications allowed, the functions and rules of MON-25
+deployed and `backfillRequestClockSchedule` run once (`functions/README.md`). Since MON-25 a
+scheduled function, not A's phone, tells A that B did not answer: `request_deadline_passed` when the
+deadline passes while a last chance can still be given, `request_no_answer` when the request ends.
+Both are pushed to A alone, at any hour, within about five minutes of the moment. Pick deadlines a
+few minutes out ("Answer by" a date with a time, or a day swap whose deadline the cap shortens), so
+the session does not wait a day.
+
+> **[CI]** `TwoParentServerClocksTest` runs the sweep on the emulators and reads each push back from
+> `notification_queue`: addressed to A only, once each, with the family id and B's first name. The
+> wording is `PushNotificationTest` (every leg) and the routing `PushRoutingTest`. What is left is
+> the notification as a phone draws it, and the real FCM delivery.
+
+- [ ] **The deadline push.** A sends a day swap with a short deadline; B does not answer. After the
+      deadline A's phone shows "<B> didn't answer by the deadline", "Nothing has changed in the
+      calendar. You can give more time.", on the **schedule** channel, with B's first name and never
+      an address. A tap opens the Requests inbox on the swap's family, where "Give a last chance" is
+      offered. B's phone shows nothing.
+- [ ] **The end push.** A does not give a last chance. At the end A's phone shows "No answer from
+      <B>", "The request is closed as “No answer”. Nothing has changed in the calendar.", once; a tap
+      opens the Requests inbox, where the request is in History as "No answer". The thread shows one
+      "No answer" card and it pushed nobody.
+- [ ] **In a second language.** Set A's app language to Czech (Settings → App → Language) and repeat with a
+      custody proposal: "<B>: bez odpovědi do termínu" and "<B>: bez odpovědi", worded on A's phone
+      in Czech whatever B's phone speaks; the proposal is withdrawn at the end.
+- [ ] **Pushes switched off.** A turns pushes off in Settings and repeats with a change request: no
+      notification appears, and the inbox and the thread still say "No answer".
+- [ ] **A second family.** With A in two families and the other family on screen, the end push of the
+      first family's request opens the inbox on the first family (the push names its family).
+- **If it fails:** the pushes in `PushNotifier.kt` and `PushRouting.kt`, the strings in
+  `push_strings.xml`; on the server `functions/request-clock-steps.js` and the functions' log of
+  `sweepRequestClocks`; a push that never arrives with the queue document written is FCM or the
+  token (§0).
 
 ---
 

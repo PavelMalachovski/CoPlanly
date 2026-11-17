@@ -433,7 +433,7 @@
       "e2e": [
         "TwoParentServerClocksTest#theProposerIsPushedAtTheDeadlineAndAtTheEnd"
       ],
-      "checklist": ["5.9"]
+      "checklist": ["5.10"]
     },
     "request_no_answer": {
       "e2e": [
@@ -443,7 +443,7 @@
         "TwoParentServerClocksTest#aDaySwapPastItsEndIsClosedAsNoAnswer",
         "TwoParentServerClocksTest#theProposerIsPushedAtTheDeadlineAndAtTheEnd"
       ],
-      "checklist": ["5.9"]
+      "checklist": ["5.10"]
     },
     "sticker_received": {
       "e2e": [
