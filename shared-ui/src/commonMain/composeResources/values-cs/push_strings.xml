@@ -115,4 +115,9 @@
     <string name="push_day_swap_asks_body">Dostane %2$s: %1$s.</string>
     <string name="push_day_swap_both_title">%1$s navrhuje výměnu dnů</string>
     <string name="push_day_swap_both_body">Vám: %1$s. %2$s: %3$s.</string>
+    <!-- The server's request clock (MON-25), to the proposer: %1$s = the parent who did not answer. -->
+    <string name="push_request_deadline_passed_title">%1$s: bez odpovědi do termínu</string>
+    <string name="push_request_deadline_passed_body">V kalendáři se nic nezměnilo. Můžete dát více času.</string>
+    <string name="push_request_no_answer_title">%1$s: bez odpovědi</string>
+    <string name="push_request_no_answer_body">Žádost je uzavřena jako „Bez odpovědi“. V kalendáři se nic nezměnilo.</string>
 </resources>

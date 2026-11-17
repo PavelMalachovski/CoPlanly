@@ -105,4 +105,9 @@
     <string name="push_day_swap_asks_body">An\u00A0%2$s: %1$s.</string>
     <string name="push_day_swap_both_title">%1$s schlägt einen Tagetausch vor</string>
     <string name="push_day_swap_both_body">Dir: %1$s. %2$s: %3$s.</string>
+    <!-- The server's request clock (MON-25), to the proposer: %1$s = the parent who did not answer. -->
+    <string name="push_request_deadline_passed_title">%1$s hat bis zur Frist nicht geantwortet</string>
+    <string name="push_request_deadline_passed_body">Im Kalender hat sich nichts geändert. Du kannst mehr Zeit geben.</string>
+    <string name="push_request_no_answer_title">Keine Antwort von %1$s</string>
+    <string name="push_request_no_answer_body">Die Anfrage ist als „Keine Antwort“ abgeschlossen. Im Kalender hat sich nichts geändert.</string>
 </resources>

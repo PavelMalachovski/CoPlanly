@@ -97,10 +97,10 @@ class PushNotificationTest {
             val bodyInEnglish = expectedBody(english, type, spec)
             val bodyInGerman = expectedBody(german, type, spec)
 
-            assertEquals("$type title (en)", english.getString(spec.title), inEnglish.title)
+            assertEquals("$type title (en)", titleOf(english, spec), inEnglish.title)
             assertEquals("$type text (en)", bodyInEnglish, inEnglish.text)
             assertEquals("$type expanded text (en)", bodyInEnglish, inEnglish.bigText)
-            assertEquals("$type title (de)", german.getString(spec.title), inGerman.title)
+            assertEquals("$type title (de)", titleOf(german, spec), inGerman.title)
             assertEquals("$type text (de)", bodyInGerman, inGerman.text)
             assertEquals("$type expanded text (de)", bodyInGerman, inGerman.bigText)
             assertNotEquals("$type is worded in German, not in English", inEnglish.title, inGerman.title)
@@ -439,6 +439,10 @@ class PushNotificationTest {
         val join = if (body.last() in ".!?…") " " else ". "
         return body + join + context.getString(R.string.push_answer_by, answerByIn(context))
     }
+
+    /** The title [spec] words in [context]'s language; a title that names the actor gets [ACTOR_NAME]. */
+    private fun titleOf(context: Context, spec: PushNotifier.PushTextSpec): String =
+        if (spec.titleTakesActor) context.getString(spec.title, ACTOR_NAME) else context.getString(spec.title)
 
     /** [plain] in [EXPENSE_CURRENCY], as [context]'s reader writes money. */
     private fun moneyIn(context: Context, plain: String): String =

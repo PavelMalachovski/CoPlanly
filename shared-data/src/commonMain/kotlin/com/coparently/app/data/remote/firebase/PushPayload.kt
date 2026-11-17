@@ -283,6 +283,20 @@ object PushPayload {
     /** Queued by `unpairCoParent`. */
     const val PAIRING_REMOVED = "pairing_removed"
 
+    /**
+     * Queued by the scheduled request-clock function (MON-25) for the proposer when the co-parent
+     * did not answer by the deadline: "<name> didn't answer by the deadline". Carries [ACTOR], the
+     * parent who did not answer, and [FAMILY_ID]; the tap opens the Requests inbox.
+     */
+    const val REQUEST_DEADLINE_PASSED = "request_deadline_passed"
+
+    /**
+     * Queued by the scheduled request-clock function (MON-25) for the proposer when a request is
+     * closed as "No answer". Carries [ACTOR], the parent who did not answer, and [FAMILY_ID]; the
+     * tap opens the Requests inbox.
+     */
+    const val REQUEST_NO_ANSWER = "request_no_answer"
+
     /** Queued by `onChatMessageCreated`, which is the only thing that has seen the message. */
     const val CHAT_MESSAGE = "chat_message"
 

@@ -430,6 +430,12 @@
       ],
       "checklist": ["5.9"]
     },
+    "request_deadline_passed": {
+      "exempt": "Covered by TwoParentServerClocksTest, added in Task 7 of the same branch (MON-25)"
+    },
+    "request_no_answer": {
+      "exempt": "Covered by TwoParentServerClocksTest, added in Task 7 of the same branch (MON-25)"
+    },
     "sticker_received": {
       "e2e": [
         "TwoParentStickersTest#aStickerReachesTheCoParentWithItsPushAndIsSeen"

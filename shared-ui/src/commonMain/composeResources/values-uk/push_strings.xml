@@ -115,4 +115,9 @@
     <string name="push_day_swap_asks_body">Отримає %2$s: %1$s.</string>
     <string name="push_day_swap_both_title">%1$s пропонує обмін днями</string>
     <string name="push_day_swap_both_body">Вам: %1$s. %2$s: %3$s.</string>
+    <!-- The server's request clock (MON-25), to the proposer: %1$s = the parent who did not answer. -->
+    <string name="push_request_deadline_passed_title">%1$s: немає відповіді до терміну</string>
+    <string name="push_request_deadline_passed_body">У календарі нічого не змінилося. Можна дати більше часу.</string>
+    <string name="push_request_no_answer_title">%1$s: немає відповіді</string>
+    <string name="push_request_no_answer_body">Запит закрито як «Немає відповіді». У календарі нічого не змінилося.</string>
 </resources>
