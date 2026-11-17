@@ -661,6 +661,83 @@ describe('request_deadlines', () => {
     await assertSucceeds(clock(ALICE).update(closure()));
   });
 
+  // ---- The server's schedule fields (MON-25) -----------------------------------------------
+
+  /** The four fields the scheduled function writes as admin; no client ever may. */
+  const SERVER_FIELDS = ['serverNextStepAt', 'serverToldDeadlineAt', 'serverToldNoAnswerAt',
+    'serverSettledAt'];
+
+  /** The four fields as the admin SDK leaves them. */
+  const serverFields = () => ({
+    serverNextStepAt: Timestamp.fromMillis(Date.now() + HOUR),
+    serverToldDeadlineAt: Timestamp.fromMillis(Date.now() - HOUR),
+    serverToldNoAnswerAt: Timestamp.fromMillis(Date.now() - MINUTE),
+    serverSettledAt: Timestamp.fromMillis(Date.now()),
+  });
+
+  it('refuses a create carrying any of the server\'s four fields', async () => {
+    const sample = serverFields();
+    for (const field of SERVER_FIELDS) {
+      await assertFails(clock(ALICE).set(clockDoc({[field]: sample[field]})));
+    }
+    await assertFails(clock(ALICE).set(clockDoc(sample)));
+    await assertSucceeds(clock(ALICE).set(clockDoc({})));
+  });
+
+  it('refuses each update shape with any of the server\'s four fields added or changed', async () => {
+    const sample = serverFields();
+    const now = Date.now();
+    // The five shapes, each with the clock it is legal on and the caller that writes it.
+    const shapes = [
+      ['plan', BOB, () => storedClock({}), () => plan(1)],
+      ['opening', BOB, () => storedClock({}), () => ({seenAtMillis: now})],
+      ['reminder shown', BOB, () => storedClock(plan(2)), () => ({remindersShown: increment(1)})],
+      ['last chance', ALICE, () => pastDueClock({}), () => lastChance(now + HOUR)],
+      ['closure', ALICE, () => pastDueClock({}), () => closure()],
+    ];
+    for (const [name, uid, base, write] of shapes) {
+      // Control: the shape alone is accepted, so each refusal below is the field's.
+      await put(base());
+      await assertSucceeds(clock(uid).update(write()));
+      for (const field of SERVER_FIELDS) {
+        // Added to a clock that has none.
+        await put(base());
+        await assertFails(clock(uid).update(Object.assign(write(), {[field]: sample[field]})),
+            `${name} + ${field} (added)`);
+        // Changed on a clock that already carries them.
+        await put(Object.assign(base(), sample));
+        await assertFails(clock(uid).update(
+            Object.assign(write(), {[field]: Timestamp.fromMillis(now + 7 * DAY)})),
+        `${name} + ${field} (changed)`);
+      }
+    }
+    // On their own, by either parent.
+    await put(storedClock({}));
+    for (const field of SERVER_FIELDS) {
+      await assertFails(clock(ALICE).update({[field]: sample[field]}));
+      await assertFails(clock(BOB).update({[field]: sample[field]}));
+    }
+    // Nor as part of a whole-document rewrite.
+    await assertFails(clock(ALICE).set(clockDoc(sample)));
+  });
+
+  it('still accepts every client update shape on a clock that carries the server\'s fields', async () => {
+    const sample = serverFields();
+    const now = Date.now();
+    await put(storedClock(sample));
+    await assertSucceeds(clock(BOB).update(plan(2)));
+    await put(storedClock(sample));
+    await assertSucceeds(clock(BOB).update({seenAtMillis: now}));
+    await put(storedClock(Object.assign(plan(2), sample)));
+    await assertSucceeds(clock(BOB).update({remindersShown: increment(1)}));
+    await put(pastDueClock(sample));
+    await assertSucceeds(clock(ALICE).update(lastChance(now + HOUR)));
+    await put(pastDueClock(sample));
+    await assertSucceeds(clock(ALICE).update(closure()));
+    // Reading is unchanged too.
+    await assertSucceeds(clock(BOB).get());
+  });
+
   // ---- Everything else ---------------------------------------------------------------------
 
   it('refuses each parent the other one\'s fields, a stranger everything, and every delete', async () => {
