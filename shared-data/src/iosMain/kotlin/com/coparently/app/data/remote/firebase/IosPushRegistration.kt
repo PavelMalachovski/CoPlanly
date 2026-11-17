@@ -4,6 +4,7 @@ import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.platform.logger
 import kotlinx.coroutines.CancellationException
+import kotlin.concurrent.Volatile
 
 /**
  * The iPhone's push registration (iPhone phase 4 part C, spec §7.2), in place of the stand-in
@@ -21,6 +22,13 @@ import kotlinx.coroutines.CancellationException
  * - turning it off, signing out and deleting the account detach the token ([unregisterToken]):
  *   the profile's field deleted, then the token itself at Firebase Messaging, each best-effort.
  *   One token per account (spec §2, decision 1): the phone that registered last is pushed.
+ * - **a detach sticks until a new session** ([detachedUid]): sign-out and deletion detach first and
+ *   end the session last, and Firebase Messaging may hand out a fresh token in between (a refresh,
+ *   or the sync's read); [keepToken] refuses to write it for the uid it detached, which would put a
+ *   push token back on the departing profile, or re-create a deleted one by its merge. The record
+ *   is cleared when the signed-in uid changes ([sessionChanged], which `IosApp` follows, a
+ *   sign-out's null included) and when the parent turns pushes on again;
+ * - nothing is read or written while nobody is signed in.
  *
  * @property firestore Where the profile's `fcmToken` is written and deleted.
  * @property signedInUser Whose profile.
@@ -35,6 +43,10 @@ class IosPushRegistration(
     private val token: IosPushToken,
     private val permission: NotificationPermission,
 ) : PushRegistration, PushTokenKeeper {
+
+    /** The uid whose token [unregisterToken] detached, until [sessionChanged] says it left. */
+    @Volatile
+    private var detachedUid: String? = null
 
     /** The iPhone registers with Apple's service: the switch is offered. */
     override val available: Boolean = true
@@ -51,25 +63,44 @@ class IosPushRegistration(
         return register()
     }
 
+    /**
+     * The signed-in uid is now [uid] (`IosApp` calls it for every value `observeCurrentUid` emits):
+     * a value other than the uid a detach was made for, a sign-out's null included, ends that
+     * detach, so the next session registers again.
+     */
+    fun sessionChanged(uid: String?) {
+        if (uid != detachedUid) detachedUid = null
+    }
+
     /** Asks for the permission, then keeps the token; a refusal or no token is a failure. */
     private suspend fun register(): Result<Unit> {
+        // The parent asked for pushes on this account again: a detach made for it no longer holds.
+        detachedUid = null
         if (!permission.request()) return Result.failure(IllegalStateException("Notifications are not allowed"))
         val current = token.awaitCurrent() ?: return Result.failure(IllegalStateException("No push token available"))
         return keepToken(current)
     }
 
-    override suspend fun currentToken(): String? = token.awaitCurrent()
+    /**
+     * This device's token, or null without asking Firebase Messaging while it would not be kept:
+     * nobody signed in, the switch off, the account's token just detached, or no permission.
+     */
+    override suspend fun currentToken(): String? {
+        val uid = signedInUser.getCurrentUid()
+        if (uid == null || uid == detachedUid || !switchOn() || !permission.refresh()) return null
+        return token.awaitCurrent()
+    }
 
     /**
      * Writes [token] as the signed-in account's `fcmToken` (merged), unless the switch is off or the
      * system does not let the app notify: a token for a phone that shows nothing would only have
      * the server push into silence. The permission is read afresh ([NotificationPermission.refresh]),
-     * since the parent may have changed it in the phone's Settings.
+     * since the parent may have changed it in the phone's Settings. Quietly nothing, too, while
+     * nobody is signed in or for the uid whose token was just detached ([detachedUid]).
      */
     override suspend fun keepToken(token: String): Result<Unit> {
-        if (!switchOn() || !permission.refresh()) return Result.success(Unit)
         val uid = signedInUser.getCurrentUid()
-            ?: return Result.failure(IllegalStateException("User not authenticated"))
+        if (uid == null || uid == detachedUid || !switchOn() || !permission.refresh()) return Result.success(Unit)
         return try {
             firestore.set(DocumentPath(USERS, uid), mapOf(FCM_TOKEN to token), SetMerge.Merge)
             Result.success(Unit)
@@ -89,6 +120,8 @@ class IosPushRegistration(
      */
     override suspend fun unregisterToken() {
         val uid = signedInUser.getCurrentUid() ?: return
+        // First, so a token handed out while the field is deleted is not written back for [uid].
+        detachedUid = uid
         try {
             firestore.update(DocumentPath(USERS, uid), FCM_TOKEN, ServerValue.Delete)
         } catch (e: CancellationException) {

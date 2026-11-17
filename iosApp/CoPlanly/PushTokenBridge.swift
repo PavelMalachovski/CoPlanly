@@ -43,6 +43,8 @@ final class PushTokenBridge: NSObject, IosPushToken, MessagingDelegate {
             completion(nil, "Firebase Messaging is not used on the emulators")
             return
         }
+        // The next registration: the shared code asks only while the token would be kept.
+        Messaging.messaging().isAutoInitEnabled = true
         Messaging.messaging().token { token, error in
             if let error {
                 completion(nil, Self.describe(error))
@@ -57,6 +59,10 @@ final class PushTokenBridge: NSObject, IosPushToken, MessagingDelegate {
             completion(nil)
             return
         }
+        // No fresh token on its own until the next registration (`current`): a sign-out or a
+        // deletion detaches first and ends the session last. The shared code refuses to keep one
+        // for the departing account either way (`IosPushRegistration`).
+        Messaging.messaging().isAutoInitEnabled = false
         Messaging.messaging().deleteToken { error in
             completion(error.map(Self.describe))
         }

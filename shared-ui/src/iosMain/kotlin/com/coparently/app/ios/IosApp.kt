@@ -4,6 +4,7 @@ import com.coparently.app.data.chat.ChatMirror
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.AppleTokens
+import com.coparently.app.data.remote.firebase.IosPushRegistration
 import com.coparently.app.data.remote.firebase.IosPushToken
 import com.coparently.app.data.remote.firebase.NotificationPermission
 import com.coparently.app.data.remote.firebase.PushDevice
@@ -156,7 +157,8 @@ object IosApp {
             edupageImport = false,
             appleSignIn = appleSignIn,
         )
-        // A push tapped while the app was not running reaches the delegate before this returns.
+        // Defensive: `AppDelegate` sets the notification delegate only after this returns, so a tap
+        // that launched the app arrives after it; one that came sooner would have been held here.
         pendingPush?.let { data ->
             pendingPush = null
             openPush(data)
@@ -170,7 +172,8 @@ object IosApp {
      * shared with the notification extension ([AppGroupShare]: on every change of the uid, and again
      * on the foreground) and the notification permission read without asking
      * ([NotificationPermission.refresh], on start and on the foreground, where the Settings switch
-     * and the push registration read it). Each is harmless while nobody is signed in,
+     * and the push registration read it), and the push registration is told of every change of
+     * the uid ([IosPushRegistration.sessionChanged]). Each is harmless while nobody is signed in,
      * as on Android: the mirror waits for a co-parent, the profile for an account, and a sync with
      * nobody signed in ends at once. Telemetry, the widget and the periodic job are not here: the
      * iPhone collects nothing, has no widget yet and no background job until phase 4.
@@ -186,6 +189,9 @@ object IosApp {
         val signedIn = koin.get<SignedInUser>()
         val permission = koin.get<NotificationPermission>()
         scope.launch { shareSignedInAccount(signedIn.observeCurrentUid()) { readerLanguageTag() } }
+        // A sign-out's detach holds until the uid changes (a token refreshed mid-sign-out is not kept).
+        val registration = koin.get<IosPushRegistration>()
+        scope.launch { signedIn.observeCurrentUid().collect { registration.sessionChanged(it) } }
         scope.launch { permission.refresh() }
         IosLifecycle.observe {
             sync.requestSyncNow()
@@ -252,8 +258,9 @@ object IosApp {
      * 15), with [openTap]. A family this phone does not know yet is deferred by
      * [SelectedFamilySource.select], as for a chat link ([openUrl]).
      *
-     * A push tapped before [start] has finished (the app launched from the notification) is held
-     * and opened at its end, as the shell holds a link until the tabs show.
+     * A push tapped before [start] has finished is held and opened at its end, as the shell holds a
+     * link until the tabs show. Defensive: `AppDelegate` sets the notification delegate after
+     * [start] returns, so even a tap that launched the app arrives once the graph is up.
      */
     fun openPush(data: Map<String, String>) {
         val graph = koin

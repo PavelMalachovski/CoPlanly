@@ -11,6 +11,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -139,6 +140,62 @@ class IosPushRegistrationTest {
     }
 
     @Test
+    fun `a token refreshed after unregisterToken is not kept for the same uid`() = runTest {
+        registration.unregisterToken()
+        // Sign-out is still running: the session ends last, and a fresh token arrives meanwhile.
+        preferences.clear()
+
+        assertTrue(queue.updateUserToken("fcm-2").isSuccess)
+
+        assertIs<Operation.UpdateField>(firestore.writes.single())
+        assertNull(queue.getCurrentToken())
+        assertEquals(0, token.reads)
+    }
+
+    @Test
+    fun `a new session after a detach keeps its token again`() = runTest {
+        registration.unregisterToken()
+        registration.sessionChanged("alice")
+        assertTrue(queue.updateUserToken("fcm-2").isSuccess)
+        assertEquals(1, firestore.writes.size, "the same uid still signed in: still detached")
+
+        registration.sessionChanged(null)
+        registration.sessionChanged("alice")
+        assertTrue(queue.updateUserToken("fcm-2").isSuccess)
+
+        assertEquals(mapOf("fcmToken" to "fcm-2"), firestore.lastSet(DocumentPath("users", "alice")))
+    }
+
+    @Test
+    fun `turning pushes on again ends a detach`() = runTest {
+        registration.setPushEnabled(false)
+
+        assertTrue(registration.setPushEnabled(true).isSuccess)
+
+        assertEquals(mapOf("fcmToken" to "fcm-1"), firestore.lastSet(DocumentPath("users", "alice")))
+    }
+
+    @Test
+    fun `nobody signed in keeps nothing and asks Messaging for nothing`() = runTest {
+        signedIn.uid = null
+
+        assertTrue(queue.updateUserToken("fcm-1").isSuccess)
+        assertNull(queue.getCurrentToken())
+
+        assertEquals(emptyList(), firestore.writes)
+        assertEquals(0, token.reads)
+    }
+
+    @Test
+    fun `with pushes off the token is not even read`() = runTest {
+        preferences.putString(PreferenceKeys.PUSH_ENABLED, "false")
+
+        assertNull(queue.getCurrentToken())
+
+        assertEquals(0, token.reads)
+    }
+
+    @Test
     fun `the switch is offered on the iPhone`() {
         assertTrue(registration.available)
     }
@@ -156,10 +213,13 @@ class IosPushRegistrationTest {
     /** The Swift side's token, answering [value] and counting deletions, with [writesSoFar] at each. */
     private class FakeToken(var value: String?, private val writesSoFar: () -> Int) : IosPushToken {
         var deletions = 0
+        var reads = 0
         var writesWhenDeleted: Int? = null
 
-        override fun current(completion: (token: String?, error: String?) -> Unit) =
+        override fun current(completion: (token: String?, error: String?) -> Unit) {
+            reads++
             completion(value, if (value == null) "no token" else null)
+        }
 
         override fun delete(completion: (error: String?) -> Unit) {
             deletions++
