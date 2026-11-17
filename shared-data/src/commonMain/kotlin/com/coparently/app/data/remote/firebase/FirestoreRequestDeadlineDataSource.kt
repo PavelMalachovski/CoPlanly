@@ -99,14 +99,6 @@ class FirestoreRequestDeadlineDataSource(
     }
 
     /**
-     * Counts one more reminder shown. An increment, so two phones' reports — or one phone's retry —
-     * add up instead of overwriting, and a clock with no count yet starts at one.
-     */
-    suspend fun reportShown(id: String) {
-        firestore.increment(clock(id), RequestDeadlineDocument.REMINDERS_SHOWN, 1)
-    }
-
-    /**
      * This document as a clock, or null when it is missing or this build cannot read it
      * ([RequestDeadlineDocument.parse]).
      *

@@ -919,6 +919,127 @@
         "answerByMillis": 1800000000000
       },
       "nextStepAt": 1800000000000
+    },
+    {
+      "name": "reminders: nothing planned yet -> the clock's creation, to plan",
+      "doc": {
+        "kind": "change",
+        "answerByMillis": 1800000000000,
+        "createdAt": 1799740800000
+      },
+      "nextStepAt": 1799740800000
+    },
+    {
+      "name": "reminders: nothing planned and no creation stamp -> the deadline",
+      "doc": {
+        "kind": "change",
+        "answerByMillis": 1800000000000
+      },
+      "nextStepAt": 1800000000000
+    },
+    {
+      "name": "reminders: the phone's plan -> its first reminder",
+      "doc": {
+        "kind": "change",
+        "answerByMillis": 1800000000000,
+        "createdAt": 1799740800000,
+        "deliveredAtMillis": 1799740800001,
+        "reminderTimesMillis": [
+          1799913600000,
+          1799827200000
+        ]
+      },
+      "nextStepAt": 1799827200000
+    },
+    {
+      "name": "reminders: the phone's plan wins over the server's",
+      "doc": {
+        "kind": "change",
+        "answerByMillis": 1800000000000,
+        "deliveredAtMillis": 1,
+        "reminderTimesMillis": [
+          1799913600000
+        ],
+        "serverReminderTimesMillis": [
+          1799827200000
+        ]
+      },
+      "nextStepAt": 1799913600000
+    },
+    {
+      "name": "reminders: the server's plan -> its first reminder",
+      "doc": {
+        "kind": "change",
+        "answerByMillis": 1800000000000,
+        "createdAt": 1799740800000,
+        "serverReminderTimesMillis": [
+          1799827200000,
+          1799913600000
+        ]
+      },
+      "nextStepAt": 1799827200000
+    },
+    {
+      "name": "reminders: one already acted on -> the next",
+      "doc": {
+        "kind": "change",
+        "answerByMillis": 1800000000000,
+        "serverReminderTimesMillis": [
+          1799827200000,
+          1799913600000
+        ],
+        "serverLastReminderAt": 1799827200000
+      },
+      "nextStepAt": 1799913600000
+    },
+    {
+      "name": "reminders: all acted on -> the deadline",
+      "doc": {
+        "kind": "change",
+        "answerByMillis": 1800000000000,
+        "serverReminderTimesMillis": [
+          1799827200000,
+          1799913600000
+        ],
+        "serverLastReminderAt": 1799913600000
+      },
+      "nextStepAt": 1800000000000
+    },
+    {
+      "name": "reminders: an empty phone plan -> the deadline",
+      "doc": {
+        "kind": "change",
+        "answerByMillis": 1800000000000,
+        "createdAt": 1799740800000,
+        "deliveredAtMillis": 1799996400000,
+        "reminderTimesMillis": []
+      },
+      "nextStepAt": 1800000000000
+    },
+    {
+      "name": "reminders: a plan after the deadline is ignored",
+      "doc": {
+        "kind": "change",
+        "answerByMillis": 1800000000000,
+        "deliveredAtMillis": 1,
+        "reminderTimesMillis": [
+          1800003600000
+        ]
+      },
+      "nextStepAt": 1800000000000
+    },
+    {
+      "name": "reminders: none once the deadline was told",
+      "doc": {
+        "kind": "change",
+        "answerByMillis": 1800000000000,
+        "deliveredAtMillis": 1,
+        "reminderTimesMillis": [
+          1799996400000
+        ],
+        "serverToldDeadlineAt": 1800000000001
+      },
+      "nextStepAt": 1800086400000
     }
   ]
 }

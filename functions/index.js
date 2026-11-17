@@ -6464,9 +6464,14 @@ const requestClockSteps = require('./request-clock-steps');
 /** The clocks' collection. */
 const REQUEST_CLOCKS = 'request_deadlines';
 
-/** The four fields only the server writes on a clock (spec §5.1). */
+/**
+ * The fields only the server writes on a clock: part B's four (spec §5.1) and the reminders' three
+ * (iPhone phase 4 part C, spec §7.3, §11 call 1: the server's own plan, how many reminders it sent,
+ * and the latest planned time it acted on).
+ */
 const REQUEST_CLOCK_SERVER_FIELDS = new Set([
   'serverNextStepAt', 'serverToldDeadlineAt', 'serverToldNoAnswerAt', 'serverSettledAt',
+  'serverReminderTimesMillis', 'serverRemindersSent', 'serverLastReminderAt',
 ]);
 
 /** How many due clocks the sweep reads per page. */

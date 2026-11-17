@@ -134,34 +134,29 @@ class RequestDeadlineRepositoryImplTest {
     @Test
     fun `a refused write returns false`() = runTest {
         coEvery { dataSource.update(any(), any()) } throws denied()
-        coEvery { dataSource.reportShown(any()) } throws denied()
         coEvery { dataSource.giveLastChance(any(), any()) } throws denied()
         val clock = openClock()
 
         assertFalse(repository.markDelivered(clock, DELIVERED_AT, listOf(ANSWER_BY - DAY)))
         assertFalse(repository.markSeen(clock, SEEN_AT))
-        assertFalse(repository.reportReminderShown(clock))
         assertFalse(repository.giveLastChance(clock, ANSWER_BY + DAY))
     }
 
     @Test
     fun `each write is a targeted update of its own fields`() = runTest {
         coEvery { dataSource.update(any(), any()) } just Runs
-        coEvery { dataSource.reportShown(any()) } just Runs
         coEvery { dataSource.giveLastChance(any(), any()) } just Runs
         val clock = openClock()
         val reminders = listOf(ANSWER_BY - 2 * DAY, ANSWER_BY - DAY)
 
         assertTrue(repository.markDelivered(clock, DELIVERED_AT, reminders))
         assertTrue(repository.markSeen(clock, SEEN_AT))
-        assertTrue(repository.reportReminderShown(clock))
         assertTrue(repository.giveLastChance(clock, ANSWER_BY + DAY))
 
         coVerify(exactly = 1) {
             dataSource.update(CHANGE_ID, RequestDeadlineDocument.deliveredFields(DELIVERED_AT, reminders))
         }
         coVerify(exactly = 1) { dataSource.update(CHANGE_ID, mapOf("seenAtMillis" to SEEN_AT)) }
-        coVerify(exactly = 1) { dataSource.reportShown(CHANGE_ID) }
         coVerify(exactly = 1) { dataSource.giveLastChance(CHANGE_ID, ANSWER_BY + DAY) }
     }
 

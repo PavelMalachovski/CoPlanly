@@ -67,8 +67,6 @@ import com.coparently.app.data.repository.RequestDeadlineRepositoryImpl
 import com.coparently.app.data.repository.UserRepositoryImpl
 import com.coparently.app.data.requests.RequestClockActions
 import com.coparently.app.data.requests.RequestClockKeeper
-import com.coparently.app.data.requests.RequestClockSteps
-import com.coparently.app.data.requests.RequestNotices
 import com.coparently.app.data.requests.RequestRecords
 import com.coparently.app.data.requests.RequestTelling
 import com.coparently.app.data.requests.RequestTime
@@ -363,9 +361,9 @@ class EmulatorParent private constructor(
     )
 
     /**
-     * The request clocks' records and reminder step (phase 3a), over this phone's repositories: a
-     * test runs a step itself where the app would wait for its job. The deadline notice and the end
-     * are the server's since MON-25.
+     * The request clocks' records (phase 3a), over this phone's repositories, which a card's actions
+     * read. No step runs on a phone: the reminders, the deadline notice and the end are the server's
+     * (MON-25; iPhone phase 4 part C).
      */
     private val requestRecords = RequestRecords(
         changeRequestRepository = changeRequestRepository,
@@ -377,13 +375,6 @@ class EmulatorParent private constructor(
     )
 
     private val requestTelling = RequestTelling(announcer, fcmService, authService)
-
-    val requestClockSteps = RequestClockSteps(
-        repository = requestDeadlineRepository,
-        records = requestRecords,
-        notices = RequestNotices(context, pairingRepository),
-        time = RequestTime()
-    )
 
     /**
      * What a parent does to a clock from a request's card (phase 3a): the answering parent opening
@@ -414,7 +405,6 @@ class EmulatorParent private constructor(
     /** What each full sync does with this phone's open clocks (phase 3a). */
     val requestClockKeeper = RequestClockKeeper(
         repository = requestDeadlineRepository,
-        scheduler = requestScheduler,
         time = RequestTime()
     )
 

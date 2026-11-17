@@ -27,10 +27,12 @@ import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Message
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.datetime.DateTimeUnit
@@ -47,8 +49,10 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.UUID
 
 /**
@@ -84,6 +88,11 @@ import java.util.UUID
  *   deadline passes with a last chance still possible, naming the parent who did not answer, and
  *   `request_no_answer` once the button's day has run out — each read back from
  *   `notification_queue`, addressed to the proposer, carrying the family.
+ *
+ * - **The answering parent is reminded by the server** (iPhone phase 4 part C, spec §7.3): with no
+ *   phone's delivery, the server plans in the zone Bob's profile states, and the sweep at the planned
+ *   time queues `request_reminder` to Bob, naming Alice, the family, the request's kind and the
+ *   deadline; a request Bob has answered gets none.
  *
  * What it cannot: the schedule firing on its own, FCM's delivery of the pushes, and the cards and
  * notifications as drawn.
@@ -287,7 +296,99 @@ class TwoParentServerClocksTest : TwoParentTest() {
         assertEquals(bob.name, atEnd[PushPayload.ACTOR])
     }
 
+    @Test
+    fun theAnsweringParentIsRemindedByTheServer() = runBlocking<Unit> {
+        val familyId = CustodyKey.of(alice.uid, bob.uid)
+
+        EmulatorEnvironment.step("server clocks: Bob's profile names a zone where it is midday")
+        val zone = middayZone()
+        bob.userRepository.recordTimeZone(zone)
+        withTimeout(EmulatorParent.WAIT_MS) {
+            while (EmulatorEnvironment.documentAsAdmin("users/${bob.uid}")?.get("timeZone") != zone) delay(POLL_MS)
+        }
+
+        val request = sendRequest(insertSharedEvent("Piano"))
+        val clock = startClock(RequestKind.CHANGE, request.id, capMillis = null)
+        val at = serverPlansOneReminder(clock)
+
+        EmulatorEnvironment.step("server clocks: the sweep at the planned time pushes Bob a reminder")
+        EmulatorEnvironment.awaitServerClock(clock.id, at + PAST_MS) { it["serverRemindersSent"] != null }
+        val push = EmulatorEnvironment.awaitQueuedPush(bob.uid, PushPayload.REQUEST_REMINDER)
+        assertEquals(familyId, push[PushPayload.FAMILY_ID])
+        assertEquals(alice.name, push[PushPayload.ACTOR])
+        assertEquals(RequestKind.CHANGE.wire, push[PushPayload.REQUEST_KIND])
+        assertEquals(clock.answerByMillis.toString(), push[PushPayload.ANSWER_BY])
+        assertFalse(
+            "Alice is never reminded of her own request",
+            EmulatorEnvironment.hasQueuedPush(alice.uid, PushPayload.REQUEST_REMINDER)
+        )
+        val counted = awaitClock(alice, clock.id) { it.serverRemindersSent == 1 }
+        assertEquals("Alice's card counts the reminder sent", 1, counted.remindersSent)
+        assertEquals(1, counted.plannedReminders)
+
+        EmulatorEnvironment.step("server clocks: Bob answers a second request, which is never reminded")
+        val second = sendRequest(insertSharedEvent("Football"))
+        val secondClock = startClock(RequestKind.CHANGE, second.id, capMillis = null)
+        val secondAt = serverPlansOneReminder(secondClock)
+        answerOnBobsPhone(second.id)
+        EmulatorEnvironment.awaitServerClock(secondClock.id, secondAt + PAST_MS) { it["serverSettledAt"] != null }
+        assertFalse(
+            "no reminder after the answer",
+            EmulatorEnvironment.documentExists(
+                "notification_queue/srv_${PushPayload.REQUEST_REMINDER}_${secondClock.id}_$secondAt"
+            )
+        )
+        assertEquals(0, checkNotNull(alice.requestDeadlineRepository.get(secondClock.id)).serverRemindersSent)
+    }
+
     // ---- requests and clocks --------------------------------------------------------------------
+
+    /**
+     * Sweeps just after [clock] was created, which nobody's phone has delivered, until the server has
+     * planned it in Bob's zone: a minute's window gets one reminder, at its midpoint. That time.
+     */
+    private suspend fun serverPlansOneReminder(clock: RequestDeadline): Long {
+        EmulatorEnvironment.step("server clocks: the server plans Bob's reminder: no phone delivered the clock")
+        val created = checkNotNull(awaitClock(alice, clock.id) { it.createdAtMillis != null }.createdAtMillis)
+        EmulatorEnvironment.awaitServerClock(clock.id, created + PAST_MS) { it["serverReminderTimesMillis"] != null }
+        val planned = awaitClock(alice, clock.id) { it.serverReminderTimesMillis.isNotEmpty() }
+        assertNull("no phone delivered it", planned.deliveredAtMillis)
+        return planned.serverReminderTimesMillis.single()
+    }
+
+    /** Bob accepts the change request [requestId] from his phone, once his listener has brought it. */
+    private suspend fun answerOnBobsPhone(requestId: String) = coroutineScope {
+        val listener = launch { bob.changeRequestRepository.observeRemote() }
+        try {
+            withTimeout(EmulatorParent.WAIT_MS) {
+                bob.changeRequestRepository.getAllChangeRequests().first { list -> list.any { it.id == requestId } }
+            }
+            bob.changeRequestRepository.updateStatus(requestId, ChangeRequestStatus.ACCEPTED)
+            withTimeout(EmulatorParent.WAIT_MS) {
+                while (true) {
+                    val onServer = alice.changeRequestRepository.fetchFromServer(requestId)
+                    if (onServer?.status == ChangeRequestStatus.ACCEPTED) break
+                    delay(POLL_MS)
+                }
+            }
+        } finally {
+            listener.cancel()
+        }
+    }
+
+    /**
+     * A fixed-offset zone where it is now midday, so the reminder never falls in Bob's quiet hours
+     * (21:00 to 08:00) whatever the hour the test runs at: `Etc/GMT-N` is UTC+N.
+     */
+    private fun middayZone(): String {
+        val offset = MIDDAY_HOUR - Instant.now().atZone(ZoneOffset.UTC).hour
+        return when {
+            offset == 0 -> "Etc/GMT"
+            offset > 0 -> "Etc/GMT-$offset"
+            else -> "Etc/GMT+${-offset}"
+        }
+    }
+
 
     /**
      * Alice starts the clock of her request [ref] through the production repository, with a deadline
@@ -489,6 +590,9 @@ class TwoParentServerClocksTest : TwoParentTest() {
         const val EVENT_HOUR = 10
 
         const val POLL_MS = 500L
+
+        /** The hour of the day Bob's zone is chosen to be at, far from the quiet hours. */
+        const val MIDDAY_HOUR = 12
 
         /** The split Alice proposes, as slot 1's share. */
         val SIXTY_FORTY = SplitRatio(6_000)

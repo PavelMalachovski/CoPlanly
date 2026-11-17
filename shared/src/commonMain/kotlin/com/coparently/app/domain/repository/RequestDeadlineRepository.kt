@@ -70,13 +70,6 @@ interface RequestDeadlineRepository {
     suspend fun markSeen(clock: RequestDeadline, seenAtMillis: Long): Boolean
 
     /**
-     * Counts one more reminder shown.
-     *
-     * @return Whether the write was accepted, or is queued.
-     */
-    suspend fun reportReminderShown(clock: RequestDeadline): Boolean
-
-    /**
      * Records the last chance the proposer gave, which ends at [untilMillis]; the server stamps when.
      *
      * @return Whether the write was accepted, or is queued.

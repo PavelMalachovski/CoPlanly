@@ -59,6 +59,21 @@ class RequestClockTextTest {
             RequestClockText.historyMeta(full, TimeZone.UTC)
         )
 
+        // No phone delivered: the server planned two and sent both.
+        val serverPlanned = CLOCK.copy(
+            serverReminderTimesMillis = listOf(SENT + 10 * HOUR, SENT + 20 * HOUR),
+            serverRemindersSent = 2,
+            outcome = RequestClockOutcome.NO_ANSWER
+        )
+        assertEquals(
+            listOf(
+                UiText.Res(Res.string.request_history_meta_deadline, listOf(dateText(2026, 5, 16))),
+                UiText.Plural(Res.plurals.request_history_meta_reminders, 2),
+                UiText.Res(Res.string.request_history_meta_unchanged)
+            ),
+            RequestClockText.historyMeta(serverPlanned, TimeZone.UTC)
+        )
+
         val neverDelivered = CLOCK.copy(outcome = RequestClockOutcome.NO_ANSWER)
         assertEquals(
             listOf(

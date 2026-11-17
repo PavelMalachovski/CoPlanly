@@ -446,7 +446,10 @@
       "checklist": ["5.10"]
     },
     "request_reminder": {
-      "exempt": "Nothing produces it yet: the type, its wording, its routing and its refusal from clients arrive first (phase 4 part C, Task 3; firestore-tests/rules/notification-payload.test.js pins the refusal), and the server's sweep that sends it arrives in Task 4 with TwoParentServerClocksTest.theAnsweringParentIsRemindedByTheServer, which replaces this exemption."
+      "e2e": [
+        "TwoParentServerClocksTest#theAnsweringParentIsRemindedByTheServer"
+      ],
+      "checklist": ["5.10"]
     },
     "sticker_received": {
       "e2e": [

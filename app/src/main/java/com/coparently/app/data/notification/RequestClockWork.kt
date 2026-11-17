@@ -6,7 +6,8 @@ package com.coparently.app.data.notification
  *
  * What WorkManager persists is part of the stored state of the app: a pending job survives an
  * update and runs under the build that replaced the one that scheduled it. None of these is ever
- * renamed.
+ * renamed. This build enqueues none of them (iPhone phase 4 part C: every step is the server's);
+ * they are kept so an older build's job is still recognised, finished and cancelled.
  */
 object RequestClockWork {
 
@@ -22,7 +23,10 @@ object RequestClockWork {
     /** The input data: the moment the job was scheduled for, in epoch millis. */
     const val KEY_AT_MILLIS = "at_millis"
 
-    /** A reminder to the answering parent. */
+    /**
+     * A reminder to the answering parent: a job only an older build enqueues, since the server sends
+     * the reminders (iPhone phase 4 part C). The worker finishes it without acting.
+     */
     const val STEP_REMINDER = "reminder"
 
     /**
@@ -39,12 +43,14 @@ object RequestClockWork {
 
     /**
      * The unique name of one job:
-     * - `request_reminder_<id>_<at>`: one per planned reminder;
+     * - `request_reminder_<id>_<at>`: the name older builds gave each planned reminder's job;
      * - `request_deadline_<id>` and `request_end_<id>_<at>`: the names older builds gave the
-     *   deadline's and the end's jobs, which this build no longer enqueues (MON-25).
+     *   deadline's and the end's jobs.
      *
-     * Jobs are enqueued with `ExistingWorkPolicy.KEEP`, so a name that left out the time would make
-     * WorkManager drop a second reminder of one clock and keep the first.
+     * This build enqueues none of them (MON-25; iPhone phase 4 part C).
+     *
+     * Older builds enqueued them with `ExistingWorkPolicy.KEEP`, so the time is in the name: one that
+     * left it out would have made WorkManager drop a second reminder of one clock.
      */
     fun uniqueName(step: String, clockId: String, atMillis: Long): String =
         if (step == STEP_DEADLINE) "request_${step}_$clockId" else "request_${step}_${clockId}_$atMillis"

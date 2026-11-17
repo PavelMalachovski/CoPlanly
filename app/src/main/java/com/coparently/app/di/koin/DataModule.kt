@@ -41,8 +41,6 @@ import com.coparently.app.data.remote.google.GoogleCalendarApi
 import com.coparently.app.data.remote.google.GoogleCalendarConnectionSource
 import com.coparently.app.data.repository.AndroidPairingWording
 import com.coparently.app.data.repository.PairingWording
-import com.coparently.app.data.requests.RequestClockNotices
-import com.coparently.app.data.requests.RequestNotices
 import com.coparently.app.data.school.SchoolImportWordingSource
 import com.coparently.app.data.school.SchoolImportWordings
 import com.coparently.app.data.school.WorkManagerSchoolImportScheduler
@@ -125,9 +123,6 @@ val dataModule = module {
     single { GoogleCalendarApi(get<HttpClient>(GOOGLE_CALENDAR_HTTP_CLIENT)) }
     // The thread title PairingRepositoryImpl (in `:shared-data`) falls back to, from resources.
     single<PairingWording> { AndroidPairingWording(get()) }
-    singleOf(::RequestNotices)
-    // The notices the request clocks' steps (in `:shared-data`) post on this phone.
-    single<RequestClockNotices> { get<RequestNotices>() }
     singleOf(::SchoolImportWordingSource)
     // The titles the school import (in `:shared-data`) writes, from resources.
     single<SchoolImportWordings> { get<SchoolImportWordingSource>() }

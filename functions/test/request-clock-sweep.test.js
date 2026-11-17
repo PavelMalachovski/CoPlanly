@@ -323,6 +323,258 @@ describe('request clock schedule', () => {
     });
   });
 
+  describe('the reminders (iPhone phase 4 part C, spec §7.3)', () => {
+    const MINUTE = 60000;
+    /** When the reminder clocks here were created: three days before the deadline. */
+    const CREATED = T - 3 * DAY;
+    /**
+     * The server's plan in Prague for [CREATED] to [T] (T is 09:00 in Prague): thirds at 09:00, and
+     * two hours before the deadline (07:00, at night) moved to 08:00.
+     */
+    const SERVER_PLAN = [T - 2 * DAY, T - DAY, T - HOUR];
+    const PENDING = {requestedBy: 'alice', requestedTo: 'bob', status: 'PENDING'};
+
+    /**
+     * A database where Bob's profile states [zone] (none when null) and the change request waits.
+     * @param {?string} zone Bob's time zone.
+     * @param {!Object=} seed more documents.
+     * @return {!Object} the fake.
+     */
+    function withZone(zone, seed) {
+      const db = setUp(Object.assign({'change_requests/cr1': PENDING}, seed));
+      if (zone !== null) db.store['users/bob'].timeZone = zone;
+      return db;
+    }
+
+    /**
+     * A change request clock Bob has not received, created at [CREATED] by the server.
+     * @param {!Object=} extra fields to add or replace.
+     * @return {!Object}
+     */
+    function undelivered(extra) {
+      return changeClock('cr1', Object.assign({createdAt: CREATED}, extra));
+    }
+
+    /**
+     * The clock Bob's phone delivered with [times] as its plan.
+     * @param {!Array<number>} times the phone's plan.
+     * @param {!Object=} extra fields to add or replace.
+     * @return {!Object}
+     */
+    function delivered(times, extra) {
+      return undelivered(Object.assign({
+        deliveredAtMillis: CREATED + MINUTE, remindersPlanned: times.length, reminderTimesMillis: times,
+      }, extra));
+    }
+
+    /**
+     * The reminder pushes queued, by id.
+     * @param {!Object} db the fake.
+     * @return {!Object<string, !Object>}
+     */
+    function reminders(db) {
+      const queued = db.docsOf('notification_queue');
+      const out = {};
+      Object.keys(queued).filter((id) => queued[id].data.type === 'request_reminder')
+          .forEach((id) => out[id] = queued[id]);
+      return out;
+    }
+
+    const clockOf = (db) => db.store['request_deadlines/c1'];
+
+    it('aDeliveredPlanIsSentAtItsTimes', async () => {
+      const db = withZone('Europe/Prague');
+      const phonePlan = [T - 2 * DAY, T - DAY, T - HOUR];
+      await writeAndTrigger(db, 'c1', delivered(phonePlan));
+      assert.strictEqual(clockOf(db).serverNextStepAt, T - 2 * DAY);
+
+      // Nothing before its time.
+      await index.sweepRequestClocksImpl(db, T - 2 * DAY - MINUTE, deps);
+      assert.deepStrictEqual(reminders(db), {});
+
+      await index.sweepRequestClocksImpl(db, T - 2 * DAY + MINUTE, deps);
+      assert.deepStrictEqual(Object.keys(reminders(db)), [`srv_request_reminder_c1_${T - 2 * DAY}`]);
+      assert.strictEqual(clockOf(db).serverRemindersSent, 1);
+      assert.strictEqual(clockOf(db).serverNextStepAt, T - DAY);
+      // The server never plans over a phone's plan.
+      assert.ok(!('serverReminderTimesMillis' in clockOf(db)));
+
+      await index.sweepRequestClocksImpl(db, T - DAY + MINUTE, deps);
+      await index.sweepRequestClocksImpl(db, T - HOUR + MINUTE, deps);
+      assert.deepStrictEqual(Object.keys(reminders(db)).sort(),
+          phonePlan.map((at) => `srv_request_reminder_c1_${at}`).sort());
+      assert.strictEqual(clockOf(db).serverRemindersSent, 3);
+      // Then the deadline, as part B left it.
+      assert.strictEqual(clockOf(db).serverNextStepAt, T);
+    });
+
+    it('anUndeliveredClockIsPlannedFromTheProfileZone', async () => {
+      const db = withZone('Europe/Prague');
+      await writeAndTrigger(db, 'c1', undelivered());
+      // Due at once, to plan.
+      assert.strictEqual(clockOf(db).serverNextStepAt, CREATED);
+
+      await index.sweepRequestClocksImpl(db, CREATED + 5 * MINUTE, deps);
+      assert.deepStrictEqual(clockOf(db).serverReminderTimesMillis, SERVER_PLAN);
+      assert.strictEqual(clockOf(db).serverNextStepAt, T - 2 * DAY);
+      assert.deepStrictEqual(reminders(db), {});
+
+      // Written once: a later zone does not plan again.
+      db.store['users/bob'].timeZone = 'Pacific/Kiritimati';
+      db.store['request_deadlines/c1'].serverNextStepAt = CREATED;
+      await index.sweepRequestClocksImpl(db, CREATED + 10 * MINUTE, deps);
+      assert.deepStrictEqual(clockOf(db).serverReminderTimesMillis, SERVER_PLAN);
+
+      db.store['users/bob'].timeZone = 'Europe/Prague';
+      await index.sweepRequestClocksImpl(db, T - 2 * DAY + MINUTE, deps);
+      assert.deepStrictEqual(Object.keys(reminders(db)), [`srv_request_reminder_c1_${T - 2 * DAY}`]);
+      assert.strictEqual(clockOf(db).serverRemindersSent, 1);
+    });
+
+    it('anUndeliveredClockWithNoZoneWaits', async () => {
+      const db = withZone(null);
+      await writeAndTrigger(db, 'c1', undelivered());
+      await index.sweepRequestClocksImpl(db, CREATED + 5 * MINUTE, deps);
+      assert.ok(!('serverReminderTimesMillis' in clockOf(db)));
+      assert.strictEqual(clockOf(db).serverNextStepAt, T);
+      await index.sweepRequestClocksImpl(db, T - HOUR, deps);
+      assert.deepStrictEqual(reminders(db), {});
+
+      // Bob's phone delivers its plan: the server sends from it.
+      await writeAndTrigger(db, 'c1', Object.assign({}, clockOf(db), {
+        deliveredAtMillis: T - HOUR, remindersPlanned: 1, reminderTimesMillis: [T - 30 * MINUTE],
+      }));
+      assert.strictEqual(clockOf(db).serverNextStepAt, T - 30 * MINUTE);
+      await index.sweepRequestClocksImpl(db, T - 29 * MINUTE, deps);
+      assert.deepStrictEqual(Object.keys(reminders(db)), [`srv_request_reminder_c1_${T - 30 * MINUTE}`]);
+    });
+
+    it('noReminderForAnAnsweredRequest', async () => {
+      const db = withZone('Europe/Prague', {'change_requests/cr1': Object.assign({}, PENDING, {status: 'ACCEPTED'})});
+      await writeAndTrigger(db, 'c1', delivered(SERVER_PLAN));
+      const result = await index.sweepRequestClocksImpl(db, T - 2 * DAY + MINUTE, deps);
+      assert.deepStrictEqual(result, {stepped: 1, left: 0});
+      assert.deepStrictEqual(reminders(db), {});
+      assert.ok(!('serverRemindersSent' in clockOf(db)));
+      assert.ok(!('serverNextStepAt' in clockOf(db)));
+      assert.strictEqual(clockOf(db).serverSettledAt, T - 2 * DAY + MINUTE);
+    });
+
+    it('noReminderForAWithdrawnRequest', async () => {
+      const db = withZone('Europe/Prague', {[`custody_models/${FAMILY}`]: custody(false)});
+      await writeAndTrigger(db, 'c1', proposalClock({
+        createdAt: CREATED, deliveredAtMillis: CREATED + MINUTE, remindersPlanned: 3, reminderTimesMillis: SERVER_PLAN,
+      }));
+      await index.sweepRequestClocksImpl(db, T - 2 * DAY + MINUTE, deps);
+      assert.deepStrictEqual(reminders(db), {});
+      assert.ok(!('serverNextStepAt' in clockOf(db)));
+    });
+
+    it('noReminderDuringTheLastChance', async () => {
+      const db = withZone('Europe/Prague');
+      const until = T + 26 * HOUR;
+      // A plan whose last reminder was never sent (an outage), then a last chance after the deadline.
+      await writeAndTrigger(db, 'c1', delivered([T - HOUR], {
+        serverToldDeadlineAt: T + MINUTE, lastChanceAt: T + 2 * HOUR, lastChanceUntilMillis: until,
+      }));
+      assert.strictEqual(clockOf(db).serverNextStepAt, until);
+      // Even a stale schedule that makes it due sends nothing.
+      db.store['request_deadlines/c1'].serverNextStepAt = T - HOUR;
+      await index.sweepRequestClocksImpl(db, T + 3 * HOUR, deps);
+      assert.deepStrictEqual(reminders(db), {});
+      assert.strictEqual(clockOf(db).serverNextStepAt, until);
+    });
+
+    it('aReminderDueAtNightWaitsForTheMorning', async () => {
+      // T is 09:00 in Prague: 20:50 that evening, a sweep delayed to 23:00, the morning at 08:00.
+      const evening = T + 11 * HOUR + 50 * MINUTE;
+      const night = T + 14 * HOUR;
+      const morning = T + 23 * HOUR;
+      const db = withZone('Europe/Prague');
+      await writeAndTrigger(db, 'c1', delivered([evening], {answerByMillis: T + DAY}));
+      await index.sweepRequestClocksImpl(db, night, deps);
+      assert.deepStrictEqual(reminders(db), {});
+      assert.strictEqual(clockOf(db).serverNextStepAt, morning);
+      // Still at night an hour later: still waiting.
+      await index.sweepRequestClocksImpl(db, night + HOUR, deps);
+      assert.deepStrictEqual(reminders(db), {});
+      await index.sweepRequestClocksImpl(db, morning + MINUTE, deps);
+      assert.deepStrictEqual(Object.keys(reminders(db)), [`srv_request_reminder_c1_${evening}`]);
+      assert.strictEqual(clockOf(db).serverRemindersSent, 1);
+
+      // With the deadline at 07:30, the morning is too late: the reminder is dropped, not sent at night.
+      const late = withZone('Europe/Prague');
+      await writeAndTrigger(late, 'c1', delivered([evening], {answerByMillis: T + 22 * HOUR + 30 * MINUTE}));
+      await index.sweepRequestClocksImpl(late, night, deps);
+      assert.deepStrictEqual(reminders(late), {});
+      assert.ok(!('serverRemindersSent' in clockOf(late)));
+      assert.strictEqual(clockOf(late).serverNextStepAt, T + 22 * HOUR + 30 * MINUTE);
+      await index.sweepRequestClocksImpl(late, night + 2 * HOUR, deps);
+      assert.deepStrictEqual(reminders(late), {});
+    });
+
+    it('aPhonePlanAfterAServerReminderNeverRepeatsIt', async () => {
+      const db = withZone('Europe/Prague');
+      await writeAndTrigger(db, 'c1', undelivered());
+      await index.sweepRequestClocksImpl(db, CREATED + 5 * MINUTE, deps);
+      await index.sweepRequestClocksImpl(db, T - 2 * DAY + MINUTE, deps);
+      assert.strictEqual(Object.keys(reminders(db)).length, 1);
+
+      // Bob's phone delivers afterwards, in another zone, its plan naming the time already sent too.
+      const phonePlan = [T - 2 * DAY, T - DAY + 30 * MINUTE, T - 2 * HOUR];
+      await writeAndTrigger(db, 'c1', Object.assign({}, clockOf(db), {
+        deliveredAtMillis: T - 2 * DAY + 2 * HOUR, remindersPlanned: 3, reminderTimesMillis: phonePlan,
+      }));
+      assert.strictEqual(clockOf(db).serverNextStepAt, T - DAY + 30 * MINUTE);
+      for (let at = T - 2 * DAY + 2 * HOUR; at < T; at += HOUR) {
+        await index.sweepRequestClocksImpl(db, at, deps);
+      }
+      assert.deepStrictEqual(Object.keys(reminders(db)).sort(), [
+        `srv_request_reminder_c1_${T - 2 * DAY}`,
+        `srv_request_reminder_c1_${T - DAY + 30 * MINUTE}`,
+        `srv_request_reminder_c1_${T - 2 * HOUR}`,
+      ].sort());
+      assert.strictEqual(clockOf(db).serverRemindersSent, 3);
+    });
+
+    it('theReminderGoesToTheAnsweringParentInTheClocksFamily', async () => {
+      const db = withZone('Europe/Prague');
+      await writeAndTrigger(db, 'c1', delivered(SERVER_PLAN));
+      await index.sweepRequestClocksImpl(db, T - 2 * DAY + MINUTE, deps);
+      assert.deepStrictEqual(reminders(db), {
+        [`srv_request_reminder_c1_${T - 2 * DAY}`]: {
+          targetUserId: 'bob',
+          data: {
+            type: 'request_reminder',
+            actorName: 'Alice',
+            familyId: FAMILY,
+            requestKind: 'change',
+            answerBy: String(T),
+          },
+          status: 'pending',
+          createdAt: 'SERVER_TIME',
+        },
+      });
+    });
+
+    it('a sweep long after two reminders sends one push for both', async () => {
+      const db = withZone('Europe/Prague');
+      await writeAndTrigger(db, 'c1', delivered(SERVER_PLAN));
+      await index.sweepRequestClocksImpl(db, T - DAY + MINUTE, deps);
+      assert.deepStrictEqual(Object.keys(reminders(db)), [`srv_request_reminder_c1_${T - DAY}`]);
+      assert.strictEqual(clockOf(db).serverRemindersSent, 1);
+      assert.strictEqual(clockOf(db).serverNextStepAt, T - HOUR);
+    });
+
+    it('the trigger ignores a write of only the reminders\' server fields', async () => {
+      const db = setUp({'request_deadlines/c1': undelivered({serverNextStepAt: T})});
+      const result = await writeAndTrigger(db, 'c1', undelivered({
+        serverNextStepAt: T, serverReminderTimesMillis: [1], serverRemindersSent: 1, serverLastReminderAt: 1,
+      }));
+      assert.deepStrictEqual(result, {action: 'ignored'});
+    });
+  });
+
   describe('the backfill', () => {
     /**
      * The clocks open at deploy, one of each case the backfill decides.

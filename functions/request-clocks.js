@@ -118,6 +118,54 @@ function toMillis(value) {
 }
 
 /**
+ * The reminder plan in force on a clock (iPhone phase 4 part C, spec §11 call 1): the answering
+ * phone's (`reminderTimesMillis`) once it delivered the clock, else the server's own
+ * (`serverReminderTimesMillis`), else null — nothing planned yet. Non-numbers are left out, and the
+ * times come back earliest first.
+ *
+ * @param {object} doc the clock document's data.
+ * @return {Array<number>|null}
+ */
+function reminderPlanOf(doc) {
+  let times;
+  if (has(doc.deliveredAtMillis)) times = Array.isArray(doc.reminderTimesMillis) ? doc.reminderTimesMillis : [];
+  else if (Array.isArray(doc.serverReminderTimesMillis)) times = doc.serverReminderTimesMillis;
+  else return null;
+  return times.filter((at) => typeof at === 'number').sort((a, b) => a - b);
+}
+
+/**
+ * The reminders of the plan in force not yet sent and still before the deadline, earliest first.
+ * A reminder is sent at most once whichever plan named it: `serverLastReminderAt` is the latest
+ * planned time the server has already acted on (sent, or dropped at night), and only later times
+ * are left. A phone's plan never names a time before its own delivery, which comes after every
+ * reminder the server sent from its own plan, so switching plans never repeats one.
+ *
+ * @param {object} doc the clock document's data.
+ * @return {Array<number>} epoch millis; empty when there is no plan or nothing is left.
+ */
+function remindersLeft(doc) {
+  const plan = reminderPlanOf(doc);
+  if (plan === null) return [];
+  const after = typeof doc.serverLastReminderAt === 'number' ? doc.serverLastReminderAt : -Infinity;
+  return plan.filter((at) => at > after && at < doc.answerByMillis);
+}
+
+/**
+ * When the reminders next need the sweep, before the deadline: the next reminder left; or, while
+ * nothing is planned (no phone delivered and the server has not planned), the clock's creation, so
+ * the server plans at once; or null.
+ *
+ * @param {object} doc the clock document's data.
+ * @return {number|null}
+ */
+function nextReminderStepAt(doc) {
+  if (reminderPlanOf(doc) === null) return toMillis(doc.createdAt);
+  const left = remindersLeft(doc);
+  return left.length > 0 ? left[0] : null;
+}
+
+/**
  * When the sweep should next look at a clock: the table of the spec's §5.1, over a raw clock
  * document, or null for "no field" (the clock needs nothing more from the server).
  *
@@ -128,11 +176,13 @@ function toMillis(value) {
  *   server checks the withdrawal once; otherwise null;
  * - a last chance given: where it ends;
  * - the deadline push already sent: the end;
- * - otherwise the deadline, which covers an open clock and a deadline not yet told. A clock that
- *   is past its end and was never told is therefore due at its deadline, also in the past.
+ * - otherwise the deadline, or the next reminder step when that is sooner (iPhone phase 4 part C:
+ *   the next reminder left, or the clock's creation while nothing is planned). A clock that is past
+ *   its end and was never told is therefore due at its deadline, also in the past.
  *
- * @param {object} doc the clock document's data. `closedAt` may be epoch millis or an object with
- *   `toMillis()` (a Firestore `Timestamp`); a missing or unreadable one counts as absent.
+ * @param {object} doc the clock document's data. `closedAt` and `createdAt` may be epoch millis or
+ *   an object with `toMillis()` (a Firestore `Timestamp`); a missing or unreadable one counts as
+ *   absent.
  * @return {number|null}
  */
 function nextStepAt(doc) {
@@ -140,7 +190,8 @@ function nextStepAt(doc) {
   if (has(doc.outcome)) return withdrawnAtEnd(doc.kind) ? toMillis(doc.closedAt) : null;
   if (has(doc.lastChanceUntilMillis)) return doc.lastChanceUntilMillis;
   if (has(doc.serverToldDeadlineAt)) return endMillis(doc);
-  return doc.answerByMillis;
+  const reminder = nextReminderStepAt(doc);
+  return reminder === null ? doc.answerByMillis : Math.min(reminder, doc.answerByMillis);
 }
 
 module.exports = {
@@ -154,4 +205,7 @@ module.exports = {
   endMillis,
   nextStepAt,
   withdrawnAtEnd,
+  reminderPlanOf,
+  remindersLeft,
+  toMillis,
 };

@@ -1,10 +1,11 @@
 package com.coparently.app.pushwording
 
 /**
- * The wording of the notifications a phone posts on its own, at a time it decides (iPhone phase 4
- * part C, design §11 call 3): an event's reminder, the child support reminder and a request's
- * reminder. Android's `DueReminders`, `SupportReminderWorker` and `RequestNotices` word through it,
- * and the iPhone's local notifications do too, so both phones say the same thing.
+ * The wording of the reminders (iPhone phase 4 part C, design §11 call 3): an event's reminder and
+ * the child support reminder, which a phone posts on its own at a time it decides, and a request's
+ * reminder, which the server pushes since Task 4 (`request_reminder`, worded through [request]).
+ * Android's `DueReminders` and `SupportReminderWorker` word through it, and the iPhone's local
+ * notifications and its push extension do too, so both phones say the same thing.
  *
  * A name that is missing or blank reads "Your co-parent" in the reader's language, never a gap.
  *

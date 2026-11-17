@@ -61,7 +61,6 @@ import com.coparently.app.data.remote.google.GoogleCalendarApi
 import com.coparently.app.data.remote.google.GoogleCalendarConnectionSource
 import com.coparently.app.data.remote.google.GoogleRevokeEndpoint
 import com.coparently.app.data.remote.google.IosGoogleCalendarAccount
-import com.coparently.app.data.requests.RequestClockNotices
 import com.coparently.app.data.school.SchoolImportScheduler
 import com.coparently.app.data.school.bakalari.BakalariClient
 import com.coparently.app.data.school.bakalari.BakalariSchoolDirectory
@@ -196,7 +195,6 @@ actual val platformDataModule: Module = module {
     }
     single<ReminderScheduler> { NoEventReminders }
     single<RequestClockScheduler> { NoRequestClockJobs }
-    single<RequestClockNotices> { NoRequestClockNotices }
     single<SchoolImportScheduler> { NoSchoolImportJob }
     single<SupportReminderScheduler> { NoSupportReminderJob }
     // A sync while the app is open, one at a time, with the Google import after each (Task 6;

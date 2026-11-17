@@ -1,53 +1,34 @@
 package com.coparently.app.data.requests
 
 import com.coparently.app.data.notification.RequestClockWork
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.confirmVerified
-import io.mockk.mockk
-import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * [runRequestClockStep]: which step a request clock's job runs (phase 3a; MON-25).
+ * [finishesWithoutActing]: what a request clock's job does on this build (phase 3a; MON-25; iPhone
+ * phase 4 part C).
  *
- * A reminder runs through [RequestClockSteps]. The deadline and the end are the server's since
- * MON-25, so a job an older build left queued for either finishes as done without touching the
- * steps; a step this build does not know is not run at all, and the worker fails the job.
+ * Every step is the server's now, so a reminder, a deadline or an end job an older build left
+ * queued finishes as done without acting; a step this build does not know is not run at all, and
+ * the worker fails the job.
  */
 class RequestClockWorkerTest {
 
-    private val steps = mockk<RequestClockSteps>()
-
     @Test
-    fun `a reminder job runs the reminder step`() = runTest {
-        coEvery { steps.reminder(CLOCK_ID, AT) } returns StepResult.RETRY
-
-        assertEquals(StepResult.RETRY, runRequestClockStep(steps, RequestClockWork.STEP_REMINDER, CLOCK_ID, AT))
-
-        coVerify(exactly = 1) { steps.reminder(CLOCK_ID, AT) }
+    fun anOldReminderJobFinishesWithoutActing() {
+        assertTrue(finishesWithoutActing(RequestClockWork.STEP_REMINDER))
     }
 
     @Test
-    fun anOldDeadlineOrEndJobFinishesWithoutActing() = runTest {
-        assertEquals(StepResult.DONE, runRequestClockStep(steps, RequestClockWork.STEP_DEADLINE, CLOCK_ID, AT))
-        assertEquals(StepResult.DONE, runRequestClockStep(steps, RequestClockWork.STEP_END, CLOCK_ID, AT))
-
-        confirmVerified(steps)
+    fun anOldDeadlineOrEndJobFinishesWithoutActing() {
+        assertTrue(finishesWithoutActing(RequestClockWork.STEP_DEADLINE))
+        assertTrue(finishesWithoutActing(RequestClockWork.STEP_END))
     }
 
     @Test
-    fun `a step this build does not know is not run`() = runTest {
-        assertNull(runRequestClockStep(steps, "from_a_newer_build", CLOCK_ID, AT))
-        assertNull(runRequestClockStep(steps, null, CLOCK_ID, AT))
-
-        confirmVerified(steps)
-    }
-
-    private companion object {
-        const val CLOCK_ID = "change_uidA_cr-1"
-        const val AT = 1_778_000_000_000L
+    fun `a step this build does not know is not run`() {
+        assertFalse(finishesWithoutActing("from_a_newer_build"))
+        assertFalse(finishesWithoutActing(null))
     }
 }

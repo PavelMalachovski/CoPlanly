@@ -295,12 +295,16 @@ private fun OpenedRow(clock: CardClock) {
     }
 }
 
-/** The answering phone's reminders: how many it showed of how many it planned, and the next. */
+/**
+ * The reminders to the answering parent: how many were sent of how many were planned, and the next.
+ * Planned is the phone's count, else the server's plan; sent is the server's count, or an older
+ * build's shown count when that is more (iPhone phase 4 part C, spec §11 call 1).
+ */
 @Composable
 private fun RemindersRow(timed: TimedRequest) {
-    val planned = timed.clock.remindersPlanned ?: 0
+    val planned = timed.clock.plannedReminders ?: 0
     if (planned == 0) return
-    val shown = timed.clock.remindersShown
+    val shown = timed.clock.remindersSent
     val next = timed.nextReminderMillis
     ClockRow(
         Icons.Default.Notifications,

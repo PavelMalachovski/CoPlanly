@@ -1,7 +1,6 @@
 package com.coparently.app.e2e
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.coparently.app.data.notification.RequestClockWork
 import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.data.repository.PatternSubmission
 import com.coparently.app.data.repository.RatioSubmission
@@ -54,8 +53,8 @@ import java.util.UUID
  *
  * Every clock write goes through the production `RequestDeadlineRepositoryImpl` against the real
  * `firestore.rules`, and every step through the production `RequestClockKeeper` and
- * `RequestClockActions` of the phone that runs it. What WorkManager would do at a reminder's time
- * the test does itself: each phone's [RecordingClockScheduler] records the reminders.
+ * `RequestClockActions` of the phone that runs it. The reminders are the server's since iPhone phase
+ * 4 part C, sent from the plan this phone records; `TwoParentServerClocksTest` runs them.
  *
  * **The deadline notice and the end are the server's since MON-25**, so a request nobody answers is
  * closed, withdrawn and carded by the scheduled function, not by a phone; `TwoParentServerClocksTest`
@@ -63,7 +62,7 @@ import java.util.UUID
  *
  * What it proves:
  * - **An offer with a deadline starts its clock, and its push says when** (`answerBy`), and the
- *   answering phone records the delivery with the reminders it planned, and schedules those.
+ *   answering phone records the delivery with the reminders it planned, and schedules no job.
  * - **Opening the request is recorded** on the proposer's side.
  * - **The last chance is given only after the deadline**, reaches the answering parent as the
  *   `request_last_chance` push read back from `notification_queue`, and an answer under it is
@@ -78,8 +77,7 @@ import java.util.UUID
  * [SHORT_DEADLINE_MILLIS] ahead. `firestore.rules` asks only that a deadline be after the server's
  * time and that a cap come after it, so the start goes through the same rule an offer's does.
  *
- * What it cannot: the reminders' jobs firing on their own (WorkManager's time),
- * the notifications and cards as drawn, and FCM's delivery of the push.
+ * What it cannot: the notifications and cards as drawn, and FCM's delivery of the push.
  */
 @RunWith(AndroidJUnit4::class)
 class TwoParentRequestDeadlinesTest : TwoParentTest() {
@@ -106,9 +104,6 @@ class TwoParentRequestDeadlinesTest : TwoParentTest() {
             "a three-day deadline plans one to three reminders",
             delivered.reminderTimesMillis.size in 1..MAX_REMINDERS
         )
-        val reminders = bob.requestScheduler.scheduled
-            .filter { it.clockId == firstId && it.step == RequestClockWork.STEP_REMINDER }
-        assertEquals(delivered.remindersPlanned, reminders.size)
 
         EmulatorEnvironment.step("deadlines: Bob opens the request")
         assertTrue(bob.requestClockActions.markSeen(firstId))

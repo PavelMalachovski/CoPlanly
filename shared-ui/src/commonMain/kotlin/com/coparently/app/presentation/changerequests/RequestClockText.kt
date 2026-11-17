@@ -44,8 +44,8 @@ object RequestClockText {
     /**
      * The meta line of a "No answer" row (spec §6.6), part by part and in order, each present only
      * when the clock knows it: the deadline's date; when the last chance ran to, if one was given;
-     * the date it was opened, if it was; how many reminders were shown, once the answering phone had
-     * planned them; and that the calendar did not change, which is always true of a request nobody
+     * the date it was opened, if it was; how many reminders were sent, once the answering phone or
+     * the server had planned them; and that the calendar did not change, which is always true of a request nobody
      * answered. The caller joins them with " · ".
      *
      * @param zone The zone the dates and the time fall in: the device's.
@@ -60,8 +60,8 @@ object RequestClockText {
             add(UiText.Res(Res.string.request_history_meta_last_chance, listOf(until)))
         }
         clock.seenAtMillis?.let { add(UiText.Res(Res.string.request_history_meta_opened, listOf(dateOf(it, zone)))) }
-        if (clock.remindersPlanned != null) {
-            add(UiText.Plural(Res.plurals.request_history_meta_reminders, clock.remindersShown))
+        if (clock.plannedReminders != null) {
+            add(UiText.Plural(Res.plurals.request_history_meta_reminders, clock.remindersSent))
         }
         add(UiText.Res(Res.string.request_history_meta_unchanged))
     }

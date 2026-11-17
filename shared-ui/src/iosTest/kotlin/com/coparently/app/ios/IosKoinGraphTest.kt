@@ -44,7 +44,6 @@ import com.coparently.app.data.remote.google.GoogleCalendarApi
 import com.coparently.app.data.remote.google.GoogleCalendarConnectionSource
 import com.coparently.app.data.remote.google.IosGoogleCalendarAccount
 import com.coparently.app.data.repository.PairingWording
-import com.coparently.app.data.requests.RequestClockNotices
 import com.coparently.app.data.school.SchoolImportScheduler
 import com.coparently.app.data.school.SchoolImportWordings
 import com.coparently.app.data.school.bakalari.BakalariClient
@@ -135,7 +134,7 @@ class IosKoinGraphTest {
             IosAccountTraces::class, AccountTraces::class, LastSignedInUid::class, AccountConsistency::class,
             FirestorePushQueue::class, PushDevice::class, PushQueue::class, PushRegistration::class,
             AccountDeletion::class, ReminderScheduler::class, RequestClockScheduler::class,
-            RequestClockNotices::class, SchoolImportScheduler::class, SupportReminderScheduler::class,
+            SchoolImportScheduler::class, SupportReminderScheduler::class,
             SyncRequester::class, GoogleCalendarAccount::class, GoogleCalendarConnectionSource::class,
             CredentialProvider::class, IosGoogleCalendarAccount::class, StorageBucket::class, RecordPhotoStorage::class,
             ReceiptTextRecognizer::class, PickedFiles::class, ExportVerifyAddress::class,

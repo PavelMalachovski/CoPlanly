@@ -150,13 +150,6 @@ class FirestoreRequestDeadlineDataSourceTest {
         assertEquals(UNTIL, update.fields["lastChanceUntilMillis"])
     }
 
-    @Test
-    fun `a reminder shown is counted by an integer increment, not by a number this phone read`() = runTest {
-        dataSource.reportShown(ID)
-
-        assertEquals(listOf(Operation.Increment(PATH, "remindersShown", 1)), client.writes)
-    }
-
     // ---- fixtures ----------------------------------------------------------------------------
 
     /** The clock [stored] holds. */

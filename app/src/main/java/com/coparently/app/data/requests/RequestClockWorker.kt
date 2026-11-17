@@ -6,60 +6,37 @@ import androidx.work.WorkerParameters
 import com.coparently.app.data.notification.RequestClockWork
 
 /**
- * Runs one step of a request's clock — a reminder — when the job that `WorkRequestClockScheduler`
- * enqueued for it comes due (phase 3a, spec §5.3). The job carries the id of the clock, the step and
- * the moment it was scheduled for, under the keys [RequestClockWork] names; [RequestClockSteps]
- * reads the clock and the request again and decides.
+ * Finishes a request clock's job that an older build enqueued (phase 3a, spec §5.3), without acting.
  *
- * A step that answers [StepResult.RETRY] is tried again with WorkManager's backoff, up to
- * [MAX_ATTEMPTS] runs in all, and then given up; the keeper's sweep on the next full sync arms the
- * reminders still ahead again. A job this build cannot read — no clock id, or a step it does not
- * know, as a newer build might have enqueued before a downgrade — fails at once.
+ * Every step of a clock runs on the server now: the deadline notice and the end since MON-25, and the
+ * reminders to the answering parent since iPhone phase 4 part C (`functions/request-clock-steps.js`,
+ * the `request_reminder` push). A phone that still ran a reminder, a deadline or an end job queued
+ * before the update would tell its parent twice, so each finishes as done. A job this build cannot
+ * read — no clock id, or a step it does not know, as a newer build might have enqueued before a
+ * downgrade — fails at once.
  *
- * **A deadline or an end job an older build left queued finishes without acting** (MON-25): the
- * server runs both steps now, and a phone that ran them too would tell the proposer twice.
+ * Kept, with its name, because WorkManager instantiates a queued job's worker by class name: a
+ * removed class would leave an older build's jobs failing on every run until they were cancelled.
  */
 class RequestClockWorker(
     context: Context,
-    params: WorkerParameters,
-    private val steps: RequestClockSteps
+    params: WorkerParameters
 ) : CoroutineWorker(context, params) {
 
-    /** Runs the job's step, and retries it a few times when it asks to be. */
+    /** Finishes the job: done for a step this build recognises, failed for anything else. */
     override suspend fun doWork(): Result {
-        val clockId = inputData.getString(RequestClockWork.KEY_CLOCK_ID) ?: return Result.failure()
-        val outcome = runRequestClockStep(
-            steps,
-            inputData.getString(RequestClockWork.KEY_STEP),
-            clockId,
-            inputData.getLong(RequestClockWork.KEY_AT_MILLIS, 0L)
-        ) ?: return Result.failure()
-        return when {
-            outcome == StepResult.DONE -> Result.success()
-            runAttemptCount + 1 < MAX_ATTEMPTS -> Result.retry()
-            else -> Result.failure()
-        }
-    }
-
-    private companion object {
-        /** How many runs a step gets in all before it is left to the next sweep. */
-        const val MAX_ATTEMPTS = 3
+        val readable = inputData.getString(RequestClockWork.KEY_CLOCK_ID) != null &&
+            finishesWithoutActing(inputData.getString(RequestClockWork.KEY_STEP))
+        return if (readable) Result.success() else Result.failure()
     }
 }
 
 /**
- * Runs the [step] of a job for clock [clockId], planned for [atMillis]: a reminder through [steps];
- * an older build's [RequestClockWork.STEP_DEADLINE] or [RequestClockWork.STEP_END] job as
- * [StepResult.DONE] without acting, because the server runs those steps since MON-25; null for a
- * step this build does not know.
+ * Whether a job of [step] is one an older build enqueued — a reminder, a deadline or an end — which
+ * this build finishes without acting, because the server runs every step (MON-25; iPhone phase 4
+ * part C); false for a step this build does not know.
  */
-internal suspend fun runRequestClockStep(
-    steps: RequestClockSteps,
-    step: String?,
-    clockId: String,
-    atMillis: Long
-): StepResult? = when (step) {
-    RequestClockWork.STEP_REMINDER -> steps.reminder(clockId, atMillis)
-    RequestClockWork.STEP_DEADLINE, RequestClockWork.STEP_END -> StepResult.DONE
-    else -> null
+internal fun finishesWithoutActing(step: String?): Boolean = when (step) {
+    RequestClockWork.STEP_REMINDER, RequestClockWork.STEP_DEADLINE, RequestClockWork.STEP_END -> true
+    else -> false
 }

@@ -1,10 +1,8 @@
 package com.coparently.app.di.koin
 
 import com.coparently.app.data.remote.firebase.PushRegistration
-import com.coparently.app.data.requests.RequestClockNotices
 import com.coparently.app.data.school.SchoolImportScheduler
 import com.coparently.app.data.support.SupportReminderScheduler
-import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.notification.RequestClockScheduler
@@ -59,9 +57,11 @@ internal object NoEventReminders : ReminderScheduler {
     override fun cancelAll() = Unit
 }
 
-/** No background jobs yet: a request clock's steps are not scheduled. */
+/**
+ * No request clock's job on the iPhone, ever: the reminders, the deadline notice and the end are
+ * the server's (MON-25; iPhone phase 4 part C), so there is nothing to cancel either.
+ */
 internal object NoRequestClockJobs : RequestClockScheduler {
-    override fun scheduleReminder(clockId: String, atMillis: Long) = Unit
     override fun cancelAll() = Unit
 }
 
@@ -84,11 +84,6 @@ internal object NoSupportReminderJob : SupportReminderScheduler {
 
     override fun schedule() = Unit
     override fun cancel() = Unit
-}
-
-/** No notifications yet: a request clock's notice is not shown, so a reminder is never counted. */
-internal object NoRequestClockNotices : RequestClockNotices {
-    override suspend fun remind(clock: RequestDeadline): Boolean = false
 }
 
 private const val UNAVAILABLE = "Not available in this iPhone build yet"
