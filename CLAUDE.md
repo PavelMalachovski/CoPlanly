@@ -2358,9 +2358,10 @@ shown) and keep their jobs through the domain's `RequestClockScheduler`, as
 before (`RequestClockNotices`, its stand-in and `RequestNotices` were deleted in iPhone phase 4 part
 C, with the phones' reminders; `RequestClockScheduler` keeps `cancelAll` alone). Every constructor kept its parameter names, so the e2e parents build them unchanged. They
 are bound in `requestsDataModule` (with `RequestClockSweep`, which the app bound in Task 8g) and
-`familyDataModule`, and the app binds `RequestClockNotices`. Still in the app from `data/requests/`
-and `data/notification/`: `RequestNotices` (the notification manager, the strings and the
-`BigTextStyle` of item 15; deleted in phase 4 part C), `RequestClockWorker`, `RequestClockWork` and
+`familyDataModule`, and the app bound `RequestClockNotices` until part C deleted it. Still in the
+app from `data/requests/` and `data/notification/` then: `RequestNotices` (the notification manager,
+the strings and the `BigTextStyle` of item 15; deleted in phase 4 part C), and still today
+`RequestClockWorker`, `RequestClockWork` and
 `WorkRequestClockScheduler` (WorkManager: the `KEEP` names and, until MON-25 left the phones only
 reminders, `needsNetwork`; since part C the worker only lets an older build's queued job finish
 without acting, and the scheduler only cancels them). Task 8i, the school import (item 35), the
@@ -4860,7 +4861,10 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       checked, so a reminder from an older build's plan may go a few minutes into 21:00 when the
       sweep runs late — accepted, commented in `remindOrPlan`. None during a last chance — the
       last-chance push is the reminder. **A reminder counts when sent**, not shown, which a push
-      cannot report: `serverRemindersSent`. The screens read `RequestDeadline.plannedReminders` and
+      cannot report: `serverRemindersSent`. **A reminder to a parent with no push token is neither
+      sent nor counted** (`noToken`: pushes off, an iPhone without permission, a signed-out phone):
+      `sendNotification` would skip it, so nothing is queued and only `serverLastReminderAt` moves,
+      and the proposer's "reminded N of M" never counts one that never left the server. The screens read `RequestDeadline.plannedReminders` and
       `remindersSent` (`CardClock`, `RequestClockText`): sent is the larger of the server's count and
       an older build's `remindersShown`, and planned is the phone's count, else the server plan's
       size, **clamped to at least sent**, so the card never says "3 of 2". While an older Android

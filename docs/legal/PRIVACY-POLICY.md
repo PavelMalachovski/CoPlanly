@@ -127,9 +127,11 @@ decide what each of you may read. **Legal basis:** performance of our contract w
   request notifies nobody. **The reminders are sent by our server** to the parent who has to
   answer, as notifications that name the other parent by first name and the deadline: before
   sending each one it checks that the request still waits, so none comes about a request already
-  answered, withdrawn or ended, and none between 21:00 and 08:00 in that parent's time zone (the
-  one their phone saved with their profile, above). A reminder counts as sent when our server sends
-  it, since a phone cannot report whether it showed one. **Our server watches the deadline**: it checks the request every
+  answered, withdrawn or ended, and none between 21:00 and 08:00 in the time zone their phone
+  saved with their profile (above); for an account whose app never saved one, the plan their own
+  phone made decides. A reminder counts as sent when our server sends it, since
+  a phone cannot report whether it showed one; a reminder to a parent whose phone holds no
+  notification token (notifications switched off, or signed out) is neither sent nor counted. **Our server watches the deadline**: it checks the request every
   few minutes, and when the deadline passes without an answer it sends **you, the parent who sent
   it,** a notification, and a second one if the request then ends with no answer, when it also
   closes the request, notes it in your conversation and withdraws a waiting custody or expense

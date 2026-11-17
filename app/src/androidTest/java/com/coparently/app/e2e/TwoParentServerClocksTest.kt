@@ -27,6 +27,7 @@ import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Message
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterNotNull
@@ -34,6 +35,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
@@ -306,6 +308,10 @@ class TwoParentServerClocksTest : TwoParentTest() {
         withTimeout(EmulatorParent.WAIT_MS) {
             while (EmulatorEnvironment.documentAsAdmin("users/${bob.uid}")?.get("timeZone") != zone) delay(POLL_MS)
         }
+        // A reminder is queued only for a parent whose profile holds a push token; the emulator has
+        // no FCM, so Bob's is written as the push service writes it, `set({fcmToken}, merge)`.
+        bob.firestore.collection("users").document(bob.uid)
+            .set(mapOf("fcmToken" to "e2e-token-bob"), SetOptions.merge()).await()
 
         val request = sendRequest(insertSharedEvent("Piano"))
         val clock = startClock(RequestKind.CHANGE, request.id, capMillis = null)

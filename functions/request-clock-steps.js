@@ -506,18 +506,21 @@ function reminderPushFor(clock, answerByMillis, actorName, createdAt) {
 }
 
 /**
- * The answering parent's time zone as their profile states it (`users/{uid}.timeZone`), read in the
- * transaction; null when the profile cannot be read or names no zone this runtime knows.
+ * The answering parent's profile as a reminder needs it, read in the transaction: their time zone
+ * as the profile states it (`users/{uid}.timeZone`; null when the profile cannot be read or names no
+ * zone this runtime knows), and whether it holds a push token (`fcmToken`) a reminder could reach.
  *
  * @param {!Object} tx the transaction.
  * @param {!Object} db Firestore.
  * @param {!Object} clock the clock.
- * @return {!Promise<?string>}
+ * @return {!Promise<{zone: ?string, hasToken: boolean}>}
  */
-async function responderZone(tx, db, clock) {
+async function responderProfile(tx, db, clock) {
   const snap = await tx.get(db.collection('users').doc(clock.responderUid));
-  const zone = snap.exists ? (snap.data() || {}).timeZone : null;
-  return reminderPlan.isZone(zone) ? zone : null;
+  const data = snap.exists ? (snap.data() || {}) : {};
+  const zone = reminderPlan.isZone(data.timeZone) ? data.timeZone : null;
+  const hasToken = typeof data.fcmToken === 'string' && data.fcmToken.length > 0;
+  return {zone, hasToken};
 }
 
 /**
@@ -531,6 +534,7 @@ async function responderZone(tx, db, clock) {
  * - the record answered or gone: settled; unreadable: `skipped`, still due;
  * - in the quiet hours of the stored zone: the next 08:00 when that is before the deadline
  *   (`deferred`), otherwise the reminder is dropped (`dropped`);
+ * - the answering parent holds no push token: nothing queued and nothing counted (`noToken`);
  * - otherwise one push for every reminder now due, counted once (`reminded`).
  *
  * @param {!Object} tx the transaction.
@@ -550,7 +554,7 @@ async function remindOrPlan(tx, db, step) {
 
   if (clocks.reminderPlanOf(doc) === null) {
     const sentAt = clocks.toMillis(doc.createdAt);
-    const zone = sentAt === null ? null : await responderZone(tx, db, clock);
+    const zone = sentAt === null ? null : (await responderProfile(tx, db, clock)).zone;
     if (zone === null) {
       // No zone: the server waits for the answering phone's own plan, and the deadline is next. A
       // later write of the clock (the phone's delivery, say) has the trigger look again.
@@ -569,7 +573,7 @@ async function remindOrPlan(tx, db, step) {
   if (look.status === 'unknown') return {action: 'skipped'};
   if (look.status !== 'pending') return settle();
 
-  const zone = await responderZone(tx, db, clock);
+  const {zone, hasToken} = await responderProfile(tx, db, clock);
   // With no stored zone (an older build delivered the plan) the quiet hours cannot be checked here;
   // the phone placed its plan outside its own night, which is what is sent.
   if (zone !== null && reminderPlan.isQuietAt(nowMillis, zone)) {
@@ -579,6 +583,13 @@ async function remindOrPlan(tx, db, step) {
       return {action: 'deferred'};
     }
     return writeAndReschedule({serverLastReminderAt: last}, 'dropped');
+  }
+
+  if (!hasToken) {
+    // No push token (pushes off, an iPhone without permission, a signed-out phone): a queued push
+    // would be skipped by `sendNotification`, so nothing is queued and nothing is counted — the
+    // proposer's card never says "reminded" for a reminder that did not leave the server.
+    return writeAndReschedule({serverLastReminderAt: last}, 'noToken');
   }
 
   const proposer = await tx.get(db.collection('users').doc(clock.proposerUid));

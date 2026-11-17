@@ -68,7 +68,7 @@ function custody(waiting) {
 function setUp(seed) {
   return fakeDb(Object.assign({
     'users/alice': {name: 'Alice Smith', partnerId: 'bob', partnerIds: ['bob']},
-    'users/bob': {name: 'Bob Jones', partnerId: 'alice', partnerIds: ['alice']},
+    'users/bob': {name: 'Bob Jones', partnerId: 'alice', partnerIds: ['alice'], fcmToken: 'bob-token'},
     [`conversations/${FAMILY}`]: {participants: ['alice', 'bob'], lastMessageAt: 1},
   }, seed));
 }
@@ -588,6 +588,23 @@ describe('request clock schedule', () => {
       assert.deepStrictEqual(Object.keys(reminders(db)), [`srv_request_reminder_c1_${T - DAY}`]);
       assert.strictEqual(clockOf(db).serverRemindersSent, 1);
       assert.strictEqual(clockOf(db).serverNextStepAt, T - HOUR);
+    });
+
+    it('aReminderWithNoPushTokenIsNeitherSentNorCounted', async () => {
+      const db = withZone('Europe/Prague');
+      delete db.store['users/bob'].fcmToken;
+      await writeAndTrigger(db, 'c1', delivered(SERVER_PLAN));
+      await index.sweepRequestClocksImpl(db, T - 2 * DAY + MINUTE, deps);
+      assert.deepStrictEqual(reminders(db), {});
+      assert.ok(!('serverRemindersSent' in clockOf(db)));
+      assert.strictEqual(clockOf(db).serverLastReminderAt, T - 2 * DAY);
+      assert.strictEqual(clockOf(db).serverNextStepAt, T - DAY);
+
+      // Bob turns pushes on: the next reminder is sent and counted as the first.
+      db.store['users/bob'].fcmToken = 'bob-token';
+      await index.sweepRequestClocksImpl(db, T - DAY + MINUTE, deps);
+      assert.deepStrictEqual(Object.keys(reminders(db)), [`srv_request_reminder_c1_${T - DAY}`]);
+      assert.strictEqual(clockOf(db).serverRemindersSent, 1);
     });
 
     it('the trigger ignores a write of only the reminders\' server fields', async () => {
