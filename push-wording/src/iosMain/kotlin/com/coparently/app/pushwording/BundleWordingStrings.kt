@@ -27,7 +27,7 @@ class BundleWordingStrings(
     private val language: String = localizationOf(bundle, languageTag)
 
     /** The reader's language, whose plural rules apply whichever folder the text came from, as on Android. */
-    private val readerLanguage: String = languageTag.substringBefore('-')
+    private val readerLanguage: String = primaryLanguage(languageTag)
 
     private val strings: Map<Any?, *> by lazy { table(bundle, "strings") }
 
@@ -59,11 +59,14 @@ class BundleWordingStrings(
         val APPLE_STRING_ARGUMENT = Regex("""%(\d+)\$@""")
         val STRINGSDICT_ARGUMENT = Regex("""%(?:(\d+)\$([@d])|%)""")
 
-        /** [tag] itself, else its language (`cs-CZ` → `cs`), else `en`: the first [bundle] has a folder for. */
+        /** [tag], else its language (`cs-CZ` or `cs_CZ` → `cs`), else `en`: the first [bundle] has a folder for. */
         fun localizationOf(bundle: NSBundle, tag: String): String {
             val folders = bundle.localizations.mapNotNull { it as? String }.toSet()
-            return listOf(tag, tag.substringBefore('-')).firstOrNull { it in folders } ?: BASE
+            return listOf(tag, primaryLanguage(tag)).firstOrNull { it in folders } ?: BASE
         }
+
+        /** A tag's language subtag, whether the tag is written with `-` (BCP 47) or `_` (Apple's locale ids). */
+        fun primaryLanguage(tag: String): String = tag.substringBefore('-').substringBefore('_')
 
         /** A `.strings` text as the XML wrote it: `%<n>$@` back to `%<n>$s`. */
         fun fromStringsFile(text: String): String =

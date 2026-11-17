@@ -18,12 +18,12 @@ internal fun pluralQuantity(language: String, count: Int): String {
     return when (language) {
         "cs" -> when (n) {
             1L -> "one"
-            in 2L..4L -> "few"
+            in FEW_DIGITS -> "few"
             else -> "other"
         }
         "ru", "uk" -> when {
-            lastDigit == 1L && lastTwo != 11L -> "one"
-            lastDigit in 2L..4L && lastTwo !in 12L..14L -> "few"
+            lastDigit == 1L && lastTwo != ELEVEN -> "one"
+            lastDigit in FEW_DIGITS && lastTwo !in TEENS_AFTER_ELEVEN -> "few"
             else -> "many"
         }
         else -> if (n == 1L) "one" else "other"
@@ -32,3 +32,13 @@ internal fun pluralQuantity(language: String, count: Int): String {
 
 private const val TEN = 10L
 private const val HUNDRED = 100L
+private const val ELEVEN = 11L
+private const val TWELVE = 12L
+private const val FOURTEEN = 14L
+private const val FOUR = 4L
+
+/** 2 to 4: Czech `few`, and the last digit of a Russian or Ukrainian `few`. */
+private val FEW_DIGITS = 2L..FOUR
+
+/** 12 to 14: last two digits that keep a Russian or Ukrainian number out of `few`. */
+private val TEENS_AFTER_ELEVEN = TWELVE..FOURTEEN

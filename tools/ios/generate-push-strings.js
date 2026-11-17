@@ -21,8 +21,12 @@
  *   count, args)`), and a text need not print the count at all ("%1$s are with you"), so the entry's
  *   format key is `%1$#@value@` over a count passed **first**, with `NSStringFormatValueTypeKey`
  *   `d`, and every argument in a quantity's text is shifted by one (`%1$s` → `%2$@`, `%2$d` →
- *   `%3$d`): `BundleWordingStrings.plural` calls `localizedStringWithFormat(entry, count, args…)`.
- *   A literal `%` in a quantity's text is written `%%`, because `NSString` formats it. A `zero`
+ *   `%3$d`), and a literal `%` in a quantity's text is written `%%`: a valid entry Foundation's own
+ *   `localizedStringWithFormat(entry, count, args…)` would format. `BundleWordingStrings.plural` does
+ *   not call it (Kotlin/Native hands the localized `NSString` back as a plain `String`, which loses
+ *   the entry): it reads the file as a property list, picks the quantity by Android's rule
+ *   (`pluralQuantity`) and reverses this encoding exactly — arguments shifted back, `%%` to `%` —
+ *   before formatting with `formatArgs`. A `zero`
  *   quantity is left out: Apple applies it to 0 in every language, Android only where the language's
  *   plural rules have it, and none of the five languages the app ships does.
  */
