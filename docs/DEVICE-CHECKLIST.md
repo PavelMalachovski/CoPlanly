@@ -2236,7 +2236,10 @@ to another time zone.
 - [ ] **The end.** Within five minutes of the end, with neither phone open, the card goes to History
       on an outlined, neutral chip (not the red of "Declined"), the thread has one "No answer" card,
       and a "No answer" proposal is withdrawn, so B can propose again. **[CI]** for the end, the
-      withdrawn proposal, the chat card and History; the two pushes A gets are §5.10.
+      withdrawn proposal, the chat card and History; the two pushes A gets are §5.10. **Timing:** with
+      no cap close by, the request ends a day after its deadline unless a last chance is given, so a
+      "Tomorrow" deadline ends about 48 hours after sending; §5.10's timing note gives a day swap
+      that ends the same evening.
 - [ ] **An older build answering after "No answer".** With B on the build before this one (a day swap
       cannot be refused by a clock): B answers A's swap after it ended as "No answer". The answer is
       kept, the swap is agreed, and A's phone shows it as accepted, with no error on either phone.
@@ -2258,16 +2261,26 @@ A and B paired, A on an Android phone with notifications allowed, the functions 
 deployed and `backfillRequestClockSchedule` run once (`functions/README.md`). Since MON-25 a
 scheduled function, not A's phone, tells A that B did not answer: `request_deadline_passed` when the
 deadline passes while a last chance can still be given, `request_no_answer` when the request ends.
-Both are pushed to A alone, at any hour, within about five minutes of the moment. Pick deadlines a
-few minutes out ("Answer by" a date with a time, or a day swap whose deadline the cap shortens), so
-the session does not wait a day.
+Both are pushed to A alone, at any hour, within five minutes of the moment (the sweep's period).
+
+**Timing: what the form can give.** "Answer by" offers +1, +3 or +7 days, or a date read at 20:00;
+there is no time field. A request whose first affected moment (its cap) is under 2 hours away gets
+no deadline; one whose cap is 2–48 hours away gets one fixed deadline, halfway to the cap (rounded
+down to a quarter hour). The deadline push needs a last chance still to be possible after the
+deadline, which ends 2 hours before the cap, so it needs a cap more than about 4 hours away: with
+a cap 2–4 hours away the request goes straight to "No answer" at the end, with no deadline push.
+The quickest session: **at about 18:00, A offers a day swap of tomorrow** (its cap is midnight, 6
+hours away). The form shows a fixed deadline of about **21:00** (+3 h): the deadline push comes then.
+Without a last chance the request ends at **22:00** (the cap − 2 h, +4 h): the end push comes then.
+With a later or earlier start, the deadline is halfway to midnight and the end at 22:00. The
+mechanism itself is [CI] (below); this section is about the notification as a phone draws it.
 
 > **[CI]** `TwoParentServerClocksTest` runs the sweep on the emulators and reads each push back from
 > `notification_queue`: addressed to A only, once each, with the family id and B's first name. The
 > wording is `PushNotificationTest` (every leg) and the routing `PushRoutingTest`. What is left is
 > the notification as a phone draws it, and the real FCM delivery.
 
-- [ ] **The deadline push.** A sends a day swap with a short deadline; B does not answer. After the
+- [ ] **The deadline push.** A sends a day swap of tomorrow at about 18:00 (above); B does not answer. After the
       deadline A's phone shows "<B> didn't answer by the deadline", "Nothing has changed in the
       calendar. You can give more time.", on the **schedule** channel, with B's first name and never
       an address. A tap opens the Requests inbox on the swap's family, where "Give a last chance" is
@@ -2277,9 +2290,10 @@ the session does not wait a day.
       opens the Requests inbox, where the request is in History as "No answer". The thread shows one
       "No answer" card and it pushed nobody.
 - [ ] **In a second language.** Set A's app language to Czech (Settings → App → Language) and repeat with a
-      custody proposal: "<B>: bez odpovědi do termínu" and "<B>: bez odpovědi", worded on A's phone
+      custody proposal whose first changed day is tomorrow (its cap is midnight too): "<B>: bez odpovědi do termínu" and "<B>: bez odpovědi", worded on A's phone
       in Czech whatever B's phone speaks; the proposal is withdrawn at the end.
-- [ ] **Pushes switched off.** A turns pushes off in Settings and repeats with a change request: no
+- [ ] **Pushes switched off.** A turns pushes off in Settings and repeats with a change request to an event that starts about 6 hours later (its cap is the
+      event's start): no
       notification appears, and the inbox and the thread still say "No answer".
 - [ ] **A second family.** With A in two families and the other family on screen, the end push of the
       first family's request opens the inbox on the first family (the push names its family).

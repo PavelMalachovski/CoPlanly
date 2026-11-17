@@ -4634,7 +4634,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     a change request's update admits three keys, the custody writes are `hasOnly` lists, and an older
     build rewrites a whole change request when it answers. Nothing is added to `change_requests`,
     `custody_models` or `events` (a one-day swap only fills its existing `DayOverride.groupId`), and
-    no Room table holds a clock. Nine things not to undo.
+    no Room table holds a clock. Ten things not to undo.
     - **States are derived, the end alone is stored.** Open, no answer with a last chance possible,
       last chance, no answer and answered come from `RequestClock` over the clock, the record and the
       phone's time, the one decision the inbox, Home, the banner, the switcher's dot (design item
