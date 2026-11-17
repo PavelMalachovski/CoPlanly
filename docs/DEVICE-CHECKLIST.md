@@ -1632,7 +1632,7 @@ words, English and German). What is left is the gesture on glass and a real push
   `SwapSelectionChrome.kt`, `components/DaySwapSelectionBar.kt`, `components/DaySwapSheet.kt`,
   `components/SwapDayChips.kt`, `changerequests/DaySwapCard.kt`, `changerequests/SwapOfferContent.kt`,
   `changerequests/SwapDayAnswers.kt`, `home/AwaitingDialogs.kt`, `data/repository/SwapPush.kt`,
-  `data/remote/firebase/SwapPushWording.kt`, `firestore.rules` (`datesToYou`, `datesToSender`).
+  `:push-wording`'s `SwapPushWording.kt`, `firestore.rules` (`datesToYou`, `datesToSender`).
 
 ---
 
