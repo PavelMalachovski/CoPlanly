@@ -183,6 +183,11 @@ Requests inbox (`CHANGE_REQUESTS`) on the schedule channel, as `request_last_cha
 They are sent at any hour: the server does not know the proposer's zone, and a chat message is
 pushed at night too (owner, 17 November 2026).
 
+**A proposer who turned pushes off gets neither** (owner, 17 November 2026). Today these two are
+local notices, which the push switch does not reach; after part B they are pushes, and the switch
+means no pushes. Such a proposer sees the state in the Requests inbox and the card in the chat. No
+local fallback is kept on Android, so `RequestClockNotices.deadlinePassed` and `noAnswer` go.
+
 ### 5.5 The phones
 
 New builds:
