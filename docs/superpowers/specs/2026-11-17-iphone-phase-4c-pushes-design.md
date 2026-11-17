@@ -1,6 +1,6 @@
 # iPhone app, phase 4 part C: pushes and local notifications — design
 
-Status: approved by the owner, 17 November 2026. Parent: `2026-11-16-iphone-phase-4-design.md` §2 and
+Status: for the owner's approval, 17 November 2026; the four decisions in §2 are the owner's. Parent: `2026-11-16-iphone-phase-4-design.md` §2 and
 §4 (part C). Builds on part B (MON-25, pull request #168), which put a request's deadline notice and
 its end on the server.
 
