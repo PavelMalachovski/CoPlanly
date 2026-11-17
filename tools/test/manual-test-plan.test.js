@@ -66,7 +66,7 @@ test('maps the account changes of MON-24 phase 4, part A, to 3.42', () => {
 });
 
 test('maps the request clocks to 5.9', () => {
-  assert.ok(sectionsFor([K + 'data/requests/RequestClockSteps.kt']).includes('5.9'));
+  assert.ok(sectionsFor([K + 'data/requests/RequestClockKeeper.kt']).includes('5.9'));
   assert.ok(sectionsFor([K + 'domain/changerequests/RequestClock.kt']).includes('5.9'));
   assert.ok(sectionsFor([K + 'domain/changerequests/RequestDeadline.kt']).includes('5.9'));
   assert.ok(sectionsFor([K + 'domain/changerequests/AnswerBy.kt']).includes('5.9'));

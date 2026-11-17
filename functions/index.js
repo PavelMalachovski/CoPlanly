@@ -121,6 +121,14 @@ function buildFcmMessage(token, data) {
 const APNS_FALLBACK_TITLE = 'CoPlanly';
 const APNS_FALLBACK_BODY = 'You have a new update in CoPlanly.';
 
+/**
+ * The pairing pushes share one collapse id, so on an iPhone a removal replaces an acceptance (and
+ * the other way round), as Android's `PushNotifier` replaces one with the other under its single
+ * `PAIRING_NOTIFICATION_ID`.
+ */
+const APNS_PAIRING_TYPES = new Set(['pairing_accepted', 'pairing_removed']);
+const APNS_PAIRING_COLLAPSE_ID = 'pairing';
+
 /** The longest `apns-collapse-id` APNs accepts, in bytes. */
 const APNS_COLLAPSE_ID_MAX_BYTES = 64;
 
@@ -133,8 +141,9 @@ const APNS_COLLAPSE_ID_MAX_BYTES = 64;
  * English text decided here, never by a client and never from the payload (SEC-3, item 15).
  *
  * The thread id and the collapse id play the role of Android's tray id (`PushNotifier`): a chat
- * message is grouped and replaced per conversation, a chat card per entity, and every other push
- * is grouped by its type and kept. Android ignores the block, so its delivery is unchanged.
+ * message is grouped and replaced per conversation, a chat card per entity, the two pairing pushes
+ * by one another, and every other push is grouped by its type and kept. Android ignores the
+ * block, so its delivery is unchanged.
  *
  * @param {!Object<string, string>} data The message's stringified `data`, type already defaulted.
  * @return {!Object} The `apns` block.
@@ -146,6 +155,7 @@ function apnsAlertFor(data) {
   let collapseId = '';
   if (entityId) collapseId = `card_${entityId}`;
   else if (conversationId) collapseId = conversationId;
+  else if (APNS_PAIRING_TYPES.has(data.type)) collapseId = APNS_PAIRING_COLLAPSE_ID;
   const headers = {'apns-push-type': 'alert'};
   if (collapseId) headers['apns-collapse-id'] = truncateToBytes(collapseId, APNS_COLLAPSE_ID_MAX_BYTES);
   return {

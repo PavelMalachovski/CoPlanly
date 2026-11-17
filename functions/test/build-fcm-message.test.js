@@ -57,6 +57,15 @@ describe('buildFcmMessage: the APNs alert', () => {
     assert.strictEqual(message.apns.headers['apns-collapse-id'], 'card_e1');
   });
 
+  it('collapses the two pairing pushes into one, as Android\'s single pairing notification', () => {
+    const accepted = buildFcmMessage('token-1', {type: 'pairing_accepted', actorName: 'Lana'});
+    const removed = buildFcmMessage('token-1', {type: 'pairing_removed', actorName: 'Lana'});
+
+    assert.strictEqual(accepted.apns.headers['apns-collapse-id'], 'pairing');
+    assert.strictEqual(removed.apns.headers['apns-collapse-id'], 'pairing');
+    assert.strictEqual(accepted.apns.payload.aps['thread-id'], 'pairing_accepted');
+  });
+
   it('keeps a collapse id within the 64 bytes APNs accepts', () => {
     const message = buildFcmMessage('token-1', {
       type: 'chat_message', conversationId: 'c', activityKind: 'EVENT_CREATED',
