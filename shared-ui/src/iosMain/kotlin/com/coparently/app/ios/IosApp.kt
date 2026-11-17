@@ -7,8 +7,8 @@ import com.coparently.app.data.remote.firebase.AppleTokens
 import com.coparently.app.data.remote.firebase.IosPushRegistration
 import com.coparently.app.data.remote.firebase.IosPushToken
 import com.coparently.app.data.remote.firebase.NotificationPermission
-import com.coparently.app.data.remote.firebase.PushDevice
 import com.coparently.app.data.remote.firebase.PushDestination
+import com.coparently.app.data.remote.firebase.PushDevice
 import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.session.SessionProfileSynchronizer
 import com.coparently.app.data.session.SignInProviderSession

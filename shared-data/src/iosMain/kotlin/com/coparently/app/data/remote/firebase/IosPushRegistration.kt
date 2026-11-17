@@ -86,8 +86,7 @@ class IosPushRegistration(
      * nobody signed in, the switch off, the account's token just detached, or no permission.
      */
     override suspend fun currentToken(): String? {
-        val uid = signedInUser.getCurrentUid()
-        if (uid == null || uid == detachedUid || !switchOn() || !permission.refresh()) return null
+        if (accountToKeep() == null) return null
         return token.awaitCurrent()
     }
 
@@ -99,8 +98,7 @@ class IosPushRegistration(
      * nobody is signed in or for the uid whose token was just detached ([detachedUid]).
      */
     override suspend fun keepToken(token: String): Result<Unit> {
-        val uid = signedInUser.getCurrentUid()
-        if (uid == null || uid == detachedUid || !switchOn() || !permission.refresh()) return Result.success(Unit)
+        val uid = accountToKeep() ?: return Result.success(Unit)
         return try {
             firestore.set(DocumentPath(USERS, uid), mapOf(FCM_TOKEN to token), SetMerge.Merge)
             Result.success(Unit)
@@ -132,6 +130,16 @@ class IosPushRegistration(
             logger.w(TAG, "Could not detach the push token", e)
         }
         token.awaitDelete()
+    }
+
+    /**
+     * The signed-in uid when this device's token is to be kept on its profile now, else null: someone
+     * is signed in, their token was not just detached ([detachedUid]), the switch is on and the
+     * system lets the app notify (read afresh, [NotificationPermission.refresh]).
+     */
+    private suspend fun accountToKeep(): String? {
+        val uid = signedInUser.getCurrentUid()?.takeIf { it != detachedUid } ?: return null
+        return uid.takeIf { switchOn() && permission.refresh() }
     }
 
     private fun switchOn(): Boolean = preferences.getString(PreferenceKeys.PUSH_ENABLED, null) != false.toString()

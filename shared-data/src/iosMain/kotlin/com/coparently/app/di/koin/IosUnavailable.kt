@@ -62,5 +62,3 @@ internal object NoSupportReminderJob : SupportReminderScheduler {
     override fun schedule() = Unit
     override fun cancel() = Unit
 }
-
-private const val UNAVAILABLE = "Not available in this iPhone build yet"
