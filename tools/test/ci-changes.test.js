@@ -326,6 +326,19 @@ test('a shared-module change runs the shared jobs and every Android job, on ever
   assert.equal(d.web, false);
 });
 
+test('the request clock rules and their fixture also run the shared jobs, beside the functions jobs (MON-25)', () => {
+  // RequestClockFixtureTest, in :shared's androidHostTest, reads both.
+  for (const p of ['functions/request-clocks.js', 'functions/test/fixtures/request-clock-cases.json']) {
+    const d = decide([p]);
+    assert.equal(d.shared, true, p);
+    assert.equal(d.ios, true, p);
+    assert.equal(d.web, true, p);
+    assert.equal(d.android, false, p);
+  }
+  // Another functions file does not.
+  assert.equal(decide(['functions/request-clock-steps.js']).shared, false);
+});
+
 test('a shared-data change is decided as a shared change - every Android job and the shared jobs', () => {
   // The data layer's module (MON-24 phase 2): the app compiles it, as it compiles `shared/`.
   const d = decide(['shared-data/src/commonMain/kotlin/com/coparently/app/data/school/bakalari/BakalariClient.kt']);

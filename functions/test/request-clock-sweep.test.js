@@ -391,10 +391,17 @@ describe('request clock schedule', () => {
     });
 
     it('refuses a caller who is not an operator', async () => {
+      const saved = process.env.BACKFILL_ADMIN_UIDS;
       process.env.BACKFILL_ADMIN_UIDS = 'op-uid';
-      const wrapped = test.wrap(index.backfillRequestClockSchedule);
-      await assert.rejects(() => wrapped({}, {auth: {uid: 'someone-else'}}), (err) => err.code === 'permission-denied');
-      await assert.rejects(() => wrapped({}, {}), (err) => err.code === 'permission-denied');
+      try {
+        const wrapped = test.wrap(index.backfillRequestClockSchedule);
+        await assert.rejects(
+            () => wrapped({}, {auth: {uid: 'someone-else'}}), (err) => err.code === 'permission-denied');
+        await assert.rejects(() => wrapped({}, {}), (err) => err.code === 'permission-denied');
+      } finally {
+        if (saved === undefined) delete process.env.BACKFILL_ADMIN_UIDS;
+        else process.env.BACKFILL_ADMIN_UIDS = saved;
+      }
     });
   });
 

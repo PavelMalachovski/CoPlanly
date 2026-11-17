@@ -539,6 +539,10 @@ whose push switch is off has no token and gets neither.
 1. `firebase deploy --only functions,firestore:rules`.
 2. Invoke `backfillRequestClockSchedule` once, as an operator, with no arguments. Until it has run, a
    clock written before the deploy is never stepped (nothing triggered its schedule).
+   **Expect a burst afterwards.** The first sweeps after the backfill close, in one go, every clock
+   already past its end whose proposer's phone never ran the end (iPhone test builds, uninstalled or
+   offline Android phones). Each gets a "No answer" card dated then and a `request_no_answer` push,
+   possibly for a request days old. That is intended; it is not a fault to chase.
 3. Release the client builds that leave the deadline and end to the server. Until every phone has
    updated, an older Android build still runs its own steps beside the server: the clock is closed
    once, but on a slow network a second "No answer" card may be posted and the proposer may be told

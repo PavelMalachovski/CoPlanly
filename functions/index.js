@@ -15,7 +15,7 @@ const util = require('util');
 // therefore `undefined`, and `acceptPairingInvitation` died with "Cannot read properties of
 // undefined (reading 'arrayUnion')" — found the first time anything ran the callable end to end
 // (`tools/e2e/pairing-smoke.js`). Production never saw it, because production has no proxy.
-const {FieldValue, Timestamp} = require('firebase-admin/firestore');
+const {FieldValue, FieldPath, Timestamp} = require('firebase-admin/firestore');
 const exportReceipts = require('./export-receipts');
 const recordPhotos = require('./record-photos');
 const aiAssist = require('./ai-assist');
@@ -6614,7 +6614,7 @@ async function backfillRequestClockScheduleImpl(db, nowMillis, options) {
   const has = (value) => value !== undefined && value !== null;
   let last = null;
   for (;;) {
-    let query = db.collection(REQUEST_CLOCKS).orderBy(admin.firestore.FieldPath.documentId()).limit(pageSize);
+    let query = db.collection(REQUEST_CLOCKS).orderBy(FieldPath.documentId()).limit(pageSize);
     if (last) query = query.startAfter(last);
     const page = await query.get();
     for (const snap of page.docs) {

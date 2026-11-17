@@ -4690,8 +4690,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       notice. A last chance reads the server (`ReadSource.SERVER`), and a refused one is reported
       to the proposer, never retried.
     - **Reminders are jobs `KEEP` by unique name (tag `request_clock`), so a step never re-enqueues
-      its own name**: one that fires early retries only when its moment is a minute away and
-      otherwise finishes, and `RequestClockKeeper.sweep`, run on every full sync, delivers the
+      its own name**: `RequestClockSteps.reminder` has no early-fire branch (it acts or finishes,
+      and a failed read retries through the worker's bounded runs), and `RequestClockKeeper.sweep`, run on every full sync, delivers the
       clocks this parent must answer and arms again the reminders still ahead; it does nothing for a
       clock this parent proposed. A reminder is unconstrained; one more than half an hour late posts
       nothing, nor does one whose job fires in the quiet hours of the phone's zone

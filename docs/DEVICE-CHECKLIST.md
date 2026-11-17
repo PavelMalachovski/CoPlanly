@@ -2272,8 +2272,12 @@ a cap 2–4 hours away the request goes straight to "No answer" at the end, with
 The quickest session: **at about 18:00, A offers a day swap of tomorrow** (its cap is midnight, 6
 hours away). The form shows a fixed deadline of about **21:00** (+3 h): the deadline push comes then.
 Without a last chance the request ends at **22:00** (the cap − 2 h, +4 h): the end push comes then.
-With a later or earlier start, the deadline is halfway to midnight and the end at 22:00. The
-mechanism itself is [CI] (below); this section is about the notification as a phone draws it.
+Started earlier, the deadline is halfway to midnight and the end is still at 22:00 (the cap
+− 2 h), as long as the swap is sent **before about 20:00**. Sent between about 20:00 and 22:00 (cap
+2–4 hours away) there is no deadline push, and the end, which is then the deadline itself, comes
+halfway to midnight; sent after 22:00 (cap under 2 hours away) there is no deadline and no clock at
+all. So start every step below before about 20:00, and for the others whenever the cap is more than
+about 4 hours away. The mechanism itself is [CI] (below); this section is about the notification as a phone draws it.
 
 > **[CI]** `TwoParentServerClocksTest` runs the sweep on the emulators and reads each push back from
 > `notification_queue`: addressed to A only, once each, with the family id and B's first name. The
@@ -2289,11 +2293,11 @@ mechanism itself is [CI] (below); this section is about the notification as a ph
       <B>", "The request is closed as “No answer”. Nothing has changed in the calendar.", once; a tap
       opens the Requests inbox, where the request is in History as "No answer". The thread shows one
       "No answer" card and it pushed nobody.
-- [ ] **In a second language.** Set A's app language to Czech (Settings → App → Language) and repeat with a
+- [ ] **In a second language** (start before about 20:00, so the cap is more than 4 hours away). Set A's app language to Czech (Settings → App → Language) and repeat with a
       custody proposal whose first changed day is tomorrow (its cap is midnight too): "<B>: bez odpovědi do termínu" and "<B>: bez odpovědi", worded on A's phone
       in Czech whatever B's phone speaks; the proposal is withdrawn at the end.
 - [ ] **Pushes switched off.** A turns pushes off in Settings and repeats with a change request to an event that starts about 6 hours later (its cap is the
-      event's start): no
+      event's start, which must be more than about 4 hours away): no
       notification appears, and the inbox and the thread still say "No answer".
 - [ ] **A second family.** With A in two families and the other family on screen, the end push of the
       first family's request opens the inbox on the first family (the push names its family).

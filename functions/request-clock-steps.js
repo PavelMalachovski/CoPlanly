@@ -443,28 +443,6 @@ function writeWithdrawal(tx, plan) {
 }
 
 /**
- * Withdraws the custody or split proposal a clock times, in a transaction, only while the stored
- * proposal is still the clock's (its `proposedAt`/`proposedAtMillis` equals the clock's `ref`, and
- * its proposer is the clock's), as the phones' `withdrawUnanswered` in `CustodyModelRepository` and
- * `FamilySettingsRepository` did until MON-25.
- *
- * @param {!Object} db Firestore.
- * @param {!Object} clock the clock document's data.
- * @return {!Promise<boolean>} whether it was withdrawn: false for another kind, a missing document,
- *   or a proposal answered or replaced meanwhile.
- */
-async function withdrawProposal(db, clock) {
-  const parsed = clockOf(clock);
-  if (!parsed || !clocks.withdrawnAtEnd(parsed.kind)) return false;
-  return db.runTransaction(async (tx) => {
-    const plan = await readWithdrawal(tx, db, parsed);
-    if (!plan || !plan.same) return false;
-    writeWithdrawal(tx, plan);
-    return true;
-  });
-}
-
-/**
  * A push to the proposer, in the shape every server push takes (`pairing_accepted`): the type, the
  * family and the answering parent's first name, never a sentence (SEC-3).
  *
@@ -624,5 +602,4 @@ module.exports = {
   lookRecord,
   stepClock,
   unansweredCardFor,
-  withdrawProposal,
 };

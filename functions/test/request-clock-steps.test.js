@@ -457,11 +457,13 @@ describe('request clock steps', () => {
       [custodyPath]: custody({proposal: custodyProposal('2026-11-18T08:00:00')}),
       [settingsPath]: settings({proposal: splitProposal(SPLIT_AT + 1000)}),
     };
-    const db = setUp('proposal', 'pending', {seed: newer});
-    assert.strictEqual(await steps.withdrawProposal(db, clock('proposal')), false);
-    assert.strictEqual(await steps.withdrawProposal(db, clock('split')), false);
+    const closedOf = (kind, seed) => setUp(kind, 'pending', {clock: {outcome: 'no_answer'}, seed});
+    const db = closedOf('proposal', newer);
+    assert.deepStrictEqual(await steps.stepClock(db, clockIdOf('proposal'), AT_END, deps), {action: 'settled'});
     assert.strictEqual(db.store[custodyPath].proposal.proposedAt, '2026-11-18T08:00:00');
-    assert.strictEqual(db.store[settingsPath].proposal.proposedAtMillis, SPLIT_AT + 1000);
+    const splitDb = closedOf('split', newer);
+    assert.deepStrictEqual(await steps.stepClock(splitDb, clockIdOf('split'), AT_END, deps), {action: 'settled'});
+    assert.strictEqual(splitDb.store[settingsPath].proposal.proposedAtMillis, SPLIT_AT + 1000);
 
     // Nor by the step that retries a phone's withdrawal.
     const step = setUp('proposal', 'pending', {clock: {outcome: 'no_answer'}, seed: newer});
@@ -469,27 +471,32 @@ describe('request clock steps', () => {
     assert.strictEqual(step.store[custodyPath].proposal.proposedAt, '2026-11-18T08:00:00');
 
     // A proposal by somebody else under the same time is not the clock's either.
-    const other = setUp('proposal', 'pending', {seed: {[custodyPath]: custody({
+    const other = closedOf('proposal', {[custodyPath]: custody({
       proposal: Object.assign(custodyProposal(PROPOSED_AT), {proposedBy: 'bob'}),
-    })}});
-    assert.strictEqual(await steps.withdrawProposal(other, clock('proposal')), false);
-    assert.strictEqual(await steps.withdrawProposal(other, clock('change')), false);
+    })});
+    assert.deepStrictEqual(await steps.stepClock(other, clockIdOf('proposal'), AT_END, deps), {action: 'settled'});
+    assert.strictEqual(other.store[custodyPath].proposal.proposedBy, 'bob');
   });
 
   it('withdrawalKeepsKeysTheServerDoesNotKnow', async () => {
-    const custodyDb = setUp('proposal', 'pending');
-    assert.strictEqual(await steps.withdrawProposal(custodyDb, clock('proposal')), true);
+    const custodyDb = setUp('proposal', 'pending', {clock: {outcome: 'no_answer'}});
+    assert.deepStrictEqual(
+        await steps.stepClock(custodyDb, clockIdOf('proposal'), AT_END, deps), {action: 'withdrawalRetried'});
     const doc = custodyDb.store[`custody_models/${FAMILY}`];
     assert.deepStrictEqual(doc, {
       participants: ['alice', 'bob'], startDate: '2026-01-05', patternDays: 14, momDayIndices: [0, 1],
       contactWindows: ['9|15:00|19:00|dad'], seasonalLayers: ['L1;summer'], futureKey: 'kept',
     });
 
-    const splitDb = setUp('split', 'pending', {seed: {[`family_settings/${FAMILY}`]: settings({
-      proposal: splitProposal(SPLIT_AT),
-      lastDecision: {outcome: 'ACCEPTED', by: 'bob', atMillis: 1, proposalAtMillis: 1},
-    })}});
-    assert.strictEqual(await steps.withdrawProposal(splitDb, clock('split')), true);
+    const splitDb = setUp('split', 'pending', {
+      clock: {outcome: 'no_answer'},
+      seed: {[`family_settings/${FAMILY}`]: settings({
+        proposal: splitProposal(SPLIT_AT),
+        lastDecision: {outcome: 'ACCEPTED', by: 'bob', atMillis: 1, proposalAtMillis: 1},
+      })},
+    });
+    assert.deepStrictEqual(
+        await steps.stepClock(splitDb, clockIdOf('split'), AT_END, deps), {action: 'withdrawalRetried'});
     assert.deepStrictEqual(splitDb.store[`family_settings/${FAMILY}`], {
       participants: ['alice', 'bob'], momShareBasisPoints: 5000, futureKey: 'kept',
       lastDecision: {outcome: 'ACCEPTED', by: 'bob', atMillis: 1, proposalAtMillis: 1},
