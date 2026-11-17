@@ -16,6 +16,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.coparently.app.R
 import com.coparently.app.domain.chat.ChatUri
+import com.coparently.app.pushwording.PushText
 import com.coparently.app.utils.DAY_IN_SENTENCE
 import com.coparently.app.utils.answerByText
 import com.coparently.app.utils.isoDateText
@@ -512,7 +513,7 @@ class PushNotificationTest {
     /** The intent the tap of a push carrying [data] would start, as the notifier builds it. */
     private fun tapIntentFor(data: Map<String, String>): Intent {
         val target = PushNotifier.NotificationTarget(
-            text = PushNotifier.PushText("", ""),
+            text = PushText("", ""),
             type = data[PushPayload.TYPE],
             conversationId = data[PushPayload.CONVERSATION_ID],
             familyId = data[PushPayload.FAMILY_ID]?.takeIf { it.isNotBlank() }

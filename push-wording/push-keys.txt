@@ -1,0 +1,4 @@
+# The resource keys the iPhone's notification extension words with, one per line: strings and
+# plurals of shared-ui/src/commonMain/composeResources/values/. tools/ios/generate-push-strings.js
+# writes exactly these into PushStrings.strings and PushStrings.stringsdict; a key that is not in
+# values/ fails it. Filled by phase 4 part C's Task 2, with the keys PushWording reads.

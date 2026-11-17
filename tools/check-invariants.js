@@ -282,10 +282,11 @@ const SOURCE_ROOT = 'app/src/main/java';
  * The shared modules' production code (MON-24): the domain moved to `shared/` with its package
  * unchanged, and its models are stored too (`DayOverride`, the child and pet records), the data
  * layer follows into `shared-data/` from phase 2, and the ViewModels into `shared-ui/` from its
- * Task 10 (the event form's `EventDraft` is a stored model), so checks 4 and 5 read all three beside
+ * Task 10 (the event form's `EventDraft` is a stored model), and `push-wording/` (phase 4 part C)
+ * ships in both apps, so checks 4 and 5 read all four beside
  * the app's. The platform source sets count: they ship as much as `commonMain` does.
  */
-const SHARED_SOURCE_ROOTS = ['shared', 'shared-data', 'shared-ui'].flatMap((module) =>
+const SHARED_SOURCE_ROOTS = ['shared', 'shared-data', 'shared-ui', 'push-wording'].flatMap((module) =>
   ['commonMain', 'androidMain', 'iosMain'].map((set) => `${module}/src/${set}/kotlin`)
 );
 

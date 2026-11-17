@@ -69,8 +69,9 @@ const BUILD = /^(build\.gradle\.kts$|settings\.gradle\.kts$|gradle\.properties$|
 
 /**
  * The Kotlin Multiplatform modules (MON-24), `shared/` (the domain), `shared-data/` (the data
- * layer, from phase 2) and `shared-ui/` (the UI, from phase 2's Task 9, but for the paths
- * [SHARED_UI_AS_APP] maps onto the app), their build files and their sources in every source set. The app compiles both, so a path here is an Android
+ * layer, from phase 2), `shared-ui/` (the UI, from phase 2's Task 9, but for the paths
+ * [SHARED_UI_AS_APP] maps onto the app) and `push-wording/` (every notification's wording, which
+ * the app and the iPhone's notification extension both compile; phase 4 part C), their build files and their sources in every source set. The app compiles both, so a path here is an Android
  * path for every other output too, and it is treated as the build is: every Android job, every
  * emulator leg. Their commonMain holds the domain the app's screens render and the clients the
  * imports call, their stored models reach `StoredJson` and R8, and their Android targets are held
@@ -78,7 +79,7 @@ const BUILD = /^(build\.gradle\.kts$|settings\.gradle\.kts$|gradle\.properties$|
  * both modules' jobs, is true for this and for [BUILD], whose root and module build files and
  * workflow can change what the modules compile against.
  */
-const SHARED = /^shared(-data|-ui)?\//;
+const SHARED = /^(shared(-data|-ui)?|push-wording)\//;
 
 /**
  * Cloud Functions files `:shared`'s own tests read (MON-25): `RequestClockFixtureTest` runs the

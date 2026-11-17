@@ -352,6 +352,26 @@ test('a shared-data change is decided as a shared change - every Android job and
   assert.equal(d.web, false);
 });
 
+test('a push-wording change is a shared change - the shared jobs, the iPhone app and every Android job', () => {
+  // The notification wording module (iPhone phase 4 part C): the app and the iPhone's extension
+  // both compile it, as they compile `shared-data/`.
+  for (const p of [
+    'push-wording/src/commonMain/kotlin/com/coparently/app/pushwording/FormatArgs.kt',
+    'push-wording/build.gradle.kts',
+    'push-wording/push-keys.txt',
+  ]) {
+    const d = decide([p]);
+    assert.equal(d.shared, true, p);
+    assert.equal(d.ios, true, p);
+    assert.equal(d.android, true, p);
+    assert.equal(d.e2e, true, p);
+    assert.equal(d.screenshots, true, p);
+    assert.equal(d.upgrade, true, p);
+    assert.equal(d.r8runtime, true, p);
+    assert.deepEqual(legs(d), [26, 30, 35], p);
+  }
+});
+
 test('a shared-ui string or screen change is decided as the app path it stands for, plus the shared jobs', () => {
   // The strings moved from app/src/main/res/ (MON-24 phase 2, Task 9); the screens follow.
   const d = decide([

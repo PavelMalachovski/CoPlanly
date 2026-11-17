@@ -2049,6 +2049,8 @@ jobs:
           :shared-data:compileTestKotlinIosSimulatorArm64
           :shared-ui:testAndroidHostTest :shared-ui:compileKotlinIosSimulatorArm64
           :shared-ui:compileTestKotlinIosSimulatorArm64
+          :push-wording:testAndroidHostTest :push-wording:compileKotlinIosSimulatorArm64
+          :push-wording:compileTestKotlinIosSimulatorArm64
 
       - name: Upload reports
         if: always()
@@ -2062,6 +2064,8 @@ jobs:
             shared-data/build/test-results/
             shared-ui/build/reports/
             shared-ui/build/test-results/
+            push-wording/build/reports/
+            push-wording/build/test-results/
           if-no-files-found: ignore
           retention-days: 14
 
@@ -2070,7 +2074,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: junit-shared
-          path: shared*/build/test-results/testAndroidHostTest/*.xml
+          path: "*/build/test-results/testAndroidHostTest/*.xml"
           if-no-files-found: ignore
           retention-days: 14
 
@@ -2079,7 +2083,7 @@ jobs:
         uses: mikepenz/action-junit-report@v6
         with:
           check_name: Shared tests (JVM)
-          report_paths: shared*/build/test-results/testAndroidHostTest/*.xml
+          report_paths: "*/build/test-results/testAndroidHostTest/*.xml"
           detailed_summary: true
           # A job that died before writing results must not publish a green check.
           require_tests: true
@@ -2194,8 +2198,12 @@ jobs:
 
       # The iPhone app's one framework, `Shared`, is `:shared-ui`'s (MON-24 phase 2, Task 9): static,
       # exporting `:shared` and `:shared-data`, neither of which makes one of its own any more.
+      # `PushWording` is the notification extension's own small framework (phase 4 part C), which
+      # links nothing else.
       - name: Shared tests (iOS simulator) and the framework
-        run: ./gradlew :shared:iosSimulatorArm64Test :shared-data:iosSimulatorArm64Test :shared-ui:linkDebugFrameworkIosSimulatorArm64
+        run: >-
+          ./gradlew :shared:iosSimulatorArm64Test :shared-data:iosSimulatorArm64Test :shared-ui:linkDebugFrameworkIosSimulatorArm64
+          :push-wording:iosSimulatorArm64Test :push-wording:linkDebugFrameworkIosSimulatorArm64
 
       - name: Pods resolved
         if: always()
@@ -2225,6 +2233,8 @@ jobs:
             shared-data/build/reports/
             shared-data/build/test-results/
             shared-ui/build/reports/
+            push-wording/build/reports/
+            push-wording/build/test-results/
           if-no-files-found: ignore
           retention-days: 14
 
@@ -2233,7 +2243,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: junit-shared-ios
-          path: shared*/build/test-results/iosSimulatorArm64Test/*.xml
+          path: "*/build/test-results/iosSimulatorArm64Test/*.xml"
           if-no-files-found: ignore
           retention-days: 14
 
@@ -2242,7 +2252,7 @@ jobs:
         uses: mikepenz/action-junit-report@v6
         with:
           check_name: Shared tests (iOS simulator)
-          report_paths: shared*/build/test-results/iosSimulatorArm64Test/*.xml
+          report_paths: "*/build/test-results/iosSimulatorArm64Test/*.xml"
           detailed_summary: true
           # A job that died before writing results must not publish a green check.
           require_tests: true

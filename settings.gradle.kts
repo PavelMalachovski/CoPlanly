@@ -25,3 +25,8 @@ include(":shared-data")
 // first, then the theme, the common components, the ViewModels and the screens. Its iOS framework,
 // `Shared`, is the one the iPhone app links.
 include(":shared-ui")
+
+// Every notification's wording, the pushes', the reminders' and the chat cards' (iPhone phase 4 part
+// C): the Android app depends on it, and its iOS framework, `PushWording`, is the one the iPhone's
+// notification extension links, without Compose.
+include(":push-wording")

@@ -16,6 +16,7 @@ import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.chat.ChatUri
 import com.coparently.app.domain.pairing.PairingUri
 import com.coparently.app.presentation.chat.cardPushText
+import com.coparently.app.pushwording.PushText
 import com.coparently.app.utils.DAY_IN_SENTENCE
 import com.coparently.app.utils.answerByText
 import com.coparently.app.utils.isoDateText
@@ -375,9 +376,6 @@ class PushNotifier(private val context: Context) {
             manager.deleteNotificationChannel(PushChannel.LEGACY_ID)
         }
     }
-
-    /** A composed notification, ready to render. */
-    internal data class PushText(val title: String, val body: String)
 
     /**
      * A notification and where tapping it leads.
