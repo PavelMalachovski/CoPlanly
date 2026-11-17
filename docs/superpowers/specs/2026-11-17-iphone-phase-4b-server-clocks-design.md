@@ -1,7 +1,7 @@
 # iPhone app, phase 4 part B: request clocks on the server (MON-25) — design
 
-Status: the approach was agreed with the owner on 17 November 2026 (chat). This document waits for
-the owner's approval before a plan is written.
+Status: approved by the owner on 17 November 2026 (chat). Plan:
+`docs/superpowers/plans/2026-11-17-iphone-phase-4b-server-clocks.md`.
 
 Parent design: `docs/superpowers/specs/2026-11-16-iphone-phase-4-design.md` §2 and §4 (part B).
 ROADMAP: MON-25. The behaviour being moved is CLAUDE.md "Things that are easy to get wrong" item 42
