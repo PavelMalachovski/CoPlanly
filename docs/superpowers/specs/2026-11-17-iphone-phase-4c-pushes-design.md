@@ -1,6 +1,6 @@
 # iPhone app, phase 4 part C: pushes and local notifications — design
 
-Status: draft for the owner, 17 November 2026. Parent: `2026-11-16-iphone-phase-4-design.md` §2 and
+Status: approved by the owner, 17 November 2026. Parent: `2026-11-16-iphone-phase-4-design.md` §2 and
 §4 (part C). Builds on part B (MON-25, pull request #168), which put a request's deadline notice and
 its end on the server.
 
@@ -23,6 +23,13 @@ without it. Part C brings the iPhone's notifications to Android's, with one word
 3. **The push's text is written by one shared Kotlin implementation.** The wording that is
    Android's `PushNotifier` today moves to common Kotlin; Android calls it as now, and the iPhone's
    Notification Service Extension links a small framework built from the same code and strings.
+
+4. **The neutral fallback is accepted until Apple grants the filtering entitlement.** Pushes are
+   switched on for the iPhone at once, and the owner applies for
+   `com.apple.developer.usernotifications.filtering` in parallel. Until it is granted, a push meant
+   for another uid, or of a type the extension cannot word, shows the server's neutral fallback
+   (names nothing) instead of nothing. Once granted, the extension suppresses both, and anti-goal 2
+   and G1's "dropped" hold in full.
 
 ## 3. Goals
 
