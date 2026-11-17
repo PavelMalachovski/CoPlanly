@@ -40,8 +40,8 @@ What the owner decided on 17 November 2026:
 4. New builds of both apps no longer schedule or run the deadline and end steps. They keep the
    answering parent's reminders, which stay on the phone (local notifications; on the iPhone those
    come in part C).
-5. Older Android builds that still run their own jobs keep working beside the server, with no
-   double closure, no double card and no proposal withdrawn twice.
+5. Older Android builds that still run their own jobs keep working beside the server: one closure,
+   one withdrawal, and a duplicate card only in the rare case §5.5 accepts.
 6. Clocks open at deploy time are picked up by a one-off operator pass.
 
 ## 3. Non-goals
@@ -78,22 +78,32 @@ The server keeps one field on each clock that only it writes:
   once.
 - `serverToldNoAnswerAt` (epoch millis): set when the server closed the clock and sent its push and
   card, so they are sent once.
+- `serverSettledAt` (epoch millis): set when the server found that the clock needs nothing more —
+  the record was answered or is gone, or a proposal's withdrawal is done. A settled clock is never
+  due again.
 
 A Firestore trigger on every write to `request_deadlines/{id}` (`onRequestClockWritten`) computes
-`serverNextStepAt` from the document and writes it only when it changed, so its own write does not
-loop:
+`serverNextStepAt` from the document. **It ignores a write that changed only the server's fields**
+(the sweep's and its own), so it never re-arms what the sweep settled and never fires itself, and it
+writes the field only when the value changed. A **settled** clock gets no field. Every value is a
+fixed moment taken from the document, never "now" (author's call after the builder check):
 - `OPEN` → `answerByMillis`;
 - `NO_ANSWER_LAST_CHANCE_POSSIBLE` → `answerByMillis` if the deadline push has not been sent, else
   `endMillis`;
 - `LAST_CHANCE` → `lastChanceUntilMillis`;
-- `NO_ANSWER` with no `outcome` → now (the end is due);
-- `outcome` set → absent, unless the clock's kind is withdrawn at the end (custody, split) and the
-  server has not confirmed the withdrawal; then now, so a failed withdrawal is retried.
+- `NO_ANSWER` with no `outcome` → `endMillis` (already past, so due at once);
+- `outcome` set by a phone (an older build closed it) → `closedAt` when the clock's kind is
+  withdrawn at the end (custody, split), so the server checks the withdrawal once; otherwise
+  absent.
+
+The sweep alone moves a clock past these values: after a step it writes the next moment, or the told
+mark, or `serverSettledAt`; a step that could not decide (a read failed, a withdrawal was refused)
+leaves `serverNextStepAt` as it is, so it is due again on the next run.
 
 The sweep queries `serverNextStepAt <= now`, ordered by it, in pages (a single-field index; the
 query never matches a clock without the field).
 
-**The rules refuse the three fields from clients**: on create (the create shape's `hasOnly` already
+**The rules refuse the four fields from clients**: on create (the create shape's `hasOnly` already
 excludes them) and on update (no client update shape may affect them). Clients write with `update()`
 of named fields (`FirestoreRequestDeadlineDataSource`), so a client write never drops them. The
 client reader ignores unknown keys, so older builds read the document unchanged. Pinned by
@@ -101,7 +111,8 @@ client reader ignores unknown keys, so older builds read the document unchanged.
 
 ### 5.2 The sweep
 
-`sweepRequestClocks` (`onSchedule`, every 5 minutes, declared through `regional`). For each due
+`sweepRequestClocks` (`regional.pubsub.schedule('every 5 minutes')`, the v1 API every function in
+`functions/index.js` uses; author's call after the builder check). For each due
 clock it runs one step in a Firestore transaction that re-reads the clock, so two overlapping runs
 cannot both act: the run that wins writes the next `serverNextStepAt` (or the told mark) in the same
 transaction, and the other finds the step no longer due.
@@ -128,7 +139,10 @@ The decision is the phone's today, moved:
 SDK (which is always the server's copy): a change request's status; an event's acceptance for the
 answering parent; a swap group's entries in `custody_models/{familyId}.dayOverrides`; the custody
 document's `proposal.proposedAt`; `family_settings/{familyId}.proposal.proposedAtMillis`. A family
-that is no longer live (`families/{id}` gone) makes the record "gone", as `familyIsLive` does.
+that is no longer live makes the record "gone". **Live is decided as the phone decides it**
+(`RequestRecords.familyIsLive`): the clock's `familyId` names the proposer and the responder, and the
+proposer's own profile names the responder in `partnerIds` or `partnerId`. Not `families/{id}`, which
+an old pair may lack (author's call after the builder check).
 
 **The state arithmetic is ported from `RequestClock`** into `functions/request-clocks.js` (pure,
 like `calendar-feed.js`), and **one shared fixture** of clocks, moments and expected states is read
@@ -148,8 +162,12 @@ in `SILENT_CARD_KINDS`, so `notifyOfChatMessage` pushes nobody for it.
 **The withdrawal** of a custody or split proposal is a transaction that removes the proposal only if
 its `proposedAt`/`proposedAtMillis` is still the clock's `ref`, as
 `CustodyModelRepository.withdrawUnanswered` and `FamilySettingsRepository.withdrawUnanswered` do.
-It writes what those write, field for field, so the co-parent's phone sees the same document an
-Android proposer would have left.
+**It deletes only the keys the phone's withdrawal empties** (`proposal`, and on the custody document
+the proposal's citation `proposalPlanCitation`; the builder lists them exactly from
+`CustodyProposalTransition.withdraw` and the settings' withdrawal), with an `update()`, never a
+`set()`: the phone re-encodes the whole document from its model, but the server must not drop keys
+it does not know (items 24, 30, 33). The phones read the result as they read their own withdrawal
+(author's call after the builder check).
 
 ### 5.4 The two pushes
 
@@ -180,7 +198,14 @@ New builds:
 
 **Older Android builds** still run their own deadline and end jobs. Side by side with the server:
 - the closure is written once (the clock's `outcome` is write-once in the rules, and the server's
-  close refuses a closed clock), so only one of them posts the card and withdraws;
+  close refuses a closed clock), so in the common case only one of them posts the card and
+  withdraws;
+- **but an old phone on a slow connection can still post a second card**: its repository counts a
+  closure that has not answered within ten seconds as written (`RequestDeadlineRepositoryImpl`), then
+  posts its card under a random id, while the server closes the clock and posts its own. Accepted for
+  the transition (author's call after the builder check): it needs an old build, a slow network and
+  the same few minutes, and a duplicate card says the same true thing twice. The server's own steps
+  are still never repeated (anti-goal 2 is about the server);
 - the proposer may see the deadline notice twice, once local and once pushed, and the same for "No
   answer" when the old phone closes first and the server then finds the clock closed (it sends
   nothing then). Accepted: it lasts until the proposer updates.
@@ -233,7 +258,7 @@ Until step 3 both run, which §5.5 makes safe.
   the record pending, answered, gone and unreadable for every kind; two overlapping runs act once; a
   retry after the close posts no second card or push; a different `proposedAt` is not withdrawn; the
   trigger's next-step computation, and that it does not loop; the backfill.
-- **Rules (`firestore-tests`):** clients cannot create, set or change the three server fields; every
+- **Rules (`firestore-tests`):** clients cannot create, set or change the four server fields; every
   write an older build makes today is still allowed.
 - **Kotlin:** `RequestClockTest` reads the shared fixture; the keeper and actions no longer schedule
   deadline or end jobs; an old deadline or end job finishes without acting.
