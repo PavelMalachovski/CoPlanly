@@ -27,20 +27,19 @@ import com.coparently.app.domain.payments.PaymentKind
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.support.SupportReminderRule
 import com.coparently.app.domain.support.SupportTerms
-import com.coparently.app.presentation.expenses.currencyFormat
 import com.coparently.app.utils.inAppLanguage
+import com.coparently.app.utils.reminderWording
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.YearMonth
-import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinTimeZone
 import kotlinx.datetime.yearMonth
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 import java.util.concurrent.TimeUnit
 
 /**
@@ -104,7 +103,11 @@ class SupportReminderWorker(
         if (post(familyId, terms, month, nameOf(payee))) reminders.reminded(uid, familyId, month)
     }
 
-    private suspend fun nameOf(uid: String): String {
+    /**
+     * The payee's first name, or null — "Your co-parent" in the reminder's language — when it
+     * cannot be read in time.
+     */
+    private suspend fun nameOf(uid: String): String? {
         val name = try {
             withTimeoutOrNull(NAME_WAIT_MILLIS) { pairingRepository.observeCoParentProfile(uid).first().name }
         } catch (e: CancellationException) {
@@ -112,27 +115,27 @@ class SupportReminderWorker(
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             null
         }
-        return name?.takeIf { it.isNotBlank() } ?: applicationContext.inAppLanguage()
-            .getString(R.string.push_actor_fallback)
+        return name?.takeIf { it.isNotBlank() }
     }
 
     /**
      * Posts the reminder, worded, dated and priced in the language the app speaks now
      * ([inAppLanguage]), and says whether it is shown ([notificationsAllowed]).
      */
-    private fun post(familyId: String, terms: SupportTerms, month: YearMonth, payeeName: String): Boolean {
+    private fun post(familyId: String, terms: SupportTerms, month: YearMonth, payeeName: String?): Boolean {
         val context = applicationContext
         val words = context.inAppLanguage()
         PushNotifier(words).createChannels()
         if (!notificationsAllowed(context, PushChannel.MONEY.id)) return false
-        // The date and the amount in the notice's own locale, the one its words are in.
-        val locale = words.resources.configuration.locales[0]
-        val due = terms.dueDate(month).toJavaLocalDate().format(
-            DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale)
-        )
-        val amount = currencyFormat(terms.currency, locale).format(MinorUnits.toDecimal(terms.amountMinor))
-        val title = words.getString(R.string.support_reminder_title, due)
-        val body = words.getString(R.string.support_reminder_body, amount, payeeName)
+        // The date and the amount in the notice's own locale, the one its words are in, worded by
+        // `:push-wording` as the iPhone's local reminder is. The due day travels as the start of
+        // that day in this zone, which the wording reads back as the same day.
+        val dueMillis = terms.dueDate(month).atStartOfDayIn(TimeZone.currentSystemDefault())
+            .toEpochMilliseconds()
+        val amount = MinorUnits.toDecimal(terms.amountMinor).toPlainString()
+        val text = words.reminderWording().support(dueMillis, amount, terms.currency, payeeName)
+        val title = text.title
+        val body = text.body
         val key = listOf("support", familyId).hashCode()
         val tap = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
             putExtra(PushDestination.EXTRA, PushDestination.SUPPORT.key)

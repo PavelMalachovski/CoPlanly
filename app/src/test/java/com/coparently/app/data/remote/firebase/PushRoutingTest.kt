@@ -1,5 +1,6 @@
 package com.coparently.app.data.remote.firebase
 
+import com.coparently.app.pushwording.PushWording
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -25,7 +26,7 @@ class PushRoutingTest {
 
     @Test
     fun `every worded type opens a screen, except the ones with links of their own`() {
-        for (type in PushNotifier.PUSH_TEXT.keys) {
+        for (type in PushWording.PUSH_TEXT.keys) {
             if (type == PushPayload.PAIRING_ACCEPTED || type == PushPayload.PAIRING_REMOVED) {
                 assertNull(PushRouting.destinationOf(type), "$type keeps its pairing link")
             } else if (type == PushPayload.COPARENT_ACCOUNT_DELETED) {

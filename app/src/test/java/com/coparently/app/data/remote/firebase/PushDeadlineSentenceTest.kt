@@ -1,5 +1,6 @@
 package com.coparently.app.data.remote.firebase
 
+import com.coparently.app.pushwording.PushWording
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -19,7 +20,7 @@ class PushDeadlineSentenceTest {
     fun `a body that ends on a date gets a full stop before the sentence`() {
         assertEquals(
             "Your co-parent proposes swapping May 14. $answerBy",
-            PushNotifier.sentenceAfter("Your co-parent proposes swapping May 14", answerBy)
+            PushWording.sentenceAfter("Your co-parent proposes swapping May 14", answerBy)
         )
     }
 
@@ -27,7 +28,7 @@ class PushDeadlineSentenceTest {
     fun `a body that ends on a closing quote gets one too, outside the quote`() {
         assertEquals(
             "Jana asked to change “Dentist”. $answerBy",
-            PushNotifier.sentenceAfter("Jana asked to change “Dentist”", answerBy)
+            PushWording.sentenceAfter("Jana asked to change “Dentist”", answerBy)
         )
     }
 
@@ -35,7 +36,7 @@ class PushDeadlineSentenceTest {
     fun `a body that already ends a sentence is not given a second stop`() {
         for (end in listOf('.', '!', '?', '…')) {
             val body = "Your co-parent proposes a new schedule$end"
-            assertEquals("$body $answerBy", PushNotifier.sentenceAfter(body, answerBy))
+            assertEquals("$body $answerBy", PushWording.sentenceAfter(body, answerBy))
         }
     }
 
@@ -49,8 +50,8 @@ class PushDeadlineSentenceTest {
                 PushPayload.CUSTODY_PROPOSAL_PROPOSED,
                 PushPayload.SPLIT_RATIO_PROPOSED
             ),
-            PushNotifier.ANSWER_BY_TYPES
+            PushWording.ANSWER_BY_TYPES
         )
-        assertTrue(PushNotifier.ANSWER_BY_TYPES.all { it in PushNotifier.PUSH_TEXT })
+        assertTrue(PushWording.ANSWER_BY_TYPES.all { it in PushWording.PUSH_TEXT })
     }
 }

@@ -3,7 +3,6 @@ package com.coparently.app.data.requests
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
-import android.text.format.DateFormat
 import androidx.core.app.NotificationCompat
 import com.coparently.app.R
 import com.coparently.app.data.notification.notificationsAllowed
@@ -13,8 +12,8 @@ import com.coparently.app.data.remote.firebase.PushNotifier
 import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.repository.PairingRepository
-import com.coparently.app.utils.answerByText
 import com.coparently.app.utils.inAppLanguage
+import com.coparently.app.utils.reminderWording
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
@@ -49,30 +48,18 @@ class RequestNotices(
      */
     override suspend fun remind(clock: RequestDeadline): Boolean {
         val words = context.inAppLanguage()
-        val name = nameOf(clock.proposerUid, words)
-        val until = answerByText(
-            clock.answerByMillis,
-            locale = words.resources.configuration.locales[0],
-            // The clock of the language it is worded in, as a push's deadline is (PushNotifier):
-            // the device's setting, else what that language expects — never Android's own
-            // resolution of the bare context.
-            is24Hour = DateFormat.is24HourFormat(words)
-        )
-        return post(
-            clock,
-            STEP_REMINDER,
-            words,
-            words.getString(R.string.request_notice_reminder_title),
-            words.getString(R.string.request_notice_reminder_body, name, until)
-        )
+        // Worded by `:push-wording` (the deadline on the clock of the language it is worded in, as a
+        // push's is), as the server's `request_reminder` is on the iPhone.
+        val text = words.reminderWording().request(nameOf(clock.proposerUid), clock.answerByMillis)
+        return post(clock, STEP_REMINDER, words, text.title, text.body)
     }
 
     /**
      * The co-parent's first name as their own profile states it, waited for at most
-     * [NAME_WAIT_MILLIS]; "Your co-parent", in [words]' language, when it is blank, unreadable or
-     * late.
+     * [NAME_WAIT_MILLIS]; null — "Your co-parent" in the notice's language — when it is blank,
+     * unreadable or late.
      */
-    private suspend fun nameOf(uid: String, words: Context): String {
+    private suspend fun nameOf(uid: String): String? {
         val name = try {
             withTimeoutOrNull(NAME_WAIT_MILLIS) { pairingRepository.observeCoParentProfile(uid).first().name }
         } catch (e: CancellationException) {
@@ -81,7 +68,7 @@ class RequestNotices(
             // Any failure to read the profile words the notice with the fallback.
             null
         }
-        return name?.takeIf { it.isNotBlank() } ?: words.getString(R.string.push_actor_fallback)
+        return name?.takeIf { it.isNotBlank() }
     }
 
     /**

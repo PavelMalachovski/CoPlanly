@@ -351,6 +351,7 @@ const RULES = [
     paths: ['K/data/remote/firebase/FcmService.kt', 'K/data/remote/firebase/PushRegistration.kt',
       'K/data/remote/firebase/PushPayload.kt',
       'K/data/remote/firebase/PushNotifier.kt', 'K/data/notification/**', 'K/domain/notification/**', '**/*MessagingService*',
+      'push-wording/**', 'K/utils/AndroidReaderClock.kt',
       'S/values*/push_strings.xml'],
   },
   {

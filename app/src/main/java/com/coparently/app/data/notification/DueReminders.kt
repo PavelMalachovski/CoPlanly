@@ -18,6 +18,7 @@ import com.coparently.app.domain.notification.ReminderPlanner
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.time.IsoText
 import com.coparently.app.utils.inAppLanguage
+import com.coparently.app.utils.reminderWording
 
 /**
  * What a due reminder does, whichever clock woke it: [ReminderAlarmReceiver]'s alarm, or
@@ -72,11 +73,13 @@ class DueReminders(
         // Permission revoked, notifications or the channel turned off since it was armed.
         if (!notificationsAllowed(context, CHANNEL_ID)) return
         val notificationManager = context.getSystemService(NotificationManager::class.java)
+        // The title as it stands now, not as it stood when the reminder was armed; worded by
+        // `:push-wording`, as the iPhone's local reminder is.
+        val text = words.reminderWording().eventAt(stored.title, startTime)
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            // The title as it stands now, not as it stood when the reminder was armed.
-            .setContentTitle(stored.title)
-            .setContentText(words.getString(R.string.reminder_notification_text, startTime))
+            .setContentTitle(text.title)
+            .setContentText(text.body)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)

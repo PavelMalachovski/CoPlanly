@@ -2428,10 +2428,10 @@ root changed. Three exceptions:
   `sync/AndroidGoogleCalendarSignIn.kt`, `settings/AndroidAppLanguages.kt` and
   `SystemDefaultRelaunch.kt`, `pairing/QRScannerActivity.kt`, `QrScannerScreen.kt`,
   `AndroidInviteQrCodes.kt` and `BuildPairingLink.kt`, `export/RecordShareIntent.kt`,
-  `chat/DictationLanguage.kt` and `CardPushText.kt` (a chat card's push wording, beside
-  `PushNotifier`), and `common/SharedFileViewer.kt`, `SensitiveClipboard.kt` and
+  `chat/DictationLanguage.kt`, and `common/SharedFileViewer.kt`, `SensitiveClipboard.kt` and
   `AndroidPermissionChecks.kt`. Of `utils/`, the app keeps `AppLocale.kt`, `NetworkMonitor.kt`,
-  `SwapDateList.kt`, `Extensions.kt` and `PreviewHelpers.kt`.
+  `SwapDateList.kt`, `AndroidReaderClock.kt` (the notifications' dates and money, `:push-wording`'s
+  `ReaderClock` on Android), `Extensions.kt` and `PreviewHelpers.kt`.
 
 A new screen, component or ViewModel goes in `shared-ui/` (the hard rule "The Android app is a thin
 shell"). How it got there, slice by slice (the history; every rule and every "don't undo" in it
@@ -3501,7 +3501,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     `request_deadline_passed` and `request_no_answer` (MON-25) producible only by Cloud Functions
     (which write as admin and bypass rules), so a co-parent cannot announce a pairing that did
     not happen, or an end that did not come. Adding a type means four places agreeing — `PushPayload`, the rule's allow-list,
-    `PushNotifier.PUSH_TEXT`, and the five `push_strings.xml` — and a type missing
+    `PushWording.PUSH_TEXT` (`:push-wording`, every notification's wording since iPhone phase 4
+    part C), and the five `push_strings.xml` — and a type missing
     from any of them is a push that silently never appears. This is also why service-layer
     string extraction (**CQ-14**) was *not* a prerequisite: the string is read on the receiving
     device, which has a `Context` and all five translations.
@@ -3539,12 +3540,15 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     - **A chat card is worded on the receiving phone.** `notifyOfChatMessage` sends the card's
       facts beside its preview (`activityKind`, `activityEntityType`, `activityEntityId`,
       `activityTitle`, `activityWhenIso`, `activityAmount`, `activityCurrency` — fields, not types)
-      and `PushNotifier` words them through `cardPushText` (`presentation/chat/CardPushText.kt`), the thread's sentence
-      without Compose. It stays in the app beside its one caller, and reads `ActivityCardText`'s
-      decisions (in `:shared-ui`, Compose Multiplatform `StringResource`s) as the app's `R.string` of
-      the same key, so the push speaks the language of the context it is worded in;
-      `res/raw/card_push_keep.xml` keeps those keys from the release build's resource shrinker, and
-      `ChatCardPushTest` checks every one resolves. The preview is the card's base-English
+      and `PushWording` words them through `CardWording.text` (`:push-wording`, iPhone phase 4 part
+      C), the thread's sentence without Compose: `CardWording` holds the decisions (which key a
+      kind takes, what it is about), and `ActivityCardText` in `:shared-ui` maps the same keys to
+      Compose Multiplatform resources, so the thread and the push cannot part. On Android the keys
+      are read by name as the app's `R.string`, so the push speaks the language of the context it is
+      worded in; `res/raw/card_push_keep.xml` keeps every key in `push-wording/push-keys.txt` from
+      the release build's resource shrinker (`tools/test/push-keys.test.js` holds the list to the
+      code and the keep file to the list), and `PushWordingGoldenTest` holds the text, byte for
+      byte, to the code it moved out of (`LegacyPushText`, kept in the app's tests as the oracle). The preview is the card's base-English
       fallback, which an older build shows; every reader used to get it.
     - **A card whose news has a push type of its own pushes nobody** (`SILENT_CARD_KINDS`: a
       change request, a day swap offered or answered, a custody proposal and its answer, a new
