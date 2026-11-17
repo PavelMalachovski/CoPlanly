@@ -580,19 +580,8 @@ const PAIRING_PREVIEW_MAX_INSTANCES = 10;
 const pairingPreviewLimiter = exportReceipts.rateLimiter(
     PAIRING_PREVIEW_RATE_LIMIT, PAIRING_PREVIEW_WINDOW_MS);
 
-/**
- * The part of a profile name a preview shows: the first word, and nothing that looks like an
- * address. `users/{uid}.name` is what the person typed or what Google gave them; some accounts
- * carry an email there, and the preview must never be a way to read one.
- *
- * @param {*} name The stored name.
- * @return {string} The first name, or '' when there is none to show.
- */
-function previewFirstName(name) {
-  const first = String(name || '').trim().split(/\s+/)[0] || '';
-  if (first.includes('@')) return '';
-  return first.slice(0, 40);
-}
+// The rule lives in `first-name.js`, which `request-clock-steps.js` shares.
+const {previewFirstName} = require('./first-name');
 
 exports.previewFirstName = previewFirstName;
 
