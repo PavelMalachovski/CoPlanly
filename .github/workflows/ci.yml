@@ -2440,6 +2440,14 @@ jobs:
       # swiped down asking "Discard changes?". The screenshots are the `ios-shell` artifact. Before the
       # emulator tests, on emulators of its own, so a shell failure shows without waiting for them.
       #
+      # Then, in the same step and on a family seeded for it, the pushes (iPhone phase 4 part C,
+      # Task 6): `PushUITests` has `simctl push` deliver the server's neutral alert with an
+      # `expense_added`, one for another uid and a `chat_message`, and reads the banners the
+      # Notification Service Extension words (or leaves as the fallback), tapping the chat one into
+      # its thread; the extension's memory, from its `COPLANLY_NSE_MEMORY` lines in the simulator's
+      # log, fails the step above 20 MB (`simulator.sh push-test`). Its screenshots are in
+      # `ios-shell` under `push/`.
+      #
       # `continue-on-error`, so the emulator tests and the write gate after it run whatever the walk
       # does (run 13 lost both to one failed walk step); "The native shell walk passed", after them,
       # fails the job when the walk did.
@@ -2531,7 +2539,7 @@ jobs:
           OUTCOME: ${{ steps.shell-test.outcome }}
         run: |
           if [ "$OUTCOME" != success ]; then
-            echo "::error::The native shell walk (testShellWalk) failed: see shell-test.log in the ios-shell artifact."
+            echo "::error::The native shell walk (testShellWalk) or the push test (PushUITests, the extension's memory) failed: see shell-test.log in the ios-shell artifact."
             exit 1
           fi
 
@@ -2600,6 +2608,10 @@ jobs:
           path: |
             iosApp/build/shell/shots/
             iosApp/build/shell/shell.xcresult
+            iosApp/build/shell/push/shots/
+            iosApp/build/shell/push/push.xcresult
+            iosApp/build/shell/push/pushes/
+            iosApp/build/shell/push/extension-memory.log
             ${{ runner.temp }}/shell-test.log
           if-no-files-found: ignore
           retention-days: 14

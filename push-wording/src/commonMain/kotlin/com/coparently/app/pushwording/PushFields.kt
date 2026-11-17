@@ -7,6 +7,12 @@ package com.coparently.app.pushwording
  * `PushPayload`'s constants, so a name that drifted here would word a push differently and fail it.
  */
 internal object PushFields {
+    /** The push's type; the iPhone's extension reads it (`wordPush`), Android's `PushNotifier` passes it apart. */
+    const val TYPE = "type"
+
+    /** The uid a push is addressed to; the iPhone's extension words nothing for another (`wordPush`). */
+    const val TARGET_USER_ID = "targetUserId"
+
     const val ACTOR = "actorName"
     const val SUBJECT = "subject"
     const val DATE = "date"

@@ -1298,7 +1298,12 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   (`tools/ios/seed-shell-family.js`) and runs the XCUITest walk of the native shell
   (`iosApp/CoPlanlyUITests/`: the tabs, Family → Expenses → the Add expense sheet, a back swipe
   completed and one let go of, a tab tap popping two screens, a dirty sheet swiped down asking
-  "Discard changes?", sign-out to fresh tabs; artifact `ios-shell`), then, on emulators again,
+  "Discard changes?", sign-out to fresh tabs; artifact `ios-shell`) and, on a family seeded for
+  it, the push test (`PushUITests`, `simulator.sh push-test`, phase 4 part C: `simctl push` with the
+  server's neutral alert, the banner the Notification Service Extension `CoPlanlyNotifications`
+  words read back, one for another uid left neutral, a chat push tapped into its thread, and the
+  extension's logged memory, `COPLANLY_NSE_MEMORY`, failing the step above 20 MB), then, on
+  emulators again,
   `:shared-data:iosSimulatorArm64Test` and `:shared-ui:iosSimulatorArm64Test` on the same booted
   simulator (`COPLANLY_SIMULATOR_UDID`, so the Keychain tests run; check run "iPhone tests on the
   emulators", `require_tests`) with the write gate: `IosWriteGateTest` writes every kind of shared

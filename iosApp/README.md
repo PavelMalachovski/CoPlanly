@@ -14,8 +14,9 @@ and the data layer are the Kotlin Multiplatform modules', compiled into one stat
 | `CoPlanly/Info.plist` | Bundle `app.coplanly`, display name CoPlanly, iPhone only, portrait only, iOS 17.0 and later. Two build settings reach it: `CoplanlyAppleSignIn` (from `COPLANLY_APPLE_SIGN_IN`) and `GIDServerClientID` (from `COPLANLY_GOOGLE_WEB_CLIENT_ID`). |
 | `CoPlanly/CoPlanly.entitlements` | Sign in with Apple (`com.apple.developer.applesignin`), pushes (`aps-environment`) and the App Group `group.app.coplanly`. |
 | `CoPlanly/Assets.xcassets` | The icon (made from the Android launcher icon by `tools/generate-ios-icon.py`; never edit the PNG by hand) and the indigo accent colour. |
-| `CoPlanlyUITests/` | The XCUITest walk of the native shell (`ShellUITests.testShellWalk`) and the tour of every screen (`testTour`), run in CI on the emulators. |
-| `scripts/simulator.sh` | CI's simulator steps (the `ios-app` job): pick, launch, the shell's walk and the tour. |
+| `CoPlanlyNotifications/` | The Notification Service Extension (`app.coplanly.notifications`, embedded in the app): words each push with the `PushWording` framework `:push-wording` builds; see "Pushes" below. |
+| `CoPlanlyUITests/` | The XCUITest walk of the native shell (`ShellUITests.testShellWalk`), the tour of every screen (`testTour`) and the pushes (`PushUITests`), run in CI on the emulators. |
+| `scripts/simulator.sh` | CI's simulator steps (the `ios-app` job): pick, launch, the shell's walk with the push test, and the tour. |
 
 ## Running it on your Mac
 
@@ -164,14 +165,30 @@ uid and its language with the notification extension through the App Group `grou
 (`AppGroupShare.kt`), cleared at sign-out. On the emulators (CI, no `GoogleService-Info.plist`)
 Firebase Messaging is never touched and the switch's "on" fails for want of a token.
 
+**The Notification Service Extension** (`CoPlanlyNotifications/`, iPhone phase 4 part C, Task 6)
+words every push. The server sends each one as a neutral alert (`CoPlanly` / `You have a new update
+in CoPlanly.`) with `mutable-content`; the extension reads the uid and the language the app shared,
+calls `ExtensionEntryKt.wordPush` in the `PushWording` framework (`:push-wording` alone, static,
+release, built by the target's Gradle phase for the SDK being built) and replaces the title and
+body. A push for another uid, one while nobody is signed in and a type it cannot word keep the
+neutral text, as does an extension that runs out of time: suppressing them needs Apple's filtering
+entitlement (owner step 4). Its strings are `<lang>.lproj/PushStrings.strings|.stringsdict`, which
+`tools/ios/generate-push-strings.js` writes into the extension at build time — and into the app,
+which words its local notifications with them. Node must be on the build's `PATH` (Homebrew's
+prefixes are added). Once per push it logs its memory (`COPLANLY_NSE_MEMORY`); CI fails above 20 MB.
+
 **The owner's steps**, before pushes reach a phone:
 
 1. **In the Apple Developer account**: the Push Notifications and App Groups capabilities on
-   `app.coplanly`, the group `group.app.coplanly`, and an APNs authentication key.
+   `app.coplanly`, the App Groups capability on `app.coplanly.notifications` (the extension), the
+   group `group.app.coplanly` on both, and an APNs authentication key.
 2. **In the Firebase console**: the APNs key uploaded under Cloud Messaging for the iOS app.
 3. `aps-environment` is `development` in `CoPlanly.entitlements`; an App Store or TestFlight
    build's distribution profile signs it as `production`. Device check: a push reaches a phone
-   built for development and one from TestFlight.
+   built for development and one from TestFlight, worded, and the extension's memory on a phone.
+4. **Apply for `com.apple.developer.usernotifications.filtering`**, so the extension can suppress a
+   push for another account or of a type it cannot word instead of leaving the neutral fallback
+   (design §2 decision 4).
 
 ## In CI
 
@@ -190,7 +207,11 @@ iOS 26.5 so far). Then, in order:
    the XCUITest walk (`CoPlanlyUITests`): sign-in by e-mail, the tabs, Family → Expenses → the Add
    expense sheet, a back swipe completed and one let go of, a tab tap popping two screens, a sheet
    with edits swiped down asking "Discard changes?", sign-out to fresh tabs, a `coplanly://pair`
-   link and, last, deleting the account. Its screenshots are the `ios-shell` artifact.
+   link and, last, deleting the account. Then, on a family seeded for it, the push test
+   (`PushUITests`, `simulator.sh push-test`): `simctl push` delivers an `expense_added`, one for
+   another uid and a `chat_message`, the banners are read (worded, the neutral fallback, and the
+   chat one tapped into its thread), and the extension's logged memory must stay under 20 MB.
+   Its screenshots are the `ios-shell` artifact (the pushes' under `push/`).
 4. On emulators again, the shared modules' iOS tests run on the same booted simulator (the
    Keychain tests included), with the write gate (`IosWriteGateTest` and
    `tools/ios/check-ios-writes.js`, which compares every document the iPhone wrote with what
