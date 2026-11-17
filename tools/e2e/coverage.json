@@ -449,7 +449,7 @@
       "e2e": [
         "TwoParentServerClocksTest#theAnsweringParentIsRemindedByTheServer"
       ],
-      "checklist": ["5.10"]
+      "checklist": ["5.9", "3.43"]
     },
     "sticker_received": {
       "e2e": [

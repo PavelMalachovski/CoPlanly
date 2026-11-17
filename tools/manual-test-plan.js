@@ -339,6 +339,16 @@ const RULES = [
       'functions/apple-auth.js'],
   },
   {
+    sections: ['3.43'],
+    why: 'pushes and reminders on an iPhone: registration, the notification extension, the App Group, a tapped push, local event and child support reminders',
+    paths: ['K/data/remote/firebase/IosPush*.kt', 'K/data/remote/firebase/NotificationPermission.kt',
+      'K/data/notification/Ios*.kt', 'K/data/notification/LocalNotificationCenter.kt',
+      'K/data/notification/AppReminderWording.kt', 'K/ios/AppGroupShare.kt', 'K/ios/IosApp.kt',
+      'push-wording/src/iosMain/**', 'push-wording/push-keys.txt', 'tools/ios/generate-push-strings.js',
+      'iosApp/CoPlanlyNotifications/**', 'iosApp/CoPlanly/PushTokenBridge.swift',
+      'iosApp/CoPlanly/AppDelegate.swift', 'iosApp/CoPlanly/CoPlanly.entitlements'],
+  },
+  {
     sections: ['3.6', '4.2'],
     why: 'strings, locales, the language picker or the rule that picks the app\'s language',
     paths: ['S/values*/**', 'app/src/main/res/xml/locales_config.xml',
@@ -441,8 +451,8 @@ const RULES = [
   },
   {
     sections: ['5.9', '5.10'],
-    why: 'the server\'s request clock steps (MON-25): a request\'s end, and the proposer\'s two pushes',
-    paths: ['functions/request-clock*.js'],
+    why: 'the server\'s request clock steps (MON-25): a request\'s end, the proposer\'s two pushes, and the answering parent\'s reminders',
+    paths: ['functions/request-clock*.js', 'functions/reminder-plan.js'],
   },
   {
     sections: ['5.6'],
