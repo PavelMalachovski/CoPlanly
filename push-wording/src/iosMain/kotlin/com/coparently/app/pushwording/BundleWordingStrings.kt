@@ -1,7 +1,12 @@
+@file:OptIn(ExperimentalForeignApi::class)
+
 package com.coparently.app.pushwording
 
+import kotlinx.cinterop.ExperimentalForeignApi
 import platform.Foundation.NSBundle
-import platform.Foundation.NSDictionary
+import platform.Foundation.NSData
+import platform.Foundation.NSPropertyListSerialization
+import platform.Foundation.dataWithContentsOfFile
 
 /**
  * [WordingStrings] over `PushStrings.strings` and `PushStrings.stringsdict` in the `<lang>.lproj`
@@ -29,9 +34,9 @@ class BundleWordingStrings(
     /** The reader's language, whose plural rules apply whichever folder the text came from, as on Android. */
     private val readerLanguage: String = primaryLanguage(languageTag)
 
-    private val strings: Map<Any?, *> by lazy { table(bundle, "strings") }
+    private val strings: Map<*, *> by lazy { table(bundle, "strings") }
 
-    private val plurals: Map<Any?, *> by lazy { table(bundle, "stringsdict") }
+    private val plurals: Map<*, *> by lazy { table(bundle, "stringsdict") }
 
     override fun string(key: String, vararg args: Any): String {
         val text = requireNotNull(strings[key] as? String) { "No string named $key" }
@@ -45,9 +50,13 @@ class BundleWordingStrings(
         return formatArgs(fromStringsdict(requireNotNull(text) { "Plural $key has no other" }), args)
     }
 
-    private fun table(bundle: NSBundle, type: String): Map<Any?, *> {
-        val path = bundle.pathForResource(TABLE, type, null, language) ?: return emptyMap<Any?, Any?>()
-        return NSDictionary.dictionaryWithContentsOfFile(path) ?: emptyMap<Any?, Any?>()
+    private fun table(bundle: NSBundle, type: String): Map<*, *> {
+        val path = bundle.pathForResource(TABLE, type, null, language) ?: return emptyMap<String, Any>()
+        // Read as a property list: `NSDictionary`'s file initializers are deprecated, and Kotlin/Native
+        // exposes the class factory only through its category.
+        val data = NSData.dataWithContentsOfFile(path) ?: return emptyMap<String, Any>()
+        val list = NSPropertyListSerialization.propertyListWithData(data, IMMUTABLE, null, null)
+        return list as? Map<*, *> ?: emptyMap<String, Any>()
     }
 
     private companion object {
@@ -55,6 +64,9 @@ class BundleWordingStrings(
         const val PLURAL_VARIABLE = "value"
         const val OTHER = "other"
         const val BASE = "en"
+
+        /** `NSPropertyListImmutable`: the table is only read. */
+        const val IMMUTABLE: ULong = 0u
 
         val APPLE_STRING_ARGUMENT = Regex("""%(\d+)\$@""")
         val STRINGSDICT_ARGUMENT = Regex("""%(?:(\d+)\$([@d])|%)""")

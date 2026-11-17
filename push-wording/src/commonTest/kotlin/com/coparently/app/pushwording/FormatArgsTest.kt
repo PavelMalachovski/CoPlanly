@@ -7,7 +7,7 @@ import kotlin.test.assertFailsWith
 class FormatArgsTest {
     @Test
     fun aStringAndANumberAreReplacedByTheirText() {
-        assertEquals("Bob pays 3", formatArgs("%1\$s pays %2\$d", arrayOf("Bob", 3)))
+        assertEquals("Bob pays 3", formatArgs("%1\$s pays %2\$d", arrayOf<Any>("Bob", 3)))
     }
 
     @Test
