@@ -1,7 +1,7 @@
 package com.coparently.app.pushwording
 
 /** `%<n>$s` and `%<n>$d`, the only arguments Compose Multiplatform 1.9.3's resources replace. */
-private val ARGUMENT = Regex("""%(\d+)\$[ds]""")
+private val ARGUMENT = Regex("""%([0-9]+)\$[ds]""")
 
 /**
  * [template] with each `%<n>$s` and `%<n>$d` replaced by the `toString()` of argument `n` (counted

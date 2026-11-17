@@ -43,7 +43,7 @@ private fun datesIn(field: String?): List<String> =
     field.orEmpty().split(',').map { it.trim() }.filter(::isIsoDate).sorted()
 
 /** `yyyy-MM-dd`, four digits of year, the form a swap's days travel in. */
-private val ISO_DATE = Regex("""(\d{4})-(\d{2})-(\d{2})""")
+private val ISO_DATE = Regex("""([0-9]{4})-([0-9]{2})-([0-9]{2})""")
 
 /**
  * Whether [text] is an ISO date naming a real day, as `LocalDate.parse` (strict, the ISO calendar)

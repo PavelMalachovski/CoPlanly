@@ -68,8 +68,8 @@ class BundleWordingStrings(
         /** `NSPropertyListImmutable`: the table is only read. */
         const val IMMUTABLE: ULong = 0u
 
-        val APPLE_STRING_ARGUMENT = Regex("""%(\d+)\$@""")
-        val STRINGSDICT_ARGUMENT = Regex("""%(?:(\d+)\$([@d])|%)""")
+        val APPLE_STRING_ARGUMENT = Regex("""%([0-9]+)\$@""")
+        val STRINGSDICT_ARGUMENT = Regex("""%(?:([0-9]+)\$([@d])|%)""")
 
         /** [tag], else its language (`cs-CZ` or `cs_CZ` → `cs`), else `en`: the first [bundle] has a folder for. */
         fun localizationOf(bundle: NSBundle, tag: String): String {

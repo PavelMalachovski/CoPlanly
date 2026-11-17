@@ -135,12 +135,12 @@ class FoundationReaderClock(
         const val MILLIS_PER_SECOND = 1000.0
 
         /** What `toBigDecimalOrNull` reads: a sign, digits with at most one point, an exponent. */
-        val DECIMAL = Regex("""([+-]?)(\d+\.?\d*|\.\d+)([eE]([+-]?\d+))?""")
+        val DECIMAL = Regex("""([+-]?)([0-9]+\.?[0-9]*|\.[0-9]+)([eE]([+-]?[0-9]+))?""")
 
         /** The exponent's digits in [DECIMAL]. */
         const val EXPONENT_GROUP = 4
 
-        val ISO_MONTH = Regex("""\d{4}-\d{2}""")
+        val ISO_MONTH = Regex("""[0-9]{4}-[0-9]{2}""")
 
         val utc: NSTimeZone = NSTimeZone.timeZoneWithName("UTC")!!
 
