@@ -1,0 +1,924 @@
+{
+  "description": "Shared by functions/test/request-clocks.test.js and RequestClockFixtureTest (:shared). Times are epoch millis; closedAt may be {\"__toMillis\": n}, a Firestore Timestamp stand-in.",
+  "stateCases": [
+    {
+      "name": "no cap: well before the deadline",
+      "clock": {
+        "answerByMillis": 1800000000000
+      },
+      "nowMillis": 1799568000000,
+      "state": "OPEN",
+      "lastChanceWindowMillis": null,
+      "endMillis": 1800086400000
+    },
+    {
+      "name": "no cap: one ms before the deadline",
+      "clock": {
+        "answerByMillis": 1800000000000
+      },
+      "nowMillis": 1799999999999,
+      "state": "OPEN",
+      "lastChanceWindowMillis": null,
+      "endMillis": 1800086400000
+    },
+    {
+      "name": "no cap: at the deadline",
+      "clock": {
+        "answerByMillis": 1800000000000
+      },
+      "nowMillis": 1800000000000,
+      "state": "NO_ANSWER_LAST_CHANCE_POSSIBLE",
+      "lastChanceWindowMillis": 86400000,
+      "endMillis": 1800086400000
+    },
+    {
+      "name": "no cap: an hour after",
+      "clock": {
+        "answerByMillis": 1800000000000
+      },
+      "nowMillis": 1800003600000,
+      "state": "NO_ANSWER_LAST_CHANCE_POSSIBLE",
+      "lastChanceWindowMillis": 86400000,
+      "endMillis": 1800086400000
+    },
+    {
+      "name": "no cap: one ms before the button ends",
+      "clock": {
+        "answerByMillis": 1800000000000
+      },
+      "nowMillis": 1800086399999,
+      "state": "NO_ANSWER_LAST_CHANCE_POSSIBLE",
+      "lastChanceWindowMillis": 86400000,
+      "endMillis": 1800086400000
+    },
+    {
+      "name": "no cap: at the button end",
+      "clock": {
+        "answerByMillis": 1800000000000
+      },
+      "nowMillis": 1800086400000,
+      "state": "NO_ANSWER",
+      "lastChanceWindowMillis": null,
+      "endMillis": 1800086400000
+    },
+    {
+      "name": "no cap: long after",
+      "clock": {
+        "answerByMillis": 1800000000000
+      },
+      "nowMillis": 1800864000000,
+      "state": "NO_ANSWER",
+      "lastChanceWindowMillis": null,
+      "endMillis": 1800086400000
+    },
+    {
+      "name": "far cap: before the deadline",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800432000000
+      },
+      "nowMillis": 1799996400000,
+      "state": "OPEN",
+      "lastChanceWindowMillis": null,
+      "endMillis": 1800086400000
+    },
+    {
+      "name": "far cap: at the deadline",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800432000000
+      },
+      "nowMillis": 1800000000000,
+      "state": "NO_ANSWER_LAST_CHANCE_POSSIBLE",
+      "lastChanceWindowMillis": 86400000,
+      "endMillis": 1800086400000
+    },
+    {
+      "name": "far cap: after the button",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800432000000
+      },
+      "nowMillis": 1800086400000,
+      "state": "NO_ANSWER",
+      "lastChanceWindowMillis": null,
+      "endMillis": 1800086400000
+    },
+    {
+      "name": "near cap: at the deadline gives a full day capped",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800036000000
+      },
+      "nowMillis": 1800000000000,
+      "state": "NO_ANSWER_LAST_CHANCE_POSSIBLE",
+      "lastChanceWindowMillis": 32400000,
+      "endMillis": 1800028800000
+    },
+    {
+      "name": "near cap: window shrinks with time",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800036000000
+      },
+      "nowMillis": 1800010800000,
+      "state": "NO_ANSWER_LAST_CHANCE_POSSIBLE",
+      "lastChanceWindowMillis": 21600000,
+      "endMillis": 1800028800000
+    },
+    {
+      "name": "near cap: one ms before the button ends",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800036000000
+      },
+      "nowMillis": 1800028799999,
+      "state": "NO_ANSWER_LAST_CHANCE_POSSIBLE",
+      "lastChanceWindowMillis": 3600001,
+      "endMillis": 1800028800000
+    },
+    {
+      "name": "near cap: at the button end",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800036000000
+      },
+      "nowMillis": 1800028800000,
+      "state": "NO_ANSWER",
+      "lastChanceWindowMillis": null,
+      "endMillis": 1800028800000
+    },
+    {
+      "name": "cap 2h past: at the deadline offers nothing",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800007200000
+      },
+      "nowMillis": 1800000000000,
+      "state": "NO_ANSWER",
+      "lastChanceWindowMillis": null,
+      "endMillis": 1800000000000
+    },
+    {
+      "name": "cap 2h past: before the deadline",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800007200000
+      },
+      "nowMillis": 1799999999999,
+      "state": "OPEN",
+      "lastChanceWindowMillis": null,
+      "endMillis": 1800000000000
+    },
+    {
+      "name": "cap 3h past: at the deadline window is two hours",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800010800000
+      },
+      "nowMillis": 1800000000000,
+      "state": "NO_ANSWER_LAST_CHANCE_POSSIBLE",
+      "lastChanceWindowMillis": 7200000,
+      "endMillis": 1800003600000
+    },
+    {
+      "name": "cap 3h past: at the button end",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800010800000
+      },
+      "nowMillis": 1800003600000,
+      "state": "NO_ANSWER",
+      "lastChanceWindowMillis": null,
+      "endMillis": 1800003600000
+    },
+    {
+      "name": "cap 1h past: at the deadline",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800003600000
+      },
+      "nowMillis": 1800000000000,
+      "state": "NO_ANSWER",
+      "lastChanceWindowMillis": null,
+      "endMillis": 1800000000000
+    },
+    {
+      "name": "cap 1h past: before",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800003600000
+      },
+      "nowMillis": 1799992800000,
+      "state": "OPEN",
+      "lastChanceWindowMillis": null,
+      "endMillis": 1800000000000
+    },
+    {
+      "name": "cap before the deadline: at the deadline",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "capMillis": 1799996400000
+      },
+      "nowMillis": 1800000000000,
+      "state": "NO_ANSWER",
+      "lastChanceWindowMillis": null,
+      "endMillis": 1800000000000
+    },
+    {
+      "name": "cap before the deadline: before",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "capMillis": 1799996400000
+      },
+      "nowMillis": 1799999999999,
+      "state": "OPEN",
+      "lastChanceWindowMillis": null,
+      "endMillis": 1800000000000
+    },
+    {
+      "name": "cap 26h past: button still a day",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800093600000
+      },
+      "nowMillis": 1800000000000,
+      "state": "NO_ANSWER_LAST_CHANCE_POSSIBLE",
+      "lastChanceWindowMillis": 86400000,
+      "endMillis": 1800086400000
+    },
+    {
+      "name": "cap just under 26h past: button ends a ms early",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800093599999
+      },
+      "nowMillis": 1800000000000,
+      "state": "NO_ANSWER_LAST_CHANCE_POSSIBLE",
+      "lastChanceWindowMillis": 86400000,
+      "endMillis": 1800086399999
+    },
+    {
+      "name": "cap 29h past: at the deadline window is a full day",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800104400000
+      },
+      "nowMillis": 1800000000000,
+      "state": "NO_ANSWER_LAST_CHANCE_POSSIBLE",
+      "lastChanceWindowMillis": 86400000,
+      "endMillis": 1800086400000
+    },
+    {
+      "name": "cap 29h past: late in the button window is what the cap leaves",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800104400000
+      },
+      "nowMillis": 1800086399999,
+      "state": "NO_ANSWER_LAST_CHANCE_POSSIBLE",
+      "lastChanceWindowMillis": 14400001,
+      "endMillis": 1800086400000
+    },
+    {
+      "name": "last chance: running",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "lastChanceUntilMillis": 1800108000000
+      },
+      "nowMillis": 1800090000000,
+      "state": "LAST_CHANCE",
+      "lastChanceWindowMillis": null,
+      "endMillis": 1800108000000
+    },
+    {
+      "name": "last chance: one ms before its end",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "lastChanceUntilMillis": 1800108000000
+      },
+      "nowMillis": 1800107999999,
+      "state": "LAST_CHANCE",
+      "lastChanceWindowMillis": null,
+      "endMillis": 1800108000000
+    },
+    {
+      "name": "last chance: at its end",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "lastChanceUntilMillis": 1800108000000
+      },
+      "nowMillis": 1800108000000,
+      "state": "NO_ANSWER",
+      "lastChanceWindowMillis": null,
+      "endMillis": 1800108000000
+    },
+    {
+      "name": "last chance: long after",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "lastChanceUntilMillis": 1800108000000
+      },
+      "nowMillis": 1800777600000,
+      "state": "NO_ANSWER",
+      "lastChanceWindowMillis": null,
+      "endMillis": 1800108000000
+    },
+    {
+      "name": "last chance: button never returns inside the button time",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "lastChanceUntilMillis": 1800007200000
+      },
+      "nowMillis": 1800003600000,
+      "state": "LAST_CHANCE",
+      "lastChanceWindowMillis": null,
+      "endMillis": 1800007200000
+    },
+    {
+      "name": "last chance given before the deadline passes is judged open",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "lastChanceUntilMillis": 1800108000000
+      },
+      "nowMillis": 1799996400000,
+      "state": "OPEN",
+      "lastChanceWindowMillis": null,
+      "endMillis": 1800108000000
+    },
+    {
+      "name": "last chance with a cap",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800036000000,
+        "lastChanceUntilMillis": 1800032400000
+      },
+      "nowMillis": 1800018000000,
+      "state": "LAST_CHANCE",
+      "lastChanceWindowMillis": null,
+      "endMillis": 1800032400000
+    },
+    {
+      "name": "outcome: before the deadline",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "outcome": "no_answer"
+      },
+      "nowMillis": 1799913600000,
+      "state": "NO_ANSWER",
+      "lastChanceWindowMillis": null,
+      "endMillis": 1800086400000
+    },
+    {
+      "name": "outcome: in the button time",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "outcome": "no_answer"
+      },
+      "nowMillis": 1800003600000,
+      "state": "NO_ANSWER",
+      "lastChanceWindowMillis": null,
+      "endMillis": 1800086400000
+    },
+    {
+      "name": "outcome with a last chance still running",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "lastChanceUntilMillis": 1800108000000,
+        "outcome": "no_answer"
+      },
+      "nowMillis": 1800090000000,
+      "state": "NO_ANSWER",
+      "lastChanceWindowMillis": null,
+      "endMillis": 1800108000000
+    },
+    {
+      "name": "outcome with a cap",
+      "clock": {
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800003600000,
+        "outcome": "no_answer"
+      },
+      "nowMillis": 1799999999999,
+      "state": "NO_ANSWER",
+      "lastChanceWindowMillis": null,
+      "endMillis": 1800000000000
+    }
+  ],
+  "nextStepCases": [
+    {
+      "name": "swap: open or deadline push not sent -> the deadline",
+      "doc": {
+        "kind": "swap",
+        "answerByMillis": 1800000000000
+      },
+      "nextStepAt": 1800000000000
+    },
+    {
+      "name": "swap: deadline push sent -> the end",
+      "doc": {
+        "kind": "swap",
+        "answerByMillis": 1800000000000,
+        "serverToldDeadlineAt": 1800000001000
+      },
+      "nextStepAt": 1800086400000
+    },
+    {
+      "name": "swap: deadline push sent, cap near -> the shortened end",
+      "doc": {
+        "kind": "swap",
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800036000000,
+        "serverToldDeadlineAt": 1800000001000
+      },
+      "nextStepAt": 1800028800000
+    },
+    {
+      "name": "swap: deadline push sent, cap under two hours -> the deadline",
+      "doc": {
+        "kind": "swap",
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800003600000,
+        "serverToldDeadlineAt": 1800000001000
+      },
+      "nextStepAt": 1800000000000
+    },
+    {
+      "name": "swap: last chance given -> its end",
+      "doc": {
+        "kind": "swap",
+        "answerByMillis": 1800000000000,
+        "lastChanceUntilMillis": 1800108000000
+      },
+      "nextStepAt": 1800108000000
+    },
+    {
+      "name": "swap: last chance given and deadline push sent -> its end",
+      "doc": {
+        "kind": "swap",
+        "answerByMillis": 1800000000000,
+        "lastChanceUntilMillis": 1800108000000,
+        "serverToldDeadlineAt": 1800000001000
+      },
+      "nextStepAt": 1800108000000
+    },
+    {
+      "name": "swap: settled -> none",
+      "doc": {
+        "kind": "swap",
+        "answerByMillis": 1800000000000,
+        "serverSettledAt": 1800000000005
+      },
+      "nextStepAt": null
+    },
+    {
+      "name": "swap: settled beats an outcome",
+      "doc": {
+        "kind": "swap",
+        "answerByMillis": 1800000000000,
+        "outcome": "no_answer",
+        "closedAt": 1800086400000,
+        "serverSettledAt": 1800000000005
+      },
+      "nextStepAt": null
+    },
+    {
+      "name": "swap: closed by the server -> none",
+      "doc": {
+        "kind": "swap",
+        "answerByMillis": 1800000000000,
+        "serverToldNoAnswerAt": 1800086400000
+      },
+      "nextStepAt": null
+    },
+    {
+      "name": "change: open or deadline push not sent -> the deadline",
+      "doc": {
+        "kind": "change",
+        "answerByMillis": 1800000000000
+      },
+      "nextStepAt": 1800000000000
+    },
+    {
+      "name": "change: deadline push sent -> the end",
+      "doc": {
+        "kind": "change",
+        "answerByMillis": 1800000000000,
+        "serverToldDeadlineAt": 1800000001000
+      },
+      "nextStepAt": 1800086400000
+    },
+    {
+      "name": "change: deadline push sent, cap near -> the shortened end",
+      "doc": {
+        "kind": "change",
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800036000000,
+        "serverToldDeadlineAt": 1800000001000
+      },
+      "nextStepAt": 1800028800000
+    },
+    {
+      "name": "change: deadline push sent, cap under two hours -> the deadline",
+      "doc": {
+        "kind": "change",
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800003600000,
+        "serverToldDeadlineAt": 1800000001000
+      },
+      "nextStepAt": 1800000000000
+    },
+    {
+      "name": "change: last chance given -> its end",
+      "doc": {
+        "kind": "change",
+        "answerByMillis": 1800000000000,
+        "lastChanceUntilMillis": 1800108000000
+      },
+      "nextStepAt": 1800108000000
+    },
+    {
+      "name": "change: last chance given and deadline push sent -> its end",
+      "doc": {
+        "kind": "change",
+        "answerByMillis": 1800000000000,
+        "lastChanceUntilMillis": 1800108000000,
+        "serverToldDeadlineAt": 1800000001000
+      },
+      "nextStepAt": 1800108000000
+    },
+    {
+      "name": "change: settled -> none",
+      "doc": {
+        "kind": "change",
+        "answerByMillis": 1800000000000,
+        "serverSettledAt": 1800000000005
+      },
+      "nextStepAt": null
+    },
+    {
+      "name": "change: settled beats an outcome",
+      "doc": {
+        "kind": "change",
+        "answerByMillis": 1800000000000,
+        "outcome": "no_answer",
+        "closedAt": 1800086400000,
+        "serverSettledAt": 1800000000005
+      },
+      "nextStepAt": null
+    },
+    {
+      "name": "change: closed by the server -> none",
+      "doc": {
+        "kind": "change",
+        "answerByMillis": 1800000000000,
+        "serverToldNoAnswerAt": 1800086400000
+      },
+      "nextStepAt": null
+    },
+    {
+      "name": "event: open or deadline push not sent -> the deadline",
+      "doc": {
+        "kind": "event",
+        "answerByMillis": 1800000000000
+      },
+      "nextStepAt": 1800000000000
+    },
+    {
+      "name": "event: deadline push sent -> the end",
+      "doc": {
+        "kind": "event",
+        "answerByMillis": 1800000000000,
+        "serverToldDeadlineAt": 1800000001000
+      },
+      "nextStepAt": 1800086400000
+    },
+    {
+      "name": "event: deadline push sent, cap near -> the shortened end",
+      "doc": {
+        "kind": "event",
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800036000000,
+        "serverToldDeadlineAt": 1800000001000
+      },
+      "nextStepAt": 1800028800000
+    },
+    {
+      "name": "event: deadline push sent, cap under two hours -> the deadline",
+      "doc": {
+        "kind": "event",
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800003600000,
+        "serverToldDeadlineAt": 1800000001000
+      },
+      "nextStepAt": 1800000000000
+    },
+    {
+      "name": "event: last chance given -> its end",
+      "doc": {
+        "kind": "event",
+        "answerByMillis": 1800000000000,
+        "lastChanceUntilMillis": 1800108000000
+      },
+      "nextStepAt": 1800108000000
+    },
+    {
+      "name": "event: last chance given and deadline push sent -> its end",
+      "doc": {
+        "kind": "event",
+        "answerByMillis": 1800000000000,
+        "lastChanceUntilMillis": 1800108000000,
+        "serverToldDeadlineAt": 1800000001000
+      },
+      "nextStepAt": 1800108000000
+    },
+    {
+      "name": "event: settled -> none",
+      "doc": {
+        "kind": "event",
+        "answerByMillis": 1800000000000,
+        "serverSettledAt": 1800000000005
+      },
+      "nextStepAt": null
+    },
+    {
+      "name": "event: settled beats an outcome",
+      "doc": {
+        "kind": "event",
+        "answerByMillis": 1800000000000,
+        "outcome": "no_answer",
+        "closedAt": 1800086400000,
+        "serverSettledAt": 1800000000005
+      },
+      "nextStepAt": null
+    },
+    {
+      "name": "event: closed by the server -> none",
+      "doc": {
+        "kind": "event",
+        "answerByMillis": 1800000000000,
+        "serverToldNoAnswerAt": 1800086400000
+      },
+      "nextStepAt": null
+    },
+    {
+      "name": "proposal: open or deadline push not sent -> the deadline",
+      "doc": {
+        "kind": "proposal",
+        "answerByMillis": 1800000000000
+      },
+      "nextStepAt": 1800000000000
+    },
+    {
+      "name": "proposal: deadline push sent -> the end",
+      "doc": {
+        "kind": "proposal",
+        "answerByMillis": 1800000000000,
+        "serverToldDeadlineAt": 1800000001000
+      },
+      "nextStepAt": 1800086400000
+    },
+    {
+      "name": "proposal: deadline push sent, cap near -> the shortened end",
+      "doc": {
+        "kind": "proposal",
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800036000000,
+        "serverToldDeadlineAt": 1800000001000
+      },
+      "nextStepAt": 1800028800000
+    },
+    {
+      "name": "proposal: deadline push sent, cap under two hours -> the deadline",
+      "doc": {
+        "kind": "proposal",
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800003600000,
+        "serverToldDeadlineAt": 1800000001000
+      },
+      "nextStepAt": 1800000000000
+    },
+    {
+      "name": "proposal: last chance given -> its end",
+      "doc": {
+        "kind": "proposal",
+        "answerByMillis": 1800000000000,
+        "lastChanceUntilMillis": 1800108000000
+      },
+      "nextStepAt": 1800108000000
+    },
+    {
+      "name": "proposal: last chance given and deadline push sent -> its end",
+      "doc": {
+        "kind": "proposal",
+        "answerByMillis": 1800000000000,
+        "lastChanceUntilMillis": 1800108000000,
+        "serverToldDeadlineAt": 1800000001000
+      },
+      "nextStepAt": 1800108000000
+    },
+    {
+      "name": "proposal: settled -> none",
+      "doc": {
+        "kind": "proposal",
+        "answerByMillis": 1800000000000,
+        "serverSettledAt": 1800000000005
+      },
+      "nextStepAt": null
+    },
+    {
+      "name": "proposal: settled beats an outcome",
+      "doc": {
+        "kind": "proposal",
+        "answerByMillis": 1800000000000,
+        "outcome": "no_answer",
+        "closedAt": 1800086400000,
+        "serverSettledAt": 1800000000005
+      },
+      "nextStepAt": null
+    },
+    {
+      "name": "proposal: closed by the server -> none",
+      "doc": {
+        "kind": "proposal",
+        "answerByMillis": 1800000000000,
+        "serverToldNoAnswerAt": 1800086400000
+      },
+      "nextStepAt": null
+    },
+    {
+      "name": "split: open or deadline push not sent -> the deadline",
+      "doc": {
+        "kind": "split",
+        "answerByMillis": 1800000000000
+      },
+      "nextStepAt": 1800000000000
+    },
+    {
+      "name": "split: deadline push sent -> the end",
+      "doc": {
+        "kind": "split",
+        "answerByMillis": 1800000000000,
+        "serverToldDeadlineAt": 1800000001000
+      },
+      "nextStepAt": 1800086400000
+    },
+    {
+      "name": "split: deadline push sent, cap near -> the shortened end",
+      "doc": {
+        "kind": "split",
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800036000000,
+        "serverToldDeadlineAt": 1800000001000
+      },
+      "nextStepAt": 1800028800000
+    },
+    {
+      "name": "split: deadline push sent, cap under two hours -> the deadline",
+      "doc": {
+        "kind": "split",
+        "answerByMillis": 1800000000000,
+        "capMillis": 1800003600000,
+        "serverToldDeadlineAt": 1800000001000
+      },
+      "nextStepAt": 1800000000000
+    },
+    {
+      "name": "split: last chance given -> its end",
+      "doc": {
+        "kind": "split",
+        "answerByMillis": 1800000000000,
+        "lastChanceUntilMillis": 1800108000000
+      },
+      "nextStepAt": 1800108000000
+    },
+    {
+      "name": "split: last chance given and deadline push sent -> its end",
+      "doc": {
+        "kind": "split",
+        "answerByMillis": 1800000000000,
+        "lastChanceUntilMillis": 1800108000000,
+        "serverToldDeadlineAt": 1800000001000
+      },
+      "nextStepAt": 1800108000000
+    },
+    {
+      "name": "split: settled -> none",
+      "doc": {
+        "kind": "split",
+        "answerByMillis": 1800000000000,
+        "serverSettledAt": 1800000000005
+      },
+      "nextStepAt": null
+    },
+    {
+      "name": "split: settled beats an outcome",
+      "doc": {
+        "kind": "split",
+        "answerByMillis": 1800000000000,
+        "outcome": "no_answer",
+        "closedAt": 1800086400000,
+        "serverSettledAt": 1800000000005
+      },
+      "nextStepAt": null
+    },
+    {
+      "name": "split: closed by the server -> none",
+      "doc": {
+        "kind": "split",
+        "answerByMillis": 1800000000000,
+        "serverToldNoAnswerAt": 1800086400000
+      },
+      "nextStepAt": null
+    },
+    {
+      "name": "swap: outcome set by a phone, closedAt as millis -> none",
+      "doc": {
+        "kind": "swap",
+        "answerByMillis": 1800000000000,
+        "outcome": "no_answer",
+        "closedAt": 1800086400007
+      },
+      "nextStepAt": null
+    },
+    {
+      "name": "change: outcome set by a phone, closedAt as millis -> none",
+      "doc": {
+        "kind": "change",
+        "answerByMillis": 1800000000000,
+        "outcome": "no_answer",
+        "closedAt": 1800086400007
+      },
+      "nextStepAt": null
+    },
+    {
+      "name": "event: outcome set by a phone, closedAt as millis -> none",
+      "doc": {
+        "kind": "event",
+        "answerByMillis": 1800000000000,
+        "outcome": "no_answer",
+        "closedAt": 1800086400007
+      },
+      "nextStepAt": null
+    },
+    {
+      "name": "proposal: outcome set by a phone, closedAt as millis -> closedAt",
+      "doc": {
+        "kind": "proposal",
+        "answerByMillis": 1800000000000,
+        "outcome": "no_answer",
+        "closedAt": 1800086400007
+      },
+      "nextStepAt": 1800086400007
+    },
+    {
+      "name": "split: outcome set by a phone, closedAt as millis -> closedAt",
+      "doc": {
+        "kind": "split",
+        "answerByMillis": 1800000000000,
+        "outcome": "no_answer",
+        "closedAt": 1800086400007
+      },
+      "nextStepAt": 1800086400007
+    },
+    {
+      "name": "proposal: outcome set without closedAt -> none",
+      "doc": {
+        "kind": "proposal",
+        "answerByMillis": 1800000000000,
+        "outcome": "no_answer"
+      },
+      "nextStepAt": null
+    },
+    {
+      "name": "proposal: outcome set, closedAt as a Timestamp-like -> closedAt",
+      "doc": {
+        "kind": "proposal",
+        "answerByMillis": 1800000000000,
+        "outcome": "no_answer",
+        "closedAt": {
+          "__toMillis": 1800086400009
+        }
+      },
+      "nextStepAt": 1800086400009
+    },
+    {
+      "name": "unknown kind: outcome set -> none",
+      "doc": {
+        "kind": "mystery",
+        "answerByMillis": 1800000000000,
+        "outcome": "no_answer",
+        "closedAt": 1800086400000
+      },
+      "nextStepAt": null
+    },
+    {
+      "name": "unknown kind: open -> the deadline",
+      "doc": {
+        "kind": "mystery",
+        "answerByMillis": 1800000000000
+      },
+      "nextStepAt": 1800000000000
+    }
+  ]
+}
