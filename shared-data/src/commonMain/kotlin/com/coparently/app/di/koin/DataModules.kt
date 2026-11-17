@@ -301,6 +301,7 @@ val chatDataModule: Module = module {
  * reads, the keeper every sync runs, the records a card's actions read and what a parent does from
  * a card. No phone runs a step of its own since iPhone phase 4 part C: the reminders, the deadline
  * notice and the end are the server's (`functions/request-clock-steps.js`).
+ */
 val requestsDataModule: Module = module {
     singleOf(::RequestTelling)
     single { RequestTime() }

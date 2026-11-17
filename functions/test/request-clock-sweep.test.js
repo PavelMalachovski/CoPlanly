@@ -537,6 +537,30 @@ describe('request clock schedule', () => {
       assert.strictEqual(clockOf(db).serverRemindersSent, 3);
     });
 
+    it('aRealisticPhonePlanAfterAServerReminderSendsTheRestOnce', async () => {
+      const db = withZone('Europe/Prague');
+      await writeAndTrigger(db, 'c1', undelivered());
+      await index.sweepRequestClocksImpl(db, CREATED + 5 * MINUTE, deps);
+      await index.sweepRequestClocksImpl(db, T - 2 * DAY + MINUTE, deps);
+      assert.strictEqual(clockOf(db).serverRemindersSent, 1);
+
+      // Bob's phone delivers two hours later and plans, as RequestClockKeeper does, only what is
+      // still ahead of its delivery: the time already sent is not in it.
+      const deliveredAt = T - 2 * DAY + 2 * HOUR;
+      const phonePlan = SERVER_PLAN.filter((at) => at >= deliveredAt);
+      assert.deepStrictEqual(phonePlan, [T - DAY, T - HOUR]);
+      await writeAndTrigger(db, 'c1', Object.assign({}, clockOf(db), {
+        deliveredAtMillis: deliveredAt, remindersPlanned: phonePlan.length, reminderTimesMillis: phonePlan,
+      }));
+      for (let at = deliveredAt; at < T; at += HOUR) {
+        await index.sweepRequestClocksImpl(db, at, deps);
+      }
+      assert.deepStrictEqual(Object.keys(reminders(db)).sort(),
+          SERVER_PLAN.map((at) => `srv_request_reminder_c1_${at}`).sort());
+      assert.strictEqual(clockOf(db).serverRemindersSent, 3);
+      assert.strictEqual(clockOf(db).serverNextStepAt, T);
+    });
+
     it('theReminderGoesToTheAnsweringParentInTheClocksFamily', async () => {
       const db = withZone('Europe/Prague');
       await writeAndTrigger(db, 'c1', delivered(SERVER_PLAN));

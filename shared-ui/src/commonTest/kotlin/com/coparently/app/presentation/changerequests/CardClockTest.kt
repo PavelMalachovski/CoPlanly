@@ -106,6 +106,22 @@ class CardClockTest {
     }
 
     @Test
+    fun `a phone plan made after a server reminder never reads fewer planned than sent`() {
+        // The server sent one from its own plan of three; the phone then delivered and planned only
+        // the two still ahead. Sent is 1 and the server's later sends make it 3: never "3 of 2".
+        val base = card(RequestKind.CHANGE, ClockRole.PROPOSER, ANSWER_BY - 2 * DAY).timed.clock.copy(
+            serverReminderTimesMillis = listOf(ANSWER_BY - 2 * DAY - HOUR, ANSWER_BY - DAY, ANSWER_BY - HOUR),
+            deliveredAtMillis = ANSWER_BY - 2 * DAY,
+            remindersPlanned = 2,
+            reminderTimesMillis = listOf(ANSWER_BY - DAY, ANSWER_BY - HOUR)
+        )
+        assertEquals(2, base.copy(serverRemindersSent = 1).plannedReminders)
+        val allSent = base.copy(serverRemindersSent = 3)
+        assertEquals(3, allSent.remindersSent)
+        assertEquals(3, allSent.plannedReminders)
+    }
+
+    @Test
     fun `nothing planned by anybody shows no reminders row`() {
         val clock = card(RequestKind.CHANGE, ClockRole.PROPOSER, ANSWER_BY - 2 * DAY).timed.clock
         assertEquals(null, clock.plannedReminders)

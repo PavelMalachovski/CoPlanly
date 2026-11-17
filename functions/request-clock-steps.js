@@ -1,9 +1,11 @@
 /**
- * The server's steps of a request's clock (MON-25): the deadline push and the end, which the
- * proposer's phone ran from WorkManager jobs until part B (`RequestClockSteps.deadline`/`end` and
- * `RequestRecords` in `shared-data`). A port of those two, with the same decisions, acting in the
- * clock's own family (CLAUDE.md item 42). Nothing here schedules anything: `index.js` wires the
- * trigger that keeps `serverNextStepAt` and the sweep that calls [stepClock] for each due clock.
+ * The server's steps of a request's clock: the deadline push and the end (MON-25), which the
+ * proposer's phone ran from WorkManager jobs until part B, and the reminders to the answering
+ * parent (iPhone phase 4 part C), which the answering phone ran until then. A port of the phone's
+ * steps (the Kotlin `RequestClockSteps`, deleted in part C, and `RequestRecords` in `shared-data`),
+ * with the same decisions, acting in the clock's own family (CLAUDE.md item 42). Nothing here
+ * schedules anything: `index.js` wires the trigger that keeps `serverNextStepAt` and the sweep that
+ * calls [stepClock] for each due clock.
  *
  * **One step is one transaction.** [stepClock] re-reads the clock, does nothing when its
  * `serverNextStepAt` is no longer due, reads the request's record, and writes everything the step
@@ -568,6 +570,8 @@ async function remindOrPlan(tx, db, step) {
   if (look.status !== 'pending') return settle();
 
   const zone = await responderZone(tx, db, clock);
+  // With no stored zone (an older build delivered the plan) the quiet hours cannot be checked here;
+  // the phone placed its plan outside its own night, which is what is sent.
   if (zone !== null && reminderPlan.isQuietAt(nowMillis, zone)) {
     const morning = reminderPlan.nextMorning(nowMillis, zone);
     if (morning < doc.answerByMillis) {
@@ -586,8 +590,9 @@ async function remindOrPlan(tx, db, step) {
 }
 
 /**
- * Runs one step of one clock: the decision `RequestClockSteps.deadline` and `end` made on the
- * proposer's phone, by the state at [nowMillis] (spec §5.3).
+ * Runs one step of one clock: the decision the phones' `RequestClockSteps` made (deleted in iPhone
+ * phase 4 part C), by the state at [nowMillis] (spec §5.3); an open clock's reminders are
+ * [remindOrPlan]'s.
  *
  * - not due (no `serverNextStepAt`, or a later one; another run acted first): nothing, `notDue`;
  * - `OPEN` or `LAST_CHANCE`, or the deadline already told: the next moment, `rescheduled`;
@@ -664,8 +669,9 @@ async function stepClock(db, clockId, nowMillis, deps) {
 }
 
 /**
- * The end of a request nobody answered (`RequestClockSteps.closeUnanswered`), inside [stepClock]'s
- * transaction: every read first, then the closure, the card, the push and the withdrawal.
+ * The end of a request nobody answered (the phones' former `RequestClockSteps.closeUnanswered`),
+ * inside [stepClock]'s transaction: every read first, then the closure, the card, the push and the
+ * withdrawal.
  *
  * @param {!Object} tx the transaction.
  * @param {!Object} db Firestore.

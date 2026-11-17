@@ -1748,11 +1748,12 @@ service cloud.firestore {
     // **Seven fields are the scheduled function's alone**: `serverNextStepAt`,
     // `serverToldDeadlineAt`, `serverToldNoAnswerAt` and `serverSettledAt` (MON-25), and the
     // reminders' `serverReminderTimesMillis`, `serverRemindersSent` and `serverLastReminderAt`
-    // (iPhone phase 4 part C). It writes them as admin, which bypasses these rules. No client write may carry or change one, and nothing
-    // here has to name them: the create's key list excludes them and each update shape is a
-    // `hasOnly` of its own keys over `diff().affectedKeys()`. A clock that already holds them
-    // still takes every shape an older build writes, because the diff of an unrelated update
-    // never contains them. `request-deadlines.test.js` pins both directions.
+    // (iPhone phase 4 part C). It writes them as admin, which bypasses these rules. No client
+    // write may carry or change one, and nothing here has to name them: the create's key list
+    // excludes them and each update shape is a `hasOnly` of its own keys over
+    // `diff().affectedKeys()`. A clock that already holds them still takes every shape an older
+    // build writes, because the diff of an unrelated update never contains them.
+    // `request-deadlines.test.js` pins both directions.
 
     // The farthest deadline a clock may carry: 31 days past the write. The app clamps itself to
     // 30 (`AnswerBy.MAX_AHEAD_MILLIS`); the day between is for a phone whose clock runs fast.

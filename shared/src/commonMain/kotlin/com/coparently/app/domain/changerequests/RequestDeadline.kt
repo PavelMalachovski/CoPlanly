@@ -158,11 +158,19 @@ data class RequestDeadline(
         get() = if (deliveredAtMillis != null) reminderTimesMillis else serverReminderTimesMillis
 
     /**
-     * How many reminders were planned: the phone's count, else the size of the server's plan; null
-     * while neither has planned any.
+     * How many reminders were planned: the phone's count, else the size of the server's plan, and
+     * never fewer than [remindersSent]; null while neither has planned or sent any.
+     *
+     * The floor matters when the server sent a reminder from its own plan before the phone
+     * delivered: the phone plans only what is still ahead, so its count leaves out what was already
+     * sent, and "3 of 2" would read as nonsense.
      */
     val plannedReminders: Int?
-        get() = remindersPlanned ?: serverReminderTimesMillis.size.takeIf { it > 0 }
+        get() {
+            val planned = remindersPlanned ?: serverReminderTimesMillis.size.takeIf { it > 0 }
+            val sent = remindersSent
+            return if (planned == null && sent == 0) null else maxOf(planned ?: 0, sent)
+        }
 
     /**
      * How many reminders were given: what the server sent, or what an older build's phone counted as
