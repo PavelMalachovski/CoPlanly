@@ -99,7 +99,7 @@ internal object LegacyPushText {
             if (type == TYPE_CHAT_MESSAGE) {
                 val sender = data[PushPayload.ACTOR]?.takeIf { it.isNotBlank() }
                     ?: context.getString(R.string.app_name)
-                val body = chatCardOf(data)?.let { CardPushText.cardPushText(context, it) }
+                val body = chatCardOf(data)?.let { CardPushText.wordCard(context, it) }
                     ?: data[PushPayload.PREVIEW].orEmpty()
                 return PushText(sender, body)
             }
@@ -466,7 +466,8 @@ internal object LegacyPushText {
 
     object CardPushText {
 
-        fun cardPushText(context: Context, card: ActivityAnnouncement): String? {
+        // `cardPushText` in the app; renamed only, so no member is named after this object.
+        fun wordCard(context: Context, card: ActivityAnnouncement): String? {
             val locale = context.resources.configuration.locales[0]
             if (card.kind.isSettleUp) {
                 val month = card.whenIso?.let { iso -> runCatching { LocalDate.parse(iso) }.getOrNull() }

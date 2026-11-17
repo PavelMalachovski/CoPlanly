@@ -616,11 +616,13 @@ class UserRepositoryImpl(
     override suspend fun recordTimeZone(zone: String) {
         if (zone.isBlank() || zone.length > TIME_ZONE_MAX_LENGTH) return
         try {
-            val uid = firebaseAuthService.getCurrentUid() ?: return
-            val stored = firestoreUserDataSource.readUserOrThrow(uid) ?: return
-            if (stored[TIME_ZONE_KEY] == zone) return
-            firestoreUserDataSource.updateUser(uid, mapOf(TIME_ZONE_KEY to zone))
-                .onFailure { logger.e(TAG, "Failed to write the time zone to Firestore", it) }
+            val uid = firebaseAuthService.getCurrentUid()
+            // Read only for a signed-in account; a missing or unreadable profile is null.
+            val stored = uid?.let { firestoreUserDataSource.readUserOrThrow(it) }
+            if (uid != null && stored != null && stored[TIME_ZONE_KEY] != zone) {
+                firestoreUserDataSource.updateUser(uid, mapOf(TIME_ZONE_KEY to zone))
+                    .onFailure { logger.e(TAG, "Failed to write the time zone to Firestore", it) }
+            }
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (

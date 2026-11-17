@@ -65,9 +65,9 @@ class PushWordingIosTest {
 
     @Test
     fun theDayCountPluralReadsAsAndroidsInCzechRussianAndUkrainian() {
-        for ((language, type, count, text) in PLURALS) {
-            val body = wording(language).compose(type, mapOf("dayCount" to "$count"))?.body
-            assertEquals(text, body, "$language $type $count")
+        for (plural in PLURALS) {
+            val body = wording(plural.language).compose(plural.type, mapOf("dayCount" to "${plural.count}"))?.body
+            assertEquals(plural.text, body, "${plural.language} ${plural.type} ${plural.count}")
         }
     }
 

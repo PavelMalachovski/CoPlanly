@@ -9,7 +9,7 @@ package com.coparently.app.pushwording
  * An ISO date that cannot be read is answered as it came, never dropped: a payload from another
  * build must still say something rather than nothing.
  */
-interface ReaderClock {
+interface ReaderClock : ReaderMoney {
     /** The deadline of a request, epoch [millis], as the "Answer by …" sentence prints it. */
     fun answerBy(millis: Long): String
 
@@ -29,19 +29,6 @@ interface ReaderClock {
     fun eventStart(millis: Long): String
 
     /**
-     * [amount] (plain decimal text) in [currency], as a new expense's push prints it; null when the
-     * amount is not a number or the currency is not an ISO 4217 code.
-     */
-    fun money(amount: String, currency: String): String?
-
-    /**
-     * A chat card's or a reminder's amount: [amount] in [currency]'s conventions; the plain decimal
-     * with no currency; and [amount] as it came (or "") when it is not a number. An unknown currency
-     * code keeps the language's own currency rather than failing, as the thread's cards do.
-     */
-    fun amount(amount: String?, currency: String?): String
-
-    /**
      * A day standing on its own, with its weekday ("Saturday, October 3"), from its ISO date; as it
      * came when unreadable.
      */
@@ -55,4 +42,24 @@ interface ReaderClock {
 
     /** The day of the instant [millis] in the reader's zone, in the language's medium date style. */
     fun mediumDate(millis: Long): String
+}
+
+/**
+ * The amounts a notification prints, in the reader's language: the half of [ReaderClock] that is
+ * money, apart so each interface stays small. On Android `NumberFormat` and `currencyFormat`; on
+ * the iPhone `NSNumberFormatter`'s currency style.
+ */
+interface ReaderMoney {
+    /**
+     * [amount] (plain decimal text) in [currency], as a new expense's push prints it; null when the
+     * amount is not a number or the currency is not an ISO 4217 code.
+     */
+    fun money(amount: String, currency: String): String?
+
+    /**
+     * A chat card's or a reminder's amount: [amount] in [currency]'s conventions; the plain decimal
+     * with no currency; and [amount] as it came (or "") when it is not a number. An unknown currency
+     * code keeps the language's own currency rather than failing, as the thread's cards do.
+     */
+    fun amount(amount: String?, currency: String?): String
 }

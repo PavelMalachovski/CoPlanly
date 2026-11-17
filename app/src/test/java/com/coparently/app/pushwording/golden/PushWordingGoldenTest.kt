@@ -222,11 +222,7 @@ class PushWordingGoldenTest {
             add("$type bare" to mapOf(PushPayload.TYPE to type))
         }
         for (count in listOf("1", "2", "4", "5", "11", "21", "22", "25", "0", "many")) {
-            for (type in listOf(
-                PushPayload.DAY_SWAP_GROUP_OFFERED,
-                PushPayload.DAY_SWAP_GROUP_ACCEPTED,
-                PushPayload.DAY_SWAP_GROUP_DECLINED
-            )) {
+            for (type in GROUP_TYPES) {
                 add("$type count $count" to full(type) + (PushPayload.DAY_COUNT to count))
             }
         }
@@ -300,22 +296,26 @@ class PushWordingGoldenTest {
         PushPayload.CONVERSATION_ID to "a__b"
     ) + fields
 
+    /** A settle-up card of [kind] for October 2026, its money and moment in [facts]. */
+    private fun settleUp(kind: String, facts: Facts): Map<String, String> = card(kind, "EXPENSE", "2026-10", facts)
+
+    /** A card's money and moment: its `whenIso`, `amount` and `currency`, each optional. */
+    private data class Facts(val whenIso: String? = null, val amount: String? = null, val currency: String? = null)
+
     private fun card(
         kind: String,
         entityType: String,
         title: String?,
-        whenIso: String? = null,
-        amount: String? = null,
-        currency: String? = null
+        facts: Facts = Facts()
     ): Map<String, String> = chat(
         PushPayload.ACTIVITY_KIND to kind,
         PushPayload.ACTIVITY_ENTITY_TYPE to entityType,
         PushPayload.ACTIVITY_ENTITY_ID to "id1"
     ) + listOfNotNull(
         title?.let { PushPayload.ACTIVITY_TITLE to it },
-        whenIso?.let { PushPayload.ACTIVITY_WHEN_ISO to it },
-        amount?.let { PushPayload.ACTIVITY_AMOUNT to it },
-        currency?.let { PushPayload.ACTIVITY_CURRENCY to it }
+        facts.whenIso?.let { PushPayload.ACTIVITY_WHEN_ISO to it },
+        facts.amount?.let { PushPayload.ACTIVITY_AMOUNT to it },
+        facts.currency?.let { PushPayload.ACTIVITY_CURRENCY to it }
     )
 
     @Suppress("CyclomaticComplexMethod", "LongMethod")
@@ -324,22 +324,22 @@ class PushWordingGoldenTest {
             val name = kind.name
             when {
                 kind == ActivityKind.SETTLE_UP_OWED || kind == ActivityKind.SETTLE_UP_OWING -> {
-                    add(name to card(name, "EXPENSE", "2026-10", "2026-10-01", "450.00", "CZK"))
-                    add("$name euros" to card(name, "EXPENSE", "2026-10", "2026-10-01", "450.00", "EUR"))
-                    add("$name no when" to card(name, "EXPENSE", "2026-10", null, "450.00", "CZK"))
-                    add("$name unreadable when" to card(name, "EXPENSE", "2026-10", "October", "450.00", "CZK"))
-                    add("$name no currency" to card(name, "EXPENSE", "2026-10", "2026-10-01", "450.00"))
-                    add("$name unreadable amount" to card(name, "EXPENSE", "2026-10", "2026-10-01", "lots", "CZK"))
-                    add("$name no amount" to card(name, "EXPENSE", "2026-10", "2026-10-01", null, "CZK"))
-                    add("$name unknown currency" to card(name, "EXPENSE", "2026-10", "2026-10-01", "450.00", "XXZ"))
+                    add(name to settleUp(name, Facts("2026-10-01", "450.00", "CZK")))
+                    add("$name euros" to settleUp(name, Facts("2026-10-01", "450.00", "EUR")))
+                    add("$name no when" to settleUp(name, Facts(null, "450.00", "CZK")))
+                    add("$name unreadable when" to settleUp(name, Facts("October", "450.00", "CZK")))
+                    add("$name no currency" to settleUp(name, Facts("2026-10-01", "450.00")))
+                    add("$name unreadable amount" to settleUp(name, Facts("2026-10-01", "lots", "CZK")))
+                    add("$name no amount" to settleUp(name, Facts("2026-10-01", null, "CZK")))
+                    add("$name unknown currency" to settleUp(name, Facts("2026-10-01", "450.00", "XXZ")))
                 }
                 kind == ActivityKind.SUPPORT_PROPOSED || kind == ActivityKind.SUPPORT_ACCEPTED -> {
-                    add(name to card(name, "SUPPORT_AGREEMENT", "5", null, "3500.00", "CZK"))
-                    add("$name no currency" to card(name, "SUPPORT_AGREEMENT", "5", null, "3500.00"))
+                    add(name to card(name, "SUPPORT_AGREEMENT", "5", Facts(null, "3500.00", "CZK")))
+                    add("$name no currency" to card(name, "SUPPORT_AGREEMENT", "5", Facts(null, "3500.00")))
                 }
                 kind.isPayment -> {
-                    add(name to card(name, "PAYMENT", "2026-10", null, "450.00", "CZK"))
-                    add("$name unreadable month" to card(name, "PAYMENT", "October", null, "450.00", "EUR"))
+                    add(name to card(name, "PAYMENT", "2026-10", Facts(null, "450.00", "CZK")))
+                    add("$name unreadable month" to card(name, "PAYMENT", "October", Facts(null, "450.00", "EUR")))
                     add("$name no amount" to card(name, "PAYMENT", "2026-10"))
                 }
                 else -> for (type in ActivityEntityType.entries) {
@@ -355,19 +355,27 @@ class PushWordingGoldenTest {
             add("sticker $wire" to card("STICKER_SENT", "STICKER", wire))
         }
         add("custody proposal with family id" to card("CUSTODY_PROPOSED", "CUSTODY_PROPOSAL", "uidA__uidB"))
-        add("split proposal" to card("SPLIT_PROPOSED", "SPLIT_PROPOSAL", "", amount = "3500"))
+        add("split proposal" to card("SPLIT_PROPOSED", "SPLIT_PROPOSAL", "", Facts(amount = "3500")))
         add("unknown kind" to card("A_KIND_FROM_A_NEWER_BUILD", "EVENT", "Swimming"))
         add("unknown entity" to card("EVENT_CREATED", "A_THING", "Swimming"))
-        add("blank entity id" to chat(
+        val blankId = chat(
             PushPayload.ACTIVITY_KIND to "EVENT_CREATED",
             PushPayload.ACTIVITY_ENTITY_TYPE to "EVENT",
             PushPayload.ACTIVITY_ENTITY_ID to " "
-        ))
+        )
+        add("blank entity id" to blankId)
         add("card with blank actor" to card("EVENT_CREATED", "EVENT", "Zahnarzt") + (PushPayload.ACTOR to ""))
     }
 
     private companion object {
         val LANGUAGES = listOf("en", "cs", "de", "ru", "uk")
+
+        /** The three pushes that count a run of swapped days. */
+        val GROUP_TYPES = listOf(
+            PushPayload.DAY_SWAP_GROUP_OFFERED,
+            PushPayload.DAY_SWAP_GROUP_ACCEPTED,
+            PushPayload.DAY_SWAP_GROUP_DECLINED
+        )
 
         /**
          * Types worded after the move, which the legacy copy never knew: each has an oracle of its
