@@ -385,4 +385,94 @@ object EmulatorEnvironment {
             connection.disconnect()
         }
     }
+
+    /**
+     * The fields of `documents/[path]`, decoded as [queryAsAdmin] decodes them, read around the
+     * rules like [documentExists]; null when there is no such document. For what the server writes
+     * and no client model carries, such as a request clock's `server…` fields (MON-25).
+     */
+    fun documentAsAdmin(path: String): Map<String, Any?>? {
+        val url = URL(
+            "http://${requireHost()}:$FIRESTORE_PORT/v1/projects/$PROJECT_ID" +
+                "/databases/(default)/documents/$path"
+        )
+        val connection = url.openConnection() as HttpURLConnection
+        return try {
+            connection.connectTimeout = CONNECT_TIMEOUT_MS
+            connection.readTimeout = CONNECT_TIMEOUT_MS
+            connection.setRequestProperty("Authorization", "Bearer owner")
+            when (val code = connection.responseCode) {
+                HTTP_OK -> decodeFields(
+                    JSONObject(connection.inputStream.bufferedReader().readText()).optJSONObject("fields")
+                        ?: JSONObject()
+                )
+                HTTP_NOT_FOUND -> null
+                else -> error("Firestore emulator answered $code for $path")
+            }
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    /**
+     * Runs the request clocks' sweep once on the Functions emulator, as if at [atMillis] (MON-25).
+     *
+     * Production runs it every five minutes from the schedule, at the server's time, and a clock's
+     * end is a day past its deadline; neither can be waited out in a test. So `functions/index.js`
+     * exports `sweepRequestClocksOnEmulator`, which calls the same `sweepRequestClocksImpl` at the
+     * moment it is given, and exports it **only** under the Functions and Firestore emulators: a
+     * deploy never sees it. Called over the callable protocol, signed in as nobody.
+     */
+    fun sweepRequestClocks(atMillis: Long) {
+        val url = URL(
+            "http://${requireHost()}:$FUNCTIONS_PORT/$PROJECT_ID/$FUNCTIONS_REGION/sweepRequestClocksOnEmulator"
+        )
+        val body = JSONObject().put("data", JSONObject().put("atMillis", atMillis))
+        val connection = url.openConnection() as HttpURLConnection
+        try {
+            connection.connectTimeout = CONNECT_TIMEOUT_MS
+            connection.readTimeout = SWEEP_TIMEOUT_MS
+            connection.requestMethod = "POST"
+            connection.doOutput = true
+            connection.setRequestProperty("Content-Type", "application/json")
+            connection.outputStream.use { it.write(body.toString().toByteArray()) }
+            check(connection.responseCode == HTTP_OK) {
+                "Functions emulator answered ${connection.responseCode} for the request clock sweep"
+            }
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    /**
+     * Sweeps the request clocks at [atMillis] until the clock [clockId], read around the rules,
+     * satisfies [condition]; that clock's fields. Repeated because the trigger that schedules a
+     * clock (`onRequestClockWritten`) runs after the phone's write, not with it, and a sweep before
+     * it has run finds nothing due.
+     */
+    suspend fun awaitServerClock(
+        clockId: String,
+        atMillis: Long,
+        condition: (Map<String, Any?>) -> Boolean
+    ): Map<String, Any?> {
+        val deadline = System.currentTimeMillis() + SERVER_CLOCK_WAIT_MS
+        while (true) {
+            sweepRequestClocks(atMillis)
+            val clock = documentAsAdmin("request_deadlines/$clockId")
+            if (clock != null && condition(clock)) return clock
+            check(System.currentTimeMillis() < deadline) {
+                "The server's sweep at $atMillis never brought $clockId to the expected state: $clock"
+            }
+            delay(PUSH_POLL_MS)
+        }
+    }
+
+    /** Whether a push of [type] addressed to [targetUid] is in `notification_queue` now. */
+    fun hasQueuedPush(targetUid: String, type: String): Boolean =
+        queryAsAdmin("notification_queue", "targetUserId", targetUid)
+            .mapNotNull { it["data"] as? Map<*, *> }
+            .any { it["type"] == type }
+
+    private const val SWEEP_TIMEOUT_MS = 60_000
+    private const val SERVER_CLOCK_WAIT_MS = 30_000L
 }

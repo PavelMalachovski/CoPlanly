@@ -430,10 +430,20 @@
       "checklist": ["5.9"]
     },
     "request_deadline_passed": {
-      "exempt": "Covered by TwoParentServerClocksTest, added in Task 7 of the same branch (MON-25)"
+      "e2e": [
+        "TwoParentServerClocksTest#theProposerIsPushedAtTheDeadlineAndAtTheEnd"
+      ],
+      "checklist": ["5.9"]
     },
     "request_no_answer": {
-      "exempt": "Covered by TwoParentServerClocksTest, added in Task 7 of the same branch (MON-25)"
+      "e2e": [
+        "TwoParentServerClocksTest#aChangeRequestPastItsEndIsClosedByTheServer",
+        "TwoParentServerClocksTest#aCustodyProposalPastItsEndIsWithdrawnByTheServer",
+        "TwoParentServerClocksTest#aSplitProposalPastItsEndIsWithdrawnByTheServer",
+        "TwoParentServerClocksTest#aDaySwapPastItsEndIsClosedAsNoAnswer",
+        "TwoParentServerClocksTest#theProposerIsPushedAtTheDeadlineAndAtTheEnd"
+      ],
+      "checklist": ["5.9"]
     },
     "sticker_received": {
       "e2e": [
@@ -476,6 +486,12 @@
     },
     "backfillRecordFamilyIds": {
       "exempt": "Operator-only maintenance callable, not a phone-to-phone feature; functions/test covers it."
+    },
+    "sweepRequestClocksOnEmulator": {
+      "e2e": [
+        "TwoParentServerClocksTest",
+        "TwoParentRequestDeadlinesTest#aSwapWithADeadlineIsDeliveredOpenedGivenALastChanceAndAnswered"
+      ]
     },
     "backfillRequestClockSchedule": {
       "exempt": "Operator-only maintenance callable, not a phone-to-phone feature; functions/test/request-clock-sweep.test.js covers it."

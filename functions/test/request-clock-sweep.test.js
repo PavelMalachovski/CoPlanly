@@ -2,6 +2,8 @@ const test = require('firebase-functions-test')();
 const assert = require('assert');
 const {fakeDb} = require('./support/clock-fake-db');
 const index = require('../index');
+const {execFileSync} = require('child_process');
+const path = require('path');
 
 /**
  * Tests for the request clocks' schedule on the server (MON-25, spec §5.1, §5.2 and §5.6): the
@@ -393,6 +395,36 @@ describe('request clock schedule', () => {
       const wrapped = test.wrap(index.backfillRequestClockSchedule);
       await assert.rejects(() => wrapped({}, {auth: {uid: 'someone-else'}}), (err) => err.code === 'permission-denied');
       await assert.rejects(() => wrapped({}, {}), (err) => err.code === 'permission-denied');
+    });
+  });
+
+  describe('the emulator-only sweep', () => {
+    /**
+     * Whether `index.js`, loaded in a fresh process with [env], exports the emulator-only sweep.
+     * A fresh process because the module, once loaded here, keeps what it exported.
+     * @param {!Object} env variables to add to this process's environment.
+     * @return {string} `function` or `undefined`.
+     */
+    function exportedWith(env) {
+      const base = Object.assign({}, process.env);
+      delete base.FUNCTIONS_EMULATOR;
+      delete base.FIRESTORE_EMULATOR_HOST;
+      return execFileSync(process.execPath, ['-e',
+        'process.stdout.write(typeof require("./index").sweepRequestClocksOnEmulator)'],
+      {cwd: path.join(__dirname, '..'), env: Object.assign(base, {GCLOUD_PROJECT: 'demo-coplanly'}, env)},
+      ).toString();
+    }
+
+    it('is not exported where a deploy loads the code', () => {
+      assert.strictEqual(index.sweepRequestClocksOnEmulator, undefined);
+      assert.strictEqual(exportedWith({}), 'undefined');
+    });
+
+    it('needs both the Functions and the Firestore emulator', () => {
+      assert.strictEqual(exportedWith({FUNCTIONS_EMULATOR: 'true'}), 'undefined');
+      assert.strictEqual(exportedWith({FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080'}), 'undefined');
+      assert.strictEqual(
+          exportedWith({FUNCTIONS_EMULATOR: 'true', FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080'}), 'function');
     });
   });
 });

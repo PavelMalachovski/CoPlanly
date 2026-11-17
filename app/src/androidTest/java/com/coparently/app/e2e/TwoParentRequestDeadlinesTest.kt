@@ -37,6 +37,7 @@ import kotlinx.datetime.plus
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -66,7 +67,8 @@ import java.util.UUID
  * - **Opening the request is recorded** on the proposer's side.
  * - **The last chance is given only after the deadline**, reaches the answering parent as the
  *   `request_last_chance` push read back from `notification_queue`, and an answer under it is
- *   listed as Accepted in the inbox's history, with the clock left unclosed.
+ *   listed as Accepted in the inbox's history; the server's sweep, run past the last chance's end
+ *   (`EmulatorEnvironment.awaitServerClock`), settles the clock and closes nothing.
  * - **An expense split proposal is a request too** (October 2026): proposed through the production
  *   `FamilySettingsRepository` with a deadline, its clock reaches the co-parent, its push says when
  *   to answer by, and its `SPLIT_PROPOSED` card reaches their thread.
@@ -199,7 +201,10 @@ class TwoParentRequestDeadlinesTest : TwoParentTest() {
         return id
     }
 
-    /** Bob accepts [day] under its last chance: the clock stays unclosed, and the history says Accepted. */
+    /**
+     * Bob accepts [day] under its last chance: when the server's sweep reaches the last chance's end
+     * it finds the answer and settles the clock without closing it, and the history says Accepted.
+     */
     private suspend fun answerTheLastChance(familyId: String, day: LocalDate, id: String) {
         EmulatorEnvironment.step("deadlines: Bob accepts under the last chance")
         val date = day.toString()
@@ -216,8 +221,18 @@ class TwoParentRequestDeadlinesTest : TwoParentTest() {
         ).getOrThrow()
         val overrides = awaitOverrides(alice) { it[date]?.isAccepted == true }
 
+        EmulatorEnvironment.step("deadlines: the server sweeps past the last chance and closes nothing")
+        val lastChanceUntil = checkNotNull(checkNotNull(alice.requestDeadlineRepository.get(id)).lastChanceUntilMillis)
+        val settled = EmulatorEnvironment.awaitServerClock(id, lastChanceUntil + PAST_MARGIN_MS) {
+            it["serverSettledAt"] != null
+        }
+        assertNull("the server settled the answered request without closing it", settled["serverToldNoAnswerAt"])
         val clock = checkNotNull(alice.requestDeadlineRepository.get(id))
         assertNull("an answered request is never closed", clock.outcome)
+        assertFalse(
+            "nobody is told that an answered request went unanswered",
+            EmulatorEnvironment.hasQueuedPush(alice.uid, PushPayload.REQUEST_NO_ANSWER)
+        )
 
         val inbox = RequestInbox.build(
             scope = checkNotNull(RequestScope.of(alice.uid, bob.uid, setOf(bob.uid))),

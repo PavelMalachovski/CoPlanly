@@ -6560,6 +6560,37 @@ exports.sweepRequestClocks = regional.runWith({timeoutSeconds: 300}).pubsub
     });
 
 /**
+ * Whether this process is the Functions emulator talking to the Firestore emulator: both variables
+ * are set by `firebase emulators:exec` and by nothing in production, and with the second one set the
+ * Admin SDK reaches only the emulator, so code behind this can never touch the live project.
+ *
+ * @return {boolean}
+ */
+function onFirestoreEmulator() {
+  return process.env.FUNCTIONS_EMULATOR === 'true' && Boolean(process.env.FIRESTORE_EMULATOR_HOST);
+}
+
+if (onFirestoreEmulator()) {
+  /**
+   * **Emulator only**: runs [sweepRequestClocksImpl] at once, for the two-parent tests
+   * (`TwoParentServerClocksTest`), where waiting five minutes for the schedule — and a day for a
+   * clock's end — is not possible. `atMillis`, when a safe integer, is the moment to sweep at;
+   * otherwise the function's clock.
+   *
+   * Exported only when [onFirestoreEmulator], so a deploy, which loads this file without those
+   * variables, never sees it; the handler asks again in case it is ever reached some other way.
+   * In production only the schedule runs the sweep.
+   */
+  exports.sweepRequestClocksOnEmulator = regional.https.onCall(async (data) => {
+    if (!onFirestoreEmulator()) {
+      throw new functions.https.HttpsError('failed-precondition', 'Emulator only', {reason: 'not-emulator'});
+    }
+    const at = data && Number.isSafeInteger(data.atMillis) ? data.atMillis : Date.now();
+    return sweepRequestClocksImpl(admin.firestore(), at);
+  });
+}
+
+/**
  * Fills `serverNextStepAt` for the clocks open at deploy (spec §5.6), which no write has yet given
  * the trigger a chance to schedule:
  * - a clock with no outcome: [requestClocks.nextStepAt], unless it is settled;
