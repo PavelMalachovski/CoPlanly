@@ -420,7 +420,9 @@ const RULES = {
 
   // RequestDeadlineRepositoryImpl.start → RequestDeadlineDocument.createFields; `createdAt` is the
   // data source's server timestamp, and the later steps each write their own keys
-  // (RequestDeadlineDocument's delivered, seen, reminder, last-chance and closing fields).
+  // (RequestDeadlineDocument's delivered, seen, reminder, last-chance and closing fields). The
+  // server's own four fields (MON-25: `onRequestClockWritten` and the sweep's steps in
+  // functions/request-clock-steps.js) are epoch millis, present once the trigger or a step ran.
   request_deadlines: () => ({
     fixture: 'request_deadlines/create.json',
     serverAdded: { createdAt: TIMESTAMP },
@@ -428,6 +430,8 @@ const RULES = {
       deliveredAtMillis: INTEGER, remindersPlanned: INTEGER, reminderTimesMillis: arrayOf(INTEGER),
       seenAtMillis: INTEGER, remindersShown: INTEGER, lastChanceAt: TIMESTAMP,
       lastChanceUntilMillis: INTEGER, outcome: STRING, closedAt: TIMESTAMP,
+      serverNextStepAt: INTEGER, serverToldDeadlineAt: INTEGER, serverToldNoAnswerAt: INTEGER,
+      serverSettledAt: INTEGER,
     },
   }),
 
