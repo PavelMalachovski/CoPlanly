@@ -25,6 +25,7 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -127,6 +128,34 @@ class IosSupportRemindersTest {
         book.rearm()
 
         assertEquals(center.nowMillis + MINUTE_MILLIS, center.requests.getValue("support-$FAMILY-2026-11").atMillis)
+    }
+
+    @Test
+    fun aLateReminderOnAMonthsLastEveningIsDroppedForTheNextMonth() = runBlocking {
+        // November's reminder is late at 22:30 on the 30th: the next allowed time is 1 December,
+        // about a due day a month gone, so November's is dropped and December's is armed.
+        center.nowMillis = millis(LocalDateTime(2026, 11, 30, 22, 30))
+
+        book.rearm()
+
+        assertEquals(setOf("support-$FAMILY-2026-12"), center.requests.keys)
+        val december = center.requests.getValue("support-$FAMILY-2026-12")
+        assertEquals(millis(LocalDateTime(2026, 12, 12, 9, 0)), december.atMillis)
+    }
+
+    @Test
+    fun theArmedRecordIsWrittenOnlyOnceArmed() = runBlocking {
+        center.failPending = true
+
+        book.rearm()
+
+        assertTrue(center.requests.isEmpty())
+        assertNull(reminders.armed(ALICE, FAMILY))
+
+        center.failPending = false
+        book.rearm()
+
+        assertEquals(millis(LocalDateTime(2026, 11, 12, 9, 0)), reminders.armed(ALICE, FAMILY)?.atMillis)
     }
 
     @Test

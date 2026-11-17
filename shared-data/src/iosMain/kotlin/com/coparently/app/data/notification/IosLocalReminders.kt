@@ -25,9 +25,25 @@ data class LocalReminder(
 /**
  * What the child support reminders decided: the [reminders] to arm, and the id prefixes
  * ([keptPrefixes], `support-<familyId>-`) of the families whose server read failed, whose pending
- * reminder is kept as it was armed — a reminder that is not sure changes nothing.
+ * reminder is kept as it was armed — a reminder that is not sure changes nothing. [onArmed] is told
+ * of each reminder once it has been handed to the notification center, and only then, so a record
+ * of what was armed never names one that was not.
  */
-data class SupportPlan(val reminders: List<LocalReminder>, val keptPrefixes: List<String>)
+data class SupportPlan(
+    val reminders: List<LocalReminder>,
+    val keptPrefixes: List<String>,
+    val onArmed: (LocalReminder) -> Unit = {},
+)
+
+/**
+ * The account the local reminders may be planned for: [current], the signed-in uid, once the
+ * account check has run for it ([lastChecked], `LastSignedInUid`, which `IosAccountSwitch` writes
+ * after wiping a previous account's rows), else null. Sign-out keeps Room, so between a new
+ * account's sign-in and that wipe the previous account's events are still there to read; planning
+ * then would arm their titles under the new account.
+ */
+fun checkedAccount(current: String?, lastChecked: String?): String? =
+    current?.takeIf { it.isNotBlank() && it == lastChecked }
 
 /**
  * The iPhone's local reminders, event and child support together (iPhone phase 4 part C, design
@@ -140,6 +156,7 @@ class IosLocalReminders(
         val keep = (keptSupport + keptEvents + wanted.map { it.id }).toSet()
         center.remove(pending.filter { it !in keep })
         wanted.forEach { center.add(it.id, it.atMillis, it.title, it.body, it.data) }
+        supportPlan?.let { plan -> wantedSupport.forEach(plan.onArmed) }
     }
 
     /** [block]'s plan, or null — logged — when it failed. */

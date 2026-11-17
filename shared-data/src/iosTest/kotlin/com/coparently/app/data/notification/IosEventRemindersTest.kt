@@ -199,6 +199,45 @@ class IosEventRemindersTest {
         assertEquals(setOf("event-dentist"), center.requests.keys)
     }
 
+    @Test
+    fun aNewAccountPlansNothingBeforeItsAccountCheck() = runBlocking {
+        // Bob signed in where Alice signed out: Room still holds her events until the check wipes them.
+        var lastChecked: String? = "alice"
+        val gated = EventReminderPlanner(
+            events = { events },
+            uid = { checkedAccount("bob", lastChecked) },
+            wording = ::echoWording,
+            zone = { zone },
+        )
+        val gatedBook = IosLocalReminders(
+            center = center,
+            events = { now -> gated.plan(now) },
+            support = { supportPlan },
+            onCancelAll = {},
+            scope = scope,
+            now = { center.nowMillis },
+        )
+        events = listOf(event("alices", LocalDateTime(2026, 11, 18, 15, 0), reminderMinutes = 60))
+
+        gatedBook.rearm()
+        assertTrue(center.requests.isEmpty())
+
+        // The check ran for Bob (and wiped her rows); his own events are armed from then on.
+        lastChecked = "bob"
+        events = listOf(event("bobs", LocalDateTime(2026, 11, 18, 15, 0), reminderMinutes = 60))
+        gatedBook.rearm()
+        assertEquals("bob", center.requests.getValue("event-bobs").data["targetUserId"])
+    }
+
+    @Test
+    fun anAccountIsCheckedOnlyWhenTheCheckNamedIt() {
+        assertEquals("bob", checkedAccount("bob", "bob"))
+        assertNull(checkedAccount("bob", "alice"))
+        assertNull(checkedAccount("bob", null))
+        assertNull(checkedAccount(null, "bob"))
+        assertNull(checkedAccount("", ""))
+    }
+
     private fun support(id: String, at: LocalDateTime) = LocalReminder(id, millis(at), "t", "b", emptyMap())
 
     private fun millis(time: LocalDateTime): Long = time.toInstant(zone).toEpochMilliseconds()

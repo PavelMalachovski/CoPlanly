@@ -13,7 +13,13 @@ internal class FakeNotificationCenter(var nowMillis: Long = 0) : LocalNotificati
     /** Every request added and not removed, shown ones included, by id. */
     val requests = LinkedHashMap<String, LocalReminder>()
 
-    override suspend fun pending(): List<String> = waiting().map { it.id }
+    /** When true, [pending] throws, as a center that cannot be asked. */
+    var failPending = false
+
+    override suspend fun pending(): List<String> {
+        check(!failPending) { "The notification center could not be asked" }
+        return waiting().map { it.id }
+    }
 
     override fun add(id: String, atMillis: Long, title: String, body: String, data: Map<String, String>) {
         requests[id] = LocalReminder(id, atMillis, title, body, data)

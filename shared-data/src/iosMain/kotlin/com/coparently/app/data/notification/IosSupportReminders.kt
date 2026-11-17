@@ -18,7 +18,6 @@ import com.coparently.app.pushwording.ReminderWording
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.DateTimeUnit
-import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
@@ -108,7 +107,15 @@ class SupportReminderPlanner(
                 Decision.None -> reminders.disarm(account, family)
             }
         }
-        return SupportPlan(armed, kept)
+        return SupportPlan(armed, kept) { reminder -> recordArmed(account, reminder) }
+    }
+
+    /** Records [reminder] as armed, once the notification center has it: its family and month from its id. */
+    private fun recordArmed(account: String, reminder: LocalReminder) {
+        val family = reminder.data[PushPayload.FAMILY_ID] ?: return
+        val month = runCatching { IsoText.parseYearMonth(reminder.id.removePrefix(prefixOf(family))) }.getOrNull()
+            ?: return
+        reminders.setArmed(account, family, month, reminder.atMillis)
     }
 
     /** A month whose armed notification's instant has passed was shown: counted, once a month. */
@@ -128,19 +135,20 @@ class SupportReminderPlanner(
         val lastReminded = reminders.lastReminded(account, family)
         // This month, else the next one; each read from the server, the next one only if needed.
         val months = listOf(thisMonth, thisMonth.plusMonth()).filter { it >= terms.fromMonth && it != lastReminded }
+        // A month is taken when unpaid and its reminder still fits inside it; a failed read stops here.
+        fun decided(month: YearMonth, paid: Result<Payment?>): Boolean =
+            paid.isFailure || (paid.getOrNull() == null && instantOf(terms, month, days, nowMillis, zone) != null)
         val reads = mutableListOf<Pair<YearMonth, Result<Payment?>>>()
         for (candidate in months) {
             val paid = payment(PaymentId.of(family, PaymentKind.SUPPORT, candidate, terms.currency))
             reads += candidate to paid
-            if (paid.isFailure || paid.getOrNull() == null) break
+            if (decided(candidate, paid)) break
         }
-        val (month, open) = reads.lastOrNull()?.takeIf { (_, paid) -> paid.isFailure || paid.getOrNull() == null }
+        val (month, open) = reads.lastOrNull()?.takeIf { (candidate, paid) -> decided(candidate, paid) }
             ?: return Decision.None
         if (open.isFailure) return Decision.Keep
         val payee = terms.payeeIn(known.participants)
-        val reminder = reminderFor(account, family, terms, month, days, nowMillis, zone, payee)
-        reminders.setArmed(account, family, month, reminder.atMillis)
-        return Decision.Arm(reminder)
+        return Decision.Arm(reminderFor(account, family, terms, month, days, nowMillis, zone, payee))
     }
 
     /** [family]'s reminder for [month] under [terms], [days] before the due day, worded now. */
@@ -155,7 +163,7 @@ class SupportReminderPlanner(
         zone: TimeZone,
         payee: String?,
     ): LocalReminder {
-        val atMillis = instantOf(terms.dueDate(month).minus(days, DateTimeUnit.DAY), nowMillis, zone)
+        val atMillis = checkNotNull(instantOf(terms, month, days, nowMillis, zone)) { "No time left for $month" }
         val text = wording().support(
             dueMillis = terms.dueDate(month).atStartOfDayIn(zone).toEpochMilliseconds(),
             amount = DecimalText.plain(terms.amountMinor, PaymentQr.MONEY_SCALE),
@@ -166,17 +174,25 @@ class SupportReminderPlanner(
     }
 
     /**
-     * When the reminder for [remindDay] is shown: [REMIND_HOUR] o'clock that day, or — once that
-     * has passed — a minute from now, moved out of the quiet hours to the next [REMIND_HOUR].
+     * When the reminder for [month] is shown: [REMIND_HOUR] o'clock on the day [days] before its due
+     * day, or — once that has passed — a minute from now, moved out of the quiet hours to the next
+     * [REMIND_HOUR]. Null when that moved time falls after [month]: on a month's last evening it
+     * would come on the 1st, about a due day a month gone, so it is dropped and the next month
+     * is planned instead.
      */
-    private fun instantOf(remindDay: LocalDate, nowMillis: Long, zone: TimeZone): Long {
+    private fun instantOf(terms: SupportTerms, month: YearMonth, days: Int, nowMillis: Long, zone: TimeZone): Long? {
+        val remindDay = terms.dueDate(month).minus(days, DateTimeUnit.DAY)
         val planned = LocalDateTime(remindDay, REMIND_TIME).toInstant(zone).toEpochMilliseconds()
         if (planned > nowMillis) return planned
         val soon = nowMillis + LATE_DELAY_MILLIS
-        if (!ReminderPlan.isQuietAt(soon, zone)) return soon
-        val local = Instant.fromEpochMilliseconds(soon).toLocalDateTime(zone)
-        val day = if (local.time < REMIND_TIME) local.date else local.date.plus(1, DateTimeUnit.DAY)
-        return LocalDateTime(day, REMIND_TIME).toInstant(zone).toEpochMilliseconds()
+        val late = if (ReminderPlan.isQuietAt(soon, zone)) {
+            val local = Instant.fromEpochMilliseconds(soon).toLocalDateTime(zone)
+            val day = if (local.time < REMIND_TIME) local.date else local.date.plus(1, DateTimeUnit.DAY)
+            LocalDateTime(day, REMIND_TIME).toInstant(zone).toEpochMilliseconds()
+        } else {
+            soon
+        }
+        return late.takeIf { Instant.fromEpochMilliseconds(it).toLocalDateTime(zone).date.yearMonth <= month }
     }
 
     /** The payee's first name, or null — "Your co-parent" — when it cannot be read in time. */

@@ -38,6 +38,7 @@ import com.coparently.app.data.notification.LocalNotificationCenter
 import com.coparently.app.data.notification.SupportReminderPlanner
 import com.coparently.app.data.notification.UserNotificationCenter
 import com.coparently.app.data.notification.appReminderWording
+import com.coparently.app.data.notification.checkedAccount
 import com.coparently.app.data.notification.toReminderEvent
 import com.coparently.app.data.payment.PaymentStore
 import com.coparently.app.data.platform.Analytics
@@ -229,7 +230,9 @@ actual val platformDataModule: Module = module {
     }
     // The event and child support reminders as local notifications (phase 4 part C, Task 7): one
     // book for both, because iOS keeps at most 64 pending and the nearest 60 are armed, a support
-    // reminder first. Each plan reads at run time, so the stores' own graph is no cycle here.
+    // reminder first. Each plan reads at run time, so the stores' own graph is no cycle here, and
+    // only for an account the account check has run for: sign-out keeps Room, and a new account's
+    // first re-arm must not read the previous one's events before `IosAccountSwitch` wipes them.
     single<LocalNotificationCenter> { UserNotificationCenter }
     single {
         EventReminderPlanner(
@@ -238,14 +241,14 @@ actual val platformDataModule: Module = module {
                     .filter { it.reminderMinutes != null }
                     .map { it.toReminderEvent().copy(familyId = it.familyId) }
             },
-            uid = { get<SignedInUser>().getCurrentUid() },
+            uid = { checkedAccount(get<SignedInUser>().getCurrentUid(), get<LastSignedInUid>().get()) },
             wording = ::appReminderWording,
         )
     }
     single {
         SupportReminderPlanner(
             reminders = get(),
-            uid = { get<SignedInUser>().getCurrentUid() },
+            uid = { checkedAccount(get<SignedInUser>().getCurrentUid(), get<LastSignedInUid>().get()) },
             agreement = { familyId -> get<SupportAgreementStore>().readFromServer(familyId) },
             payment = { id -> get<PaymentStore>().readFromServer(id) },
             payeeName = { uid -> get<PairingRepository>().observeCoParentProfile(uid).first().name },
