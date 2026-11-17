@@ -69,8 +69,8 @@ class PushRoutingTest {
     @Test
     fun `the server's two request clock pushes open the inbox, on the schedule channel`() {
         for (type in listOf(PushPayload.REQUEST_DEADLINE_PASSED, PushPayload.REQUEST_NO_ANSWER)) {
-            assertEquals(type, PushDestination.CHANGE_REQUESTS, PushRouting.destinationOf(type))
-            assertEquals(type, PushChannel.SCHEDULE, PushRouting.channelOf(type))
+            assertEquals(PushDestination.CHANGE_REQUESTS, PushRouting.destinationOf(type), type)
+            assertEquals(PushChannel.SCHEDULE, PushRouting.channelOf(type), type)
         }
     }
 
