@@ -135,9 +135,9 @@ import org.koin.dsl.module
  * and its verification address ([InfoPlistExportVerifyAddress]), since phase 4's Task 7 Google
  * Calendar ([IosGoogleCalendarAccount]), since phase 4 part C's Task 5 the push token
  * ([IosPushRegistration]), since its Task 7 the event and child support reminders as local
- * notifications ([IosLocalReminders]) — and, for what the iPhone does not have yet (background
- * jobs), the stand-ins in
- * `IosUnavailable.kt`, which answer as a phone with nothing of the kind would. The two wordings the
+ * notifications ([IosLocalReminders]), since part D's Task 6 the school import's daily run on the
+ * syncs ([IosSchoolImportJob]) — and, for what the iPhone never has (a request clock's job), the
+ * stand-in in `NoRequestClockJobs.kt`, which answers as a phone with nothing of the kind would. The two wordings the
  * data layer writes into stored data read the app's strings, so `:shared-ui`'s `platformUiModule`
  * binds them (`IosPairingWording`, `IosSchoolImportWordings`); the graph resolves with both
  * modules, as `IosApp.start` builds it.
@@ -277,8 +277,8 @@ actual val platformDataModule: Module = module {
     single<SchoolImportScheduler> { IosSchoolImportJob }
     single { DailySchoolImport(get<SchoolImporter>(), get(), get(), get()) }
     single<SupportReminderScheduler> { IosSupportReminders(get()) }
-    // A sync while the app is open, one at a time, with the Google import after each (Task 6;
-    // the iPhone has no background job until phase 4). The lambdas resolve at run time, so the
+    // A sync while the app is open or in iOS's background refresh (phase 4 part D), one at a time,
+    // with the Google import after each (Task 6). The lambdas resolve at run time, so the
     // sync's own need of a `SyncRequester` (the pairing transition asks for one) is no cycle.
     single<SyncRequester> {
         ForegroundSyncRunner(

@@ -1831,8 +1831,8 @@ shared-data/ — Kotlin Multiplatform module (MON-24 phase 2, Tasks 5–8, done;
              Android has and the data layer itself needs: the 41 legacy migrations, SQLCipher,
              EncryptionManager, CrashlyticsManager, the database builder (di/DatabaseBuilder.kt)
              and the Android halves of a few seams. iosMain holds the iPhone's halves and, in
-             platformDataModule, a binding for every seam (stand-ins in di/koin/IosUnavailable.kt
-             where the iPhone has nothing yet). Its Koin modules are dataModules and
+             platformDataModule, a binding for every seam (stand-ins in di/koin/NoRequestClockJobs.kt,
+             the one left, where the iPhone has nothing yet). Its Koin modules are dataModules and
              platformDataModule, which appModules includes. Depends on shared/; no iOS framework
              of its own
 shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phase 2, Tasks 9–12,
@@ -2119,9 +2119,11 @@ the rules; spec `docs/superpowers/specs/2026-11-18-iphone-phase-4d-background-an
   Group's keys stay `coplanly.push.uid` and `coplanly.push.language`, plus this file.
 - **It is rewritten on every trigger the Android widget has**: after each sync run
   (`ForegroundSyncRunner.completedRuns`), a debounced write to `events`, `custody_models` or
-  `users`, a change of the signed-in uid, the family on screen, the remembered names or the app's
-  language, and every foreground. A language change rewrites it because the lines are worded in the
-  app's language; a night passing needs no write, since the timeline carries one entry per day.
+  `users`, a change of the signed-in uid, the family on screen or the remembered names, every
+  foreground and every unlock. No trigger follows the app's language as such: a language change
+  (in-app or in iOS Settings) is written by the next foreground's rewrite, which words the lines in
+  the language the app speaks then. A night passing needs no write, since the timeline carries one
+  entry per day.
 - **Sign-out writes the signed-out snapshot before the session ends.** `SessionEndingHook`
   (`shared-data` `iosMain`, run first by `IosAccountTraces` in `clearAfterSignOut` and
   `clearAccount`, which deletion and an account switch both reach) clears the remembered names and
@@ -2131,12 +2133,23 @@ the rules; spec `docs/superpowers/specs/2026-11-18-iphone-phase-4d-background-an
   item 9 states for reminders): on a phone's first sign-in the widget shows the signed-out line
   until the first sync's account check, so the previous account's rows never reach a new account's
   widget.
-- **The database stays `NSFileProtectionComplete`, so nothing runs while the phone is locked**
-  (owner decision, 18 November 2026): `UIApplication.isProtectedDataAvailable` false makes the
-  background chain end at once, reporting success and touching nothing, and the widget writes (the
-  snapshot and the signed-out fallback from a trigger) are skipped, retried on
-  `UIApplicationProtectedDataDidBecomeAvailable`. A real sign-out on an unlocked phone still writes
-  signed-out. Don't weaken the file's protection to make the chain run.
+- **The database stays `NSFileProtectionComplete`, so nothing reads it while the phone is locked**
+  (owner decision, 18 November 2026). Three gates, each on `UIApplication.isProtectedDataAvailable`:
+  - **A launch on a locked phone starts no session.** iOS may cold-launch the app for its
+    background refresh while the phone is locked; `IosApp.start` then builds Firebase and the graph
+    but defers `startSession` (the launch sync, the chat mirror, the profile, the widget's
+    collectors, the push and reminder followers, the background request's sign-out cancel) until
+    `UIApplicationProtectedDataDidBecomeAvailable`, observed once on the main queue
+    (`whenProtectedDataAvailable`).
+  - **The background chain ends at once, reporting success and touching nothing** while locked
+    (`BackgroundRefresh`), so its completion is still called exactly once.
+  - **Inside a running session** (the phone locked again later), the widget writes (the snapshot and
+    the signed-out fallback from a trigger) are skipped and retried on the next unlock, and a uid
+    read as null then is taken neither for a sign-out by the widget nor for one by the background
+    request's cancel. Every widget collector that reads Room or the parents logs a failure
+    (`.catch`) rather than taking the process down.
+  A real sign-out on an unlocked phone still writes signed-out. Don't weaken the file's protection
+  to make the chain run, and don't start a Room reader before `startSession`.
 - **`BackgroundRefresh`** (`ios/BackgroundRefresh.kt`) is the chain a `BGAppRefreshTask` runs: signed
   out or locked, it ends with no call; otherwise it syncs (`ForegroundSyncRunner.syncAndAwait`, which
   joins a run in progress), words the widget and ends reporting success; a failed sync is logged
@@ -2220,7 +2233,7 @@ changed. Three exceptions, each by a file's reason:
   `AndroidDeviceRegion`) and of GitLive (`AndroidCallableFunctions`, `FirestorePlatform.android.kt`).
 - **`shared-data/src/iosMain/`**: the iPhone's halves of the same (`data/local/IosDatabase.kt`, the
   Keychain's `KeychainTextStore`, Darwin's engine, …) and `di/koin/PlatformDataModule.ios.kt` with
-  the stand-ins in `di/koin/IosUnavailable.kt`.
+  the stand-in in `di/koin/NoRequestClockJobs.kt` (`IosUnavailable.kt` until phase 4 part D left it one).
 - **`app/src/main/java/com/coparently/app/data/`**, on purpose: a `Worker` or WorkManager scheduler,
   a notification or an alarm (`data/notification/`, `PushNotifier`; their text is `:push-wording`'s
   since iPhone phase 4 part C), a string resource (`AndroidPairingWording`,
@@ -2501,7 +2514,8 @@ receipt rules are unchanged. It is bound in `exportDataModule`; the e2e parent b
 takes** (Task 8j; `di/koin/PlatformDataModule.ios.kt`): GitLive's default instances, the app's
 directories, the database on the bundled driver and its fifteen DAOs, the Keychain's store, the
 no-op telemetry, the network monitor and the two HTTP clients, and, for what the iPhone does not
-have yet, the stand-ins in `di/koin/IosUnavailable.kt`. At Task 8j these were: nobody signed in, no
+have yet, the stand-ins in `di/koin/IosUnavailable.kt` (since phase 4 part D
+`di/koin/NoRequestClockJobs.kt`, the one left). At Task 8j these were: nobody signed in, no
 push, no Google Calendar, no Cloud Storage (every bucket call an `IOException`), nothing picked, no
 background job or notice, no verification address, and no wording (a pairing's thread title and a
 school import's titles are stored data a co-parent reads, so no English stand-in is written; asking

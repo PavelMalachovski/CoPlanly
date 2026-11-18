@@ -16,9 +16,10 @@ import kotlinx.coroutines.launch
 
 /**
  * The iPhone's [SyncRequester] (MON-24 phase 3, Task 6): runs the sync in the app's own scope while
- * the app is open, where Android hands it to WorkManager (`SyncWorker.syncNow`). The iPhone has no
- * background job yet (phase 4), so a sync runs at launch, on every return to the foreground and
- * whenever the data layer asks for one (a pairing transition, say).
+ * the app is open, where Android hands it to WorkManager (`SyncWorker.syncNow`). A sync runs at
+ * launch, on every return to the foreground, whenever the data layer asks for one (a pairing
+ * transition, say) and, since phase 4 part D, in the background refresh iOS grants now and then
+ * (`BGAppRefreshTask`, through [syncAndAwait]).
  *
  * The rule is `SyncWorker`'s (CLAUDE.md item 22):
  * - **One run at a time.** A request while idle starts a run; requests made together coalesce.

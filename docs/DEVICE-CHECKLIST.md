@@ -2897,15 +2897,21 @@ Background App Refresh on in iOS Settings → General.
       right. Both are readable at the default text size and the medium one's two columns do not
       clip a typical day. Tap each: the app opens on the Calendar, on today.
 - [ ] **Locked phone, refresh fires: nothing happens, nothing fails.** Lock the phone and let a
-      refresh fire (Xcode: Debug → Simulate Background Fetch, or `e -l objc -- (void)[[BGTaskScheduler
-      sharedScheduler] _simulateLaunchForTaskWithIdentifier:@"app.coplanly.refresh"]` in the
-      debugger, with the phone locked after being unlocked once). The run ends at once, no sync
+      refresh fire (on a development build, pause in the debugger and run `e -l objc -- (void)
+      [[BGTaskScheduler sharedScheduler] _simulateLaunchForTaskWithIdentifier:@"app.coplanly.refresh"]`,
+      with the phone locked after being unlocked once; Xcode's Debug → Simulate Background Fetch
+      launches no `BGAppRefreshTask` and checks nothing here). The run ends at once, no sync
       starts, no crash or error appears in the console, and the widget still shows what it last
       drew.
-- [ ] **Signed out.** Sign out in the app: the widget shows "Sign in to CoPlanly to see today." and
-      nothing of the account (no name, no event). Sign in again as the same account, then as
-      another: the widget shows the signed-out line until the first sync, then only that
-      account's day.
+- [ ] **Locked phone, cold launch.** Lock the phone, kill the app, wait for a background refresh (or
+      reboot and leave it locked): no crash in the device log (Xcode → Devices and Simulators →
+      View Device Logs, no CoPlanly report and no "CoPlanly uncaught exception" line). Unlock and
+      open the app: the session starts (the sync runs, the chat follows) and the widget updates.
+- [ ] **Signed out.** Sign out in the app: the widget shows "Sign in to CoPlanly to see your day."
+      (the app's own sentence, in the app's language) and nothing of the account (no name, no
+      event). Sign in again as the same account: the widget shows that account's day. Then as
+      another account: the widget shows the signed-out line until that account's first sync, then
+      only that account's day.
 - [ ] **Language.** Change the app's language (iOS Settings → CoPlanly → Language, or the phone's
       first language, Czech then German): open the app once and the widget's lines, its custody
       sentence, times and the gallery's name read in the new language.

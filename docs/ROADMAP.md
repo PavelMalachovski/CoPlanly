@@ -2825,7 +2825,7 @@ notes list each file):
   0.9.x does not recognise AGP 9.3's Android KMP library target; the `unit` variant is wired for the
   shared modules (CI hygiene, below).
 - **The iPhone's stand-ins, which phase 3 and 4 replace.** In `:shared-data`'s
-  `di/koin/IosUnavailable.kt` and `platformDataModule`: ~~`NoAccountDeletion`~~ (replaced in part
+  `di/koin/NoRequestClockJobs.kt` (`IosUnavailable.kt` until phase 4 part D) and `platformDataModule`: ~~`NoAccountDeletion`~~ (replaced in part
   B's Task 11 by `IosAccountDeletion`: the `deleteAccount` callable, then the wipe Android's
   `AccountDeletionService` does and the session's end; Settings' row now deletes the account on the
   iPhone, held by `IosAccountDeletionTest` on the emulators and the walk's last step), ~~`NoPush`~~ (replaced in phase 4's part C by `IosPushRegistration`: the push switch, the FCM

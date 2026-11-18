@@ -102,12 +102,15 @@ struct TodayProvider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<TodayEntry>) -> Void) {
+        let now = Date()
+        let calendar = Calendar.current
         let entries = TodayTimeline.entries(
             snapshot: TodaySnapshotFile.read(),
-            now: Date(),
-            calendar: Calendar.current
+            now: now,
+            calendar: calendar
         )
-        completion(Timeline(entries: entries, policy: .atEnd))
+        let policy = TodayTimeline.policy(entries: entries, now: now, calendar: calendar)
+        completion(Timeline(entries: entries, policy: policy))
     }
 }
 
@@ -144,6 +147,20 @@ enum TodayTimeline {
         let afterLast = calendar.date(byAdding: .day, value: 1, to: lastDay) ?? lastDay
         entries.append(TodayEntry(date: max(afterLast, now), content: .stale(snapshot.staleLine)))
         return entries
+    }
+
+    /// When WidgetKit asks for the next timeline: at its last entry while that is still ahead (the
+    /// day after the snapshot's last, where the stale line starts), otherwise (no snapshot, signed
+    /// out, or every day already passed) at the next local midnight, never at once: an entry at now
+    /// with `.atEnd` would ask again immediately and spend the widget's reload budget. The app asks
+    /// for a reload itself (`WidgetReloadBridge`) whenever it writes a new snapshot.
+    static func policy(entries: [TodayEntry], now: Date, calendar: Calendar) -> TimelineReloadPolicy {
+        if let last = entries.last, last.date > now {
+            return .atEnd
+        }
+        let today = calendar.startOfDay(for: now)
+        let midnight = calendar.date(byAdding: .day, value: 1, to: today) ?? now.addingTimeInterval(86_400)
+        return .after(midnight)
     }
 
     /// The local midnight of an ISO day ("2026-11-18"), read in the Gregorian calendar whatever the

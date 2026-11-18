@@ -17,7 +17,8 @@ import UserNotifications
 ///
 /// The background refresh (iPhone phase 4 part D): the handler for `app.coplanly.refresh` is
 /// registered before launching ends (`BackgroundRefreshBridge`), and runs the shared chain
-/// (`IosApp.runBackgroundRefresh`), which ends at once while the phone is locked.
+/// (`IosApp.runBackgroundRefresh`), which ends at once while the phone is locked. A launch iOS
+/// makes for it on a locked phone starts the shared session only once the phone is unlocked.
 @main
 final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     /// This iPhone's Firebase Messaging token, for the shared code.
@@ -39,11 +40,13 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         do {
             try IosApp.shared.start(
                 config: config,
-                google: GoogleSignInBridge(),
-                apple: AppleSignInBridge(),
-                pushToken: push,
-                widgetReload: WidgetReloadBridge(),
-                background: BackgroundRefreshBridge()
+                bridges: IosBridges(
+                    google: GoogleSignInBridge(),
+                    apple: AppleSignInBridge(),
+                    pushToken: push,
+                    widgetReload: WidgetReloadBridge(),
+                    background: BackgroundRefreshBridge()
+                )
             )
         } catch {
             fatalError("The shared code did not start: \(error)")

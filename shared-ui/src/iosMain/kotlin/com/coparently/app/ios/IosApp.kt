@@ -66,6 +66,7 @@ import platform.Foundation.NSOperationQueue
 import platform.UIKit.UIApplication
 import platform.UIKit.UIApplicationProtectedDataDidBecomeAvailable
 import platform.UIKit.UIViewController
+import platform.darwin.NSObjectProtocol
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.experimental.ExperimentalNativeApi
 import kotlin.native.setUnhandledExceptionHook
@@ -138,56 +139,44 @@ object IosApp {
      * platform halves, and [iosAppModule]. Then it starts what runs for the whole session
      * ([startSession]). All before the first screen.
      *
+     * On a phone whose protected data cannot be read yet (iOS launching the app for its background
+     * refresh while the phone is locked, phase 4 part D), [startSession] waits for the phone to be
+     * unlocked (`UIApplicationProtectedDataDidBecomeAvailable`, [whenProtectedDataAvailable]): the
+     * database keeps `NSFileProtectionComplete` (owner decision (b), CLAUDE.md item 20), and the
+     * session's collectors read it. The graph is up at once, so the background run ends at once, by
+     * its own rule ([BackgroundRefresh]).
+     *
      * The once-per-process guard is claimed before any of it, so a second call changes nothing,
      * even after a first call that failed part-way: Firebase and Koin refuse to start twice.
      *
-     * @param google Google's sign-in sheet, which the app's Swift side runs (`GoogleSignInBridge`);
-     *   the sign-in screen offers it only where it is available ([IosCredentialSignIn]), Settings
-     *   connects Google Calendar through it where the build names the web client
-     *   (`IosGoogleCalendarSignIn`), and its session ends with ours ([SignInProviderSession]).
-     * @param apple Apple's sign-in sheet, which the app's Swift side runs (`AppleSignInBridge`); the
-     *   sign-in screen and the sign-in methods offer it only while the bundle's `CoplanlyAppleSignIn`
-     *   flag is on ([IosCredentialSignIn.appleAvailable]).
-     * @param pushToken This iPhone's Firebase Messaging token, which the app's Swift side holds
-     *   (`PushTokenBridge`): what the push registration keeps on the profile and detaches at
-     *   sign-out (phase 4 part C).
-     * @param widgetReload Asks WidgetKit to draw the Today widget again, which the app's Swift side
-     *   implements (`WidgetReloadBridge`): what the widget's snapshot writer calls once it has written
-     *   a snapshot that changed (phase 4 part D).
-     * @param background The background refresh's scheduling, which the app's Swift side implements
-     *   over `BGTaskScheduler` (`BackgroundRefreshBridge`): a request submitted on entering the
-     *   background and at the end of each run while somebody is signed in, and cancelled when nobody
-     *   is (sign-out, deletion; phase 4 part D, [runBackgroundRefresh]).
+     * @param config What the app's own build hands the shared code.
+     * @param bridges The Swift side's bridges: the Google and Apple sheets, the push token, the
+     *   widget's reload and the background refresh's scheduling ([IosBridges]).
      * @throws IllegalStateException when called a second time.
      */
     @Throws(Throwable::class)
-    fun start(
-        config: IosAppConfig,
-        google: GoogleIdTokenSource,
-        apple: AppleIdSource,
-        pushToken: IosPushToken,
-        widgetReload: WidgetReload,
-        background: BackgroundScheduling,
-    ) {
+    fun start(config: IosAppConfig, bridges: IosBridges) {
         started.claim()
         reportUncaughtExceptions()
         IosFirebase.configure(config)
         // After Firebase, which the sign-out needs; before Koin builds the preference store.
+        val google = bridges.google
         clearPreviousInstall(google.session())
         val koin = startKoin {
             modules(
                 dataModules + platformDataModule + uiModules + platformUiModule +
-                    iosAppModule(google, pushToken, widgetReload, appGroupWidgetDirectory())
+                    iosAppModule(google, bridges.pushToken, bridges.widgetReload, appGroupWidgetDirectory())
             )
         }.koin
+        val background = bridges.background
         this.background = background
-        startSession(koin, background)
+        whenProtectedDataAvailable { startSession(koin, background) }
         this.koin = koin
         this.google = google
         val appleSignIn = bundleAppleSignIn()
         credentialSignIn = IosCredentialSignIn(
             google = google,
-            apple = apple,
+            apple = bridges.apple,
             appleSignIn = appleSignIn,
             appleAccount = GitLiveAppleAccount(Firebase.auth, koin.get<AppleTokens>()),
         )
@@ -220,8 +209,8 @@ object IosApp {
      * the uid ([IosPushRegistration.sessionChanged]), as the local reminders are planned again
      * ([IosLocalReminders.requestRearm]). Each is harmless while nobody is signed in,
      * as on Android: the mirror waits for a co-parent, the profile for an account, and a sync with
-     * nobody signed in ends at once. Telemetry and the periodic job are not here: the iPhone collects
-     * nothing and has no background job until phase 4. Since phase 4 part D the Today widget's
+     * nobody signed in ends at once. Telemetry is not here: the iPhone collects nothing. The periodic
+     * job is iOS's background refresh since phase 4 part D ([runBackgroundRefresh]), and the Today widget's
      * snapshot is written on every trigger `followWidget` lists, and on every return to the
      * foreground, and the background refresh's request ([background]) is submitted on every entry
      * into the background while an account is signed in and cancelled whenever none is.
@@ -258,7 +247,10 @@ object IosApp {
         // pending request withdrawn at sign-out and deletion, so a signed-out phone is never woken.
         IosLifecycle.observeBackground { if (signedIn.getCurrentUid() != null) background.schedule() }
         scope.launch {
-            signedIn.observeCurrentUid().distinctUntilChanged().collect { if (it == null) background.cancel() }
+            // A uid read as null while the phone is locked again is no sign-out (as for the widget).
+            signedIn.observeCurrentUid().distinctUntilChanged().collect {
+                if (it == null && protectedDataAvailable()) background.cancel()
+            }
         }
     }
 
@@ -555,8 +547,39 @@ private fun followWidget(
             .collect { ask() }
     }
     val parents = koin.get<ParentsSource>()
-    scope.launch { parents.observe().collect { if (names.remember(it)) ask() } }
+    scope.launch {
+        parents.observe()
+            .catch { logger.w(WIDGET_TAG, "The Today widget stopped following the parents' names", it) }
+            .collect { if (names.remember(it)) ask() }
+    }
     return ask
+}
+
+/**
+ * Runs [block] on the main thread now when the phone's protected data can be read, or else once,
+ * when it can (`UIApplicationProtectedDataDidBecomeAvailable`, observed on the main queue, the
+ * observer then removed): a launch iOS made for the background refresh on a locked phone starts its
+ * session only once the phone is unlocked ([IosApp.start]). Call on the main thread.
+ */
+private fun whenProtectedDataAvailable(block: () -> Unit) {
+    if (protectedDataAvailable()) {
+        block()
+    } else {
+        val center = NSNotificationCenter.defaultCenter
+        var observer: NSObjectProtocol? = null
+        observer = center.addObserverForName(
+            name = UIApplicationProtectedDataDidBecomeAvailable,
+            `object` = null,
+            queue = NSOperationQueue.mainQueue,
+        ) { _ ->
+            // Once: a later unlock (the phone locked and unlocked again) starts nothing more.
+            observer?.let { token ->
+                observer = null
+                center.removeObserver(token)
+                block()
+            }
+        }
+    }
 }
 
 /**

@@ -15,8 +15,12 @@ import com.coparently.app.presentation.common.Parents
  * last loaded [Parents] here while it is on screen, and the widget reads them back.
  *
  * Kept in [SecurePreferences] (`EncryptedPreferences` on Android, the Keychain's store on the
- * iPhone), beside the account's other local state, and so cleared with it on sign-out, an account
- * switch and account deletion; [clear] forgets these keys alone. Keyed to the signed-in uid as well:
+ * iPhone), beside the account's other local state. How they are forgotten when a session ends
+ * differs by platform: on Android the whole store is cleared (`EncryptedPreferences.clear()`) on
+ * sign-out, an account switch and account deletion, these keys with it; on the iPhone the app's
+ * session-ending hook (`widgetSessionEnding`, run first by `IosAccountTraces` on the same three)
+ * calls [clear] before anything else is cleared, so the names are gone even where the store
+ * outlives the session. [clear] forgets these keys alone. Keyed to the signed-in uid as well:
  * [recall] refuses a snapshot whose own parent is somebody else, so the home screen never names
  * the previous account's family for the moment before the new one's names load.
  *

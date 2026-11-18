@@ -10,6 +10,7 @@ import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.widget.WidgetClock
 import com.coparently.app.presentation.widget.WidgetSnapshot
 import com.coparently.app.pushwording.WordingStrings
+import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
@@ -35,6 +36,7 @@ import kotlin.test.assertTrue
  * Over a temporary directory of the test's own, with the sources and the wording as fakes, so no
  * Room, Firebase or App Group is touched.
  */
+@OptIn(ExperimentalForeignApi::class)
 class WidgetSnapshotWriterTest {
 
     private val directory = Path(NSTemporaryDirectory(), "widget-${NSUUID().UUIDString}")
