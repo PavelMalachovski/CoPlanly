@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalForeignApi::class)
+@file:OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class)
 
 package com.coparently.app.ios.controls
 
@@ -48,6 +48,7 @@ import platform.darwin.NSObject
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
 import platform.darwin.dispatch_queue_create
+import kotlin.experimental.ExperimentalNativeApi
 import kotlin.native.ref.WeakReference
 
 /**
