@@ -12,6 +12,8 @@ import platform.AVFoundation.AVAuthorizationStatusNotDetermined
 import platform.AVFoundation.AVCaptureConnection
 import platform.AVFoundation.AVCaptureDevice
 import platform.AVFoundation.AVCaptureDeviceInput
+import platform.AVFoundation.AVCaptureDevicePositionBack
+import platform.AVFoundation.AVCaptureDeviceTypeBuiltInWideAngleCamera
 import platform.AVFoundation.AVCaptureMetadataOutput
 import platform.AVFoundation.AVCaptureMetadataOutputObjectsDelegateProtocol
 import platform.AVFoundation.AVCaptureOutput
@@ -22,6 +24,7 @@ import platform.AVFoundation.AVMediaTypeVideo
 import platform.AVFoundation.AVMetadataMachineReadableCodeObject
 import platform.AVFoundation.AVMetadataObjectTypeQRCode
 import platform.AVFoundation.authorizationStatusForMediaType
+import platform.AVFoundation.defaultDeviceWithDeviceType
 import platform.AVFoundation.requestAccessForMediaType
 import platform.CoreGraphics.CGRectMake
 import platform.CoreGraphics.CGSizeMake
@@ -157,7 +160,12 @@ internal class QrScannerController(
             AVAuthorizationStatusNotDetermined ->
                 AVCaptureDevice.requestAccessForMediaType(AVMediaTypeVideo) { granted ->
                     dispatch_async(dispatch_get_main_queue()) {
-                        if (granted) startSession() else cancel()
+                        if (granted) {
+                            startSession()
+                        } else {
+                            logger.w(TAG, "The camera was refused; the scanner closes")
+                            cancel()
+                        }
                     }
                 }
             // Denied, or restricted by the phone's own settings.
@@ -171,7 +179,7 @@ internal class QrScannerController(
     /** Opens the back camera, reads QR codes from it on the main queue, and starts the session. */
     private fun startSession() {
         if (finished) return
-        val device = AVCaptureDevice.defaultDeviceWithMediaType(AVMediaTypeVideo)
+        val device = backCamera()
         val input = device?.let {
             AVCaptureDeviceInput.deviceInputWithDevice(it, error = null) as? AVCaptureDeviceInput
         }
@@ -277,3 +285,13 @@ internal class QrScannerController(
         const val HINT_SHADOW_RADIUS_PT = 4.0
     }
 }
+
+/**
+ * The phone's back wide-angle camera, the one a QR is held up to; null on a phone without one (and on
+ * the simulator).
+ */
+internal fun backCamera(): AVCaptureDevice? = AVCaptureDevice.defaultDeviceWithDeviceType(
+    AVCaptureDeviceTypeBuiltInWideAngleCamera,
+    mediaType = AVMediaTypeVideo,
+    position = AVCaptureDevicePositionBack
+)

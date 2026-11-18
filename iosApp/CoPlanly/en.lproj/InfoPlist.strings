@@ -1,2 +1,2 @@
 /* The camera permission question (MON-24 phase 3, part C, Task 11): what the camera is for. */
-"NSCameraUsageDescription" = "CoPlanly uses the camera to photograph a receipt or a document you add.";
+"NSCameraUsageDescription" = "CoPlanly uses the camera to photograph a receipt or a document you add, and to scan a co-parent’s invitation QR code.";

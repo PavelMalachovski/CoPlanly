@@ -6,6 +6,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import com.coparently.app.data.platform.logger
 import com.coparently.app.ios.controls.QrScannerController
+import com.coparently.app.ios.controls.backCamera
 import com.coparently.app.ios.controls.presentWhenSettled
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.pairing_qr_hint
@@ -24,7 +25,7 @@ import platform.UIKit.UIViewController
  * full-screen [QrScannerController], presented from the screen's own view controller once nothing
  * there is moving ([presentWhenSettled]), as Android's `QRScannerActivity` is started.
  *
- * [available] is whether the phone has a camera (false on the simulator, where the pairing form
+ * [available] is whether the phone has a back camera (false on the simulator, where the pairing form
  * then draws no scan button). A scan hands [QrScanner.rememberScanner]'s `onScanned` a code
  * `PairingUri.extractCode` accepted, once, and the screen redeems it as it redeems a typed one
  * (CLAUDE.md item 37); Cancel or a refused camera calls nothing.
@@ -32,7 +33,7 @@ import platform.UIKit.UIViewController
 internal object IosQrScanner : QrScanner {
 
     override val available: Boolean
-        get() = AVCaptureDevice.defaultDeviceWithMediaType(AVMediaTypeVideo) != null
+        get() = backCamera() != null
 
     @Composable
     override fun rememberScanner(onScanned: (code: String) -> Unit): PlatformLauncher {

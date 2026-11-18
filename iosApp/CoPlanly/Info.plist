@@ -55,7 +55,7 @@
 		</dict>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>CoPlanly uses the camera to photograph a receipt or a document you add.</string>
+	<string>CoPlanly uses the camera to photograph a receipt or a document you add, and to scan a co-parent’s invitation QR code.</string>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>app.coplanly.refresh</string>
