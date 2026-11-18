@@ -112,7 +112,7 @@ class IosKoinGraphTest {
         val koin = startKoin {
             modules(
                 dataModules + platformDataModule + uiModules + platformUiModule +
-                    iosAppModule(NoGoogle, NoTestPushToken)
+                    iosAppModule(TEST_BUILD_VALUES, NoGoogle, NoTestPushToken)
             )
         }.koin
         try {

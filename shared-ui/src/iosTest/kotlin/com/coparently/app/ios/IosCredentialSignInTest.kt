@@ -112,7 +112,9 @@ class IosCredentialSignInTest {
         // The graph's sign-out half as `IosApp.start` builds it: the traces, the app's module and
         // the widget's remembered names, which `uiModules` binds and the session's end clears.
         val names = module { single { TodayWidgetNames(get()) } }
-        val koin = startKoin { modules(platformDataModule + iosAppModule(google, NoTestPushToken) + names) }.koin
+        val koin = startKoin {
+            modules(platformDataModule + iosAppModule(TEST_BUILD_VALUES, google, NoTestPushToken) + names)
+        }.koin
         try {
             val traces = koin.get<AccountTraces>()
 

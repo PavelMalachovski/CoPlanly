@@ -34,8 +34,12 @@ import com.coparently.app.presentation.navigation.PendingChatLink
 import com.coparently.app.presentation.navigation.PendingChatOpen
 import com.coparently.app.presentation.navigation.PendingDestinationOpen
 import com.coparently.app.presentation.navigation.PendingInviteCodes
+import com.coparently.app.presentation.pairing.InviteQrCodes
+import com.coparently.app.presentation.pairing.IosInviteQrCodes
 import com.coparently.app.presentation.platform.AppBuildValues
 import com.coparently.app.presentation.platform.CredentialSignIn
+import com.coparently.app.presentation.platform.IosQrCodes
+import com.coparently.app.presentation.platform.IosShareSheet
 import com.coparently.app.presentation.widget.TodayWidgetNames
 import com.coparently.app.utils.readerLanguageTag
 import dev.gitlive.firebase.Firebase
@@ -162,10 +166,28 @@ object IosApp {
         // After Firebase, which the sign-out needs; before Koin builds the preference store.
         val google = bridges.google
         clearPreviousInstall(google.session())
+        // One set of build values: Koin's single and the shell's provider read this instance.
+        val appleSignIn = bundleAppleSignIn()
+        val values = AppBuildValues(
+            versionName = config.versionName,
+            privacyPolicyUrl = config.privacyPolicyUrl,
+            termsUrl = config.termsUrl,
+            supportEmail = config.supportEmail,
+            pairingWebLink = PAIRING_WEB_LINK,
+            // The EduPage import is not offered on the iPhone yet.
+            edupageImport = false,
+            appleSignIn = appleSignIn,
+        )
         val koin = startKoin {
             modules(
                 dataModules + platformDataModule + uiModules + platformUiModule +
-                    iosAppModule(google, bridges.pushToken, bridges.widgetReload, appGroupWidgetDirectory())
+                    iosAppModule(
+                        values,
+                        google,
+                        bridges.pushToken,
+                        bridges.widgetReload,
+                        appGroupWidgetDirectory()
+                    )
             )
         }.koin
         val background = bridges.background
@@ -173,23 +195,13 @@ object IosApp {
         whenProtectedDataAvailable { startSession(koin, background) }
         this.koin = koin
         this.google = google
-        val appleSignIn = bundleAppleSignIn()
         credentialSignIn = IosCredentialSignIn(
             google = google,
             apple = bridges.apple,
             appleSignIn = appleSignIn,
             appleAccount = GitLiveAppleAccount(Firebase.auth, koin.get<AppleTokens>()),
         )
-        buildValues = AppBuildValues(
-            versionName = config.versionName,
-            privacyPolicyUrl = config.privacyPolicyUrl,
-            termsUrl = config.termsUrl,
-            supportEmail = config.supportEmail,
-            pairingWebLink = PAIRING_WEB_LINK,
-            // The EduPage import is not offered on the iPhone yet (as `platformUiModule` binds it).
-            edupageImport = false,
-            appleSignIn = appleSignIn,
-        )
+        buildValues = values
         // Defensive: `AppDelegate` sets the notification delegate only after this returns, so a tap
         // that launched the app arrives after it; one that came sooner would have been held here.
         pendingPush?.let { data ->
@@ -621,14 +633,19 @@ private const val WIDGET_DEBOUNCE_MS = 2_000L
  * 4 part C also the Swift side's push token ([IosPushToken]), which `platformDataModule`'s push
  * registration reads, and since part D the Today widget's snapshot writer ([WidgetSnapshotWriter],
  * in [widgetDirectory], reloading through [widgetReload]) with what runs before a session ends
- * ([widgetSessionEnding]).
+ * ([widgetSessionEnding]). Also [values], the build values the shell shares, and the invitation's QR
+ * ([IosInviteQrCodes]) drawn from them.
  */
 internal fun iosAppModule(
+    values: AppBuildValues,
     google: GoogleIdTokenSource,
     pushToken: IosPushToken,
     widgetReload: WidgetReload = NoWidgetReload,
     widgetDirectory: Path? = null,
 ): Module = module {
+    // The shell's one set of build values, so Koin and the screens' platform read the same instance.
+    single<AppBuildValues> { values }
+    single<InviteQrCodes> { IosInviteQrCodes(get(), IosQrCodes(IosShareSheet)) }
     single<SignInProviderSession> { google.session() }
     single<IosPushToken> { pushToken }
     // The Today widget's snapshot (phase 4 part D), where the app has the App Group's container.

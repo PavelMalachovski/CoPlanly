@@ -7,21 +7,17 @@ import com.coparently.app.domain.ai.AiAssistRepository
 import com.coparently.app.domain.dictation.SpeechDictation
 import com.coparently.app.ios.IosPairingWording
 import com.coparently.app.ios.IosSchoolImportWordings
-import com.coparently.app.ios.bundleAppleSignIn
 import com.coparently.app.presentation.auth.AuthErrors
 import com.coparently.app.presentation.auth.IosAuthErrors
-import com.coparently.app.presentation.pairing.InviteQrCodes
-import com.coparently.app.presentation.platform.AppBuildValues
 import org.koin.core.module.Module
 import org.koin.dsl.module
 
 /**
  * What [uiModules] takes from the platform on the iPhone beyond [platformDataModule]: the chat's
- * on-device dictation and the AI assist and an invitation's QR code (slice 10e), none of which the
- * iPhone has yet, as the stand-ins in `IosUiUnavailable.kt` — no microphone, no assist offered and
- * no QR drawn — and, since phase 3's Task 5, which reason a failed sign-in is ([IosAuthErrors]).
- * Since the merge of the tester redesign it also binds an [AppBuildValues] for a ViewModel that
- * decides on the build (the school import's EduPage flag, off on the iPhone).
+ * on-device dictation and the AI assist (slice 10e), neither of which the iPhone has yet, as the
+ * stand-ins in `IosUiUnavailable.kt` — no microphone, no assist offered — and, since phase 3's Task 5, which reason a failed sign-in is ([IosAuthErrors]).
+ * The [AppBuildValues] and the invitation's QR are bound by the iPhone app's own module
+ * (`iosAppModule`), from the one set of build values the shell shares.
  * Since Task 6 it also binds the two wordings the data layer writes into stored data
  * ([IosPairingWording], [IosSchoolImportWordings]): data seams, but they read the app's strings,
  * which live in this module. (A record photo's storage is a data seam, so its stand-in is
@@ -32,22 +28,7 @@ actual val platformUiModule: Module = module {
     single<SpeechDictation> { NoSpeechDictation }
     single { AiAssistAvailability(enabled = false) }
     single<AiAssistRepository> { NoAiAssist }
-    single<InviteQrCodes> { NoInviteQrCodes }
     single<AuthErrors> { IosAuthErrors }
     single<PairingWording> { IosPairingWording() }
     single<SchoolImportWordings> { IosSchoolImportWordings(get()) }
-    // The EduPage import is not offered on the iPhone: this stand-in is what a ViewModel reads, while
-    // the screens read the real values the shell provides (`ProvideIosShell`). Apple's flag is the
-    // bundle's, as the shell reads it.
-    single {
-        AppBuildValues(
-            versionName = "",
-            privacyPolicyUrl = null,
-            termsUrl = null,
-            supportEmail = null,
-            pairingWebLink = false,
-            edupageImport = false,
-            appleSignIn = bundleAppleSignIn()
-        )
-    }
 }
