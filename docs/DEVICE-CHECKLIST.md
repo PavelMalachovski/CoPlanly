@@ -2963,6 +2963,8 @@ is checked only here.**
       recognition ran on the phone. Repeat in each of the five languages (English, Czech, German,
       Russian, Ukrainian), and **record which of them show no microphone** (no on-device model):
       ______. Send the app to the background while dictating: it stops and keeps what was heard.
+- [ ] **Before granting speech recognition** on a fresh install, note whether the chat's microphone appears
+      at all (`supportsOnDeviceRecognition` is read before authorization); if it does not, record it: ______.
 - [ ] **PAY by square.** For a Slovak account's payment, a Slovak bank's app reads the code on the
       iPhone and the payment matches; the same payment's code on an Android phone is identical.
 - **If it fails:** the halves in `presentation/platform/Ios*.kt`, `ios/controls/QrScannerController.kt`,

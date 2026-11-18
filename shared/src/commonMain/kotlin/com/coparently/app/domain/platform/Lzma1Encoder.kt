@@ -19,7 +19,7 @@ import com.coparently.app.domain.platform.lzma.RangeEncoder
  * 128 KiB dictionary; no LZMA2, no fast mode, no preset dictionary. The integer arithmetic is the
  * library's bit for bit, and `Lzma1EncoderParityTest` holds the two to the same bytes.
  */
-object Lzma1Encoder {
+internal object Lzma1Encoder {
 
     private const val DICTIONARY = 1 shl 17
     private const val LITERAL_CONTEXT_BITS = 3

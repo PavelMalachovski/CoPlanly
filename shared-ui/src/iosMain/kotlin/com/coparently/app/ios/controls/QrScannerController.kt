@@ -4,6 +4,7 @@ package com.coparently.app.ios.controls
 
 import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.pairing.ScannedCodeFilter
+import kotlin.native.ref.WeakReference
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCAction
 import kotlinx.cinterop.useContents
@@ -87,7 +88,7 @@ internal class QrScannerController(
     }
 
     /** Cancel's target and the metadata output's delegate, which UIKit and AVFoundation do not retain. */
-    private val actions = Actions()
+    private val actions = Actions(WeakReference(this))
 
     /** The metadata output while the session reads; dropped with its delegate when the scanner ends. */
     private var output: AVCaptureMetadataOutput? = null
@@ -199,14 +200,14 @@ internal class QrScannerController(
     }
 
     /** A payload the camera read, on the main queue. */
-    private fun read(payload: String) {
+    internal fun read(payload: String) {
         if (finished) return
         val code = filter.accept(payload) ?: return
         end { onScanned(code) }
     }
 
     /** Cancel, a refused camera or one that could not be opened. */
-    private fun cancel() {
+    internal fun cancel() {
         if (finished) return
         end(onCancelled)
     }
@@ -249,12 +250,14 @@ internal class QrScannerController(
     }
 
     /** Cancel's target and the metadata output's delegate. */
-    private inner class Actions : NSObject(), AVCaptureMetadataOutputObjectsDelegateProtocol {
+    private class Actions(
+        private val owner: WeakReference<QrScannerController>
+    ) : NSObject(), AVCaptureMetadataOutputObjectsDelegateProtocol {
 
         /** Cancel's target-action. */
         @ObjCAction
         fun cancel() {
-            this@QrScannerController.cancel()
+            owner.get()?.cancel()
         }
 
         override fun captureOutput(
@@ -262,9 +265,10 @@ internal class QrScannerController(
             didOutputMetadataObjects: List<*>,
             fromConnection: AVCaptureConnection
         ) {
+            val scanner = owner.get() ?: return
             didOutputMetadataObjects
                 .mapNotNull { (it as? AVMetadataMachineReadableCodeObject)?.stringValue }
-                .forEach { payload -> read(payload) }
+                .forEach { payload -> scanner.read(payload) }
         }
     }
 }

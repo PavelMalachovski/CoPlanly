@@ -3080,7 +3080,7 @@ previous Material call. What it built, task by task:
 - **The record** (Task 13): the tour shows six controls in use; CLAUDE.md, this entry, the spec's
   decisions, the device checklist (§3.40) and the privacy documents (Vision named beside ML Kit).
 
-**Still stand-ins on the iPhone after part C** (each hides what it stands for):
+**Still stand-ins on the iPhone after part C** (superseded by part E1: see the MON-24 row) (each hides what it stands for):
 - **Phase 4** (pushes, reminders and background jobs): ~~`NoPush` as `PushRegistration`,
   `NoEventReminders`, `NoRequestClockNotices`, `NoSupportReminderJob`~~ (replaced or deleted in
   phase 4's part C, below), `NoRequestClockJobs` (kept with `cancelAll` alone) and

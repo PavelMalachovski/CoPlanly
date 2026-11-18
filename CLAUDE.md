@@ -2576,8 +2576,9 @@ change of the signed-in uid and after every sync, and keeps the nearest 60 pendi
 reminder first; `LocalNotificationCenter` is its narrow seam over `UNUserNotificationCenter`).
 It also replaced `NoPush` with `IosPushRegistration` (`data/remote/firebase/`, the push switch and
 the FCM token behind `PushTokenBridge.swift`, with `NotificationPermission`) and, in `:shared-ui`'s
-`IosPlatform.kt`, `NoPermissions` with `IosPermissions` (the notification permission; the
-microphone and camera still answer denied), and deleted `NoRequestClockNotices` with the phones'
+`IosPlatform.kt`, `NoPermissions` with `IosPermissions` (the notification permission, and since part E1
+the microphone and speech recognition for dictation; the camera is asked by `IosCameraCapture` and the
+scanner themselves), and deleted `NoRequestClockNotices` with the phones'
 request reminders, which the server sends now (item 42). Still stand-ins on the iPhone:
 `NoRequestClockJobs` (`RequestClockScheduler` keeps only `cancelAll`, and the iPhone never queued
 a clock's job), and in `:shared-ui` `NoAiAssist` (`NoAiAssist.kt`) and the platform interface's
