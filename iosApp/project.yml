@@ -271,8 +271,9 @@ targets:
   # The Today widget (iPhone phase 4 part D, Task 5; design §7.3): SwiftUI and WidgetKit, small and
   # medium on the home screen. It reads the snapshot the app writes into the App Group
   # (`<group container>/widget/today.json`, WidgetSnapshotWriter.kt) and draws its lines; it links no
-  # Kotlin framework and no package, and has no strings of its own but the English line for a phone
-  # with no snapshot yet (CoPlanlyWidget/TodayWidget.swift).
+  # Kotlin framework and no package. Its only strings (the gallery's name and description and the
+  # line for a phone with no snapshot yet) are CoPlanlyWidget/<lang>.lproj/Localizable.strings in
+  # the five languages.
   CoPlanlyWidget:
     type: app-extension
     platform: iOS

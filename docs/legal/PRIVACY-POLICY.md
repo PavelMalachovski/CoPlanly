@@ -321,8 +321,9 @@ stays there.
   language, from the facts the notification carries. If the phone cannot (it is meant for an account
   that is no longer signed in on it, say), that fixed text is what you see, and it names nobody.
   To write the sentence, the app keeps your account's identifier and the app's language where the
-  phone's notification component can read them; both stay on the phone and are removed when you
-  sign out.
+  phone's notification component can read them, and, for the Today widget, the widget's lines (the
+  day's text and colours, not your records); all of it stays on the phone and is removed or
+  replaced when you sign out.
 - **Reminders that never leave your phone.** An event's reminder, and the paying parent's reminder
   before a child support payment, are scheduled on the phone itself (on an iPhone, as the system's
   own notifications, planned from what the app last synced); we send nothing for them.

@@ -349,6 +349,15 @@ const RULES = [
       'iosApp/CoPlanly/AppDelegate.swift', 'iosApp/CoPlanly/CoPlanly.entitlements'],
   },
   {
+    sections: ['3.44'],
+    why: 'the Today widget and background refresh on an iPhone: the snapshot, the widget extension, the refresh task and the daily school import',
+    paths: ['K/presentation/widget/**', 'K/ios/Widget*.kt', 'K/ios/IosWidget*.kt', 'K/ios/BackgroundRefresh.kt',
+      'K/ios/IosLifecycle.kt', 'K/data/school/DailySchoolImport.kt', 'K/data/school/IosSchoolImportJob.kt',
+      'K/data/session/SessionEndingHook.kt', 'K/data/sync/ForegroundSyncRunner.kt',
+      'iosApp/CoPlanlyWidget/**', 'iosApp/CoPlanly/BackgroundRefreshBridge.swift',
+      'iosApp/CoPlanly/WidgetReloadBridge.swift'],
+  },
+  {
     sections: ['3.6', '4.2'],
     why: 'strings, locales, the language picker or the rule that picks the app\'s language',
     paths: ['S/values*/**', 'app/src/main/res/xml/locales_config.xml',

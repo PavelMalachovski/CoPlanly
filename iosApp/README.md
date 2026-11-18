@@ -7,7 +7,7 @@ and the data layer are the Kotlin Multiplatform modules', compiled into one stat
 | Path | What it is |
 | --- | --- |
 | `project.yml` | The Xcode project, for [XcodeGen](https://github.com/yonaskolb/XcodeGen). The generated `CoPlanly.xcodeproj/` is not committed. |
-| `CoPlanly/AppDelegate.swift` | The entry point: reads the configuration and calls `IosApp.shared.start(config:google:apple:)` with the Google and Apple sheets' bridges (`shared-ui/src/iosMain/kotlin/com/coparently/app/ios/`). |
+| `CoPlanly/AppDelegate.swift` | The entry point: reads the configuration and calls `IosApp.shared.start(config:google:apple:pushToken:widgetReload:background:)` with the Google and Apple sheets' bridges, the push token's, the widget reload's and the background scheduler's (`shared-ui/src/iosMain/kotlin/com/coparently/app/ios/`). |
 | `CoPlanly/SceneDelegate.swift` | The window: shows `IosApp.shared.rootViewController()`, the native shell, and hands Google's sign-in answers (`openURLContexts`) to Google Sign-In. |
 | `CoPlanly/GoogleSignInBridge.swift` | Google's sign-in sheet (Google Sign-In for iOS 9.2.0) for the shared sign-in screen and for connecting Google Calendar; see "Google sign-in" and "Google Calendar" below. |
 | `CoPlanly/AppleSignInBridge.swift` | Apple's sign-in sheet (AuthenticationServices) for the sign-in screen and the sign-in methods, behind the `CoplanlyAppleSignIn` flag (YES in Debug, NO in Release; `project.yml`). |
@@ -16,6 +16,8 @@ and the data layer are the Kotlin Multiplatform modules', compiled into one stat
 | `CoPlanly/Assets.xcassets` | The icon (made from the Android launcher icon by `tools/generate-ios-icon.py`; never edit the PNG by hand) and the indigo accent colour. |
 | `CoPlanlyNotifications/` | The Notification Service Extension (`app.coplanly.notifications`, embedded in the app): words each push with the `PushWording` framework `:push-wording` builds; see "Pushes" below. |
 | `CoPlanlyWidget/` | The Today widget (`app.coplanly.widget`, embedded in the app; SwiftUI and WidgetKit, small and medium): draws the day the app's snapshot in the App Group holds; see "The Today widget" below. |
+| `CoPlanly/BackgroundRefreshBridge.swift` | `BGTaskScheduler` behind the Kotlin `BackgroundScheduling`: submits `app.coplanly.refresh` 30 minutes ahead, cancels it, and registers the handler that runs `IosApp.shared.runBackgroundRefresh`; see "Background refresh". |
+| `CoPlanly/WidgetReloadBridge.swift` | `WidgetCenter.shared.reloadAllTimelines()` behind the Kotlin `WidgetReload`, called by `WidgetSnapshotWriter` after a changed snapshot. |
 | `CoPlanlyUITests/` | The XCUITest walk of the native shell (`ShellUITests.testShellWalk`), the tour of every screen (`testTour`) and the pushes (`PushUITests`), run in CI on the emulators. |
 | `scripts/simulator.sh` | CI's simulator steps (the `ios-app` job): pick, launch, the shell's walk with the push test, and the tour. |
 
@@ -212,6 +214,20 @@ scheme; other text is the system's primary or secondary colour. A tap opens `cop
 the Calendar tab on today. It links no Kotlin framework and no package, and holds only the App
 Group entitlement: the owner adds the App Groups capability and `group.app.coplanly` to the
 `app.coplanly.widget` App ID too (as for the notification extension, "Pushes" step 1).
+
+## Background refresh
+
+`BackgroundRefreshBridge.swift` (iPhone phase 4 part D, Task 6) submits a `BGAppRefreshTask`,
+identifier `app.coplanly.refresh` (`BGTaskSchedulerPermittedIdentifiers` and the `fetch` background
+mode in `Info.plist`), with `earliestBeginDate` 30 minutes ahead. It is submitted when the app
+enters the background (read in Kotlin, `IosLifecycle.observeBackground`, since the app uses scenes)
+and at the end of each run, and cancelled at sign-out. The handler runs `BackgroundRefresh`: signed
+out or while the phone is locked (the database is `NSFileProtectionComplete`) it ends at once,
+reporting success; otherwise it syncs, runs the daily school import with the sync and rewrites the
+widget's snapshot. The system decides when a run happens, and Background App Refresh may be off.
+To try one on a development build, pause in the debugger and run
+`e -l objc -- (void)[[BGTaskScheduler sharedScheduler] _simulateLaunchForTaskWithIdentifier:@"app.coplanly.refresh"]`,
+or use Xcode's Debug → Simulate Background Fetch.
 
 ## In CI
 
