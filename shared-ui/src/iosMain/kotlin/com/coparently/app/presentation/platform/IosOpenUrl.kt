@@ -120,6 +120,6 @@ private class FilePreview(
 }
 
 /** The file Quick Look shows. */
-private class FilePreviewItem(file: NSURL) : NSObject(), QLPreviewItemProtocol {
-    override val previewItemURL: NSURL? = file
+private class FilePreviewItem(private val file: NSURL) : NSObject(), QLPreviewItemProtocol {
+    override fun previewItemURL(): NSURL? = file
 }
