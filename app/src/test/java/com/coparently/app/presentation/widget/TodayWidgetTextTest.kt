@@ -155,7 +155,12 @@ class TodayWidgetTextTest {
 
     @Test
     fun `signed out, the widget asks for a sign-in and names nobody`() {
-        val lines = TodayWidgetText.lines(context, TodayWidgetModel.signedOut(today.toKotlinLocalDate()), parents, maxEvents = 4)
+        val lines = TodayWidgetText.lines(
+            context,
+            TodayWidgetModel.signedOut(today.toKotlinLocalDate()),
+            parents,
+            maxEvents = 4
+        )
 
         assertEquals("Sign in to CoPlanly to see your day.", lines.footer)
         assertNull(lines.custody)

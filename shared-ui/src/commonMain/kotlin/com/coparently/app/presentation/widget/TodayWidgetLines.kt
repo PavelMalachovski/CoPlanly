@@ -24,7 +24,7 @@ data class WidgetEventLine(val time: String, val title: String, val parent: Pare
 /**
  * Everything the widget draws at one size, worded.
  *
- * Decided here rather than in the composable so that [TodayWidgetContent] reads no `Context` and
+ * Decided here rather than in the composable so that `TodayWidgetContent` reads no `Context` and
  * can be tested without one, and so that what the widget *says* is one function a unit test can
  * reach: which lines appear, how a parent is named, how many events fit and what the footer
  * admits about the rest.
