@@ -2838,7 +2838,7 @@ notes list each file):
   ~~`NoEventReminders`~~ (phase 4's part C: `IosEventReminders`, local notifications),
   `NoRequestClockJobs` (kept: `RequestClockScheduler` has only `cancelAll` since part C, for an older
   Android build's queued jobs, and the iPhone never queued one), ~~`NoRequestClockNotices`~~ (deleted
-  in part C with the phones' request reminders, which the server sends), ~~`NoSchoolImportJob`~~ (part D: `IosSchoolImportJob`),
+  in part C with the phones' request reminders, which the server sends), ~~`NoSchoolImportJob`~~ (replaced in part D: `IosSchoolImportJob`),
   ~~`NoSupportReminderJob`~~ (part C: `IosSupportReminders`) and ~~`NoExportVerifyAddress`~~ (Task 12: `InfoPlistExportVerifyAddress`). In
   `:shared-ui`: `NoSpeechDictation`, `NoAiAssist` with `AiAssistAvailability(false)`,
   and `NoInviteQrCodes` (`di/koin/IosUiUnavailable.kt`), and in
@@ -3008,7 +3008,7 @@ and does what it did. What it built, task by task:
 - **Phase 4** (pushes, reminders and background jobs): ~~`NoPush` as `PushRegistration`,
   `NoEventReminders`, `NoRequestClockNotices`, `NoSupportReminderJob`~~ (replaced or deleted in
   phase 4's part C, below), `NoRequestClockJobs` (kept with `cancelAll` alone) and
-  ~~`NoSchoolImportJob`~~ (part D: `IosSchoolImportJob`).
+  `NoSchoolImportJob` (part D's).
 - ~~**Part C** (files, photos and the export): `NoStorageBucket`, `NoPickedFiles`,
   `NoRecordPhotoStorage`, `NoReceiptText`, `NoRecordFiles`, `NoExportVerifyAddress`, and the
   platform's `NoShareSheet`, `NoFilePicker`, `NoCameraCapture`, `NoImages` and `NoQrCodes`.~~ All
@@ -3083,7 +3083,7 @@ previous Material call. What it built, task by task:
 - **Phase 4** (pushes, reminders and background jobs): ~~`NoPush` as `PushRegistration`,
   `NoEventReminders`, `NoRequestClockNotices`, `NoSupportReminderJob`~~ (replaced or deleted in
   phase 4's part C, below), `NoRequestClockJobs` (kept with `cancelAll` alone) and
-  ~~`NoSchoolImportJob`~~ (part D: `IosSchoolImportJob`).
+  `NoSchoolImportJob` (part D's).
 - **Not in parts B or C** (the parent design's later phases decide): `NoGoogleCalendar` with
   `NoGoogleCalendarSignIn`, `NoSpeechDictation`, `NoAiAssist`, `NoInviteQrCodes`, `NoQrScanner`,
   `NoDictation`, `NoPermissions`, `NoOpenUrl`, `NoClipboard` and `NoAppLanguages` (iOS's own
