@@ -651,10 +651,16 @@ internal fun iosAppModule(
  * where [IosApp]'s one collector remembers them, and the signed-out snapshot is written ([writer],
  * null where the app has no App Group container), so the home screen never names the departing
  * account's family once it has gone.
+ *
+ * `Main.immediate`, not `Main`: a caller already on the main thread clears the names in place,
+ * where `Main` would queue the work on the main queue and wait for it. A caller that blocks the main
+ * thread until the session has ended (a simulator test's `runTest`) never drains that queue, so the
+ * wait never ended and the test binary hung. A caller elsewhere is dispatched to the main thread as
+ * before.
  */
 internal fun widgetSessionEnding(writer: WidgetSnapshotWriter?, names: TodayWidgetNames): SessionEndingHook =
     SessionEndingHook {
-        withContext(Dispatchers.Main) { names.clear() }
+        withContext(Dispatchers.Main.immediate) { names.clear() }
         writer?.writeSignedOut()
     }
 
