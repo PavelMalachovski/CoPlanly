@@ -1,6 +1,7 @@
 # iPhone app, phase 4 part D: background work and the Today widget — design
 
-Status: approach agreed with the owner on 18 November 2026 (chat). Parent design:
+Status: approach agreed with the owner on 18 November 2026 (chat); the locked-phone question
+answered the same day (option b). Approved for planning once the owner approves this document. Parent design:
 `docs/superpowers/specs/2026-11-16-iphone-phase-4-design.md` §2 and §4 (part D). Parts A–C are
 merged (pull requests #167–#169).
 
@@ -80,6 +81,11 @@ day; part E is release readiness.
 - **The App Group `group.app.coplanly`** is the only shared storage (part C). Today it holds two
   keys for the notification extension. The widget's snapshot is one more item there, a JSON file in
   the group's container.
+- **The database is unreadable while the phone is locked** (`NSFileProtectionComplete`, the owner's
+  substitute for SQLCipher, CLAUDE.md item 20). Owner decision of 18 November 2026: the protection
+  stays. A background run therefore does its work only while protected data is available (the
+  phone unlocked since its last lock, the app merely in the background) and ends at once otherwise;
+  the widget's week of lines covers the locked hours.
 - **`BGAppRefreshTask` is best-effort.** iOS decides when, from the parent's use of the app, and
   may never run it (Low Power Mode, Background App Refresh switched off). A run has about 30
   seconds. Nothing may depend on it running.
@@ -146,6 +152,13 @@ probe as every stored model):
   dark, from the family's palette (`ParentColors` on the widget's own background), so the Swift
   side never computes a colour.
 
+The parents' names come from a cache the app writes while it shows a signed-in account (the twin of
+Android's `TodayWidgetNames`, in `SecurePreferences`, cleared with the session and refused for
+another uid), so a background run never attaches `ParentsSource`'s Firestore listeners for a label
+(author's call). Each day also carries a third variant, `compactLarge` (`compactAtLargeText` applied
+in Kotlin), which the small widget draws at the accessibility text sizes, so Android's drop rule is
+not rewritten in Swift (author's call).
+
 It holds lines, never records: a private event of the co-parent never reaches it, because the
 model already drops it (the same rule as Home). A signed-out snapshot holds one day with the
 signed-out line and nothing else.
@@ -208,17 +221,25 @@ small                         medium
   the task to `IosApp.runBackgroundRefresh(completion)`.
 - **The chain** (`BackgroundRefresh`, `shared-data` or `shared-ui` `iosMain`, a plain suspend
   function a test calls):
-  1. stop at once when nobody is signed in;
+  1. stop at once, reporting success, when protected data is not available
+     (`UIApplication.isProtectedDataAvailable` false: the phone is locked; owner decision (b) of
+     18 November 2026) or nobody is signed in — no step touches the database first;
   2. the sync, through the existing `ForegroundSyncRunner` so a foreground run and a background run
      never overlap (it already coalesces requests); the run awaits that request's completion;
   3. the Google Calendar import, as after any sync (already the runner's `afterSync`);
   4. the school import when the day's has not run (`SchoolImporter.sync` for each connection,
-     remembered per account per day in the sealed preferences, as Android's daily `KEEP` work);
+     remembered per account per day in the sealed preferences, as Android's daily `KEEP` work).
+     **The same daily check also runs after the launch and foreground syncs** (author's call: a
+     parent with Background App Refresh off, in Low Power Mode or always locked overnight would
+     otherwise never get the daily import); at most once a day per account either way;
   5. the local reminders planned again;
   6. the widget snapshot written.
 
   Each step's failure is logged and does not stop the next. `expirationHandler` cancels the
   coroutine; the task reports success only when the chain ran to its end.
+- **A background launch starts the app as any launch does** (author's call): `IosApp.start` runs
+  unchanged, `startSession` included; the chain awaits only its own sync request. A separate
+  background start mode would change the entry point for little saved time.
 - **Scheduling.** `BGAppRefreshTaskRequest` with `earliestBeginDate` 30 minutes ahead, submitted on
   entering the background and at the end of each run. `NoSchoolImportJob` becomes
   `IosSchoolImportJob`: `schedule()` and `cancel()` only record whether any connection exists, since
@@ -241,7 +262,10 @@ small                         medium
   not added: the extension's logic is "read a file, pick today's entry", and the tour shoots the
   widget gallery's preview of the placed widget is not reachable either. So the device check (below)
   holds the drawn widget.
-- **Device checks** (`docs/DEVICE-CHECKLIST.md`, new §3.44): place both sizes; sign out and see the
+- **The locked case** (iosTest): with protected data unavailable the chain touches nothing and
+  reports success.
+- **Device checks** (`docs/DEVICE-CHECKLIST.md`, new §3.44): place both sizes; lock the phone and
+  let a refresh fire (nothing happens, nothing fails);  sign out and see the
   signed-out line; change language; leave the phone a night and see the next day; let a background
   refresh run (Xcode's simulate command on a development build) and see a co-parent's new event.
 
