@@ -358,6 +358,15 @@ const RULES = [
       'iosApp/CoPlanly/WidgetReloadBridge.swift'],
   },
   {
+    sections: ['3.45'],
+    why: 'the iPhone\'s platform halves: Quick Look, the dialler and mail drafts, the clipboard and paste control, the QR scanner, the invitation\'s QR, on-device dictation and PAY by square',
+    paths: ['K/presentation/platform/Ios*.kt', 'K/presentation/platform/PlatformUris.kt',
+      'K/ios/controls/QrScannerController.kt', 'K/ios/controls/PasteButton.kt',
+      'K/presentation/pairing/IosInviteQrCodes.kt', 'K/presentation/chat/IosSpeechDictation.kt',
+      'K/presentation/chat/AppleSpeechRecognizerSource.kt', 'shared/**/Lzma1Encoder*', '**/lzma/**',
+      'iosApp/CoPlanly/*.lproj/InfoPlist.strings'],
+  },
+  {
     sections: ['3.6', '4.2'],
     why: 'strings, locales, the language picker or the rule that picks the app\'s language',
     paths: ['S/values*/**', 'app/src/main/res/xml/locales_config.xml',

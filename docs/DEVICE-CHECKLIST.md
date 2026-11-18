@@ -2936,6 +2936,40 @@ Background App Refresh on in iOS Settings → General.
   or the account check that has not run yet. One that never updates: the App Group, or WidgetKit's
   own reload budget.
 
+### 3.45 The iPhone's platform halves · 1P, an iPhone, an Android phone, a development build
+
+MON-24 phase 4, part E1. The rules are CLAUDE.md's "Phase 4's part E1". The LZMA1 port is held byte
+for byte to xz-java on the JVM (`Lzma1EncoderParityTest`), the links in `MailtoTest` and
+`TelUriTest`, the invitation's matrix in `IosInviteQrCodesTest` and dictation's rules over a fake
+recognizer; **what a camera, Quick Look, the pasteboard, the speech recognizer and a bank's app do
+is checked only here.**
+
+- [ ] **Scan a real invitation QR.** On the Android phone show an invitation's QR; on the iPhone scan
+      it from the pairing form. The code fills in and the "Link with …?" question names the
+      inviter. A QR of anything else (a web address) does nothing.
+- [ ] **Show one's own QR.** On the iPhone open the invitation; scan its QR with the Android phone:
+      the same code and link arrive.
+- [ ] **Paste a code.** Copy a code in Messages; on the pairing form, "Add another co-parent" and
+      the guest code field, tap the system paste button: the code fills in with no "pasted from"
+      prompt beyond the system's own.
+- [ ] **Copy an IBAN.** On the payer's phone copy the IBAN from a settle-up card; on a Mac signed
+      in to the same Apple account, paste: nothing arrives (the copy is local-only).
+- [ ] **A vault PDF in Quick Look.** Open a document in Family → Documents: Quick Look shows it and
+      sharing from it works.
+- [ ] **Dial a contact.** Tap a contact's number: the dialler opens with it.
+- [ ] **A report mail draft.** Report a chat message: the mail composer opens with the support
+      address, the subject and the body, including Cyrillic and line breaks, intact.
+- [ ] **Dictate in flight mode.** Turn on flight mode and dictate a message: the words arrive, so
+      recognition ran on the phone. Repeat in each of the five languages (English, Czech, German,
+      Russian, Ukrainian), and **record which of them show no microphone** (no on-device model):
+      ______. Send the app to the background while dictating: it stops and keeps what was heard.
+- [ ] **PAY by square.** For a Slovak account's payment, a Slovak bank's app reads the code on the
+      iPhone and the payment matches; the same payment's code on an Android phone is identical.
+- **If it fails:** the halves in `presentation/platform/Ios*.kt`, `ios/controls/QrScannerController.kt`,
+  `PasteButton.kt`, `presentation/chat/IosSpeechDictation.kt` and `AppleSpeechRecognizerSource.kt`;
+  the code in `domain/platform/Lzma1Encoder.kt`. A missing microphone: the language's on-device
+  model; a prompt that names the pasteboard: the paste control's host.
+
 ---
 
 ## After the session

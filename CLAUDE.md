@@ -2013,9 +2013,8 @@ shell alone, so Android reads a null and behaves as before:
   `UIGraphicsPDFRenderer` in the system font; its verification address is
   `InfoPlistExportVerifyAddress` (blank, as Android's, until the page is hosted).
 - **What the iPhone does not draw yet**: a Google account's picture (a web address `IosImages`
-  never fetches; the initial is drawn), PAY by square (no LZMA1 encoder until phase 4; QR Platba
-  and EPC draw), the invitation's QR (`NoInviteQrCodes`), and everything ROADMAP MON-24 lists as a
-  stand-in.
+  never fetches; the initial is drawn), and everything ROADMAP MON-24 lists as a stand-in. PAY by
+  square and the invitation's QR draw since phase 4's part E1 (below).
 
 **Part D's shapes** (November 2026, the theme; owner's check
 `docs/superpowers/plans/2026-11-16-iphone-phase-3d-owner-check.md`; design refresh item 1 states
@@ -2106,6 +2105,36 @@ rules; spec `docs/superpowers/specs/2026-11-17-iphone-phase-4c-pushes-design.md`
   launch for the XCUITest alone, because the simulator has no other way to grant it; a Release
   build never asks on cold start.
 - **Local reminders** are item 9's last paragraph.
+
+**Phase 4's part E1** (November 2026, the iPhone's platform halves; spec
+`docs/superpowers/specs/2026-11-18-iphone-phase-4e1-platform-halves-design.md`; device check §3.45).
+Six halves replace stand-ins, and Android's branch of each is untouched:
+- **Quick Look** (`IosOpenUrl`: a file, the dialler through `telUri`, a mail draft through
+  `mailtoUri`, both in `PlatformUris.kt`; `LSApplicationQueriesSchemes` lists `mailto` and `tel`),
+  **the clipboard** (`IosClipboard`, `UIPasteboard`, local-only so a code copied here is not offered
+  to a paired Mac), **the QR scanner** (`IosQrScanner` over `ios/controls/QrScannerController.kt`),
+  **the invitation's QR** (`IosInviteQrCodes`, the matrix of `pairingLinkFor`), **dictation**
+  (`IosSpeechDictation` over `AppleSpeechRecognizerSource`, a seam a test fakes) and **PAY by
+  square** (`domain/platform/Lzma1Encoder.kt` and `domain/platform/lzma/*` in `:shared`, a port of
+  xz-java 1.10).
+- **The paste control is a `NativeControls` member**: `PasteButton`, whose iPhone half
+  `SystemPasteButton` is a `UIPasteControl` (host painted `colorScheme.background`, item 1's
+  background rule), drawn in `CodeEntryField` on the pairing form, "Add another co-parent" and the
+  guest code. Android's branch draws nothing. The system control, not a read of the pasteboard,
+  is what avoids the "pasted from" prompt.
+- **The scanner reads one thing**: `ScannedCodeFilter` (`shared/…/domain/pairing/`) accepts only a
+  pairing link or code, so a QR of anything else does nothing.
+- **The LZMA1 port is held to xz-java on the JVM**: `Lzma1EncoderParityTest` compares it byte for
+  byte with `org.tukaani:xz` over a corpus and random inputs, and Android keeps the library. Change
+  the port and the test together, never the expected bytes alone.
+- **Dictation is on-device only**: every request sets `requiresOnDeviceRecognition`, a language
+  with no on-device model shows no microphone (device check §3.45 records which), a second start
+  replaces the first, and going to the background aborts and hands over the heard words as final
+  only when something was heard. `Info.plist` carries `NSMicrophoneUsageDescription` and
+  `NSSpeechRecognitionUsageDescription` in five locales (`InfoPlist.strings`), and the camera's
+  purpose string names scanning an invitation QR too.
+- **`AppBuildValues` is built once**, by `IosApp.start`, and bound in `iosAppModule`, so Koin and the
+  shell share one instance (the `platformUiModule` stand-in is gone).
 
 **Phase 4's part D** (November 2026, background work and the Today widget; item 18 and item 35 state
 the rules; spec `docs/superpowers/specs/2026-11-18-iphone-phase-4d-background-and-widget-design.md`):
@@ -2551,9 +2580,9 @@ the FCM token behind `PushTokenBridge.swift`, with `NotificationPermission`) and
 microphone and camera still answer denied), and deleted `NoRequestClockNotices` with the phones'
 request reminders, which the server sends now (item 42). Still stand-ins on the iPhone:
 `NoRequestClockJobs` (`RequestClockScheduler` keeps only `cancelAll`, and the iPhone never queued
-a clock's job), and in `:shared-ui` `NoSpeechDictation`, `NoAiAssist`,
-`NoInviteQrCodes` and the platform interfaces' `NoQrScanner`, `NoDictation`,
-`NoOpenUrl`, `NoClipboard` and `NoAppLanguages` in `IosPlatform.kt`.
+a clock's job), and in `:shared-ui` `NoAiAssist` (`NoAiAssist.kt`) and the platform interface's
+`NoAppLanguages` (`IosPlatform.kt`); phase 4's part E1 replaced `NoSpeechDictation`,
+`NoInviteQrCodes`, `NoQrScanner`, `NoDictation`, `NoOpenUrl` and `NoClipboard`.
 ROADMAP MON-24 lists what still stands in. Every `data/…`
 path this history does not name as moved is under `app/src/main/java/com/coparently/app/` (the
 third exception at the top of this note).
@@ -2587,7 +2616,7 @@ root changed. Three exceptions:
   `utils/ReaderDateText.kt` and `utils/ReaderMoneyText.kt`, `expenses/CurrencyFormat.kt`, and
   `di/koin/PlatformUiModule.android.kt`.
 - **`shared-ui/src/iosMain/`**: the iPhone's `actual`s, `platform/IosPlatform.kt`
-  (`iosPlatformServices`, `ProvideIosShell` and their stand-ins) and `di/koin/IosUiUnavailable.kt`.
+  (`iosPlatformServices`, `ProvideIosShell` and their stand-ins) and `di/koin/NoAiAssist.kt`.
 - **`app/src/main/java/com/coparently/app/presentation/`**: what the thin shell keeps
   (`ShellBoundaryTest` refuses any other `@Composable` there, and any `ViewModel`) — `MainActivity.kt`, `widget/`, the previews (`*Previews.kt`),
   and the Android halves of the platform interfaces: `platform/AndroidPlatform.kt` and
@@ -2834,9 +2863,9 @@ scan through `QrScanner` (`QRScannerActivity` on Android, unchanged), Back throu
 Multiplatform's `BackHandler`, the paired-since day through `readerMediumDate`, the code's countdown
 through `kotlin.time` (whole hours and minutes, as `TimeUnit` truncated them), and the onboarding's
 notification question through `PermissionRequester`. **The carried notes**: where the phone draws no
-QR (`InviteQrCodes.available`, new, true by default; the iPhone's `NoInviteQrCodes` says false;
+QR (`InviteQrCodes.available`, new, true by default; the iPhone's `IosInviteQrCodes` since part E1, `NoInviteQrCodes` before it;
 `PairingViewModel.qrAvailable`) the card draws no QR frame; where there is no share sheet, clipboard
-or scanner (the iPhone has the share sheet since part C, and neither of the others yet) the card
+or scanner (the iPhone has the share sheet since part C, and the clipboard and scanner since part E1) the card
 offers no Share, no copy (the code stays, the line under
 it says only how long it lasts) and the form no scan button; and the onboarding's notification step
 offers its button only where the phone asks for the permission. `QRScannerActivity`,
@@ -3024,9 +3053,9 @@ and `FamilyDocumentsScreen` open as `File(path.toString())`), `ChatEventCardView
 `AiAssistSession`, and `SettleUpPaymentViewModel` (out of `SettleUpPayment.kt`, whose ZXing and share
 code stays with the screen), in `chatUiModule`; `sharedFileError` left `SharedFileViewer.kt` for
 `SharedFileErrors.kt`, and `data/ai/AiConsentManager` moved to `:shared-data` (`aiDataModule`).
-On the iPhone `platformUiModule` binds the chat's two platform seams the data layer does not: no
-dictation (`NoSpeechDictation`, unavailable) and no AI assist (`AiAssistAvailability(false)`,
-`NoAiAssist` answering `Disabled`), in `di/koin/IosUiUnavailable.kt`. `coParentOnScreen`,
+On the iPhone `platformUiModule` binds the chat's AI assist seam as unavailable
+(`AiAssistAvailability(false)`, `NoAiAssist` answering `Disabled`, `di/koin/NoAiAssist.kt`);
+dictation is `IosSpeechDictation` since phase 4's part E1. `coParentOnScreen`,
 `observeSignedInUser` and `projectedCoParentUid` were public behind `@InternalSharedApi` while
 ViewModels in the app called them, and are `internal` again since slice 10f moved the last
 (`ParentingPlanViewModel`). Slice 10b moved **the calendar**: `CalendarViewModel` (its
@@ -3163,7 +3192,7 @@ staying in the app (item 37) — so `PairingFormState.qrBitmap` is an `ImageBitm
 `InviteCodeCard` draws it as it is; `AndroidInviteQrCodesTest` holds the link. `OnboardingViewModel`
 (in `onboardingUiModule`) with `OnboardingStep`: its log lines through `logger`, and the finish mark
 `IsoText.dateTimeShortest(wallClockNow())`, the text `LocalDateTime.now().toString()` wrote. On the
-iPhone `platformUiModule` binds `NoInviteQrCodes` (no QR drawn). `OnboardingStepTest` runs in
+iPhone the invitation's QR is `IosInviteQrCodes` since phase 4's part E1 (`NoInviteQrCodes` drew none before). `OnboardingStepTest` runs in
 `commonTest` (one name lost its commas); `PairingViewModelTest` and `OnboardingViewModelTest`
 (MockK) in `androidHostTest`, the first verifying `InviteQrCodes.forInvite` and `Analytics.log`
 where it verified `QRCodeService` and `AnalyticsManager`, and without its dead `ValidationUtils`
@@ -5048,7 +5077,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     Firestore only, mod-97 checked; the rules bound its shape), and under the card, on the payer's
     phone only, `SettleUpPayment.kt` (`:shared-ui` since slice 11b; the matrix and the shared PNG from
     the platform's `QrCodes`, ZXing in the app's `AndroidQrCodes`) draws `PaymentQr`: Czech QR Platba for a CZ account, Slovak PAY
-    by square (raw LZMA1 through `org.tukaani:xz`) for an SK one, the EPC code for another euro
+    by square (raw LZMA1 through `org.tukaani:xz` on Android and the common `Lzma1Encoder` port on
+    the iPhone, which part E1 holds byte for byte to xz-java) for an SK one, the EPC code for another euro
     account, and nothing for another currency — the IBAN to copy and **Share QR code** either way,
     because a bank's app cannot scan the screen it runs on. Three things not to undo. **The codes
     are made on the phone and nothing goes to a bank**; the privacy policy says so. **PAY by square
