@@ -6,6 +6,7 @@ import com.coparently.app.data.platform.logger
 import com.coparently.app.presentation.platform.AppBuildValues
 import com.coparently.app.presentation.platform.QrCodes
 import com.coparently.app.presentation.platform.QrMatrix
+import org.jetbrains.skia.Canvas
 import org.jetbrains.skia.Paint
 import org.jetbrains.skia.Rect
 import org.jetbrains.skia.Surface
@@ -45,20 +46,7 @@ internal class IosInviteQrCodes(
         try {
             val canvas = surface.canvas
             canvas.drawRect(Rect.makeWH(SIDE.toFloat(), SIDE.toFloat()), white)
-            val modules = matrix.width + 2 * QUIET_MODULES
-            val cell = SIDE.toFloat() / modules
-            for (y in 0 until matrix.height) {
-                for (x in 0 until matrix.width) {
-                    if (!matrix[x, y]) continue
-                    // Edges are rounded to whole pixels so neighbouring modules leave no seam.
-                    val left = ((x + QUIET_MODULES) * cell).toInt()
-                    val top = ((y + QUIET_MODULES) * cell).toInt()
-                    val right = ((x + 1 + QUIET_MODULES) * cell).toInt()
-                    val bottom = ((y + 1 + QUIET_MODULES) * cell).toInt()
-                    val box = Rect.makeLTRB(left.toFloat(), top.toFloat(), right.toFloat(), bottom.toFloat())
-                    canvas.drawRect(box, black)
-                }
-            }
+            drawModules(canvas, matrix, black)
             return surface.makeImageSnapshot().toComposeImageBitmap()
         } finally {
             white.close()
@@ -66,6 +54,24 @@ internal class IosInviteQrCodes(
             surface.close()
         }
     }
+
+    /** Each dark module of [matrix] as a box of whole pixels, so neighbours leave no seam. */
+    private fun drawModules(canvas: Canvas, matrix: QrMatrix, paint: Paint) {
+        val cell = SIDE.toFloat() / (matrix.width + 2 * QUIET_MODULES)
+        for (y in 0 until matrix.height) {
+            for (x in 0 until matrix.width) {
+                if (matrix[x, y]) canvas.drawRect(boxOf(x, y, cell), paint)
+            }
+        }
+    }
+
+    /** The pixel box of the module at column [x], row [y], [cell] pixels wide with edges rounded down. */
+    private fun boxOf(x: Int, y: Int, cell: Float): Rect = Rect.makeLTRB(
+        ((x + QUIET_MODULES) * cell).toInt().toFloat(),
+        ((y + QUIET_MODULES) * cell).toInt().toFloat(),
+        ((x + 1 + QUIET_MODULES) * cell).toInt().toFloat(),
+        ((y + 1 + QUIET_MODULES) * cell).toInt().toFloat(),
+    )
 
     internal companion object {
         /** The picture's width and height in pixels, as Android's `QRCodeService` draws it. */
