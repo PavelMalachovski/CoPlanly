@@ -35,6 +35,7 @@ import com.coparently.app.presentation.theme.LightColorScheme
 import com.coparently.app.utils.AppLocale
 import com.coparently.app.utils.inAppLanguage
 import kotlinx.coroutines.flow.first
+import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
@@ -100,11 +101,11 @@ class TodayWidget : GlanceAppWidget() {
             val today = LocalDate.now()
             val userId = source.userRepository().getCurrentUserId()?.takeIf { it.isNotBlank() }
             val model = if (userId == null) {
-                TodayWidgetModel.signedOut(today)
+                TodayWidgetModel.signedOut(today.toKotlinLocalDate())
             } else {
                 val (custody, swaps) = source.custodyModelRepository().storedCustody()
                 TodayWidgetModel.of(
-                    today = today,
+                    today = today.toKotlinLocalDate(),
                     userId = userId,
                     events = source.eventRepository()
                         .getEventsByDateRange(

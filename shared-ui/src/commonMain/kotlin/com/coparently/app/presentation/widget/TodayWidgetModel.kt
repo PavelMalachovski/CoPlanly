@@ -8,8 +8,7 @@ import com.coparently.app.domain.custody.HandoverInfo
 import com.coparently.app.domain.home.HomeWeek
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.Event
-import kotlinx.datetime.toKotlinLocalDate
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * What the Today widget shows, before any of it is worded.
@@ -68,7 +67,7 @@ data class TodayWidgetModel(
             val windows = CustodyResolver.contactWindowsResolver(model, resolve)
             val agenda = HomeWeek.todayOf(
                 events = events,
-                today = today.toKotlinLocalDate(),
+                today = today,
                 userId = userId,
                 custodyFor = resolve,
                 contactWindowsFor = windows
@@ -78,7 +77,7 @@ data class TodayWidgetModel(
                 today = today,
                 dayParent = agenda.dayParent,
                 contactWindows = agenda.contactWindows,
-                handover = model?.let { HandoverCalculator.nextHandoverFrom(it, today.toKotlinLocalDate(), overrides) },
+                handover = model?.let { HandoverCalculator.nextHandoverFrom(it, today, overrides) },
                 events = agenda.events
             )
         }

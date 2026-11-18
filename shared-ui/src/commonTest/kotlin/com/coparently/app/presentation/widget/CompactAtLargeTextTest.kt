@@ -1,7 +1,7 @@
 package com.coparently.app.presentation.widget
 
 import com.coparently.app.presentation.theme.ParentColorChoice
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
