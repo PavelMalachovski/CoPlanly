@@ -4,7 +4,6 @@ import com.coparently.app.presentation.auth.AndroidAuthErrors
 import com.coparently.app.presentation.auth.AuthErrors
 import com.coparently.app.presentation.pairing.AndroidInviteQrCodes
 import com.coparently.app.presentation.pairing.InviteQrCodes
-import com.coparently.app.presentation.widget.TodayWidgetNames
 import com.coparently.app.presentation.widget.TodayWidgetRefresher
 import com.coparently.app.utils.NetworkMonitor
 import org.koin.core.module.dsl.singleOf
@@ -18,10 +17,9 @@ import org.koin.dsl.module
  * Task 10), `PendingCustodyConflict` and `PlanReferenceSource` to its `custodyUiModule`,
  * `RequestsSource` to its `requestsUiModule`, `MonthSpendDependencies` to its `familyUiModule`,
  * `HomeIdentityDependencies` to its `homeUiModule`, and `MonthReviewAssist` and `MonthReviewSources`
- * to its `reviewUiModule`.
+ * to its `reviewUiModule`, and `TodayWidgetNames` to its `widgetUiModule` (iPhone phase 4 part D).
  */
 val presentationModule = module {
-    singleOf(::TodayWidgetNames)
     singleOf(::TodayWidgetRefresher)
     singleOf(::NetworkMonitor)
     // The invitation's QR code, which the pairing ViewModel in `:shared-ui` asks for.

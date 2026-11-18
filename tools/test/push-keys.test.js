@@ -4,7 +4,8 @@
  * Android the release build's resource shrinker keeps exactly these (`card_push_keep.xml`), because
  * the module reads them by name. A key the wording starts to read and the list misses would be
  * missing from the iPhone's strings and shrunk away on Android; a key the list keeps after the
- * wording stopped reading it is dead weight. Run with `node --test tools/test/*.test.js`.
+ * wording stopped reading it is dead weight. The Today widget's `TodayWidgetText` (iPhone phase 4
+ * part D) reads its keys the same way and is held to the list too. Run with `node --test tools/test/*.test.js`.
  */
 'use strict';
 
@@ -17,7 +18,14 @@ const { readKeys } = require('../ios/generate-push-strings.js');
 const ROOT = path.join(__dirname, '..', '..');
 const KEYS_FILE = path.join(ROOT, 'push-wording', 'push-keys.txt');
 const WORDING_DIR = path.join(ROOT, 'push-wording', 'src', 'commonMain', 'kotlin', 'com', 'coparently', 'app', 'pushwording');
-const WORDING_FILES = ['PushWording.kt', 'CardWording.kt', 'ReminderWording.kt'];
+const WIDGET_DIR = path.join(ROOT, 'shared-ui', 'src', 'commonMain', 'kotlin', 'com', 'coparently', 'app', 'presentation', 'widget');
+/** The files that read keys by name: the three wordings, and the Today widget's (iPhone phase 4 part D). */
+const WORDING_FILES = [
+  path.join(WORDING_DIR, 'PushWording.kt'),
+  path.join(WORDING_DIR, 'CardWording.kt'),
+  path.join(WORDING_DIR, 'ReminderWording.kt'),
+  path.join(WIDGET_DIR, 'TodayWidgetText.kt'),
+];
 const VALUES_DIR = path.join(ROOT, 'shared-ui', 'src', 'commonMain', 'composeResources', 'values');
 const KEEP_FILE = path.join(ROOT, 'app', 'src', 'main', 'res', 'raw', 'card_push_keep.xml');
 
@@ -36,11 +44,11 @@ function definedResources() {
   return defined;
 }
 
-/** Every string literal of the three wording files that names a resource in `values/`. */
+/** Every string literal of the wording files that names a resource in `values/`. */
 function referencedKeys(defined) {
   const keys = new Set();
   for (const file of WORDING_FILES) {
-    const source = withoutComments(fs.readFileSync(path.join(WORDING_DIR, file), 'utf8'));
+    const source = withoutComments(fs.readFileSync(file, 'utf8'));
     for (const m of source.matchAll(/"([a-z][a-z0-9_]*)"/g)) if (defined.has(m[1])) keys.add(m[1]);
   }
   return keys;
@@ -64,7 +72,7 @@ function isKept(entries, type, name) {
   });
 }
 
-test('push-keys.txt lists exactly the keys PushWording, CardWording and ReminderWording name', () => {
+test('push-keys.txt lists exactly the keys PushWording, CardWording, ReminderWording and TodayWidgetText name', () => {
   const defined = definedResources();
   const listed = new Set(readKeys(KEYS_FILE));
   const referenced = referencedKeys(defined);
