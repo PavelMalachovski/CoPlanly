@@ -78,8 +78,21 @@ object RequestDeadlineDocument {
     /** When the answering parent first opened the request. Written once. */
     const val SEEN_AT_MILLIS = "seenAtMillis"
 
-    /** How many of the planned reminders that phone has shown. Raised by one each time. */
+    /**
+     * How many of the planned reminders an older build's phone has shown, raised by one each time.
+     * This build writes none: the server sends the reminders (iPhone phase 4 part C).
+     */
     const val REMINDERS_SHOWN = "remindersShown"
+
+    /**
+     * The server's own reminder plan, in epoch millis, made only when no phone delivered the clock.
+     * Written by the server alone (`functions/request-clock-steps.js`); the rules refuse it from a
+     * client, as every `server…` field.
+     */
+    const val SERVER_REMINDER_TIMES_MILLIS = "serverReminderTimesMillis"
+
+    /** How many reminders the server has pushed. Written by the server alone. */
+    const val SERVER_REMINDERS_SENT = "serverRemindersSent"
 
     /** A server timestamp: when the proposer gave a last chance. Written once, with [LAST_CHANCE_UNTIL_MILLIS]. */
     const val LAST_CHANCE_AT = "lastChanceAt"
@@ -200,7 +213,10 @@ object RequestDeadlineDocument {
             lastChanceAtMillis = times.lastChanceAtMillis,
             lastChanceUntilMillis = document.long(LAST_CHANCE_UNTIL_MILLIS),
             outcome = outcome,
-            closedAtMillis = times.closedAtMillis.takeIf { outcome != null }
+            closedAtMillis = times.closedAtMillis.takeIf { outcome != null },
+            serverReminderTimesMillis = (document[SERVER_REMINDER_TIMES_MILLIS] as? List<*>).orEmpty()
+                .mapNotNull { (it as? Number)?.toLong() },
+            serverRemindersSent = document.int(SERVER_REMINDERS_SENT) ?: 0
         )
     }
 

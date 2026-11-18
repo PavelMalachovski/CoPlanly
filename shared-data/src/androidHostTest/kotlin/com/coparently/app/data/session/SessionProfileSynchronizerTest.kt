@@ -3,11 +3,13 @@ package com.coparently.app.data.session
 import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.repository.UserRepository
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.TimeZone
 import org.junit.Test
 
 /**
@@ -63,6 +65,30 @@ class SessionProfileSynchronizerTest {
         synchronizer().observeSessions()
 
         coVerify(exactly = 0) { userRepository.ensureProfile() }
+    }
+
+    @Test
+    fun `records the phone's time zone once per account, after the profile exists`() = runTest {
+        // iPhone phase 4 part C: the server plans request reminders in it.
+        every { authService.observeCurrentUid() } returns flowOf("user-a", "user-a", null, "user-b")
+
+        synchronizer().observeSessions()
+
+        val zone = TimeZone.currentSystemDefault().id
+        coVerify(exactly = 2) { userRepository.recordTimeZone(zone) }
+        coVerifyOrder {
+            userRepository.ensureProfile()
+            userRepository.recordTimeZone(zone)
+        }
+    }
+
+    @Test
+    fun `records no time zone while signed out`() = runTest {
+        every { authService.observeCurrentUid() } returns flowOf(null)
+
+        synchronizer().observeSessions()
+
+        coVerify(exactly = 0) { userRepository.recordTimeZone(any()) }
     }
 
     private fun synchronizer() =

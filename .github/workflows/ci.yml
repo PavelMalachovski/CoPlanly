@@ -2049,6 +2049,8 @@ jobs:
           :shared-data:compileTestKotlinIosSimulatorArm64
           :shared-ui:testAndroidHostTest :shared-ui:compileKotlinIosSimulatorArm64
           :shared-ui:compileTestKotlinIosSimulatorArm64
+          :push-wording:testAndroidHostTest :push-wording:compileKotlinIosSimulatorArm64
+          :push-wording:compileTestKotlinIosSimulatorArm64
 
       - name: Upload reports
         if: always()
@@ -2062,6 +2064,8 @@ jobs:
             shared-data/build/test-results/
             shared-ui/build/reports/
             shared-ui/build/test-results/
+            push-wording/build/reports/
+            push-wording/build/test-results/
           if-no-files-found: ignore
           retention-days: 14
 
@@ -2070,7 +2074,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: junit-shared
-          path: shared*/build/test-results/testAndroidHostTest/*.xml
+          path: "*/build/test-results/testAndroidHostTest/*.xml"
           if-no-files-found: ignore
           retention-days: 14
 
@@ -2079,7 +2083,7 @@ jobs:
         uses: mikepenz/action-junit-report@v6
         with:
           check_name: Shared tests (JVM)
-          report_paths: shared*/build/test-results/testAndroidHostTest/*.xml
+          report_paths: "*/build/test-results/testAndroidHostTest/*.xml"
           detailed_summary: true
           # A job that died before writing results must not publish a green check.
           require_tests: true
@@ -2194,8 +2198,12 @@ jobs:
 
       # The iPhone app's one framework, `Shared`, is `:shared-ui`'s (MON-24 phase 2, Task 9): static,
       # exporting `:shared` and `:shared-data`, neither of which makes one of its own any more.
+      # `PushWording` is the notification extension's own small framework (phase 4 part C), which
+      # links nothing else.
       - name: Shared tests (iOS simulator) and the framework
-        run: ./gradlew :shared:iosSimulatorArm64Test :shared-data:iosSimulatorArm64Test :shared-ui:linkDebugFrameworkIosSimulatorArm64
+        run: >-
+          ./gradlew :shared:iosSimulatorArm64Test :shared-data:iosSimulatorArm64Test :shared-ui:linkDebugFrameworkIosSimulatorArm64
+          :push-wording:iosSimulatorArm64Test :push-wording:linkDebugFrameworkIosSimulatorArm64
 
       - name: Pods resolved
         if: always()
@@ -2225,6 +2233,8 @@ jobs:
             shared-data/build/reports/
             shared-data/build/test-results/
             shared-ui/build/reports/
+            push-wording/build/reports/
+            push-wording/build/test-results/
           if-no-files-found: ignore
           retention-days: 14
 
@@ -2233,7 +2243,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: junit-shared-ios
-          path: shared*/build/test-results/iosSimulatorArm64Test/*.xml
+          path: "*/build/test-results/iosSimulatorArm64Test/*.xml"
           if-no-files-found: ignore
           retention-days: 14
 
@@ -2242,7 +2252,7 @@ jobs:
         uses: mikepenz/action-junit-report@v6
         with:
           check_name: Shared tests (iOS simulator)
-          report_paths: shared*/build/test-results/iosSimulatorArm64Test/*.xml
+          report_paths: "*/build/test-results/iosSimulatorArm64Test/*.xml"
           detailed_summary: true
           # A job that died before writing results must not publish a green check.
           require_tests: true
@@ -2430,6 +2440,15 @@ jobs:
       # swiped down asking "Discard changes?". The screenshots are the `ios-shell` artifact. Before the
       # emulator tests, on emulators of its own, so a shell failure shows without waiting for them.
       #
+      # Then, in the same step and on a family seeded for it, the pushes (iPhone phase 4 part C,
+      # Task 6): `PushUITests` has `simctl push` deliver the server's neutral alert with an
+      # `expense_added`, one for another uid and a `chat_message`, and reads the banners, tapping the
+      # chat one into its thread. The simulator does not run the Notification Service Extension for
+      # a `simctl push`, so the banners read the server's alert; its wording is `:push-wording`'s
+      # simulator tests' to hold, and its memory (`COPLANLY_NSE_MEMORY`, failing above 20 MB once
+      # logged) a phone's (`simulator.sh push-test`). Its screenshots are in
+      # `ios-shell` under `push/`.
+      #
       # `continue-on-error`, so the emulator tests and the write gate after it run whatever the walk
       # does (run 13 lost both to one failed walk step); "The native shell walk passed", after them,
       # fails the job when the walk did.
@@ -2521,7 +2540,7 @@ jobs:
           OUTCOME: ${{ steps.shell-test.outcome }}
         run: |
           if [ "$OUTCOME" != success ]; then
-            echo "::error::The native shell walk (testShellWalk) failed: see shell-test.log in the ios-shell artifact."
+            echo "::error::The native shell walk (testShellWalk) or the push test (PushUITests, the extension's memory) failed: see shell-test.log in the ios-shell artifact."
             exit 1
           fi
 
@@ -2590,6 +2609,10 @@ jobs:
           path: |
             iosApp/build/shell/shots/
             iosApp/build/shell/shell.xcresult
+            iosApp/build/shell/push/shots/
+            iosApp/build/shell/push/push.xcresult
+            iosApp/build/shell/push/pushes/
+            iosApp/build/shell/push/extension-memory.log
             ${{ runner.temp }}/shell-test.log
           if-no-files-found: ignore
           retention-days: 14

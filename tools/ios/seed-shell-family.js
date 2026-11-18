@@ -2,7 +2,8 @@
 /**
  * Seeds the family the iPhone shell's UI test signs in to (MON-24 phase 3, Task 8): two accounts on
  * the local Firebase emulators, paired through the real `acceptPairingInvitation`, and prints the
- * first parent's e-mail address and password as JSON on stdout for the test to sign in with.
+ * first parent's e-mail address and password as JSON on stdout for the test to sign in with, with
+ * their uid and the family's id (`uid`, `familyId`), which the push test addresses its pushes to.
  *
  * Run inside `firebase emulators:exec --only auth,firestore,functions,storage --project
  * demo-coplanly`, like `tools/e2e/pairing-smoke.js`, whose helpers it uses: every write goes through
@@ -240,7 +241,9 @@ async function main() {
     const bobSlot = accepted.result.familyRole || accepted.result.role;
     await seedTourRecords(alice, bob, bobSlot === 'mom' ? 'dad' : 'mom');
   }
-  process.stdout.write(JSON.stringify({email: alice.email, password: PASSWORD}) + '\n');
+  // The uid and the family id are for the push test (`PushUITests`), which addresses its pushes.
+  const familyId = [alice.uid, bob.uid].sort().join('__');
+  process.stdout.write(JSON.stringify({email: alice.email, password: PASSWORD, uid: alice.uid, familyId}) + '\n');
 }
 
 main().catch((error) => {

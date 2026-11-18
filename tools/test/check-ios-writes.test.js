@@ -182,7 +182,7 @@ test('a real fixture compared with itself as the emulator would store it, server
 });
 
 
-test('a request clock may carry the server\'s four fields, as integers (MON-25)', () => {
+test('a request clock may carry the server\'s fields, as integers (MON-25, iPhone phase 4 part C)', () => {
   const text = fs.readFileSync(path.join(FIXTURES, 'request_deadlines/create.json'), 'utf8');
   const fields = Object.assign(restFieldsOf(JSON.parse(text).document, text), {
     createdAt: { timestampValue: '2026-11-17T07:00:00Z' },
@@ -191,8 +191,12 @@ test('a request clock may carry the server\'s four fields, as integers (MON-25)'
   assert.deepEqual(compareDocument(shape, doc(fields)), []);
   const stepped = doc(Object.assign({}, fields, {
     serverNextStepAt: i(1), serverToldDeadlineAt: i(2), serverToldNoAnswerAt: i(3), serverSettledAt: i(4),
+    serverReminderTimesMillis: arr(i(5), i(6)), serverRemindersSent: i(1),
+    serverLastReminderAt: i(5),
   }));
   assert.deepEqual(compareDocument(shape, stepped), []);
+  const sentAsDouble = doc(Object.assign({}, fields, { serverRemindersSent: d(1.5) }));
+  assert.deepEqual(compareDocument(shape, sentAsDouble), ['serverRemindersSent: integer expected, double found']);
   const asDouble = doc(Object.assign({}, fields, { serverNextStepAt: d(1.5) }));
   assert.deepEqual(compareDocument(shape, asDouble), ['serverNextStepAt: integer expected, double found']);
 });

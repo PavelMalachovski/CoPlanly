@@ -402,6 +402,10 @@ dependencies {
     // tests' coverage (the theme's) joins the same report.
     implementation(project(":shared-ui"))
     kover(project(":shared-ui"))
+    // Every notification's wording (iPhone phase 4 part C): `PushText` and the strings seam, which
+    // the iPhone's notification extension links too, as its own small framework.
+    implementation(project(":push-wording"))
+    kover(project(":push-wording"))
 
     // Core Android - Updated to latest stable versions
     implementation("androidx.core:core-ktx:1.13.1")
@@ -801,6 +805,7 @@ tasks.named<io.gitlab.arturbosch.detekt.DetektCreateBaselineTask>("detektBaselin
     source(rootProject.layout.projectDirectory.dir("shared/src"))
     source(rootProject.layout.projectDirectory.dir("shared-data/src"))
     source(rootProject.layout.projectDirectory.dir("shared-ui/src"))
+    source(rootProject.layout.projectDirectory.dir("push-wording/src"))
 }
 
 // Screenshots are recorded into, and verified against, the committed baselines in

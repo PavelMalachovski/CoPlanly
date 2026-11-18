@@ -1,9 +1,11 @@
 /**
- * The server's steps of a request's clock (MON-25): the deadline push and the end, which the
- * proposer's phone ran from WorkManager jobs until part B (`RequestClockSteps.deadline`/`end` and
- * `RequestRecords` in `shared-data`). A port of those two, with the same decisions, acting in the
- * clock's own family (CLAUDE.md item 42). Nothing here schedules anything: `index.js` wires the
- * trigger that keeps `serverNextStepAt` and the sweep that calls [stepClock] for each due clock.
+ * The server's steps of a request's clock: the deadline push and the end (MON-25), which the
+ * proposer's phone ran from WorkManager jobs until part B, and the reminders to the answering
+ * parent (iPhone phase 4 part C), which the answering phone ran until then. A port of the phone's
+ * steps (the Kotlin `RequestClockSteps`, deleted in part C, and `RequestRecords` in `shared-data`),
+ * with the same decisions, acting in the clock's own family (CLAUDE.md item 42). Nothing here
+ * schedules anything: `index.js` wires the trigger that keeps `serverNextStepAt` and the sweep that
+ * calls [stepClock] for each due clock.
  *
  * **One step is one transaction.** [stepClock] re-reads the clock, does nothing when its
  * `serverNextStepAt` is no longer due, reads the request's record, and writes everything the step
@@ -20,6 +22,7 @@
 
 const {FieldValue} = require('firebase-admin/firestore');
 const clocks = require('./request-clocks');
+const reminderPlan = require('./reminder-plan');
 const {previewFirstName} = require('./first-name');
 
 /** The clocks' collection. */
@@ -43,6 +46,9 @@ const FULL_SHARE_BASIS_POINTS = 10000;
 /** The two server push types (spec §5.4); server-only, so not in the rules' client allow-list. */
 const PUSH_DEADLINE_PASSED = 'request_deadline_passed';
 const PUSH_NO_ANSWER = 'request_no_answer';
+
+/** The reminder to the answering parent (iPhone phase 4 part C, spec §7.3); server-only too. */
+const PUSH_REMINDER = 'request_reminder';
 
 const GONE = Object.freeze({status: 'gone', card: null});
 const UNKNOWN = Object.freeze({status: 'unknown', card: null});
@@ -475,8 +481,129 @@ async function responderFirstName(tx, db, clock) {
 }
 
 /**
- * Runs one step of one clock: the decision `RequestClockSteps.deadline` and `end` made on the
- * proposer's phone, by the state at [nowMillis] (spec §5.3).
+ * The reminder push to the answering parent (`request_reminder`): the family, the request's kind,
+ * the proposer's first name and the deadline as epoch millis in decimal text, never a sentence.
+ *
+ * @param {!Object} clock the clock, from [clockOf].
+ * @param {number} answerByMillis the deadline.
+ * @param {string} actorName the proposer's first name.
+ * @param {*} createdAt the server timestamp sentinel.
+ * @return {!Object}
+ */
+function reminderPushFor(clock, answerByMillis, actorName, createdAt) {
+  return {
+    targetUserId: clock.responderUid,
+    data: {
+      type: PUSH_REMINDER,
+      actorName,
+      familyId: clock.familyId,
+      requestKind: clock.kind,
+      answerBy: String(answerByMillis),
+    },
+    status: 'pending',
+    createdAt,
+  };
+}
+
+/**
+ * The answering parent's profile as a reminder needs it, read in the transaction: their time zone
+ * as the profile states it (`users/{uid}.timeZone`; null when the profile cannot be read or names no
+ * zone this runtime knows), and whether it holds a push token (`fcmToken`) a reminder could reach.
+ *
+ * @param {!Object} tx the transaction.
+ * @param {!Object} db Firestore.
+ * @param {!Object} clock the clock.
+ * @return {!Promise<{zone: ?string, hasToken: boolean}>}
+ */
+async function responderProfile(tx, db, clock) {
+  const snap = await tx.get(db.collection('users').doc(clock.responderUid));
+  const data = snap.exists ? (snap.data() || {}) : {};
+  const zone = reminderPlan.isZone(data.timeZone) ? data.timeZone : null;
+  const hasToken = typeof data.fcmToken === 'string' && data.fcmToken.length > 0;
+  return {zone, hasToken};
+}
+
+/**
+ * The reminders of an open clock (spec §7.3, §11 call 1), inside [stepClock]'s transaction:
+ *
+ * - nothing planned (no phone delivered it, the server has not planned): the server's own plan in
+ *   the answering parent's zone, from the clock's creation, never a time already past, written once
+ *   (`planned`); with no zone stored, nothing, and the clock waits for the phone's delivery
+ *   (`rescheduled`);
+ * - no reminder due yet: the next moment (`rescheduled`);
+ * - the record answered or gone: settled; unreadable: `skipped`, still due;
+ * - in the quiet hours of the stored zone: the next 08:00 when that is before the deadline
+ *   (`deferred`), otherwise the reminder is dropped (`dropped`);
+ * - the answering parent holds no push token: nothing queued and nothing counted (`noToken`);
+ * - otherwise one push for every reminder now due, counted once (`reminded`).
+ *
+ * @param {!Object} tx the transaction.
+ * @param {!Object} db Firestore.
+ * @param {!Object} step the clock's reference and id, its data and parsed clock, the moment, the
+ *   timestamp sentinel and [stepClock]'s `settle`.
+ * @return {!Promise<{action: string}>}
+ */
+async function remindOrPlan(tx, db, step) {
+  const {clockRef, clockId, doc, clock, nowMillis, serverTimestamp, settle} = step;
+  const writeAndReschedule = (update, action) => {
+    const after = Object.assign({}, doc, update);
+    const next = clocks.nextStepAt(after);
+    tx.update(clockRef, Object.assign({}, update, {serverNextStepAt: next === null ? FieldValue.delete() : next}));
+    return {action};
+  };
+
+  if (clocks.reminderPlanOf(doc) === null) {
+    const sentAt = clocks.toMillis(doc.createdAt);
+    const zone = sentAt === null ? null : (await responderProfile(tx, db, clock)).zone;
+    if (zone === null) {
+      // No zone: the server waits for the answering phone's own plan, and the deadline is next. A
+      // later write of the clock (the phone's delivery, say) has the trigger look again.
+      tx.update(clockRef, {serverNextStepAt: doc.answerByMillis});
+      return {action: 'rescheduled'};
+    }
+    const times = reminderPlan.plan(sentAt, doc.answerByMillis, nowMillis, zone);
+    return writeAndReschedule({serverReminderTimesMillis: times}, 'planned');
+  }
+
+  const due = clocks.remindersLeft(doc).filter((at) => at <= nowMillis);
+  if (due.length === 0) return writeAndReschedule({}, 'rescheduled');
+  const last = due[due.length - 1];
+
+  const look = await lookWith((ref) => tx.get(ref), db, clock);
+  if (look.status === 'unknown') return {action: 'skipped'};
+  if (look.status !== 'pending') return settle();
+
+  const {zone, hasToken} = await responderProfile(tx, db, clock);
+  // With no stored zone (an older build delivered the plan) the quiet hours cannot be checked here;
+  // the phone placed its plan outside its own night, which is what is sent.
+  if (zone !== null && reminderPlan.isQuietAt(nowMillis, zone)) {
+    const morning = reminderPlan.nextMorning(nowMillis, zone);
+    if (morning < doc.answerByMillis) {
+      tx.update(clockRef, {serverNextStepAt: morning});
+      return {action: 'deferred'};
+    }
+    return writeAndReschedule({serverLastReminderAt: last}, 'dropped');
+  }
+
+  if (!hasToken) {
+    // No push token (pushes off, an iPhone without permission, a signed-out phone): a queued push
+    // would be skipped by `sendNotification`, so nothing is queued and nothing is counted — the
+    // proposer's card never says "reminded" for a reminder that did not leave the server.
+    return writeAndReschedule({serverLastReminderAt: last}, 'noToken');
+  }
+
+  const proposer = await tx.get(db.collection('users').doc(clock.proposerUid));
+  const actor = proposer.exists ? previewFirstName((proposer.data() || {}).name) : '';
+  tx.set(db.collection('notification_queue').doc(`srv_${PUSH_REMINDER}_${clockId}_${last}`),
+      reminderPushFor(clock, doc.answerByMillis, actor, serverTimestamp()));
+  const sent = Number.isInteger(doc.serverRemindersSent) ? doc.serverRemindersSent : 0;
+  return writeAndReschedule({serverRemindersSent: sent + 1, serverLastReminderAt: last}, 'reminded');
+}
+
+/**
+ * Runs one step of one clock: the decision the phones' `RequestClockSteps` made (deleted in iPhone
+ * phase 4 part C), by the state at [nowMillis] (spec §5.3); an open clock's reminders are
+ * [remindOrPlan]'s.
  *
  * - not due (no `serverNextStepAt`, or a later one; another run acted first): nothing, `notDue`;
  * - `OPEN` or `LAST_CHANCE`, or the deadline already told: the next moment, `rescheduled`;
@@ -532,7 +659,7 @@ async function stepClock(db, clockId, nowMillis, deps) {
 
     switch (clocks.stateOf(doc, nowMillis)) {
       case 'OPEN':
-        return reschedule(doc.answerByMillis);
+        return remindOrPlan(tx, db, {clockRef, clockId, doc, clock, nowMillis, serverTimestamp, settle});
       case 'LAST_CHANCE':
         return reschedule(doc.lastChanceUntilMillis);
       case 'NO_ANSWER_LAST_CHANCE_POSSIBLE': {
@@ -553,8 +680,9 @@ async function stepClock(db, clockId, nowMillis, deps) {
 }
 
 /**
- * The end of a request nobody answered (`RequestClockSteps.closeUnanswered`), inside [stepClock]'s
- * transaction: every read first, then the closure, the card, the push and the withdrawal.
+ * The end of a request nobody answered (the phones' former `RequestClockSteps.closeUnanswered`),
+ * inside [stepClock]'s transaction: every read first, then the closure, the card, the push and the
+ * withdrawal.
  *
  * @param {!Object} tx the transaction.
  * @param {!Object} db Firestore.
@@ -599,6 +727,7 @@ async function closeUnanswered(tx, db, step) {
 module.exports = {
   PUSH_DEADLINE_PASSED,
   PUSH_NO_ANSWER,
+  PUSH_REMINDER,
   lookRecord,
   stepClock,
   unansweredCardFor,

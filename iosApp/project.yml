@@ -58,8 +58,15 @@ targets:
       # Cloud Storage (MON-24 phase 3, part C, Task 10): GitLive's Storage bindings in `Shared` call it.
       - package: Firebase
         product: FirebaseStorage
+      # Pushes (MON-24 phase 4, part C, Task 5): the FCM token the app keeps on the profile
+      # (PushTokenBridge.swift). From the same Firebase package, never a CocoaPod.
+      - package: Firebase
+        product: FirebaseMessaging
       - package: GoogleSignIn
         product: GoogleSignIn
+      # The Notification Service Extension (iPhone phase 4 part C, Task 6), embedded in PlugIns.
+      - target: CoPlanlyNotifications
+        embed: true
     preBuildScripts:
       # Builds `Shared` for the configuration and simulator or device Xcode is building, into
       # shared-ui/build/xcode-frameworks/<configuration>/<sdk>, which FRAMEWORK_SEARCH_PATHS names.
@@ -107,6 +114,18 @@ targets:
             -c "Add :CFBundleURLTypes:1:CFBundleURLSchemes:0 string $scheme" \
             "$plist"
           echo "Registered Google's URL scheme."
+      # The notifications' strings (iPhone phase 4 part C): `PushStrings.strings` and `.stringsdict`
+      # in each `<lang>.lproj`, written from `:shared-ui`'s XML for the keys `push-wording/push-keys.txt`
+      # lists, as the extension's own phase writes them into the extension. The app words its local
+      # notifications (event and support reminders) with the same `BundleWordingStrings` over its
+      # own bundle. Node must be on the PATH (CI's is; Homebrew's two prefixes are added for Xcode).
+      - name: Write the notifications' strings
+        basedOnDependencyAnalysis: false
+        script: |
+          export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
+          cd "$SRCROOT/.."
+          node tools/ios/generate-push-strings.js "${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}" \
+            --keys push-wording/push-keys.txt
     settings:
       base:
         PRODUCT_NAME: CoPlanly
@@ -158,6 +177,12 @@ targets:
         # offers no Google Calendar row (GoogleSignInBridge.calendarAvailable), as in CI. A client id is
         # not a secret, but set it on your own Mac or the release build only, as the URL scheme.
         COPLANLY_GOOGLE_WEB_CLIENT_ID: ""
+        # Pushes (MON-24 phase 4, part C): `CoPlanly.entitlements` carries `aps-environment`
+        # (`development`; the release build's signing decides production) and the App Group
+        # `group.app.coplanly`, where the app shares the signed-in uid and its language with the
+        # notification extension (`AppGroupShare.kt`). Both need the App ID's capabilities and the
+        # APNs key in the Firebase console (owner steps, iosApp/README.md); a simulator build signs
+        # them locally. No `remote-notification` background mode: every push carries an alert.
         # Sign in with Apple (MON-24 phase 4, part A): the `CoplanlyAppleSignIn` Info.plist key the
         # shared code reads (`AppleSignInFlag.kt`), on in Debug and off in Release until the owner
         # turns it on, as Android's `APPLE_SIGN_IN` build flag. The sheet also needs the
@@ -172,6 +197,73 @@ targets:
     scheme:
       testTargets:
         - CoPlanlyUITests
+
+  # The Notification Service Extension (iPhone phase 4 part C, Task 6; design §7.2): rewrites each
+  # push's neutral alert with the sentence `:push-wording` words, in the language and for the account
+  # the app shares through the App Group (CoPlanlyNotifications/NotificationService.swift). It links
+  # `PushWording`, a static Kotlin framework of that module alone, built by the Gradle phase below for
+  # the SDK Xcode is building (release: an extension has about 24 MB), and carries the strings in its
+  # own `<lang>.lproj` folders.
+  CoPlanlyNotifications:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: CoPlanlyNotifications
+        excludes:
+          - Info.plist
+          - CoPlanlyNotifications.entitlements
+    preBuildScripts:
+      # Into push-wording/build/bin/<target>/releaseFramework, which FRAMEWORK_SEARCH_PATHS names.
+      - name: Build the PushWording framework (Gradle)
+        basedOnDependencyAnalysis: false
+        script: |
+          cd "$SRCROOT/.."
+          case "$PLATFORM_NAME" in
+            iphonesimulator) task=linkReleaseFrameworkIosSimulatorArm64 ;;
+            iphoneos) task=linkReleaseFrameworkIosArm64 ;;
+            *) echo "error: no PushWording framework for $PLATFORM_NAME"; exit 1 ;;
+          esac
+          ./gradlew ":push-wording:$task"
+    postBuildScripts:
+      - name: Write the notifications' strings
+        basedOnDependencyAnalysis: false
+        script: |
+          export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
+          cd "$SRCROOT/.."
+          node tools/ios/generate-push-strings.js "${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}" \
+            --keys push-wording/push-keys.txt
+    settings:
+      base:
+        PRODUCT_NAME: CoPlanlyNotifications
+        # The app's id and `.notifications`, as iOS requires of an embedded extension.
+        PRODUCT_BUNDLE_IDENTIFIER: app.coplanly.notifications
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        INFOPLIST_FILE: CoPlanlyNotifications/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        # The App Group alone: the uid and the language the app shares (AppGroupShare.kt).
+        CODE_SIGN_ENTITLEMENTS: CoPlanlyNotifications/CoPlanlyNotifications.entitlements
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_VERSION: "5.0"
+        SKIP_INSTALL: YES
+        # The Gradle phase reads and writes outside the sandbox Xcode gives a script.
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        EXCLUDED_ARCHS[sdk=iphonesimulator*]: x86_64
+        FRAMEWORK_SEARCH_PATHS[sdk=iphonesimulator*]:
+          - "$(inherited)"
+          - "$(SRCROOT)/../push-wording/build/bin/iosSimulatorArm64/releaseFramework"
+        FRAMEWORK_SEARCH_PATHS[sdk=iphoneos*]:
+          - "$(inherited)"
+          - "$(SRCROOT)/../push-wording/build/bin/iosArm64/releaseFramework"
+        # `PushWording` is static: the extension links it, and nothing else of ours.
+        OTHER_LDFLAGS:
+          - "$(inherited)"
+          - "-framework"
+          - "PushWording"
+      configs:
+        Debug:
+          ONLY_ACTIVE_ARCH: YES
 
   # The native shell's UI test (MON-24 phase 3, Task 8), which the `ios-app` job runs on the Firebase
   # emulators with a seeded family (tools/ios/seed-shell-family.js); it reaches no real project.

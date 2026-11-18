@@ -141,8 +141,11 @@ data class TimedRequest(val clock: RequestDeadline, val nowMillis: Long) {
     /** What pressing the last-chance button now would give, or null when it is not offered. */
     val lastChanceWindowMillis: Long? get() = RequestClock.lastChanceWindowMillis(clock, nowMillis)
 
-    /** The first planned reminder still ahead of [nowMillis], or null when none is. */
-    val nextReminderMillis: Long? get() = clock.reminderTimesMillis.filter { it > nowMillis }.minOrNull()
+    /**
+     * The first reminder of the plan in force ([RequestDeadline.reminderTimesInForce]) still ahead of
+     * [nowMillis], or null when none is.
+     */
+    val nextReminderMillis: Long? get() = clock.reminderTimesInForce.filter { it > nowMillis }.minOrNull()
 
     /**
      * Whether the request is waiting on the answering parent: it is open, or in its last chance.

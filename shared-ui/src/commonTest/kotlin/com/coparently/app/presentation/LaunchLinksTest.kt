@@ -1,5 +1,6 @@
 package com.coparently.app.presentation
 
+import com.coparently.app.data.remote.firebase.PushDestination
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -121,5 +122,106 @@ class LaunchLinksTest {
     fun `the host is percent-decoded and ends at a backslash`() {
         assertEquals(LaunchLink.Pair("4F7K2M"), LaunchLinks.parse("coplanly://p%61ir?code=4F7K2M"))
         assertEquals(LaunchLink.Pair(""), LaunchLinks.parse("coplanly://pair\\x"))
+    }
+
+    @Test
+    fun `a push for another uid opens nothing`() {
+        val data = mapOf("type" to "expense_added", "targetUserId" to "bob", "familyId" to "alice__bob")
+
+        assertNull(LaunchLinks.forPush(data, signedInUid = "carol"))
+    }
+
+    @Test
+    fun `a push opens nothing while nobody is signed in`() {
+        assertNull(LaunchLinks.forPush(mapOf("type" to "expense_added", "targetUserId" to "bob"), signedInUid = null))
+    }
+
+    @Test
+    fun `a push with no addressee is the signed-in account's`() {
+        assertEquals(
+            PushTap(familyId = null, link = null, destination = PushDestination.EXPENSES),
+            LaunchLinks.forPush(mapOf("type" to "expense_added"), signedInUid = "bob")
+        )
+    }
+
+    @Test
+    fun `a push names its family beside the screen it opens`() {
+        val data = mapOf("type" to "request_reminder", "targetUserId" to "bob", "familyId" to "alice__bob")
+
+        assertEquals(
+            PushTap(familyId = "alice__bob", link = null, destination = PushDestination.CHANGE_REQUESTS),
+            LaunchLinks.forPush(data, signedInUid = "bob")
+        )
+    }
+
+    @Test
+    fun `a chat push opens its thread and keeps the family out of the link`() {
+        val data = mapOf(
+            "type" to "chat_message",
+            "targetUserId" to "bob",
+            "familyId" to "alice__bob",
+            "conversationId" to "alice__bob",
+        )
+
+        assertEquals(
+            PushTap(
+                familyId = "alice__bob",
+                link = LaunchLink.Chat(familyId = null, conversationId = "alice__bob"),
+                destination = null,
+            ),
+            LaunchLinks.forPush(data, signedInUid = "bob")
+        )
+    }
+
+    @Test
+    fun `a departed co-parent's notice opens its thread and one with no thread the list`() {
+        val notice = mapOf("type" to "coparent_account_deleted", "conversationId" to "alice__bob")
+        val bare = mapOf("type" to "chat_message")
+
+        assertEquals(LaunchLink.Chat(null, "alice__bob"), LaunchLinks.forPush(notice, "bob")?.link)
+        assertEquals(LaunchLink.Chat(null, null), LaunchLinks.forPush(bare, "bob")?.link)
+    }
+
+    @Test
+    fun `pairing news opens pairing with nothing prefilled`() {
+        for (type in listOf("pairing_accepted", "pairing_removed")) {
+            assertEquals(
+                PushTap(familyId = null, link = LaunchLink.Pair(""), destination = null),
+                LaunchLinks.forPush(mapOf("type" to type), "bob"),
+                type
+            )
+        }
+    }
+
+    @Test
+    fun `a type this build does not know opens the app alone`() {
+        assertEquals(
+            PushTap(familyId = "alice__bob", link = null, destination = null),
+            LaunchLinks.forPush(mapOf("type" to "from_the_future", "familyId" to "alice__bob"), "bob")
+        )
+    }
+
+    @Test
+    fun `a local reminder opens the screen it names on its family`() {
+        val support = mapOf(
+            "targetUserId" to "bob",
+            "coplanly.destination" to "support",
+            "familyId" to "alice__bob",
+        )
+        val event = mapOf("targetUserId" to "bob", "coplanly.destination" to "calendar")
+
+        assertEquals(
+            PushTap(familyId = "alice__bob", link = null, destination = PushDestination.SUPPORT),
+            LaunchLinks.forPush(support, "bob")
+        )
+        assertEquals(PushDestination.CALENDAR, LaunchLinks.forPush(event, "bob")?.destination)
+        assertNull(LaunchLinks.forPush(event, "carol"))
+    }
+
+    @Test
+    fun `a screen named beside a type that names one is not read`() {
+        val data = mapOf("type" to "expense_added", "coplanly.destination" to "support")
+
+        assertEquals(PushDestination.EXPENSES, LaunchLinks.forPush(data, "bob")?.destination)
     }
 }

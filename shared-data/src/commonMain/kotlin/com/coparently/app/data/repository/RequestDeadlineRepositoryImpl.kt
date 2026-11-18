@@ -94,9 +94,6 @@ class RequestDeadlineRepositoryImpl(
             dataSource.update(clock.id, mapOf(RequestDeadlineDocument.SEEN_AT_MILLIS to seenAtMillis))
         }
 
-    override suspend fun reportReminderShown(clock: RequestDeadline): Boolean =
-        write("The reminder count") { dataSource.reportShown(clock.id) }
-
     override suspend fun giveLastChance(clock: RequestDeadline, untilMillis: Long): Boolean =
         write("The last chance") { dataSource.giveLastChance(clock.id, untilMillis) }
 

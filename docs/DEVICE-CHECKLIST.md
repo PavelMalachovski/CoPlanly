@@ -161,6 +161,19 @@ them the evening before, from the commit you will build the app from.
       `backfillRequestClockSchedule` once (`functions/README.md`, "Request clocks on the server").
       Until the functions are deployed, a request that nobody answers is never told or ended on a
       build from MON-25 on (§5.9, §5.10).
+- [ ] **iPhone phase 4 part C, pushes** (`functions/README.md`, "Pushes to an iPhone and the
+      request reminders"; `iosApp/README.md`, "Pushes"), in this order:
+  1. [ ] `firebase deploy --only firestore:rules` (the profile's bounded `timeZone`), then
+         `firebase deploy --only functions` (the `apns` alert and the server's request reminders).
+  2. [ ] Invoke `backfillRequestClockSchedule` again, so clocks already open get their reminders.
+  3. [ ] **Apple Developer account:** the Push Notifications and App Groups capabilities on
+         `app.coplanly`, App Groups on `app.coplanly.notifications` (the extension), the group
+         `group.app.coplanly` on both, and an APNs authentication key.
+  4. [ ] **Firebase console** → Project settings → Cloud Messaging → the iOS app: upload the APNs
+         key. Without it no push reaches an iPhone, and nothing in the app says why (§3.43).
+  5. [ ] **Apply for `com.apple.developer.usernotifications.filtering`** (Apple's request form).
+         Until it is granted, a push the iPhone cannot word shows the neutral "You have a new update
+         in CoPlanly." — expected, not a finding (§3.43).
 - [ ] **Accounts:** at least two test accounts (A = you, B = co-parent). For the M-8 checks,
       add a third (C = a second co-parent). Also create one throwaway account for the deletion
       check in §7.
@@ -1632,7 +1645,7 @@ words, English and German). What is left is the gesture on glass and a real push
   `SwapSelectionChrome.kt`, `components/DaySwapSelectionBar.kt`, `components/DaySwapSheet.kt`,
   `components/SwapDayChips.kt`, `changerequests/DaySwapCard.kt`, `changerequests/SwapOfferContent.kt`,
   `changerequests/SwapDayAnswers.kt`, `home/AwaitingDialogs.kt`, `data/repository/SwapPush.kt`,
-  `data/remote/firebase/SwapPushWording.kt`, `firestore.rules` (`datesToYou`, `datesToSender`).
+  `:push-wording`'s `SwapPushWording.kt`, `firestore.rules` (`datesToYou`, `datesToSender`).
 
 ---
 
@@ -2197,15 +2210,18 @@ to another time zone.
 
 > **[CI]** `TwoParentRequestDeadlinesTest` runs the clocks between two parents against the real
 > `firestore.rules` and the real callables and keepers: the clock written with an offer, its `answerBy`
-> in the `day_swap_offered` push, the delivery with the reminders the answering phone planned and
-> scheduled, the opened mark, the last chance given only after the deadline and read back as the
+> in the `day_swap_offered` push, the delivery with the reminders the answering phone planned, the
+> opened mark, the last chance given only after the deadline and read back as the
 > `request_last_chance` push, and an answer under it (the server's sweep closes nothing, History says
 > Accepted). The end is the server's since MON-25: `TwoParentServerClocksTest` runs the scheduled
 > sweep on the emulators and covers a change request, a day swap, a custody proposal and a split
 > proposal ending as "No answer" — closed, the proposals withdrawn, the card posted to the thread,
 > listed in the co-parent's History — and the proposer's `request_deadline_passed` and
 > `request_no_answer` pushes read back from `notification_queue`. How those two pushes look is
-> §5.10. The pure rules are unit tests (`RequestClockTest`, `ReminderPlanTest`,
+> §5.10. Since iPhone phase 4 part C the answering parent's reminders are the server's too:
+> `TwoParentServerClocksTest.theAnsweringParentIsRemindedByTheServer` has the sweep plan one from
+> the answering parent's profile zone and queue the `request_reminder` push to that parent alone,
+> and none for a request already answered. The pure rules are unit tests (`RequestClockTest`, `ReminderPlanTest`,
 > `RequestCapTest`, `AnswerByTest`) and the cards render in the screenshot matrix. What only phones show
 > is below; a step marked **[CI]** has its mechanism covered, so run it only for what is drawn, posted
 > or timed.
@@ -2214,14 +2230,22 @@ to another time zone.
       with the default (3 days), then one with "Tomorrow" and one with a date. The form shows the chosen
       time in the phone's clock (12/24 hour); a date past the allowed range is clamped, not refused.
       The card of each reads "Sent · Answer by <time>" on A's phone and "Answer by <time> · <relative>" on B's; a date too close reads "Too soon for a deadline" and goes out as a plain request. **[CI]** for the clock and the push's `answerBy`.
-- [ ] **Reminders arrive at their planned times.** B's phone is online, then idle, with a request whose
-      deadline is 3 days out: one to three reminders post at the times the card's plan shows, each on
-      the **schedule** channel, and each opens the card that names the request. Answer the request and
-      the later reminders do not post. **[CI]** for the plan and its scheduling; **not** the jobs firing.
-- [ ] **Quiet hours follow the phone's own zone.** Set B's phone to a zone six hours away and again plan
-      a request: no reminder posts at night in that zone, whatever the time is for A. A reminder whose
-      job ran more than 30 minutes late (phone off over the planned time, then switched on) posts
-      nothing.
+- [ ] **Reminders arrive at their planned times, from the server.** B's phone is online, then idle,
+      with a request whose deadline is 3 days out: one to three reminders arrive within five minutes
+      of the times the card's plan shows ("Waiting for your answer", "<A> is waiting for your answer
+      until <time>."), each
+      on the **schedule** channel, and each opens the Requests inbox on the request's family. Answer
+      the request and the later reminders do not come. A's card counts them ("reminded N of M") and
+      never shows more sent than planned. **[CI]** for the plan and the push; **not** a phone
+      drawing it.
+- [ ] **A reminder before B ever opened the app.** With B's phone off from before A sends the
+      request, the server plans the reminders itself in B's profile zone (`users/{B}.timeZone`, in the
+      Firebase console): B still gets them once the phone is on. A profile with no `timeZone` (a
+      build before part C) gets none until B's phone has received the request.
+- [ ] **Quiet hours follow the profile's zone.** Set B's phone to a zone six hours away, open the app
+      (the profile's `timeZone` changes on the next start) and again send a request: no reminder
+      comes between 21:00 and 08:00 in that zone, whatever the time is for A; one due in the night
+      comes at 08:00, or not at all when 08:00 is past the deadline.
 - [ ] **The opened mark.** B opens the request. A's card changes from "<B> hasn't opened it yet" to "<B> opened it · <time>"
       within a minute, on its own. **[CI]** for the write; the card as drawn is the check.
 - [ ] **The last chance.** The deadline passes unanswered. A's card says "Deadline passed <time>" and offers
@@ -2249,11 +2273,12 @@ to another time zone.
 - **Fallback (1P):** sign in as B on the same phone to open and answer, then back as A. The reminders
   need the phone to stay B's, so only the cards, the last chance and the end can be
   seen; run the time zone and older-build steps with a second device if there is one.
-- **If it fails:** tag `RequestClockSteps`, `RequestClockKeeper`, `RequestClockActions`; `data/requests/`,
+- **If it fails:** tag `RequestClockKeeper`, `RequestClockActions`; `data/requests/`,
   `domain/changerequests/` (`RequestClock*`, `RequestDeadline*`, `ReminderPlan*`, `RequestCap*`),
   `presentation/changerequests/CardClock*`, `request_deadlines` in `firestore.rules`; for the end,
   the functions' log of `sweepRequestClocks` ("Stepped N request clocks, M left due") and
-  `functions/request-clock-steps.js`.
+  `functions/request-clock-steps.js`; for the reminders `functions/reminder-plan.js` and the clock's
+  `serverReminderTimesMillis`, `serverRemindersSent` and `serverLastReminderAt` in the console.
 
 ### 5.10 The server's two request pushes, as drawn (MON-25) · 2P, Android, two languages
 
@@ -2780,6 +2805,80 @@ done and the functions deployed; a device build will not sign before step 1.
   `functions/index.js` (the functions' log names the step and Apple's status, never a token); the
   calendar in `IosGoogleCalendarAccount.kt`, `GoogleGrantRevocation.kt`,
   `IosGoogleCalendarSignIn.kt` and `GoogleSignInBridge.swift`.
+
+### 3.43 Pushes and reminders on an iPhone · 2P, an iPhone and the co-parent's phone, a development and a TestFlight build
+
+MON-24 phase 4, part C. The rules are CLAUDE.md items 9, 15 and 42 and "Phase 4's part C". The
+wording is held to Android's byte for byte on the JVM (`PushWordingGoldenTest`) and run on the
+simulator (`PushWordingIosTest`, `ExtensionEntryTest`); the `ios-app` job pushes with `simctl push`
+(`PushUITests`: the banners delivered, one for another uid never worded, a chat push tapped into
+its thread). The simulator does not run the Notification Service Extension for a `simctl push`, so
+**a worded banner and the extension's memory are checked only here**; the local reminders run against a fake center
+(`IosEventRemindersTest`, `IosSupportRemindersTest`); the server's reminders run on the emulators
+(`TwoParentServerClocksTest`). **APNs works only on a device**, so the delivery, the lock screen,
+the extension's real memory and a reminder firing are checked here. **First:** §0's part C steps
+(the rules and functions deployed, the capabilities, the APNs key in Firebase; the filtering
+entitlement applied for) and a `GoogleService-Info.plist` in the build — without one the app runs on
+the emulators and never registers.
+
+- [ ] **The permission is asked in context.** A fresh install asks nothing at launch. Onboarding's
+      Notifications step asks once; an event's Reminder row and Settings' push switch ask when
+      nothing was asked yet. Denied: the switch reads off. Revoke the permission in iOS Settings and
+      come back: the switch reads off. Allowed and on: `users/{A}.fcmToken` holds a token
+      (Firebase console); switch off: the field is gone.
+- [ ] **A push arrives, worded.** On a development build, then on a TestFlight build (APNs'
+      production environment), have B add an expense and send a message: the iPhone shows "New
+      expense" with B's name and the amount, and the message's start, in the app's language — never
+      "You have a new update in CoPlanly.". Change the iPhone's language to Czech and repeat: the
+      text follows. Locked phone and app closed included.
+- [ ] **The same text as Android.** Send the same push types to the Android phone in the same
+      language (a day swap of two days, a change request with a deadline, an expense with a share):
+      title and body read alike on both, plurals included ("2 dny", "5 dnů" in Czech).
+- [ ] **A tap opens its screen, on its family.** With the app closed (a cold start), tap B's day
+      swap push: the Requests inbox opens on the swap's family. With A in two families and the other
+      on screen, tap the first family's push: the family switches first. A chat push opens its
+      thread. A push while the app is open shows a banner with sound.
+- [ ] **The previous account's push names nobody.** Sign out, sign in as another account, and have B
+      send a message to the first one: at most the neutral "You have a new update in CoPlanly."
+      appears, never B's name or words (the extension's filtering entitlement, once granted, shows
+      nothing at all — note which you saw). Sign-out deleted the first account's `fcmToken`.
+- [ ] **The extension's memory on a phone.** Connect the iPhone to a Mac, open Console, filter on
+      `COPLANLY_NSE_MEMORY`, and receive a few pushes (an expense, a long message, a swap): each line's
+      `footprint=` and `peak=` stay under 20 MB (20 971 520 bytes). Record the highest.
+- [ ] **A token refresh.** Delete the app, reinstall it and sign in: `fcmToken` is the new token,
+      and B's next push arrives on the reinstalled app.
+- [ ] **A request reminder from the server.** B sends A a request with a deadline 3 days out; A does
+      not answer. The reminders arrive on the iPhone at the planned times (§5.9), worded "Waiting for
+      your answer", none between 21:00 and 08:00 on the iPhone's clock, and a tap opens the Requests
+      inbox. Answer it: no further reminder comes.
+- [ ] **An event reminder, on time, on a locked iPhone.** Create an event 40 minutes ahead with a
+      30-minute reminder, lock the phone: the reminder comes on the minute, titled with the event and
+      "Starts at <time>" in the app's language; a tap opens the Calendar on the event's family.
+- [ ] **A deleted event stops reminding — after a sync.** Arm a reminder on the iPhone, delete the
+      event on the Android phone, open the iPhone app (a sync runs): its reminder no longer comes.
+      Then repeat but leave the iPhone app closed: it can still remind once. That is the known limit
+      (a local notification runs no code when it fires); record it, it is not a finding.
+- [ ] **A weekly event's next week.** A weekly event reminds this week; the next week's reminder is
+      armed at the next app start or sync (not the moment this one fires), so open the app once
+      between the two.
+- [ ] **The child support reminder.** As the payer, turn on child support reminders 3 days before:
+      the reminder comes at 09:00 on that day, names the due day, the amount and the payee, and opens
+      Family → Child support. Record "I paid" before the reminder's day: no reminder comes, and next
+      month's does. A reminder whose time has passed by the next start comes about a minute later,
+      or at the next 09:00 when that minute is at night; a month already reminded is not reminded
+      again (on the iPhone a month counts as reminded once its time passes, even with notifications
+      off — the known difference from Android).
+- [ ] **Sign-out and deletion end it.** Sign out (or delete a throwaway account): no reminder of that
+      account comes afterwards, its `fcmToken` is gone, and B's pushes to it no longer arrive.
+- **If it fails:** registration in `IosPushRegistration.kt`, `NotificationPermission.kt`,
+  `PushTokenBridge.swift` and `AppDelegate.swift`; the extension in
+  `iosApp/CoPlanlyNotifications/NotificationService.swift` and `push-wording`'s `ExtensionEntry.kt`
+  (its `PushStrings` files come from `tools/ios/generate-push-strings.js` at build time); the App
+  Group in `ios/AppGroupShare.kt`; a tap in `IosApp.openPush` and `LaunchLinks.forPush`; the local
+  reminders in `data/notification/IosLocalReminders.kt`, `IosEventReminders.kt` and
+  `IosSupportReminders.kt`; on the server `buildFcmMessage`'s `apns` block and
+  `functions/reminder-plan.js`. A push that never arrives with its queue document written is APNs:
+  the key in the Firebase console, the capability, or `aps-environment` (§0).
 
 ---
 

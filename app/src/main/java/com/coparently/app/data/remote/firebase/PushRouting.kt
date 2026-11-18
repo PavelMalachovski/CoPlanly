@@ -45,45 +45,10 @@ object PushRouting {
     /**
      * The screen [type] opens, or null for pairing, chat, a departed co-parent's notice (which
      * opens its thread through the chat link, like a message) and a type this build does not know.
+     * The table is [PushDestination.forType], in `:shared-data`'s common code since iPhone phase 4
+     * part C, so the iPhone's tap opens the same screen.
      */
-    fun destinationOf(type: String?): PushDestination? = when (type) {
-        PushPayload.EVENT_CREATED,
-        PushPayload.EVENT_UPDATED,
-        PushPayload.EVENT_DELETED,
-        PushPayload.EVENT_IMPORTANT -> PushDestination.CALENDAR
-        PushPayload.CHILD_INFO_UPDATED -> PushDestination.CHILD_INFO
-        PushPayload.CHANGE_REQUEST_CREATED,
-        PushPayload.CHANGE_REQUEST_ACCEPTED,
-        PushPayload.CHANGE_REQUEST_DECLINED,
-        PushPayload.CHANGE_REQUEST_CANCELLED,
-        // A last chance is answered in the Requests inbox, like the request it gives another go.
-        PushPayload.REQUEST_LAST_CHANCE,
-        // The server's clock pushes (MON-25) say a request closed or lapsed; the inbox shows it.
-        PushPayload.REQUEST_DEADLINE_PASSED,
-        PushPayload.REQUEST_NO_ANSWER -> PushDestination.CHANGE_REQUESTS
-        // Asks are answered on Home, where the pop-up and the inline card wait for this parent;
-        // outcomes are read on the grid they changed.
-        PushPayload.CUSTODY_PROPOSAL_PROPOSED,
-        PushPayload.DAY_SWAP_OFFERED,
-        PushPayload.DAY_SWAP_GROUP_OFFERED,
-        PushPayload.RECORDS_SHARED,
-        // A sticker is drawn on Home, where its card waits to be seen.
-        PushPayload.STICKER_RECEIVED -> PushDestination.HOME
-        PushPayload.CUSTODY_PROPOSAL_ACCEPTED,
-        PushPayload.CUSTODY_PROPOSAL_DECLINED,
-        PushPayload.DAY_SWAP_ACCEPTED,
-        PushPayload.DAY_SWAP_DECLINED,
-        PushPayload.DAY_SWAP_GROUP_ACCEPTED,
-        PushPayload.DAY_SWAP_GROUP_DECLINED -> PushDestination.CALENDAR
-        PushPayload.SPLIT_RATIO_PROPOSED,
-        PushPayload.SPLIT_RATIO_ACCEPTED,
-        PushPayload.SPLIT_RATIO_DECLINED,
-        PushPayload.SPLIT_RATIO_AGREED,
-        PushPayload.EXPENSE_ADDED -> PushDestination.EXPENSES
-        PushPayload.PROFESSIONAL_ACCESS_REQUESTED -> PushDestination.PROFESSIONALS
-        PushPayload.CALENDAR_FRIEND_ACCEPTED -> PushDestination.FRIENDS
-        else -> null
-    }
+    fun destinationOf(type: String?): PushDestination? = PushDestination.forType(type)
 
     /**
      * The channel [type] posts to; the family channel for news about the family itself — pairing,
@@ -111,7 +76,8 @@ object PushRouting {
         PushPayload.DAY_SWAP_GROUP_DECLINED,
         PushPayload.REQUEST_LAST_CHANCE,
         PushPayload.REQUEST_DEADLINE_PASSED,
-        PushPayload.REQUEST_NO_ANSWER -> PushChannel.SCHEDULE
+        PushPayload.REQUEST_NO_ANSWER,
+        PushPayload.REQUEST_REMINDER -> PushChannel.SCHEDULE
         PushPayload.SPLIT_RATIO_PROPOSED,
         PushPayload.SPLIT_RATIO_ACCEPTED,
         PushPayload.SPLIT_RATIO_DECLINED,

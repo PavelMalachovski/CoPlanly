@@ -432,6 +432,9 @@ const RULES = {
       lastChanceUntilMillis: INTEGER, outcome: STRING, closedAt: TIMESTAMP,
       serverNextStepAt: INTEGER, serverToldDeadlineAt: INTEGER, serverToldNoAnswerAt: INTEGER,
       serverSettledAt: INTEGER,
+      // The server's reminders (iPhone phase 4 part C): its own plan, the count it sent, and the
+      // latest planned time it acted on.
+      serverReminderTimesMillis: arrayOf(INTEGER), serverRemindersSent: INTEGER, serverLastReminderAt: INTEGER,
     },
   }),
 

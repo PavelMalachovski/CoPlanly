@@ -10,7 +10,6 @@ import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.stickers.StickerKind
 import com.coparently.app.presentation.chat.ActivityCardText
 import com.coparently.app.presentation.chat.CardSubjectText
-import com.coparently.app.presentation.chat.androidStringId
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -104,8 +103,9 @@ class ChatCardPushTest {
 
     @Test
     fun `every sentence a card can be worded with is one of the app's own strings`() {
-        // The push reads `ActivityCardText`'s Compose Multiplatform resources as the app's `R.string`
-        // of the same key (MON-24 phase 2): a key the app did not hold would push the English preview.
+        // The push reads `CardWording`'s keys (`:push-wording`), the keys of `ActivityCardText`'s
+        // Compose Multiplatform resources, as the app's `R.string` of the same name: a key the app
+        // did not hold would push the English preview.
         val resources = ActivityKind.entries.flatMap { kind ->
             listOf(
                 ActivityCardText.resourceFor(kind),
@@ -120,7 +120,12 @@ class ChatCardPushTest {
         }
 
         for (resource in resources.toSet()) {
-            assertTrue(context.androidStringId(resource) != 0, "no R.string.${resource.key}")
+            assertTrue(stringIdOf(resource.key) != 0, "no R.string.${resource.key}")
         }
     }
+
+    // A key Compose Multiplatform names is the app's resource name: the app's copy is generated from
+    // the same files (`stringsToAndroidRes`).
+    @Suppress("DiscouragedApi")
+    private fun stringIdOf(key: String): Int = context.resources.getIdentifier(key, "string", context.packageName)
 }

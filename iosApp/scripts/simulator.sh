@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The iPhone app on a simulator, for the `ios-app` CI job (MON-24 phase 3). Two commands:
+# The iPhone app on a simulator, for the `ios-app` CI job (MON-24 phase 3). Its commands:
 #
 #   iosApp/scripts/simulator.sh pick
 #       Prints the UDID of the simulator to use: an available "iPhone 16" when the image has one,
@@ -16,7 +16,20 @@
 #       runs the CoPlanlyUITests target (built by `build-for-testing`) on the booted simulator
 #       signed in as its first parent, keeps the result bundle in <out-dir>/shell.xcresult and
 #       exports its screenshots to <out-dir>/shots, printing a small copy of each into the log.
-#       Fails when the test fails. Runs `testShellWalk` alone.
+#       Fails when the test fails. Runs `testShellWalk`, then the push test as `push-test` does,
+#       into <out-dir>/push, on a family seeded for it; fails when either fails.
+#
+#   iosApp/scripts/simulator.sh push-test <udid> <out-dir>
+#       Inside `firebase emulators:exec`: seeds a family and runs CoPlanlyUITests' `PushUITests`
+#       (iPhone phase 4 part C, Task 6), which writes each push it wants sent as a JSON payload into
+#       <out-dir>/pushes; while it runs, every payload that appears there is sent to app.coplanly
+#       with `xcrun simctl push` (renamed `.sent` or `.failed`, `simctl`'s output beside it). Then
+#       reads the Notification Service Extension's `COPLANLY_NSE_MEMORY` lines from the simulator's
+#       log into <out-dir>/extension-memory.log and fails when its footprint, or the footprint's
+#       peak, passed 20 MB (iOS ends an extension past about 24 MB). With no such line it warns and
+#       does not fail: the measurement is then missing, which says nothing of the extension's size.
+#       (The simulator does not run a Notification Service Extension for `simctl push`, so today the
+#       line is always missing and the extension's memory is measured on a phone.)
 #
 #   iosApp/scripts/simulator.sh tour <udid> <out-dir>
 #       The same inside a fresh `firebase emulators:exec`, for the tour (MON-24 phase 3, part B,
@@ -161,14 +174,80 @@ show_samples() {
 }
 
 shell_test() {
-  ui_test "$1" "$2" shell testShellWalk yes
+  local status=0
+  ui_test "$1" "$2" shell testShellWalk yes || status=1
+  push_test "$1" "$2/push" || status=1
+  return "$status"
+}
+
+# Sends every payload `PushUITests` writes into <dir> (`<n>-<name>.json`, renamed into place) with
+# `xcrun simctl push`, until stopped (stop_watcher). A sent payload becomes `.sent`, a refused one
+# `.failed`, with simctl's output in `<file>.log`.
+send_pushes() {
+  local udid=$1 dir=$2 file
+  while sleep 1; do
+    for file in "$dir"/*.json; do
+      [ -f "$file" ] || continue
+      if xcrun simctl push "$udid" "$BUNDLE_ID" "$file" > "$file.log" 2>&1; then
+        mv "$file" "$file.sent"
+        echo "COPLANLY_PUSH_SENT $(basename "$file")"
+      else
+        mv "$file" "$file.failed"
+        echo "COPLANLY_PUSH_FAILED $(basename "$file"): $(cat "$file.log")"
+      fi
+    done
+  done
+}
+
+# The largest physical footprint the notification extension logged (`COPLANLY_NSE_MEMORY
+# footprint=… peak=…`, NotificationService.swift), against 20 MB. No line is a warning, not a pass
+# dressed as one: the measurement is missing.
+check_extension_memory() {
+  local udid=$1 out=$2 largest limit=$((20 * 1024 * 1024))
+  xcrun simctl spawn "$udid" log show --last 60m --style compact \
+    --predicate 'eventMessage CONTAINS "COPLANLY_NSE_MEMORY"' > "$out/extension-memory.log" 2>&1 || true
+  echo "::group::the notification extension's memory (COPLANLY_NSE_MEMORY)"
+  grep "COPLANLY_NSE_MEMORY" "$out/extension-memory.log" || true
+  echo "::endgroup::"
+  largest=$( { grep -oE 'footprint=[0-9]+|peak=[0-9]+' "$out/extension-memory.log" || true; } |
+    cut -d= -f2 | sort -n | tail -n 1)
+  if [ -z "$largest" ]; then
+    echo "::warning::The notification extension's memory was not measured: no COPLANLY_NSE_MEMORY line in the simulator's log."
+    return 0
+  fi
+  echo "The notification extension's largest footprint: $largest bytes (limit $limit)."
+  if [ "$largest" -gt "$limit" ]; then
+    echo "::error::The notification extension used $largest bytes, above 20 MB (iOS ends one past about 24 MB)."
+    return 1
+  fi
+}
+
+push_test() {
+  local udid=$1 out=$2 status=0 sender
+  mkdir -p "$out"
+  out=$(cd "$out" && pwd)
+  rm -rf "$out/pushes"
+  mkdir -p "$out/pushes"
+  export TEST_RUNNER_COPLANLY_UITEST_PUSH_DIR="$out/pushes"
+  send_pushes "$udid" "$out/pushes" &
+  sender=$!
+  ui_test "$udid" "$out" push PushUITests yes || status=1
+  stop_watcher "$sender"
+  echo "::group::the pushes sent"; ls -l "$out/pushes"; cat "$out"/pushes/*.log 2>/dev/null || true; echo "::endgroup::"
+  echo "::group::the notification extension's lines in the system log"
+  xcrun simctl spawn "$udid" log show --last 60m --style compact \
+    --predicate 'process == "CoPlanlyNotifications"' 2>/dev/null | tail -n 100 || true
+  echo "::endgroup::"
+  check_extension_memory "$udid" "$out" || status=1
+  return "$status"
 }
 
 tour() {
   ui_test "$1" "$2" tour testTour no --tour
 }
 
-# Runs one UI test method, <test>, on <udid> after seeding a family (<seed-args> passed to the
+# Runs one UI test method of ShellUITests, <test>, or a whole class named `…UITests` (PushUITests),
+# on <udid> after seeding a family (<seed-args> passed to the
 # seed), keeping <out>/<name>.xcresult and its attachments in <out>/shots. <small-copies> "yes"
 # prints a small copy of each screenshot into the log, as the walk does; the tour has too many.
 ui_test() {
@@ -185,10 +264,16 @@ ui_test() {
   # xcodebuild hands the test runner every TEST_RUNNER_-prefixed variable, without the prefix.
   export TEST_RUNNER_COPLANLY_UITEST_EMAIL
   export TEST_RUNNER_COPLANLY_UITEST_PASSWORD
+  export TEST_RUNNER_COPLANLY_UITEST_UID
+  export TEST_RUNNER_COPLANLY_UITEST_FAMILY_ID
   TEST_RUNNER_COPLANLY_UITEST_EMAIL=$(node -e 'console.log(JSON.parse(process.argv[1]).email)' "$seed")
   TEST_RUNNER_COPLANLY_UITEST_PASSWORD=$(node -e 'console.log(JSON.parse(process.argv[1]).password)' "$seed")
+  TEST_RUNNER_COPLANLY_UITEST_UID=$(node -e 'console.log(JSON.parse(process.argv[1]).uid)' "$seed")
+  TEST_RUNNER_COPLANLY_UITEST_FAMILY_ID=$(node -e 'console.log(JSON.parse(process.argv[1]).familyId)' "$seed")
   echo "Seeded family; signing in as $TEST_RUNNER_COPLANLY_UITEST_EMAIL"
   rm -rf "$out/$name.xcresult"
+  local only="CoPlanlyUITests/ShellUITests/$test"
+  case "$test" in *UITests) only="CoPlanlyUITests/$test" ;; esac
   # While the walk runs, the app's threads are sampled now and then, so a walk that fails because
   # the app's main thread stopped answering ("main thread busy") says where it was busy.
   local watcher
@@ -199,7 +284,7 @@ ui_test() {
     -scheme CoPlanly \
     -destination "platform=iOS Simulator,id=$udid" \
     -derivedDataPath iosApp/build \
-    -only-testing:"CoPlanlyUITests/ShellUITests/$test" \
+    -only-testing:"$only" \
     -resultBundlePath "$out/$name.xcresult" 2>&1 | tee "$out/xcodebuild-$name.log" || status=$?
   stop_watcher "$watcher"
   if [ "$status" -ne 0 ]; then show_samples "$out"; fi
@@ -345,7 +430,8 @@ case "${1:-}" in
   pick) pick ;;
   launch) shift; launch "$@" ;;
   shell-test) shift; shell_test "$@" ;;
+  push-test) shift; push_test "$@" ;;
   tour) shift; tour "$@" ;;
   tour-appearance) shift; tour_appearance "$@" ;;
-  *) echo "usage: $0 pick | launch <udid> <app> <out-dir> | shell-test <udid> <out-dir> | tour <udid> <out-dir> | tour-appearance <udid> <out-dir>" >&2; exit 2 ;;
+  *) echo "usage: $0 pick | launch <udid> <app> <out-dir> | shell-test <udid> <out-dir> | push-test <udid> <out-dir> | tour <udid> <out-dir> | tour-appearance <udid> <out-dir>" >&2; exit 2 ;;
 esac

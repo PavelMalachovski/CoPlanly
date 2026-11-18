@@ -530,7 +530,7 @@ arithmetic (a port of the Kotlin `RequestClock`, held to it by the shared fixtur
 - **`sweepRequestClocksOnEmulator`** exists only on the emulators, for the two-parent tests.
 
 The four fields `serverNextStepAt`, `serverToldDeadlineAt`, `serverToldNoAnswerAt` and
-`serverSettledAt` are written here alone; `firestore.rules` refuses them from every client. The two
+`serverSettledAt` (and, since part C, the reminders' three, below) are written here alone; `firestore.rules` refuses them from every client. The two
 pushes are server-only types carrying `familyId` and the answering parent's first name; a proposer
 whose push switch is off has no token and gets neither.
 
@@ -547,6 +547,44 @@ whose push switch is off has no token and gets neither.
    updated, an older Android build still runs its own steps beside the server: the clock is closed
    once, but on a slow network a second "No answer" card may be posted and the proposer may be told
    twice (spec §5.5, accepted for the transition).
+
+## Pushes to an iPhone and the request reminders (iPhone phase 4 part C)
+
+- **Every push carries an `apns` block** (`buildFcmMessage`, `apnsAlertFor`): an alert with a fixed,
+  English, neutral text — title `CoPlanly`, body `You have a new update in CoPlanly.`, never taken
+  from the payload — `mutable-content: 1`, a `thread-id` and, for a chat message or card, an
+  `apns-collapse-id`. The iPhone's Notification Service Extension replaces the text with the one the
+  phone words (CLAUDE.md item 15); when it cannot, this text is what shows. `data` and `android` are
+  unchanged, so Android's delivery is too (`test/build-fcm-message.test.js`).
+- **The answering parent's reminders are sent here** (CLAUDE.md item 42), by the same
+  `sweepRequestClocks`: a `request_reminder` push (server-only; `familyId`, the proposer's first
+  name as `actorName`, `requestKind`, `answerBy`) at each planned time — the phone's plan once it
+  delivered the clock, else the server's own, written once into `serverReminderTimesMillis` by
+  `reminder-plan.js` (a port of `ReminderPlan`, held to it by `test/fixtures/reminder-plan-cases.json`,
+  which the Kotlin `ReminderPlanFixtureTest` reads too) in the answering parent's
+  `users/{uid}.timeZone`. With no zone stored nothing is planned and the server waits for the
+  phone's plan. The step re-reads the request in its transaction and sends nothing for one that no
+  longer waits; a reminder due between 21:00 and 08:00 in the stored zone waits for 08:00, or is
+  dropped when that is past the deadline. `serverRemindersSent` counts the reminders sent and
+  `serverLastReminderAt` is the latest planned time acted on, so none is sent twice; both, like the
+  plan, are server-only (the trigger ignores them). Push id:
+  `notification_queue/srv_request_reminder_<clockId>_<time>`.
+
+### Deploying it (order matters)
+
+1. `firebase deploy --only firestore:rules`: the rules bound the profile's `timeZone` (a string of
+   1–64 characters, the owner's), so the zone the sweep plans from is bounded before anything reads
+   it, and they keep refusing `request_reminder` and the three new server fields from every client.
+2. `firebase deploy --only functions`: the `apns` block and the reminders.
+3. Invoke `backfillRequestClockSchedule` again (operator-only, safe to repeat): it recomputes
+   `serverNextStepAt` with the reminders, so a clock open at deploy gets them; until then such a
+   clock is next looked at at its deadline.
+4. Release the client builds that stop scheduling their own request reminders. Until a phone has
+   updated, an older Android build reminds from its own plan too, so a parent may be reminded twice
+   (accepted for the transition, as in part B).
+
+Before an iPhone receives anything: the APNs key in the Firebase console and the capabilities in the
+Apple Developer account (`iosApp/README.md`, "Pushes").
 
 ## Region: europe-west3 (September 2026)
 

@@ -161,8 +161,6 @@ internal class CountingClocks : RequestClockScheduler {
     /** How many times every clock's job was cancelled. */
     var cancelledAll = 0
 
-    override fun scheduleReminder(clockId: String, atMillis: Long) = Unit
-
     override fun cancelAll() {
         cancelledAll++
     }

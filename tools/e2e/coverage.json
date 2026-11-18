@@ -445,6 +445,12 @@
       ],
       "checklist": ["5.10"]
     },
+    "request_reminder": {
+      "e2e": [
+        "TwoParentServerClocksTest#theAnsweringParentIsRemindedByTheServer"
+      ],
+      "checklist": ["5.9", "3.43"]
+    },
     "sticker_received": {
       "e2e": [
         "TwoParentStickersTest#aStickerReachesTheCoParentWithItsPushAndIsSeen"

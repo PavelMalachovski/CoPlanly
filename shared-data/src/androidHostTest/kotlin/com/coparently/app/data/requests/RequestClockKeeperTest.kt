@@ -5,13 +5,10 @@ import com.coparently.app.domain.changerequests.RequestClockOutcome
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.changerequests.RequestKind
-import com.coparently.app.domain.notification.RequestClockScheduler
 import com.coparently.app.domain.repository.RequestDeadlineRepository
-import io.mockk.Called
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.emptyFlow
@@ -28,16 +25,16 @@ import org.junit.Test
  * [RequestClockKeeper]: what each full sync, and each listener snapshot while the app runs, does
  * with this parent's open clocks (phase 3a, spec §4.3, §4.5 and §5.3).
  *
- * The answering phone delivers a clock once: it plans the reminders in its own zone, records the
- * delivery with the plan, and schedules them. The proposer's phone keeps nothing since MON-25: the
- * deadline notice and the end are the server's. A clock of a family this parent has left, or one
+ * The answering phone delivers a clock once: it plans the reminders in its own zone and records the
+ * delivery with the plan, from which the server sends them (iPhone phase 4 part C); no phone
+ * schedules a reminder. The proposer's phone keeps nothing since MON-25: the deadline notice and the
+ * end are the server's. A clock of a family this parent has left, or one
  * whose id does not spell its own fields, is left alone.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class RequestClockKeeperTest {
 
     private val repository = mockk<RequestDeadlineRepository>()
-    private val scheduler = mockk<RequestClockScheduler>(relaxed = true)
     private var now = SENT + HOUR
     private val time = RequestTime(now = { now }, zoneOf = { PRAGUE }, ticks = emptyFlow())
 
@@ -45,7 +42,7 @@ class RequestClockKeeperTest {
      * A keeper whose deliveries run on the test's background scope. `runCurrent()`, not
      * `advanceUntilIdle()`, runs them: the latter does not wait for background work.
      */
-    private fun TestScope.keeper() = RequestClockKeeper(repository, scheduler, time, backgroundScope)
+    private fun TestScope.keeper() = RequestClockKeeper(repository, time, backgroundScope)
 
     @Before
     fun setUp() {
@@ -67,9 +64,8 @@ class RequestClockKeeperTest {
             plan
         )
         coVerify(exactly = 1) { repository.markDelivered(clock, now, plan) }
-        plan.forEach { verify(exactly = 1) { scheduler.scheduleReminder(clock.id, it) } }
 
-        // The next sweep finds it delivered: no second mark, only the reminders still ahead.
+        // The next sweep finds it delivered: no second mark.
         val delivered = clock.copy(deliveredAtMillis = now, remindersPlanned = plan.size, reminderTimesMillis = plan)
         now = plan.first() + MINUTE
         coEvery { repository.openFor(BOB, now - FOUR_DAYS) } returns listOf(delivered)
@@ -86,7 +82,6 @@ class RequestClockKeeperTest {
         keeper().sweep(BOB, setOf(ALICE))
 
         coVerify(exactly = 1) { repository.markDelivered(clock, now, emptyList()) }
-        verify(exactly = 0) { scheduler.scheduleReminder(any(), any()) }
     }
 
     @Test
@@ -116,13 +111,11 @@ class RequestClockKeeperTest {
 
         gate.complete(false)
         runCurrent()
-        verify(exactly = 0) { scheduler.scheduleReminder(any(), any()) }
 
         coEvery { repository.markDelivered(clock, any(), any()) } returns true
         keeper.deliverSoon(BOB, listOf(clock))
         runCurrent()
         coVerify(exactly = 2) { repository.markDelivered(clock, any(), any()) }
-        verify(atLeast = 1) { scheduler.scheduleReminder(clock.id, any()) }
     }
 
     @Test
@@ -143,7 +136,7 @@ class RequestClockKeeperTest {
     }
 
     @Test
-    fun `every planned reminder still ahead is scheduled`() = runTest {
+    fun `a delivered clock is left to the server - nothing is written again`() = runTest {
         val times = listOf(SENT + HOUR, SENT + 24 * HOUR, SENT + 48 * HOUR)
         val delivered = clock().copy(deliveredAtMillis = SENT, remindersPlanned = 3, reminderTimesMillis = times)
         now = SENT + 2 * HOUR
@@ -151,14 +144,12 @@ class RequestClockKeeperTest {
 
         keeper().sweep(BOB, setOf(ALICE))
 
-        verify(exactly = 0) { scheduler.scheduleReminder(delivered.id, times[0]) }
-        verify(exactly = 1) { scheduler.scheduleReminder(delivered.id, times[1]) }
-        verify(exactly = 1) { scheduler.scheduleReminder(delivered.id, times[2]) }
         coVerify(exactly = 0) { repository.markDelivered(any(), any(), any()) }
+        coVerify(exactly = 0) { repository.get(any()) }
     }
 
     @Test
-    fun `the proposer's clocks are left to the server - the sweep schedules and runs nothing for them`() = runTest {
+    fun `the proposer's clocks are left to the server - the sweep writes and runs nothing for them`() = runTest {
         // MON-25: the deadline notice and the end run on the server, so a phone keeps no job for a
         // request it sent — open, past its deadline, due to end or closed.
         val open = clockByBob(ref = "open")
@@ -182,7 +173,6 @@ class RequestClockKeeperTest {
 
         keeper().sweep(BOB, setOf(ALICE))
 
-        verify { scheduler wasNot Called }
         coVerify(exactly = 0) { repository.markDelivered(any(), any(), any()) }
         coVerify(exactly = 0) { repository.get(any()) }
     }
@@ -196,13 +186,12 @@ class RequestClockKeeperTest {
         keeper().sweep(BOB, setOf(CAROL))
 
         coVerify(exactly = 0) { repository.markDelivered(any(), any(), any()) }
-        verify { scheduler wasNot Called }
     }
 
     @Test
     fun `a clock whose id does not match its fields is left alone`() = runTest {
         // A clock addressed to Bob whose id spells another proposer, or one that names another
-        // record: neither is delivered, and no reminder is armed for it.
+        // record: neither is delivered.
         val forged = clock().copy(id = RequestDeadlineId.of(RequestKind.CHANGE, BOB, "ref-1", FAMILY))
         val wrongRef = clock().copy(ref = "another")
         now = SENT + HOUR
@@ -211,7 +200,6 @@ class RequestClockKeeperTest {
         keeper().sweep(BOB, setOf(ALICE))
 
         coVerify(exactly = 0) { repository.markDelivered(any(), any(), any()) }
-        verify { scheduler wasNot Called }
     }
 
     /** A change request Alice sent Bob, three days to answer. */

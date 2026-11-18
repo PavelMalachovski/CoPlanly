@@ -1,0 +1,397 @@
+{
+  "description": "Shared by functions/test/reminder-plan.test.js and ReminderPlanFixtureTest (:shared). Times are epoch millis; zone is an IANA name. plan is ReminderPlan.plan(sentAtMillis, answerByMillis, notBeforeMillis, zone); quiet is ReminderPlan.isQuietAt(millis, zone).",
+  "planCases": [
+    {
+      "name": "three: a three-day window in the day",
+      "zone": "Europe/Prague",
+      "sentAtMillis": 1794819600000,
+      "answerByMillis": 1795078800000,
+      "notBeforeMillis": 1794819600000,
+      "plan": [
+        1794906000000,
+        1794992400000,
+        1795071600000
+      ]
+    },
+    {
+      "name": "three: exactly 24 hours",
+      "zone": "Europe/Prague",
+      "sentAtMillis": 1794826800000,
+      "answerByMillis": 1794913200000,
+      "notBeforeMillis": 1794826800000,
+      "plan": [
+        1794855600000,
+        1794898800000,
+        1794906000000
+      ]
+    },
+    {
+      "name": "two: one ms under 24 hours",
+      "zone": "Europe/Prague",
+      "sentAtMillis": 1794816000000,
+      "answerByMillis": 1794902399999,
+      "notBeforeMillis": 1794816000000,
+      "plan": [
+        1794859199999,
+        1794898800000
+      ]
+    },
+    {
+      "name": "two: exactly six hours",
+      "zone": "Europe/Prague",
+      "sentAtMillis": 1794819600000,
+      "answerByMillis": 1794841200000,
+      "notBeforeMillis": 1794819600000,
+      "plan": [
+        1794830400000,
+        1794837600000
+      ]
+    },
+    {
+      "name": "one: one ms under six hours",
+      "zone": "Europe/Prague",
+      "sentAtMillis": 1794819600000,
+      "answerByMillis": 1794841199999,
+      "notBeforeMillis": 1794819600000,
+      "plan": [
+        1794830399999
+      ]
+    },
+    {
+      "name": "one: an hour's window",
+      "zone": "Europe/Prague",
+      "sentAtMillis": 1794834000000,
+      "answerByMillis": 1794837600000,
+      "notBeforeMillis": 1794834000000,
+      "plan": [
+        1794835800000
+      ]
+    },
+    {
+      "name": "none: an empty window",
+      "zone": "Europe/Prague",
+      "sentAtMillis": 1794834000000,
+      "answerByMillis": 1794834000000,
+      "notBeforeMillis": 1794834000000,
+      "plan": []
+    },
+    {
+      "name": "none: a negative window",
+      "zone": "Europe/Prague",
+      "sentAtMillis": 1794834000000,
+      "answerByMillis": 1794830400000,
+      "notBeforeMillis": 1794834000000,
+      "plan": []
+    },
+    {
+      "name": "evening before: a midpoint at 23:00, the deadline at 02:00",
+      "zone": "Europe/Prague",
+      "sentAtMillis": 1794855600000,
+      "answerByMillis": 1794877200001,
+      "notBeforeMillis": 1794855600000,
+      "plan": [
+        1794857400000
+      ]
+    },
+    {
+      "name": "evening before: a midpoint at 01:00, the deadline at 06:00",
+      "zone": "Europe/Prague",
+      "sentAtMillis": 1794855600000,
+      "answerByMillis": 1794891600000,
+      "notBeforeMillis": 1794855600000,
+      "plan": [
+        1794857400000
+      ]
+    },
+    {
+      "name": "evening before: the next 08:00 is past the deadline",
+      "zone": "Europe/Prague",
+      "sentAtMillis": 1794848400000,
+      "answerByMillis": 1794895200000,
+      "notBeforeMillis": 1794848400000,
+      "plan": [
+        1794857400000
+      ]
+    },
+    {
+      "name": "evening before: the next 08:00 is exactly the deadline",
+      "zone": "Europe/Prague",
+      "sentAtMillis": 1794852000000,
+      "answerByMillis": 1794898800000,
+      "notBeforeMillis": 1794852000000,
+      "plan": [
+        1794857400000
+      ]
+    },
+    {
+      "name": "dropped: the evening before is before the sending",
+      "zone": "Europe/Prague",
+      "sentAtMillis": 1794861000000,
+      "answerByMillis": 1794875400000,
+      "notBeforeMillis": 1794861000000,
+      "plan": []
+    },
+    {
+      "name": "night: two at 21:00 and 23:00 go to the evening before",
+      "zone": "Europe/Prague",
+      "sentAtMillis": 1794848400000,
+      "answerByMillis": 1794870000000,
+      "notBeforeMillis": 1794848400000,
+      "plan": [
+        1794857400000
+      ]
+    },
+    {
+      "name": "day: a reminder at exactly 08:00 stays",
+      "zone": "Europe/Prague",
+      "sentAtMillis": 1794808800000,
+      "answerByMillis": 1794816000000,
+      "notBeforeMillis": 1794808800000,
+      "plan": [
+        1794812400000
+      ]
+    },
+    {
+      "name": "night: a reminder at 07:59 moves to 08:00",
+      "zone": "Europe/Prague",
+      "sentAtMillis": 1794808680000,
+      "answerByMillis": 1794816000000,
+      "notBeforeMillis": 1794808680000,
+      "plan": [
+        1794812400000
+      ]
+    },
+    {
+      "name": "merged: two night reminders land on one morning",
+      "zone": "Europe/Prague",
+      "sentAtMillis": 1794866400000,
+      "answerByMillis": 1794900600000,
+      "notBeforeMillis": 1794866400000,
+      "plan": [
+        1794898800000
+      ]
+    },
+    {
+      "name": "night: two reminders, one moved to the morning",
+      "zone": "Europe/Prague",
+      "sentAtMillis": 1794859200000,
+      "answerByMillis": 1794906000000,
+      "notBeforeMillis": 1794859200000,
+      "plan": [
+        1794898800000,
+        1794902400000
+      ]
+    },
+    {
+      "name": "notBefore drops the first of three",
+      "zone": "Europe/Prague",
+      "sentAtMillis": 1794819600000,
+      "answerByMillis": 1795078800000,
+      "notBeforeMillis": 1794913200000,
+      "plan": [
+        1794992400000,
+        1795071600000
+      ]
+    },
+    {
+      "name": "notBefore drops all three",
+      "zone": "Europe/Prague",
+      "sentAtMillis": 1794819600000,
+      "answerByMillis": 1795078800000,
+      "notBeforeMillis": 1795075200000,
+      "plan": []
+    },
+    {
+      "name": "notBefore equal to a reminder keeps it",
+      "zone": "Europe/Prague",
+      "sentAtMillis": 1794819600000,
+      "answerByMillis": 1795078800000,
+      "notBeforeMillis": 1794906000000,
+      "plan": [
+        1794906000000,
+        1794992400000,
+        1795071600000
+      ]
+    },
+    {
+      "name": "dst spring: a night across the change in Prague",
+      "zone": "Europe/Prague",
+      "sentAtMillis": 1774724400000,
+      "answerByMillis": 1774778400000,
+      "notBeforeMillis": 1774724400000,
+      "plan": [
+        1774764000000,
+        1774774800000
+      ]
+    },
+    {
+      "name": "dst autumn: a night across the change in Prague",
+      "zone": "Europe/Prague",
+      "sentAtMillis": 1792864800000,
+      "answerByMillis": 1792926000000,
+      "notBeforeMillis": 1792864800000,
+      "plan": [
+        1792911600000,
+        1792922400000
+      ]
+    },
+    {
+      "name": "dst spring: a three-day window across the change",
+      "zone": "Europe/Prague",
+      "sentAtMillis": 1774602000000,
+      "answerByMillis": 1774857600000,
+      "notBeforeMillis": 1774602000000,
+      "plan": [
+        1774687200000,
+        1774772400000,
+        1774850400000
+      ]
+    },
+    {
+      "name": "utc+14: a three-day window",
+      "zone": "Pacific/Kiritimati",
+      "sentAtMillis": 1794772800000,
+      "answerByMillis": 1795032000000,
+      "notBeforeMillis": 1794772800000,
+      "plan": [
+        1794859200000,
+        1794945600000,
+        1795024800000
+      ]
+    },
+    {
+      "name": "utc+14: a night midpoint goes to the evening before",
+      "zone": "Pacific/Kiritimati",
+      "sentAtMillis": 1794808800000,
+      "answerByMillis": 1794844800000,
+      "notBeforeMillis": 1794808800000,
+      "plan": [
+        1794810600000
+      ]
+    },
+    {
+      "name": "utc-11: a three-day window",
+      "zone": "Pacific/Pago_Pago",
+      "sentAtMillis": 1794862800000,
+      "answerByMillis": 1795122000000,
+      "notBeforeMillis": 1794862800000,
+      "plan": [
+        1794949200000,
+        1795035600000,
+        1795114800000
+      ]
+    },
+    {
+      "name": "utc-11: a night midpoint goes to the evening before",
+      "zone": "Pacific/Pago_Pago",
+      "sentAtMillis": 1794898800000,
+      "answerByMillis": 1794934800000,
+      "notBeforeMillis": 1794898800000,
+      "plan": [
+        1794900600000
+      ]
+    },
+    {
+      "name": "utc+14: the Prague evening is a day there",
+      "zone": "Pacific/Kiritimati",
+      "sentAtMillis": 1794855600000,
+      "answerByMillis": 1794891600000,
+      "notBeforeMillis": 1794855600000,
+      "plan": [
+        1794873600000,
+        1794888000000
+      ]
+    },
+    {
+      "name": "utc-11: the Prague evening is a day there",
+      "zone": "Pacific/Pago_Pago",
+      "sentAtMillis": 1794855600000,
+      "answerByMillis": 1794891600000,
+      "notBeforeMillis": 1794855600000,
+      "plan": [
+        1794873600000,
+        1794888000000
+      ]
+    },
+    {
+      "name": "new york: a two-hours-before-deadline reminder at night",
+      "zone": "America/New_York",
+      "sentAtMillis": 1794841200000,
+      "answerByMillis": 1795010400000,
+      "notBeforeMillis": 1794841200000,
+      "plan": [
+        1794920400000,
+        1794954000000,
+        1795006800000
+      ]
+    },
+    {
+      "name": "utc: a ten-day window",
+      "zone": "UTC",
+      "sentAtMillis": 1793524620000,
+      "answerByMillis": 1794388620000,
+      "notBeforeMillis": 1793524620000,
+      "plan": [
+        1793812620000,
+        1794124800000,
+        1794384000000
+      ]
+    }
+  ],
+  "quietCases": [
+    {
+      "name": "20:59 is not quiet",
+      "zone": "Europe/Prague",
+      "millis": 1794859140000,
+      "quiet": false
+    },
+    {
+      "name": "21:00 is quiet",
+      "zone": "Europe/Prague",
+      "millis": 1794859200000,
+      "quiet": true
+    },
+    {
+      "name": "midnight is quiet",
+      "zone": "Europe/Prague",
+      "millis": 1794870000000,
+      "quiet": true
+    },
+    {
+      "name": "07:59 is quiet",
+      "zone": "Europe/Prague",
+      "millis": 1794898740000,
+      "quiet": true
+    },
+    {
+      "name": "08:00 is not quiet",
+      "zone": "Europe/Prague",
+      "millis": 1794898800000,
+      "quiet": false
+    },
+    {
+      "name": "noon in Prague is midnight-ish in utc+14",
+      "zone": "Pacific/Kiritimati",
+      "millis": 1794826800000,
+      "quiet": true
+    },
+    {
+      "name": "noon in Prague in utc-11",
+      "zone": "Pacific/Pago_Pago",
+      "millis": 1794826800000,
+      "quiet": true
+    },
+    {
+      "name": "a minute before 08:00 just after the spring change",
+      "zone": "Europe/Prague",
+      "millis": 1774763940000,
+      "quiet": true
+    },
+    {
+      "name": "08:00 just after the autumn change",
+      "zone": "Europe/Prague",
+      "millis": 1792911600000,
+      "quiet": false
+    }
+  ]
+}

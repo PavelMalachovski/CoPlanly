@@ -24,15 +24,18 @@
 | Processor | Services | Terms | Location |
 | --- | --- | --- | --- |
 | Google Ireland Ltd / Google LLC (Firebase, Google Cloud) | Firestore, Cloud Storage, Cloud Functions, Authentication, Cloud Messaging, Analytics, Crashlytics, Cloud Logging; **Vertex AI** (Anthropic's Claude model, served by Google) for P15 once enabled | Google Cloud Data Processing Addendum; Firebase Data Processing and Security Terms; SCCs incorporated; for Vertex AI also Google's Service Specific Terms for generative AI / partner models (**to verify**, see P15) | Functions: `europe-west3`. Vertex AI: `AI_VERTEX_REGION`, an EU region (default `europe-west1`). Firestore/Storage: {{FIRESTORE_REGION}}. FCM, Auth, Analytics, Crashlytics: global |
+| Apple Inc. (Apple Push Notification service, APNs), from iPhone phase 4 part C (November 2026) | Delivers each push to an iPhone: Firebase Cloud Messaging hands it over with the iPhone's APNs token | Apple Developer Program License Agreement (APNs used only to deliver the app's notifications); transfer basis **to confirm** with counsel (Apple's Data Privacy Framework certification, see "Transfers") | Global |
 
 Google's sub-processors are listed by Google and accepted under the Addendum; whether Anthropic
 appears among them for Claude on Vertex AI is for counsel to confirm (P15). No other processor
-is used: no email service, no support desk, no advertising or attribution SDK, and no AI service
-other than the one in P15, which the company reaches only through Google Cloud.
+is used but Apple's push service for an iPhone (above): no email service, no support desk, no
+advertising or attribution SDK, and no AI service other than the one in P15, which the company
+reaches only through Google Cloud.
 
-**Apple is not a processor.** A parent who chooses Sign in with Apple (P1a) uses Apple as an
-identity provider; Apple is an independent controller of the Apple ID under its own terms, and
-receives from us only the authorisation code to exchange and the refresh token to revoke.
+**Apple is a processor only for delivering pushes to an iPhone (P10).** A parent who chooses Sign in
+with Apple (P1a) uses Apple as an identity provider; there Apple is an independent controller of the
+Apple ID under its own terms, and receives from us only the authorisation code to exchange and the
+refresh token to revoke.
 
 ## Processing activities
 
@@ -45,7 +48,7 @@ only what is specific to it.
 | --- | --- |
 | Purpose | Provide an account; link two co-parents; decide who may read what |
 | Data subjects | Parents |
-| Data | Name, email (from an Apple sign-in, possibly Apple's private relay address; Apple shares the name only at the first sign-in, and it fills only a blank profile name), the linked sign-in methods (email and password, Google, Apple — Firebase Auth's providers; the last cannot be removed), optional profile photo (Google), optional date of birth and phone, auth identifier, parent slot (and, for a moment after a pairing that moved it, the time it moved, `slotMovedAt`, removed by the parent's phone at its next sync), partner uids, FCM token, country and region, onboarding state, whether the family cares for children, pets or both (`caresFor`), health-data consent record `{version, atMillis}`, AI-assist consent record `{version, grantedAt}` (P15), optional IBAN for being paid a settle-up (`paymentIban`, October 2026), how stickers address the parent (`parentRole`: dad, mom or parent — asked once, used only to word stickers, October 2026) |
+| Data | Name, email (from an Apple sign-in, possibly Apple's private relay address; Apple shares the name only at the first sign-in, and it fills only a blank profile name), the linked sign-in methods (email and password, Google, Apple — Firebase Auth's providers; the last cannot be removed), optional profile photo (Google), optional date of birth and phone, auth identifier, parent slot (and, for a moment after a pairing that moved it, the time it moved, `slotMovedAt`, removed by the parent's phone at its next sync), partner uids, FCM token (one per account: the phone that registered last, Android or iPhone), the phone's time zone (`timeZone`, an IANA name of at most 64 characters, written by the app with the profile, iPhone phase 4 part C: the server plans a request's reminders and keeps their quiet hours in it, P2), country and region, onboarding state, whether the family cares for children, pets or both (`caresFor`), health-data consent record `{version, atMillis}`, AI-assist consent record `{version, grantedAt}` (P15), optional IBAN for being paid a settle-up (`paymentIban`, October 2026), how stickers address the parent (`parentRole`: dad, mom or parent — asked once, used only to word stickers, October 2026) |
 | Legal basis | Art. 6(1)(b) contract; the consent record is kept under Art. 7(1) to demonstrate consent |
 | Recipients | The linked co-parent (name, slot, photo, the sticker role, and the IBAN, from which their phone draws a QR payment code — nothing is sent to a bank); before linking, a signed-in person entering the inviter's code sees the inviter's **first name** only (`previewPairingInvitation`, rate-limited per account, writes nothing). An invitation's Google Play link carries the code as the install referrer, which the invited parent's app reads once on the phone to prefill it (Play Install Referrer API); nothing from it reaches the controller |
 | Retention | Life of the account; deleted at once on account deletion |
@@ -69,7 +72,7 @@ only what is specific to it.
 | --- | --- |
 | Purpose | The shared service |
 | Data subjects | Parents; children (named in records); third parties named in event text |
-| Data | Events (title, time, place, notes, photo), custody schedule, swaps, seasonal layers, contact windows, expenses (amount, currency, category, receipt photo), budgets written by earlier builds (this one no longer creates or reads them), parenting plan answers, change requests; the expense split agreement and a pending proposal to change it with the latest answer (each also posted as a chat note); for a request sent with a deadline (a change request, a day swap, a custody proposal, an expense split proposal, an event awaiting an answer), its clock: the deadline, the first affected moment, when the answering parent's phone received it and its reminder plan (up to three times) and count shown, when that parent first opened it (shown to the proposer), a last chance's start and end, and a "no answer" outcome with its time; and, written by the server alone (MON-25, November 2026), when it next looks at the clock, when it told the proposer the deadline passed and that the request ended, and when it was done with it. A scheduled function in `europe-west3` reads a clock and its request every five minutes to decide the deadline notice and the end: it closes the clock, posts the "No answer" card in the family's thread, withdraws a custody or expense split proposal still waiting, and pushes the proposer (P10) |
+| Data | Events (title, time, place, notes, photo), custody schedule, swaps, seasonal layers, contact windows, expenses (amount, currency, category, receipt photo), budgets written by earlier builds (this one no longer creates or reads them), parenting plan answers, change requests; the expense split agreement and a pending proposal to change it with the latest answer (each also posted as a chat note); for a request sent with a deadline (a change request, a day swap, a custody proposal, an expense split proposal, an event awaiting an answer), its clock: the deadline, the first affected moment, when the answering parent's phone received it and its reminder plan (up to three times), when that parent first opened it (shown to the proposer), a last chance's start and end, and a "no answer" outcome with its time; and, written by the server alone (MON-25, November 2026), when it next looks at the clock, when it told the proposer the deadline passed and that the request ended, and when it was done with it; and, since iPhone phase 4 part C (November 2026), the reminders' own plan when no phone received the clock (made in the answering parent's profile time zone, P1), how many reminders it sent and the last planned time it acted on. A scheduled function in `europe-west3` reads a clock and its request every five minutes to decide the reminders, the deadline notice and the end: it pushes the answering parent a reminder at each planned time while the request still waits and outside 21:00–08:00 on their clock (a reminder counts as given when sent, not shown), closes the clock, posts the "No answer" card in the family's thread, withdraws a custody or expense split proposal still waiting, and pushes the proposer (P10) |
 | Legal basis | Art. 6(1)(b) |
 | Recipients | The co-parent; a calendar friend (calendar only, time-limited); a professional with both parents' consent (calendar, custody, plan; ≤ 180 days); whoever holds a calendar-feed link a parent created. Request clocks: the two parents only |
 | Retention | Life of the account. An individual deletion is a tombstone for **90 days** (so the other phone learns of it), then swept. On account deletion the departing parent's half of the parenting plan is also removed from the plans of families they had already left (found through accepted invitations); the former co-parent's half stays. At unpair a co-parent loses read access to the family's expenses and budgets at once (the family document is deleted). A request's clock is not deleted when the request is answered and stays readable to both parents after unpair; account deletion removes every clock naming the departing parent, for both of them |
@@ -184,10 +187,11 @@ only what is specific to it.
 | | |
 | --- | --- |
 | Purpose | Tell a parent something changed |
-| Data | Push type, addressee uid, family id, record id, the sender's name and the record's title; for a new shared expense also its amount, currency and the reader's share (21 October 2026); for a chat message, the **first 120 characters of its text** (`notifyOfChatMessage`, `CHAT_MESSAGE_PREVIEW_LENGTH`), which Firebase Cloud Messaging carries to the reader's phone; for a chat card, also the card's own facts (its kind, the record's id and title, a date, an amount and currency, each at most 120 characters — the same facts the card's text already held), so the receiving phone words it in its reader's language (9 November 2026); for a request's deadline passing or its "no answer" end (MON-25, November 2026), pushed by the server to the proposer alone, the answering parent's first name. Every other sentence is written on the receiving phone |
+| Data | Push type, addressee uid, family id, record id, the sender's name and the record's title; for a new shared expense also its amount, currency and the reader's share (21 October 2026); for a chat message, the **first 120 characters of its text** (`notifyOfChatMessage`, `CHAT_MESSAGE_PREVIEW_LENGTH`), which Firebase Cloud Messaging carries to the reader's phone; for a chat card, also the card's own facts (its kind, the record's id and title, a date, an amount and currency, each at most 120 characters — the same facts the card's text already held), so the receiving phone words it in its reader's language (9 November 2026); for a request's deadline passing or its "no answer" end (MON-25, November 2026), pushed by the server to the proposer alone, the answering parent's first name; for a request reminder (`request_reminder`, iPhone phase 4 part C), pushed by the server to the answering parent alone, the proposer's first name, the request's kind and its deadline. Every other sentence is written on the receiving phone. To an iPhone every push also carries a fixed, neutral alert of the server's own (`CoPlanly` / "You have a new update in CoPlanly.", names nothing), which the phone's notification extension replaces with the worded text; the app shares the signed-in uid and the app's language with that extension through the App Group `group.app.coplanly`, on the phone only, cleared at sign-out and deletion. Event and child support reminders on an iPhone are local notifications: nothing is sent for them |
 | Legal basis | Art. 6(1)(b) |
-| Retention | Queue entries swept after **30 days** |
-| Where | `notification_queue`; FCM |
+| Recipients | Google (FCM); for an iPhone, Apple (APNs), as processors |
+| Retention | Queue entries swept after **30 days**; the push token is deleted when notifications are switched off, at sign-out and with the account |
+| Where | `notification_queue`; FCM; APNs for an iPhone |
 
 ### P11. Google Calendar integration (optional)
 
@@ -284,7 +288,9 @@ Functions run in the EU (`europe-west3`). AI writing help (P15) runs on Vertex A
 the code enforces (`europe-…`). Firestore and Storage: {{FIRESTORE_REGION}} — must be an
 EU location (LEGAL-REVIEW L-3). FCM, Firebase Authentication, Analytics and Crashlytics are global
 Google services: Google LLC is certified under the EU–US Data Privacy Framework, and the SCCs in
-Google's data processing terms apply as a fallback.
+Google's data processing terms apply as a fallback. A push to an iPhone is delivered by Apple's APNs,
+also global; its transfer basis (Apple Inc.'s Data Privacy Framework certification) is **to confirm**
+before an iPhone build reaches users.
 
 ## Security measures (Art. 32; Art. 30(1)(g))
 

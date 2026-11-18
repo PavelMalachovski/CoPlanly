@@ -25,7 +25,9 @@ class RequestClockTest {
         lastChanceAt: Long? = null,
         until: Long? = null,
         outcome: RequestClockOutcome? = null,
-        reminders: List<Long> = emptyList()
+        reminders: List<Long> = emptyList(),
+        delivered: Long? = null,
+        serverReminders: List<Long> = emptyList()
     ) = RequestDeadline(
         id = "swap_uA_g-1",
         kind = RequestKind.SWAP,
@@ -35,7 +37,10 @@ class RequestClockTest {
         responderUid = responder,
         answerByMillis = answerBy,
         capMillis = cap,
+        deliveredAtMillis = delivered,
+        remindersPlanned = if (delivered != null) reminders.size else null,
         reminderTimesMillis = reminders,
+        serverReminderTimesMillis = serverReminders,
         lastChanceAtMillis = lastChanceAt,
         lastChanceUntilMillis = until,
         outcome = outcome
@@ -105,11 +110,23 @@ class RequestClockTest {
 
     @Test
     fun `a timed request knows its next reminder`() {
-        val c = clock(reminders = listOf(T0 - 2 * H, T0 - H))
+        // The phone's plan is in force once it delivered: it writes the plan and the delivery in
+        // one write, so a plan never stands without its delivery (iPhone phase 4 part C).
+        val c = clock(reminders = listOf(T0 - 2 * H, T0 - H), delivered = T0 - 3 * H)
         assertEquals(T0 - H, TimedRequest(c, T0 - 90 * 60_000).nextReminderMillis)
         assertNull(TimedRequest(c, T0 - 30 * 60_000).nextReminderMillis)
-        // A reminder that is due this very moment is not the next one: it is the one being shown.
+        // A reminder that is due this very moment is not the next one: it is the one being sent.
         assertNull(TimedRequest(c, T0 - H).nextReminderMillis)
+    }
+
+    @Test
+    fun `with no phone's delivery the next reminder comes from the server's plan`() {
+        val c = clock(serverReminders = listOf(T0 - 2 * H, T0 - H))
+        assertEquals(T0 - H, TimedRequest(c, T0 - 90 * 60_000).nextReminderMillis)
+        assertNull(TimedRequest(c, T0 - 30 * 60_000).nextReminderMillis)
+        // Once a phone delivered, its plan replaces the server's, as the sweep decides.
+        val delivered = c.copy(deliveredAtMillis = T0 - 3 * H, reminderTimesMillis = listOf(T0 - 20 * 60_000))
+        assertEquals(T0 - 20 * 60_000, TimedRequest(delivered, T0 - 90 * 60_000).nextReminderMillis)
     }
 
     @Test

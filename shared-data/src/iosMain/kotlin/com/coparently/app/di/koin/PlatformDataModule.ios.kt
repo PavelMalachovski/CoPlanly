@@ -1,3 +1,5 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.di.koin
 
 import com.coparently.app.data.export.ExportVerifyAddress
@@ -28,6 +30,17 @@ import com.coparently.app.data.local.dao.MessageDao
 import com.coparently.app.data.local.dao.ParentingPlanDao
 import com.coparently.app.data.local.dao.PetDao
 import com.coparently.app.data.local.dao.UserDao
+import com.coparently.app.data.notification.EventReminderPlanner
+import com.coparently.app.data.notification.IosEventReminders
+import com.coparently.app.data.notification.IosLocalReminders
+import com.coparently.app.data.notification.IosSupportReminders
+import com.coparently.app.data.notification.LocalNotificationCenter
+import com.coparently.app.data.notification.SupportReminderPlanner
+import com.coparently.app.data.notification.UserNotificationCenter
+import com.coparently.app.data.notification.appReminderWording
+import com.coparently.app.data.notification.checkedAccount
+import com.coparently.app.data.notification.toReminderEvent
+import com.coparently.app.data.payment.PaymentStore
 import com.coparently.app.data.platform.Analytics
 import com.coparently.app.data.platform.AppDirectories
 import com.coparently.app.data.platform.Connectivity
@@ -51,17 +64,19 @@ import com.coparently.app.data.remote.firebase.GitLiveFirestoreClient
 import com.coparently.app.data.remote.firebase.IosAccountLinking
 import com.coparently.app.data.remote.firebase.IosCallableFunctions
 import com.coparently.app.data.remote.firebase.IosFirebaseAuth
+import com.coparently.app.data.remote.firebase.IosPushRegistration
+import com.coparently.app.data.remote.firebase.NotificationPermission
 import com.coparently.app.data.remote.firebase.PushDevice
 import com.coparently.app.data.remote.firebase.PushQueue
 import com.coparently.app.data.remote.firebase.PushRegistration
 import com.coparently.app.data.remote.firebase.SignedInUser
+import com.coparently.app.data.remote.firebase.UserNotificationsPermission
 import com.coparently.app.data.remote.google.CredentialProvider
 import com.coparently.app.data.remote.google.GoogleCalendarAccount
 import com.coparently.app.data.remote.google.GoogleCalendarApi
 import com.coparently.app.data.remote.google.GoogleCalendarConnectionSource
 import com.coparently.app.data.remote.google.GoogleRevokeEndpoint
 import com.coparently.app.data.remote.google.IosGoogleCalendarAccount
-import com.coparently.app.data.requests.RequestClockNotices
 import com.coparently.app.data.school.SchoolImportScheduler
 import com.coparently.app.data.school.bakalari.BakalariClient
 import com.coparently.app.data.school.bakalari.BakalariSchoolDirectory
@@ -74,14 +89,18 @@ import com.coparently.app.data.session.IosAccountSwitch
 import com.coparently.app.data.session.IosAccountTraces
 import com.coparently.app.data.session.LastSignedInUid
 import com.coparently.app.data.session.UserDefaultsLastSignedInUid
+import com.coparently.app.data.support.SupportAgreementStore
 import com.coparently.app.data.support.SupportReminderScheduler
+import com.coparently.app.data.support.SupportReminders
 import com.coparently.app.data.sync.ForegroundSyncRunner
 import com.coparently.app.data.sync.GoogleCalendarAutoImport
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.data.sync.SyncService
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.notification.RequestClockScheduler
 import com.coparently.app.domain.receipts.ReceiptTextRecognizer
+import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.RecordPhotoStorage
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
@@ -91,6 +110,7 @@ import dev.gitlive.firebase.storage.storage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import org.koin.core.module.Module
 import org.koin.dsl.module
 
@@ -107,8 +127,10 @@ import org.koin.dsl.module
  * a record's photos ([IosRecordPhotoStorage]) and the pickers' copies ([IosPickedFiles]), since
  * Task 12 a receipt read by Vision ([VisionReceiptText]), the record's file ([IosRecordFileWriter])
  * and its verification address ([InfoPlistExportVerifyAddress]), since phase 4's Task 7 Google
- * Calendar ([IosGoogleCalendarAccount]) — and, for what the iPhone does not have yet (a push token,
- * background jobs and notifications), the stand-ins in
+ * Calendar ([IosGoogleCalendarAccount]), since phase 4 part C's Task 5 the push token
+ * ([IosPushRegistration]), since its Task 7 the event and child support reminders as local
+ * notifications ([IosLocalReminders]) — and, for what the iPhone does not have yet (background
+ * jobs), the stand-ins in
  * `IosUnavailable.kt`, which answer as a phone with nothing of the kind would. The two wordings the
  * data layer writes into stored data read the app's strings, so `:shared-ui`'s `platformUiModule`
  * binds them (`IosPairingWording`, `IosSchoolImportWordings`); the graph resolves with both
@@ -174,13 +196,25 @@ actual val platformDataModule: Module = module {
             lastUid = get(),
         )
     }
-    // The co-parent is told through the queue, as `FcmService` tells them on Android; this phone
-    // holds no push token yet, so the switch and sign-out's detach are still `NoPush` (phase 4
-    // replaces it with the token's registration and unregistration together).
-    single { FirestorePushQueue(get(), get()) }
+    // The co-parent is told through the queue, as `FcmService` tells them on Android, and this
+    // phone's own token (phase 4 part C) is registered and detached by `IosPushRegistration`, which
+    // the queue reads it through: the switch, the sync's write and sign-out's detach in one place
+    // (CLAUDE.md item 23). The token is the app's Swift side's (`IosPushToken`, which `IosApp.start`
+    // binds in `iosAppModule`), the permission the system's.
+    single<NotificationPermission> { UserNotificationsPermission }
+    single {
+        IosPushRegistration(
+            firestore = get(),
+            signedInUser = get(),
+            preferences = get(),
+            token = get(),
+            permission = get(),
+        )
+    }
+    single<PushRegistration> { get<IosPushRegistration>() }
+    single { FirestorePushQueue(get(), get(), tokens = get<IosPushRegistration>()) }
     single<PushDevice> { get<FirestorePushQueue>() }
     single<PushQueue> { get<PushDevice>() }
-    single<PushRegistration> { NoPush }
     // The `deleteAccount` callable, then this phone's wipe and the session's end (part B, Task 11).
     single<AccountDeletion> {
         IosAccountDeletion(
@@ -194,18 +228,61 @@ actual val platformDataModule: Module = module {
             authSession = get(),
         )
     }
-    single<ReminderScheduler> { NoEventReminders }
+    // The event and child support reminders as local notifications (phase 4 part C, Task 7): one
+    // book for both, because iOS keeps at most 64 pending and the nearest 60 are armed, a support
+    // reminder first. Each plan reads at run time, so the stores' own graph is no cycle here, and
+    // only for an account the account check has run for: sign-out keeps Room, and a new account's
+    // first re-arm must not read the previous one's events before `IosAccountSwitch` wipes them.
+    single<LocalNotificationCenter> { UserNotificationCenter }
+    single {
+        EventReminderPlanner(
+            events = {
+                get<EventDao>().getAllEvents().first()
+                    .filter { it.reminderMinutes != null }
+                    .map { it.toReminderEvent().copy(familyId = it.familyId) }
+            },
+            uid = { checkedAccount(get<SignedInUser>().getCurrentUid(), get<LastSignedInUid>().get()) },
+            wording = ::appReminderWording,
+        )
+    }
+    single {
+        SupportReminderPlanner(
+            reminders = get(),
+            uid = { checkedAccount(get<SignedInUser>().getCurrentUid(), get<LastSignedInUid>().get()) },
+            agreement = { familyId -> get<SupportAgreementStore>().readFromServer(familyId) },
+            payment = { id -> get<PaymentStore>().readFromServer(id) },
+            payeeName = { uid -> get<PairingRepository>().observeCoParentProfile(uid).first().name },
+            wording = ::appReminderWording,
+        )
+    }
+    single {
+        IosLocalReminders(
+            center = get(),
+            events = { now -> get<EventReminderPlanner>().plan(now) },
+            support = { now -> get<SupportReminderPlanner>().plan(now) },
+            onCancelAll = { get<SupportReminders>().forgetArmed() },
+            scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+        )
+    }
+    single<ReminderScheduler> { IosEventReminders(get()) }
     single<RequestClockScheduler> { NoRequestClockJobs }
-    single<RequestClockNotices> { NoRequestClockNotices }
     single<SchoolImportScheduler> { NoSchoolImportJob }
-    single<SupportReminderScheduler> { NoSupportReminderJob }
+    single<SupportReminderScheduler> { IosSupportReminders(get()) }
     // A sync while the app is open, one at a time, with the Google import after each (Task 6;
     // the iPhone has no background job until phase 4). The lambdas resolve at run time, so the
     // sync's own need of a `SyncRequester` (the pairing transition asks for one) is no cycle.
     single<SyncRequester> {
         ForegroundSyncRunner(
             sync = { get<SyncService>().performFullSync() },
-            afterSync = { get<GoogleCalendarAutoImport>().importIfDue() },
+            // Then the local reminders are planned again from what the sync brought (design §7.4):
+            // an event deleted on the other phone loses its reminder, a month paid there its own.
+            afterSync = {
+                try {
+                    get<GoogleCalendarAutoImport>().importIfDue()
+                } finally {
+                    get<IosLocalReminders>().requestRearm()
+                }
+            },
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
         )
     }

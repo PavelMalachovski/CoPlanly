@@ -72,7 +72,6 @@ import com.coparently.app.data.requests.AgreementWithdrawals
 import com.coparently.app.data.requests.FamilyAgreementsSource
 import com.coparently.app.data.requests.RequestClockActions
 import com.coparently.app.data.requests.RequestClockKeeper
-import com.coparently.app.data.requests.RequestClockSteps
 import com.coparently.app.data.requests.RequestClockSweep
 import com.coparently.app.data.requests.RequestClocks
 import com.coparently.app.data.requests.RequestRecords
@@ -102,7 +101,6 @@ import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.chat.AttachmentUploadGate
 import com.coparently.app.domain.error.ErrorHandler
 import com.coparently.app.domain.family.FamilySlotsSource
-import com.coparently.app.domain.notification.RequestClockScheduler
 import com.coparently.app.domain.repository.CalendarFeedRepository
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.ChatSearchRepository
@@ -300,22 +298,20 @@ val chatDataModule: Module = module {
 /**
  * The request clocks (phase 3a, CLAUDE.md item 42): what their background steps say to the
  * answering parent (MON-24 phase 2, Task 8c), and since Task 8h their time, the clocks a screen
- * reads, the keeper every sync runs, the steps, the records they read and what a parent does from a
- * card. The jobs (`RequestClockScheduler`) and the notices (`RequestClockNotices`) are the
- * platform's, bound where it builds them.
+ * reads, the keeper every sync runs, the records a card's actions read and what a parent does from
+ * a card. No phone runs a step of its own since iPhone phase 4 part C: the reminders, the deadline
+ * notice and the end are the server's (`functions/request-clock-steps.js`).
  */
 val requestsDataModule: Module = module {
     singleOf(::RequestTelling)
     single { RequestTime() }
     singleOf(::RequestClocks)
     singleOf(::RequestRecords)
-    singleOf(::RequestClockSteps)
     singleOf(::RequestClockActions)
     // The secondary constructor, whose deliveries run on the keeper's own scope for the process.
     single {
         RequestClockKeeper(
             get<RequestDeadlineRepository>(),
-            get<RequestClockScheduler>(),
             get<RequestTime>()
         )
     }
@@ -498,7 +494,7 @@ val dataModules: List<Module> = listOf(
  * `firebaseModule` builds, so an instrumented test's replacement of those reaches the data sources,
  * and the rest — the Room DAOs, `AppDirectories`, `SecurePreferences`, `CrashReporter`, `Analytics`,
  * `Connectivity`, `DeviceRegion`, `SignedInUser`, `PushQueue`, `PushDevice`, `AccountConsistency`,
- * `ReminderScheduler`, `RequestClockScheduler`, `RequestClockNotices`, `SyncRequester`,
+ * `ReminderScheduler`, `SyncRequester`,
  * `PairingWording`, `GoogleCalendarApi`, `CredentialProvider`, `GoogleCalendarConnectionSource`,
  * `BakalariClient`, `SchoolImportWordings`, `SchoolImportScheduler` and, since Task 8j,
  * `StorageBucket`, `PickedFiles` and `ExportVerifyAddress` — is bound by the app's own modules.

@@ -11,6 +11,7 @@ import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
 import com.coparently.app.data.remote.firebase.GitLiveFirestoreClient
 import com.coparently.app.data.remote.firebase.IosCallableFunctions
 import com.coparently.app.data.remote.firebase.IosFirebaseAuth
+import com.coparently.app.data.remote.firebase.PushRegistration
 import com.coparently.app.data.remote.firebase.runOnMainRunLoop
 import com.coparently.app.data.repository.UserRepositoryImpl
 import com.coparently.app.data.session.AccountSwitchFixture.Companion.EDUPAGE_KEY
@@ -18,7 +19,6 @@ import com.coparently.app.data.session.AccountSwitchFixture.Companion.ORDINARY_K
 import com.coparently.app.data.session.AccountSwitchFixture.Companion.SCHOOL_KEY
 import com.coparently.app.data.session.AccountSwitchFixture.Companion.SLOT_MARKER_KEY
 import com.coparently.app.di.koin.FUNCTIONS_REGION
-import com.coparently.app.di.koin.NoPush
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.FirebaseOptions
 import dev.gitlive.firebase.auth.auth
@@ -126,7 +126,8 @@ class IosAccountDeletionTest {
     /**
      * One phone: a named Firebase app on the emulators with Functions at [functionsPort], a freshly
      * signed-up account with its profile, the fixture's database, store and files, and the deletion
-     * under test wired as `platformDataModule` wires it (the push switch the iPhone's `NoPush`).
+     * under test wired as `platformDataModule` wires it, but for the push registration: a phone with
+     * no token to detach ([NoTokenToDetach]); `IosPushRegistrationTest` holds the detach itself.
      */
     private class DeletionPhone(
         val auth: IosFirebaseAuth,
@@ -139,7 +140,7 @@ class IosAccountDeletionTest {
             functions = functions,
             database = fixture.database,
             preferences = fixture.preferences,
-            push = NoPush,
+            push = NoTokenToDetach,
             reminders = fixture.reminders,
             clocks = fixture.clocks,
             traces = fixture.traces,
@@ -232,5 +233,12 @@ class IosAccountDeletionTest {
             storageBucket = "demo-coplanly.appspot.com",
             gcmSenderId = "000000000000",
         )
+    }
+
+    /** A push registration with no token to detach: what this test's phone, with no app, holds. */
+    private object NoTokenToDetach : PushRegistration {
+        override fun isPushEnabled(): Boolean = false
+        override suspend fun setPushEnabled(enabled: Boolean): Result<Unit> = Result.success(Unit)
+        override suspend fun unregisterToken() = Unit
     }
 }

@@ -166,12 +166,13 @@ function checkLocales() {
 // ---- 3: push types ----------------------------------------------------------
 
 const PAYLOAD_KT = 'shared-data/src/commonMain/kotlin/com/coparently/app/data/remote/firebase/PushPayload.kt';
-const SERVICE_KT = 'app/src/main/java/com/coparently/app/data/remote/firebase/PushNotifier.kt';
+const SERVICE_KT = 'push-wording/src/commonMain/kotlin/com/coparently/app/pushwording/PushWording.kt';
 const RULES = 'firestore.rules';
 const PUSH_STRINGS = `${RES_DIR}/values/push_strings.xml`;
 
 /**
- * `chat_message` is composed by a branch of its own in `PushNotifier.compose()`,
+ * `chat_message` is composed by a branch of its own in `PushWording.compose()` (`:push-wording`,
+ * which every notification's wording moved to in iPhone phase 4 part C),
  * ahead of the `PUSH_TEXT` lookup, because its text is not a frame: the title is who sent the
  * message and the body is what they wrote, and only the Cloud Function that saw the message
  * could supply either. It is renderable without a `PUSH_TEXT` entry — the one type that is.
@@ -227,10 +228,9 @@ function checkPushTypes() {
 
   // Types the receiving device can put words to.
   const rendered = new Set();
-  for (const m of service.matchAll(/PushPayload\.([A-Z_0-9]+)\s+to\s+PushTextSpec/g)) {
-    const value = client.constants.get(m[1]) || server.constants.get(m[1]);
-    if (value) rendered.add(value);
-  }
+  // `:push-wording` cannot name `PushPayload` (it depends on no module of ours), so the table is
+  // keyed on the types' own text: `"expense_added" to PushTextSpec(`.
+  for (const m of service.matchAll(/"([a-z_]+)"\s+to\s+PushTextSpec/g)) rendered.add(m[1]);
   // Match the branch itself, not a mention of the type: `chat_message` appears throughout the
   // file's prose, so an `includes` on the name would go on passing after the branch was deleted
   // — which is exactly the regression this is here to catch.
@@ -242,7 +242,7 @@ function checkPushTypes() {
 
   for (const type of declared) {
     if (!rendered.has(type)) {
-      fail(`push type "${type}" is declared but PushNotifier has no wording for it — the push would be silently dropped on arrival`);
+      fail(`push type "${type}" is declared but PushWording has no wording for it — the push would be silently dropped on arrival`);
     }
   }
 
@@ -262,11 +262,9 @@ function checkPushTypes() {
 
   // Every string resource the service names must exist.
   const defined = new Set([...strings.matchAll(/<(?:string|plurals)\s+[^>]*name="([^"]+)"/g)].map((m) => m[1]));
-  const referenced = new Set(
-    [...service.matchAll(/R\.(?:string|plurals)\.(push_[a-z_0-9]+)/g)].map((m) => m[1])
-  );
+  const referenced = new Set([...service.matchAll(/"(push_[a-z_0-9]+)"/g)].map((m) => m[1]));
   for (const name of referenced) {
-    if (!defined.has(name)) fail(`PushNotifier references R.string/plurals.${name}, which ${PUSH_STRINGS} does not define`);
+    if (!defined.has(name)) fail(`PushWording names the string or plural ${name}, which ${PUSH_STRINGS} does not define`);
   }
 
   console.log(
@@ -282,10 +280,11 @@ const SOURCE_ROOT = 'app/src/main/java';
  * The shared modules' production code (MON-24): the domain moved to `shared/` with its package
  * unchanged, and its models are stored too (`DayOverride`, the child and pet records), the data
  * layer follows into `shared-data/` from phase 2, and the ViewModels into `shared-ui/` from its
- * Task 10 (the event form's `EventDraft` is a stored model), so checks 4 and 5 read all three beside
+ * Task 10 (the event form's `EventDraft` is a stored model), and `push-wording/` (phase 4 part C)
+ * ships in both apps, so checks 4 and 5 read all four beside
  * the app's. The platform source sets count: they ship as much as `commonMain` does.
  */
-const SHARED_SOURCE_ROOTS = ['shared', 'shared-data', 'shared-ui'].flatMap((module) =>
+const SHARED_SOURCE_ROOTS = ['shared', 'shared-data', 'shared-ui', 'push-wording'].flatMap((module) =>
   ['commonMain', 'androidMain', 'iosMain'].map((set) => `${module}/src/${set}/kotlin`)
 );
 

@@ -108,7 +108,7 @@ class IosCredentialSignInTest {
     fun `every app sign-out ends Google's session once`() = runTest {
         val google = FakeSource(Answer())
         // The graph's sign-out half as `IosApp.start` builds it: the traces and the app's module.
-        val koin = startKoin { modules(platformDataModule + iosAppModule(google)) }.koin
+        val koin = startKoin { modules(platformDataModule + iosAppModule(google, NoTestPushToken)) }.koin
         try {
             val traces = koin.get<AccountTraces>()
 

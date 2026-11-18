@@ -18,6 +18,10 @@ import kotlin.test.assertTrue
  * proposer's phone withdraws it, the proposal blocks every schedule change the answering parent
  * could make, and a phone that never syncs would block them for good. Accept stays hidden — the
  * proposer has not offered a last chance.
+ *
+ * And what its reminders row reads (iPhone phase 4 part C, spec §11 call 1): planned is the phone's
+ * count, else the server's plan; sent is the larger of the server's count and an older build's shown
+ * count; the next reminder comes from the plan in force.
  */
 class CardClockTest {
 
@@ -72,6 +76,57 @@ class CardClockTest {
         assertEquals(ClockState.LAST_CHANCE, card.timed.state)
         assertFalse(card.declineOnly)
         assertFalse(card.hidesAnswers)
+    }
+
+    @Test
+    fun `the reminders row reads the phone's plan and count when a phone delivered`() {
+        // An older build's phone counted two shown; the server has sent one: the larger is said.
+        val clock = card(RequestKind.CHANGE, ClockRole.PROPOSER, ANSWER_BY - 2 * DAY).timed.clock.copy(
+            deliveredAtMillis = ANSWER_BY - 3 * DAY,
+            remindersPlanned = 3,
+            reminderTimesMillis = listOf(ANSWER_BY - 2 * DAY - HOUR, ANSWER_BY - DAY, ANSWER_BY - HOUR),
+            remindersShown = 2,
+            serverReminderTimesMillis = listOf(ANSWER_BY - 30 * HOUR),
+            serverRemindersSent = 1
+        )
+        assertEquals(3, clock.plannedReminders)
+        assertEquals(2, clock.remindersSent)
+        assertEquals(ANSWER_BY - DAY, TimedRequest(clock, ANSWER_BY - 2 * DAY).nextReminderMillis)
+    }
+
+    @Test
+    fun `the reminders row reads the server's plan and count when no phone delivered`() {
+        val clock = card(RequestKind.CHANGE, ClockRole.PROPOSER, ANSWER_BY - 2 * DAY).timed.clock.copy(
+            serverReminderTimesMillis = listOf(ANSWER_BY - 2 * DAY - HOUR, ANSWER_BY - DAY),
+            serverRemindersSent = 1
+        )
+        assertEquals(2, clock.plannedReminders)
+        assertEquals(1, clock.remindersSent)
+        assertEquals(ANSWER_BY - DAY, TimedRequest(clock, ANSWER_BY - 2 * DAY).nextReminderMillis)
+    }
+
+    @Test
+    fun `a phone plan made after a server reminder never reads fewer planned than sent`() {
+        // The server sent one from its own plan of three; the phone then delivered and planned only
+        // the two still ahead. Sent is 1 and the server's later sends make it 3: never "3 of 2".
+        val base = card(RequestKind.CHANGE, ClockRole.PROPOSER, ANSWER_BY - 2 * DAY).timed.clock.copy(
+            serverReminderTimesMillis = listOf(ANSWER_BY - 2 * DAY - HOUR, ANSWER_BY - DAY, ANSWER_BY - HOUR),
+            deliveredAtMillis = ANSWER_BY - 2 * DAY,
+            remindersPlanned = 2,
+            reminderTimesMillis = listOf(ANSWER_BY - DAY, ANSWER_BY - HOUR)
+        )
+        assertEquals(2, base.copy(serverRemindersSent = 1).plannedReminders)
+        val allSent = base.copy(serverRemindersSent = 3)
+        assertEquals(3, allSent.remindersSent)
+        assertEquals(3, allSent.plannedReminders)
+    }
+
+    @Test
+    fun `nothing planned by anybody shows no reminders row`() {
+        val clock = card(RequestKind.CHANGE, ClockRole.PROPOSER, ANSWER_BY - 2 * DAY).timed.clock
+        assertEquals(null, clock.plannedReminders)
+        assertEquals(0, clock.remindersSent)
+        assertEquals(null, TimedRequest(clock, ANSWER_BY - 2 * DAY).nextReminderMillis)
     }
 
     private fun pastDeadline() = ANSWER_BY + HOUR

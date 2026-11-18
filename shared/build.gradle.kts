@@ -69,6 +69,11 @@ kotlin {
             // signatures take its `KSerializer` and `JsonElement`. Its jar carries its own R8 rules
             // for the generated serializers.
             api("org.jetbrains.kotlinx:kotlinx-serialization-json:1.12.0")
+            // The notification wording (iPhone phase 4 part C), which holds the chat card's facts,
+            // `domain/activity/ActivityAnnouncement.kt`, with its package unchanged: the iPhone's
+            // notification extension links that module alone and words a card's push from them, so
+            // they cannot live here. `api`, because `Message` and `ActivityFallbackText` take them.
+            api(project(":push-wording"))
         }
         androidMain.dependencies {
             // PAY by square's raw LZMA1 encoder (`Lzma1Raw`), the version the app uses: one

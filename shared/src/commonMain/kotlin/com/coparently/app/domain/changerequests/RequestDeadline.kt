@@ -110,7 +110,12 @@ enum class RequestClockOutcome(val wire: String) {
  * @property reminderTimesMillis When that phone planned the reminders for, worked out in its own
  *   time zone; empty until it has planned.
  * @property seenAtMillis When the answering parent first opened the request; written once.
- * @property remindersShown How many of the planned reminders that phone has shown.
+ * @property remindersShown How many of the planned reminders an older build's phone counted as
+ *   shown; this build writes none, since the server sends the reminders (iPhone phase 4 part C).
+ * @property serverReminderTimesMillis The server's own plan, made in the answering parent's profile
+ *   zone only when no phone delivered the clock (spec §11 call 1); empty until then, and while a
+ *   phone's plan exists the phone's is used.
+ * @property serverRemindersSent How many reminders the server has pushed to the answering parent.
  * @property lastChanceAtMillis The server's time when the proposer gave a last chance; null until
  *   they do. On the proposer's phone it is that phone's estimate until the server has answered.
  * @property lastChanceUntilMillis When the last chance ends. Its presence is what says a last chance
@@ -140,8 +145,40 @@ data class RequestDeadline(
     val lastChanceAtMillis: Long? = null,
     val lastChanceUntilMillis: Long? = null,
     val outcome: RequestClockOutcome? = null,
-    val closedAtMillis: Long? = null
-)
+    val closedAtMillis: Long? = null,
+    val serverReminderTimesMillis: List<Long> = emptyList(),
+    val serverRemindersSent: Int = 0
+) {
+
+    /**
+     * The reminder plan in force (spec §11 call 1): the answering phone's once it delivered the clock,
+     * else the server's own. The server sends from this one.
+     */
+    val reminderTimesInForce: List<Long>
+        get() = if (deliveredAtMillis != null) reminderTimesMillis else serverReminderTimesMillis
+
+    /**
+     * How many reminders were planned: the phone's count, else the size of the server's plan, and
+     * never fewer than [remindersSent]; null while neither has planned or sent any.
+     *
+     * The floor matters when the server sent a reminder from its own plan before the phone
+     * delivered: the phone plans only what is still ahead, so its count leaves out what was already
+     * sent, and "3 of 2" would read as nonsense.
+     */
+    val plannedReminders: Int?
+        get() {
+            val planned = remindersPlanned ?: serverReminderTimesMillis.size.takeIf { it > 0 }
+            val sent = remindersSent
+            return if (planned == null && sent == 0) null else maxOf(planned ?: 0, sent)
+        }
+
+    /**
+     * How many reminders were given: what the server sent, or what an older build's phone counted as
+     * shown when that is more (spec §11 call 1).
+     */
+    val remindersSent: Int
+        get() = maxOf(serverRemindersSent, remindersShown)
+}
 
 /**
  * What a sender knows when it starts a clock: the request, the family it is made in, who must

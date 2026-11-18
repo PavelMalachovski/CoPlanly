@@ -222,6 +222,29 @@ describe('SEC-3: notification payloads', () => {
       })));
     });
 
+    it('refuses a forged request reminder and the server\'s other request clock pushes', async () => {
+      // iPhone phase 4 part C: the server's sweep sends `request_reminder` at the answering
+      // parent's planned times, after re-reading the request; a co-parent who could queue it would
+      // nag at any hour about a request that no longer waits. MON-25's two pushes are server-only
+      // for the same reason.
+      const db = env.authenticatedContext(ALICE).firestore();
+      for (const type of ['request_reminder', 'request_deadline_passed', 'request_no_answer']) {
+        await assertFails(db.collection('notification_queue').add(queued({
+          type: type,
+          actorName: 'Alice',
+          requestKind: 'swap',
+          answerBy: '1790000000000',
+        })));
+      }
+      // The control: the same keys under a client type are accepted, so the type is the refusal.
+      await assertSucceeds(db.collection('notification_queue').add(queued({
+        type: 'request_last_chance',
+        actorName: 'Alice',
+        requestKind: 'swap',
+        answerBy: '1790000000000',
+      })));
+    });
+
     it('refuses a type nobody defines', async () => {
       const db = env.authenticatedContext(ALICE).firestore();
       await assertFails(db.collection('notification_queue').add(queued({

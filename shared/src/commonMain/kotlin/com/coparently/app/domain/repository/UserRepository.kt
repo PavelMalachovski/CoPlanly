@@ -134,6 +134,15 @@ interface UserRepository {
     suspend fun updateFcmToken(token: String)
 
     /**
+     * Writes [zone], the IANA name of the zone this phone is in, to the signed-in user's
+     * `users/{uid}.timeZone` (iPhone phase 4 part C, design §7.3): the server plans a request's
+     * reminders in it when no phone delivered the clock, and keeps its quiet hours. Only when it
+     * differs from the stored value, and only into a profile that exists; best effort — a failure
+     * is logged and the next start writes it.
+     */
+    suspend fun recordTimeZone(zone: String)
+
+    /**
      * Reads a profile straight from that user's `users/{uid}` Firestore document, bypassing
      * Room entirely.
      *

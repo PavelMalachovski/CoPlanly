@@ -28,12 +28,20 @@ internal fun readerLocale(): NSLocale {
     val first = preferredFirst()
     val known = cached
     if (known != null && cachedFor == first) return known
-    val identifier = NSLocale.canonicalLocaleIdentifierFromString(AppLanguageRule.effective(null, first))
+    val identifier = NSLocale.canonicalLocaleIdentifierFromString(readerLanguageTag(first))
     return NSLocale(localeIdentifier = identifier).also {
         cached = it
         cachedFor = first
     }
 }
+
+/**
+ * The language the app speaks, as the owner's rule ([AppLanguageRule.effective]) answers it over the
+ * phone's first preferred language ([first]): a shipped language's tag, else `en-150`. What
+ * [readerLocale] is built from, and what the app shares with its notification extension
+ * (`AppGroupShare`), so a push is worded in the language the app speaks.
+ */
+internal fun readerLanguageTag(first: String = preferredFirst()): String = AppLanguageRule.effective(null, first)
 
 private fun preferredFirst(): String =
     preferredLanguagesForTest?.firstOrNull() ?: (NSLocale.preferredLanguages.firstOrNull() as? String) ?: "en"

@@ -68,6 +68,11 @@ Where something is *not* shared, we say so below.
 - An authentication identifier from Firebase Authentication.
 - Which parent slot you occupy in your family, and who your linked co-parent is.
 - Your country and, where it matters for holidays, your region.
+- **Your phone's time zone** (a name such as "Europe/Prague"), which the app saves with your
+  profile when you open it. Our server uses it for one thing: to time the reminders about a
+  request you have not answered yet so that none comes at night on your clock (see "When a
+  request is to be answered by"). Your co-parent can read it, as they read the rest of your
+  profile. It is replaced when you open the app in another zone, and deleted with your account.
 - If you agreed to it, when you gave consent to entering health details about your child, and
   to which version of the wording (see below).
 - How the stickers you receive address you — "dad", "mom" or a neutral "parent" — which the app
@@ -114,12 +119,19 @@ decide what each of you may read. **Legal basis:** performance of our contract w
   carry a deadline you choose. With it we keep,
   next to the request: the deadline and the first moment the request would change something; when
   your co-parent's phone received the request; when they first opened it; the times that phone
-  chose to remind them (at most three, none at night) and how many reminders it has shown; whether
+  chose to remind them (at most three, none at night), or the times our server chose when that
+  phone had not received the request yet, and how many reminders our server has sent; whether
   you gave one last chance, and until when; and whether the request ended with no answer, and
   when. **The parent who
   sent the request sees when the other opened it** — as they see a message's read mark. Opening a
-  request notifies nobody, and the reminders are notifications on the answering parent's own phone,
-  not messages from our servers. **Our server watches the deadline**: it checks the request every
+  request notifies nobody. **The reminders are sent by our server** to the parent who has to
+  answer, as notifications that name the other parent by first name and the deadline: before
+  sending each one it checks that the request still waits, so none comes about a request already
+  answered, withdrawn or ended, and none between 21:00 and 08:00 in the time zone their phone
+  saved with their profile (above); for an account whose app never saved one, the plan their own
+  phone made decides. A reminder counts as sent when our server sends it, since
+  a phone cannot report whether it showed one; a reminder to a parent whose phone holds no
+  notification token (notifications switched off, or signed out) is neither sent nor counted. **Our server watches the deadline**: it checks the request every
   few minutes, and when the deadline passes without an answer it sends **you, the parent who sent
   it,** a notification, and a second one if the request then ends with no answer, when it also
   closes the request, notes it in your conversation and withdraws a waiting custody or expense
@@ -301,7 +313,19 @@ stays there.
   notification names who made the change and what it is about (an event's title, say); one about
   a new shared expense also carries its amount and your share of it, and one about a new chat
   message carries the first 120 characters of that message, which Google's Firebase Cloud
-  Messaging delivers to the phone.
+  Messaging delivers to the phone. We keep one token per account: the phone you used last receives
+  your notifications. The token is deleted when you switch notifications off, sign out or delete
+  your account. **On an iPhone**, Firebase Cloud Messaging hands each notification to **Apple's
+  push notification service**, which delivers it, and it travels with a fixed text of ours, "You
+  have a new update in CoPlanly."; your phone then writes the real sentence itself, in the app's
+  language, from the facts the notification carries. If the phone cannot (it is meant for an account
+  that is no longer signed in on it, say), that fixed text is what you see, and it names nobody.
+  To write the sentence, the app keeps your account's identifier and the app's language where the
+  phone's notification component can read them; both stay on the phone and are removed when you
+  sign out.
+- **Reminders that never leave your phone.** An event's reminder, and the paying parent's reminder
+  before a child support payment, are scheduled on the phone itself (on an iPhone, as the system's
+  own notifications, planned from what the app last synced); we send nothing for them.
 - **Crash reports** (Firebase Crashlytics) and **usage analytics** (Firebase Analytics) in
   release builds. These carry no message content, no event titles and no records about your
   child. They record which screens are opened and which actions succeed or fail, with your
@@ -492,6 +516,7 @@ We do not sell personal data, and we do not use it for advertising.
 | Google (Vertex AI), **our processor**, running Anthropic's Claude model | Only if you use writing help: the last 20 messages of the thread and your note (reply suggestion), or the month's figures (summary) | To draft the text you asked for — see "Writing help (AI)" |
 | Google (Calendar API) | Only your calendar, only if you connect it | The integration you enabled — for your Google Calendar, Google is responsible under its own privacy policy |
 | Apple, if you sign in with Apple | The authorisation code to exchange and, when you remove Apple or delete your account, the token to revoke | Sign in with Apple, which you chose — for your Apple ID, Apple is responsible under its own privacy policy |
+| Apple (Apple Push Notification service), **our processor**, if you use an iPhone | Your iPhone's push token and each notification sent to it, with the facts it carries (who, what, a title, an amount, the start of a message) | Delivering notifications to an iPhone, which only Apple's service can do |
 
 **Where your data is processed.** Our database and file storage are located in
 {{FIRESTORE_REGION}}. Our server functions — which link co-parents, send notifications, renew
@@ -500,12 +525,14 @@ region in Frankfurt, Germany. Writing help, if you use it, runs on Google Cloud'
 {{AI_VERTEX_REGION}}, also in the European Union.
 
 Some Google services we use run on Google's global infrastructure and may process data outside
-the European Economic Area: delivering push notifications (Firebase Cloud Messaging), signing in
+the European Economic Area: delivering push notifications (Firebase Cloud Messaging, and on an
+iPhone Apple's push notification service), signing in
 (Firebase Authentication), and — only if you agreed — usage statistics and crash reports. Google
 LLC is certified under the **EU–US Data Privacy Framework**, for which the European Commission has
 adopted an adequacy decision (Art. 45); Google's data processing terms also incorporate the
 Commission's **Standard Contractual Clauses** (Art. 46(2)(c)). Google acts as our processor under
-the Google Cloud Data Processing Addendum.
+the Google Cloud Data Processing Addendum. Apple delivers notifications to an iPhone under
+Apple's developer terms, which let it use them only to deliver them.
 
 A professional both of you admit may work outside the European Economic Area; what they read is
 sent to them because you both asked for it (Art. 49(1)(b)).

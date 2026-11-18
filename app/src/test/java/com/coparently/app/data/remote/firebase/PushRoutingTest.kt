@@ -1,5 +1,6 @@
 package com.coparently.app.data.remote.firebase
 
+import com.coparently.app.pushwording.PushWording
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -25,7 +26,7 @@ class PushRoutingTest {
 
     @Test
     fun `every worded type opens a screen, except the ones with links of their own`() {
-        for (type in PushNotifier.PUSH_TEXT.keys) {
+        for (type in PushWording.PUSH_TEXT.keys) {
             if (type == PushPayload.PAIRING_ACCEPTED || type == PushPayload.PAIRING_REMOVED) {
                 assertNull(PushRouting.destinationOf(type), "$type keeps its pairing link")
             } else if (type == PushPayload.COPARENT_ACCOUNT_DELETED) {
@@ -72,6 +73,14 @@ class PushRoutingTest {
             assertEquals(PushDestination.CHANGE_REQUESTS, PushRouting.destinationOf(type), type)
             assertEquals(PushChannel.SCHEDULE, PushRouting.channelOf(type), type)
         }
+    }
+
+    @Test
+    fun `the server's request reminder opens the inbox, on the schedule channel`() {
+        assertEquals(PushDestination.CHANGE_REQUESTS, PushRouting.destinationOf(PushPayload.REQUEST_REMINDER))
+        assertEquals(PushChannel.SCHEDULE, PushRouting.channelOf(PushPayload.REQUEST_REMINDER))
+        assertTrue(PushPayload.REQUEST_REMINDER in PushWording.PUSH_TEXT, "the reminder is worded")
+        assertTrue(PushPayload.REQUEST_REMINDER !in PushPayload.CLIENT_TYPES, "no client may queue it")
     }
 
     @Test

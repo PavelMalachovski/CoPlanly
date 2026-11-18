@@ -75,5 +75,9 @@
 	<string>$(COPLANLY_GOOGLE_WEB_CLIENT_ID)</string>
 	<key>CoplanlyAppleSignIn</key>
 	<string>$(COPLANLY_APPLE_SIGN_IN)</string>
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<false/>
+	<key>FirebaseMessagingAutoInitEnabled</key>
+	<false/>
 </dict>
 </plist>

@@ -36,7 +36,7 @@ our processor are declared.
 | Email address | Yes | No | No | Account management (email invitations were removed in August 2026) |
 | Phone number | Yes | No | **Yes** | App functionality — `User.phone` on the profile and onboarding, and the phone numbers of emergency, school, activity and vet contacts (third parties' numbers, entered by a parent) |
 | Address | Yes | No | **Yes** | App functionality — addresses on emergency and school contacts in the child's record |
-| Other info | Yes | No | **Yes** | App functionality — a child's date of birth, school and activity details; how a parent's stickers address them (`users/{uid}.parentRole`: dad, mom or parent, October 2026), read by their co-parent and used only to word stickers |
+| Other info | Yes | No | **Yes** | App functionality — a child's date of birth, school and activity details; how a parent's stickers address them (`users/{uid}.parentRole`: dad, mom or parent, October 2026), read by their co-parent and used only to word stickers; the phone's time zone (`users/{uid}.timeZone`, an IANA name, November 2026), see the note below |
 | Device or other IDs | Yes | No | No | App functionality (the FCM push token stored on `users/{uid}`) and, with consent, analytics/crash reporting (Firebase installation ID) |
 | User IDs | Yes | No | No | Account management |
 | Photos | Yes | No | Yes | App functionality — receipts, event images, a photo of each child, medical and pet photos, photos in the document vault and sent in chat |
@@ -116,6 +116,18 @@ minute and the notification is built from the phone's own copy of the event; not
 anywhere. USE_EXACT_ALARM is not a data type in the form, but Play asks for a **permission
 declaration** (Console → Policy → App content → *Exact alarm permission*): the app is a calendar that
 shows notifications for the events in it.
+
+**Pushes, server reminders and the time zone** (iPhone phase 4 part C, November 2026). The app
+saves the phone's time zone (an IANA name such as `Europe/Prague`) with the profile, and the server
+uses it for one thing: to plan the reminders about a request the parent has not answered and keep
+them out of 21:00–08:00 on that clock. A zone is the region of a clock, not the phone's position,
+and nothing reads a location to find it, so it is declared under *Other info* and **not** as
+*Approximate location*; revisit if Play's form says otherwise. The request reminders are now pushes
+from the server (`request_reminder`, carrying the proposer's first name, the request's kind and the
+deadline), already covered by *Device or other IDs* (the token) and by the data types they name.
+On an iPhone a push is delivered by Apple's push service as our processor; event and child support
+reminders there are local notifications, with nothing sent. The Play listing concerns the Android
+build, whose answers this does not change beyond the time zone.
 
 **Private events never leave the device.** Events marked private are excluded from every sync
 path. They are not collected in Play's sense.

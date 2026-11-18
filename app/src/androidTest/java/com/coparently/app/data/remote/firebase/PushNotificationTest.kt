@@ -16,6 +16,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.coparently.app.R
 import com.coparently.app.domain.chat.ChatUri
+import com.coparently.app.pushwording.PushText
+import com.coparently.app.pushwording.PushWording
 import com.coparently.app.utils.DAY_IN_SENTENCE
 import com.coparently.app.utils.answerByText
 import com.coparently.app.utils.isoDateText
@@ -83,7 +85,7 @@ class PushNotificationTest {
 
     @Test
     fun everyClientType_hasWords() {
-        val unworded = PushPayload.CLIENT_TYPES - PushNotifier.PUSH_TEXT.keys
+        val unworded = PushPayload.CLIENT_TYPES - PushWording.PUSH_TEXT.keys
         assertTrue("client push types with no wording, dropped on arrival: $unworded", unworded.isEmpty())
     }
 
@@ -91,7 +93,7 @@ class PushNotificationTest {
     fun everyWordedType_postsTheAppsOwnWords_inEnglishAndInGerman() {
         val english = localized("en")
         val german = localized("de")
-        for ((type, spec) in PushNotifier.PUSH_TEXT) {
+        for ((type, spec) in PushWording.PUSH_TEXT) {
             val inEnglish = postAndRead(english, payload(type))
             val inGerman = postAndRead(german, payload(type))
             val bodyInEnglish = expectedBody(english, type, spec)
@@ -114,7 +116,7 @@ class PushNotificationTest {
     fun everyWordedType_composesInEveryShippedLanguage() {
         for (tag in SHIPPED_LANGUAGES) {
             val notifier = PushNotifier(localized(tag))
-            for ((type, spec) in PushNotifier.PUSH_TEXT) {
+            for ((type, spec) in PushWording.PUSH_TEXT) {
                 val text = notifier.compose(type, payload(type))
                 assertNotNull("$type composes in $tag", text)
                 assertTrue("$type has a title in $tag", text!!.title.isNotBlank())
@@ -335,7 +337,7 @@ class PushNotificationTest {
         val channels = manager.notificationChannels.map { it.id }.toSet()
         assertTrue("the four push channels exist: $channels", channels.containsAll(PushChannel.entries.map { it.id }))
         assertFalse("the channel every push shared is gone", PushChannel.LEGACY_ID in channels)
-        for (type in PushNotifier.PUSH_TEXT.keys) {
+        for (type in PushWording.PUSH_TEXT.keys) {
             val data = payload(type)
             val id = requireNotNull(PushNotifier(appContext).receive(data, SIGNED_IN)) { "$type was posted" }
             val posted = awaitPosted(id)
@@ -408,41 +410,45 @@ class PushNotificationTest {
      * What the text of a push of [type], worded by [spec], reads as in [context]'s language: the
      * body, and for a request's first push the sentence that says when to answer by.
      */
-    private fun expectedBody(context: Context, type: String, spec: PushNotifier.PushTextSpec): String {
+    private fun expectedBody(context: Context, type: String, spec: PushWording.PushTextSpec): String {
         val body = when (spec.args) {
-            PushNotifier.BodyArgs.ACTOR_AND_SUBJECT -> context.getString(spec.body, ACTOR_NAME, SUBJECT)
-            PushNotifier.BodyArgs.ACTOR -> context.getString(spec.body, ACTOR_NAME)
+            PushWording.BodyArgs.ACTOR_AND_SUBJECT -> context.word(spec.body, ACTOR_NAME, SUBJECT)
+            PushWording.BodyArgs.ACTOR -> context.word(spec.body, ACTOR_NAME)
             // The payload below carries no deadline millis, so the notifier falls back to the ISO day.
-            PushNotifier.BodyArgs.ACTOR_AND_DEADLINE -> context.getString(
+            PushWording.BodyArgs.ACTOR_AND_DEADLINE -> context.word(
                 spec.body,
                 ACTOR_NAME,
                 isoDateText(DATE, DAY_IN_SENTENCE, context.resources.configuration.locales[0])
             )
-            PushNotifier.BodyArgs.ACTOR_AND_ANSWER_BY -> context.getString(spec.body, ACTOR_NAME, answerByIn(context))
-            PushNotifier.BodyArgs.DATE -> context.getString(
+            PushWording.BodyArgs.ACTOR_AND_ANSWER_BY -> context.word(spec.body, ACTOR_NAME, answerByIn(context))
+            PushWording.BodyArgs.DATE -> context.word(
                 spec.body,
                 isoDateText(DATE, DAY_IN_SENTENCE, context.resources.configuration.locales[0])
             )
-            PushNotifier.BodyArgs.DAY_COUNT -> context.resources.getQuantityString(spec.body, DAY_COUNT, DAY_COUNT)
+            PushWording.BodyArgs.DAY_COUNT -> context.resources.getQuantityString(
+                pluralsId(context, spec.body),
+                DAY_COUNT,
+                DAY_COUNT
+            )
             // The payload carries a share, so the sentence that says it.
-            PushNotifier.BodyArgs.EXPENSE -> context.getString(
+            PushWording.BodyArgs.EXPENSE -> context.getString(
                 R.string.push_expense_added_body_share,
                 ACTOR_NAME,
                 SUBJECT,
                 moneyIn(context, EXPENSE_AMOUNT),
                 moneyIn(context, EXPENSE_SHARE)
             )
-            PushNotifier.BodyArgs.NONE -> context.getString(spec.body)
+            PushWording.BodyArgs.NONE -> context.word(spec.body)
         }
-        if (type !in PushNotifier.ANSWER_BY_TYPES) return body
+        if (type !in PushWording.ANSWER_BY_TYPES) return body
         // A sentence of its own: after a full stop when the body ends one, after one this adds otherwise.
         val join = if (body.last() in ".!?…") " " else ". "
         return body + join + context.getString(R.string.push_answer_by, answerByIn(context))
     }
 
     /** The title [spec] words in [context]'s language; a title that names the actor gets [ACTOR_NAME]. */
-    private fun titleOf(context: Context, spec: PushNotifier.PushTextSpec): String =
-        if (spec.titleTakesActor) context.getString(spec.title, ACTOR_NAME) else context.getString(spec.title)
+    private fun titleOf(context: Context, spec: PushWording.PushTextSpec): String =
+        if (spec.titleTakesActor) context.word(spec.title, ACTOR_NAME) else context.word(spec.title)
 
     /** [plain] in [EXPENSE_CURRENCY], as [context]'s reader writes money. */
     private fun moneyIn(context: Context, plain: String): String =
@@ -458,21 +464,37 @@ class PushNotificationTest {
     )
 
     /** The names the payload carried appear in [body] — a translation that drops one fails here. */
-    private fun assertCarriesItsNames(label: String, spec: PushNotifier.PushTextSpec, body: String) {
+    private fun assertCarriesItsNames(label: String, spec: PushWording.PushTextSpec, body: String) {
         assertTrue("$label has a text", body.isNotBlank())
         val names = when (spec.args) {
-            PushNotifier.BodyArgs.ACTOR_AND_SUBJECT -> listOf(ACTOR_NAME, SUBJECT)
-            PushNotifier.BodyArgs.ACTOR -> listOf(ACTOR_NAME)
-            PushNotifier.BodyArgs.ACTOR_AND_DEADLINE -> listOf(ACTOR_NAME, DATE_DAY)
-            PushNotifier.BodyArgs.ACTOR_AND_ANSWER_BY -> listOf(ACTOR_NAME, ANSWER_BY_DAY)
+            PushWording.BodyArgs.ACTOR_AND_SUBJECT -> listOf(ACTOR_NAME, SUBJECT)
+            PushWording.BodyArgs.ACTOR -> listOf(ACTOR_NAME)
+            PushWording.BodyArgs.ACTOR_AND_DEADLINE -> listOf(ACTOR_NAME, DATE_DAY)
+            PushWording.BodyArgs.ACTOR_AND_ANSWER_BY -> listOf(ACTOR_NAME, ANSWER_BY_DAY)
             // The date is said in the reader's language (D-18), so its day is what every one shows.
-            PushNotifier.BodyArgs.DATE -> listOf(DATE_DAY)
-            PushNotifier.BodyArgs.DAY_COUNT -> listOf(DAY_COUNT.toString())
-            PushNotifier.BodyArgs.EXPENSE -> listOf(ACTOR_NAME, SUBJECT)
-            PushNotifier.BodyArgs.NONE -> emptyList()
+            PushWording.BodyArgs.DATE -> listOf(DATE_DAY)
+            PushWording.BodyArgs.DAY_COUNT -> listOf(DAY_COUNT.toString())
+            PushWording.BodyArgs.EXPENSE -> listOf(ACTOR_NAME, SUBJECT)
+            PushWording.BodyArgs.NONE -> emptyList()
         }
         for (name in names) assertTrue("$label: \"$body\" shows \"$name\"", body.contains(name))
     }
+
+    /**
+     * The app's string id of [key]: the wording's table (`:push-wording`) names its resources by key,
+     * as the app's notifications read them.
+     */
+    @Suppress("DiscouragedApi")
+    private fun stringId(context: Context, key: String): Int =
+        context.resources.getIdentifier(key, "string", context.packageName).also { assertNotEquals(0, it) }
+
+    /** The app's string [key] in this context's language, formatted with [args]. */
+    private fun Context.word(key: String, vararg args: Any): String = getString(stringId(this, key), *args)
+
+    /** The app's plurals id of [key]. */
+    @Suppress("DiscouragedApi")
+    private fun pluralsId(context: Context, key: String): Int =
+        context.resources.getIdentifier(key, "plurals", context.packageName).also { assertNotEquals(0, it) }
 
     /** Posts [data] through a notifier worded in [context]'s language and reads it back. */
     private fun postAndRead(context: Context, data: Map<String, String>): Shown {
@@ -512,7 +534,7 @@ class PushNotificationTest {
     /** The intent the tap of a push carrying [data] would start, as the notifier builds it. */
     private fun tapIntentFor(data: Map<String, String>): Intent {
         val target = PushNotifier.NotificationTarget(
-            text = PushNotifier.PushText("", ""),
+            text = PushText("", ""),
             type = data[PushPayload.TYPE],
             conversationId = data[PushPayload.CONVERSATION_ID],
             familyId = data[PushPayload.FAMILY_ID]?.takeIf { it.isNotBlank() }

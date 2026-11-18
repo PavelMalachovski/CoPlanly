@@ -1,5 +1,6 @@
 package com.coparently.app.presentation
 
+import com.coparently.app.data.remote.firebase.PushDestination
 import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.domain.chat.ChatUri
 import com.coparently.app.domain.family.FamilyKey
@@ -32,6 +33,18 @@ sealed interface LaunchLink {
 }
 
 /**
+ * What tapping a push opens, as [LaunchLinks.forPush] reads it from the push's data: the family to
+ * switch to first ([familyId], CLAUDE.md item 15), then the [link] or the [destination] to arm.
+ * The same three things Android's `PushNotifier.tapIntent` puts on the intent `MainActivity` reads.
+ *
+ * @property familyId The family the push names, or null when it names none.
+ * @property link A pairing link (pairing news) or a chat link (a message, a departed co-parent's
+ *   notice), or null.
+ * @property destination The screen every other type names ([PushDestination.forType]), or null.
+ */
+data class PushTap(val familyId: String?, val link: LaunchLink?, val destination: PushDestination?)
+
+/**
  * Reads a `coplanly://` link into a [LaunchLink], for both apps: Android's `MainActivity` and the
  * iPhone's shell read the same three forms through it, with the domain's parsers ([PairingUri],
  * [GuestInviteUri], [ChatUri]) deciding the codes and the conversation id.
@@ -57,6 +70,45 @@ object LaunchLinks {
                 LaunchLink.Chat(familyId = familyIdOf(url), conversationId = ChatUri.extractConversationId(url))
             else -> null
         }
+    }
+
+    /**
+     * What tapping a push whose data is [data] opens on a phone where [signedInUid] is signed in
+     * (iPhone phase 4 part C; Android's `PushNotifier.tapIntent`, read back by `MainActivity`), or
+     * null when the push opens nothing: nobody is signed in, or the push names another addressee
+     * ([PushPayload.TARGET_USER_ID]), the rule Android's `PushNotifier.receive` drops a push by
+     * (CLAUDE.md item 23). A push that names no addressee is the signed-in account's, as there.
+     *
+     * Pairing news opens the pairing screen with nothing prefilled, a chat message and a departed
+     * co-parent's notice their thread (the list when the thread is missing or malformed, as
+     * [parse] reads `ChatUri.build`'s link), and every other type the screen
+     * [PushDestination.forType] names, or nothing more than the app for a type this build does not
+     * know. The family rides beside it, never inside the chat link, as on Android.
+     *
+     * The iPhone's local reminders (phase 4 part C) carry no type, and name their screen as Android's
+     * reminders put it on the launcher intent: [PushDestination.EXTRA] with a key [PushDestination.fromKey]
+     * reads — the calendar for an event's, Family → Child support for the payer's. Read only where the
+     * type names no screen, and only ever picks one.
+     */
+    fun forPush(data: Map<String, String>, signedInUid: String?): PushTap? {
+        val addressee = data[PushPayload.TARGET_USER_ID]?.takeIf { it.isNotBlank() }
+        if (signedInUid == null || (addressee != null && addressee != signedInUid)) return null
+        val type = data[PushPayload.TYPE]
+        val link = when (type) {
+            PushPayload.PAIRING_ACCEPTED, PushPayload.PAIRING_REMOVED -> LaunchLink.Pair("")
+            PushPayload.CHAT_MESSAGE, PushPayload.COPARENT_ACCOUNT_DELETED ->
+                parse(ChatUri.build(data[PushPayload.CONVERSATION_ID]))
+            else -> null
+        }
+        return PushTap(
+            familyId = data[PushPayload.FAMILY_ID]?.takeIf { it.isNotBlank() },
+            link = link,
+            destination = if (link == null) {
+                PushDestination.forType(type) ?: PushDestination.fromKey(data[PushDestination.EXTRA])
+            } else {
+                null
+            }
+        )
     }
 
     /**

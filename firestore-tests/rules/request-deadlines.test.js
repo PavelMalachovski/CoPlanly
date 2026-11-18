@@ -663,19 +663,26 @@ describe('request_deadlines', () => {
 
   // ---- The server's schedule fields (MON-25) -----------------------------------------------
 
-  /** The four fields the scheduled function writes as admin; no client ever may. */
+  /**
+   * The fields the scheduled function writes as admin; no client ever may: part B's four (MON-25)
+   * and the reminders' three (iPhone phase 4 part C: the server's own plan, how many it sent, and
+   * the latest planned time it acted on).
+   */
   const SERVER_FIELDS = ['serverNextStepAt', 'serverToldDeadlineAt', 'serverToldNoAnswerAt',
-    'serverSettledAt'];
+    'serverSettledAt', 'serverReminderTimesMillis', 'serverRemindersSent', 'serverLastReminderAt'];
 
-  /** The four fields as the admin SDK leaves them. */
+  /** The fields as the admin SDK leaves them. */
   const serverFields = () => ({
     serverNextStepAt: Timestamp.fromMillis(Date.now() + HOUR),
     serverToldDeadlineAt: Timestamp.fromMillis(Date.now() - HOUR),
     serverToldNoAnswerAt: Timestamp.fromMillis(Date.now() - MINUTE),
     serverSettledAt: Timestamp.fromMillis(Date.now()),
+    serverReminderTimesMillis: [Date.now() + HOUR, Date.now() + 2 * HOUR],
+    serverRemindersSent: 1,
+    serverLastReminderAt: Date.now() - HOUR,
   });
 
-  it('refuses a create carrying any of the server\'s four fields', async () => {
+  it('refuses a create carrying any of the server\'s fields', async () => {
     const sample = serverFields();
     for (const field of SERVER_FIELDS) {
       await assertFails(clock(ALICE).set(clockDoc({[field]: sample[field]})));
@@ -684,7 +691,7 @@ describe('request_deadlines', () => {
     await assertSucceeds(clock(ALICE).set(clockDoc({})));
   });
 
-  it('refuses each update shape with any of the server\'s four fields added or changed', async () => {
+  it('refuses each update shape with any of the server\'s fields added or changed', async () => {
     const sample = serverFields();
     const now = Date.now();
     // The five shapes, each with the clock it is legal on and the caller that writes it.

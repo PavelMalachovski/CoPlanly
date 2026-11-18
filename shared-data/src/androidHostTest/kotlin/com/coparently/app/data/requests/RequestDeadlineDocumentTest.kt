@@ -118,7 +118,9 @@ class RequestDeadlineDocumentTest {
             lastChanceAtMillis = 1_550_000_000L,
             lastChanceUntilMillis = 1_600_000_000L,
             outcome = RequestClockOutcome.NO_ANSWER,
-            closedAtMillis = 1_650_000_000L
+            closedAtMillis = 1_650_000_000L,
+            serverReminderTimesMillis = listOf(1_150_000_000L, 1_250_000_000L),
+            serverRemindersSent = 1
         )
         val times = ServerTimes(
             createdAtMillis = 1_000_000_000L,
@@ -296,6 +298,9 @@ class RequestDeadlineDocumentTest {
         "remindersShown" to number(2L),
         "lastChanceUntilMillis" to number(1_600_000_000L),
         "outcome" to "no_answer",
+        // The server's reminders (iPhone phase 4 part C): its own plan and how many it sent.
+        "serverReminderTimesMillis" to listOf(1_150_000_000L, 1_250_000_000L).map(number),
+        "serverRemindersSent" to number(1L),
         // The three server stamps are not in the document's map as numbers; the data source reads them.
         "createdAt" to Any(),
         "lastChanceAt" to Any(),
