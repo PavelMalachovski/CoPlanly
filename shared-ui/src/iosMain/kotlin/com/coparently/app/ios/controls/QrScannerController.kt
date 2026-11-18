@@ -4,7 +4,6 @@ package com.coparently.app.ios.controls
 
 import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.pairing.ScannedCodeFilter
-import kotlin.native.ref.WeakReference
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCAction
 import kotlinx.cinterop.useContents
@@ -49,6 +48,7 @@ import platform.darwin.NSObject
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
 import platform.darwin.dispatch_queue_create
+import kotlin.native.ref.WeakReference
 
 /**
  * The full-screen QR scanner (MON-24 phase 4 part E1, Task 4): the back camera's picture over the
