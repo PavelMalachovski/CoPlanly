@@ -15,8 +15,9 @@ import org.koin.dsl.module
 /**
  * What [uiModules] takes from the platform on the iPhone beyond [platformDataModule]: the chat's
  * on-device dictation and the AI assist (slice 10e), neither of which the iPhone has yet, as the
- * stand-ins in `IosUiUnavailable.kt` — no microphone, no assist offered — and, since phase 3's Task 5, which reason a failed sign-in is ([IosAuthErrors]).
- * The [AppBuildValues] and the invitation's QR are bound by the iPhone app's own module
+ * stand-ins in `IosUiUnavailable.kt` — no microphone, no assist offered — and, since phase 3's Task 5,
+ * which reason a failed sign-in is ([IosAuthErrors]).
+ * The `AppBuildValues` and the invitation's QR are bound by the iPhone app's own module
  * (`iosAppModule`), from the one set of build values the shell shares.
  * Since Task 6 it also binds the two wordings the data layer writes into stored data
  * ([IosPairingWording], [IosSchoolImportWordings]): data seams, but they read the app's strings,
