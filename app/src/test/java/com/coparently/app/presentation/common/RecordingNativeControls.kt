@@ -6,6 +6,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
@@ -123,6 +125,13 @@ class RecordingNativeControls : NativeControls {
 
     /** The latest "Sign in with Apple" button's callback, for a test that taps it. */
     var lastAppleClick: (() -> Unit)? = null
+
+    /** How many paste buttons were drawn, in the order of composition. */
+    var pasteButtons = 0
+        private set
+
+    /** The latest paste button's callback, for a test that pastes through it. */
+    var lastPaste: ((String) -> Unit)? = null
 
     /** The colour each native control was told it sits on, in the order of composition. */
     val backgrounds = mutableListOf<Color>()
@@ -266,7 +275,18 @@ class RecordingNativeControls : NativeControls {
         Box(modifier.testTag(APPLE_BUTTON_TAG))
     }
 
+    @Composable
+    override fun PasteButton(onPaste: (String) -> Unit, background: Color, modifier: Modifier) {
+        backgrounds += background
+        pasteButtons++
+        lastPaste = onPaste
+        Box(modifier.size(100.dp, 44.dp).semantics { contentDescription = PASTE_BUTTON_DESCRIPTION })
+    }
+
     companion object {
+        /** The content description of a paste button this fake drew. */
+        const val PASTE_BUTTON_DESCRIPTION = "native-paste-button"
+
         /** The test tag of a "Sign in with Apple" button this fake drew. */
         const val APPLE_BUTTON_TAG = "native-apple-button"
 

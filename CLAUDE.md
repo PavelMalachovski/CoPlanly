@@ -1974,8 +1974,9 @@ shell alone, so Android reads a null and behaves as before:
   `tour-crashed` marker); its step's other failures, a timeout or the seed, are a notice, and the
   tour stops visiting after 35 minutes so it always writes its summary. A new
   destination is added to its `tourRoutes`, which mirrors `AppDestinationCatalog.all`. Since part C
-  it also shows six controls in use (`tourControls`: a switch, a segment, the date sheet, an option
-  menu, an action sheet and the event preview sheet, shot as `tour-control-…`), counted apart from
+  it also shows the system's controls in use (`tourControls`: a switch, a segment, the date sheet,
+  an option menu, an action sheet, the event preview sheet and, since phase 4 part E1, the code
+  field's paste button, shot as `tour-control-…`), counted apart from
   the routes and skipped with a reason like them.
 
 **Part C's shapes** (November 2026; owner's check

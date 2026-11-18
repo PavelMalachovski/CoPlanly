@@ -1453,7 +1453,7 @@ final class ShellUITests: XCTestCase {
     /// them apart, and one the tour cannot show is skipped with the reason, as a route is.
     private let tourControls = [
         "control-switch", "control-segment", "control-date-sheet", "control-option-menu",
-        "control-action-sheet", "control-preview-sheet",
+        "control-action-sheet", "control-preview-sheet", "control-paste",
     ]
 
     /// The destinations no signed-in parent of the seeded family can reach, each with the reason.
@@ -1479,7 +1479,8 @@ final class ShellUITests: XCTestCase {
     /// destination it can reach from there and attaches a screenshot named `tour-<route>` for each,
     /// the route as `AppDestinationCatalog` writes it up to its first `/` or `?`. Since part C it also
     /// shows the system's controls in use (`tourControls`: a switch, a segment, the date sheet, an
-    /// option menu, an action sheet and the event preview sheet), each shot as `tour-control-…`.
+    /// option menu, an action sheet, the event preview sheet and, since phase 4 part E1, the code
+    /// field's paste button), each shot as `tour-control-…`.
     ///
     /// As the Android UI tour (`e2e/UiTourTest`), a destination it cannot reach is recorded with
     /// the reason, never as a failure: a `COPLANLY_TOUR <route>: skipped: …` line, in a text
@@ -1780,8 +1781,8 @@ final class ShellUITests: XCTestCase {
         }
     }
 
-    /// The six controls of `tourControls`, each left open for its screenshot (MON-24 phase 3, part C,
-    /// Task 13). None saves or deletes anything: the switch is flipped back after its own shot, the
+    /// The controls of `tourControls`, each left open for its screenshot (MON-24 phase 3, part C,
+    /// Task 13; the paste button since iPhone phase 4, part E1). None saves or deletes anything: the switch is flipped back after its own shot, the
     /// option menu and the action sheet are left for `tourReset` to cancel, and the segment needs no
     /// undoing, since a tap on the Calendar tab opens Month again (CLAUDE.md design item 5).
     private func tourControlVisits() {
@@ -1848,6 +1849,25 @@ final class ShellUITests: XCTestCase {
             try self.tourTab("Calendar")
             let edit = self.app.buttons.matching(NSPredicate(format: "label == %@", "Edit")).firstMatch
             try self.openPreview(of: self.tourEventTitle, edit: edit)
+        }
+        // The system's paste button beside the code field (iPhone phase 4, part E1): Family, the
+        // co-parent's row, "Add another co-parent", then "Enter a code" opens the field; nothing is
+        // pasted. Opening the row mints a code on the emulators, as the share sheet's walk does.
+        tourVisit("control-paste") {
+            try self.tourTab("Family")
+            if self.labelExists(containing: "Linked: ") {
+                try self.tourOpen(containing: "Linked: ", from: "Family")
+            } else {
+                try self.tourOpen(containing: "Co-parent", from: "Family")
+            }
+            self.press(try self.element(containing: "Add another co-parent"))
+            let enter = self.app.buttons["Enter a code"]
+            try self.require(enter.waitForExistence(timeout: 60), "Add another co-parent offers no Enter a code")
+            self.press(enter)
+            self.dismissKeyboard()
+            let paste = self.app.descendants(matching: .any)
+                .matching(NSPredicate(format: "label == %@", "Paste")).firstMatch
+            try self.require(paste.waitForExistence(timeout: 8), "The code field shows no system paste button named \"Paste\"")
         }
     }
 
