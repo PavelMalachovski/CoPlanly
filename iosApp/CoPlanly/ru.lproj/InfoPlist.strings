@@ -1,2 +1,7 @@
 /* The camera permission question (MON-24 phase 3, part C, Task 11): what the camera is for. */
 "NSCameraUsageDescription" = "CoPlanly использует камеру, чтобы сфотографировать чек или документ, который вы добавляете, и чтобы отсканировать QR-код приглашения от другого родителя.";
+
+/* The microphone and speech recognition questions (iPhone phase 4 part E1): dictation in the chat,
+ * on the iPhone only. */
+"NSMicrophoneUsageDescription" = "CoPlanly использует микрофон только пока вы диктуете сообщение в чат. Звук остаётся на вашем iPhone.";
+"NSSpeechRecognitionUsageDescription" = "Ваши слова превращаются в текст прямо на iPhone. Ничего из сказанного никуда не отправляется.";
