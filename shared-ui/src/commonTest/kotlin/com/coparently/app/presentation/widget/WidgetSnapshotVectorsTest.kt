@@ -9,8 +9,9 @@ import kotlin.test.assertEquals
  * on, as `StoredJsonVectorsTest` in `:shared` pins the shared module's models (which cannot see this
  * module's types).
  *
- * Each expected string is **Gson 2.11.0's own output** for the same value, obtained by running Gson
- * on the JVM over a twin of each class (same field names) and pasting the result — never written by
+ * Each expected string is **Gson 2.11.0's own output** for the same value, obtained by running a
+ * default `Gson()` (HTML escaping on, as the app's call sites had it, so `&` is written `\u0026`) on
+ * the JVM over a twin of each class (same field names) and pasting the result — never written by
  * hand — with each class's keys sorted by name, as Gson wrote them on a phone (`GsonFieldOrder`).
  * The iPhone writes this file and its widget extension reads it, so the simulator is held to the
  * same bytes. Each vector is also read back, to the value it was written from.
@@ -56,7 +57,7 @@ class WidgetSnapshotVectorsTest {
                 """"title":"Today · Wed, 18 Nov","windows":[]},"date":"2026-11-18",""" +
                 """"tall":{"custody":{"colour":{"dark":"#FF99BB","light":"#A0124F"},"text":"Today with you"},""" +
                 """"events":[{"mark":{"dark":"#FF4081","light":"#E91E63"},"time":"09:00",""" +
-                """"title":"Dentist & check-up"}],"handover":{"text":"Handover to Bob in 5 days"},""" +
+                """"title":"Dentist \u0026 check-up"}],"handover":{"text":"Handover to Bob in 5 days"},""" +
                 """"title":"Today · Wed, 18 Nov","windows":[{"colour":{"dark":"#9EC2FF","light":"#1550C0"},""" +
                 """"text":"15:00–19:00 with Bob"}]}}],"language":"en","signedIn":true,""" +
                 """"staleLine":"Open CoPlanly to update","version":1,"writtenAtMillis":1763460000000}"""
