@@ -90,6 +90,24 @@ class WidgetSnapshotWriterTest {
     }
 
     @Test
+    fun anUncheckedAccountWritesNoRecords() = runTest {
+        // Alice has just signed in over another account's rows: the check has not run for her yet.
+        sources.lastChecked = "uid-previous"
+
+        writer.write()
+
+        val text = SystemFileSystem.source(Path(directory, WidgetSnapshotWriter.FILE_NAME)).buffered()
+            .use { it.readString() }
+        assertFalse(stored().signedIn)
+        listOf("Bob", "Dentist").forEach { word -> assertFalse(word in text, "an unchecked account drew $word") }
+
+        // The sync's check has wiped and recorded her: the next write draws her day.
+        sources.lastChecked = UID
+        assertTrue(writer.write())
+        assertTrue(stored().signedIn)
+    }
+
+    @Test
     fun languageChangeRewritesTheSnapshot() = runTest {
         wording.tag = "en"
         writer.write()
@@ -119,7 +137,11 @@ class WidgetSnapshotWriterTest {
     private class FakeSources : WidgetSources {
         var now = 1_000L
 
+        var lastChecked: String? = UID
+
         override fun signedInUid(): String = UID
+
+        override fun lastCheckedUid(): String? = lastChecked
 
         override fun today(): LocalDate = TODAY
 

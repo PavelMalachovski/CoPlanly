@@ -3,6 +3,7 @@ package com.coparently.app.ios
 import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.repository.CustodyModelRepository
+import com.coparently.app.data.session.LastSignedInUid
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.Event
@@ -37,9 +38,12 @@ internal class IosWidgetSources(
     private val events: EventRepository,
     private val custodyModels: CustodyModelRepository,
     private val names: TodayWidgetNames,
+    private val lastUid: LastSignedInUid,
 ) : WidgetSources {
 
     override fun signedInUid(): String? = signedIn.getCurrentUid()
+
+    override fun lastCheckedUid(): String? = lastUid.get()
 
     override fun today(): LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefault())
 

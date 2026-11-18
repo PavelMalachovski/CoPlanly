@@ -527,7 +527,7 @@ internal fun iosAppModule(
             WidgetSnapshotWriter(
                 directory = widgetDirectory,
                 reload = widgetReload,
-                sources = IosWidgetSources(get(), get(), get(), get()),
+                sources = IosWidgetSources(get(), get(), get(), get(), get()),
                 wording = IosWidgetWording,
             )
         }

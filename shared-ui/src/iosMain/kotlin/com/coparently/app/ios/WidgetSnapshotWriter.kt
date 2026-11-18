@@ -1,5 +1,6 @@
 package com.coparently.app.ios
 
+import com.coparently.app.data.notification.checkedAccount
 import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.model.CustodyModel
@@ -45,6 +46,12 @@ interface WidgetReload {
 interface WidgetSources {
     /** The signed-in account, or null when nobody is signed in. */
     fun signedInUid(): String?
+
+    /**
+     * The last account the account check ran for (`LastSignedInUid`, which `IosAccountSwitch` writes
+     * once it has wiped a previous account's rows), or null.
+     */
+    fun lastCheckedUid(): String?
 
     /** Today in the phone's zone: the snapshot's first day. */
     fun today(): LocalDate
@@ -106,14 +113,17 @@ class WidgetSnapshotWriter(
     private val mutex = Mutex()
 
     /**
-     * Writes the snapshot for whoever is signed in now (the signed-out one when nobody is).
+     * Writes the snapshot for whoever is signed in now, once the account check has run for them
+     * ([checkedAccount], the rule the local reminders follow); the signed-out one when nobody is, or
+     * while the check has not run: sign-out keeps Room, so until `IosAccountSwitch` wipes them the
+     * previous account's events and schedule are still there, and must not be drawn as the new
+     * account's day. The write after the sync that ran the check draws it.
      *
      * @return true when the file changed and a reload was asked; false when nothing changed or the
      *   file could not be written (logged).
      */
     suspend fun write(): Boolean = mutex.withLock {
-        val uid = sources.signedInUid()?.takeIf { it.isNotBlank() }
-        store(snapshot(uid))
+        store(snapshot(checkedAccount(sources.signedInUid(), sources.lastCheckedUid())))
     }
 
     /**
