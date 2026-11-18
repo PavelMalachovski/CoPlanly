@@ -1782,9 +1782,10 @@ final class ShellUITests: XCTestCase {
     }
 
     /// The controls of `tourControls`, each left open for its screenshot (MON-24 phase 3, part C,
-    /// Task 13; the paste button since iPhone phase 4, part E1). None saves or deletes anything: the switch is flipped back after its own shot, the
-    /// option menu and the action sheet are left for `tourReset` to cancel, and the segment needs no
-    /// undoing, since a tap on the Calendar tab opens Month again (CLAUDE.md design item 5).
+    /// Task 13; the paste button since iPhone phase 4, part E1). None saves or deletes anything: the
+    /// switch is flipped back after its own shot, the option menu and the action sheet are left for
+    /// `tourReset` to cancel, and the segment needs no undoing, since a tap on the Calendar tab opens
+    /// Month again (CLAUDE.md design item 5).
     private func tourControlVisits() {
         // A switch: New event's "All day", a UISwitch, flipped on for a shot and back off.
         tourVisit("control-switch") {
