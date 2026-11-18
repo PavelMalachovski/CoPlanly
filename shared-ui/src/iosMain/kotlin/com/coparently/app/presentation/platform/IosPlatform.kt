@@ -20,11 +20,12 @@ import platform.Foundation.NSByteCountFormatterCountStyleFile
  * The iPhone's platform capabilities (MON-24 phase 2, Task 11): what the iPhone app's view
  * controller will hand `ProvidePlatform` (phase 3). Until each capability is built there, it is a
  * stand-in that says it is not available, so the shared screens draw no affordance for it (design
- * item 8): QR scanning and dictation until phase 4, the rest until phase 3. A launch that
- * comes anyway does nothing and reports nothing it did not do. Images (`IosImages`) and payment
- * codes (`IosQrCodes`) are the iPhone's own since part C, and since its Task 11 the share sheet
- * (`IosShareSheet`), the pickers (`IosFilePicker`) and the camera (`IosCameraCapture`), and since
- * phase 4 part C the notification permission (`IosPermissions`).
+ * item 8): QR scanning and dictation, and the language picker. A launch that comes anyway does
+ * nothing and reports nothing it did not do. Images (`IosImages`) and payment codes (`IosQrCodes`)
+ * are the iPhone's own since part C, and since its Task 11 the share sheet (`IosShareSheet`), the
+ * pickers (`IosFilePicker`) and the camera (`IosCameraCapture`), since phase 4 part C the
+ * notification permission (`IosPermissions`), and since part E1 links, files, the dialler and mail
+ * (`IosOpenUrl`) and the clipboard (`IosClipboard`).
  */
 
 /**
@@ -38,8 +39,8 @@ fun iosPlatformServices(buildValues: AppBuildValues): PlatformServices = Platfor
     qrScanner = NoQrScanner,
     dictation = NoDictation,
     permissions = IosPermissions(UserNotificationsPermission),
-    openUrl = NoOpenUrl,
-    clipboard = NoClipboard,
+    openUrl = IosOpenUrl,
+    clipboard = IosClipboard,
     buildValues = buildValues,
     images = IosImages.fromKoin(),
     fileDetails = IosFileDetails,
@@ -127,28 +128,6 @@ internal class IosPermissions(private val notifications: NotificationPermission)
             }
         }
     }
-}
-
-/** Nothing is handed to another app until phase 3: every call answers that no app took it. */
-private object NoOpenUrl : OpenUrl {
-    override val available: Boolean = false
-
-    override fun open(url: String): Boolean = false
-
-    override fun openFile(path: String, contentType: String): Boolean = false
-
-    override fun dial(number: String): Boolean = false
-
-    override fun composeEmail(address: String, subject: String, body: String): Boolean = false
-
-    override fun openAppSettings(): Boolean = false
-}
-
-/** No clipboard until phase 3 (`UIPasteboard`, marked local-only). */
-private object NoClipboard : SensitiveClipboard {
-    override val available: Boolean = false
-
-    override fun copySensitive(label: String, text: String) = Unit
 }
 
 /**
