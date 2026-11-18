@@ -163,14 +163,14 @@ internal class QrScannerController(
                         if (granted) {
                             startSession()
                         } else {
-                            logger.w(TAG, "The camera was refused; the scanner closes")
+                            logger.w(SCANNER_TAG, "The camera was refused; the scanner closes")
                             cancel()
                         }
                     }
                 }
             // Denied, or restricted by the phone's own settings.
             else -> {
-                logger.w(TAG, "The camera is not allowed; the scanner closes")
+                logger.w(SCANNER_TAG, "The camera is not allowed; the scanner closes")
                 cancel()
             }
         }
@@ -185,7 +185,7 @@ internal class QrScannerController(
         }
         val metadata = AVCaptureMetadataOutput()
         if (input == null || !session.canAddInput(input) || !session.canAddOutput(metadata)) {
-            logger.w(TAG, "The camera could not be opened; the scanner closes")
+            logger.w(SCANNER_TAG, "The camera could not be opened; the scanner closes")
             return cancel()
         }
         session.addInput(input)
@@ -267,23 +267,6 @@ internal class QrScannerController(
                 .forEach { payload -> read(payload) }
         }
     }
-
-    private companion object {
-        const val TAG = "QrScannerController"
-
-        /** The serial queue the session starts and stops on. */
-        const val SESSION_QUEUE = "app.coplanly.qrscanner.session"
-
-        /** The guide's side as a share of the screen's shorter edge. */
-        const val GUIDE_SHARE = 0.65
-
-        const val GUIDE_BORDER_PT = 3.0
-        const val GUIDE_CORNER_PT = 16.0
-        const val HINT_MARGIN_PT = 24.0
-        const val HINT_BOTTOM_PT = 32.0
-        const val HINT_SHADOW_OPACITY = 0.8f
-        const val HINT_SHADOW_RADIUS_PT = 4.0
-    }
 }
 
 /**
@@ -295,3 +278,23 @@ internal fun backCamera(): AVCaptureDevice? = AVCaptureDevice.defaultDeviceWithD
     mediaType = AVMediaTypeVideo,
     position = AVCaptureDevicePositionBack
 )
+
+/*
+ * The scanner's constants are top-level: Kotlin/Native allows no fields in the companion of a
+ * subclass of an Objective-C class.
+ */
+
+private const val SCANNER_TAG = "QrScannerController"
+
+/** The serial queue the session starts and stops on. */
+private const val SESSION_QUEUE = "app.coplanly.qrscanner.session"
+
+/** The guide's side as a share of the screen's shorter edge. */
+private const val GUIDE_SHARE = 0.65
+
+private const val GUIDE_BORDER_PT = 3.0
+private const val GUIDE_CORNER_PT = 16.0
+private const val HINT_MARGIN_PT = 24.0
+private const val HINT_BOTTOM_PT = 32.0
+private const val HINT_SHADOW_OPACITY = 0.8f
+private const val HINT_SHADOW_RADIUS_PT = 4.0
