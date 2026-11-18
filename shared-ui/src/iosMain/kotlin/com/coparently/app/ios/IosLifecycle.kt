@@ -26,6 +26,9 @@ object IosLifecycle {
      */
     private var foregroundObserver: NSObjectProtocol? = null
 
+    /** [observeBackground]'s token, kept for the life of the process like [foregroundObserver]. */
+    private var backgroundObserver: NSObjectProtocol? = null
+
     /** The two observers [foreground] follows, kept for the life of the process like [foregroundObserver]. */
     private var stateObservers: List<NSObjectProtocol>? = null
 
@@ -73,5 +76,19 @@ object IosLifecycle {
             `object` = null,
             queue = NSOperationQueue.mainQueue,
         ) { _ -> onForeground() }
+    }
+
+    /**
+     * Calls [onBackground] on the main queue each time the app enters the background
+     * (`UIApplicationDidEnterBackgroundNotification`, posted to a scene-based app too, where the
+     * delegate's `applicationDidEnterBackground` is not called). Once per process, as [observe].
+     */
+    fun observeBackground(onBackground: () -> Unit) {
+        if (backgroundObserver != null) return
+        backgroundObserver = NSNotificationCenter.defaultCenter.addObserverForName(
+            name = UIApplicationDidEnterBackgroundNotification,
+            `object` = null,
+            queue = NSOperationQueue.mainQueue,
+        ) { _ -> onBackground() }
     }
 }

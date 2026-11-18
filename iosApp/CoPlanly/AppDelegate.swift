@@ -14,6 +14,10 @@ import UserNotifications
 /// banner with its sound, and a tapped one hands its data to `IosApp.openPush`, which switches the
 /// family it names before it opens the screen (CLAUDE.md item 15). The notification permission is
 /// never asked here: the shared screens ask it in context (UX overhaul item 7).
+///
+/// The background refresh (iPhone phase 4 part D): the handler for `app.coplanly.refresh` is
+/// registered before launching ends (`BackgroundRefreshBridge`), and runs the shared chain
+/// (`IosApp.runBackgroundRefresh`), which ends at once while the phone is locked.
 @main
 final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     /// This iPhone's Firebase Messaging token, for the shared code.
@@ -38,11 +42,15 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
                 google: GoogleSignInBridge(),
                 apple: AppleSignInBridge(),
                 pushToken: push,
-                widgetReload: WidgetReloadBridge()
+                widgetReload: WidgetReloadBridge(),
+                background: BackgroundRefreshBridge()
             )
         } catch {
             fatalError("The shared code did not start: \(error)")
         }
+        // The background refresh (phase 4 part D): iOS requires the handler before this method
+        // returns. The shared code submits the request on entering the background.
+        BackgroundRefreshBridge.register()
         // Before this method returns, so a tap that launched the app reaches the delegate.
         UNUserNotificationCenter.current().delegate = self
         // The push UI test only (PushUITests): it sets this variable to have the system's question

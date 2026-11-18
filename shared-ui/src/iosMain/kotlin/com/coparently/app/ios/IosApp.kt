@@ -61,6 +61,7 @@ import org.koin.core.context.startKoin
 import org.koin.core.module.Module
 import org.koin.dsl.module
 import platform.Foundation.NSLog
+import platform.UIKit.UIApplication
 import platform.UIKit.UIViewController
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.experimental.ExperimentalNativeApi
@@ -120,6 +121,9 @@ object IosApp {
     /** The shell, built by the first [rootViewController]. */
     private var shell: NativeShell? = null
 
+    /** Set by [start]: the background task's scheduling, which the Swift side runs over `BGTaskScheduler`. */
+    private var background: BackgroundScheduling? = null
+
     /** A push tapped before [start] has finished, opened once it has ([openPush]). */
     private var pendingPush: Map<String, String>? = null
 
@@ -147,6 +151,10 @@ object IosApp {
      * @param widgetReload Asks WidgetKit to draw the Today widget again, which the app's Swift side
      *   implements (`WidgetReloadBridge`): what the widget's snapshot writer calls once it has written
      *   a snapshot that changed (phase 4 part D).
+     * @param background The background refresh's scheduling, which the app's Swift side implements
+     *   over `BGTaskScheduler` (`BackgroundRefreshBridge`): a request submitted on entering the
+     *   background and at the end of each run while somebody is signed in, and cancelled when nobody
+     *   is (sign-out, deletion; phase 4 part D, [runBackgroundRefresh]).
      * @throws IllegalStateException when called a second time.
      */
     @Throws(Throwable::class)
@@ -156,6 +164,7 @@ object IosApp {
         apple: AppleIdSource,
         pushToken: IosPushToken,
         widgetReload: WidgetReload,
+        background: BackgroundScheduling,
     ) {
         started.claim()
         reportUncaughtExceptions()
@@ -168,7 +177,8 @@ object IosApp {
                     iosAppModule(google, pushToken, widgetReload, appGroupWidgetDirectory())
             )
         }.koin
-        startSession(koin)
+        this.background = background
+        startSession(koin, background)
         this.koin = koin
         this.google = google
         val appleSignIn = bundleAppleSignIn()
@@ -210,12 +220,13 @@ object IosApp {
      * nobody signed in ends at once. Telemetry and the periodic job are not here: the iPhone collects
      * nothing and has no background job until phase 4. Since phase 4 part D the Today widget's
      * snapshot is written on every trigger `followWidget` lists, and on every return to the
-     * foreground.
+     * foreground, and the background refresh's request ([background]) is submitted on every entry
+     * into the background while an account is signed in and cancelled whenever none is.
      *
      * After the first-launch cleanup and Koin, never before: the sync's account check reads the last
      * uid and the preference store the cleanup has just made consistent.
      */
-    private fun startSession(koin: Koin) {
+    private fun startSession(koin: Koin, background: BackgroundScheduling) {
         koin.get<ChatMirror>().start()
         koin.get<SessionProfileSynchronizer>().start()
         val sync = koin.get<SyncRequester>()
@@ -239,6 +250,38 @@ object IosApp {
             AppGroupShare.write(uid, uid?.let { readerLanguageTag() })
             // A language changed in the phone's Settings shows here, as for the App Group's key.
             widget?.invoke()
+        }
+        // The background refresh (phase 4 part D): asked for while somebody is signed in, and its
+        // pending request withdrawn at sign-out and deletion, so a signed-out phone is never woken.
+        IosLifecycle.observeBackground { if (signedIn.getCurrentUid() != null) background.schedule() }
+        scope.launch {
+            signedIn.observeCurrentUid().distinctUntilChanged().collect { if (it == null) background.cancel() }
+        }
+    }
+
+    /**
+     * Runs the background refresh ([BackgroundRefresh], spec §7.4) for the `BGAppRefreshTask` the
+     * app's Swift side was handed, and calls [completion] exactly once when it ends: true when the
+     * chain ran to its end (or ended at once on a locked phone or with nobody signed in), false when
+     * it was cancelled ([BackgroundRun.cancel], from the task's expiration handler), threw, or
+     * [start] had not run. The next request is submitted at its end while somebody is signed in.
+     *
+     * The launch iOS made for the task ran [start] as any launch does; the chain awaits only its
+     * own sync request.
+     *
+     * @return the run, which the task's expiration handler cancels.
+     */
+    fun runBackgroundRefresh(completion: (Boolean) -> Unit): BackgroundRun {
+        val graph = koin
+        if (graph == null) {
+            completion(false)
+            return BackgroundRun(null)
+        }
+        val signedIn = graph.get<SignedInUser>()
+        val refresh = backgroundRefreshOf(graph, signedIn)
+        return startBackgroundRun(scope, refresh::run) { succeeded ->
+            if (signedIn.getCurrentUid() != null) background?.schedule()
+            completion(succeeded)
         }
     }
 
@@ -396,17 +439,35 @@ object IosApp {
         tap.destination?.let(armDestination)
     }
 
-    /** Shows [familyId] unless it already shows. */
-    private suspend fun SelectedFamilySource.showFamily(familyId: String) {
-        if (selected()?.familyId != familyId) select(familyId)
-    }
-
     /**
      * Which pairing link an invitation carries: the hosted `web/pair/` page, as the Android build's
      * `publishedPairingWebLink` says. Nothing on the iPhone shares a link yet (no share sheet).
      */
     private const val PAIRING_WEB_LINK = true
 }
+
+/** Shows [familyId] unless it already shows ([IosApp.openUrl], [IosApp.openPush]). */
+private suspend fun SelectedFamilySource.showFamily(familyId: String) {
+    if (selected()?.familyId != familyId) select(familyId)
+}
+
+/**
+ * The background refresh over [graph] ([IosApp.runBackgroundRefresh]): protected data read from
+ * `UIApplication` on the main thread the run is made on, the signed-in account, the one
+ * [ForegroundSyncRunner]'s awaited sync and the Today widget's writer, where the app has one.
+ */
+private fun backgroundRefreshOf(graph: Koin, signedIn: SignedInUser): BackgroundRefresh =
+    BackgroundRefresh(
+        protectedDataAvailable = { UIApplication.sharedApplication.protectedDataAvailable },
+        signedIn = { signedIn.getCurrentUid() != null },
+        sync = {
+            when (val sync = graph.get<SyncRequester>()) {
+                is ForegroundSyncRunner -> sync.syncAndAwait()
+                else -> sync.requestSyncNow()
+            }
+        },
+        writeWidget = { graph.getOrNull<WidgetSnapshotWriter>()?.write() },
+    )
 
 /**
  * Writes the Today widget's snapshot ([writer]) whenever something it draws may have changed

@@ -47,6 +47,7 @@ import com.coparently.app.data.remote.google.GoogleCalendarApi
 import com.coparently.app.data.remote.google.GoogleCalendarConnectionSource
 import com.coparently.app.data.remote.google.IosGoogleCalendarAccount
 import com.coparently.app.data.repository.PairingWording
+import com.coparently.app.data.school.DailySchoolImport
 import com.coparently.app.data.school.SchoolImportScheduler
 import com.coparently.app.data.school.SchoolImportWordings
 import com.coparently.app.data.school.bakalari.BakalariClient
@@ -152,7 +153,7 @@ class IosKoinGraphTest {
             InviteQrCodes::class, AuthErrors::class, PairingWording::class, SchoolImportWordings::class,
             // what IosApp.startSession starts, and what its sync runs
             ChatMirror::class, SessionProfileSynchronizer::class, SyncService::class,
-            GoogleCalendarAutoImport::class, PairingRepository::class,
+            GoogleCalendarAutoImport::class, DailySchoolImport::class, PairingRepository::class,
             // iosAppModule
             SignInProviderSession::class, IosPushToken::class, SessionEndingHook::class,
         )
