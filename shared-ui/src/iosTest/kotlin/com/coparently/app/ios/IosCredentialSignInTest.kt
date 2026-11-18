@@ -9,9 +9,11 @@ import com.coparently.app.di.koin.platformDataModule
 import com.coparently.app.presentation.auth.AuthError
 import com.coparently.app.presentation.auth.IosAuthErrors
 import com.coparently.app.presentation.auth.NoSavedPassword
+import com.coparently.app.presentation.widget.TodayWidgetNames
 import kotlinx.coroutines.test.runTest
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
+import org.koin.dsl.module
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -107,8 +109,10 @@ class IosCredentialSignInTest {
     @Test
     fun `every app sign-out ends Google's session once`() = runTest {
         val google = FakeSource(Answer())
-        // The graph's sign-out half as `IosApp.start` builds it: the traces and the app's module.
-        val koin = startKoin { modules(platformDataModule + iosAppModule(google, NoTestPushToken)) }.koin
+        // The graph's sign-out half as `IosApp.start` builds it: the traces, the app's module and
+        // the widget's remembered names, which `uiModules` binds and the session's end clears.
+        val names = module { single { TodayWidgetNames(get()) } }
+        val koin = startKoin { modules(platformDataModule + iosAppModule(google, NoTestPushToken) + names) }.koin
         try {
             val traces = koin.get<AccountTraces>()
 

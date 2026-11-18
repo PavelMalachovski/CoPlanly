@@ -11,7 +11,7 @@ import kotlinx.datetime.YearMonth
 
 /*
  * What the ViewModels in `uiModules` ask of the platform that the iPhone does not have yet (MON-24
- * phase 2, Task 10), beside `:shared-data`'s `IosUnavailable.kt`: each answers as a phone with
+ * phase 2, Task 10), beside `:shared-data`'s `NoRequestClockJobs.kt`: each answers as a phone with
  * nothing of the kind would, so `platformUiModule` resolves every ViewModel's definition without
  * promising a feature (design item 8). Each is replaced as the iPhone app gains it (phase 3 and 4);
  * `NoAuthErrors` left in phase 3's Task 5, for `IosAuthErrors`. The data layer's wording, which
