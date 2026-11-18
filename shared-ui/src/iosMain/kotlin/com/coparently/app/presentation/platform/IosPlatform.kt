@@ -20,12 +20,11 @@ import platform.Foundation.NSByteCountFormatterCountStyleFile
  * The iPhone's platform capabilities (MON-24 phase 2, Task 11): what the iPhone app's view
  * controller will hand `ProvidePlatform` (phase 3). Until each capability is built there, it is a
  * stand-in that says it is not available, so the shared screens draw no affordance for it (design
- * item 8): QR scanning and dictation, and the language picker. A launch that comes anyway does
- * nothing and reports nothing it did not do. Images (`IosImages`) and payment codes (`IosQrCodes`)
+ * item 8): dictation and the language picker. Images (`IosImages`) and payment codes (`IosQrCodes`)
  * are the iPhone's own since part C, and since its Task 11 the share sheet (`IosShareSheet`), the
  * pickers (`IosFilePicker`) and the camera (`IosCameraCapture`), since phase 4 part C the
  * notification permission (`IosPermissions`), and since part E1 links, files, the dialler and mail
- * (`IosOpenUrl`) and the clipboard (`IosClipboard`).
+ * (`IosOpenUrl`), the clipboard (`IosClipboard`) and the QR scanner (`IosQrScanner`).
  */
 
 /**
@@ -36,7 +35,7 @@ fun iosPlatformServices(buildValues: AppBuildValues): PlatformServices = Platfor
     shareSheet = IosShareSheet,
     filePicker = IosFilePicker,
     cameraCapture = IosCameraCapture,
-    qrScanner = NoQrScanner,
+    qrScanner = IosQrScanner,
     dictation = NoDictation,
     permissions = IosPermissions(UserNotificationsPermission),
     openUrl = IosOpenUrl,
@@ -76,17 +75,6 @@ fun ProvideIosShell(
             content = content
         )
     }
-}
-
-/** A launcher with nothing behind it. */
-private val NothingToLaunch = PlatformLauncher { }
-
-/** No QR scanning until phase 4: the code and the link are how an invitation arrives. */
-private object NoQrScanner : QrScanner {
-    override val available: Boolean = false
-
-    @Composable
-    override fun rememberScanner(onScanned: (code: String) -> Unit): PlatformLauncher = NothingToLaunch
 }
 
 /** No dictation until phase 4, beside `NoSpeechDictation` in `platformUiModule`. */
