@@ -275,7 +275,7 @@ actual val platformDataModule: Module = module {
     single<ReminderScheduler> { IosEventReminders(get()) }
     single<RequestClockScheduler> { NoRequestClockJobs }
     single<SchoolImportScheduler> { IosSchoolImportJob }
-    single { DailySchoolImport(get<SchoolImporter>(), get(), get()) }
+    single { DailySchoolImport(get<SchoolImporter>(), get(), get(), get()) }
     single<SupportReminderScheduler> { IosSupportReminders(get()) }
     // A sync while the app is open, one at a time, with the Google import after each (Task 6;
     // the iPhone has no background job until phase 4). The lambdas resolve at run time, so the

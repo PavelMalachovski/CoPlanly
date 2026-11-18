@@ -61,7 +61,10 @@ import org.koin.core.context.startKoin
 import org.koin.core.module.Module
 import org.koin.dsl.module
 import platform.Foundation.NSLog
+import platform.Foundation.NSNotificationCenter
+import platform.Foundation.NSOperationQueue
 import platform.UIKit.UIApplication
+import platform.UIKit.UIApplicationProtectedDataDidBecomeAvailable
 import platform.UIKit.UIViewController
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.experimental.ExperimentalNativeApi
@@ -458,7 +461,7 @@ private suspend fun SelectedFamilySource.showFamily(familyId: String) {
  */
 private fun backgroundRefreshOf(graph: Koin, signedIn: SignedInUser): BackgroundRefresh =
     BackgroundRefresh(
-        protectedDataAvailable = { UIApplication.sharedApplication.protectedDataAvailable },
+        protectedDataAvailable = ::protectedDataAvailable,
         signedIn = { signedIn.getCurrentUid() != null },
         sync = {
             when (val sync = graph.get<SyncRequester>()) {
@@ -484,7 +487,10 @@ private fun backgroundRefreshOf(graph: Koin, signedIn: SignedInUser): Background
  *   collector hands to [TodayWidgetNames.remember] (it has no lock: one writer, on the main
  *   thread);
  * - on every return to the foreground, through the function returned, which `IosApp`'s
- *   foreground block calls.
+ *   foreground block calls;
+ * - when the phone is unlocked (`UIApplicationProtectedDataDidBecomeAvailable`), for the asks
+ *   made while it was locked: no snapshot is written while protected data is unavailable, and a
+ *   uid read as null then is not taken for a sign-out (phase 4 part D, Task 6 review).
  *
  * Every ask goes through one conflated channel and one consumer, so two triggers never write
  * at once and a burst of them writes once more at most; the writer's own lock covers the
@@ -501,8 +507,17 @@ private fun followWidget(
     signedIn: SignedInUser,
 ): () -> Unit {
     val requests = Channel<Unit>(Channel.CONFLATED)
-    scope.launch { requests.consumeEach { writeQuietly { writer.write() } } }
+    // Never while the phone's protected data is locked away (a background launch on a locked phone,
+    // the database under `NSFileProtectionComplete`, owner decision (b)): a read that failed, or an
+    // account that read as nobody, must not replace a good snapshot. The ask is kept for the unlock.
+    scope.launch { requests.consumeEach { if (protectedDataAvailable()) writeQuietly { writer.write() } } }
     val ask: () -> Unit = { requests.trySend(Unit) }
+    // The center keeps the observer for the life of the process; nothing removes it.
+    NSNotificationCenter.defaultCenter.addObserverForName(
+        name = UIApplicationProtectedDataDidBecomeAvailable,
+        `object` = null,
+        queue = NSOperationQueue.mainQueue,
+    ) { _ -> ask() }
     // The runner is the iPhone's `SyncRequester` (`platformDataModule`); anything else runs no
     // sync of this kind, and the Room trigger still follows what a sync writes.
     (sync as? ForegroundSyncRunner)?.let { runner -> scope.launch { runner.completedRuns.collect { ask() } } }
@@ -519,8 +534,12 @@ private fun followWidget(
     scope.launch {
         signedIn.observeCurrentUid().distinctUntilChanged().collect { uid ->
             if (uid == null) {
-                names.clear()
-                writeQuietly { writer.writeSignedOut() }
+                // A sign-out is made on an unlocked phone (and wrote this already, through
+                // `widgetSessionEnding`); a null read on a locked launch is no sign-out.
+                if (protectedDataAvailable()) {
+                    names.clear()
+                    writeQuietly { writer.writeSignedOut() }
+                }
             } else {
                 ask()
             }
@@ -539,6 +558,13 @@ private fun followWidget(
     scope.launch { parents.observe().collect { if (names.remember(it)) ask() } }
     return ask
 }
+
+/**
+ * Whether the phone's protected data can be read now (`UIApplication.isProtectedDataAvailable`):
+ * false while the phone is locked, when the database (`NSFileProtectionComplete`) and the files under
+ * the same protection cannot be read. Read on the main thread.
+ */
+private fun protectedDataAvailable(): Boolean = UIApplication.sharedApplication.protectedDataAvailable
 
 /**
  * Runs [write], logging its failure: a snapshot that could not be built (Room unreadable while the

@@ -4,6 +4,8 @@ import com.coparently.app.data.platform.MemoryTextStore
 import com.coparently.app.data.platform.SealedSecurePreferences
 import com.coparently.app.data.remote.firebase.SignedInAccount
 import com.coparently.app.data.remote.firebase.SignedInUser
+import com.coparently.app.domain.school.SchoolSyncFailure
+import com.coparently.app.domain.school.SchoolSyncResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -19,7 +21,8 @@ import kotlin.time.Instant
 
 /**
  * The iPhone's daily school import (phase 4 part D): at most once a local day per account, after
- * any sync, and an import that threw is not recorded as done.
+ * any sync, never offline, and an import that threw or whose connection failed is not recorded
+ * as done.
  */
 class DailySchoolImportTest {
 
@@ -28,16 +31,21 @@ class DailySchoolImportTest {
     private val clock = MovableClock(Instant.parse("2026-11-18T07:00:00Z"))
     private var imports = 0
     private var failNext = false
+    private var online = true
+
+    /** What the next import answers per connection; one success by default. */
+    private var nextResults: List<SchoolSyncResult> = listOf(SchoolSyncResult.Success(1, 0, 0))
 
     private val daily = DailySchoolImport(
-        syncAll = {
+        syncEach = {
             imports++
             if (failNext) {
                 failNext = false
-                error("school offline")
+                error("database unreadable")
             }
-            1
+            nextResults.also { nextResults = listOf(SchoolSyncResult.Success(1, 0, 0)) }
         },
+        online = { online },
         preferences = preferences,
         signedInUser = user,
         clock = clock,
@@ -90,6 +98,39 @@ class DailySchoolImportTest {
         assertTrue(daily.runIfDue())
         assertEquals(2, imports)
         assertFalse(daily.runIfDue())
+    }
+
+    @Test
+    fun offlineDoesNotUseUpTheDay() = runTest {
+        online = false
+        assertFalse(daily.runIfDue())
+        assertEquals(0, imports, "nothing is fetched offline")
+
+        online = true
+        assertTrue(daily.runIfDue())
+        assertEquals(1, imports)
+    }
+
+    @Test
+    fun aFailedConnectionDoesNotUseUpTheDay() = runTest {
+        nextResults = listOf(
+            SchoolSyncResult.Success(2, 0, 0),
+            SchoolSyncResult.Failed(SchoolSyncFailure.NETWORK)
+        )
+        assertFalse(daily.runIfDue())
+
+        assertTrue(daily.runIfDue(), "a later sync that day tries again")
+        assertFalse(daily.runIfDue())
+        assertEquals(2, imports)
+    }
+
+    @Test
+    fun aConnectionWaitingForItsPasswordStillCompletesTheDay() = runTest {
+        nextResults = listOf(SchoolSyncResult.NeedsPassword, SchoolSyncResult.NeedsFamily)
+
+        assertTrue(daily.runIfDue())
+        assertFalse(daily.runIfDue())
+        assertEquals(1, imports)
     }
 
     /** A clock the test moves. */
