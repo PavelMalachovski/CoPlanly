@@ -88,6 +88,7 @@ import com.coparently.app.data.session.IosAccountDeletion
 import com.coparently.app.data.session.IosAccountSwitch
 import com.coparently.app.data.session.IosAccountTraces
 import com.coparently.app.data.session.LastSignedInUid
+import com.coparently.app.data.session.SessionEndingHook
 import com.coparently.app.data.session.UserDefaultsLastSignedInUid
 import com.coparently.app.data.support.SupportAgreementStore
 import com.coparently.app.data.support.SupportReminderScheduler
@@ -182,7 +183,9 @@ actual val platformDataModule: Module = module {
     // The account's sign-in methods (phase 4, part A), Apple's unlink through `dataModules`' AppleTokens.
     single<AccountLinking> { IosAccountLinking(Firebase.auth, appleTokens = get()) }
     // The provider session is the app's Google bridge, which `IosApp.start` binds (`iosAppModule`).
-    single { IosAccountTraces(get(), get()) }
+    // The app's own module binds the hook (the Today widget's signed-out snapshot, phase 4 part D);
+    // a graph without it, as a data-layer test's, runs none.
+    single { IosAccountTraces(get(), get(), getOrNull<SessionEndingHook>() ?: SessionEndingHook.None) }
     single<AccountTraces> { get<IosAccountTraces>() }
     single<LastSignedInUid> { UserDefaultsLastSignedInUid }
     single<AccountConsistency> {

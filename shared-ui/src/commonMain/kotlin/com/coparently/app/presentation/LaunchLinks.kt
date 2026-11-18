@@ -9,7 +9,8 @@ import com.coparently.app.domain.pairing.PairingUri
 
 /**
  * A `coplanly://` link the app was opened with, as [LaunchLinks.parse] reads it: one of the three
- * custom-scheme hosts Android's manifest declares (`pair`, `guest`, `chat`).
+ * custom-scheme hosts Android's manifest declares (`pair`, `guest`, `chat`), or `calendar`, the
+ * link the iPhone's Today widget opens (iPhone phase 4 part D).
  */
 sealed interface LaunchLink {
     /**
@@ -30,6 +31,13 @@ sealed interface LaunchLink {
      * reads this one.
      */
     data class Chat(val familyId: String?, val conversationId: String?) : LaunchLink
+
+    /**
+     * `coplanly://calendar`: the Calendar tab on today, as a tap on the tab opens it (design item
+     * 5). What a tap on the iPhone's Today widget opens (`widgetURL`); Android's widget starts the
+     * activity instead, and its manifest declares no such host.
+     */
+    data object Calendar : LaunchLink
 }
 
 /**
@@ -47,7 +55,8 @@ data class PushTap(val familyId: String?, val link: LaunchLink?, val destination
 /**
  * Reads a `coplanly://` link into a [LaunchLink], for both apps: Android's `MainActivity` and the
  * iPhone's shell read the same three forms through it, with the domain's parsers ([PairingUri],
- * [GuestInviteUri], [ChatUri]) deciding the codes and the conversation id.
+ * [GuestInviteUri], [ChatUri]) deciding the codes and the conversation id, and the iPhone's Today
+ * widget's `coplanly://calendar` ([LaunchLink.Calendar]) beside them.
  *
  * Only the custom scheme: the pairing link's web form (`https://…/pair/…`) is answered with null
  * here, and `MainActivity` reads it itself, where an App Link can arrive.
@@ -55,7 +64,7 @@ data class PushTap(val familyId: String?, val link: LaunchLink?, val destination
 object LaunchLinks {
 
     /**
-     * The link [url] is, or null when it is not one of the custom scheme's three hosts. The scheme
+     * The link [url] is, or null when it is not one of the custom scheme's four hosts. The scheme
      * and host are compared exactly, as Android's intent filters and `Uri` compare them.
      */
     fun parse(url: String): LaunchLink? {
@@ -68,6 +77,7 @@ object LaunchLinks {
                 GuestInviteUri.extractCode(url)?.let { LaunchLink.Guest(it) }
             ChatUri.isChatUri(scheme, host) ->
                 LaunchLink.Chat(familyId = familyIdOf(url), conversationId = ChatUri.extractConversationId(url))
+            scheme == CALENDAR_SCHEME && host == CALENDAR_HOST -> LaunchLink.Calendar
             else -> null
         }
     }
@@ -176,6 +186,10 @@ object LaunchLinks {
     /** The family a chat link names, when it names one in the shape a family id has. */
     private fun familyIdOf(url: String): String? =
         FAMILY_ID_PATTERN.find(url)?.groupValues?.get(1)?.takeIf { FamilyKey.membersOf(it) != null }
+
+    /** The Today widget's link, `coplanly://calendar`, compared exactly as the other hosts are. */
+    private const val CALENDAR_SCHEME = "coplanly"
+    private const val CALENDAR_HOST = "calendar"
 
     private const val SCHEME_SEPARATOR_LENGTH = 3
     private const val ESCAPE_LENGTH = 3

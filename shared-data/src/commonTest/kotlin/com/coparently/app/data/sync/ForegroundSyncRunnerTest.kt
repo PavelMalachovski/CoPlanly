@@ -4,6 +4,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestResult
 import kotlinx.coroutines.test.TestScope
@@ -123,6 +124,31 @@ class ForegroundSyncRunnerTest {
         advanceUntilIdle()
 
         assertEquals(3, runs)
+    }
+
+    @Test
+    fun completedRunsEmitsAfterEachRun() = runnerTest { scope ->
+        var runs = 0
+        val runner = ForegroundSyncRunner(
+            sync = {
+                runs++
+                if (runs == 2) throw IllegalStateException("offline")
+                Result.success(Unit)
+            },
+            afterSync = {},
+            scope = scope
+        )
+        val heard = mutableListOf<Int>()
+        scope.launch { runner.completedRuns.collect { heard += runs } }
+        runCurrent()
+
+        runner.requestSyncNow()
+        advanceUntilIdle()
+        runner.requestSyncNow()
+        advanceUntilIdle()
+
+        // One after each run, the throwing second one included, each once that run had ended.
+        assertEquals(listOf(1, 2), heard)
     }
 
     @Test

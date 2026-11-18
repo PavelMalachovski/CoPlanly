@@ -56,6 +56,7 @@ import com.coparently.app.data.session.AccountDeletion
 import com.coparently.app.data.session.AccountTraces
 import com.coparently.app.data.session.IosAccountTraces
 import com.coparently.app.data.session.LastSignedInUid
+import com.coparently.app.data.session.SessionEndingHook
 import com.coparently.app.data.session.SessionProfileSynchronizer
 import com.coparently.app.data.session.SignInProviderSession
 import com.coparently.app.data.support.SupportReminderScheduler
@@ -153,7 +154,7 @@ class IosKoinGraphTest {
             ChatMirror::class, SessionProfileSynchronizer::class, SyncService::class,
             GoogleCalendarAutoImport::class, PairingRepository::class,
             // iosAppModule
-            SignInProviderSession::class, IosPushToken::class,
+            SignInProviderSession::class, IosPushToken::class, SessionEndingHook::class,
         )
 
         /** Google's sheet as a phone without a `GoogleService-Info.plist` has it: unavailable. */

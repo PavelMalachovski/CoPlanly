@@ -4,7 +4,11 @@ import com.coparently.app.data.platform.logger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -20,6 +24,9 @@ import kotlinx.coroutines.launch
  * - **[afterSync] — the Google Calendar import — runs after each sync and apart from it** (Legal
  *   item 10): its failure is logged and never fails the run or stops the next one.
  * - **A failed or throwing sync is logged**, and the next request runs as usual.
+ * - **Every finished run is announced** on [completedRuns], success or failure, once [afterSync] has
+ *   run too: the iPhone's Today widget rewrites its snapshot from what the run brought (phase 4
+ *   part D).
  * - **A cancelled [scope] stops the runner cleanly**: the run in flight is cancelled with it and a
  *   later request does nothing.
  *
@@ -38,6 +45,16 @@ class ForegroundSyncRunner(
      * that arrive while it runs leave one element behind, which is the one follow-up run.
      */
     private val requests = Channel<Unit>(Channel.CONFLATED)
+
+    private val completed =
+        MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    /**
+     * One element after each run, whether the sync succeeded, failed or threw, emitted after
+     * [afterSync]. Nothing is replayed: a collector hears of the runs that end after it subscribed,
+     * and a slow one of at least the latest.
+     */
+    val completedRuns: SharedFlow<Unit> = completed.asSharedFlow()
 
     init {
         // `consumeEach` cancels the channel when the scope is cancelled, so a later request is
@@ -69,6 +86,7 @@ class ForegroundSyncRunner(
         ) {
             logger.w(TAG, "Automatic Google Calendar import threw.", e)
         }
+        completed.tryEmit(Unit)
     }
 
     private companion object {

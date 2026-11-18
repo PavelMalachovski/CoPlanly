@@ -1,7 +1,9 @@
 package com.coparently.app.ios
 
 import com.coparently.app.data.chat.ChatMirror
+import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.data.family.SelectedFamilySource
+import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.notification.IosLocalReminders
 import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.AppleTokens
@@ -11,9 +13,11 @@ import com.coparently.app.data.remote.firebase.NotificationPermission
 import com.coparently.app.data.remote.firebase.PushDestination
 import com.coparently.app.data.remote.firebase.PushDevice
 import com.coparently.app.data.remote.firebase.SignedInUser
+import com.coparently.app.data.session.SessionEndingHook
 import com.coparently.app.data.session.SessionProfileSynchronizer
 import com.coparently.app.data.session.SignInProviderSession
 import com.coparently.app.data.session.clearPreviousInstall
+import com.coparently.app.data.sync.ForegroundSyncRunner
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.di.koin.dataModules
 import com.coparently.app.di.koin.platformDataModule
@@ -24,18 +28,34 @@ import com.coparently.app.presentation.AppLaunch
 import com.coparently.app.presentation.LaunchLink
 import com.coparently.app.presentation.LaunchLinks
 import com.coparently.app.presentation.PushTap
+import com.coparently.app.presentation.common.ParentsSource
+import com.coparently.app.presentation.navigation.CalendarTabTaps
 import com.coparently.app.presentation.navigation.PendingChatLink
 import com.coparently.app.presentation.navigation.PendingChatOpen
 import com.coparently.app.presentation.navigation.PendingDestinationOpen
 import com.coparently.app.presentation.navigation.PendingInviteCodes
 import com.coparently.app.presentation.platform.AppBuildValues
 import com.coparently.app.presentation.platform.CredentialSignIn
+import com.coparently.app.presentation.widget.TodayWidgetNames
 import com.coparently.app.utils.readerLanguageTag
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.io.files.Path
 import org.koin.core.Koin
 import org.koin.core.context.startKoin
 import org.koin.core.module.Module
@@ -124,10 +144,19 @@ object IosApp {
      * @param pushToken This iPhone's Firebase Messaging token, which the app's Swift side holds
      *   (`PushTokenBridge`): what the push registration keeps on the profile and detaches at
      *   sign-out (phase 4 part C).
+     * @param widgetReload Asks WidgetKit to draw the Today widget again, which the app's Swift side
+     *   implements (`WidgetReloadBridge`): what the widget's snapshot writer calls once it has written
+     *   a snapshot that changed (phase 4 part D).
      * @throws IllegalStateException when called a second time.
      */
     @Throws(Throwable::class)
-    fun start(config: IosAppConfig, google: GoogleIdTokenSource, apple: AppleIdSource, pushToken: IosPushToken) {
+    fun start(
+        config: IosAppConfig,
+        google: GoogleIdTokenSource,
+        apple: AppleIdSource,
+        pushToken: IosPushToken,
+        widgetReload: WidgetReload,
+    ) {
         started.claim()
         reportUncaughtExceptions()
         IosFirebase.configure(config)
@@ -135,7 +164,8 @@ object IosApp {
         clearPreviousInstall(google.session())
         val koin = startKoin {
             modules(
-                dataModules + platformDataModule + uiModules + platformUiModule + iosAppModule(google, pushToken)
+                dataModules + platformDataModule + uiModules + platformUiModule +
+                    iosAppModule(google, pushToken, widgetReload, appGroupWidgetDirectory())
             )
         }.koin
         startSession(koin)
@@ -177,8 +207,10 @@ object IosApp {
      * the uid ([IosPushRegistration.sessionChanged]), as the local reminders are planned again
      * ([IosLocalReminders.requestRearm]). Each is harmless while nobody is signed in,
      * as on Android: the mirror waits for a co-parent, the profile for an account, and a sync with
-     * nobody signed in ends at once. Telemetry, the widget and the periodic job are not here: the
-     * iPhone collects nothing, has no widget yet and no background job until phase 4.
+     * nobody signed in ends at once. Telemetry and the periodic job are not here: the iPhone collects
+     * nothing and has no background job until phase 4. Since phase 4 part D the Today widget's
+     * snapshot is written on every trigger `followWidget` lists, and on every return to the
+     * foreground.
      *
      * After the first-launch cleanup and Koin, never before: the sync's account check reads the last
      * uid and the preference store the cleanup has just made consistent.
@@ -199,11 +231,14 @@ object IosApp {
         val reminders = koin.get<IosLocalReminders>()
         scope.launch { signedIn.observeCurrentUid().collect { reminders.requestRearm() } }
         scope.launch { permission.refresh() }
+        val widget = koin.getOrNull<WidgetSnapshotWriter>()?.let { followWidget(scope, koin, it, sync, signedIn) }
         IosLifecycle.observe {
             sync.requestSyncNow()
             scope.launch { permission.refresh() }
             val uid = signedIn.getCurrentUid()
             AppGroupShare.write(uid, uid?.let { readerLanguageTag() })
+            // A language changed in the phone's Settings shows here, as for the App Group's key.
+            widget?.invoke()
         }
     }
 
@@ -374,17 +409,148 @@ object IosApp {
 }
 
 /**
+ * Writes the Today widget's snapshot ([writer]) whenever something it draws may have changed
+ * (phase 4 part D, spec §7.2), from `IosApp.startSession`, in its [scope]: the iPhone's twin of
+ * Android's `TodayWidgetRefresher`:
+ * - after every sync run, success or failure ([ForegroundSyncRunner.completedRuns]);
+ * - on a Room write to the tables the day is computed from (`events`, `custody_models`, and
+ *   `users`, whose row says whose family is on screen), debounced, as a sync writes in bursts;
+ * - on every change of the signed-in uid; a sign-out (null) writes the signed-out snapshot and
+ *   forgets the remembered names (the sign-out itself wrote it already, before the session
+ *   ended, through [widgetSessionEnding]);
+ * - on a change of the family on screen ([FamilyViewSource]);
+ * - when [ParentsSource] loads names that differ from the remembered ones, which this one
+ *   collector hands to [TodayWidgetNames.remember] (it has no lock: one writer, on the main
+ *   thread);
+ * - on every return to the foreground, through the function returned, which `IosApp`'s
+ *   foreground block calls.
+ *
+ * Every ask goes through one conflated channel and one consumer, so two triggers never write
+ * at once and a burst of them writes once more at most; the writer's own lock covers the
+ * sign-out's direct write.
+ *
+ * @return what asks for a write.
+ */
+@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
+private fun followWidget(
+    scope: CoroutineScope,
+    koin: Koin,
+    writer: WidgetSnapshotWriter,
+    sync: SyncRequester,
+    signedIn: SignedInUser,
+): () -> Unit {
+    val requests = Channel<Unit>(Channel.CONFLATED)
+    scope.launch { requests.consumeEach { writeQuietly { writer.write() } } }
+    val ask: () -> Unit = { requests.trySend(Unit) }
+    // The runner is the iPhone's `SyncRequester` (`platformDataModule`); anything else runs no
+    // sync of this kind, and the Room trigger still follows what a sync writes.
+    (sync as? ForegroundSyncRunner)?.let { runner -> scope.launch { runner.completedRuns.collect { ask() } } }
+    val database = koin.get<CoPlanlyDatabase>()
+    scope.launch {
+        database.invalidationTracker.createFlow(*WIDGET_TABLES, emitInitialState = false)
+            .debounce(WIDGET_DEBOUNCE_MS)
+            // The database could not be opened (a locked phone, say): the other triggers still
+            // write, as Android's refresher still redraws at midnight.
+            .catch { logger.w(WIDGET_TAG, "The Today widget stopped following Room", it) }
+            .collect { ask() }
+    }
+    val names = koin.get<TodayWidgetNames>()
+    scope.launch {
+        signedIn.observeCurrentUid().distinctUntilChanged().collect { uid ->
+            if (uid == null) {
+                names.clear()
+                writeQuietly { writer.writeSignedOut() }
+            } else {
+                ask()
+            }
+        }
+    }
+    val families = koin.get<FamilyViewSource>()
+    scope.launch {
+        signedIn.observeCurrentUid()
+            .flatMapLatest { families.observe() }
+            .map { it.onScreen }
+            .distinctUntilChanged()
+            .catch { logger.w(WIDGET_TAG, "The Today widget stopped following the family on screen", it) }
+            .collect { ask() }
+    }
+    val parents = koin.get<ParentsSource>()
+    scope.launch { parents.observe().collect { if (names.remember(it)) ask() } }
+    return ask
+}
+
+/**
+ * Runs [write], logging its failure: a snapshot that could not be built (Room unreadable while the
+ * phone is locked, say) leaves the last one up until the next trigger, and must never end the
+ * collector it runs in, whose failure would take the app down.
+ */
+private suspend fun writeQuietly(write: suspend () -> Unit) {
+    runCatching { write() }.onFailure { failure ->
+        if (failure is CancellationException) throw failure
+        logger.w(WIDGET_TAG, "Could not write the Today widget's snapshot", failure)
+    }
+}
+
+private const val WIDGET_TAG = "IosWidget"
+
+/**
+ * The tables the widget's day is computed from, Android's `TodayWidgetRefresher.WATCHED_TABLES`:
+ * events, the pattern with its swaps, and the signed-in parent's row (whose family is on screen).
+ */
+private val WIDGET_TABLES = arrayOf("events", "custody_models", "users")
+
+/** Long enough to fold a sync's burst of writes into one snapshot, as on Android. */
+private const val WIDGET_DEBOUNCE_MS = 2_000L
+
+/**
  * The iPhone app's own definitions, beside the shared modules: Google Sign-In's session
  * ([SignInProviderSession]), which sign-out ends (`IosAccountTraces`, part B, Task 12). The sign-in
  * (Task 5) and the sync, push queue and wordings (Task 6) went into the platform modules, where the
  * shared graph asks for them, the native shell (Task 8) resolves what it needs itself, and Google's
  * sheet (Task 9) is handed to [IosApp.start] and reaches the screens through the shell. Since phase
  * 4 part C also the Swift side's push token ([IosPushToken]), which `platformDataModule`'s push
- * registration reads.
+ * registration reads, and since part D the Today widget's snapshot writer ([WidgetSnapshotWriter],
+ * in [widgetDirectory], reloading through [widgetReload]) with what runs before a session ends
+ * ([widgetSessionEnding]).
  */
-internal fun iosAppModule(google: GoogleIdTokenSource, pushToken: IosPushToken): Module = module {
+internal fun iosAppModule(
+    google: GoogleIdTokenSource,
+    pushToken: IosPushToken,
+    widgetReload: WidgetReload = NoWidgetReload,
+    widgetDirectory: Path? = null,
+): Module = module {
     single<SignInProviderSession> { google.session() }
     single<IosPushToken> { pushToken }
+    // The Today widget's snapshot (phase 4 part D), where the app has the App Group's container.
+    if (widgetDirectory != null) {
+        single {
+            WidgetSnapshotWriter(
+                directory = widgetDirectory,
+                reload = widgetReload,
+                sources = IosWidgetSources(get(), get(), get(), get()),
+                wording = IosWidgetWording,
+            )
+        }
+    }
+    single<SessionEndingHook> { widgetSessionEnding(getOrNull<WidgetSnapshotWriter>(), get()) }
+}
+
+/**
+ * What runs before an account's session ends ([SessionEndingHook], from `IosAccountTraces` at
+ * sign-out, deletion and an account switch): the remembered names are forgotten, on the main thread
+ * where [IosApp]'s one collector remembers them, and the signed-out snapshot is written ([writer],
+ * null where the app has no App Group container), so the home screen never names the departing
+ * account's family once it has gone.
+ */
+internal fun widgetSessionEnding(writer: WidgetSnapshotWriter?, names: TodayWidgetNames): SessionEndingHook =
+    SessionEndingHook {
+        withContext(Dispatchers.Main) { names.clear() }
+        writer?.writeSignedOut()
+    }
+
+/** A reload that asks nothing: a graph built without the Swift side, as a test's. */
+private object NoWidgetReload : WidgetReload {
+    override fun reloadAll() = Unit
 }
 
 /** [google]'s own session, as the data layer ends it, and its grant, as Google Calendar revokes it. */
@@ -441,6 +607,13 @@ internal class IosLaunch {
             is LaunchLink.Pair -> pairing.value = link.code
             is LaunchLink.Guest -> guest.value = link.code
             is LaunchLink.Chat -> chat.value = PendingChatLink(link.conversationId)
+            // The Today widget's tap (iPhone phase 4 part D): the Calendar tab, as a push names it,
+            // on today, as a tap on the tab opens it (design item 5): the screen answers the count
+            // when it shows, so a tap counted before the tabs are up is not lost.
+            LaunchLink.Calendar -> {
+                CalendarTabTaps.tap()
+                destination.value = PushDestination.CALENDAR
+            }
         }
     }
 

@@ -37,7 +37,8 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
                 config: config,
                 google: GoogleSignInBridge(),
                 apple: AppleSignInBridge(),
-                pushToken: push
+                pushToken: push,
+                widgetReload: WidgetReloadBridge()
             )
         } catch {
             fatalError("The shared code did not start: \(error)")
