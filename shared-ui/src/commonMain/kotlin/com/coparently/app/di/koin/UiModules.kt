@@ -72,6 +72,7 @@ import com.coparently.app.presentation.stickers.StickersViewModel
 import com.coparently.app.presentation.support.SupportViewModel
 import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
+import com.coparently.app.presentation.widget.TodayWidgetNames
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
@@ -422,6 +423,15 @@ val schoolUiModule: Module = module {
 }
 
 /**
+ * The Today widget (iPhone phase 4 part D): the parents' names as the app last loaded them, a
+ * `single` as in the app's `presentationModule` it came from, kept in the sealed preference store
+ * [platformDataModule] binds (`EncryptedPreferences` on Android, the Keychain's on the iPhone).
+ */
+val widgetUiModule: Module = module {
+    singleOf(::TodayWidgetNames)
+}
+
+/**
  * Every module of the UI both apps run, grouped by feature as [dataModules] is. The app's
  * `appModules` includes them, with [platformUiModule]; the iPhone app's will (phase 3). The
  * ViewModels move here group by group (Task 10's slices); a screen still in the app resolves a moved
@@ -459,7 +469,8 @@ val uiModules: List<Module> = listOf(
     professionalsUiModule,
     parentingPlanUiModule,
     exportUiModule,
-    schoolUiModule
+    schoolUiModule,
+    widgetUiModule
 )
 
 /**

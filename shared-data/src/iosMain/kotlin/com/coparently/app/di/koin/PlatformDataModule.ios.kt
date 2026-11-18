@@ -53,6 +53,7 @@ import com.coparently.app.data.platform.IosCrashReporter
 import com.coparently.app.data.platform.IosDeviceRegion
 import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.platform.keychainSecurePreferences
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.receipts.VisionReceiptText
 import com.coparently.app.data.remote.firebase.AccountLinking
 import com.coparently.app.data.remote.firebase.AccountSignIn
@@ -77,7 +78,10 @@ import com.coparently.app.data.remote.google.GoogleCalendarApi
 import com.coparently.app.data.remote.google.GoogleCalendarConnectionSource
 import com.coparently.app.data.remote.google.GoogleRevokeEndpoint
 import com.coparently.app.data.remote.google.IosGoogleCalendarAccount
+import com.coparently.app.data.school.DailySchoolImport
+import com.coparently.app.data.school.IosSchoolImportJob
 import com.coparently.app.data.school.SchoolImportScheduler
+import com.coparently.app.data.school.SchoolImporter
 import com.coparently.app.data.school.bakalari.BakalariClient
 import com.coparently.app.data.school.bakalari.BakalariSchoolDirectory
 import com.coparently.app.data.school.edupage.EdupageClient
@@ -88,6 +92,7 @@ import com.coparently.app.data.session.IosAccountDeletion
 import com.coparently.app.data.session.IosAccountSwitch
 import com.coparently.app.data.session.IosAccountTraces
 import com.coparently.app.data.session.LastSignedInUid
+import com.coparently.app.data.session.SessionEndingHook
 import com.coparently.app.data.session.UserDefaultsLastSignedInUid
 import com.coparently.app.data.support.SupportAgreementStore
 import com.coparently.app.data.support.SupportReminderScheduler
@@ -107,6 +112,7 @@ import dev.gitlive.firebase.auth.auth
 import dev.gitlive.firebase.firestore.firestore
 import dev.gitlive.firebase.functions.functions
 import dev.gitlive.firebase.storage.storage
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -129,9 +135,9 @@ import org.koin.dsl.module
  * and its verification address ([InfoPlistExportVerifyAddress]), since phase 4's Task 7 Google
  * Calendar ([IosGoogleCalendarAccount]), since phase 4 part C's Task 5 the push token
  * ([IosPushRegistration]), since its Task 7 the event and child support reminders as local
- * notifications ([IosLocalReminders]) — and, for what the iPhone does not have yet (background
- * jobs), the stand-ins in
- * `IosUnavailable.kt`, which answer as a phone with nothing of the kind would. The two wordings the
+ * notifications ([IosLocalReminders]), since part D's Task 6 the school import's daily run on the
+ * syncs ([IosSchoolImportJob]) — and, for what the iPhone never has (a request clock's job), the
+ * stand-in in `NoRequestClockJobs.kt`, which answers as a phone with nothing of the kind would. The two wordings the
  * data layer writes into stored data read the app's strings, so `:shared-ui`'s `platformUiModule`
  * binds them (`IosPairingWording`, `IosSchoolImportWordings`); the graph resolves with both
  * modules, as `IosApp.start` builds it.
@@ -182,7 +188,9 @@ actual val platformDataModule: Module = module {
     // The account's sign-in methods (phase 4, part A), Apple's unlink through `dataModules`' AppleTokens.
     single<AccountLinking> { IosAccountLinking(Firebase.auth, appleTokens = get()) }
     // The provider session is the app's Google bridge, which `IosApp.start` binds (`iosAppModule`).
-    single { IosAccountTraces(get(), get()) }
+    // The app's own module binds the hook (the Today widget's signed-out snapshot, phase 4 part D);
+    // a graph without it, as a data-layer test's, runs none.
+    single { IosAccountTraces(get(), get(), getOrNull<SessionEndingHook>() ?: SessionEndingHook.None) }
     single<AccountTraces> { get<IosAccountTraces>() }
     single<LastSignedInUid> { UserDefaultsLastSignedInUid }
     single<AccountConsistency> {
@@ -266,19 +274,27 @@ actual val platformDataModule: Module = module {
     }
     single<ReminderScheduler> { IosEventReminders(get()) }
     single<RequestClockScheduler> { NoRequestClockJobs }
-    single<SchoolImportScheduler> { NoSchoolImportJob }
+    single<SchoolImportScheduler> { IosSchoolImportJob }
+    single { DailySchoolImport(get<SchoolImporter>(), get(), get(), get()) }
     single<SupportReminderScheduler> { IosSupportReminders(get()) }
-    // A sync while the app is open, one at a time, with the Google import after each (Task 6;
-    // the iPhone has no background job until phase 4). The lambdas resolve at run time, so the
+    // A sync while the app is open or in iOS's background refresh (phase 4 part D), one at a time,
+    // with the Google import after each (Task 6). The lambdas resolve at run time, so the
     // sync's own need of a `SyncRequester` (the pairing transition asks for one) is no cycle.
     single<SyncRequester> {
         ForegroundSyncRunner(
             sync = { get<SyncService>().performFullSync() },
             // Then the local reminders are planned again from what the sync brought (design §7.4):
             // an event deleted on the other phone loses its reminder, a month paid there its own.
+            // The school import rides the same syncs (phase 4 part D): at most once a day per account,
+            // after the Google import however that went, and its own failure is logged
+            // (`runDailySchoolImport`), so it stops neither the reminders nor the next run.
             afterSync = {
                 try {
-                    get<GoogleCalendarAutoImport>().importIfDue()
+                    try {
+                        get<GoogleCalendarAutoImport>().importIfDue()
+                    } finally {
+                        runDailySchoolImport(get())
+                    }
                 } finally {
                     get<IosLocalReminders>().requestRearm()
                 }
@@ -320,4 +336,15 @@ actual val platformDataModule: Module = module {
     single<PickedFiles> { get<IosPickedFiles>() }
     single<ExportVerifyAddress> { InfoPlistExportVerifyAddress }
     single<RecordFileWriter> { IosRecordFileWriter(get<AppDirectories>().cache.toString()) }
+}
+
+/**
+ * Today's school import when it is due ([DailySchoolImport]), with a failure logged rather than
+ * thrown: it runs inside the sync's `afterSync`, where a throw would skip what follows.
+ */
+private suspend fun runDailySchoolImport(daily: DailySchoolImport) {
+    runCatching { daily.runIfDue() }.onFailure { e ->
+        if (e is CancellationException) throw e
+        logger.w("DailySchoolImport", "The daily school import threw.", e)
+    }
 }

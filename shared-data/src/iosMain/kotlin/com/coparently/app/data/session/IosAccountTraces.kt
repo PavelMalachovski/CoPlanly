@@ -8,6 +8,7 @@ import com.coparently.app.data.files.IosPickedFiles
 import com.coparently.app.data.platform.AppDirectories
 import com.coparently.app.data.platform.logger
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
@@ -32,18 +33,33 @@ import platform.Foundation.NSFileManager
  * notification); the task that makes it post one adds their removal here. Best effort: a folder
  * that cannot be deleted is logged by name, never by its files' names, and never stops a sign-out.
  *
+ * Each of the three first runs [sessionEnding] (iPhone phase 4 part D: the Today widget's
+ * signed-out snapshot and the forgetting of its names), since every one of them is called before
+ * the session it clears ends.
+ *
  * @property directories the app's folders: [AppDirectories.cache] and [AppDirectories.files]
  * @property providerSession the sign-in provider's own session, ended on sign-out and deletion
+ * @property sessionEnding what runs before the session ends ([SessionEndingHook])
  */
 class IosAccountTraces(
     private val directories: AppDirectories,
     private val providerSession: SignInProviderSession,
+    private val sessionEnding: SessionEndingHook = SessionEndingHook.None,
 ) : AccountTraces {
 
     /** What sign-out removes; see the class comment. */
     override suspend fun clearAfterSignOut() {
+        runSessionEnding()
         withContext(Dispatchers.IO) { CACHE_DIRECTORIES.forEach { delete(Path(directories.cache, it)) } }
         endProviderSession()
+    }
+
+    /** Runs [sessionEnding]; its failure is logged and never stops the clearing that follows. */
+    private suspend fun runSessionEnding() {
+        runCatching { sessionEnding.beforeSessionEnds() }.onFailure { failure ->
+            if (failure is CancellationException) throw failure
+            logger.w(TAG, "Could not finish what runs before the session ends: ${failure.message}")
+        }
     }
 
     @Suppress("TooGenericExceptionCaught") // a provider's failure must never stop a sign-out
@@ -57,6 +73,7 @@ class IosAccountTraces(
 
     /** What an account switch removes; see the class comment. */
     suspend fun clearAccount() {
+        runSessionEnding()
         withContext(Dispatchers.IO) {
             CACHE_DIRECTORIES.forEach { delete(Path(directories.cache, it)) }
             delete(Path(directories.files, ChatAttachmentOutbox.OUTBOX_DIRECTORY))

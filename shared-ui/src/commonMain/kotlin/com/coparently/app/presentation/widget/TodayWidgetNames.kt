@@ -1,6 +1,6 @@
 package com.coparently.app.presentation.widget
 
-import com.coparently.app.data.local.preferences.EncryptedPreferences
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.presentation.common.NamedParent
 import com.coparently.app.presentation.common.Parents
 
@@ -14,16 +14,25 @@ import com.coparently.app.presentation.common.Parents
  * would pay four Firestore listeners for a label, so the app remembers the
  * last loaded [Parents] here while it is on screen, and the widget reads them back.
  *
- * Kept in [EncryptedPreferences], beside the account's other local state, and so cleared with it
- * on sign-out, an account switch and account deletion. Keyed to the signed-in uid as well:
+ * Kept in [SecurePreferences] (`EncryptedPreferences` on Android, the Keychain's store on the
+ * iPhone), beside the account's other local state. How they are forgotten when a session ends
+ * differs by platform: on Android the whole store is cleared (`EncryptedPreferences.clear()`) on
+ * sign-out, an account switch and account deletion, these keys with it; on the iPhone the app's
+ * session-ending hook (`widgetSessionEnding`, run first by `IosAccountTraces` on the same three)
+ * calls [clear] before anything else is cleared, so the names are gone even where the store
+ * outlives the session. [clear] forgets these keys alone. Keyed to the signed-in uid as well:
  * [recall] refuses a snapshot whose own parent is somebody else, so the home screen never names
  * the previous account's family for the moment before the new one's names load.
  *
  * One key per field, never a serialised object: a name is free text, and a separator or a JSON
  * encoder would be one more format to get right for a label.
+ *
+ * One writer: the app's refresher remembers the parents from one collector while the app is on
+ * screen, so [remember] needs no lock of its own (it was `@Synchronized` while it lived in the app;
+ * a store write is atomic in itself, and two writers would only race to store the same answer).
  */
 class TodayWidgetNames(
-    private val preferences: EncryptedPreferences
+    private val preferences: SecurePreferences
 ) {
 
     /**
@@ -31,7 +40,6 @@ class TodayWidgetNames(
      *
      * @return True when something changed, so the caller knows the widget needs redrawing.
      */
-    @Synchronized
     fun remember(parents: Parents): Boolean {
         if (!parents.loaded) return false
         val values = fieldsOf(parents.me) + fieldsOf(parents.coParent)
@@ -49,6 +57,11 @@ class TodayWidgetNames(
         val me = parentAt(values, 0)?.takeIf { it.uid == currentUid } ?: return null
         val coParent = parentAt(values, FIELDS_PER_PARENT)
         return Parents(me = me, coParent = coParent, isPaired = coParent != null, loaded = true)
+    }
+
+    /** Forgets the stored parents, so [recall] answers null until [remember] stores new ones. */
+    fun clear() {
+        KEYS.forEach { preferences.remove(it) }
     }
 
     private fun fieldsOf(parent: NamedParent?): List<String> = listOf(

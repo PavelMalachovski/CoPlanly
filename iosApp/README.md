@@ -7,7 +7,7 @@ and the data layer are the Kotlin Multiplatform modules', compiled into one stat
 | Path | What it is |
 | --- | --- |
 | `project.yml` | The Xcode project, for [XcodeGen](https://github.com/yonaskolb/XcodeGen). The generated `CoPlanly.xcodeproj/` is not committed. |
-| `CoPlanly/AppDelegate.swift` | The entry point: reads the configuration and calls `IosApp.shared.start(config:google:apple:)` with the Google and Apple sheets' bridges (`shared-ui/src/iosMain/kotlin/com/coparently/app/ios/`). |
+| `CoPlanly/AppDelegate.swift` | The entry point: reads the configuration and calls `IosApp.shared.start(config:bridges:)` with an `IosBridges` of the Google and Apple sheets' bridges, the push token's, the widget reload's and the background scheduler's (`shared-ui/src/iosMain/kotlin/com/coparently/app/ios/`). |
 | `CoPlanly/SceneDelegate.swift` | The window: shows `IosApp.shared.rootViewController()`, the native shell, and hands Google's sign-in answers (`openURLContexts`) to Google Sign-In. |
 | `CoPlanly/GoogleSignInBridge.swift` | Google's sign-in sheet (Google Sign-In for iOS 9.2.0) for the shared sign-in screen and for connecting Google Calendar; see "Google sign-in" and "Google Calendar" below. |
 | `CoPlanly/AppleSignInBridge.swift` | Apple's sign-in sheet (AuthenticationServices) for the sign-in screen and the sign-in methods, behind the `CoplanlyAppleSignIn` flag (YES in Debug, NO in Release; `project.yml`). |
@@ -15,6 +15,9 @@ and the data layer are the Kotlin Multiplatform modules', compiled into one stat
 | `CoPlanly/CoPlanly.entitlements` | Sign in with Apple (`com.apple.developer.applesignin`), pushes (`aps-environment`) and the App Group `group.app.coplanly`. |
 | `CoPlanly/Assets.xcassets` | The icon (made from the Android launcher icon by `tools/generate-ios-icon.py`; never edit the PNG by hand) and the indigo accent colour. |
 | `CoPlanlyNotifications/` | The Notification Service Extension (`app.coplanly.notifications`, embedded in the app): words each push with the `PushWording` framework `:push-wording` builds; see "Pushes" below. |
+| `CoPlanlyWidget/` | The Today widget (`app.coplanly.widget`, embedded in the app; SwiftUI and WidgetKit, small and medium): draws the day the app's snapshot in the App Group holds; see "The Today widget" below. |
+| `CoPlanly/BackgroundRefreshBridge.swift` | `BGTaskScheduler` behind the Kotlin `BackgroundScheduling`: submits `app.coplanly.refresh` 30 minutes ahead, cancels it, and registers the handler that runs `IosApp.shared.runBackgroundRefresh`; see "Background refresh". |
+| `CoPlanly/WidgetReloadBridge.swift` | `WidgetCenter.shared.reloadAllTimelines()` behind the Kotlin `WidgetReload`, called by `WidgetSnapshotWriter` after a changed snapshot. |
 | `CoPlanlyUITests/` | The XCUITest walk of the native shell (`ShellUITests.testShellWalk`), the tour of every screen (`testTour`) and the pushes (`PushUITests`), run in CI on the emulators. |
 | `scripts/simulator.sh` | CI's simulator steps (the `ios-app` job): pick, launch, the shell's walk with the push test, and the tour. |
 
@@ -190,6 +193,46 @@ prefixes are added). Once per push it logs its memory (`COPLANLY_NSE_MEMORY`); C
 4. **Apply for `com.apple.developer.usernotifications.filtering`**, so the extension can suppress a
    push for another account or of a type it cannot word instead of leaving the neutral fallback
    (design §2 decision 4).
+
+## The Today widget
+
+The widget extension (`CoPlanlyWidget/`, iPhone phase 4 part D, Task 5) is the Calendar's today card
+on the home screen, as Android's Glance widget is, in the small and medium sizes. It computes and
+words nothing: the app writes seven days of finished lines and colours to
+`<App Group container>/widget/today.json` (`WidgetSnapshotWriter.kt`, the shape of
+`WidgetSnapshot.kt`), through a `.part` file and a rename, and asks WidgetKit to reload. The
+extension's timeline has one entry per day at its local midnight (today's at once), then, from the
+day after the last, the snapshot's own "open the app" line; a phone with no snapshot, or one it
+cannot read (a `version` other than 1), shows its own line, "Sign in to CoPlanly to see today."
+Its only strings — that line and the gallery's name and description — are
+`CoPlanlyWidget/<lang>.lproj/Localizable.strings` in the five languages, read in the system's
+language. The small size draws the snapshot's `compact` lines in one column (`compactLarge` at the
+accessibility text sizes); the medium size draws its `tall` lines in two: the title, custody,
+windows and handover on the left, the events (each with a 3 pt mark in its owner's colour) and the
+footer on the right. A parent's colour is the snapshot's light or dark hex by the widget's colour
+scheme; other text is the system's primary or secondary colour. A tap opens `coplanly://calendar`,
+the Calendar tab on today. It links no Kotlin framework and no package, and holds only the App
+Group entitlement: the owner adds the App Groups capability and `group.app.coplanly` to the
+`app.coplanly.widget` App ID too (as for the notification extension, "Pushes" step 1).
+
+## Background refresh
+
+`BackgroundRefreshBridge.swift` (iPhone phase 4 part D, Task 6) submits a `BGAppRefreshTask`,
+identifier `app.coplanly.refresh` (`BGTaskSchedulerPermittedIdentifiers` and the `fetch` background
+mode in `Info.plist`), with `earliestBeginDate` 30 minutes ahead. It is submitted when the app
+enters the background (read in Kotlin, `IosLifecycle.observeBackground`, since the app uses scenes)
+and at the end of each run, and cancelled at sign-out. The handler runs `BackgroundRefresh`: signed
+out or while the phone is locked (the database is `NSFileProtectionComplete`) it ends at once,
+reporting success; otherwise it syncs, runs the daily school import with the sync and rewrites the
+widget's snapshot. The system decides when a run happens, and Background App Refresh may be off.
+To try one on a development build, pause in the debugger and run
+`e -l objc -- (void)[[BGTaskScheduler sharedScheduler] _simulateLaunchForTaskWithIdentifier:@"app.coplanly.refresh"]`
+(Xcode's Debug → Simulate Background Fetch drives the legacy fetch callback, which the app does not
+implement, and launches no `BGAppRefreshTask`). A launch iOS makes for the refresh while the phone
+is locked starts the shared session (the sync, the chat mirror, the widget's triggers) only once
+the phone is unlocked. The widget's gallery text and its fallback follow iOS's own choice of the
+bundle's language, not the app's rule (CLAUDE.md, "Localization"); the snapshot's lines follow the
+app's.
 
 ## In CI
 

@@ -474,6 +474,8 @@ class MainActivity : AppCompatActivity() {
             is LaunchLink.Pair -> _pendingPairingCode.value = link.code
             is LaunchLink.Guest -> _pendingGuestCode.value = link.code
             is LaunchLink.Chat -> _pendingChatLink.value = PendingChatLink(link.conversationId)
+            // The iPhone widget's link; the manifest declares no such host, so it only arrives typed.
+            LaunchLink.Calendar -> _pendingDestination.value = PushDestination.CALENDAR
             null -> readWebPairingLink(data)
         }
     }

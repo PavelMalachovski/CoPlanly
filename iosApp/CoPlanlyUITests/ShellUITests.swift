@@ -970,13 +970,31 @@ final class ShellUITests: XCTestCase {
         shot("18-invite-share-sheet")
         try require(shown, "The share sheet did not appear")
         let close = app.buttons["Close"]
-        if close.exists {
+        let tappedClose = close.exists
+        if tappedClose {
             close.tap()
-        } else {
-            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45))
-                .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.98)))
         }
-        try require(sheet.waitForNonExistence(timeout: timeout) && !copy.exists, "The share sheet did not close")
+        // A share sheet with no Close button is swiped down. The drag starts on the sheet's own top edge,
+        // since a fixed point on the screen can fall on the dimmed area above a half-height sheet, where
+        // a drag closes nothing. A tap above the sheet is the last way out, after two swipes.
+        var closed = sheet.waitForNonExistence(timeout: tappedClose ? timeout : 2) && !copy.exists
+        for attempt in 0..<3 where !closed {
+            let window = app.windows.firstMatch.frame
+            let top = sheet.exists ? sheet.frame.minY : window.height * 0.5
+            if attempt < 2 {
+                let from = app.coordinate(withNormalizedOffset: .zero)
+                    .withOffset(CGVector(dx: window.midX, dy: top + 12))
+                let to = app.coordinate(withNormalizedOffset: .zero)
+                    .withOffset(CGVector(dx: window.midX, dy: window.maxY - 4))
+                from.press(forDuration: 0.05, thenDragTo: to)
+            } else {
+                app.coordinate(withNormalizedOffset: .zero)
+                    .withOffset(CGVector(dx: window.midX, dy: max(top * 0.3, 60)))
+                    .tap()
+            }
+            closed = sheet.waitForNonExistence(timeout: 10) && !copy.exists
+        }
+        try require(closed, "The share sheet did not close")
         try require(labelExists(containing: "Add another co-parent"), "Closing the share sheet left the pairing screen")
         try goToFamilyRoot()
     }

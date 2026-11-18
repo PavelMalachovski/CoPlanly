@@ -5,6 +5,8 @@
 # it. On Android they are read by name, so app/src/main/res/raw/card_push_keep.xml keeps each one
 # from the release build's resource shrinker. tools/test/push-keys.test.js holds this list to the
 # keys the three files name, and the keep file to this list: a key added to the wording is added here.
+# The Today widget's TodayWidgetText (shared-ui, iPhone phase 4 part D) reads its keys the same way,
+# so they are listed (at the end) and generated for the iPhone's app bundle too.
 activity_change_accepted
 activity_change_declined
 activity_change_requested
@@ -132,3 +134,24 @@ sticker_thank_you
 sticker_well_done
 support_reminder_body
 support_reminder_title
+# the Today widget
+calendar_agenda_contact_window
+calendar_agenda_empty
+calendar_agenda_time_range
+event_all_day
+home_handover_current
+home_handover_current_you
+home_handover_hero_in_days
+home_handover_hero_in_days_you
+home_handover_hero_today
+home_handover_hero_today_you
+home_handover_hero_tomorrow
+home_handover_hero_tomorrow_you
+parent_label_coparent
+parent_label_unknown
+parent_label_you
+widget_today_events_count
+widget_today_more
+widget_today_signed_out
+widget_today_stale
+widget_today_title

@@ -4,6 +4,7 @@
     <string name="widget_today_description">Чей сегодня день, ближайшая передача и события на сегодня</string>
     <string name="widget_today_title">Сегодня · %1$s</string>
     <string name="widget_today_signed_out">Войдите в CoPlanly, чтобы увидеть свой день.</string>
+    <string name="widget_today_stale">Откройте CoPlanly, чтобы обновить</string>
     <plurals name="widget_today_more">
         <item quantity="one">ещё %1$d</item>
         <item quantity="few">ещё %1$d</item>

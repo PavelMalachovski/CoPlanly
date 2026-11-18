@@ -1,6 +1,6 @@
 package com.coparently.app.presentation.widget
 
-import com.coparently.app.data.local.preferences.EncryptedPreferences
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.presentation.common.NamedParent
 import com.coparently.app.presentation.common.Parents
 import io.mockk.every
@@ -20,9 +20,10 @@ import org.junit.Test
 class TodayWidgetNamesTest {
 
     private val stored = mutableMapOf<String, String>()
-    private val preferences = mockk<EncryptedPreferences> {
+    private val preferences = mockk<SecurePreferences> {
         every { getString(any(), any()) } answers { stored[firstArg()] ?: secondArg() }
         every { putString(any(), any()) } answers { stored[firstArg<String>()] = secondArg() }
+        every { remove(any()) } answers { stored.remove(firstArg<String>()) }
     }
     private val names = TodayWidgetNames(preferences)
 
@@ -44,6 +45,26 @@ class TodayWidgetNamesTest {
         names.remember(Parents(me = alex, coParent = sam, isPaired = true, loaded = true))
 
         assertNull(names.recall("uid-someone-else"))
+    }
+
+    @Test
+    fun recallRefusesAnotherAccount() {
+        names.remember(Parents(me = alex, coParent = sam, isPaired = true, loaded = true))
+
+        assertNull(names.recall("uid-sam"))
+        assertEquals(alex, names.recall("uid-alex")?.me)
+    }
+
+    @Test
+    fun `clear forgets the parents and nothing else`() {
+        stored["another_key"] = "kept"
+        names.remember(Parents(me = alex, coParent = sam, isPaired = true, loaded = true))
+
+        names.clear()
+
+        assertNull(names.recall("uid-alex"))
+        assertEquals(mapOf("another_key" to "kept"), stored)
+        assertTrue(names.remember(Parents(me = alex, loaded = true)))
     }
 
     @Test

@@ -97,11 +97,18 @@ class SchoolImporter internal constructor(
      *
      * @return How many connections there were — zero when nobody is signed in.
      */
-    suspend fun syncAll(): Int {
-        val uid = userRepository.getCurrentUserId() ?: return 0
-        val connections = store.all(uid)
-        connections.forEach { sync(it.id) }
-        return connections.size
+    suspend fun syncAll(): Int = syncEach().size
+
+    /**
+     * Updates every connection of the signed-in account, as [syncAll] does, and answers each
+     * connection's result: what the iPhone's daily import (`DailySchoolImport`) reads to tell a day
+     * done from one a network failure spoiled.
+     *
+     * @return One result per connection; empty when nobody is signed in or there is none.
+     */
+    suspend fun syncEach(): List<SchoolSyncResult> {
+        val uid = userRepository.getCurrentUserId() ?: return emptyList()
+        return store.all(uid).map { sync(it.id) }
     }
 
     /** Updates the connection [connectionId] of the signed-in account. Never throws. */

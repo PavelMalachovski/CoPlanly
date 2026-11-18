@@ -8,6 +8,8 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.NamedParent
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.theme.ParentColorChoice
+import com.coparently.app.pushwording.AndroidWordingStrings
+import com.coparently.app.pushwording.WordingStrings
 import com.coparently.app.testing.RobolectricTestApplication
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.toKotlinLocalDate
@@ -28,7 +30,8 @@ import java.time.LocalDateTime
  * What the widget says, with the app's real string resources.
  *
  * Robolectric rather than a mocked `Context`, because the point is the resources: that each line
- * is worded with the app's own string for it, that a parent is a name and never a slot, that a
+ * is worded with the app's own string for it (read by key through `AndroidWordingStrings`, as the
+ * widget reads it), that a parent is a name and never a slot, that a
  * plural is chosen by the reader's language, and that nothing the rows leave out goes unsaid.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -36,6 +39,11 @@ import java.time.LocalDateTime
 class TodayWidgetTextTest {
 
     private val context: Context get() = RuntimeEnvironment.getApplication()
+
+    // The two halves the widget builds from the context it is worded in, as `TodayWidget` does;
+    // read afresh for each call, so a test's clock setting and language qualifier reach them.
+    private val strings: WordingStrings get() = AndroidWordingStrings(context)
+    private val clock: WidgetClock get() = AndroidWidgetClock(context)
 
     /** The reader's clock is the device setting (release audit R-9); 24-hour unless a test says. */
     @Before
@@ -54,7 +62,7 @@ class TodayWidgetTextTest {
 
     private val day = TodayWidgetModel(
         signedIn = true,
-        today = today,
+        today = today.toKotlinLocalDate(),
         dayParent = "mom",
         contactWindows = listOf(ContactWindow(2, LocalTime(15, 0), LocalTime(19, 0), "dad")),
         handover = HandoverInfo(
@@ -71,7 +79,7 @@ class TodayWidgetTextTest {
 
     @Test
     fun `the tall widget names both parents and lists the day`() {
-        val lines = TodayWidgetText.lines(context, day, parents, maxEvents = 4)
+        val lines = TodayWidgetText.lines(strings, clock, day, parents, maxEvents = 4)
 
         assertTrue(lines.title, lines.title.startsWith("Today · "))
         // The phone's owner is "you", as on Home's hero (UX audit H4).
@@ -95,7 +103,7 @@ class TodayWidgetTextTest {
     fun `a twelve-hour clock writes the times as the reader reads them`() {
         clock("12")
 
-        val lines = TodayWidgetText.lines(context, day, parents, maxEvents = 4)
+        val lines = TodayWidgetText.lines(strings, clock, day, parents, maxEvents = 4)
 
         assertEquals("3:00 PM–7:00 PM · contact with Sam", lines.windows.single().text)
         assertEquals("9:00 AM–10:00 AM", lines.events.first().time)
@@ -105,8 +113,8 @@ class TodayWidgetTextTest {
     fun `rows that do not fit are counted, never dropped silently`() {
         val busy = day.copy(events = (8..12).map { event("Event $it", today.atTime(it, 0), null, owner = "mom") })
 
-        val tall = TodayWidgetText.lines(context, busy, parents, maxEvents = 4)
-        val compact = TodayWidgetText.lines(context, busy, parents, maxEvents = 0)
+        val tall = TodayWidgetText.lines(strings, clock, busy, parents, maxEvents = 4)
+        val compact = TodayWidgetText.lines(strings, clock, busy, parents, maxEvents = 0)
 
         assertEquals(4, tall.events.size)
         assertEquals("+1 more", tall.footer)
@@ -116,7 +124,7 @@ class TodayWidgetTextTest {
 
     @Test
     fun `an empty day says so, as the today card does`() {
-        val lines = TodayWidgetText.lines(context, day.copy(events = emptyList()), parents, maxEvents = 4)
+        val lines = TodayWidgetText.lines(strings, clock, day.copy(events = emptyList()), parents, maxEvents = 4)
 
         assertEquals("Nothing scheduled.", lines.footer)
     }
@@ -124,7 +132,8 @@ class TodayWidgetTextTest {
     @Test
     fun `tomorrow's handover is worded as the hero words it`() {
         val lines = TodayWidgetText.lines(
-            context,
+            strings,
+            clock,
             day.copy(handover = HandoverInfo(today.plusDays(1).toKotlinLocalDate(), 1, "mom", "dad")),
             parents,
             maxEvents = 4
@@ -136,7 +145,8 @@ class TodayWidgetTextTest {
     @Test
     fun `a handover to the reader says you, as Home does`() {
         val lines = TodayWidgetText.lines(
-            context,
+            strings,
+            clock,
             day.copy(handover = HandoverInfo(today.plusDays(1).toKotlinLocalDate(), 1, "dad", "mom")),
             parents,
             maxEvents = 4
@@ -147,7 +157,7 @@ class TodayWidgetTextTest {
 
     @Test
     fun `with no names known a parent is a fallback label, never a slot`() {
-        val lines = TodayWidgetText.lines(context, day, parents = null, maxEvents = 4)
+        val lines = TodayWidgetText.lines(strings, clock, day, parents = null, maxEvents = 4)
 
         assertEquals("Today with Parent", lines.custody?.text)
         assertTrue(listOfNotNull(lines.custody, lines.handover).none { "mom" in it.text || "dad" in it.text })
@@ -155,7 +165,13 @@ class TodayWidgetTextTest {
 
     @Test
     fun `signed out, the widget asks for a sign-in and names nobody`() {
-        val lines = TodayWidgetText.lines(context, TodayWidgetModel.signedOut(today), parents, maxEvents = 4)
+        val lines = TodayWidgetText.lines(
+            strings,
+            clock,
+            TodayWidgetModel.signedOut(today.toKotlinLocalDate()),
+            parents,
+            maxEvents = 4
+        )
 
         assertEquals("Sign in to CoPlanly to see your day.", lines.footer)
         assertNull(lines.custody)
@@ -166,7 +182,7 @@ class TodayWidgetTextTest {
     @Test
     @Config(qualifiers = "ru")
     fun `the reader's language picks the words and the plural`() {
-        val lines = TodayWidgetText.lines(context, day, parents, maxEvents = 0)
+        val lines = TodayWidgetText.lines(strings, clock, day, parents, maxEvents = 0)
 
         assertTrue(lines.title, lines.title.startsWith("Сегодня · "))
         assertEquals("Передача через 5 дней, дальше — Sam", lines.handover?.text)

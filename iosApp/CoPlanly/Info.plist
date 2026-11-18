@@ -51,6 +51,14 @@
 	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>CoPlanly uses the camera to photograph a receipt or a document you add.</string>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>app.coplanly.refresh</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UIRequiredDeviceCapabilities</key>

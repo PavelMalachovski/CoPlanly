@@ -518,6 +518,19 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     context it was handed, unchanged. `TodayWidgetTextTest` holds the wording (Robolectric,
     English and Russian), and the UI tour draws the widget's own `RemoteViews` in every variant
     (`UiTourWidget`).
+    **The iPhone's widget is the same card, drawn by WidgetKit** (iPhone phase 4 part D, November
+    2026; spec `docs/superpowers/specs/2026-11-18-iphone-phase-4d-background-and-widget-design.md`),
+    and keeps the same two rules. **One computation and one wording**: `TodayWidgetModel`,
+    `TodayWidgetLines` and `TodayWidgetText` live in `:shared-ui`'s `commonMain`
+    (`presentation/widget/`), where Android's Glance widget calls them too; the text reads its
+    strings through `:push-wording`'s `WordingStrings` and its dates through `WidgetClock`
+    (`IosWidgetClock`, Foundation), so the lines are worded in Kotlin on the iPhone as on Android, in
+    the app's language, and `push-keys.txt` lists the widget's keys beside the notifications'. The
+    widget extension (`iosApp/CoPlanlyWidget/`, SwiftUI and WidgetKit, small and medium on the home
+    screen, medium in two columns) computes and words nothing: the app writes a **snapshot**, seven
+    days of finished lines and colours (`WidgetSnapshot`, built by `WidgetSnapshotBuilder`, written by
+    `WidgetSnapshotWriter`), and the extension draws it. Its rules are "Phase 4's part D" under the
+    architecture map.
 19. **Every screen that is not a tab is one readable column** (October 2026 audit, week 6). A
     destination is declared with `pane()` (`navigation/ReadablePane.kt`), which is `composable()`
     with the screen laid out at most 640 dp wide, centred, top bar included. Only the four tabs
@@ -1818,8 +1831,8 @@ shared-data/ — Kotlin Multiplatform module (MON-24 phase 2, Tasks 5–8, done;
              Android has and the data layer itself needs: the 41 legacy migrations, SQLCipher,
              EncryptionManager, CrashlyticsManager, the database builder (di/DatabaseBuilder.kt)
              and the Android halves of a few seams. iosMain holds the iPhone's halves and, in
-             platformDataModule, a binding for every seam (stand-ins in di/koin/IosUnavailable.kt
-             where the iPhone has nothing yet). Its Koin modules are dataModules and
+             platformDataModule, a binding for every seam (stand-ins in di/koin/NoRequestClockJobs.kt,
+             the one left, where the iPhone has nothing yet). Its Koin modules are dataModules and
              platformDataModule, which appModules includes. Depends on shared/; no iOS framework
              of its own
 shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phase 2, Tasks 9–12,
@@ -1847,7 +1860,7 @@ push-wording/ — Kotlin Multiplatform module (iPhone phase 4 part C, November 2
              WordingStrings and ReaderClock. Its Android halves read the app's own resources
              (AndroidWordingStrings; AndroidReaderClock stays in app/utils/), its iPhone halves
              the PushStrings .strings/.stringsdict that tools/ios/generate-push-strings.js
-             writes from shared-ui's XML for the keys push-keys.txt lists (BundleWordingStrings,
+             writes from shared-ui's XML for the keys push-keys.txt lists, the Today widget's among them (BundleWordingStrings,
              FoundationReaderClock, ExtensionEntry's wordPush). Depends on nothing of ours and on
              no library; shared/ exposes it (api). On the iPhone it is a framework of its own,
              PushWording (static), which the notification extension links
@@ -1861,7 +1874,11 @@ iosApp/    — the iPhone app (MON-24 phase 3, part A, November 2026): an Xcode 
              committed: without one it runs against the Firebase emulators. Since phase 4 part C
              it also holds the Notification Service Extension (CoPlanlyNotifications/: one Swift
              file that words each push through PushWording, embedded in the app) and
-             PushTokenBridge (Firebase Messaging's token behind a Kotlin interface).
+             PushTokenBridge (Firebase Messaging's token behind a Kotlin interface). Since part D
+             it holds the Today widget (CoPlanlyWidget/: SwiftUI and WidgetKit, which draws the
+             App Group's snapshot and links no Kotlin framework), and two more Swift bridges,
+             BackgroundRefreshBridge (BGTaskScheduler behind BackgroundScheduling) and
+             WidgetReloadBridge (WidgetCenter behind WidgetReload).
              iosApp/README.md says how to run it
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler, the export's
              record and the school import's plan — in shared/, but for the event use cases with
@@ -2089,6 +2106,75 @@ rules; spec `docs/superpowers/specs/2026-11-17-iphone-phase-4c-pushes-design.md`
   build never asks on cold start.
 - **Local reminders** are item 9's last paragraph.
 
+**Phase 4's part D** (November 2026, background work and the Today widget; item 18 and item 35 state
+the rules; spec `docs/superpowers/specs/2026-11-18-iphone-phase-4d-background-and-widget-design.md`):
+- **The widget draws a snapshot, and the snapshot holds lines only.** `WidgetSnapshotWriter`
+  (`shared-ui` `iosMain`, `ios/`) builds seven days of worded lines and colour hexes from the same
+  Room rows Home reads (`IosWidgetSources`: today, the day's events, the stored custody, the
+  remembered names), writes `<App Group container>/widget/today.json` through a `.part` file and a
+  rename, and asks `WidgetReload` (`WidgetReloadBridge.swift`, `WidgetCenter.reloadAllTimelines()`)
+  for a redraw only when the content changed. Never a record, a uid, a token or an address in it;
+  a co-parent's private event never reaches it. It is read by the widget alone, and the file has the
+  App Group's default protection, so a locked phone that was unlocked once still draws it. The App
+  Group's keys stay `coplanly.push.uid` and `coplanly.push.language`, plus this file.
+- **It is rewritten on every trigger the Android widget has**: after each sync run
+  (`ForegroundSyncRunner.completedRuns`), a debounced write to `events`, `custody_models` or
+  `users`, a change of the signed-in uid, the family on screen or the remembered names, every
+  foreground and every unlock. No trigger follows the app's language as such: a language change
+  (in-app or in iOS Settings) is written by the next foreground's rewrite, which words the lines in
+  the language the app speaks then. A night passing needs no write, since the timeline carries one
+  entry per day.
+- **Sign-out writes the signed-out snapshot before the session ends.** `SessionEndingHook`
+  (`shared-data` `iosMain`, run first by `IosAccountTraces` in `clearAfterSignOut` and
+  `clearAccount`, which deletion and an account switch both reach) clears the remembered names and
+  writes the signed-out snapshot while the uid is still known, and a uid turning null does it again.
+  No snapshot of one account is ever drawn for another.
+- **A snapshot is written only for an account whose check has run** (`checkedAccount`, the gate
+  item 9 states for reminders): on a phone's first sign-in the widget shows the signed-out line
+  until the first sync's account check, so the previous account's rows never reach a new account's
+  widget.
+- **The database stays `NSFileProtectionComplete`, so nothing reads it while the phone is locked**
+  (owner decision, 18 November 2026). Three gates, each on `UIApplication.isProtectedDataAvailable`:
+  - **A launch on a locked phone starts no session.** iOS may cold-launch the app for its
+    background refresh while the phone is locked; `IosApp.start` then builds Firebase and the graph
+    but defers `startSession` (the launch sync, the chat mirror, the profile, the widget's
+    collectors, the push and reminder followers, the background request's sign-out cancel) until
+    `UIApplicationProtectedDataDidBecomeAvailable`, observed once on the main queue
+    (`whenProtectedDataAvailable`).
+  - **The background chain ends at once, reporting success and touching nothing** while locked
+    (`BackgroundRefresh`), so its completion is still called exactly once.
+  - **Inside a running session** (the phone locked again later), the widget writes (the snapshot and
+    the signed-out fallback from a trigger) are skipped and retried on the next unlock, and a uid
+    read as null then is taken neither for a sign-out by the widget nor for one by the background
+    request's cancel. Every widget collector that reads Room or the parents logs a failure
+    (`.catch`) rather than taking the process down.
+  A real sign-out on an unlocked phone still writes signed-out. Don't weaken the file's protection
+  to make the chain run, and don't start a Room reader before `startSession`.
+- **`BackgroundRefresh`** (`ios/BackgroundRefresh.kt`) is the chain a `BGAppRefreshTask` runs: signed
+  out or locked, it ends with no call; otherwise it syncs (`ForegroundSyncRunner.syncAndAwait`, which
+  joins a run in progress), words the widget and ends reporting success; a failed sync is logged
+  and the widget is still written. It is scheduled as `app.coplanly.refresh`
+  (`BackgroundRefreshBridge.swift`, `BGTaskSchedulerPermittedIdentifiers` and the `fetch`
+  background mode in `Info.plist`), the next request `earliestBeginDate` 30 minutes ahead,
+  submitted on entering the background and at the end of each run, cancelled at sign-out. The
+  background notice is read in Kotlin (`IosLifecycle.observeBackground`), not in `AppDelegate`,
+  because the app uses scenes and the delegate's method is not called. The system decides when it
+  runs; Background App Refresh may be off.
+- **The daily school import** (`DailySchoolImport`, `shared-data` `commonMain`, item 35) is the
+  iPhone's `SchoolImportScheduler`, `IosSchoolImportJob`, which logs only: the import runs inside
+  every sync's `afterSync` (launch, foreground and the background run), at most **once a day per
+  account** (`school_import_daily_<uid>` in the sealed preferences, the day written only after a
+  run). It is skipped while offline, as Android's job needs a connection, and the day is not used
+  up when a connection failed (`SchoolSyncResult.Failed`); a connection waiting for its password
+  or a family does not hold the day back. Its failure never fails the sync or the reminders'
+  re-arm.
+- **Where it lives**: the widget's Swift is `iosApp/CoPlanlyWidget/` (App Group only, bundle
+  `app.coplanly.widget`, its own `Localizable.strings` in the five languages for the gallery's name
+  and description and the signed-out line; the stale line is written by the app into the snapshot);
+  the Kotlin side is `presentation/widget/` and `ios/`; `docs/DEVICE-CHECKLIST.md` §3.44 is what only
+  a phone proves. A tap on the widget opens `coplanly://calendar` (`LaunchLink.Calendar`), the
+  Calendar tab on today.
+
 **Where a `domain/…` path in this file lives** (MON-24 phase 1, November 2026). The domain moved
 to the shared module with every package unchanged, so a path this file writes as
 `domain/<package>/<File>.kt` is `shared/src/commonMain/kotlin/com/coparently/app/domain/<package>/<File>.kt`,
@@ -2147,7 +2233,7 @@ changed. Three exceptions, each by a file's reason:
   `AndroidDeviceRegion`) and of GitLive (`AndroidCallableFunctions`, `FirestorePlatform.android.kt`).
 - **`shared-data/src/iosMain/`**: the iPhone's halves of the same (`data/local/IosDatabase.kt`, the
   Keychain's `KeychainTextStore`, Darwin's engine, …) and `di/koin/PlatformDataModule.ios.kt` with
-  the stand-ins in `di/koin/IosUnavailable.kt`.
+  the stand-in in `di/koin/NoRequestClockJobs.kt` (`IosUnavailable.kt` until phase 4 part D left it one).
 - **`app/src/main/java/com/coparently/app/data/`**, on purpose: a `Worker` or WorkManager scheduler,
   a notification or an alarm (`data/notification/`, `PushNotifier`; their text is `:push-wording`'s
   since iPhone phase 4 part C), a string resource (`AndroidPairingWording`,
@@ -2428,7 +2514,8 @@ receipt rules are unchanged. It is bound in `exportDataModule`; the e2e parent b
 takes** (Task 8j; `di/koin/PlatformDataModule.ios.kt`): GitLive's default instances, the app's
 directories, the database on the bundled driver and its fifteen DAOs, the Keychain's store, the
 no-op telemetry, the network monitor and the two HTTP clients, and, for what the iPhone does not
-have yet, the stand-ins in `di/koin/IosUnavailable.kt`. At Task 8j these were: nobody signed in, no
+have yet, the stand-ins in `di/koin/IosUnavailable.kt` (since phase 4 part D
+`di/koin/NoRequestClockJobs.kt`, the one left). At Task 8j these were: nobody signed in, no
 push, no Google Calendar, no Cloud Storage (every bucket call an `IOException`), nothing picked, no
 background job or notice, no verification address, and no wording (a pairing's thread title and a
 school import's titles are stored data a co-parent reads, so no English stand-in is written; asking
@@ -2452,7 +2539,7 @@ with `IosStorageBucket` (the iOS SDK's Storage by path, Task 10), `NoPickedFiles
 `IosGoogleCalendarAccount` (`data/remote/google/`, the same tokens, keys and server exchange as
 Android's, the grant revoked through `GoogleGrantRevocation`) and, in `:shared-ui`,
 `NoGoogleCalendarSignIn` with `IosGoogleCalendarSignIn` (Google's sheet asking for a server auth
-code). Phase 4's part C (pushes) replaced `NoEventReminders` and `NoSupportReminderJob` with
+code). Phase 4's part D replaced `NoSchoolImportJob` with `IosSchoolImportJob` (a logging seam: the import runs after every sync, once a day, `DailySchoolImport`). Phase 4's part C (pushes) replaced `NoEventReminders` and `NoSupportReminderJob` with
 local notifications (`data/notification/` in `shared-data`'s `iosMain`: `IosEventReminders` and
 `IosSupportReminders` over one book, `IosLocalReminders`, which plans both again on start, on every
 change of the signed-in uid and after every sync, and keeps the nearest 60 pending, a child support
@@ -2463,8 +2550,7 @@ the FCM token behind `PushTokenBridge.swift`, with `NotificationPermission`) and
 microphone and camera still answer denied), and deleted `NoRequestClockNotices` with the phones'
 request reminders, which the server sends now (item 42). Still stand-ins on the iPhone:
 `NoRequestClockJobs` (`RequestClockScheduler` keeps only `cancelAll`, and the iPhone never queued
-a clock's job), `NoSchoolImportJob`,
-and in `:shared-ui` `NoSpeechDictation`, `NoAiAssist`,
+a clock's job), and in `:shared-ui` `NoSpeechDictation`, `NoAiAssist`,
 `NoInviteQrCodes` and the platform interfaces' `NoQrScanner`, `NoDictation`,
 `NoOpenUrl`, `NoClipboard` and `NoAppLanguages` in `IosPlatform.kt`.
 ROADMAP MON-24 lists what still stands in. Every `data/…`

@@ -38,6 +38,14 @@ class LaunchLinksTest {
     }
 
     @Test
+    fun calendarLinkOpensTheCalendar() {
+        assertEquals(LaunchLink.Calendar, LaunchLinks.parse("coplanly://calendar"))
+        // Exactly the host, as the other three are compared: another scheme or host is no link.
+        assertNull(LaunchLinks.parse("https://calendar"))
+        assertNull(LaunchLinks.parse("coplanly://calendars"))
+    }
+
+    @Test
     fun `a bare chat link opens the list`() {
         assertEquals(LaunchLink.Chat(familyId = null, conversationId = null), LaunchLinks.parse("coplanly://chat"))
     }

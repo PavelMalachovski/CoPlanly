@@ -4,6 +4,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestResult
 import kotlinx.coroutines.test.TestScope
@@ -13,6 +14,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -123,6 +125,76 @@ class ForegroundSyncRunnerTest {
         advanceUntilIdle()
 
         assertEquals(3, runs)
+    }
+
+    @Test
+    fun awaitedRequestJoinsTheRunningSync() = runnerTest { scope ->
+        val sync = SlowSync()
+        val runner = ForegroundSyncRunner(sync = sync::run, afterSync = {}, scope = scope)
+
+        runner.requestSyncNow()
+        advanceTimeBy(SYNC_MILLIS / 2)
+        var awaited = false
+        scope.launch {
+            runner.syncAndAwait()
+            awaited = true
+        }
+        // The first run ends: it started before the request, so the wait goes on.
+        advanceTimeBy(SYNC_MILLIS / 2 + 1)
+        runCurrent()
+        assertFalse(awaited, "returned after a run that started before it asked")
+        assertEquals(2, sync.runs, "the follow-up run has started")
+
+        advanceUntilIdle()
+        assertTrue(awaited)
+        assertEquals(2, sync.runs)
+        assertEquals(1, sync.mostAtOnce)
+    }
+
+    @Test
+    fun awaitedRequestWhileIdleReturnsAfterItsRun() = runnerTest { scope ->
+        val sync = SlowSync()
+        var importedFirst = false
+        val runner = ForegroundSyncRunner(
+            sync = sync::run,
+            afterSync = { importedFirst = true },
+            scope = scope
+        )
+        var awaited = false
+        scope.launch {
+            runner.syncAndAwait()
+            awaited = importedFirst
+        }
+
+        advanceUntilIdle()
+
+        assertTrue(awaited, "returned only once the run and its import had ended")
+        assertEquals(1, sync.runs)
+    }
+
+    @Test
+    fun completedRunsEmitsAfterEachRun() = runnerTest { scope ->
+        var runs = 0
+        val runner = ForegroundSyncRunner(
+            sync = {
+                runs++
+                if (runs == 2) throw IllegalStateException("offline")
+                Result.success(Unit)
+            },
+            afterSync = {},
+            scope = scope
+        )
+        val heard = mutableListOf<Int>()
+        scope.launch { runner.completedRuns.collect { heard += runs } }
+        runCurrent()
+
+        runner.requestSyncNow()
+        advanceUntilIdle()
+        runner.requestSyncNow()
+        advanceUntilIdle()
+
+        // One after each run, the throwing second one included, each once that run had ended.
+        assertEquals(listOf(1, 2), heard)
     }
 
     @Test

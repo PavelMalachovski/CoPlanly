@@ -2880,6 +2880,62 @@ the emulators and never registers.
   `functions/reminder-plan.js`. A push that never arrives with its queue document written is APNs:
   the key in the Firebase console, the capability, or `aps-environment` (§0).
 
+### 3.44 The Today widget and background refresh on an iPhone · 1P, an iPhone, a development build (Xcode on a Mac), the co-parent's phone for the last check
+
+MON-24 phase 4, part D. The rules are CLAUDE.md item 18's iPhone half and "Phase 4's part D". The
+model, the wording and the snapshot's shape are held on the JVM and the simulator
+(`TodayWidgetTextTest`, `WidgetSnapshotVectorsTest`, `WidgetSnapshotWriterTest`,
+`BackgroundRefreshTest`, `DailySchoolImportTest`); CI builds the extension. **What the widget draws
+on a home screen, WidgetKit's reload and timeline, and the system running a background refresh are
+checked only here.** **First:** the owner's steps: the App Groups capability with
+`group.app.coplanly` on the `app.coplanly.widget` App ID (as for the notification extension), and
+Background App Refresh on in iOS Settings → General.
+
+- [ ] **Both sizes.** Add the Today widget small and medium to the home screen. Small: whose day it
+      is and the day's lines; medium: two columns, the title, custody, contact windows and handover
+      on the left, today's events (each with a mark in its owner's colour) and the footer on the
+      right. Both are readable at the default text size and the medium one's two columns do not
+      clip a typical day. Tap each: the app opens on the Calendar, on today.
+- [ ] **Locked phone, refresh fires: nothing happens, nothing fails.** Lock the phone and let a
+      refresh fire (on a development build, pause in the debugger and run `e -l objc -- (void)
+      [[BGTaskScheduler sharedScheduler] _simulateLaunchForTaskWithIdentifier:@"app.coplanly.refresh"]`,
+      with the phone locked after being unlocked once; Xcode's Debug → Simulate Background Fetch
+      launches no `BGAppRefreshTask` and checks nothing here). The run ends at once, no sync
+      starts, no crash or error appears in the console, and the widget still shows what it last
+      drew.
+- [ ] **Locked phone, cold launch.** Lock the phone, kill the app, wait for a background refresh (or
+      reboot and leave it locked): no crash in the device log (Xcode → Devices and Simulators →
+      View Device Logs, no CoPlanly report and no "CoPlanly uncaught exception" line). Unlock and
+      open the app: the session starts (the sync runs, the chat follows) and the widget updates.
+- [ ] **Signed out.** Sign out in the app: the widget shows "Sign in to CoPlanly to see your day."
+      (the app's own sentence, in the app's language) and nothing of the account (no name, no
+      event). Sign in again as the same account: the widget shows that account's day. Then as
+      another account: the widget shows the signed-out line until that account's first sync, then
+      only that account's day.
+- [ ] **Language.** Change the app's language (iOS Settings → CoPlanly → Language, or the phone's
+      first language, Czech then German): open the app once and the widget's lines, its custody
+      sentence, times and the gallery's name read in the new language.
+- [ ] **A night passes.** Leave the phone overnight without opening the app: in the morning the
+      widget shows the new day (its title, its events), not yesterday's; after seven days without
+      the app it shows the "open the app" line.
+- [ ] **A refresh brings a co-parent's new event.** B adds an event for today on the Android phone;
+      leave the iPhone unlocked on the home screen (app in the background) and simulate a refresh
+      as above (a development build; a real one comes when iOS decides): the event appears on the
+      widget without opening the app. A private event of B's never appears.
+- [ ] **The daily school import.** With a school connected, open the app twice on one day: the
+      import ran after the first launch's sync and not after the second (the "last imported" time
+      is unchanged); the next day it runs again. Offline, it does not run and the day stays free.
+- [ ] **Background App Refresh off.** Turn it off in iOS Settings: the app still syncs and writes
+      the widget when opened; nothing breaks.
+- **If it fails:** the snapshot in `ios/WidgetSnapshotWriter.kt`, `IosWidgetSources.kt` and
+  `presentation/widget/WidgetSnapshotBuilder.kt`; the drawing in
+  `iosApp/CoPlanlyWidget/TodayWidget.swift` and `TodayWidgetViews.swift`; the reload in
+  `WidgetReloadBridge.swift`; the refresh in `ios/BackgroundRefresh.kt`, `ios/IosApp.kt` and
+  `BackgroundRefreshBridge.swift`; the school import in `data/school/DailySchoolImport.kt`. A widget
+  that shows the signed-out line while signed in: the App Group capability on the widget's App ID,
+  or the account check that has not run yet. One that never updates: the App Group, or WidgetKit's
+  own reload budget.
+
 ---
 
 ## After the session

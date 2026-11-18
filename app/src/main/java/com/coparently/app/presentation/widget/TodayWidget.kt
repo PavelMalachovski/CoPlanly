@@ -32,9 +32,11 @@ import com.coparently.app.presentation.MainActivity
 import com.coparently.app.presentation.common.STACK_CONTROLS_FONT_SCALE
 import com.coparently.app.presentation.theme.DarkColorScheme
 import com.coparently.app.presentation.theme.LightColorScheme
+import com.coparently.app.pushwording.AndroidWordingStrings
 import com.coparently.app.utils.AppLocale
 import com.coparently.app.utils.inAppLanguage
 import kotlinx.coroutines.flow.first
+import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
@@ -100,11 +102,11 @@ class TodayWidget : GlanceAppWidget() {
             val today = LocalDate.now()
             val userId = source.userRepository().getCurrentUserId()?.takeIf { it.isNotBlank() }
             val model = if (userId == null) {
-                TodayWidgetModel.signedOut(today)
+                TodayWidgetModel.signedOut(today.toKotlinLocalDate())
             } else {
                 val (custody, swaps) = source.custodyModelRepository().storedCustody()
                 TodayWidgetModel.of(
-                    today = today,
+                    today = today.toKotlinLocalDate(),
                     userId = userId,
                     events = source.eventRepository()
                         .getEventsByDateRange(
@@ -117,7 +119,12 @@ class TodayWidget : GlanceAppWidget() {
                 )
             }
             val parents = userId?.let { source.widgetNames().recall(it) }
-            return TodayWidgetText.contentState(context, model, parents)
+            return TodayWidgetText.contentState(
+                strings = AndroidWordingStrings(context),
+                clock = AndroidWidgetClock(context),
+                model = model,
+                parents = parents
+            )
         }
 
         /** Redraws every placed Today widget. Does nothing when none is placed. */

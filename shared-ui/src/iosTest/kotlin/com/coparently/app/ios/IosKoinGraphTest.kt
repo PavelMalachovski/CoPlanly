@@ -47,6 +47,7 @@ import com.coparently.app.data.remote.google.GoogleCalendarApi
 import com.coparently.app.data.remote.google.GoogleCalendarConnectionSource
 import com.coparently.app.data.remote.google.IosGoogleCalendarAccount
 import com.coparently.app.data.repository.PairingWording
+import com.coparently.app.data.school.DailySchoolImport
 import com.coparently.app.data.school.SchoolImportScheduler
 import com.coparently.app.data.school.SchoolImportWordings
 import com.coparently.app.data.school.bakalari.BakalariClient
@@ -56,6 +57,7 @@ import com.coparently.app.data.session.AccountDeletion
 import com.coparently.app.data.session.AccountTraces
 import com.coparently.app.data.session.IosAccountTraces
 import com.coparently.app.data.session.LastSignedInUid
+import com.coparently.app.data.session.SessionEndingHook
 import com.coparently.app.data.session.SessionProfileSynchronizer
 import com.coparently.app.data.session.SignInProviderSession
 import com.coparently.app.data.support.SupportReminderScheduler
@@ -151,9 +153,9 @@ class IosKoinGraphTest {
             InviteQrCodes::class, AuthErrors::class, PairingWording::class, SchoolImportWordings::class,
             // what IosApp.startSession starts, and what its sync runs
             ChatMirror::class, SessionProfileSynchronizer::class, SyncService::class,
-            GoogleCalendarAutoImport::class, PairingRepository::class,
+            GoogleCalendarAutoImport::class, DailySchoolImport::class, PairingRepository::class,
             // iosAppModule
-            SignInProviderSession::class, IosPushToken::class,
+            SignInProviderSession::class, IosPushToken::class, SessionEndingHook::class,
         )
 
         /** Google's sheet as a phone without a `GoogleService-Info.plist` has it: unavailable. */

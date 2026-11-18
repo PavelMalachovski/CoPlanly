@@ -1,6 +1,5 @@
 package com.coparently.app.di.koin
 
-import com.coparently.app.data.school.SchoolImportScheduler
 import com.coparently.app.domain.notification.RequestClockScheduler
 
 /*
@@ -23,7 +22,8 @@ import com.coparently.app.domain.notification.RequestClockScheduler
  * for `IosGoogleCalendarAccount`; in phase 4 part C's Task 5 `NoPush`, for `IosPushRegistration`
  * (the token's registration and its unregistration replaced together, CLAUDE.md item 23); in its
  * Task 7 `NoEventReminders` and `NoSupportReminderJob`, for the local notifications of
- * `IosEventReminders` and `IosSupportReminders`.
+ * `IosEventReminders` and `IosSupportReminders`; in part D's Task 6 `NoSchoolImportJob`, for
+ * `IosSchoolImportJob` (the daily import rides the syncs, `DailySchoolImport`).
  */
 
 /**
@@ -32,10 +32,4 @@ import com.coparently.app.domain.notification.RequestClockScheduler
  */
 internal object NoRequestClockJobs : RequestClockScheduler {
     override fun cancelAll() = Unit
-}
-
-/** No background jobs yet: the school import's daily run is not scheduled. */
-internal object NoSchoolImportJob : SchoolImportScheduler {
-    override fun schedule() = Unit
-    override fun cancel() = Unit
 }
