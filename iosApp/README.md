@@ -15,6 +15,7 @@ and the data layer are the Kotlin Multiplatform modules', compiled into one stat
 | `CoPlanly/CoPlanly.entitlements` | Sign in with Apple (`com.apple.developer.applesignin`), pushes (`aps-environment`) and the App Group `group.app.coplanly`. |
 | `CoPlanly/Assets.xcassets` | The icon (made from the Android launcher icon by `tools/generate-ios-icon.py`; never edit the PNG by hand) and the indigo accent colour. |
 | `CoPlanlyNotifications/` | The Notification Service Extension (`app.coplanly.notifications`, embedded in the app): words each push with the `PushWording` framework `:push-wording` builds; see "Pushes" below. |
+| `CoPlanlyWidget/` | The Today widget (`app.coplanly.widget`, embedded in the app; SwiftUI and WidgetKit, small and medium): draws the day the app's snapshot in the App Group holds; see "The Today widget" below. |
 | `CoPlanlyUITests/` | The XCUITest walk of the native shell (`ShellUITests.testShellWalk`), the tour of every screen (`testTour`) and the pushes (`PushUITests`), run in CI on the emulators. |
 | `scripts/simulator.sh` | CI's simulator steps (the `ios-app` job): pick, launch, the shell's walk with the push test, and the tour. |
 
@@ -190,6 +191,24 @@ prefixes are added). Once per push it logs its memory (`COPLANLY_NSE_MEMORY`); C
 4. **Apply for `com.apple.developer.usernotifications.filtering`**, so the extension can suppress a
    push for another account or of a type it cannot word instead of leaving the neutral fallback
    (design §2 decision 4).
+
+## The Today widget
+
+The widget extension (`CoPlanlyWidget/`, iPhone phase 4 part D, Task 5) is the Calendar's today card
+on the home screen, as Android's Glance widget is, in the small and medium sizes. It computes and
+words nothing: the app writes seven days of finished lines and colours to
+`<App Group container>/widget/today.json` (`WidgetSnapshotWriter.kt`, the shape of
+`WidgetSnapshot.kt`), through a `.part` file and a rename, and asks WidgetKit to reload. The
+extension's timeline has one entry per day at its local midnight (today's at once), then, from the
+day after the last, the snapshot's own "open the app" line; a phone with no snapshot, or one it
+cannot read (a `version` other than 1), shows its one sentence of its own, in English: "Sign in to
+CoPlanly to see today." The small size draws the snapshot's `compact` lines (`compactLarge` at the
+accessibility text sizes), the medium size its `tall` lines with the events, each with a 3 pt mark
+in its owner's colour. A parent's colour is the snapshot's light or dark hex by the widget's colour
+scheme; other text is the system's primary or secondary colour. A tap opens `coplanly://calendar`,
+the Calendar tab on today. It links no Kotlin framework and no package, and holds only the App
+Group entitlement: the owner adds the App Groups capability and `group.app.coplanly` to the
+`app.coplanly.widget` App ID too (as for the notification extension, "Pushes" step 1).
 
 ## In CI
 

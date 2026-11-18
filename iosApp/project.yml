@@ -67,6 +67,9 @@ targets:
       # The Notification Service Extension (iPhone phase 4 part C, Task 6), embedded in PlugIns.
       - target: CoPlanlyNotifications
         embed: true
+      # The Today widget (iPhone phase 4 part D, Task 5), embedded in PlugIns.
+      - target: CoPlanlyWidget
+        embed: true
     preBuildScripts:
       # Builds `Shared` for the configuration and simulator or device Xcode is building, into
       # shared-ui/build/xcode-frameworks/<configuration>/<sdk>, which FRAMEWORK_SEARCH_PATHS names.
@@ -261,6 +264,39 @@ targets:
           - "$(inherited)"
           - "-framework"
           - "PushWording"
+      configs:
+        Debug:
+          ONLY_ACTIVE_ARCH: YES
+
+  # The Today widget (iPhone phase 4 part D, Task 5; design §7.3): SwiftUI and WidgetKit, small and
+  # medium on the home screen. It reads the snapshot the app writes into the App Group
+  # (`<group container>/widget/today.json`, WidgetSnapshotWriter.kt) and draws its lines; it links no
+  # Kotlin framework and no package, and has no strings of its own but the English line for a phone
+  # with no snapshot yet (CoPlanlyWidget/TodayWidget.swift).
+  CoPlanlyWidget:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: CoPlanlyWidget
+        excludes:
+          - Info.plist
+          - CoPlanlyWidget.entitlements
+    settings:
+      base:
+        PRODUCT_NAME: CoPlanlyWidget
+        # The app's id and `.widget`, as iOS requires of an embedded extension.
+        PRODUCT_BUNDLE_IDENTIFIER: app.coplanly.widget
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        INFOPLIST_FILE: CoPlanlyWidget/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        # The App Group alone: the snapshot the app writes there.
+        CODE_SIGN_ENTITLEMENTS: CoPlanlyWidget/CoPlanlyWidget.entitlements
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_VERSION: "5.0"
+        SKIP_INSTALL: YES
+        EXCLUDED_ARCHS[sdk=iphonesimulator*]: x86_64
       configs:
         Debug:
           ONLY_ACTIVE_ARCH: YES
