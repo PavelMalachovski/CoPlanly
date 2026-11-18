@@ -201,10 +201,13 @@ words nothing: the app writes seven days of finished lines and colours to
 `WidgetSnapshot.kt`), through a `.part` file and a rename, and asks WidgetKit to reload. The
 extension's timeline has one entry per day at its local midnight (today's at once), then, from the
 day after the last, the snapshot's own "open the app" line; a phone with no snapshot, or one it
-cannot read (a `version` other than 1), shows its one sentence of its own, in English: "Sign in to
-CoPlanly to see today." The small size draws the snapshot's `compact` lines (`compactLarge` at the
-accessibility text sizes), the medium size its `tall` lines with the events, each with a 3 pt mark
-in its owner's colour. A parent's colour is the snapshot's light or dark hex by the widget's colour
+cannot read (a `version` other than 1), shows its own line, "Sign in to CoPlanly to see today."
+Its only strings — that line and the gallery's name and description — are
+`CoPlanlyWidget/<lang>.lproj/Localizable.strings` in the five languages, read in the system's
+language. The small size draws the snapshot's `compact` lines in one column (`compactLarge` at the
+accessibility text sizes); the medium size draws its `tall` lines in two: the title, custody,
+windows and handover on the left, the events (each with a 3 pt mark in its owner's colour) and the
+footer on the right. A parent's colour is the snapshot's light or dark hex by the widget's colour
 scheme; other text is the system's primary or secondary colour. A tap opens `coplanly://calendar`,
 the Calendar tab on today. It links no Kotlin framework and no package, and holds only the App
 Group entitlement: the owner adds the App Groups capability and `group.app.coplanly` to the

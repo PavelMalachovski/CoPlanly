@@ -7,8 +7,9 @@ import WidgetKit
 ///
 /// The extension words and computes nothing. The app writes seven days of finished lines and
 /// colours to `<App Group container>/widget/today.json` (`WidgetSnapshotWriter.kt`, the shape of
-/// `WidgetSnapshot.kt`), and this only picks the day it is and draws it. Its one sentence of its
-/// own is the English line for a phone where the app has never written a snapshot.
+/// `WidgetSnapshot.kt`), and this only picks the day it is and draws it. Its own strings — the
+/// gallery's name and description and the line for a phone where the app has never written a
+/// snapshot — are its `Localizable.strings`, in the five languages.
 @main
 struct TodayWidget: Widget {
     /// The widget's kind; `WidgetCenter.reloadAllTimelines()` in the app reaches it.
@@ -18,8 +19,8 @@ struct TodayWidget: Widget {
         StaticConfiguration(kind: kind, provider: TodayProvider()) { entry in
             TodayWidgetView(entry: entry)
         }
-        .configurationDisplayName("Today")
-        .description("Whose day it is, the next handover and today's events.")
+        .configurationDisplayName(Text("widget_display_name"))
+        .description(Text("widget_description"))
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }
@@ -113,8 +114,11 @@ struct TodayProvider: TimelineProvider {
 /// The timeline's rule: one entry per day at that day's local midnight (today's at now), then the
 /// stale line from the day after the last; a missing or unreadable snapshot is one signed-out entry.
 enum TodayTimeline {
-    /// The extension's only own text: no snapshot has been written on this phone yet.
-    static let signedOutLine = "Sign in to CoPlanly to see today."
+    /// The extension's own line for a phone with no snapshot yet, from its `Localizable.strings`
+    /// (en, cs, de, ru, uk) in the system's language.
+    static var signedOutLine: String {
+        NSLocalizedString("widget_signed_out", comment: "No widget snapshot on this phone yet")
+    }
 
     /// The entries for [snapshot] at [now], days placed in [calendar]'s time zone.
     static func entries(snapshot: WidgetSnapshot?, now: Date, calendar: Calendar) -> [TodayEntry] {

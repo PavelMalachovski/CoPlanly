@@ -40,51 +40,85 @@ struct TodayWidgetView: View {
     }
 }
 
-/// One day's lines: the title, whose day it is, the contact windows, the handover, the events
-/// (medium only) and the footer, top to bottom, each line limited so the widget never overflows
-/// sideways.
+/// One day's lines. Small: one column — the title, whose day it is, the contact windows, the
+/// handover and the footer. Medium: two columns, top-aligned — those lines on the left (the footer
+/// apart), the event rows and the footer on the right — because `tall` holds up to four events,
+/// which one column of a medium widget cannot fit under the rest. Every line is limited, so a column
+/// never runs past the widget.
 private struct TodayDayView: View {
     let lines: WidgetDayLines
     let showsEvents: Bool
 
+    var body: some View {
+        if showsEvents {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    TodaySummaryLines(lines: lines)
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                VStack(alignment: .leading, spacing: 3) {
+                    ForEach(Array(lines.events.enumerated()), id: \.offset) { _, event in
+                        TodayEventRow(event: event)
+                    }
+                    TodayFooter(text: lines.footer)
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 2) {
+                TodaySummaryLines(lines: lines)
+                TodayFooter(text: lines.footer)
+                Spacer(minLength: 0)
+            }
+        }
+    }
+}
+
+/// The title, whose day it is, the contact windows and the handover.
+private struct TodaySummaryLines: View {
+    let lines: WidgetDayLines
+
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(lines.title)
-                .font(.headline)
-                .foregroundStyle(Color.primary)
+        Text(lines.title)
+            .font(.headline)
+            .foregroundStyle(Color.primary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+        if let custody = lines.custody {
+            Text(custody.text)
+                .font(.subheadline)
+                .foregroundStyle(TodayColours.colour(custody.colour, in: colorScheme, else: .primary))
+                .lineLimit(2)
+        }
+        ForEach(Array(lines.windows.enumerated()), id: \.offset) { _, window in
+            Text(window.text)
+                .font(.caption)
+                .foregroundStyle(TodayColours.colour(window.colour, in: colorScheme, else: .secondary))
                 .lineLimit(1)
-            if let custody = lines.custody {
-                Text(custody.text)
-                    .font(.subheadline)
-                    .foregroundStyle(TodayColours.colour(custody.colour, in: colorScheme, else: .primary))
-                    .lineLimit(2)
-            }
-            ForEach(Array(lines.windows.enumerated()), id: \.offset) { _, window in
-                Text(window.text)
-                    .font(.caption)
-                    .foregroundStyle(TodayColours.colour(window.colour, in: colorScheme, else: .secondary))
-                    .lineLimit(1)
-            }
-            if let handover = lines.handover {
-                Text(handover.text)
-                    .font(.caption)
-                    .foregroundStyle(TodayColours.colour(handover.colour, in: colorScheme, else: .secondary))
-                    .lineLimit(2)
-            }
-            if showsEvents {
-                ForEach(Array(lines.events.enumerated()), id: \.offset) { _, event in
-                    TodayEventRow(event: event)
-                }
-            }
-            if let footer = lines.footer {
-                Text(footer)
-                    .font(.caption)
-                    .foregroundStyle(Color.secondary)
-                    .lineLimit(2)
-            }
-            Spacer(minLength: 0)
+        }
+        if let handover = lines.handover {
+            Text(handover.text)
+                .font(.caption)
+                .foregroundStyle(TodayColours.colour(handover.colour, in: colorScheme, else: .secondary))
+                .lineLimit(2)
+        }
+    }
+}
+
+/// What is not drawn, said in words ("+1 more"), when the snapshot has a footer.
+private struct TodayFooter: View {
+    let text: String?
+
+    var body: some View {
+        if let text {
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(Color.secondary)
+                .lineLimit(2)
         }
     }
 }

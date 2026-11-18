@@ -1,0 +1,10 @@
+/* The Today widget's own strings (iPhone phase 4 part D). Every other line it draws is worded by the app. */
+
+/* The widget's name in the widget gallery. */
+"widget_display_name" = "Dnes";
+
+/* The widget's description in the widget gallery. */
+"widget_description" = "Čí je dnes den, příští předání a dnešní události.";
+
+/* Drawn when the app has never written a snapshot on this phone, or it cannot be read. */
+"widget_signed_out" = "Přihlaste se do CoPlanly a uvidíte dnešek.";
