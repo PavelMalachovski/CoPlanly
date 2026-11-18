@@ -153,4 +153,5 @@ parent_label_you
 widget_today_events_count
 widget_today_more
 widget_today_signed_out
+widget_today_stale
 widget_today_title

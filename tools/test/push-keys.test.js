@@ -19,12 +19,13 @@ const ROOT = path.join(__dirname, '..', '..');
 const KEYS_FILE = path.join(ROOT, 'push-wording', 'push-keys.txt');
 const WORDING_DIR = path.join(ROOT, 'push-wording', 'src', 'commonMain', 'kotlin', 'com', 'coparently', 'app', 'pushwording');
 const WIDGET_DIR = path.join(ROOT, 'shared-ui', 'src', 'commonMain', 'kotlin', 'com', 'coparently', 'app', 'presentation', 'widget');
-/** The files that read keys by name: the three wordings, and the Today widget's (iPhone phase 4 part D). */
+/** The files that read keys by name: the three wordings, and the Today widget's two (iPhone phase 4 part D). */
 const WORDING_FILES = [
   path.join(WORDING_DIR, 'PushWording.kt'),
   path.join(WORDING_DIR, 'CardWording.kt'),
   path.join(WORDING_DIR, 'ReminderWording.kt'),
   path.join(WIDGET_DIR, 'TodayWidgetText.kt'),
+  path.join(WIDGET_DIR, 'WidgetSnapshotBuilder.kt'),
 ];
 const VALUES_DIR = path.join(ROOT, 'shared-ui', 'src', 'commonMain', 'composeResources', 'values');
 const KEEP_FILE = path.join(ROOT, 'app', 'src', 'main', 'res', 'raw', 'card_push_keep.xml');

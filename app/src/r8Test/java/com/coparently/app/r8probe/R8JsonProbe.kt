@@ -19,6 +19,7 @@ import com.coparently.app.data.versions.EventVersionDocument
 import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.serialization.StoredJson
 import com.coparently.app.presentation.event.EventDraft
+import com.coparently.app.presentation.widget.WidgetSnapshot
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.auth.FirebaseAuth
@@ -77,7 +78,8 @@ internal class R8JsonProbe(private val context: Context) {
                 database.close()
             }
         }
-        return setup + cases + dayOverrideCases() + eventDraftCases() + libraryTypeCases() + HttpImportProbe.run() +
+        return setup + cases + dayOverrideCases() + eventDraftCases() + widgetSnapshotCases() +
+            libraryTypeCases() + HttpImportProbe.run() +
             FirestoreWriteProbe.run()
     }
 
@@ -194,6 +196,30 @@ internal class R8JsonProbe(private val context: Context) {
     }
 
     /**
+     * The iPhone widget's snapshot (iPhone phase 4 part D), written as the iPhone's writer writes it.
+     * Android never stores one; the probe holds its six generated serializers whole all the same,
+     * because every stored model is probed.
+     */
+    private fun widgetSnapshotCases(): List<ProbeCase> {
+        val via = "StoredJson with WidgetSnapshot.serializer(), as the iPhone writes the widget's snapshot"
+        return guarded(WIDGET_TYPES, via) {
+            val snapshot = ProbeFixtures.widgetSnapshot
+            val json = StoredJson.encode(WidgetSnapshot.serializer(), snapshot)
+            val equal = StoredJson.decodeOrNull(WidgetSnapshot.serializer(), json) == snapshot
+            val day = JSONObject(json).getJSONArray("days").getJSONObject(0)
+            val lines = day.getJSONObject("tall")
+            val line = lines.getJSONObject("custody")
+            val event = lines.getJSONArray("events").getJSONObject(0)
+            keys(WIDGET_SNAPSHOT, json, WIDGET_SNAPSHOT_KEYS, equal)
+            keys(WIDGET_DAY, day.toString(), WIDGET_DAY_KEYS, equal)
+            keys(WIDGET_DAY_LINES, lines.toString(), WIDGET_DAY_LINES_KEYS, equal)
+            keys(WIDGET_SNAPSHOT_LINE, line.toString(), setOf("text", "colour"), equal)
+            keys(WIDGET_SNAPSHOT_EVENT, event.toString(), setOf("time", "title", "mark"), equal)
+            keys(WIDGET_COLOUR, line.getJSONObject("colour").toString(), setOf("light", "dark"), equal)
+        }
+    }
+
+    /**
      * The serializers over library types — lists and maps of texts and numbers, and the untyped
      * values `StoredJson.encodeValue` writes — in the files that were Gson's `TypeToken`s. Nothing
      * here can be renamed; what is checked is that the minified mappers still write and read them.
@@ -242,6 +268,12 @@ internal class R8JsonProbe(private val context: Context) {
         const val DAY_OVERRIDE = "com.coparently.app.domain.custody.DayOverride"
         const val DAY_OVERRIDE_STATUS = "com.coparently.app.domain.custody.DayOverrideStatus"
         const val EVENT_DRAFT = "com.coparently.app.presentation.event.EventDraft"
+        const val WIDGET_SNAPSHOT = "com.coparently.app.presentation.widget.WidgetSnapshot"
+        const val WIDGET_DAY = "com.coparently.app.presentation.widget.WidgetDay"
+        const val WIDGET_DAY_LINES = "com.coparently.app.presentation.widget.WidgetDayLines"
+        const val WIDGET_SNAPSHOT_LINE = "com.coparently.app.presentation.widget.WidgetSnapshotLine"
+        const val WIDGET_SNAPSHOT_EVENT = "com.coparently.app.presentation.widget.WidgetSnapshotEvent"
+        const val WIDGET_COLOUR = "com.coparently.app.presentation.widget.WidgetColour"
 
         // Whole records and library-type tokens: checked, not discovered.
         const val CHILD_INFO = "com.coparently.app.domain.model.ChildInfo"
@@ -259,6 +291,15 @@ internal class R8JsonProbe(private val context: Context) {
             BLOOD_TYPE,
             VACCINATION,
             CHILD_INFO
+        )
+
+        private val WIDGET_TYPES = listOf(
+            WIDGET_SNAPSHOT,
+            WIDGET_DAY,
+            WIDGET_DAY_LINES,
+            WIDGET_SNAPSHOT_LINE,
+            WIDGET_SNAPSHOT_EVENT,
+            WIDGET_COLOUR
         )
 
         private val MEDICATION_KEYS = setOf("name", "dosage", "frequency", "notes")
@@ -288,5 +329,9 @@ internal class R8JsonProbe(private val context: Context) {
             "endDaySpan",
             "allDay"
         )
+        private val WIDGET_SNAPSHOT_KEYS =
+            setOf("days", "language", "signedIn", "staleLine", "version", "writtenAtMillis")
+        private val WIDGET_DAY_KEYS = setOf("date", "compact", "compactLarge", "tall")
+        private val WIDGET_DAY_LINES_KEYS = setOf("title", "custody", "windows", "handover", "events", "footer")
     }
 }

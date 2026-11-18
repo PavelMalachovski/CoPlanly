@@ -19,6 +19,12 @@ import com.coparently.app.domain.school.SchoolImportRecord
 import com.coparently.app.domain.school.SchoolStudent
 import com.coparently.app.domain.serialization.StoredJson
 import com.coparently.app.presentation.event.EventDraft
+import com.coparently.app.presentation.widget.WidgetColour
+import com.coparently.app.presentation.widget.WidgetDay
+import com.coparently.app.presentation.widget.WidgetDayLines
+import com.coparently.app.presentation.widget.WidgetSnapshot
+import com.coparently.app.presentation.widget.WidgetSnapshotEvent
+import com.coparently.app.presentation.widget.WidgetSnapshotLine
 import com.coparently.app.wire.WireFixtures
 import com.coparently.app.wire.WireTimestamp
 import com.google.gson.Gson
@@ -104,6 +110,43 @@ class GsonParityTest {
         val expected = lenient.fromJson(older, EventDraft::class.java)
         assertEquals(expected, StoredJson.decodeOrNull(EventDraft.serializer(), older))
         assertEquals(0, expected.endDaySpan)
+    }
+
+    /**
+     * The iPhone widget's snapshot (iPhone phase 4 part D) never went through Gson, but every stored
+     * model is held to the shape Gson would write, so its text is the one the other models share:
+     * nulls left out, HTML escaped, a class's keys sorted by name.
+     */
+    @Test
+    fun aWidgetSnapshotWritesAsGsonWouldHave() {
+        val random = Random(SEED)
+        repeat(CASES / 10) {
+            val snapshot = widgetSnapshot(random)
+            val onPhones = ArtFieldOrder.of(plain.toJson(snapshot), snapshot)
+            assertEquals(onPhones, StoredJson.encode(WidgetSnapshot.serializer(), snapshot))
+            assertEquals(snapshot, StoredJson.decodeOrNull(WidgetSnapshot.serializer(), onPhones))
+        }
+    }
+
+    private fun widgetSnapshot(random: Random): WidgetSnapshot {
+        fun colour() = if (random.nextBoolean()) null else WidgetColour(text(random), text(random))
+        fun line() = WidgetSnapshotLine(text(random), colour())
+        fun lines() = WidgetDayLines(
+            title = text(random),
+            custody = if (random.nextBoolean()) null else line(),
+            windows = List(random.nextInt(0, 3)) { line() },
+            handover = if (random.nextBoolean()) null else line(),
+            events = List(random.nextInt(0, 3)) { WidgetSnapshotEvent(text(random), text(random), colour()) },
+            footer = if (random.nextBoolean()) null else text(random)
+        )
+        return WidgetSnapshot(
+            version = random.nextInt(1, 3),
+            writtenAtMillis = random.nextLong(),
+            language = text(random),
+            signedIn = random.nextBoolean(),
+            days = List(random.nextInt(0, 8)) { WidgetDay(text(random), lines(), lines(), lines()) },
+            staleLine = text(random)
+        )
     }
 
     @Test

@@ -8,6 +8,9 @@
     <!-- %1$s = today's date, formatted for the reader's locale -->
     <string name="widget_today_title">Today · %1$s</string>
     <string name="widget_today_signed_out">Sign in to CoPlanly to see your day.</string>
+    <!-- The iPhone widget's last line once its seven days have run out: the app has not
+         been opened, or has not run in the background, for a week. -->
+    <string name="widget_today_stale">Open CoPlanly to update</string>
     <!-- Events that did not fit on the widget. %1$d = how many. -->
     <plurals name="widget_today_more">
         <item quantity="one">+%1$d more</item>

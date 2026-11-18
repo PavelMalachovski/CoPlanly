@@ -15,6 +15,12 @@ import com.coparently.app.domain.model.PetSpecies
 import com.coparently.app.domain.model.SchoolInfo
 import com.coparently.app.domain.model.Vaccination
 import com.coparently.app.presentation.event.EventDraft
+import com.coparently.app.presentation.widget.WidgetColour
+import com.coparently.app.presentation.widget.WidgetDay
+import com.coparently.app.presentation.widget.WidgetDayLines
+import com.coparently.app.presentation.widget.WidgetSnapshot
+import com.coparently.app.presentation.widget.WidgetSnapshotEvent
+import com.coparently.app.presentation.widget.WidgetSnapshotLine
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 
@@ -123,6 +129,25 @@ internal object ProbeFixtures {
         endDaySpan = 2,
         allDay = true
     )
+
+    /** Every field set — a colour on the line and the mark, a handover and a footer — so every key is written. */
+    val widgetSnapshot: WidgetSnapshot = run {
+        val lines = WidgetDayLines(
+            title = "Today - Tue, 12 May",
+            custody = WidgetSnapshotLine("Today with you", WidgetColour(light = "#A0124F", dark = "#FF99BB")),
+            windows = listOf(WidgetSnapshotLine("15:00-19:00 with Bob", WidgetColour("#1550C0", "#9EC2FF"))),
+            handover = WidgetSnapshotLine("Handover to Bob in 5 days", WidgetColour("#1550C0", "#9EC2FF")),
+            events = listOf(WidgetSnapshotEvent("14:30-15:15", "Dentist", WidgetColour("#E91E63", "#FF4081"))),
+            footer = "+1 more"
+        )
+        WidgetSnapshot(
+            writtenAtMillis = 1_778_580_000_000L,
+            language = "en",
+            signedIn = true,
+            days = listOf(WidgetDay(date = "2026-05-12", compact = lines, compactLarge = lines, tall = lines)),
+            staleLine = "Open CoPlanly to update"
+        )
+    }
 
     val conversation = Conversation(
         id = "uid-a_uid-b",
