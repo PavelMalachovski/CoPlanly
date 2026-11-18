@@ -9,8 +9,8 @@ import kotlin.test.assertFalse
 /**
  * The iPhone's dictation (phase 4 part E1) over a fake recognizer: no microphone without an
  * on-device model, a language the phone cannot recognize refused before anything starts, the text
- * handed on as partial then final, one session at a time, and the session ended by the background
- * (CLAUDE.md item 28).
+ * handed on as partial then final, a new start replacing the running session, and the session
+ * ended by the background (CLAUDE.md item 28).
  */
 class IosSpeechDictationTest {
 
@@ -48,16 +48,37 @@ class IosSpeechDictationTest {
     }
 
     @Test
-    fun aSecondStartIsBusy() {
+    fun aSecondStartReplacesTheFirst() {
         val second = RecordingListener()
         dictation.start("cs", listener)
 
         dictation.start("cs", second)
 
-        assertEquals(listOf("failure:BUSY"), second.events)
-        assertEquals(1, source.begun)
-        source.onText("still here", false)
-        assertEquals(listOf("partial:still here"), listener.events)
+        assertEquals(2, source.begun)
+        assertEquals(1, source.sessions[0].aborted)
+        assertEquals(0, source.sessions[1].aborted)
+        source.onText("Ahoj", false)
+        assertEquals(listOf("partial:Ahoj"), second.events)
+        assertEquals(emptyList(), listener.events)
+    }
+
+    @Test
+    fun aLateCallbackFromAReplacedSessionIsIgnored() {
+        val second = RecordingListener()
+        dictation.start("cs", listener)
+        val firstText = source.onText
+        val firstFailure = source.onFailure
+        dictation.stop()
+
+        dictation.start("cs", second)
+        firstText("late", true)
+        firstFailure(DictationFailure.OTHER)
+
+        assertEquals(1, source.sessions[0].finished)
+        assertEquals(emptyList(), listener.events)
+        assertEquals(emptyList(), second.events)
+        source.onText("Ahoj", true)
+        assertEquals(listOf("final:Ahoj"), second.events)
     }
 
     @Test
@@ -72,6 +93,16 @@ class IosSpeechDictationTest {
         assertEquals(1, source.session.aborted)
         assertEquals(0, source.session.finished)
         assertEquals(listOf("partial:Ahoj", "final:Ahoj"), listener.events)
+    }
+
+    @Test
+    fun backgroundWithNothingHeardEndsSilently() {
+        dictation.start("cs", listener)
+
+        dictation.onBackground()
+
+        assertEquals(1, source.session.aborted)
+        assertEquals(emptyList(), listener.events)
     }
 
     @Test
@@ -93,8 +124,10 @@ class IosSpeechDictationTest {
         val asked = mutableListOf<String>()
         var begun = 0
         var lastTag: String? = null
-        val session = FakeSession()
+        val sessions = mutableListOf<FakeSession>()
+        val session: FakeSession get() = sessions.last()
         var onText: (String, Boolean) -> Unit = { _, _ -> }
+        var onFailure: (DictationFailure) -> Unit = {}
 
         override fun supportsOnDevice(languageTag: String): Boolean {
             asked += languageTag
@@ -109,7 +142,8 @@ class IosSpeechDictationTest {
             begun++
             lastTag = languageTag
             this.onText = onText
-            return session
+            this.onFailure = onFailure
+            return FakeSession().also { sessions += it }
         }
     }
 

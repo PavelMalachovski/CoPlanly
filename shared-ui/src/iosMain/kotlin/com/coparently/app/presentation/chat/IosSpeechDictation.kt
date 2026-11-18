@@ -66,11 +66,11 @@ private const val FALLBACK_LANGUAGE = "en"
  * (CLAUDE.md item 28). Where [source] has no on-device recognizer for the language, [isAvailable] is
  * false and the composer draws no microphone; there is no fallback to Apple's server recognition.
  *
- * One session at a time: a second [start] while one runs is answered [DictationFailure.BUSY] and the
- * running one goes on. Callbacks of a session that is no longer current are dropped. The session ends
- * when the app goes to the background ([onBackground], registered for
- * `UIApplicationDidEnterBackgroundNotification` at construction): the recognition is abandoned and
- * the listener told the words heard so far, so the composer never waits on a microphone that stopped.
+ * One session at a time: a [start] while one runs abandons it silently and starts anew, as the
+ * domain contract says and Android does (a session [stop] asked to finish, whose recognizer never
+ * answers, is replaced the same way). Callbacks of a session that is no longer current are dropped.
+ * The session also ends when the app goes to the background ([onBackground], registered for
+ * `UIApplicationDidEnterBackgroundNotification` at construction).
  *
  * @param languageTag The tag a [start] without one dictates in, and the one [isAvailable] asks about
  */
@@ -94,10 +94,7 @@ internal class IosSpeechDictation(
     override fun isAvailable(): Boolean = source.supportsOnDevice(languageTag())
 
     override fun start(languageTag: String?, listener: DictationListener) {
-        if (current != null) {
-            listener.onFailure(DictationFailure.BUSY)
-            return
-        }
+        cancel()
         val tag = languageTag?.takeIf { it.isNotBlank() } ?: languageTag()
         if (!source.supportsOnDevice(tag)) {
             listener.onFailure(DictationFailure.LANGUAGE_UNAVAILABLE)
@@ -130,15 +127,19 @@ internal class IosSpeechDictation(
     }
 
     /**
-     * The app went to the background: the microphone is released at once, and the listener gets
-     * the words heard so far as the final text (CLAUDE.md item 28: the session ends when the app
-     * stops). Nothing happens without a session.
+     * The app went to the background: the session ends and the microphone is released at once
+     * (CLAUDE.md item 28: the session ends when the app stops), as Android's `ON_STOP` cancel ends
+     * it. With nothing heard there is no callback, as for [cancel]: the screen's own `ON_STOP` cancel
+     * ends the composer's "listening", and a "nothing heard" line for a session the parent never
+     * ended would be wrong. Words already heard are handed on as the final text, a safety net so the
+     * composer is not left listening to a stopped microphone should that cancel not arrive (it
+     * ignores the callback when it did). Nothing happens without a session.
      */
     internal fun onBackground() {
         val session = current ?: return
         current = null
         session.recognition?.abort()
-        session.listener.onFinal(session.heard)
+        if (session.heard.isNotBlank()) session.listener.onFinal(session.heard)
     }
 
     /** One [start]'s listener and recognition; its callbacks count only while it is [current]. */
