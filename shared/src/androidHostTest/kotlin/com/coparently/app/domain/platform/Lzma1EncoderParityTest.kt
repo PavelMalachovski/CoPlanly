@@ -77,6 +77,20 @@ class Lzma1EncoderParityTest {
         }
     }
 
+    /**
+     * Small inputs never search the binary tree 48 nodes deep, so this one is large: about 300 KB of
+     * seeded words, which repeat at every distance the 128 KiB dictionary holds.
+     */
+    @Test
+    fun largeTextReachesTheDepthLimit() {
+        val random = Random(SEED + 2)
+        val words = listOf("platba ", "Žluťoučký ", "kůň ", "Платба ", "EUR\t", "SK31 ", "1200", "\n")
+            .map { it.toByteArray(Charsets.UTF_8) }
+        val text = ByteArrayOutputStream()
+        while (text.size() < LARGE_TEXT_SIZE) text.write(words[random.nextInt(words.size)])
+        assertParity(text.toByteArray())
+    }
+
     private fun assertParity(input: ByteArray) {
         assertContentEquals(paymentQrCompress(input), Lzma1Encoder.encode(input), "length ${input.size}")
     }
@@ -103,5 +117,6 @@ class Lzma1EncoderParityTest {
         const val RANDOM_CASES = 2_000
         const val MAX_LENGTH = 2_048
         const val ALPHABET_SIZE = 16
+        const val LARGE_TEXT_SIZE = 300_000
     }
 }
