@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalAtomicApi::class)
+
 package com.coparently.app.presentation.chat
 
 import com.coparently.app.domain.dictation.DictationFailure
@@ -10,6 +12,11 @@ import platform.Foundation.NSUserDefaults
 import platform.Foundation.preferredLanguages
 import platform.UIKit.UIApplicationDidEnterBackgroundNotification
 import platform.darwin.NSObjectProtocol
+import platform.darwin.dispatch_async
+import platform.darwin.dispatch_get_global_queue
+import platform.posix.QOS_CLASS_UTILITY
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * The phone's speech recognizer, as [IosSpeechDictation] needs it: Apple's Speech framework in the
@@ -61,6 +68,22 @@ internal fun phoneDictationLanguage(): String {
 private const val APPLE_LANGUAGES = "AppleLanguages"
 private const val FALLBACK_LANGUAGE = "en"
 
+/** Replaces the value by [transform] of it, atomically, and answers the value it replaced. */
+private inline fun <T> AtomicReference<T>.replaceBy(transform: (T) -> T): T {
+    while (true) {
+        val previous = load()
+        if (compareAndSet(previous, transform(previous))) return previous
+    }
+}
+
+/**
+ * Runs [work] on a background queue of utility priority: asking Speech whether a language has an
+ * on-device model talks to the speech daemon synchronously, which must never block the main thread.
+ */
+internal fun offMainThread(work: () -> Unit) {
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY.toLong(), 0u)) { work() }
+}
+
 /**
  * [SpeechDictation] on the iPhone (phase 4 part E1): the phone's own recognizer, on the device only
  * (CLAUDE.md item 28). Where [source] has no on-device recognizer for the language, [isAvailable] is
@@ -72,14 +95,30 @@ private const val FALLBACK_LANGUAGE = "en"
  * The session also ends when the app goes to the background ([onBackground], registered for
  * `UIApplicationDidEnterBackgroundNotification` at construction).
  *
+ * **Speech is never asked on the main thread whether a language is supported.** The question talks
+ * to the speech daemon synchronously, which on a cold phone held the main thread for seconds. The
+ * answer is cached per language tag, computed through [checkOffMain] and published atomically;
+ * [isAvailable] and [start] read the cache, and while a tag has no answer yet they start its check
+ * and say no (no microphone rather than a hang, design item 8). [warm] starts the check early: the
+ * app calls it at start for the phone's dictation language, so the composer usually finds it done.
+ *
  * @param languageTag The tag a [start] without one dictates in, and the one [isAvailable] asks about
+ * @param checkOffMain Runs a support check off the main thread ([offMainThread]; a test may run it
+ *   at once or later)
  */
 internal class IosSpeechDictation(
     private val source: SpeechRecognizerSource,
     private val languageTag: () -> String = ::phoneDictationLanguage,
+    private val checkOffMain: (() -> Unit) -> Unit = ::offMainThread,
 ) : SpeechDictation {
 
     private var current: Session? = null
+
+    /** Whether each checked language tag has an on-device model; replaced whole, never mutated. */
+    private val supported = AtomicReference<Map<String, Boolean>>(emptyMap())
+
+    /** The tags whose check has been started, so each is asked of Speech once. */
+    private val checking = AtomicReference<Set<String>>(emptySet())
 
     /**
      * The background observer's token, the one handle that could remove it. Kept for the life of
@@ -91,12 +130,29 @@ internal class IosSpeechDictation(
         queue = NSOperationQueue.mainQueue,
     ) { _ -> onBackground() }
 
-    override fun isAvailable(): Boolean = source.supportsOnDevice(languageTag())
+    override fun isAvailable(): Boolean = supports(languageTag())
+
+    /** Starts the support check for [tag] (by default the phone's dictation language), off the main thread. */
+    internal fun warm(tag: String = languageTag()) {
+        if (supported.load().containsKey(tag)) return
+        if (tag in checking.replaceBy { it + tag }) return
+        checkOffMain {
+            val answer = runCatching { source.supportsOnDevice(tag) }.getOrDefault(false)
+            supported.replaceBy { it + (tag to answer) }
+        }
+    }
+
+    /** The cached answer for [tag]; with none yet, its check is started and the answer is no. */
+    private fun supports(tag: String): Boolean {
+        supported.load()[tag]?.let { return it }
+        warm(tag)
+        return supported.load()[tag] ?: false
+    }
 
     override fun start(languageTag: String?, listener: DictationListener) {
         cancel()
         val tag = languageTag?.takeIf { it.isNotBlank() } ?: languageTag()
-        if (!source.supportsOnDevice(tag)) {
+        if (!supports(tag)) {
             listener.onFailure(DictationFailure.LANGUAGE_UNAVAILABLE)
             return
         }

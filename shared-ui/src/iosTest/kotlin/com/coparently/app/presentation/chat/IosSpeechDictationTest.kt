@@ -2,21 +2,58 @@ package com.coparently.app.presentation.chat
 
 import com.coparently.app.domain.dictation.DictationFailure
 import com.coparently.app.domain.dictation.DictationListener
+import platform.Foundation.NSDate
+import platform.Foundation.NSThread
+import platform.Foundation.timeIntervalSince1970
+import kotlin.concurrent.Volatile
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * The iPhone's dictation (phase 4 part E1) over a fake recognizer: no microphone without an
  * on-device model, a language the phone cannot recognize refused before anything starts, the text
  * handed on as partial then final, a new start replacing the running session, and the session
- * ended by the background (CLAUDE.md item 28).
+ * ended by the background (CLAUDE.md item 28). Speech is asked off the main thread and its answer
+ * cached; most tests run that check at once, two run it as the app does or later.
  */
 class IosSpeechDictationTest {
 
     private val source = FakeSource()
     private val listener = RecordingListener()
-    private val dictation = IosSpeechDictation(source, languageTag = { "cs" })
+    private val dictation = IosSpeechDictation(source, languageTag = { "cs" }, checkOffMain = { it() })
+
+    @Test
+    fun availabilityIsNotCheckedOnTheMainThread() {
+        val offMain = IosSpeechDictation(source, languageTag = { "cs" })
+
+        offMain.warm()
+        val deadline = NSDate().timeIntervalSince1970 + WAIT_SECONDS
+        while (!offMain.isAvailable() && NSDate().timeIntervalSince1970 < deadline) {
+            NSThread.sleepForTimeInterval(POLL_SECONDS)
+        }
+
+        assertTrue(offMain.isAvailable())
+        assertEquals(false, source.askedOnMainThread)
+    }
+
+    @Test
+    fun unknownLanguageReportsUnavailableUntilChecked() {
+        val pending = mutableListOf<() -> Unit>()
+        val later = IosSpeechDictation(source, languageTag = { "cs" }, checkOffMain = { pending += it })
+
+        assertFalse(later.isAvailable())
+        later.start("cs", listener)
+        assertEquals(listOf("failure:LANGUAGE_UNAVAILABLE"), listener.events)
+        assertEquals(0, source.begun)
+        assertEquals(1, pending.size)
+
+        pending.forEach { it() }
+
+        assertTrue(later.isAvailable())
+        assertEquals(listOf("cs"), source.asked)
+    }
 
     @Test
     fun noMicrophoneWithoutAnOnDeviceModel() {
@@ -122,6 +159,9 @@ class IosSpeechDictationTest {
     private class FakeSource : SpeechRecognizerSource {
         var onDevice = true
         val asked = mutableListOf<String>()
+
+        @Volatile
+        var askedOnMainThread: Boolean? = null
         var begun = 0
         var lastTag: String? = null
         val sessions = mutableListOf<FakeSession>()
@@ -130,6 +170,7 @@ class IosSpeechDictationTest {
         var onFailure: (DictationFailure) -> Unit = {}
 
         override fun supportsOnDevice(languageTag: String): Boolean {
+            askedOnMainThread = NSThread.isMainThread
             asked += languageTag
             return onDevice
         }
@@ -178,3 +219,6 @@ class IosSpeechDictationTest {
         }
     }
 }
+
+private const val WAIT_SECONDS = 5.0
+private const val POLL_SECONDS = 0.01

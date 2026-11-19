@@ -23,11 +23,13 @@ import com.coparently.app.di.koin.dataModules
 import com.coparently.app.di.koin.platformDataModule
 import com.coparently.app.di.koin.platformUiModule
 import com.coparently.app.di.koin.uiModules
+import com.coparently.app.domain.dictation.SpeechDictation
 import com.coparently.app.ios.shell.NativeShell
 import com.coparently.app.presentation.AppLaunch
 import com.coparently.app.presentation.LaunchLink
 import com.coparently.app.presentation.LaunchLinks
 import com.coparently.app.presentation.PushTap
+import com.coparently.app.presentation.chat.IosSpeechDictation
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.navigation.CalendarTabTaps
 import com.coparently.app.presentation.navigation.PendingChatLink
@@ -190,6 +192,8 @@ object IosApp {
                     )
             )
         }.koin
+        // Asks Speech off the main thread now, so the chat composer finds the answer waiting.
+        (koin.get<SpeechDictation>() as? IosSpeechDictation)?.warm()
         val background = bridges.background
         this.background = background
         whenProtectedDataAvailable { startSession(koin, background) }
