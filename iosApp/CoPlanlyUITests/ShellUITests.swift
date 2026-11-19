@@ -959,6 +959,13 @@ final class ShellUITests: XCTestCase {
         // The code card's button is `pairing_share_link`, "Share link" in English.
         let share = app.buttons.matching(NSPredicate(format: "label == %@", "Share link")).firstMatch
         try require(share.waitForExistence(timeout: 60), "The invitation's Share link button did not appear")
+        // Since phase 4 part E1 the card draws the invitation's QR above it, which can push the button
+        // below the fold, where a tap lands off screen: scroll it into view first.
+        let screenBottom = app.windows.firstMatch.frame.maxY - 120
+        for _ in 0..<6 where share.frame.maxY > screenBottom {
+            app.swipeUp()
+        }
+        sleep(1)
         press(share)
         let sheet = app.otherElements["ActivityListView"]
         let copy = app.buttons["Copy"]
@@ -1864,6 +1871,12 @@ final class ShellUITests: XCTestCase {
             self.press(try self.element(containing: "Add another co-parent"))
             let enter = self.app.buttons["Enter a code"]
             try self.require(enter.waitForExistence(timeout: 60), "Add another co-parent offers no Enter a code")
+            // The invitation's QR above it can push the button below the fold.
+            let screenBottom = self.app.windows.firstMatch.frame.maxY - 120
+            for _ in 0..<6 where enter.frame.maxY > screenBottom {
+                self.app.swipeUp()
+            }
+            sleep(1)
             self.press(enter)
             self.dismissKeyboard()
             let paste = self.app.descendants(matching: .any)
