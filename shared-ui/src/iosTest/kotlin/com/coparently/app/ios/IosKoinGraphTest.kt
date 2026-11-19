@@ -78,6 +78,7 @@ import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.RecordPhotoStorage
 import com.coparently.app.presentation.auth.AuthErrors
 import com.coparently.app.presentation.pairing.InviteQrCodes
+import com.coparently.app.presentation.platform.AppBuildValues
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import platform.Foundation.NSProcessInfo
@@ -112,7 +113,7 @@ class IosKoinGraphTest {
         val koin = startKoin {
             modules(
                 dataModules + platformDataModule + uiModules + platformUiModule +
-                    iosAppModule(NoGoogle, NoTestPushToken)
+                    iosAppModule(TEST_BUILD_VALUES, NoGoogle, NoTestPushToken)
             )
         }.koin
         try {
@@ -156,6 +157,7 @@ class IosKoinGraphTest {
             GoogleCalendarAutoImport::class, DailySchoolImport::class, PairingRepository::class,
             // iosAppModule
             SignInProviderSession::class, IosPushToken::class, SessionEndingHook::class,
+            AppBuildValues::class,
         )
 
         /** Google's sheet as a phone without a `GoogleService-Info.plist` has it: unavailable. */

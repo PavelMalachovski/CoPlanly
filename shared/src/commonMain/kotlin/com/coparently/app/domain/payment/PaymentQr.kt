@@ -118,8 +118,8 @@ object PaymentQr {
      * encoder writes it: the tab-separated "Pay" document, its CRC32 in front, raw LZMA1
      * (lc 3, lp 0, pb 2, 128 KiB dictionary), a four-byte header (two zero bytes for type and
      * version, then the uncompressed length, little-endian), all of it in base32hex. The
-     * compression is [Lzma1Raw]'s, which has those settings; where the platform has no encoder
-     * (iOS, for now) there is no code, and the screen still offers the IBAN.
+     * compression is [Lzma1Raw]'s, which has those settings on Android and iOS alike; where a
+     * platform has no encoder there is no code, and the screen still offers the IBAN.
      */
     internal object PayBySquare {
         private const val ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUV"

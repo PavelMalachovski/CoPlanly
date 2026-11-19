@@ -9,22 +9,30 @@ import androidx.compose.runtime.rememberUpdatedState
 import com.coparently.app.data.files.IosPickedFiles
 import com.coparently.app.data.remote.firebase.NotificationPermission
 import com.coparently.app.data.remote.firebase.UserNotificationsPermission
+import com.coparently.app.presentation.chat.phoneDictationLanguage
 import com.coparently.app.presentation.settings.AppLanguage
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
+import platform.AVFAudio.AVAudioApplication
+import platform.AVFAudio.AVAudioApplicationRecordPermissionGranted
 import platform.Foundation.NSByteCountFormatter
 import platform.Foundation.NSByteCountFormatterCountStyleFile
+import platform.Speech.SFSpeechRecognizer
+import platform.Speech.SFSpeechRecognizerAuthorizationStatus.SFSpeechRecognizerAuthorizationStatusAuthorized
+import kotlin.coroutines.resume
 
 /*
  * The iPhone's platform capabilities (MON-24 phase 2, Task 11): what the iPhone app's view
  * controller will hand `ProvidePlatform` (phase 3). Until each capability is built there, it is a
  * stand-in that says it is not available, so the shared screens draw no affordance for it (design
- * item 8): QR scanning and dictation until phase 4, the rest until phase 3. A launch that
- * comes anyway does nothing and reports nothing it did not do. Images (`IosImages`) and payment
- * codes (`IosQrCodes`) are the iPhone's own since part C, and since its Task 11 the share sheet
- * (`IosShareSheet`), the pickers (`IosFilePicker`) and the camera (`IosCameraCapture`), and since
- * phase 4 part C the notification permission (`IosPermissions`).
+ * item 8): the language picker. Images (`IosImages`) and payment codes (`IosQrCodes`)
+ * are the iPhone's own since part C, and since its Task 11 the share sheet (`IosShareSheet`), the
+ * pickers (`IosFilePicker`) and the camera (`IosCameraCapture`), since phase 4 part C the
+ * notification permission (`IosPermissions`), and since part E1 links, files, the dialler and mail
+ * (`IosOpenUrl`), the clipboard (`IosClipboard`), the QR scanner (`IosQrScanner`) and on-device
+ * dictation (`IosDictation`, with the microphone and speech permissions in `IosPermissions`).
  */
 
 /**
@@ -35,11 +43,11 @@ fun iosPlatformServices(buildValues: AppBuildValues): PlatformServices = Platfor
     shareSheet = IosShareSheet,
     filePicker = IosFilePicker,
     cameraCapture = IosCameraCapture,
-    qrScanner = NoQrScanner,
-    dictation = NoDictation,
+    qrScanner = IosQrScanner,
+    dictation = IosDictation,
     permissions = IosPermissions(UserNotificationsPermission),
-    openUrl = NoOpenUrl,
-    clipboard = NoClipboard,
+    openUrl = IosOpenUrl,
+    clipboard = IosClipboard,
     buildValues = buildValues,
     images = IosImages.fromKoin(),
     fileDetails = IosFileDetails,
@@ -77,23 +85,16 @@ fun ProvideIosShell(
     }
 }
 
-/** A launcher with nothing behind it. */
-private val NothingToLaunch = PlatformLauncher { }
-
-/** No QR scanning until phase 4: the code and the link are how an invitation arrives. */
-private object NoQrScanner : QrScanner {
-    override val available: Boolean = false
-
-    @Composable
-    override fun rememberScanner(onScanned: (code: String) -> Unit): PlatformLauncher = NothingToLaunch
-}
-
-/** No dictation until phase 4, beside `NoSpeechDictation` in `platformUiModule`. */
-private object NoDictation : Dictation {
-    override val available: Boolean = false
+/**
+ * Dictation in the chat's composer (phase 4 part E1): the recognition is `IosSpeechDictation`, which
+ * says whether the phone has an on-device model ([available] here only lets the composer ask it), and
+ * the language is the parent's own ([phoneDictationLanguage]), never the app's English fallback.
+ */
+private object IosDictation : Dictation {
+    override val available: Boolean = true
 
     @Composable
-    override fun rememberLanguageTag(): String = ""
+    override fun rememberLanguageTag(): String = remember { phoneDictationLanguage() }
 }
 
 /**
@@ -104,14 +105,19 @@ private object NoDictation : Dictation {
  * `IosApp` reads it on start and on every return to the foreground, so a change made in the phone's
  * Settings shows.
  *
- * The microphone is part E's and the camera `IosCameraCapture`'s own, so neither is asked here: as
- * before, neither reads granted and a request for one takes its "denied" path at once.
+ * The microphone, for dictation (part E1), is two of iOS's questions: the microphone
+ * (`AVAudioApplication`) and speech recognition (`SFSpeechRecognizer`), asked in that order, and
+ * granted only when both are ([DictationPermission]). The camera is `IosCameraCapture`'s own, so it
+ * is not asked here: it never reads granted and a request for it takes its "denied" path at once.
  */
 internal class IosPermissions(private val notifications: NotificationPermission) : PermissionRequester {
     override val available: Boolean = true
 
-    override fun isGranted(permission: PlatformPermission): Boolean =
-        permission == PlatformPermission.NOTIFICATIONS && notifications.granted
+    override fun isGranted(permission: PlatformPermission): Boolean = when (permission) {
+        PlatformPermission.NOTIFICATIONS -> notifications.granted
+        PlatformPermission.MICROPHONE -> DictationPermission.granted
+        PlatformPermission.CAMERA -> false
+    }
 
     @Composable
     override fun rememberRequest(permission: PlatformPermission, onDenied: () -> Unit): PermissionRequest {
@@ -119,36 +125,44 @@ internal class IosPermissions(private val notifications: NotificationPermission)
         val denied by rememberUpdatedState(onDenied)
         return remember(permission, scope) {
             PermissionRequest { action ->
-                if (permission != PlatformPermission.NOTIFICATIONS) {
-                    denied()
-                } else {
-                    scope.launch { if (notifications.request()) action() else denied() }
+                val ask: (suspend () -> Boolean)? = when (permission) {
+                    PlatformPermission.NOTIFICATIONS -> notifications::request
+                    PlatformPermission.MICROPHONE -> DictationPermission::request
+                    PlatformPermission.CAMERA -> null
                 }
+                if (ask == null) denied() else scope.launch { if (ask()) action() else denied() }
             }
         }
     }
 }
 
-/** Nothing is handed to another app until phase 3: every call answers that no app took it. */
-private object NoOpenUrl : OpenUrl {
-    override val available: Boolean = false
+/**
+ * What dictation needs of iOS: the microphone and on-device speech recognition. [granted] when both
+ * are; [request] asks the microphone first, then speech recognition, and answers true only when
+ * both are granted (an answer given before is returned at once, without a dialog).
+ */
+private object DictationPermission {
+    val granted: Boolean
+        get() {
+            val microphone = AVAudioApplication.sharedInstance.recordPermission
+            return microphone == AVAudioApplicationRecordPermissionGranted &&
+                SFSpeechRecognizer.authorizationStatus() == SFSpeechRecognizerAuthorizationStatusAuthorized
+        }
 
-    override fun open(url: String): Boolean = false
+    suspend fun request(): Boolean = requestMicrophone() && requestSpeech()
 
-    override fun openFile(path: String, contentType: String): Boolean = false
+    private suspend fun requestMicrophone(): Boolean = suspendCancellableCoroutine { continuation ->
+        AVAudioApplication.requestRecordPermissionWithCompletionHandler { allowed ->
+            if (continuation.isActive) continuation.resume(allowed)
+        }
+    }
 
-    override fun dial(number: String): Boolean = false
-
-    override fun composeEmail(address: String, subject: String, body: String): Boolean = false
-
-    override fun openAppSettings(): Boolean = false
-}
-
-/** No clipboard until phase 3 (`UIPasteboard`, marked local-only). */
-private object NoClipboard : SensitiveClipboard {
-    override val available: Boolean = false
-
-    override fun copySensitive(label: String, text: String) = Unit
+    private suspend fun requestSpeech(): Boolean = suspendCancellableCoroutine { continuation ->
+        SFSpeechRecognizer.requestAuthorization { status ->
+            val allowed = status == SFSpeechRecognizerAuthorizationStatusAuthorized
+            if (continuation.isActive) continuation.resume(allowed)
+        }
+    }
 }
 
 /**

@@ -22,11 +22,13 @@ import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.coparently.app.presentation.auth.AppleSignInButton
 import com.coparently.app.presentation.components.TimePickerDialog
+import com.coparently.app.presentation.pairing.components.CodeEntryField
 import com.coparently.app.testing.RobolectricTestApplication
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
@@ -105,6 +107,52 @@ class NativeControlsTest {
         rule.onNodeWithText("Sign in with Apple").assertDoesNotExist()
         fake.lastAppleClick?.invoke()
         assertEquals(1, taps)
+    }
+
+    @Test
+    fun codeEntryFieldDrawsNoPasteButtonOnAndroid() {
+        rule.setContent {
+            CodeEntryField(value = "", onValueChange = {}, onSubmit = {}, errorText = null, enabled = true)
+        }
+        rule.waitForIdle()
+
+        rule.onNodeWithContentDescription(RecordingNativeControls.PASTE_BUTTON_DESCRIPTION).assertDoesNotExist()
+        assertEquals(0, fake.pasteButtons)
+    }
+
+    @Test
+    fun codeEntryFieldAsksTheNativePasteButton() {
+        val typed = mutableListOf<String>()
+        rule.setContent {
+            CompositionLocalProvider(LocalNativeControls provides fake) {
+                CodeEntryField(
+                    value = "",
+                    onValueChange = { typed += it },
+                    onSubmit = {},
+                    errorText = null,
+                    enabled = true
+                )
+            }
+        }
+        rule.waitForIdle()
+
+        assertEquals(1, fake.pasteButtons)
+        rule.onNodeWithContentDescription(RecordingNativeControls.PASTE_BUTTON_DESCRIPTION).assertExists()
+        fake.lastPaste?.invoke("ABC234")
+        assertEquals(listOf("ABC234"), typed)
+    }
+
+    @Test
+    fun codeEntryFieldHidesThePasteButtonWhileDisabled() {
+        rule.setContent {
+            CompositionLocalProvider(LocalNativeControls provides fake) {
+                CodeEntryField(value = "", onValueChange = {}, onSubmit = {}, errorText = null, enabled = false)
+            }
+        }
+        rule.waitForIdle()
+
+        assertEquals(0, fake.pasteButtons)
+        rule.onNodeWithContentDescription(RecordingNativeControls.PASTE_BUTTON_DESCRIPTION).assertDoesNotExist()
     }
 
     @Test

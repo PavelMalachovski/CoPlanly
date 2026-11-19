@@ -271,6 +271,20 @@ interface NativeControls {
      */
     @Composable
     fun AppleSignInButton(onClick: () -> Unit, enabled: Boolean, background: Color, modifier: Modifier)
+
+    /**
+     * The system's paste button beside a code field (iPhone phase 4, part E1): on the iPhone a
+     * `UIPasteControl`, in place, 44 pt high, its icon and label and its VoiceOver name the
+     * system's. A tap pastes without iOS asking "Allow Paste?", because the parent pressed the
+     * system's own button; the pasteboard's plain text reaches [onPaste] on the main thread.
+     * Android draws none: its code field takes a paste from the field's own menu.
+     *
+     * @param onPaste Called with the pasted text, which the caller parses
+     * @param background The colour of what the button sits on, as for [Switch]
+     * @param modifier Modifier applied to the button
+     */
+    @Composable
+    fun PasteButton(onPaste: (String) -> Unit, background: Color, modifier: Modifier)
 }
 
 /**

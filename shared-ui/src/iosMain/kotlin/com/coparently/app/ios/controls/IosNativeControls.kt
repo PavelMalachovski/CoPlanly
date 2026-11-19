@@ -81,6 +81,12 @@ internal object IosNativeControls : NativeControls {
         AppleIdButton(onClick = onClick, enabled = enabled, background = background, modifier = modifier)
     }
 
+    /** The system's `UIPasteControl`, in place ([SystemPasteButton]). */
+    @Composable
+    override fun PasteButton(onPaste: (String) -> Unit, background: Color, modifier: Modifier) {
+        SystemPasteButton(onPaste = onPaste, background = background, modifier = modifier)
+    }
+
     /**
      * A `UISegmentedControl` filling the width at [SEGMENTED_HEIGHT_PT]. The segments are rebuilt
      * only when [labels] change, and [selectedIndex] is set at every update without the control

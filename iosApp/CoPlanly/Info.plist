@@ -28,6 +28,11 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>mailto</string>
+		<string>tel</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
@@ -50,7 +55,11 @@
 		</dict>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>CoPlanly uses the camera to photograph a receipt or a document you add.</string>
+	<string>CoPlanly uses the camera to photograph a receipt or a document you add, and to scan a co-parent’s invitation QR code.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>CoPlanly uses the microphone only while you dictate a chat message. The audio stays on your iPhone.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Your words are turned into text on your iPhone. Nothing you say is sent anywhere.</string>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>app.coplanly.refresh</string>
