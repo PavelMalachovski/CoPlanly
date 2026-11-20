@@ -2501,8 +2501,11 @@ school) and a build with the row switched on: a debug build, or release with
       tagged with the child.
 - [ ] Two children on one EduPage login: connect both; each child's events carry that child and a
       second parent's own login for the same child makes no duplicate (the ids name the child).
-- [ ] **Record the real answers.** With a debug build and a proxy or `adb logcat` that shows
-      responses, save the sign-in page, the `userhome(...)` object, `curentttGetData` and the
+- [ ] **Record the real answers.** Without a phone: `python3 tools/edupage/record-answers.py` on your
+      own computer makes the client's requests, asks for the password without echoing it, and writes
+      `raw/` (keep it, never share it) and `redacted/` (names, free text and cookies removed, ids
+      replaced by stable pseudonyms; read it before sending). Or, with a debug build and a proxy or
+      `adb logcat` that shows responses, save the sign-in page, the `userhome(...)` object, `curentttGetData` and the
       timeline answer (names, ids and school redacted) and replace the inferred ones in
       `EdupageFixtures` and `EdupageParsersTest`; list the timeline item types seen
       (`typ`) and fix `EdupageTimelineParser`'s three sets if they differ.
