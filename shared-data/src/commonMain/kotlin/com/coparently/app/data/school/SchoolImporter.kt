@@ -171,7 +171,8 @@ class SchoolImporter internal constructor(
             drawnHolidays = drawnHolidays(user, today),
             existing = emptyMap(),
             ledger = latest.ledger,
-            wording = collaborators.wording.forChild(connection.childId, latest.student.name)
+            wording = collaborators.wording.forChild(connection.childId, latest.student.name),
+            importHours = connection.importHours
         )
         val input = draft.copy(existing = collaborators.writer.existing(SchoolImportPlanner.idsToLookUp(draft)))
         val plan = SchoolImportPlanner.plan(input)

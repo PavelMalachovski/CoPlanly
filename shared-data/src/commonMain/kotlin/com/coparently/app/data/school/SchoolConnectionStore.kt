@@ -22,6 +22,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
@@ -198,6 +199,8 @@ object SchoolConnectionCodec {
             connection.familyId?.let { put("familyId", it) }
             put("status", connection.status.stored)
             connection.lastSuccessAtMillis?.let { put("lastSuccessAt", it) }
+            // Written only when off, so a record of a connection that imports hours keeps its text.
+            if (!connection.importHours) put(IMPORT_HOURS, false)
             put("userUid", stored.student.userUid)
             put("fullName", stored.student.fullName)
             put("classId", stored.student.classId)
@@ -235,7 +238,8 @@ object SchoolConnectionCodec {
             childId = root.string("childId") ?: return null,
             familyId = root.string("familyId"),
             status = SchoolConnectionStatus.of(root.string("status")),
-            lastSuccessAtMillis = root.number("lastSuccessAt")
+            lastSuccessAtMillis = root.number("lastSuccessAt"),
+            importHours = (root[IMPORT_HOURS] as? JsonPrimitive)?.booleanOrNull != false
         )
         return StoredSchoolConnection(
             connection = connection,
@@ -278,4 +282,7 @@ object SchoolConnectionCodec {
     private fun JsonElement.textOrNull(): String? = (this as? JsonPrimitive)?.takeIf { it !== JsonNull }?.content
 
     private const val LEDGER_PARTS = 3
+
+    /** The key of [SchoolConnection.importHours], present only as `false`. */
+    internal const val IMPORT_HOURS = "importHours"
 }

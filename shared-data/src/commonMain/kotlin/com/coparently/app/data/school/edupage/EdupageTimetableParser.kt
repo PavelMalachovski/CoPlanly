@@ -43,6 +43,19 @@ object EdupageTimetableParser {
             .sortedBy { it.monday }
     }
 
+    /**
+     * Whether [json] is EduPage refusing the pupil timetable itself: an `r.error` beside
+     * `r.rights.students == false`. Recorded live (November 2026): a Czech school answers a parent's
+     * `table: "students"` with "Insuficient priviledges" and the rights it grants, `classes` among
+     * them, so the import asks for the child's class instead.
+     */
+    fun refusesPupilTable(json: String): Boolean {
+        val result = (EdupageJson.parseOrNull(json) as? JsonObject)?.obj("r") ?: return false
+        val error = result["error"]
+        if (error == null || error is JsonNull) return false
+        return result.obj("rights")?.text("students") == "false"
+    }
+
     /** An answer with no `r.error` and a `ttitems` key (present, possibly empty) can be read. */
     private fun readable(result: JsonObject): Boolean {
         val error = result["error"]
@@ -51,7 +64,7 @@ object EdupageTimetableParser {
 
     private fun lessonSpans(items: List<JsonObject>): Map<LocalDate, Span> {
         val spans = HashMap<LocalDate, Span>()
-        items.filter { it.text("type") == "lesson" && it.text("removed") !in REMOVED }
+        items.filter { it.text("type") in LESSON_TYPES && it.text("removed") !in REMOVED }
             .forEach { item ->
                 val date = EdupageJson.date(item.text("date"))
                 val start = EdupageJson.time(item.text("starttime"))
@@ -71,4 +84,10 @@ object EdupageTimetableParser {
     }
 
     private val REMOVED = setOf("true", "1")
+
+    /**
+     * A lesson's item type: `card` is what EduPage answers (recorded live, November 2026); `lesson`
+     * is what edupage-api 0.13.3 described and is still read.
+     */
+    private val LESSON_TYPES = setOf("card", "lesson")
 }

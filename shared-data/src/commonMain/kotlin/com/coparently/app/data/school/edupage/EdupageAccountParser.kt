@@ -4,6 +4,7 @@ import com.coparently.app.data.school.edupage.EdupageJson.entry
 import com.coparently.app.data.school.edupage.EdupageJson.items
 import com.coparently.app.data.school.edupage.EdupageJson.obj
 import com.coparently.app.data.school.edupage.EdupageJson.text
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -46,7 +47,7 @@ object EdupageAccountParser {
         val children = if (dbi == null) {
             emptyList()
         } else if (isParent) {
-            dbi.items("students").mapNotNull { childOf(it, dbi) }
+            parentsChildren(userhome, userId, dbi)
         } else {
             listOfNotNull(ownChild(userId, dbi))
         }
@@ -58,6 +59,33 @@ object EdupageAccountParser {
             year = userhome.obj("dp")?.text("year")?.toIntOrNull() ?: 0
         )
     }
+
+    /**
+     * The parent's own children. A parent's `dbi.students` holds the whole class (recorded live,
+     * November 2026: 24 pupils for a parent of one), so it is narrowed to `parentStudentids`, else
+     * to the pupils whose `parent1id`…`parent3id` name the parent (`Rodic<id>`). Only a page that
+     * carries neither (no recorded school has been seen to) falls back to every listed pupil.
+     */
+    private fun parentsChildren(userhome: JsonObject, userId: String, dbi: JsonObject): List<EdupageChild> {
+        val students = dbi.items("students")
+        val listed = (userhome["parentStudentids"] as? JsonArray)
+            ?.mapNotNull { (it as? JsonPrimitive)?.content?.takeIf(String::isNotBlank) }
+            .orEmpty()
+        if (listed.isNotEmpty()) {
+            return listed.mapNotNull { id -> dbi.entry("students", id)?.withId(id)?.let { childOf(it, dbi) } }
+        }
+        val parentId = userId.removePrefix(PARENT_PREFIX)
+        val carriesParents = students.any { row -> PARENT_FIELDS.any { it in row } }
+        if (!carriesParents) return students.mapNotNull { childOf(it, dbi) }
+        return students.filter { row -> PARENT_FIELDS.any { row.text(it) == parentId } }
+            .mapNotNull { childOf(it, dbi) }
+    }
+
+    private val PARENT_FIELDS = listOf("parent1id", "parent2id", "parent3id")
+
+    /** The class id of pupil [studentId] in [userhome]'s `dbi.students`, or null. */
+    fun classIdOf(userhome: JsonObject, studentId: String): String? =
+        userhome.obj("dbi")?.entry("students", studentId)?.text("classid")?.takeIf(String::isNotBlank)
 
     private fun ownChild(userId: String, dbi: JsonObject): EdupageChild? {
         val id = userId.removePrefix("Student").takeIf { it.isNotBlank() } ?: return null

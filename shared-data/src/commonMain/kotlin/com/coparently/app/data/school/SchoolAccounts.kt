@@ -132,7 +132,8 @@ class SchoolAccounts(
                 childId = childId,
                 familyId = familyId,
                 status = SchoolConnectionStatus.OK,
-                lastSuccessAtMillis = null
+                lastSuccessAtMillis = null,
+                importHours = store.get(uid, id)?.connection?.importHours ?: false
             ),
             ownerUid = uid,
             student = signIn.account.student,
@@ -207,7 +208,8 @@ class SchoolAccounts(
                 familyId = familyId,
                 status = SchoolConnectionStatus.OK,
                 lastSuccessAtMillis = null,
-                system = SchoolSystem.EDUPAGE
+                system = SchoolSystem.EDUPAGE,
+                importHours = store.get(uid, id)?.connection?.importHours ?: false
             ),
             ownerUid = uid,
             student = SchoolStudent(child.studentId, studentName, child.className),
@@ -237,6 +239,19 @@ class SchoolAccounts(
                 edupage = current.edupage?.copy(password = password, cookies = session.cookies),
                 connection = current.connection.copy(status = SchoolConnectionStatus.OK)
             )
+        }?.connection
+    }
+
+    /**
+     * Whether the connection [connectionId] imports the school hours ([SchoolConnection.importHours]).
+     * The next update creates them, or takes back those it made for today or later.
+     *
+     * @return The connection as saved, or null when it is not stored for this account.
+     */
+    suspend fun setImportHours(connectionId: String, on: Boolean): SchoolConnection? {
+        val uid = userRepository.getCurrentUserId() ?: return null
+        return store.update(uid, connectionId) { current ->
+            current.copy(connection = current.connection.copy(importHours = on))
         }?.connection
     }
 

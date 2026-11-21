@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.LinkOff
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -26,8 +27,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.coparently.app.domain.school.SchoolConnectionStatus
 import com.coparently.app.domain.school.SchoolSystem
+import com.coparently.app.presentation.common.AdaptiveSwitch
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.InlineBanner
@@ -51,6 +55,8 @@ import com.coparently.app.resources.school_import_empty_description
 import com.coparently.app.resources.school_import_empty_title
 import com.coparently.app.resources.school_import_intro
 import com.coparently.app.resources.school_import_last_sync
+import com.coparently.app.resources.school_import_lesson_times_description
+import com.coparently.app.resources.school_import_lesson_times_title
 import com.coparently.app.resources.school_import_never_synced
 import com.coparently.app.resources.school_import_reconnect
 import com.coparently.app.resources.school_import_status_error
@@ -113,6 +119,7 @@ fun SchoolImportScreen(
             state = state,
             actions = ConnectionActions(
                 onUpdate = viewModel::updateNow,
+                onImportHours = viewModel::setImportHours,
                 onReconnect = onReconnect,
                 onDisconnect = { disconnecting = it },
                 onConnect = onConnect
@@ -141,6 +148,7 @@ fun SchoolImportScreen(
 /** What a connection's rows can do. */
 private class ConnectionActions(
     val onUpdate: (String) -> Unit,
+    val onImportHours: (String, Boolean) -> Unit,
     val onReconnect: (String) -> Unit,
     val onDisconnect: (String) -> Unit,
     val onConnect: () -> Unit
@@ -231,6 +239,8 @@ private fun ConnectionGroup(row: SchoolConnectionRow, updating: Boolean, actions
             )
         }
         Divider()
+        HoursRow(on = connection.importHours, onChange = { actions.onImportHours(id, it) })
+        Divider()
         SectionRow(
             icon = Icons.Default.LinkOff,
             iconTint = MaterialTheme.colorScheme.error,
@@ -239,6 +249,27 @@ private fun ConnectionGroup(row: SchoolConnectionRow, updating: Boolean, actions
             onClick = { actions.onDisconnect(id) }
         )
     }
+}
+
+/** Whether the connection imports the school hours; the events come in either way. */
+@Composable
+private fun HoursRow(on: Boolean, onChange: (Boolean) -> Unit) {
+    val title = stringResource(Res.string.school_import_lesson_times_title)
+    SectionRow(
+        icon = Icons.Default.Schedule,
+        title = title,
+        supporting = stringResource(Res.string.school_import_lesson_times_description),
+        trailing = {
+            AdaptiveSwitch(
+                checked = on,
+                modifier = Modifier.semantics { contentDescription = title },
+                onCheckedChange = onChange,
+                accessibilityLabel = title
+            )
+        },
+        onToggle = { onChange(!on) },
+        toggled = on
+    )
 }
 
 /** When the connection last updated, or what stops it. */

@@ -4562,6 +4562,14 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       rewritten only when the school's fingerprint (title, description, start, end) changed, and
       only those fields, through `copy()`, so a parent's edit survives until the school changes
       it. Nothing before today is touched.
+    - **School hours are an option of each connection, events are not** (owner decision, 21 November
+      2026; `SchoolConnection.importHours`, design
+      `docs/superpowers/specs/2026-11-21-school-hours-optional-design.md`). A new connection starts
+      with it off, a record written before the option reads on, and the record carries
+      `"importHours": false` only when off. Off, the planner creates no school-hours event and deletes
+      those this connection made for today or later (the import's second deletion, its own `hours`
+      kind only), and drops them from the ledger so switching on imports them afresh; events, tests,
+      homework and days off come in either way. The switch is the import screen's "Lesson times" row.
     - **Quiet writes, daily job.** The import writes through the event use cases with
       `announce = false` (no chat card per event; revisions are still recorded), skips a day off the
       holiday provider already draws, merges a run of days off into one event, and runs as unique
@@ -4576,8 +4584,34 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     `shared-data/`'s `data/school/edupage/` (`EdupageClient`, `EdupageSource`, three parsers over a
     JSON tree, as Bakaláři's). It reads the timetable (`curentttGetData`) and the timeline (events,
     tests, homework) for the child; EduPage has no API, so the protocol is inferred from the
-    open-source `edupage-api` 0.13.3 and **no real answer has been recorded** until
-    `docs/DEVICE-CHECKLIST.md` §3.36 is run. Six things not to undo.
+    open-source `edupage-api` 0.13.3, and was **checked against one live Czech school on 21 November
+    2026** (a parent's account, from a cloud session; the answers' shapes, names and ids replaced, are
+    the `live…` fixtures of `EdupageParsersTest`). The phone's screens and the co-parent's side are
+    still `docs/DEVICE-CHECKLIST.md` §3.36. Six things not to undo, and four the live answers taught:
+    - **A parent's children are `parentStudentids`**, else the pupils whose `parent1id`…`parent3id`
+      name the parent; a parent's `dbi.students` is the whole class (24 pupils for one child).
+    - **A school may refuse a parent the pupil's timetable** ("Insuficient priviledges",
+      `rights.students: false`): the source then asks for the child's class (`table: "classes"`), which
+      still carries the child's own clubs. Lessons are `card` items, not `lesson`.
+    - **The timeline is the child's by `user` in the answer's `childGroups[studentId]`**, with the
+      `ydNNNN@` school-year prefix ignored; names (`user_meno`) only when an answer has no groups. A
+      homework's audience is a plan (`CustPlan…`), which a class name never matched.
+    - **An event's title is `data.name` and its time the bell times of `data.period` for
+      `data.durationperiods`** (`dbi.periods`); a cancelled one is dropped. A homework is titled by
+      `data.nazov` without the one-word mark EduPage adds once it is edited ("Změněné: …").
+    - **An event's details are quoted from the school's own messages, on an exact match only**
+      (owner decision, 21 November 2026: better a missing detail than somebody else's;
+      `EdupageEventDetails`, `EdupageNotes`, design
+      `docs/superpowers/specs/2026-11-21-edupage-event-details-design.md`). A message or
+      noticeboard post to the child's groups or all the school's parents (`Rodic*`), sent before the
+      event's day, whose folded text holds the event's whole name (and its date when another event
+      of the child shares the name), goes into `SchoolEvent.description` under the day it was sent:
+      whole when it names the event in its opening and no other date, else only the paragraph. A
+      published fee (`ls` 7814) adds the school's own sentence. Never a message to this parent
+      alone, never fuzzy matching or a model, never a string of ours (the text reads in the
+      school's language on both phones). The timeline is read 120 days back, because EduPage filters
+      it by when an item was created: a shorter window missed older events on a new connection and
+      dropped a detail as its message aged.
     - **The password is stored, the one exception to "used once and dropped"** (owner decision):
       EduPage has no refresh token, only a session cookie that expires, so the connection keeps the
       password (`EdupageSecrets`: password, cookies, studentId, device token), sealed in

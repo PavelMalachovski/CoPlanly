@@ -33,7 +33,8 @@ import kotlinx.serialization.json.putJsonArray
  *
  * Stateless, and it only fetches: storing the session and reading the timetable and the timeline
  * out of what EduPage answers are the import's job. The requests follow the open-source
- * `edupage-api` 0.13.3's description of the protocol; they have not been recorded live yet.
+ * `edupage-api` 0.13.3's description of the protocol; the sign-in, the child switch, the timetable and
+ * the timeline were checked against one live Czech school in November 2026.
  */
 class EdupageClient(private val http: HttpClient) {
 
@@ -87,11 +88,18 @@ class EdupageClient(private val http: HttpClient) {
     /**
      * The timetable of [studentId] from [from] to [to], as EduPage writes it:
      * `POST /timetable/server/currenttt.js?__func=curentttGetData` with the school year of the
-     * session (`dp.year`) and its `gsechash`.
+     * session (`dp.year`) and its `gsechash`. [table] is `students` (the pupil's own timetable, [studentId]
+     * a pupil) or `classes` ([studentId] then a class id), for a school that refuses a parent the first.
      *
      * @throws EdupageException.NotEdupage when the session's user data names no school year.
      */
-    suspend fun timetableJson(session: EdupageSession, studentId: String, from: LocalDate, to: LocalDate): String {
+    suspend fun timetableJson(
+        session: EdupageSession,
+        studentId: String,
+        from: LocalDate,
+        to: LocalDate,
+        table: String = "students"
+    ): String {
         val year = (session.userhome["dp"] as? JsonObject)?.get("year") as? JsonPrimitive
             ?: throw EdupageException.NotEdupage("No school year")
         val body = buildJsonObject {
@@ -102,7 +110,7 @@ class EdupageClient(private val http: HttpClient) {
                         put("year", year)
                         put("datefrom", from.toString())
                         put("dateto", to.toString())
-                        put("table", "students")
+                        put("table", table)
                         put("id", studentId)
                         put("showColors", true)
                         put("showIgroupsInClasses", true)

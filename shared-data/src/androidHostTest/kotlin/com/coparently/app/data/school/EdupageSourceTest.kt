@@ -17,6 +17,7 @@ import io.mockk.coVerifyOrder
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -190,6 +191,31 @@ class EdupageSourceTest {
         source.events("alice", "ep1", monday)
 
         coVerify(exactly = 2) { client.resume(HOST, mapOf("PHPSESSID" to "old")) }
+    }
+
+    @Test
+    fun `a parent refused the pupil timetable reads the child's class timetable instead`() = runTest {
+        connect()
+        val home = Json.parseToJsonElement(
+            """{"userid":"Rodic77","parentStudentids":["-1234"],
+               "dbi":{"students":{"-1234":{"id":"-1234","classid":"-12","parent1id":"77"}}}}"""
+        ) as JsonObject
+        val parent = EdupageSession(HOST, mapOf("PHPSESSID" to "old"), "hash", home)
+        coEvery { client.resume(HOST, mapOf("PHPSESSID" to "old")) } returns parent
+        coEvery { client.switchChild(parent, "-1234") } returns parent
+        val to = LocalDate(2026, 12, 6)
+        coEvery { client.timetableJson(parent, "-1234", monday, to) } returns
+            """{"r":{"ttitems":[],"error":"Insuficient priviledges","rights":{"students":false,"classes":true}}}"""
+        coEvery { client.timetableJson(parent, "-12", monday, to, "classes") } returns
+            """{"r":{"ttitems":[{"type":"card","date":"2026-11-09","starttime":"08:00","endtime":"11:40"}]}}"""
+        coEvery { client.timelineJson(parent, any()) } returns timeline
+
+        val weeks = source.weeks("alice", "ep1", monday)
+
+        val day = weeks.first().days.first { it.date == monday }
+        assertEquals(kotlinx.datetime.LocalTime(8, 0), day.firstLessonStart)
+        assertEquals(kotlinx.datetime.LocalTime(11, 40), day.lastLessonEnd)
+        coVerify(exactly = 1) { client.timetableJson(parent, "-12", monday, to, "classes") }
     }
 }
 

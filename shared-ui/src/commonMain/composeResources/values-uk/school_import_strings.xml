@@ -18,6 +18,8 @@
     <string name="school_import_status_error">Останнє оновлення не вдалося</string>
     <string name="school_import_update_now">Оновити зараз</string>
     <string name="school_import_updating">Оновлюється…</string>
+    <string name="school_import_lesson_times_title">Розклад уроків</string>
+    <string name="school_import_lesson_times_description">Кожен навчальний день від першого уроку до останнього. Шкільні події імпортуються завжди.</string>
     <string name="school_import_reconnect">Увійти знову</string>
     <string name="school_import_disconnect">Відключити</string>
     <string name="school_import_disconnect_title">Відключити цю школу?</string>

@@ -3,6 +3,7 @@ package com.coparently.app.data.school.edupage
 import com.coparently.app.domain.school.SchoolDayType
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
+import kotlinx.datetime.atTime
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -199,5 +200,135 @@ class EdupageParsersTest {
     fun `a removed item is ignored`() {
         val result = EdupageTimelineParser.parse(timeline(item("trip", "5.A", Fields(removed = "1"))), child)
         assertTrue(result.events.isEmpty())
+    }
+
+    // Shapes recorded live from a Czech school (November 2026), names and ids replaced.
+    private val liveParentHome = """
+        {"userid":"Rodic-60","parentStudentids":["-80"],"dp":{"year":2026},
+         "dbi":{"classes":{"-3":{"id":"-3","short":"2.B"}},
+                "students":{"-80":{"id":"-80","firstname":"Eva","lastname":"Nováková","classid":"-3",
+                                   "parent1id":"-60","parent2id":"-61","parent3id":""},
+                            "-81":{"id":"-81","firstname":"Jan","lastname":"Dvořák","classid":"-3",
+                                   "parent1id":"-62","parent2id":"","parent3id":""}}}}
+    """.trimIndent()
+
+    private val liveChild = EdupageChild("-80", "Eva Nováková", "2.B")
+
+    @Test
+    fun `a parent lists only the children parentStudentids names - not the whole class`() {
+        val account = EdupageAccountParser.parse(home(liveParentHome))
+        assertEquals(listOf(liveChild), account.children)
+    }
+
+    @Test
+    fun `without parentStudentids a parent's children are those naming the parent`() {
+        val withoutList = liveParentHome.replace("\"parentStudentids\":[\"-80\"],", "")
+        assertEquals(listOf(liveChild), EdupageAccountParser.parse(home(withoutList)).children)
+    }
+
+    @Test
+    fun `the class id of a pupil is read from dbi`() {
+        assertEquals("-3", EdupageAccountParser.classIdOf(home(liveParentHome), "-80"))
+        assertNull(EdupageAccountParser.classIdOf(home(liveParentHome), "-99"))
+    }
+
+    @Test
+    fun `card items are lessons and events are not`() {
+        val json = timetable(
+            """{"type":"card","date":"2026-11-11","starttime":"08:00","endtime":"08:45","removed":null}""",
+            """{"type":"event","date":"2026-11-11","starttime":"08:00","endtime":"12:35"}""",
+            """{"type":"card","date":"2026-11-11","starttime":"10:55","endtime":"11:40"}""",
+            """{"type":"card","date":"2026-11-11","starttime":"11:50","endtime":"12:35","removed":true}"""
+        )
+        val day = EdupageTimetableParser.weeks(json, LocalDate(2026, 11, 11), LocalDate(2026, 11, 11))
+            .single().days.single()
+        assertEquals(LocalTime(8, 0), day.firstLessonStart)
+        assertEquals(LocalTime(11, 40), day.lastLessonEnd)
+    }
+
+    @Test
+    fun `a refusal of the pupil table is told apart from other errors`() {
+        val refused = """{"r":{"ttitems":[],"error":"Error2759154749 - Insuficient priviledges",
+            "rights":{"students":false,"classes":true}}}"""
+        assertTrue(EdupageTimetableParser.refusesPupilTable(refused))
+        assertTrue(!EdupageTimetableParser.refusesPupilTable("""{"r":{"error":"bad"}}"""))
+        assertTrue(!EdupageTimetableParser.refusesPupilTable(timetable()))
+        assertTrue(!EdupageTimetableParser.refusesPupilTable("<html></html>"))
+    }
+
+    private companion object {
+        const val NOV_11 = "2026-11-11 00:00:00"
+        const val NOV_19 = "2026-11-19 00:00:00"
+        const val NOV_20 = "2026-11-20 00:00:00"
+        const val HW_HERS = """{"nazov":"PS str.76/3","predmetid":"-28"}"""
+        const val PHOTO_TEXT = "Udalosť: Focení 1. - 4.ročník -  11.11.2026"
+        const val PHOTO = """{"name":"Focení 1. - 4.ročník","allday":false,"period":"1","durationperiods":3}"""
+    }
+
+    private fun liveItem(typ: String, user: String, cas: String, data: String, text: String = "") =
+        """{"timelineid":"t-$typ-$cas","typ":"$typ","user":"$user","user_meno":"2.B","text":"$text",
+        "cas_udalosti":"$cas","removed":0,"data":${JsonPrimitive(data)}}"""
+
+    private fun liveTimeline(vararg items: String) = """{"timelineItems":[${items.joinToString(",")}],
+        "childGroups":{"-80":["*","Student-80","Trieda-3","CustPlan5"]},
+        "dbi":{"periods":[{"id":"1","starttime":"08:00","endtime":"08:45"},
+                          {"id":"2","starttime":"08:55","endtime":"09:40"},
+                          {"id":"3","starttime":"10:00","endtime":"10:45"}],
+               "subjects":{"-28":{"id":-28,"name":"Český jazyk","short":"ČJ"}}}}"""
+
+    @Test
+    fun `items are the child's by EduPage's group ids`() {
+        val result = EdupageTimelineParser.parse(
+            liveTimeline(
+                liveItem("event", "yd2026@Trieda-3", NOV_19, """{"name":"Minigolf"}"""),
+                liveItem("event", "yd2026@Trieda-4", NOV_19, """{"name":"Another class"}"""),
+                liveItem("homework", "CustPlan5", NOV_20, HW_HERS, text = "Změněné: PS str.76/3"),
+                liveItem("homework", "CustPlan9", NOV_20, """{"nazov":"Not hers","predmetid":"-28"}""")
+            ),
+            liveChild
+        )
+        assertEquals(listOf("Minigolf"), result.events.map { it.title })
+        assertEquals(listOf("Český jazyk: PS str.76/3"), result.tasks.map { it.title })
+        assertEquals(LocalDate(2026, 11, 20), result.tasks.single().date)
+    }
+
+    @Test
+    fun `an event takes its name and its lesson periods`() {
+        val event = EdupageTimelineParser.parse(
+            liveTimeline(
+                liveItem("event", "yd2026@Trieda-3", NOV_11, PHOTO, text = PHOTO_TEXT)
+            ),
+            liveChild
+        ).events.single()
+        assertEquals("Focení 1. - 4.ročník", event.title)
+        val time = event.times.single()
+        assertTrue(!time.wholeDay)
+        assertEquals(LocalDate(2026, 11, 11).atTime(8, 0), time.start)
+        assertEquals(LocalDate(2026, 11, 11).atTime(10, 45), time.end)
+    }
+
+    @Test
+    fun `an event with no period stays whole-day and a cancelled one is dropped`() {
+        val result = EdupageTimelineParser.parse(
+            liveTimeline(
+                liveItem("event", "Trieda-3", "2026-12-02 00:00:00", """{"name":"Jarmark","period":null}"""),
+                liveItem("event", "Trieda-3", "2026-12-03 00:00:00", """{"name":"Zrušeno","cancelled":true}""")
+            ),
+            liveChild
+        )
+        assertEquals(listOf("Jarmark"), result.events.map { it.title })
+        assertTrue(result.events.single().times.single().wholeDay)
+    }
+
+    @Test
+    fun `an edited homework loses EduPage's change mark and keeps a colon of its own`() {
+        val tasks = EdupageTimelineParser.parse(
+            liveTimeline(
+                liveItem("homework", "CustPlan5", NOV_11, """{"nazov":"Změněné: PS str.72/1,2","zmena":true}"""),
+                liveItem("homework", "CustPlan5", NOV_11, """{"nazov":"Věta: Eva volá Alenu.","zmena":false}""")
+            ),
+            liveChild
+        ).tasks
+        assertEquals(listOf("PS str.72/1,2", "Věta: Eva volá Alenu."), tasks.map { it.title })
     }
 }

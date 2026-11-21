@@ -20,6 +20,8 @@
     <string name="school_import_status_error">The last update failed</string>
     <string name="school_import_update_now">Update now</string>
     <string name="school_import_updating">Updating…</string>
+    <string name="school_import_lesson_times_title">Lesson times</string>
+    <string name="school_import_lesson_times_description">Each school day from the first lesson to the last. School events always come in.</string>
     <string name="school_import_reconnect">Sign in again</string>
     <string name="school_import_disconnect">Disconnect</string>
     <string name="school_import_disconnect_title">Disconnect this school?</string>
