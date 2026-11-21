@@ -4576,8 +4576,21 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     `shared-data/`'s `data/school/edupage/` (`EdupageClient`, `EdupageSource`, three parsers over a
     JSON tree, as Bakaláři's). It reads the timetable (`curentttGetData`) and the timeline (events,
     tests, homework) for the child; EduPage has no API, so the protocol is inferred from the
-    open-source `edupage-api` 0.13.3 and **no real answer has been recorded** until
-    `docs/DEVICE-CHECKLIST.md` §3.36 is run. Six things not to undo.
+    open-source `edupage-api` 0.13.3, and was **checked against one live Czech school on 21 November
+    2026** (a parent's account, from a cloud session; the answers' shapes, names and ids replaced, are
+    the `live…` fixtures of `EdupageParsersTest`). The phone's screens and the co-parent's side are
+    still `docs/DEVICE-CHECKLIST.md` §3.36. Six things not to undo, and four the live answers taught:
+    - **A parent's children are `parentStudentids`**, else the pupils whose `parent1id`…`parent3id`
+      name the parent; a parent's `dbi.students` is the whole class (24 pupils for one child).
+    - **A school may refuse a parent the pupil's timetable** ("Insuficient priviledges",
+      `rights.students: false`): the source then asks for the child's class (`table: "classes"`), which
+      still carries the child's own clubs. Lessons are `card` items, not `lesson`.
+    - **The timeline is the child's by `user` in the answer's `childGroups[studentId]`**, with the
+      `ydNNNN@` school-year prefix ignored; names (`user_meno`) only when an answer has no groups. A
+      homework's audience is a plan (`CustPlan…`), which a class name never matched.
+    - **An event's title is `data.name` and its time the bell times of `data.period` for
+      `data.durationperiods`** (`dbi.periods`); a cancelled one is dropped. A homework is titled by
+      `data.nazov` without the one-word mark EduPage adds once it is edited ("Změněné: …").
     - **The password is stored, the one exception to "used once and dropped"** (owner decision):
       EduPage has no refresh token, only a session cookie that expires, so the connection keeps the
       password (`EdupageSecrets`: password, cookies, studentId, device token), sealed in

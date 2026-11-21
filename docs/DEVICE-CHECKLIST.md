@@ -2482,8 +2482,10 @@ the real launch and the badge as drawn.
 
 EduPage import (design `docs/superpowers/specs/2026-11-12-edupage-import-design.md`). The client, the
 three parsers and the store are JVM-tested against **inferred** answers (the open-source
-`edupage-api` 0.13.3's description of the protocol, `EdupageFixtures`); **no real EduPage account has
-answered the app yet**, so this section is the first contact. Needs a parent's EduPage login (Zuzana's
+`edupage-api` 0.13.3's description of the protocol, `EdupageFixtures`) and, since 21 November 2026,
+against the shapes one live Czech school answered a parent's account (sign-in, child switch, the
+class timetable a parent is given, the timeline; `EdupageParsersTest`'s `live…` cases). What is left
+for a phone is everything drawn, the stored connection and the co-parent's side. Needs a parent's EduPage login (Zuzana's
 school) and a build with the row switched on: a debug build, or release with
 `-PCOPLANLY_EDUPAGE_IMPORT=true` (`BuildConfig.EDUPAGE_IMPORT`; the row is hidden in release otherwise).
 

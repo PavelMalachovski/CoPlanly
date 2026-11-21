@@ -64,8 +64,7 @@ class EdupageSource(
             val to = monday.plus(SchoolImportPlanner.TIMETABLE_WEEKS, DateTimeUnit.WEEK)
                 .minus(1, DateTimeUnit.DAY)
             reading(uid, connectionId, first) { pass ->
-                val json = client.timetableJson(pass.session, pass.studentId, monday, to)
-                val weeks = EdupageTimetableParser.weeks(json, monday, to)
+                val weeks = EdupageTimetableParser.weeks(timetableJson(pass, monday, to), monday, to)
                 // `today` is not known here, only its Monday: reading from a week earlier covers the
                 // `today - 7 days` the events and tasks want, so the timeline is still read once.
                 mergeDaysOff(weeks, timeline(pass, lookbackFrom(monday)).daysOff)
@@ -97,6 +96,18 @@ class EdupageSource(
             ?: open(uid, connectionId, signInFirst = false).also { pass ->
                 passesMonitor.locked { passes[connectionId] = pass }
             }
+
+    /**
+     * The pupil's timetable, or the class's when EduPage refuses a parent the pupil's
+     * ([EdupageTimetableParser.refusesPupilTable]). The class timetable still carries the pupil's own
+     * clubs (recorded live); it shows every group's lessons, which only ever widens a school day.
+     */
+    private suspend fun timetableJson(pass: Pass, from: LocalDate, to: LocalDate): String {
+        val json = client.timetableJson(pass.session, pass.studentId, from, to)
+        if (!EdupageTimetableParser.refusesPupilTable(json)) return json
+        val classId = EdupageAccountParser.classIdOf(pass.session.userhome, pass.studentId) ?: return json
+        return client.timetableJson(pass.session, classId, from, to, table = "classes")
+    }
 
     /** The timeline from [from] or earlier, read at most once per pass. */
     private suspend fun timeline(pass: Pass, from: LocalDate): EdupageTimelineParser.Result {
