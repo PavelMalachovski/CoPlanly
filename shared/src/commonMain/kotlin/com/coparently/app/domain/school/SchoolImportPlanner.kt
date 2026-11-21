@@ -118,6 +118,9 @@ data class SchoolImportTarget(
  * @property ledger What this connection has imported before, by event id.
  * @property wording The titles to write.
  * @property tasks The school's homework and assignments; empty when none were fetched.
+ * @property importHours Whether the connection imports the school-hours events
+ *   ([SchoolConnection.importHours]). Off, none is created or updated, and those it made for today
+ *   or later are deleted.
  */
 data class SchoolImportInput(
     val target: SchoolImportTarget,
@@ -130,7 +133,8 @@ data class SchoolImportInput(
     val existing: Map<String, ExistingImport>,
     val ledger: Map<String, SchoolImportRecord>,
     val wording: SchoolImportWording,
-    val tasks: List<SchoolTask> = emptyList()
+    val tasks: List<SchoolTask> = emptyList(),
+    val importHours: Boolean = true
 )
 
 /**
@@ -138,9 +142,9 @@ data class SchoolImportInput(
  *
  * @property creates New events, to go through the ordinary create path.
  * @property updates Imported events whose school data changed, as copies of the stored events.
- * @property deletes School-hours events for days the fetched timetable now says have no school —
- *   the one deletion an import makes, through the ordinary delete path (a tombstone and a
- *   revision).
+ * @property deletes School-hours events — for days the fetched timetable now says have no school,
+ *   and, while the connection does not import hours, every one it made for today or later. The only
+ *   kind an import deletes, through the ordinary delete path (a tombstone and a revision).
  * @property ledger The connection's record after this update.
  */
 data class SchoolImportPlan(
@@ -215,8 +219,22 @@ object SchoolImportPlanner {
                 }
             }
         }
+        if (!input.importHours) {
+            val withdrawn = comingHours(input)
+            withdrawn.forEach(ledger::remove)
+            val deletes = withdrawn.mapNotNull { (input.existing[it] as? ExistingImport.Live)?.event }
+            return SchoolImportPlan(creates, updates, deletes, ledger)
+        }
         return SchoolImportPlan(creates, updates, noSchoolDeletes(input), ledger)
     }
+
+    /**
+     * The school-hours events this connection made for today or later: what switching hours off
+     * takes back. Dropped from the ledger too, so switching them on again imports them afresh.
+     */
+    private fun comingHours(input: SchoolImportInput): List<String> =
+        input.ledger.filter { (_, record) -> record.kind == SchoolImportKind.HOURS && record.lastDate >= input.today }
+            .keys.toList()
 
     /**
      * The id of the imported event of [kind] under [key] for [target]'s account:

@@ -4562,6 +4562,14 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       rewritten only when the school's fingerprint (title, description, start, end) changed, and
       only those fields, through `copy()`, so a parent's edit survives until the school changes
       it. Nothing before today is touched.
+    - **School hours are an option of each connection, events are not** (owner decision, 21 November
+      2026; `SchoolConnection.importHours`, design
+      `docs/superpowers/specs/2026-11-21-school-hours-optional-design.md`). A new connection starts
+      with it off, a record written before the option reads on, and the record carries
+      `"importHours": false` only when off. Off, the planner creates no school-hours event and deletes
+      those this connection made for today or later (the import's second deletion, its own `hours`
+      kind only), and drops them from the ledger so switching on imports them afresh; events, tests,
+      homework and days off come in either way. The switch is the import screen's "Lesson times" row.
     - **Quiet writes, daily job.** The import writes through the event use cases with
       `announce = false` (no chat card per event; revisions are still recorded), skips a day off the
       holiday provider already draws, merges a run of days off into one event, and runs as unique

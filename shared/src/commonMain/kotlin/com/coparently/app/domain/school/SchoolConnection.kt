@@ -43,6 +43,9 @@ enum class SchoolConnectionStatus(val stored: String) {
  * @property status Whether it can still import.
  * @property lastSuccessAtMillis When an update last worked, or null when none has.
  * @property system Which school system it reads; a record written before EduPage is [SchoolSystem.BAKALARI].
+ * @property importHours Whether the import puts the school hours (first lesson to last) in the
+ *   calendar, beside the events, which it always imports. Off for a new connection; a record written
+ *   before the option existed reads on (owner decision, 21 November 2026).
  */
 data class SchoolConnection(
     val id: String,
@@ -54,5 +57,6 @@ data class SchoolConnection(
     val familyId: String?,
     val status: SchoolConnectionStatus,
     val lastSuccessAtMillis: Long?,
-    val system: SchoolSystem = SchoolSystem.BAKALARI
+    val system: SchoolSystem = SchoolSystem.BAKALARI,
+    val importHours: Boolean = true
 )

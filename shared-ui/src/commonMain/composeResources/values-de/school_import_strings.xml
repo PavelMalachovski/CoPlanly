@@ -18,6 +18,8 @@
     <string name="school_import_status_error">Die letzte Aktualisierung ist fehlgeschlagen</string>
     <string name="school_import_update_now">Jetzt aktualisieren</string>
     <string name="school_import_updating">Wird aktualisiert…</string>
+    <string name="school_import_lesson_times_title">Unterrichtszeiten</string>
+    <string name="school_import_lesson_times_description">Jeder Schultag von der ersten bis zur letzten Stunde. Schulveranstaltungen kommen immer.</string>
     <string name="school_import_reconnect">Erneut anmelden</string>
     <string name="school_import_disconnect">Trennen</string>
     <string name="school_import_disconnect_title">Diese Schule trennen?</string>

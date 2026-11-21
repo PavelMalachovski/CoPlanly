@@ -322,6 +322,50 @@ class SchoolImportPlannerTest {
 
     // --- fixtures -------------------------------------------------------------------------------
 
+    @Test
+    fun `hours off creates no school-hours event but still imports events`() {
+        val plan = SchoolImportPlanner.plan(
+            input(events = listOf(trip()), weeks = listOf(week(today, schoolDay(today)))).copy(importHours = false)
+        )
+
+        assertEquals(listOf("Trip to the zoo"), plan.creates.map { it.title })
+        assertTrue(plan.ledger.values.none { it.kind == SchoolImportKind.HOURS })
+    }
+
+    @Test
+    fun `hours off deletes this connection's coming school-hours events and keeps past ones`() {
+        val days = week(today, schoolDay(today), schoolDay(today.plusDays(1)))
+        val first = SchoolImportPlanner.plan(input(weeks = listOf(days)))
+        val coming = first.creates
+        val pastId = SchoolImportPlanner.idOf(target, SchoolImportKind.HOURS, IsoText.date(today.minusDays(1)))
+        val ledger = first.ledger + (pastId to SchoolImportRecord(SchoolImportKind.HOURS, today.minusDays(1), "f"))
+        val edited = coming.first().copy(title = "Anna at school (edited)")
+        val existing = mapOf<String, ExistingImport>(
+            edited.id to ExistingImport.Live(edited),
+            coming.last().id to ExistingImport.Live(coming.last())
+        )
+
+        val plan = SchoolImportPlanner.plan(
+            input(weeks = emptyList(), existing = existing, ledger = ledger).copy(importHours = false)
+        )
+
+        assertEquals(coming.map { it.id }.toSet(), plan.deletes.map { it.id }.toSet())
+        assertTrue(plan.creates.isEmpty() && plan.updates.isEmpty())
+        assertTrue(coming.none { it.id in plan.ledger }, "switching hours on again imports them afresh")
+    }
+
+    @Test
+    fun `hours off does not delete a school-hours event already pending deletion`() {
+        val first = SchoolImportPlanner.plan(input(weeks = listOf(week(today, schoolDay(today)))))
+        val id = first.creates.single().id
+
+        val plan = SchoolImportPlanner.plan(
+            input(existing = mapOf(id to ExistingImport.Deleted), ledger = first.ledger).copy(importHours = false)
+        )
+
+        assertTrue(plan.deletes.isEmpty())
+    }
+
     private fun trip() = SchoolEvent(
         id = "TRIP",
         title = "Trip to the zoo",
