@@ -114,6 +114,17 @@ class SchoolImportViewModel(
         }
     }
 
+    /**
+     * Whether [connectionId] imports the school hours, then an update at once, so the calendar gains
+     * them, or loses those of today and later, without waiting for the daily one.
+     */
+    fun setImportHours(connectionId: String, on: Boolean) {
+        viewModelScope.launch {
+            accounts.setImportHours(connectionId, on) ?: return@launch
+            updateNow(connectionId)
+        }
+    }
+
     /** Forgets [connectionId]. The events it imported stay in the calendar. */
     fun disconnect(connectionId: String) {
         viewModelScope.launch {

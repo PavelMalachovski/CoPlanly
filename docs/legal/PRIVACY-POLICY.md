@@ -410,8 +410,8 @@ processing of your child's data in Bakaláři is the school's, under its own pri
 
 ### Your child's school system (EduPage), if you connect it
 
-You can connect your child's **EduPage** account (Settings → Sync) so that the lesson times, the
-school's events, tests and homework appear in the family calendar. EduPage works differently from
+You can connect your child's **EduPage** account (Settings → Sync) so that the school's events,
+tests and homework, and if you choose the lesson times, appear in the family calendar. EduPage works differently from
 Bakaláři in one way that matters to you:
 
 - **Your phone keeps your EduPage password, encrypted, and nowhere else.** EduPage gives the app no
@@ -426,11 +426,19 @@ Bakaláři in one way that matters to you:
 - If your account asks for a second confirmation, the app asks you to approve the sign-in in
   EduPage and try again. It never sees or stores the confirmation.
 - From EduPage the app reads **only** your child's timetable for the next four weeks and the
-  timeline entries meant for your child, their class or the whole school: events, tests and
-  homework with a date, and days without lessons. It keeps the first lesson's start and the last
-  one's end for each school day, and the title of each entry. It does **not** keep or import
-  grades, absences or messages: EduPage sends messages in the same timeline answer, and the phone
-  discards them.
+  timeline entries of the last 120 days meant for your child, their class or the whole school:
+  events, tests and homework with a date, days without lessons, messages and noticeboard posts, and
+  fee notices. It keeps the first lesson's start and the last one's end for each school day (only
+  while "Lesson times" is on for that connection), and the title of each entry. It does **not** keep
+  or import grades or absences.
+- **Messages are used only to describe an event, and only by exact match.** When a message to your
+  child's class or to all the school's parents names one of the imported events, by its exact name
+  (and its date, when two events share a name), and was sent before that event's day, the part of
+  the message about it is copied into the event's description, with the day it was sent; a fee
+  notice that names the event adds the school's own sentence about the fee. A message sent to you
+  alone is never used. Every other message is discarded on the phone and never kept. Because the
+  imported event is shared with your co-parent, so is that description. A teacher's message can
+  mention other pupils or staff by name; it is copied as the school wrote it to the class's parents.
 - What it imports becomes **ordinary events in the family you chose**, about the child you chose
   — visible to your co-parent like any event you enter yourself, and kept and deleted like them.
 

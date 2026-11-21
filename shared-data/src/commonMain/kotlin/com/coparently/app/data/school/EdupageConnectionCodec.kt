@@ -15,6 +15,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
@@ -52,6 +53,8 @@ object EdupageConnectionCodec {
             connection.familyId?.let { put("familyId", it) }
             put("status", connection.status.stored)
             connection.lastSuccessAtMillis?.let { put("lastSuccessAt", it) }
+            // Written only when off, so a record of a connection that imports hours keeps its text.
+            if (!connection.importHours) put(SchoolConnectionCodec.IMPORT_HOURS, false)
             put("userUid", stored.student.userUid)
             put("fullName", stored.student.fullName)
             put("classId", stored.student.classId)
@@ -94,6 +97,7 @@ object EdupageConnectionCodec {
             familyId = root.string("familyId"),
             status = SchoolConnectionStatus.of(root.string("status")),
             lastSuccessAtMillis = root.number("lastSuccessAt"),
+            importHours = (root[SchoolConnectionCodec.IMPORT_HOURS] as? JsonPrimitive)?.booleanOrNull != false,
             system = SchoolSystem.EDUPAGE
         )
         val secrets = EdupageSecrets(

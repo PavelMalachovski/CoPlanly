@@ -148,4 +148,25 @@ class EdupageConnectionStoreTest {
         assertNull(EdupageConnectionCodec.decode(SchoolConnectionCodec.encode(record("b1"))))
         assertEquals("ep1", EdupageConnectionCodec.decode(text)?.id)
     }
+
+    @Test
+    fun `a connection that does not import hours keeps that through both codecs`() {
+        val off = { r: StoredSchoolConnection -> r.copy(connection = r.connection.copy(importHours = false)) }
+        val bakalari = off(record("c1"))
+        val edupage = off(record("ep1", secrets))
+
+        assertEquals(bakalari, SchoolConnectionCodec.decode(SchoolConnectionCodec.encode(bakalari)))
+        assertEquals(edupage, EdupageConnectionCodec.decode(EdupageConnectionCodec.encode(edupage)))
+        assertTrue(SchoolConnectionCodec.encode(bakalari).contains("\"importHours\":false"))
+    }
+
+    @Test
+    fun `a record written before the option reads as importing hours and writes no key while on`() {
+        val text = SchoolConnectionCodec.encode(record("c1"))
+
+        assertTrue("importHours" !in text)
+        assertEquals(true, SchoolConnectionCodec.decode(text)?.connection?.importHours)
+        val edupage = EdupageConnectionCodec.encode(record("ep1", secrets))
+        assertEquals(true, EdupageConnectionCodec.decode(edupage)?.connection?.importHours)
+    }
 }

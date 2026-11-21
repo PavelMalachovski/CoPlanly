@@ -116,7 +116,8 @@ internal object SchoolImportItems {
 
     /** Everything the school's data asks for, one item per id. */
     fun all(input: SchoolImportInput): List<ImportItem> =
-        (events(input) + hours(input) + daysOff(input) + tasks(input)).distinctBy { it.id }
+        (events(input) + (if (input.importHours) hours(input) else emptyList()) + daysOff(input) + tasks(input))
+            .distinctBy { it.id }
 
     /** The fetched days from today on, inside the window, one per date, in order. */
     fun daysInWindow(input: SchoolImportInput): List<SchoolDay> {

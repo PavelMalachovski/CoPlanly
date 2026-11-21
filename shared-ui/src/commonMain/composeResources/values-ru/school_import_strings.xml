@@ -18,6 +18,8 @@
     <string name="school_import_status_error">Последнее обновление не удалось</string>
     <string name="school_import_update_now">Обновить сейчас</string>
     <string name="school_import_updating">Обновляется…</string>
+    <string name="school_import_lesson_times_title">Расписание уроков</string>
+    <string name="school_import_lesson_times_description">Каждый учебный день с первого урока до последнего. Школьные события импортируются всегда.</string>
     <string name="school_import_reconnect">Войти снова</string>
     <string name="school_import_disconnect">Отключить</string>
     <string name="school_import_disconnect_title">Отключить эту школу?</string>

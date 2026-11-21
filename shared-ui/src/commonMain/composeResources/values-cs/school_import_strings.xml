@@ -18,6 +18,8 @@
     <string name="school_import_status_error">Aktualizace se nezdařila</string>
     <string name="school_import_update_now">Aktualizovat teď</string>
     <string name="school_import_updating">Aktualizuje se…</string>
+    <string name="school_import_lesson_times_title">Rozvrh hodin</string>
+    <string name="school_import_lesson_times_description">Každý školní den od první hodiny do poslední. Školní akce se importují vždy.</string>
     <string name="school_import_reconnect">Znovu přihlásit</string>
     <string name="school_import_disconnect">Odpojit</string>
     <string name="school_import_disconnect_title">Odpojit tuto školu?</string>
