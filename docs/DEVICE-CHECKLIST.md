@@ -2497,6 +2497,12 @@ school) and a build with the row switched on: a debug build, or release with
       shows, on each school day of the next four weeks, one event from the first lesson's start to
       the last lesson's end: **compare three days with the EduPage app**, one with a substitution.
 - [ ] School events for the child's class and for the whole school appear; another class's do not.
+- [ ] An event a teacher wrote about (by its exact name, before its day) carries that message, or
+      its paragraph, in its description, headed by the day it was sent, and a published fee's
+      sentence; an event whose message names it inflected ("na Sofijském náměstí") carries none.
+      The co-parent sees the same description. A message to you alone is never quoted.
+- [ ] Turn "Lesson times" off on the import screen: the coming school-hours events go, the events
+      stay; turn it on: they come back.
       A test (písomka) and a homework with a date appear as all-day events titled "Subject: title".
 - [ ] Update now twice: no duplicates. Delete one imported event, Update now: it does not come back.
 - [ ] On the co-parent's phone: the imported events (hours, events, tests, homework) are there,

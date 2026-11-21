@@ -4599,6 +4599,19 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     - **An event's title is `data.name` and its time the bell times of `data.period` for
       `data.durationperiods`** (`dbi.periods`); a cancelled one is dropped. A homework is titled by
       `data.nazov` without the one-word mark EduPage adds once it is edited ("Změněné: …").
+    - **An event's details are quoted from the school's own messages, on an exact match only**
+      (owner decision, 21 November 2026: better a missing detail than somebody else's;
+      `EdupageEventDetails`, `EdupageNotes`, design
+      `docs/superpowers/specs/2026-11-21-edupage-event-details-design.md`). A message or
+      noticeboard post to the child's groups or all the school's parents (`Rodic*`), sent before the
+      event's day, whose folded text holds the event's whole name (and its date when another event
+      of the child shares the name), goes into `SchoolEvent.description` under the day it was sent:
+      whole when it names the event in its opening and no other date, else only the paragraph. A
+      published fee (`ls` 7814) adds the school's own sentence. Never a message to this parent
+      alone, never fuzzy matching or a model, never a string of ours (the text reads in the
+      school's language on both phones). The timeline is read 120 days back, because EduPage filters
+      it by when an item was created: a shorter window missed older events on a new connection and
+      dropped a detail as its message aged.
     - **The password is stored, the one exception to "used once and dropped"** (owner decision):
       EduPage has no refresh token, only a session cookie that expires, so the connection keeps the
       password (`EdupageSecrets`: password, cookies, studentId, device token), sealed in

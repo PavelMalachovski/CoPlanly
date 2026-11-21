@@ -49,18 +49,36 @@ object EdupageTimelineParser {
         val book = Book.of(holder, child)
         val items = holder.items("timelineItems")
         val events = ArrayList<SchoolEvent>()
+        val targets = ArrayList<EdupageEventDetails.Target>()
         val tasks = ArrayList<SchoolTask>()
         val daysOff = ArrayList<SchoolDay>()
-        items.filter { it.text("removed") !in REMOVED && book.isForChild(it) }
+        val live = items.filter { it.text("removed") !in REMOVED }
+        live.filter { book.isForChild(it) }
             .mapNotNull { item -> stampOf(item)?.let { item to it } }
             .forEach { (item, stamp) ->
                 when (item.text("typ")) {
-                    in EVENT_TYPES -> eventOf(item, stamp, book)?.let(events::add)
+                    in EVENT_TYPES -> eventOf(item, stamp, book)?.let { event ->
+                        events += event
+                        targets += EdupageEventDetails.Target(event.id, event.title, stamp.date)
+                    }
                     in TASK_TYPES -> taskOf(item, stamp, book)?.let(tasks::add)
                     in DAY_OFF_TYPES -> daysOff.add(dayOffOf(item, stamp))
                 }
             }
-        return Result(events, tasks, daysOff)
+        val notes = live.mapNotNull { item ->
+            // A message to the class's or the school's parents counts, one to this parent alone never:
+            // it may be a private exchange, and the event is shared with the co-parent.
+            val audience = book.isForChild(item) || item.text("user") == ALL_PARENTS
+            EdupageNotes.noteOf(
+                typ = item.text("typ"),
+                audienceIsTheChilds = audience,
+                sentAt = item.text("cas_pridania"),
+                text = item.text("text"),
+                data = dataOf(item)
+            )
+        }
+        val details = EdupageEventDetails.describe(targets, notes)
+        return Result(events.map { it.copy(description = details[it.id] ?: it.description) }, tasks, daysOff)
     }
 
     /** What the answer says beside its items: the child's groups, the bell times and the subjects. */
@@ -183,6 +201,7 @@ object EdupageTimelineParser {
         SchoolDay(stamp.date, SchoolDayType.HOLIDAY, titleOf(item), false, null, null)
 
     private val REMOVED = setOf("1", "true")
+    private const val ALL_PARENTS = "Rodic*"
     private const val CHANGE_MARK_MAX = 20
     private val SCHOOL_YEAR_PREFIX = Regex("^yd\\d+@")
     private const val OK_STATUS = 200

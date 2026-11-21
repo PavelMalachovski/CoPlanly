@@ -258,6 +258,12 @@ class EdupageSource(
 
     private companion object {
         const val TAG = "EdupageSource"
-        const val TIMELINE_LOOKBACK_DAYS = 7
+
+        /**
+         * How far back the timeline is read. EduPage filters it by when an item was **created**
+         * (recorded live, November 2026), so a short window missed every event created before it on a
+         * new connection, and dropped a message's details from its event once the message aged out.
+         */
+        const val TIMELINE_LOOKBACK_DAYS = 120
     }
 }
