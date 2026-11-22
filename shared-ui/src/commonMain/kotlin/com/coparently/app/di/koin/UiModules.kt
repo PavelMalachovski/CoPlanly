@@ -14,7 +14,6 @@ import com.coparently.app.presentation.chat.ChatSearchViewModel
 import com.coparently.app.presentation.chat.ChatViewModel
 import com.coparently.app.presentation.chat.DictationViewModel
 import com.coparently.app.presentation.chat.ReplySuggestionViewModel
-import com.coparently.app.presentation.chat.SettleUpPaymentViewModel
 import com.coparently.app.presentation.childinfo.ChildInfoViewModel
 import com.coparently.app.presentation.common.ConnectivityViewModel
 import com.coparently.app.presentation.common.FamilyKindSource
@@ -55,6 +54,7 @@ import com.coparently.app.presentation.pairing.PendingCustodyConflict
 import com.coparently.app.presentation.parentingplan.ParentingPlanViewModel
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
 import com.coparently.app.presentation.payments.PaymentsViewModel
+import com.coparently.app.presentation.payments.SettleUpPaymentViewModel
 import com.coparently.app.presentation.pets.PetsViewModel
 import com.coparently.app.presentation.professionals.ProfessionalCalendarViewModel
 import com.coparently.app.presentation.professionals.ProfessionalPlanViewModel
@@ -101,11 +101,10 @@ val commonUiModule: Module = module {
 
 /**
  * The chat (MON-24 phase 2, Task 10): the thread and its conversations, a file's sending and
- * opening, the card that names an event, the search, dictation, the suggested reply and the
- * payment a settle-up card shows. What they take from the platform — the sealed preference store,
- * the signed-in account, on-device speech and the AI callable with whether the build offers it — is
- * bound by [platformDataModule] and the app's modules on Android, and by [platformDataModule] and
- * [platformUiModule] on the iPhone.
+ * opening, the card that names an event, the search, dictation and the suggested reply. What they
+ * take from the platform — the sealed preference store, the signed-in account, on-device speech
+ * and the AI callable with whether the build offers it — is bound by [platformDataModule] and the
+ * app's modules on Android, and by [platformDataModule] and [platformUiModule] on the iPhone.
  */
 val chatUiModule: Module = module {
     viewModelOf(::ChatAttachmentViewModel)
@@ -114,7 +113,6 @@ val chatUiModule: Module = module {
     viewModelOf(::ChatViewModel)
     viewModelOf(::DictationViewModel)
     viewModelOf(::ReplySuggestionViewModel)
-    viewModelOf(::SettleUpPaymentViewModel)
 }
 
 /**
@@ -197,6 +195,7 @@ val expensesUiModule: Module = module {
  */
 val paymentsUiModule: Module = module {
     viewModelOf(::PaymentsViewModel)
+    viewModelOf(::SettleUpPaymentViewModel)
 }
 
 /**

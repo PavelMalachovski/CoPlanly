@@ -1,4 +1,4 @@
-package com.coparently.app.presentation.chat
+package com.coparently.app.presentation.payments
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 /**
- * The account the co-parent of the thread on screen receives payments on.
+ * The account the co-parent of the family on screen receives payments on.
  *
  * @property uid The co-parent.
  * @property iban Their IBAN, or null when they have added none.
@@ -24,9 +24,8 @@ data class PayeeAccount(val uid: String, val iban: String?)
 /**
  * Follows the co-parent of the family on screen and the IBAN they receive payments on.
  *
- * In its own file since MON-24 phase 2 (Task 10), out of `SettleUpPayment.kt`, whose composables
- * draw the payment code with ZXing and share it through Android and stay in the app until the
- * screens move.
+ * The payer's payment code on the Money card and the Expenses header ([SettleUpPanel]) pays this
+ * account. It lived with the chat's settle-up cards until settle up left the chat (November 2026).
  */
 class SettleUpPaymentViewModel(
     chatPartnerSource: ChatPartnerSource,

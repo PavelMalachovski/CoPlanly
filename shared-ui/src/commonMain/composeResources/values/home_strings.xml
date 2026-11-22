@@ -94,4 +94,6 @@
     <string name="home_handover_goes_to">Goes to %1$s</string>
     <!-- A week tile's spoken description on a day with events. %1$s = the day and whose it is. -->
     <string name="home_week_tile_with_events">%1$s, has events</string>
+    <!-- The Money card's top line. %1$s = the month's standalone name ("November"). -->
+    <string name="home_money_spent_in">Spent in %1$s</string>
 </resources>

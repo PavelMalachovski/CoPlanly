@@ -25,12 +25,15 @@ import com.coparently.app.presentation.consent.TelemetryConsentViewModel
 import com.coparently.app.presentation.custody.SchedulePreviewMonth
 import com.coparently.app.presentation.event.EventPreviewContent
 import com.coparently.app.presentation.expenses.CollapsedMonthSummary
+import com.coparently.app.presentation.expenses.ExpenseSettleUp
 import com.coparently.app.presentation.expenses.ExpenseSummaryHeader
 import com.coparently.app.presentation.expenses.MonthNavigation
 import com.coparently.app.presentation.expenses.currencyFormat
 import com.coparently.app.presentation.family.FamilyMoneyCard
 import com.coparently.app.presentation.home.MonthMoney
 import com.coparently.app.presentation.pairing.InvitationView
+import com.coparently.app.presentation.payments.SettleUpPanelActions
+import com.coparently.app.presentation.payments.SettleUpPanelState
 import com.coparently.app.presentation.settings.CUSTOM_COLOUR
 import com.coparently.app.presentation.settings.ParentColorPicker
 import com.coparently.app.testing.RobolectricTestApplication
@@ -38,6 +41,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.YearMonth
 import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -73,7 +77,18 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
             ),
             currency = "CZK",
             parentNames = ScreenshotFixtures.parentNames,
-            onSettleUp = {}
+            // The payee's settle-up, since settle up left the chat (November 2026).
+            settleUp = ExpenseSettleUp(
+                state = SettleUpPanelState.AskToSettle(
+                    YearMonth(2026, 5),
+                    "CZK",
+                    OWED_TO_ME_MINOR,
+                    OWED_TO_ME
+                ),
+                payeeIban = null,
+                actions = SettleUpPanelActions(onAskToSettle = {}, onMarkPaid = {}, onConfirm = {}),
+                coParentFallback = "Co-parent"
+            )
         )
     }
 
@@ -265,6 +280,7 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
         private const val MOM_PAID = 3_120.0
         private const val DAD_PAID = 1_480.0
         private const val OWED_TO_ME = 820.0
+        private const val OWED_TO_ME_MINOR = 82_000L
         private const val EUR_TOTAL = 145.0
         private const val EXPENSE_COUNT = 5
         private const val PREVIEW_HOUR = 15

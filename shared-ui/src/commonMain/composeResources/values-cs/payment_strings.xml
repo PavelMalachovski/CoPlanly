@@ -11,4 +11,17 @@
     <string name="payment_error_not_saved">Nepodařilo se to uložit. Zkontrolujte připojení a zkuste to znovu.</string>
     <string name="payment_card_waiting">Čeká na potvrzení</string>
     <string name="payment_card_received">Přijato</string>
+    <!-- Settle up on the Money card and the Expenses header (November 2026). The month is its
+         standalone name ("October"); the amount is formatted; a date is the day and month. -->
+    <string name="payment_panel_not_settled">Za %1$s zatím není vyrovnáno</string>
+    <string name="payment_panel_ask">Požádat o vyrovnání: %1$s</string>
+    <string name="payment_panel_pay">%1$s: zaplatit %2$s za %3$s</string>
+    <string name="payment_panel_paid_on">Zaplatili jste %1$s dne %2$s. %3$s potvrdí, až peníze dorazí.</string>
+    <string name="payment_panel_show_code">Znovu zobrazit platební kód</string>
+    <string name="payment_panel_says_paid">%1$s: zaplaceno %2$s dne %3$s.</string>
+    <string name="payment_panel_check_bank">Nejdřív si platbu ověřte v bance.</string>
+    <string name="payment_panel_settled">Za %1$s vyrovnáno · %2$s</string>
+    <string name="payment_chip_waiting_for_you">Čeká na vás</string>
+    <string name="payment_chip_waiting_for">Čeká na: %1$s</string>
+    <string name="payment_chip_settled">Vyrovnáno</string>
 </resources>

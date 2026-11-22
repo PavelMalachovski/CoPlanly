@@ -26,6 +26,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -294,10 +295,11 @@ fun ChatScreen(
                 // The attachment renderer and the tap-to-open handling (MON-23), provided rather
                 // than passed so `MessageItem`'s baselined signature stays as it is.
                 ChatAttachmentsHost {
-                    // Long-press "Report message" on the co-parent's bubbles (F-10), and what to pay
-                    // under a settle-up card.
+                    // Long-press "Report message" on the co-parent's bubbles (F-10), and where a child
+                    // support card leads. What to pay under a settle-up card left the thread for the
+                    // Money card and Expenses (November 2026).
                     ChatReportHost {
-                        SettleUpPaymentHost(parentNames, onOpenSupport) {
+                        CompositionLocalProvider(LocalOpenSupport provides onOpenSupport) {
                             // A card about an event opens that event — its preview, or the inbox while
                             // it waits on this parent — never the change-request inbox on a request
                             // that does not exist.

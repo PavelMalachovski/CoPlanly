@@ -630,12 +630,6 @@ fun MessageItem(
             }
         }
 
-        // What to pay, under a settle-up card on the payer's phone: the code, the IBAN, a share.
-        // And under a payment card, the payee's "Money arrived" (25 October 2026).
-        if (activity?.kind?.isSettleUp == true || activity?.kind?.isPayment == true) {
-            LocalSettleUpPayment.current?.invoke(message, isCurrentUser)
-        }
-
         // The one delivery state loud enough to leave the bubble: error red on the filled
         // primary background is the contrast pairing that fails, so a failed send says so
         // on the surface below instead.

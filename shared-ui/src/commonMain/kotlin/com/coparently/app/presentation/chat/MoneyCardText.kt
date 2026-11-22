@@ -2,6 +2,7 @@ package com.coparently.app.presentation.chat
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.remember
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.time.IsoText
@@ -38,3 +39,19 @@ internal fun monthText(isoMonth: String): String =
     runCatching { IsoText.parseYearMonth(isoMonth) }.getOrNull()
         ?.let { ReaderDateText.pattern(it, "LLLL yyyy") }
         ?: isoMonth
+
+/**
+ * A settle-up card's sentence on this phone — "you owe" or "you are owed", by who reads it — with
+ * the month and the amount in the reader's language. What to pay, and "I paid", are on Home's Money
+ * card and the Expenses header since November 2026, no longer under the card.
+ */
+@Composable
+internal fun settleUpCardText(card: ActivityAnnouncement, isCurrentUser: Boolean): String {
+    val month = remember(card.whenIso) {
+        card.whenIso?.let { iso -> runCatching { IsoText.parseDate(iso) }.getOrNull() }
+            ?.let { ReaderDateText.pattern(it, "LLLL yyyy") }
+            ?: card.title
+    }
+    val amount = card.amount?.let { ReaderMoneyText.amount(it, card.currency) } ?: card.amount.orEmpty()
+    return stringResource(ActivityCardText.settleUpResource(card.kind, isCurrentUser), month, amount)
+}

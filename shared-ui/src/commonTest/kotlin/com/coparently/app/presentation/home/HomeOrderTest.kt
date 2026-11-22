@@ -16,7 +16,7 @@ class HomeOrderTest {
                 HomeSection.OPEN_REQUESTS,
                 HomeSection.THIS_WEEK,
                 HomeSection.HANDOVER,
-                HomeSection.TILES
+                HomeSection.MONEY
             ),
             first
         )
@@ -28,17 +28,17 @@ class HomeOrderTest {
         val (first, _) = homeSections(hasOpenRequests = false, twoPane = false)
 
         assertEquals(
-            listOf(HomeSection.UPDATES, HomeSection.THIS_WEEK, HomeSection.HANDOVER, HomeSection.TILES),
+            listOf(HomeSection.UPDATES, HomeSection.THIS_WEEK, HomeSection.HANDOVER, HomeSection.MONEY),
             first
         )
     }
 
     @Test
-    fun `two panes put updates - requests and the handover left and the week and tiles right`() {
+    fun `two panes put updates - requests and the handover left and the week and money right`() {
         val (first, second) = homeSections(hasOpenRequests = true, twoPane = true)
 
         assertEquals(listOf(HomeSection.UPDATES, HomeSection.OPEN_REQUESTS, HomeSection.HANDOVER), first)
-        assertEquals(listOf(HomeSection.THIS_WEEK, HomeSection.TILES), second)
+        assertEquals(listOf(HomeSection.THIS_WEEK, HomeSection.MONEY), second)
     }
 
     @Test
@@ -46,6 +46,6 @@ class HomeOrderTest {
         val (first, second) = homeSections(hasOpenRequests = false, twoPane = true)
 
         assertEquals(listOf(HomeSection.UPDATES, HomeSection.HANDOVER), first)
-        assertEquals(listOf(HomeSection.THIS_WEEK, HomeSection.TILES), second)
+        assertEquals(listOf(HomeSection.THIS_WEEK, HomeSection.MONEY), second)
     }
 }

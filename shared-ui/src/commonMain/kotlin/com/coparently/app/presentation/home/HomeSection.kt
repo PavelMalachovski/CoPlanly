@@ -16,16 +16,16 @@ internal enum class HomeSection {
     /** The next handover, one compact card. */
     HANDOVER,
 
-    /** This month's expenses and the unread chat. */
-    TILES
+    /** The Money card: this month's spend, who owes whom, and settling up. */
+    MONEY
 }
 
 /**
  * Which sections Home draws, and where.
  *
- * One column on a phone: Updates, open requests, this week, the handover, the tiles. From two
+ * One column on a phone: Updates, open requests, this week, the handover, the Money card. From two
  * panes (design item 19) the left holds what the parent reads and acts on — Updates, open
- * requests, the handover — and the right this week and the tiles.
+ * requests, the handover — and the right this week and the Money card.
  *
  * @param hasOpenRequests Whether anything waits on either parent
  * @param twoPane Whether the window is wide enough for two panes
@@ -41,10 +41,10 @@ internal fun homeSections(
     )
     val week = listOf(HomeSection.THIS_WEEK)
     val handover = listOf(HomeSection.HANDOVER)
-    val tiles = listOf(HomeSection.TILES)
+    val money = listOf(HomeSection.MONEY)
     return if (twoPane) {
-        (readNow + handover) to (week + tiles)
+        (readNow + handover) to (week + money)
     } else {
-        (readNow + week + handover + tiles) to emptyList()
+        (readNow + week + handover + money) to emptyList()
     }
 }

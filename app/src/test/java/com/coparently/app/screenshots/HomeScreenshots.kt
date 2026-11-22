@@ -1,5 +1,6 @@
 package com.coparently.app.screenshots
 
+import androidx.compose.runtime.Composable
 import com.coparently.app.domain.changerequests.HistoryEntry
 import com.coparently.app.domain.changerequests.RequestOutcome
 import com.coparently.app.domain.changerequests.RequestSubject
@@ -7,20 +8,25 @@ import com.coparently.app.domain.custody.HandoverInfo
 import com.coparently.app.domain.expenses.CurrencyBalance
 import com.coparently.app.domain.expenses.ExpenseBalance
 import com.coparently.app.domain.home.WeekDay
+import com.coparently.app.domain.payments.Payment
+import com.coparently.app.domain.payments.PaymentKind
 import com.coparently.app.presentation.calendar.components.DayAgendaCard
 import com.coparently.app.presentation.home.ActivityItem
 import com.coparently.app.presentation.home.ActivityKind
 import com.coparently.app.presentation.home.ChildWithParent
 import com.coparently.app.presentation.home.CurrencyAmount
 import com.coparently.app.presentation.home.HandoverCard
+import com.coparently.app.presentation.home.MoneyCard
 import com.coparently.app.presentation.home.MonthSpend
 import com.coparently.app.presentation.home.OpenRequestsCard
 import com.coparently.app.presentation.home.RequestsRowState
-import com.coparently.app.presentation.home.StatTiles
 import com.coparently.app.presentation.home.UpdatesCard
 import com.coparently.app.presentation.home.WeekTiles
+import com.coparently.app.presentation.payments.SettleUpPanelActions
+import com.coparently.app.presentation.payments.SettleUpPanelState
 import com.coparently.app.testing.RobolectricTestApplication
 import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.YearMonth
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
@@ -32,9 +38,10 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Home's cards (redesign, November 2026, variant A): the Updates card, the open requests, the
- * week's seven tiles, the handover card and the stat tiles, beside the "today" agenda card (with
- * the co-parent's contact window, MON-6b). All carry translated sentences or parent colours, so
- * they take the full [ScreenshotVariants.TEXT_HEAVY] set, 2.0× German included.
+ * week's seven tiles, the handover card and the Money card in its five settle-up states, beside
+ * the "today" agenda card (with the co-parent's contact window, MON-6b). All carry translated
+ * sentences or parent colours, so they take the full [ScreenshotVariants.TEXT_HEAVY] set, 2.0×
+ * German included.
  *
  * @param variant Language, theme, font scale and palette for this run
  */
@@ -156,15 +163,50 @@ class HomeScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
         )
     }
 
+    /** The payee, before anything is recorded: "Ask Pavel to settle up" (board MoneySettleUp, 1). */
     @Test
-    fun statTiles() = snap("home_stat_tiles") {
-        StatTiles(
-            spend = MonthSpend(
-                byCurrency = listOf(
-                    CurrencyAmount(currency = "CZK", amount = CZK_SPENT),
-                    CurrencyAmount(currency = "EUR", amount = EUR_SPENT)
-                )
-            ),
+    fun moneyCardAskToSettle() = snap("home_money_card_ask") {
+        moneyCard(
+            net = CZK_OWED_TO_ME,
+            panel = SettleUpPanelState.AskToSettle(MONTH, "CZK", CZK_OWED_MINOR, CZK_OWED_TO_ME)
+        )
+    }
+
+    /** The payer: the payment code for Pavel's account, the IBAN, Share and "I paid" (2). */
+    @Test
+    fun moneyCardPay() = snap("home_money_card_pay") {
+        moneyCard(net = -CZK_OWED_TO_ME, panel = SettleUpPanelState.Pay(MONTH, "CZK", CZK_OWED_MINOR))
+    }
+
+    /** The payer after "I paid": waiting for Pavel, the code again on request (3). */
+    @Test
+    fun moneyCardWaitingForConfirm() = snap("home_money_card_waiting") {
+        moneyCard(
+            net = -CZK_OWED_TO_ME,
+            panel = SettleUpPanelState.WaitingForConfirm(MONTH, "CZK", CZK_OWED_MINOR, PAID_AT_MILLIS)
+        )
+    }
+
+    /** The payee, once Pavel says he paid: "Money arrived" (4). */
+    @Test
+    fun moneyCardConfirm() = snap("home_money_card_confirm") {
+        moneyCard(
+            net = CZK_OWED_TO_ME,
+            panel = SettleUpPanelState.Confirm(MONTH, "CZK", CZK_OWED_MINOR, PAID_AT_MILLIS, paymentByCoParent)
+        )
+    }
+
+    /** Both phones once the money arrived: settled, and the balance reads square (5). */
+    @Test
+    fun moneyCardSettled() = snap("home_money_card_settled") {
+        moneyCard(net = CZK_OWED_TO_ME, panel = SettleUpPanelState.Settled(MONTH, "CZK", CZK_OWED_MINOR))
+    }
+
+    @Composable
+    private fun moneyCard(net: Double, panel: SettleUpPanelState) {
+        MoneyCard(
+            month = MONTH,
+            spend = MonthSpend(byCurrency = listOf(CurrencyAmount(currency = "CZK", amount = CZK_SPENT))),
             balances = listOf(
                 CurrencyBalance(
                     currency = "CZK",
@@ -172,16 +214,30 @@ class HomeScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
                         momPaid = CZK_MOM_PAID,
                         dadPaid = CZK_SPENT - CZK_MOM_PAID,
                         total = CZK_SPENT,
-                        netForCurrentUser = CZK_OWED_TO_ME,
+                        netForCurrentUser = net,
                         splitKnown = true
                     )
                 )
             ),
-            unreadCount = UNREAD,
-            onOpenExpenses = {},
-            onOpenChat = {}
+            panels = listOf(panel),
+            coParentName = CO_PARENT_NAME,
+            payeeIban = CO_PARENT_IBAN,
+            actionsFor = { SettleUpPanelActions(onAskToSettle = {}, onMarkPaid = {}, onConfirm = {}) },
+            onOpenExpenses = {}
         )
     }
+
+    private val paymentByCoParent = Payment(
+        id = "fam__expenses__2026-05__CZK",
+        familyId = "fam",
+        kind = PaymentKind.EXPENSES,
+        month = MONTH,
+        currency = "CZK",
+        amountMinor = CZK_OWED_MINOR,
+        payerUid = ScreenshotFixtures.CO_PARENT_UID,
+        payeeUid = ScreenshotFixtures.MY_UID,
+        paidAtMillis = PAID_AT_MILLIS
+    )
 
     private fun answerItem(key: String, subject: RequestSubject, outcome: RequestOutcome, at: LocalDateTime) =
         ActivityItem(
@@ -209,8 +265,17 @@ class HomeScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
         private const val CZK_SPENT = 4_250.0
         private const val CZK_MOM_PAID = 3_000.0
         private const val CZK_OWED_TO_ME = 875.0
-        private const val EUR_SPENT = 86.5
-        private const val UNREAD = 3
+        private const val CZK_OWED_MINOR = 87_500L
+        private const val CO_PARENT_NAME = "Pavel"
+
+        /** A valid Czech IBAN (the well-known example account), so the card draws QR Platba. */
+        private const val CO_PARENT_IBAN = "CZ6508000000192000145399"
+
+        /** 22 May 2026, 12:00 UTC: the day the payer said they paid, in every zone CI runs in. */
+        private const val PAID_AT_MILLIS = 1_779_451_200_000L
+
+        /** The fixtures' month, May 2026, as the money card takes it. */
+        private val MONTH = YearMonth(2026, 5)
 
         /** The variants this class runs over. */
         @JvmStatic

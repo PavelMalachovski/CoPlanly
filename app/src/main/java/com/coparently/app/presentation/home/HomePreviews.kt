@@ -2,9 +2,12 @@ package com.coparently.app.presentation.home
 
 import androidx.compose.runtime.Composable
 import com.coparently.app.domain.custody.HandoverInfo
+import com.coparently.app.presentation.payments.SettleUpPanelActions
+import com.coparently.app.presentation.payments.SettleUpPanelState
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
 import com.coparently.app.utils.previewParentNames
+import kotlinx.datetime.YearMonth
 import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
 
@@ -32,14 +35,23 @@ private fun HandoverCardPreview() {
 
 @LightDarkPreviews
 @Composable
-private fun StatTilesPreview() {
+private fun MoneyCardPreview() {
     PreviewWrapper {
-        StatTiles(
+        MoneyCard(
+            month = YearMonth(year = 2026, month = 10),
             spend = MonthSpend(byCurrency = listOf(CurrencyAmount(currency = "CZK", amount = 4_250.0))),
             balances = emptyList(),
-            unreadCount = 2,
-            onOpenExpenses = {},
-            onOpenChat = {}
+            panels = listOf(
+                SettleUpPanelState.Pay(
+                    month = YearMonth(year = 2026, month = 10),
+                    currency = "CZK",
+                    amountMinor = 62_000
+                )
+            ),
+            coParentName = "Alice",
+            payeeIban = "CZ6508000000192000145399",
+            actionsFor = { SettleUpPanelActions(onAskToSettle = {}, onMarkPaid = {}, onConfirm = {}) },
+            onOpenExpenses = {}
         )
     }
 }

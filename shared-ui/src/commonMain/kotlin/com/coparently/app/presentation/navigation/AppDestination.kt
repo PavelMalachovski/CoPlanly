@@ -405,14 +405,10 @@ internal fun appDestinations(
             onNavigateToPairing = {
                 navController.navigate(Screen.Pairing.routeWithCode(null))
             },
-            // The dashboard's stat tiles deep-link into what owns those numbers:
-            // Expenses, a detail screen since the Family tab replaced its tab, and the
-            // Chat tab, through the tab switcher like tapping the tab itself.
+            // The Money card deep-links into what owns its numbers: Expenses, a detail
+            // screen since the Family tab replaced its tab.
             onOpenExpenses = {
                 navController.navigate(Screen.Expenses.route)
-            },
-            onOpenChat = {
-                tabSwitcher.select(BottomNavDestination.CHAT)
             },
             // A week tile opens the calendar's Day view on its day (redesign, November
             // 2026, variant A): the request first, then the tab, which answers it.

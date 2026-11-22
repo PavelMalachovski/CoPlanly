@@ -52,11 +52,6 @@ import com.coparently.app.domain.expenses.CurrencyBalance
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.Expense
-import com.coparently.app.domain.money.DecimalText
-import com.coparently.app.domain.payment.PaymentQr
-import com.coparently.app.domain.payments.Payment
-import com.coparently.app.domain.payments.PaymentKind
-import com.coparently.app.domain.payments.PaymentState
 import com.coparently.app.presentation.changerequests.splitSharesText
 import com.coparently.app.presentation.common.AdaptiveSegmented
 import com.coparently.app.presentation.common.AppIcon
@@ -85,6 +80,7 @@ import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.common.valueOrNull
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.payments.PaymentsViewModel
+import com.coparently.app.presentation.payments.rememberSettleUpSource
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.Spacing
@@ -122,7 +118,6 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.YearMonth
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import kotlin.math.abs
 
 /**
  * The band kept clear under the Add button while it is shown.
@@ -202,9 +197,9 @@ fun ExpenseScreen(
     paymentsViewModel: PaymentsViewModel = koinViewModel()
 ) {
     val expensesState by viewModel.expenses.collectAsState()
-    // "I paid" and "Money arrived" for each month and currency (25 October 2026).
-    val payments by paymentsViewModel.payments.collectAsState()
-    val paymentBusy by paymentsViewModel.busy.collectAsState()
+    // "I paid" and "Money arrived" for each month and currency (25 October 2026), drawn by the
+    // summary's settle-up panel since November 2026.
+    val settleUpSource = rememberSettleUpSource(paymentsViewModel)
     val paymentError by paymentsViewModel.error.collectAsState()
     val expenses = expensesState.valueOrNull.orEmpty()
     // One value, not three. The month and its figures travel together so the outgoing half of a
@@ -469,45 +464,41 @@ fun ExpenseScreen(
                                     )
                                 }
                                 shownSummary(balancesByCurrency, summaryCurrency)?.let { currencyBalance ->
-                                    val recorded = paymentsViewModel.paymentFor(
-                                        payments,
-                                        PaymentKind.EXPENSES,
-                                        shownMonth.month,
-                                        currencyBalance.currency
+                                    val balance = currencyBalance.balance
+                                    // Settle up is drawn here and on Home's Money card, no longer
+                                    // under a chat card (November 2026).
+                                    val panel = settleUpSource.stateFor(
+                                        netForMe = balance.netForCurrentUser,
+                                        splitKnown = balance.splitKnown,
+                                        currency = currencyBalance.currency,
+                                        month = shownMonth.month
                                     )
                                     ExpenseSummaryHeader(
-                                        balance = currencyBalance.balance,
+                                        balance = balance,
                                         currency = currencyBalance.currency,
                                         parentNames = parentNames,
-                                        onSettleUp = { ask ->
-                                            pendingSettleUp =
-                                                PendingSettleUp(ask, shownMonth.month, shownMonth.familyId)
-                                        },
                                         modifier = Modifier
                                             .monthSwipe(monthNavigation)
                                             .padding(horizontal = Spacing.L, vertical = Spacing.XS),
                                         monthNavigation = monthNavigation,
-                                        payment = paymentStripFor(
-                                            recorded = recorded,
-                                            myUid = paymentsViewModel.myUid,
-                                            owed = currencyBalance.balance.netForCurrentUser,
-                                            enabled = !paymentBusy,
-                                            onMarkPaid = {
-                                                shownMonth.familyId?.let { family ->
-                                                    val owed = minorUnitsOf(
-                                                        abs(currencyBalance.balance.netForCurrentUser)
-                                                    ) ?: return@let
-                                                    paymentsViewModel.markPaid(
-                                                        family,
-                                                        PaymentKind.EXPENSES,
-                                                        shownMonth.month,
-                                                        currencyBalance.currency,
-                                                        owed
+                                        settleUp = panel?.let { state ->
+                                            ExpenseSettleUp(
+                                                state = state,
+                                                payeeIban = settleUpSource.payeeIban,
+                                                actions = settleUpSource.actionsFor(state, shownMonth.familyId) {
+                                                    val ask = SettleUpAsk(
+                                                        balance.netForCurrentUser,
+                                                        currencyBalance.currency
                                                     )
-                                                }
-                                            },
-                                            onConfirm = { recorded?.let(paymentsViewModel::confirm) }
-                                        )
+                                                    pendingSettleUp = PendingSettleUp(
+                                                        ask,
+                                                        shownMonth.month,
+                                                        shownMonth.familyId
+                                                    )
+                                                },
+                                                coParentFallback = parentNames.coParentLabel()
+                                            )
+                                        }
                                     )
                                 }
                             }
@@ -786,13 +777,6 @@ internal fun shownSummary(balances: List<CurrencyBalance>, picked: String?): Cur
 private fun rememberMonthLabel(month: YearMonth): String = remember(month) { readerMonthTitle(month) }
 
 /**
- * [value] in minor units rounded half up, or null when it does not fit a Long: what the app's
- * `MinorUnits.fromDouble` answered through `BigDecimal.valueOf(value)`, whose text is the double's
- * own (`toString()`), read by [DecimalText.parseHalfUp] as the money documents read theirs.
- */
-private fun minorUnitsOf(value: Double): Long? = DecimalText.parseHalfUp(value.toString(), PaymentQr.MONEY_SCALE)
-
-/**
  * This parent proposed a split and is waiting for an answer (UX-17).
  *
  * `SplitRatioTransition.withdraw` was written and unit-tested when the feature landed and then
@@ -887,26 +871,3 @@ private fun namedShares(ratio: SplitRatio, parentNames: ParentNames): String = s
 /** The co-parent's name, or the "your co-parent" fallback while it is not known. */
 private fun coParentName(parentNames: ParentNames): String =
     parentNames.parents.coParent?.uid?.let(parentNames::labelForUid) ?: parentNames.coParentFallback
-
-/**
- * What the month's header says about its payment in one currency, and which step this parent may
- * take: say they paid, while they owe and nothing is recorded; say the money arrived, while the
- * co-parent says they paid. Neither while a write is on its way.
- */
-@Suppress("LongParameterList") // what was recorded, for whom, and the two steps it may offer
-internal fun paymentStripFor(
-    recorded: Payment?,
-    myUid: String?,
-    owed: Double,
-    enabled: Boolean,
-    onMarkPaid: () -> Unit,
-    onConfirm: () -> Unit
-): PaymentStrip {
-    val state = PaymentState.of(recorded, myUid)
-    return PaymentStrip(
-        state = state,
-        amount = recorded?.amountMinor?.let { DecimalText.plain(it, PaymentQr.MONEY_SCALE) },
-        onMarkPaid = onMarkPaid.takeIf { enabled && state == PaymentState.NONE && owed < 0 },
-        onConfirm = onConfirm.takeIf { enabled && state == PaymentState.PAID_TO_ME }
-    )
-}

@@ -11,4 +11,17 @@
     <string name="payment_error_not_saved">Не удалось сохранить. Проверьте подключение и попробуйте ещё раз.</string>
     <string name="payment_card_waiting">Ждёт подтверждения</string>
     <string name="payment_card_received">Получено</string>
+    <!-- Settle up on the Money card and the Expenses header (November 2026). The month is its
+         standalone name ("October"); the amount is formatted; a date is the day and month. -->
+    <string name="payment_panel_not_settled">За %1$s ещё не рассчитались</string>
+    <string name="payment_panel_ask">Попросить рассчитаться: %1$s</string>
+    <string name="payment_panel_pay">%1$s: оплатить %2$s за %3$s</string>
+    <string name="payment_panel_paid_on">Вы оплатили %1$s %2$s. %3$s подтвердит, когда деньги придут.</string>
+    <string name="payment_panel_show_code">Снова показать платёжный код</string>
+    <string name="payment_panel_says_paid">%1$s: перевод %2$s отмечен %3$s.</string>
+    <string name="payment_panel_check_bank">Сначала проверьте поступление в банке.</string>
+    <string name="payment_panel_settled">За %1$s рассчитались · %2$s</string>
+    <string name="payment_chip_waiting_for_you">Ждёт вас</string>
+    <string name="payment_chip_waiting_for">Ждёт: %1$s</string>
+    <string name="payment_chip_settled">Рассчитались</string>
 </resources>
