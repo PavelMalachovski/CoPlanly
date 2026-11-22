@@ -59,8 +59,9 @@ adb logcat -v time EncryptedDatabase:V DatabaseKey:V SyncService:V SyncWorker:V 
 **Look at the screenshots before the phone.** Every pull request that touches Android uploads a
 `screenshots` artefact from CI (the `screenshots` job: Roborazzi on Robolectric, no emulator).
 Unzip it and open `index.html`; it filters by component, language, theme, font scale and palette.
-It renders Home's cards (handover hero, today card with a contact window, week timeline, stat
-tiles), the month grid with every layer, the calendar banners, a Settings group, an empty state,
+It renders Home's cards (the Requests block and its Details sheet, the Money card in each
+settle-up state, the week tiles and the handover card), the calendar's header, grid card and legend
+sheet, the month grid with every layer, the calendar banners, a Settings group, an empty state,
 the Expenses summary header, a chat thread, the event preview, the consent screen and the family
 switcher chip — in light and dark, in all five languages, at 1.0× and 1.5× text, and in the
 default and a purple/orange palette (`ScreenshotVariants` says which combinations). What those
@@ -1384,22 +1385,39 @@ they read at their real size.
   `presentation/home/HomeScreen.kt` (`TimelineRow`), `presentation/calendar/EventMemberMark.kt` and
   `DayWeekView.kt` (`MemberInitialDisc`).
 
-### 3.25 Settle up: a card, and a payment code a bank reads · 2P, a Czech and a Slovak banking app
+### 3.25 Settle up: Money on Home and Expenses, and a payment code a bank reads · 2P, a Czech and a Slovak banking app
 
-Settle up posts a card instead of a sentence in the composer (tester report, October 2026), and the
-payer's phone draws a QR payment code from the receiving parent's IBAN: QR Platba for a Czech
-account, PAY by square for a Slovak one, the EPC code for another euro account. The texts are pinned
-byte for byte on the JVM (`PaymentQrTest`, PAY by square against liblzma's encoder); whether a real
-bank's app reads them is only provable here.
+Settle up posts a card for the record instead of a sentence in the composer (tester report, October
+2026), and the payer's phone draws a QR payment code from the receiving parent's IBAN: QR Platba for
+a Czech account, PAY by square for a Slovak one, the EPC code for another euro account. Since
+November 2026 the code, "I paid" and "Money arrived" are `SettleUpPanel`'s, under the balance on
+Home's **Money** card and in the Expenses summary header — no longer under the card, which the chat
+thread does not draw (CLAUDE.md items 45 and 48). The texts are pinned byte for byte on the JVM
+(`PaymentQrTest`, PAY by square against liblzma's encoder) and the panel's five states by
+`SettleUpPanelStateTest` and the `home_money_card_*` screenshots; whether a real bank's app reads the
+code, and the two phones following each other, is only provable here.
 
-- [ ] **A card, not a draft.** On Expenses, in a month the co-parent owes you, tap **Settle up**. A
-      dialog says what the co-parent will see; type your IBAN (spaces are fine) and **Send**. The
-      Chat tab opens on a card "Settle up for <month>: you are owed <amount>" — and nothing in the
-      composer. On the co-parent's phone the same card reads "… you owe <amount>". Neither phone
-      can edit it. A mistyped IBAN (change one digit) keeps **Send** disabled and says why.
-- [ ] **The code on the payer's phone.** Under the card on the co-parent's phone: "Pay <amount> to
-      <your name>", a QR code, the IBAN in groups of four, **Copy IBAN** and **Share QR code**. Your
-      own phone shows no code under your card.
+- [ ] **The ask, not a draft.** On Expenses (or Home's Money card), in a month the co-parent owes
+      you, tap **Settle up** / **Ask <name> to settle up**. A dialog says the co-parent will see it on
+      their Home, under Money; type your IBAN (spaces are fine) and **Send**. Expenses stays on
+      screen, and nothing lands in the composer or the thread. A mistyped IBAN (change one digit)
+      keeps **Send** disabled and says why.
+- [ ] **The code on the payer's phone.** On the co-parent's Home, the Money card's panel reads "Pay
+      <your name> <amount> for <month>" with a QR code, the IBAN in groups of four, **Copy IBAN**,
+      **Share QR code** and **I paid**; the same panel is in their Expenses header. Your own phone
+      shows no code: your panel says the month is not settled yet, waiting for them.
+- [ ] **End to end, two phones** (the whole round, live). Alice is owed, Bob owes:
+  - Alice asks (above); Bob's Money card turns to **Pay** within a minute, without reopening the app.
+  - Bob loads the code in his bank's app (below) — do not confirm a real payment unless you mean to —
+    and taps **I paid**: his panel reads "You paid <amount> on <date>. Alice will confirm when it
+    arrives." with a "Waiting for Alice" chip and **Show payment code again**; Alice's reads "Bob says
+    they paid <amount> on <date>. Check your bank first." with a "Waiting for you" chip and **Money
+    arrived**.
+  - Alice taps **Money arrived**: both panels, on Home and in Expenses, read "<month> settled" with a
+    "Settled" chip, and the balance sentence says you are all square. No expense changed.
+  - At 200 % font, in German: every sentence and amount wraps, nothing is cut off, the buttons stack.
+  - With two families, the panel follows the family on screen; a switch never shows the other
+    family's payment.
 - [ ] **A Czech bank reads it.** With a **CZ** IBAN, share the code to the gallery (or a second phone
       photographs it) and load it in a Czech banking app's QR payment: the account, the amount, CZK
       and the message "CoPlanly <yyyy-MM>" are filled in. Do not confirm the payment.
@@ -1408,8 +1426,10 @@ bank's app reads them is only provable here.
 - [ ] **No account yet.** Remove the IBAN (clear the field and send again): the payer's phone says
       "<name> hasn't added a bank account for payments yet." instead of a code.
 - **If it fails:** `domain/payment/PaymentQr.kt` (the three formats), `domain/payment/Iban.kt`,
-  `presentation/chat/SettleUpPayment.kt` (the code, the share), `presentation/expenses/SettleUpDialog.kt`
-  and `data/payment/` (the IBAN on the profile, the card).
+  `presentation/payments/SettleUpPanel.kt`, `SettleUpPanelState.kt` and `SettleUpSource.kt` (the
+  panel, its states, its reads), `presentation/home/MoneyCard.kt`,
+  `presentation/expenses/ExpenseSummaryHeader.kt`, `presentation/expenses/SettleUpDialog.kt` and
+  `data/payment/` (the IBAN on the profile, the card, the payment).
 
 ### 3.26 Events over several days, and all-day events · 1P, co-parent check 2P
 
@@ -1530,20 +1550,21 @@ The new-user review of 24 October. What is decided is pinned on the JVM (`HomeAs
 - [ ] **Four tabs.** Home, Calendar, Chat, **Family**. The Family tab shows Money (this month's
       spend and who owes whom, by name), Agreements, Children and home, People and Only mine, with
       the stickers at its foot. Its money card opens Expenses with an up-arrow, and Back returns to
-      the tab. Home's month tile opens Expenses too.
+      the tab. Home's Money card opens Expenses too.
 - [ ] **Named on the Family tab.** Linked, the money card's balance names the co-parent ("Bob owes
       you …", "Bob vám dluží …") and the Co-parent row reads "Linked: Bob"; unlinked, the row says
       what linking gives. With two families, a switch renames both.
-- [ ] **Home leads with today**: the handover, then today's card, then **Requests**. No contacts,
-      child or pet rows and no sticker card on Home.
+- [ ] **What Home leads with** is §3.46's since November 2026 (the heading, Requests, Money, this
+      week, the handover). Still true: no contacts, child or pet rows and no sticker card on Home.
 - [ ] **A money push** (2P, Bob adds an expense): the tap opens Expenses over the Family tab, and
       Back lands on Family.
 - [ ] **Requests ask once** (2P). Bob sends two change requests. Alice's Home asks once, naming
       Bob. Answer one from the inbox and go back: the pop-up does not return for the other. A third
       request, sent later, asks again.
-- [ ] **The calendar legend** sits under the member filter with both parents' names, the handover
-      mark and, when a window exists, the contact band.
-- [ ] **A chat card reads as a card**: centred, no ticks, its first line naming who did it.
+- [ ] **The calendar legend** (behind the header's "?" since calendar K1, §3.46) names both parents,
+      the handover mark and, when a window exists, the contact band.
+- [ ] **A sticker reads as a card** in the thread: centred, no ticks, its first line naming who sent
+      it. No other card is drawn there since November 2026 (§3.46).
 - [ ] **No e-mail addresses** on the pairing screen, and the pause before sending is on for a new
       install (Settings → App).
 - [ ] **Settings is Sync, App, Account.** My colour, Country and Region are in App; the family
@@ -1597,8 +1618,9 @@ sticker cases). What is left is what the phones draw and a real pairing of four 
       Bob's phone under Earlier families; neither can add one there.
 - [ ] **A sticker in the chat.** Alice sends Bob a sticker: a card "Sticker: …" appears in both
       threads, and Bob's phone rings once, not twice.
-- [ ] **Settle up, paid and confirmed.** Bob owes October: **I paid** under the card (or on the
-      header), then on Alice's phone **Money arrived**; both headers then read "Settled".
+- [ ] **Settle up, paid and confirmed.** Bob owes October: **I paid** on Bob's Money card (or in the
+      Expenses header; no longer under the chat card, §3.25), then on Alice's phone **Money
+      arrived**; both panels then read "October settled".
 - [ ] **Child support.** Alice proposes 5 000 Kč on the 5th, Bob pays; Bob accepts. The months list
       October; Bob taps **I paid**, Alice **Money arrived**. Bob's reminder 3 days before posts one
       notification on the money channel, none at night, none once paid.
@@ -1657,7 +1679,7 @@ Board SW-7 (CLAUDE.md item 40). Pinned by `RequestInboxAgreementsTest`, `Parenti
 phones and the deployed index.
 
 - [ ] **Child support** (2P). Bob proposes child support: on Alice's phone Home's **Requests** count
-      goes up by one and the calendar banner does not; the inbox lists "Child support — Bob proposes …"
+      goes up by one (the calendar counts no requests since calendar K1); the inbox lists "Child support — Bob proposes …"
       under *Waiting for your answer*, and a tap opens Child support. Bob's own inbox lists his
       proposal under *Waiting for Alice* with **Withdraw request**; withdrawing removes it on both.
 - [ ] **Professional access** (2P). Bob invites a mediator, who redeems the code: Alice's inbox lists
@@ -2152,16 +2174,44 @@ for an answer.
 > proposal run between two phones against the real rules in `TwoParentCustodyTest`. What a phone adds
 > is the two phones answering each other live, the cards and the buttons as drawn.
 
-- [ ] Home's **Requests** row, on A, in each state: nothing waiting and no recent answer — "No
-      requests yet"; B sends a change request — "1 waiting for your answer", with 1 beside the row;
-      A sends one — "… · 1 waiting for B"; B accepts or declines one of A's — "Yesterday: B accepted
-      your request" (or today's, or a weekday's) as long as it is under a week old. The row's number
-      and the calendar banner's are the same, except that a custody proposal waiting for A counts on
-      the row and draws its own banner instead.
+> **Since November 2026 Home's Requests is one block** (CLAUDE.md design item 5, board HomeG1): the
+> heading's counts, an action card per request waiting on A, "Waiting for B" rows, and **Details**.
+> `HomeRequestsTest`, `HomeOrderTest`, `ScheduleChangesTest` and the `home_requests_block`,
+> `home_request_details_*` screenshots pin what is decided; the calendar draws no request banner.
+
+- [ ] Home's **Requests** block, on A, in each state: nothing waiting — "Nothing waits for an
+      answer."; B sends a change request — an action card "Waiting for you" (with "Answer by …" when
+      B set a deadline), "B asks to move <title>", B's note as a quote, **Details**, **Decline** and
+      **Accept**, and a "1 for you" chip on the heading equal to the Home tab's badge; A sends one — a
+      row under **Waiting for B** with **Withdraw**. All of it arrives and leaves live, without
+      reopening Home.
+- [ ] **"See all · N new"** (A's look, per family). B accepts one of A's requests: "See all" carries
+      "1 new". Tap **See all**: the inbox opens (on History while nothing waits); back on Home the
+      chip is gone. With two families, a look in one leaves the other family's "N new" as it was.
+- [ ] **Answer from the action card** (2P). B offers a day swap and sends a change request. On A's
+      Home tap **Accept** on one card and **Decline** on the other: each card leaves at once, B's
+      phone shows the answers in its inbox and History within a minute, and the calendars follow. B
+      answering or withdrawing on B's phone while A looks removes A's card without a reload. Past a
+      custody or split proposal's deadline the card keeps only **Decline**; past any other request's,
+      no answer (§5.9).
+- [ ] **Answer from Details.** On a waiting card tap **Details**: a sheet (on an iPhone the system's
+      page sheet) shows the request on a mini month of A's own calendar — a swap's days striped in the
+      colour of whom they go to, a change request or a waiting event on its day — then B's note and
+      **Decline** / **Accept** again. Answer there: the sheet closes and the card leaves. Close it
+      without answering: nothing changes.
+- [ ] **A schedule proposal, Proposed | Now** (B proposes a custody pattern change with a deadline).
+      A's Home pops up once with the proposal drawn on a mini month: a **Proposed | Now** switch
+      (the system's segmented control on an iPhone), the proposed pattern with each day that would
+      change ringed in the colour of whom it goes to and a legend line saying so, **Now** drawing
+      today's pattern with no rings; an accepted day swap reads the same on both sides, never as a
+      change. B's note, a plan citation (when the proposal came from the plan) and "Answer by …"
+      follow. No count of days or nights per parent anywhere. **Later**, then **Details** on its
+      action card: the same preview. Accept from either: the grid takes the new pattern from its
+      start, the past keeps its colours.
 - [ ] B answers A's requests on B's phone — accepts one, declines one; A withdraws a third. A's inbox
       (**Requests**) shows each under **History** with its outcome on a neutral chip and who decided
-      when; an answer A gave while offline reads **Queued** until it leaves. Home's feed lists B's
-      answers as "Accepted"/"Declined" rows, one per answer, and its last row opens the History.
+      when; an answer A gave while offline reads **Queued** until it leaves. Home has no feed of them
+      any more: its "See all" counts B's answers as "N new" and opens this History.
 - [ ] B creates an event on A's days with a description: A's card under **Waiting for your answer** shows
       B's words beside B's initial, the time on A's clock, and the month with that day ringed and the
       custody colours. On B's phone the same card reads "Waiting for A" with **Withdraw request** and
@@ -2173,7 +2223,7 @@ for an answer.
     Histories show it as withdrawn by B, A's chat shows "Day swap withdrawn: <first day>", and the
     calendar's swap arrows go from those days on both phones. Offer a change to a day the two already
     agreed to swap (History → **Propose a change**) and withdraw it: the day stays where it was agreed.
-  - **A custody proposal**: the preview leaves B's calendar, A's Home pop-up and review banner go, A's
+  - **A custody proposal**: the preview leaves B's calendar, A's Home pop-up and action card go, A's
     chat shows "Custody proposal withdrawn", and the pattern in force does not move.
   - **An event waiting for A**: it leaves both phones' calendars and inboxes, and A's chat shows
     "Event removed".
@@ -2181,11 +2231,11 @@ for an answer.
     offer has already been answered." or shows the answer — never both.
   - An A phone on an older build (if one is at hand): after a withdrawn swap it cannot offer or
     answer a swap until it is updated (CLAUDE.md item 44).
-- [ ] A parent in two families: the row, the inbox and the History hold only the family on screen;
-      switching families switches them.
+- [ ] A parent in two families: Home's Requests block, the inbox and the History hold only the family
+      on screen; switching families switches them, the "N for you" chip and the badge included.
 - [ ] **A split proposal is a request** (October 2026, owner request). B proposes a new expense split in
       Settings → Expense split, with an "Answer by" of tomorrow. On A's phone: the push; Home's
-      **Requests** row counts it; Home pops up "B proposes: A pays …, B pays …" once (Later keeps it
+      **Requests** block counts it and draws its action card; Home pops up "B proposes: A pays …, B pays …" once (Later keeps it
       away until it changes); the inbox lists it under **Waiting for your answer** with Accept and
       Decline; the chat shows B's note with the shares. On B's phone: the inbox lists it under
       **Waiting for A** with **Withdraw**, the note in the chat reaches ✓✓ and then read, and the card
@@ -2197,7 +2247,9 @@ for an answer.
   arrive on the next open rather than live.
 - **If it fails:** tag `ChangeRequestViewModel`, `HomeViewModel`, `CustodyModelRepository`;
   `presentation/changerequests/`, `domain/changerequests/`, `domain/custody/DayOverrideTransition.kt`,
-  `presentation/home/RequestsRowState.kt`, `presentation/home/HomeFeed.kt`.
+  `presentation/home/RequestsBlock.kt`, `RequestActionCard.kt`, `RequestDetailsSheet.kt`,
+  `HomeRequests.kt` and `RequestsSeenViewModel.kt`, `presentation/changerequests/SchedulePreviewWithChanges.kt`,
+  `presentation/home/HomeFeed.kt`.
 
 
 ### 5.9 Deadlines, reminders and the last chance (phase 3a) · 2P, 1P + a second account fallback
@@ -2466,9 +2518,9 @@ the real launch and the badge as drawn.
       over it.
 - [ ] **Back exits.** From Calendar press Back: the app closes. From Home or Chat or Family press
       Back once: Calendar; once more: the app closes.
-- [ ] **Home badge matches the Requests row** (2P). Bob sends Alice a change request: the Home tab
-      shows a badge with the number Home's **Requests** row shows (a proposed expense split counts,
-      the calendar banner does not); TalkBack reads "1 request waiting for your answer"; answering
+- [ ] **Home badge matches the Requests block** (2P). Bob sends Alice a change request: the Home tab
+      shows a badge with the number in the "N for you" chip of Home's **Requests** heading (a proposed
+      expense split counts too); TalkBack reads "1 request waiting for your answer"; answering
       it clears the badge. On a tablet the rail shows the same badge.
 - [ ] **Back from a day opened on Home returns to Month.** On Home tap a day of the week tiles: the
       Calendar opens that day in Day view. Press Back: the Calendar shows Month (not the app
@@ -2628,18 +2680,18 @@ and the walk prove the mechanics on the simulator (artifact `ios-shell`), and th
 controls in use (artifact `ios-tour`, `tour-control-…`). The simulator has no camera, no banking app
 and no real receipt. What is left:
 
-- [ ] **Calendar and Home lead with the redesign's header.** No system bar over either: the
-      "coplanly." wordmark, the children's avatars and the gear, then "Your family calendar" (on
-      Home, the family switcher's row), under the status bar, nothing under it cut off. On the
-      Calendar, Month/Week/Day and Filters are under the heading, and the grid card's bar holds the
-      month, Today, "⇄" and "+". Push Settings: its system bar returns, and its back button reads
-      "Calendar" (or "Home").
+- [ ] **Calendar and Home lead with their own header.** No system bar over either, under the status
+      bar, nothing under it cut off. Home: the "coplanly." wordmark, the children's avatars, the
+      family switcher's chip and the gear, then "Your family calendar". The Calendar, since calendar
+      K1: the month title with its year, "?", the avatars and the gear in one row, and the grid
+      card's bar holds M | W | D, Today, "⇄" and "+" (§3.46). Push Settings: its system bar returns,
+      and its back button reads "Calendar" (or "Home").
 - [ ] **A switch** (New event → All day; Settings → Pause before sending): the system's
       switch in its green, on the card's white with no dark corners around it. Flip it from the
       switch and from the row itself; each flip is one change, and the switch never jumps back on
       its own.
-- [ ] **A segmented choice** (Calendar → Month/Week/Day; Add expense's "Who paid?"): the system's
-      control, full width. A tap selects and the screen follows. VoiceOver reads each segment.
+- [ ] **A segmented choice** (Add expense's "Who paid?"; the Calendar's M | W | D, which is a letter
+      wide per segment, not full width — §3.46): the system's control, full width. A tap selects and the screen follows. VoiceOver reads each segment.
 - [ ] **Dates and times** (New event): Starts' date is the system's compact pill, which opens its
       calendar; the time opens wheels on your phone's 12- or 24-hour clock. The card's month title
       → "Jump to date" opens a half-height sheet with the inline calendar: pick a day and Done, and
@@ -2979,6 +3031,69 @@ is checked only here.**
   `PasteButton.kt`, `presentation/chat/IosSpeechDictation.kt` and `AppleSpeechRecognizerSource.kt`;
   the code in `domain/platform/Lzma1Encoder.kt`. A missing microphone: the language's on-device
   model; a prompt that names the pasteboard: the paste control's host.
+
+### 3.46 Home's Requests, the calendar K1 and a chat of people · 1P on Android and an iPhone, push and thread checks 2P
+
+The November 2026 redesign (spec `docs/superpowers/specs/2026-11-22-home-requests-calendar-concepts-design.md`;
+CLAUDE.md design items 5 and 8, "Things that are easy to get wrong" 40 and 45). What is decided is
+pinned in `commonTest` (`HomeOrderTest`, `HomeRequestsTest`, `MonthCellPillsTest`, `ThreadMessagesTest`,
+`BuildThreadTest`, `ChatReadStateTest`, `LaunchLinksTest`), the card push's tap in `PushRoutingTest`
+and `PushNotificationTest` (every emulator leg), and the screens in the screenshot matrix
+(`calendar_header`, `calendar_grid_card`, `calendar_legend_sheet`, `home_requests_block`,
+`home_money_card_*`); the e2e, UI tour and XCUITest walks follow the new controls. Answering on Home
+and Details are §5.8's, settle-up end to end §3.25's. What is left is the screens as drawn, the
+system's controls and hyphenation on a phone, VoiceOver and the push that arrives.
+
+- [ ] **Home's order** (Android and iPhone). The wordmark row (children's avatars, the switcher chip
+      with two families, the gear), "Your family calendar" over "Together, for <children>", then
+      **Requests**, **Money** ("Spent in <month>" and who owes whom; a tap opens Expenses), **This
+      week**, the next handover. No Updates card, no "Open requests" card, no stat tiles and no
+      chat tile. At 200 % font the heading's second line stays and the money figures wrap. On a
+      tablet held sideways: heading and Requests on the left, Money, the week and the handover on the
+      right.
+- [ ] **The Calendar's header** (Android). One row: "November 2026 ▾" with the year lighter — this
+      year's too — then "?", the children's (and pets') avatars from two members and the gear; no
+      wordmark, no "Your family calendar", no "Show for" strip, no legend row, no Today card under
+      the grid and no request banner over it. Tap the title: "Jump to date". At 130 % in Russian the
+      avatars and the gear go to a line of their own and the title stays whole.
+- [ ] **"?" and Filters.** "?" opens "What the colours mean": the legend with both parents' names
+      and, under it, **Filters**, which opens the filter sheet as before. Hide an event type: "?"
+      wears a dot; show it again: the dot goes.
+- [ ] **The avatars filter.** Tap Emma's avatar: it is ringed and the grid keeps only the events
+      naming Emma (an event naming nobody shows only unfiltered); tap Leo's too: both; tap both
+      again: everyone. A family with one
+      child shows no avatars. TalkBack names each avatar and says whether it is chosen.
+- [ ] **The card's bar.** M | W | D on the left, then **Today** (a word), "⇄" and "+"; no arrows.
+      Swipe for the next and previous month (and week and day); Today returns. TalkBack reads the
+      segments as "Month", "Week", "Day".
+- [ ] **Pills** (Android). A day with three events shows two pills and "+1"; a long Czech or German
+      title ("Rodičovské sdružení", "Elternsprechtag") breaks over two lines at a syllable with a
+      hyphen, never inside a letter, then ellipsises. At 200 % font a cell too short for a line
+      draws the coloured bar, never half a title.
+- [ ] **The Calendar on an iPhone.** No system bar over it; the same header under the status bar,
+      the M | W | D control the system's `UISegmentedControl`, a letter wide per segment, with
+      Today, "⇄" and "+" on its row. **VoiceOver reads each segment as its letter** ("M", "W", "D";
+      only the control as a whole carries "Month, Week, Day") — record what it says:
+      ______. Pills: a long title hyphenates over two lines as on Android (Compose's `Hyphens.Auto`
+      on iOS); note any title broken without a hyphen or inside a letter: ______. Push Settings from
+      the gear: its system bar returns, its back button reads "Calendar".
+- [ ] **The thread holds the parents' words** (2P). Bob adds an event, sends a day swap and a
+      message with a photo, then a sticker. Alice's thread shows the message, the photo and the
+      sticker only — no "added an event" or swap card, no day separator over a day of cards alone,
+      and an empty thread's empty state when only cards were posted. The Chat badge and the
+      conversation's unread count go up for the message and the sticker, not for the cards, and the
+      conversations list orders by the last message, not the last card. The export of that week
+      still lists every card.
+- [ ] **A card's push opens Home** (2P, Android and iPhone). With Alice's app closed, Bob edits a
+      shared event or withdraws a day swap, and Alice gets that card's chat push (a card with a push
+      type of its own, such as a new swap, sends that push instead): the tap opens Home on that
+      family, not the thread. A plain message's push opens the thread.
+- **If it fails:** `presentation/home/HomeSection.kt`, `HomeScreen.kt`, `RequestsBlock.kt`,
+  `MoneyCard.kt`, `common/HeadingLines.kt`; `presentation/calendar/components/CalendarHeader.kt`,
+  `CalendarMonthBar.kt`, `CalendarLegendSheet.kt`, `presentation/calendar/MonthCellPills.kt` and
+  `CellPills.kt` (`pillLines`); `domain/chat/ThreadMessages.kt` (`isShownInThread`),
+  `presentation/chat/MessagesList.kt` (`buildThread`), `MessageDao.observeUnreadCount`;
+  `PushDestination.forChatCard`, `PushNotifier` (Android), `LaunchLinks.forPush` (iPhone).
 
 ---
 

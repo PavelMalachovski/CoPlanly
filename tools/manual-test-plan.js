@@ -252,8 +252,9 @@ const RULES = [
   },
   {
     sections: ['3.25'],
-    why: 'settle up: the card, the IBAN, or the payment QR code a bank reads',
-    paths: ['K/domain/payment/**', 'K/data/payment/**', 'K/presentation/chat/SettleUpPayment.kt',
+    why: 'settle up: the card, the IBAN, the Money card\'s and Expenses\' settle-up panel, or the payment QR code a bank reads',
+    paths: ['K/domain/payment/**', 'K/data/payment/**', 'K/presentation/payments/SettleUp*',
+      'K/presentation/home/MoneyCard.kt', 'S/values*/payment_strings.xml',
       'K/presentation/expenses/SettleUpDialog.kt', 'K/presentation/expenses/SettleUpViewModel.kt',
       'K/presentation/expenses/ExpenseSummaryHeader.kt',
       // Since MON-24: the code's matrix and shared PNG (`QrCodes`, ZXing in `AndroidQrCodes`), and
@@ -367,6 +368,21 @@ const RULES = [
       'iosApp/CoPlanly/*.lproj/InfoPlist.strings'],
   },
   {
+    sections: ['3.46'],
+    why: 'Home\'s order and Requests heading, the calendar\'s K1 header, bar and pills, or what the chat thread draws, counts and where a card\'s push opens',
+    paths: ['K/presentation/home/HomeSection.kt', 'K/presentation/home/HomeScreen.kt',
+      'K/presentation/home/RequestsBlock.kt', 'K/presentation/home/MoneyCard.kt',
+      'K/presentation/common/HeadingLines.kt', 'K/presentation/calendar/components/CalendarHeader.kt',
+      'K/presentation/calendar/components/CalendarMonthBar.kt',
+      'K/presentation/calendar/components/CalendarLegendSheet.kt',
+      'K/presentation/calendar/components/CalendarTopBar.kt', 'K/presentation/calendar/MonthCellPills.kt',
+      'K/presentation/calendar/CellPills.kt', 'K/domain/chat/ThreadMessages.kt',
+      'K/domain/chat/ChatReadState.kt', 'K/presentation/chat/MessagesList.kt',
+      'K/data/local/dao/MessageDao.kt', 'K/data/remote/firebase/PushDestination.kt',
+      'K/data/remote/firebase/PushNotifier.kt', 'K/presentation/LaunchLinks.kt',
+      'S/values*/calendar_strings.xml', 'S/values*/home_requests_strings.xml'],
+  },
+  {
     sections: ['3.6', '4.2'],
     why: 'strings, locales, the language picker or the rule that picks the app\'s language',
     paths: ['S/values*/**', 'app/src/main/res/xml/locales_config.xml',
@@ -451,7 +467,7 @@ const RULES = [
   },
   {
     sections: ['5.8'],
-    why: 'requests: Home\'s Requests row, the co-parent\'s answers in its feed, or the inbox and its history',
+    why: 'requests: Home\'s Requests block, its action cards and Details, the Proposed | Now preview, "N new", or the inbox and its history',
     paths: ['K/presentation/changerequests/**', 'K/domain/changerequests/**',
       'K/presentation/home/Request*', 'K/presentation/home/HomeFeed*',
       'S/values*/change_requests_strings.xml'],
