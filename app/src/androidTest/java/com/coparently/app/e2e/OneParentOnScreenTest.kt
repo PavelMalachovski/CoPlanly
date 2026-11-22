@@ -1,5 +1,6 @@
 package com.coparently.app.e2e
 
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.coparently.app.domain.chat.ConversationKey
@@ -39,14 +40,21 @@ class OneParentOnScreenTest : AliceOnScreenTest() {
         val bob = this.bob
         val conversationId = ConversationKey.of(aliceUid, bob.uid)
 
-        // An event Bob saves for today appears on Alice's Home, once her sync has run.
+        // An event Bob saves for today appears on Alice's calendar once her sync has run (Home lists
+        // no events since the redesign): as a month cell's pill, or in the cell's description where
+        // no pill fits.
         val eventTitle = "Dentist ${shortId()}"
         runBlocking {
             bob.eventRepository.insertEvent(eventForToday(bob, eventTitle))
             step("event: sync")
             syncService.performFullSync().getOrThrow()
         }
-        waitFor("Bob's event on Alice's Home", hasText(eventTitle, substring = true))
+        step("event: open the calendar")
+        openTab(BottomNavDestination.CALENDAR)
+        waitFor(
+            "Bob's event on Alice's calendar",
+            hasText(eventTitle, substring = true) or hasContentDescription(eventTitle, substring = true)
+        )
 
         // A message Bob sends is drawn in Alice's thread.
         val fromBob = "Pickup moved to 5 pm ${shortId()}"
