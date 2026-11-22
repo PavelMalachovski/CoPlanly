@@ -151,8 +151,8 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    Onest Bold on both. **Every icon is drawn through `AppIcon`** (`common/AppIcon.kt`, an `expect`
    with material3 `Icon`'s parameters; on Android exactly that `Icon` call): `AppIconGuardTest`
    refuses Material's `Icon` called or imported in `commonMain`. On the iPhone `AppIcon` looks the
-   vector's `ImageVector.name` up in `SF_SYMBOLS` (`common/SfSymbolTable.kt`: 117 symbols, 120
-   mapped rows of the 132 in the owner-approved
+   vector's `ImageVector.name` up in `SF_SYMBOLS` (`common/SfSymbolTable.kt`: 118 symbols, 121
+   mapped rows of the 133 in the owner-approved
    `docs/superpowers/plans/2026-11-16-iphone-phase-3d-sf-symbols.json`, where `Default` and `Filled`
    share a key; 12 keep Material) and draws that SF Symbol rasterised inside Compose, in the call site's tint, size and semantics, never a
    native view; an icon with no row, or whose symbol the running iOS cannot load, draws its

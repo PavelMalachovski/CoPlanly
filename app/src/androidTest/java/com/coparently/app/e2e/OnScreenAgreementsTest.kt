@@ -80,23 +80,23 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
     val custodyRepository: CustodyModelRepository by lazy { koinRule.get() }
 
     @Test
-    fun bobsChangeRequestRaisesTheCalendarBannerAndAliceAcceptsItInTheInbox() {
+    fun bobsChangeRequestReachesAlicesHomeAndSheAcceptsItInTheInbox() {
         val title = "Swimming ${shortId()}"
         val event = runBlocking { aliceSavesAnEvent(title) }
 
-        // On the calendar before it arrives, so the banner is what she sees — on Home the same
-        // request would open the requests pop-up instead.
+        // On the calendar while it arrives: since calendar K1 the grid draws no request banner, and
+        // Home is where what waits on her is asked, through its requests pop-up.
         step("request: open the calendar")
         openTab(BottomNavDestination.CALENDAR)
         val request = runBlocking { bobAsksToMove(event) }
 
-        val banner = hasText(
-            context.resources.getQuantityString(R.plurals.calendar_change_requests_banner, 1, 1)
-        ) and hasClickAction()
-        waitFor("the change-request banner over the grid", banner)
-        tap(banner)
+        step("request: Home asks her to review it")
+        openTab(BottomNavDestination.HOME)
+        val review = dialogButton(R.string.home_dialog_review)
+        waitFor("the requests pop-up on Home", review)
+        tap(review)
 
-        // The inbox, opened from the banner: the request's card and its Accept.
+        // The inbox, opened from the pop-up: the request's card and its Accept.
         val accept = hasText(string(R.string.change_request_accept)) and hasClickAction() and
             hasAnyAncestor(hasText(title, substring = true))
         waitFor("Bob's request in the inbox", accept)

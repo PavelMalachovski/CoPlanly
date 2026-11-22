@@ -439,9 +439,6 @@ internal fun appDestinations(
             },
             onSettingsClick = {
                 navController.navigate(Screen.Settings.route)
-            },
-            onChangeRequestsClick = {
-                navController.navigate(Screen.ChangeRequests.createRoute())
             }
         )
     },

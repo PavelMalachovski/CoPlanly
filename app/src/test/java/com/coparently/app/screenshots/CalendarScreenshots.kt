@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.custody.SwapSides
+import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.calendar.CalendarViewMode
@@ -16,6 +17,10 @@ import com.coparently.app.presentation.calendar.SwapDaysButton
 import com.coparently.app.presentation.calendar.SwapMark
 import com.coparently.app.presentation.calendar.components.CalendarGridCard
 import com.coparently.app.presentation.calendar.components.CalendarHeader
+import com.coparently.app.presentation.calendar.components.CalendarHeaderActions
+import com.coparently.app.presentation.calendar.components.CalendarHeaderState
+import com.coparently.app.presentation.calendar.components.CalendarLegendContent
+import com.coparently.app.presentation.calendar.components.CalendarLegendState
 import com.coparently.app.presentation.calendar.components.CalendarMonthBar
 import com.coparently.app.presentation.calendar.components.ChangeRequestBanner
 import com.coparently.app.presentation.calendar.components.CustodyChangedBanner
@@ -28,6 +33,7 @@ import com.coparently.app.presentation.calendar.components.TodayCard
 import com.coparently.app.presentation.calendar.components.TodayModel
 import com.coparently.app.presentation.calendar.components.VacationBanner
 import com.coparently.app.presentation.calendar.swapMiniMonths
+import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.testing.RobolectricTestApplication
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.atTime
@@ -59,38 +65,53 @@ class CalendarScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant
     @Test
     fun monthGrid() = snap("calendar_month_grid") { MonthGridFixture() }
 
-    /** The header's three rows (redesign, November 2026): brand, heading and together line, views. */
+    /**
+     * The header's one row (calendar K1, November 2026): the month with its year, "?" with the dot
+     * an active filter gives it, the children's avatars as the member filter with Emma chosen, and
+     * the gear.
+     */
     @Test
     fun header() = snap("calendar_header") {
+        val members = HEADER_CHILDREN.map { FamilyMember(FamilyMemberRef.Child(it.id), it.childName, it) }
         CalendarHeader(
-            children = HEADER_CHILDREN,
-            viewMode = CalendarViewMode.MONTH,
-            onViewModeChange = {},
-            onFiltersClick = {},
-            filtersActive = true,
-            onSettingsClick = {}
+            state = CalendarHeaderState(
+                month = ScreenshotFixtures.MONTH.atDay(1).toKotlinLocalDate(),
+                members = members,
+                selectedMembers = listOf(members.first().ref),
+                filtersActive = true
+            ),
+            actions = CalendarHeaderActions(onJumpToDate = {}, onLegend = {}, onToggleMember = {}, onSettings = {})
         )
     }
 
-    /** The grid in its white card: the month bar, the legend with the swap button, the month. */
+    /** The grid in its white card: the M | W | D control, Today, "⇄" and "+", then the month. */
     @Test
     fun gridCard() = snap("calendar_grid_card") {
         CalendarGridCard {
             CalendarMonthBar(
-                selectedDate = ScreenshotFixtures.MONTH.atDay(1).toKotlinLocalDate(),
+                viewMode = CalendarViewMode.MONTH,
+                onViewModeChange = {},
                 onToday = {},
-                onPrevious = {},
-                onNext = {},
-                onJumpToDate = {},
                 onSwapDays = {},
                 onAddEvent = {}
             )
-            CustodyLegend(
-                parentNames = ScreenshotFixtures.parentNames,
-                showContactWindows = true
-            )
             MonthGridFixture()
         }
+    }
+
+    /** The header's "?" sheet: what the colours mean, and the Filters row while a filter is on. */
+    @Test
+    fun legendSheet() = snap("calendar_legend_sheet") {
+        CalendarLegendContent(
+            state = CalendarLegendState(
+                hasSchedule = true,
+                showContactWindows = true,
+                showPendingSwap = true,
+                filtersActive = true
+            ),
+            parentNames = ScreenshotFixtures.parentNames,
+            onFilters = {}
+        )
     }
 
     /** The Today card: the children with the reader, and the next event. */

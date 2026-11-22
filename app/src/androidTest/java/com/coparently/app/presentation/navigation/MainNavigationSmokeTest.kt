@@ -66,8 +66,8 @@ class MainNavigationSmokeTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
     private val bottomBar = hasTestTag(BOTTOM_BAR_TEST_TAG)
     private val settingsButton = hasContentDescription(string(R.string.nav_settings)) and hasClickAction()
-    // The calendar's header heading, drawn in every view (redesign, part 2b).
-    private val viewModeTitle = hasText(string(R.string.calendar_heading))
+    // The calendar header's "?", drawn in every view (calendar K1).
+    private val viewModeTitle = hasContentDescription(string(R.string.calendar_legend_title))
 
     @Before
     fun launchSignedIn() {
@@ -109,7 +109,7 @@ class MainNavigationSmokeTest {
         )
         for (mode in views) {
             chooseCalendarView(mode)
-            composeTestRule.onAllNodes(hasText(string(mode)) and hasClickAction() and isMenuItem())
+            composeTestRule.onAllNodes(hasContentDescription(string(mode)) and hasClickAction() and isMenuItem())
                 .onFirst()
                 .assertIsSelected()
             composeTestRule.onNode(bottomBar).assertIsDisplayed()
@@ -217,8 +217,10 @@ class MainNavigationSmokeTest {
     }
 
     private fun chooseCalendarView(@StringRes mode: Int) {
-        // The header's segmented Month/Week/Day control (redesign, part 2b).
-        composeTestRule.onAllNodes(hasText(string(mode)) and hasClickAction() and isMenuItem()).onFirst().performClick()
+        // The grid card's segmented M | W | D control, its letters named in full (calendar K1).
+        composeTestRule.onAllNodes(hasContentDescription(string(mode)) and hasClickAction() and isMenuItem())
+            .onFirst()
+            .performClick()
         composeTestRule.settle()
     }
 

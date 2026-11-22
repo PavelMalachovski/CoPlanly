@@ -105,9 +105,10 @@ class IsolationScenarioTest : QaOnScreenTest() {
 
         report.step(
             id = "home_today",
-            // The today card moved from Home to the Calendar (redesign, November 2026); the step
-            // keeps its id so earlier reports still line up.
-            title = "The Calendar's today card in the family with $onScreenCoParent",
+            // The today card moved from Home to the Calendar (redesign, November 2026) and left it in
+            // calendar K1, where today's event is the month cell's pill; the step keeps its id so
+            // earlier reports still line up.
+            title = "Today on the Calendar in the family with $onScreenCoParent",
             expected = "\"${mine.title}\" is on the Calendar; " +
                 "\"${theirs.title}\" from the family with $otherCoParent is not"
         ) {
