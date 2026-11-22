@@ -312,22 +312,20 @@ abstract class AliceOnScreenTest {
     }
 
     /**
-     * Opens the Requests inbox from Home (redesign, November 2026, variant A): through the open
-     * requests card while something waits on either parent, and through the Updates card's "See
-     * all", which opens it at History, when nothing does.
+     * Opens the Requests inbox from Home (November 2026, board HomeG1): through the Requests block's
+     * "See all", which opens it while something waits on either parent and at History when nothing
+     * does. Given a bounded while for the requests to load first, since the block names what waits
+     * only once they have, and "See all" decides where it leads on the tap.
      */
     protected fun openRequestsFromHome() {
-        val waiting = hasText(string(R.string.home_waiting_for_coparent, "").trim(), substring = true) and
-            hasClickAction()
+        val waiting = hasText(string(R.string.home_request_details)) and hasClickAction()
         val seeAll = hasText(string(R.string.home_updates_see_all)) and hasClickAction()
-        // The dashboard first, then a bounded while for the requests to load: the card is left out
-        // until they have, so its absence at the first frame does not mean nothing waits.
-        waitFor("Home's Updates card", seeAll, HOME_TIMEOUT_MS)
+        waitFor("Home's Requests block", seeAll, HOME_TIMEOUT_MS)
         val settleBy = SystemClock.uptimeMillis() + REQUESTS_SETTLE_MS
-        composeTestRule.pumpUntil("the open requests card, or nothing waiting", 2 * REQUESTS_SETTLE_MS) {
+        composeTestRule.pumpUntil("a request waiting, or nothing waiting", 2 * REQUESTS_SETTLE_MS) {
             exists(waiting) || SystemClock.uptimeMillis() > settleBy
         }
-        tap(if (composeTestRule.exists(waiting)) waiting else seeAll)
+        tap(seeAll)
     }
 
     /** A button labelled by [labelRes] inside the dialog on screen. */
@@ -459,7 +457,7 @@ abstract class AliceOnScreenTest {
         private const val PASSWORD = "e2e-password-1"
         private const val HOME_TIMEOUT_MS = 60_000L
 
-        /** How long Home is given to show the open requests card before "See all" is taken. */
+        /** How long Home is given to show what waits before "See all" is taken. */
         private const val REQUESTS_SETTLE_MS = 5_000L
         private const val SHORT_ID_LENGTH = 6
 

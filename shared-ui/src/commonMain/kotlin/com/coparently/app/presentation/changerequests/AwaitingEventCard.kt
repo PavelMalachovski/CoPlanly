@@ -161,7 +161,7 @@ private fun WaitingLine() {
  * no end, or both sides in full when it ends on another day.
  */
 @Composable
-private fun eventWhenText(event: Event): String {
+internal fun eventWhenText(event: Event): String {
     val start = event.startDateTime
     val end = event.endDateTime
     return when {

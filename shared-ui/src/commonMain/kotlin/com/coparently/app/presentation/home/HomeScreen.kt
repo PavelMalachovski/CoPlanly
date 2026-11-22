@@ -36,6 +36,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.changerequests.RequestDeadlineId
+import com.coparently.app.presentation.changerequests.AgreementScreen
 import com.coparently.app.presentation.changerequests.ChangeRequestViewModel
 import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.BrandHeader
@@ -68,22 +69,22 @@ import com.coparently.app.resources.home_pairing_cta
 import com.coparently.app.resources.home_pairing_prompt
 import com.coparently.app.resources.home_pairing_title
 import com.coparently.app.resources.home_section_this_week
-import com.coparently.app.resources.home_updates_title
 import com.coparently.app.resources.nav_home
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.YearMonth
 import kotlinx.datetime.yearMonth
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Home dashboard. At-a-glance co-parenting state, in variant A of the November 2026 redesign:
- * the co-parent's updates first, what waits on either parent, this week as seven day tiles, the
- * next handover, and the Money card, where the month is settled up. The today card lives on the
- * Calendar since the same redesign.
+ * Home dashboard (November 2026, board HomeG1): under the wordmark "Your family calendar", then one
+ * Requests block — an action card per request waiting on this parent, answered in place or through
+ * its Details sheet, and a row per request waiting on the co-parent — then the Money card, where
+ * the month is settled up, this week as seven day tiles and the next handover. The co-parent's
+ * informational updates live in the inbox "See all" opens; "N new" counts those not opened yet.
  *
- * @param onOpenEvent Opens an event by id
+ * @param onOpenEvent Opens an event by id (a change request's event, as in the inbox)
  * @param onOpenChangeRequests Opens the requests inbox
  * @param onOpenRequestHistory Opens the requests inbox at its History
  * @param onOpenSettings Opens settings
@@ -92,9 +93,11 @@ import org.koin.compose.viewmodel.koinViewModel
  * @param onOpenDay Opens the calendar's Day view on a day — a week tile's tap
  * @param onOpenUnassignedRecords Opens "Records without a family" from the one-time question about
  *   them; null asks nothing
+ * @param onOpenAgreement Opens the screen a child support, professional or plan request is answered on
  * @param viewModel Screen state
  * @param putOffAsks Which pop-up asks this parent already dealt with; the Requests row records them too
  * @param paymentsViewModel The family on screen's payments, for the Money card's settle-up
+ * @param requestsSeen When this parent last opened the requests from "See all", for "N new"
  */
 @Composable
 // One callback per navigation target this dashboard links to; the body is one linear column of
@@ -109,10 +112,12 @@ fun HomeScreen(
     onOpenExpenses: () -> Unit,
     onOpenDay: (LocalDate) -> Unit,
     onOpenUnassignedRecords: (() -> Unit)? = null,
+    onOpenAgreement: (AgreementScreen) -> Unit = {},
     viewModel: HomeViewModel = koinViewModel(),
     changeRequestViewModel: ChangeRequestViewModel = koinViewModel(),
     putOffAsks: PutOffAsksViewModel = koinViewModel(),
-    paymentsViewModel: PaymentsViewModel = koinViewModel()
+    paymentsViewModel: PaymentsViewModel = koinViewModel(),
+    requestsSeen: RequestsSeenViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val children by viewModel.children.collectAsState()
@@ -123,6 +128,8 @@ fun HomeScreen(
     val pendingSplit by changeRequestViewModel.pendingSplit.collectAsState()
     val agreedSplit by changeRequestViewModel.agreedSplit.collectAsState()
     val swapMonths by changeRequestViewModel.swapMonths.collectAsState()
+    val requests = rememberHomeRequests(changeRequestViewModel, parentNames, onOpenEvent, onOpenAgreement)
+    val seenAt by requestsSeen.seenAtMillis.collectAsState()
     // Settle up on the Money card (November 2026), for the month its figures are of.
     val settleUpSource = rememberSettleUpSource(paymentsViewModel)
     val thisMonth = rememberToday().value.yearMonth
@@ -148,28 +155,6 @@ fun HomeScreen(
             snackbarHostState.showSnackbar(message.asString(textResolver))
             paymentsViewModel.errorShown()
         }
-    }
-
-    // An event tapped anywhere on the dashboard opens its preview first, like the calendar.
-    // The tapped occurrence's start travels with the id (audit L-6): every occurrence of a
-    // recurring event shares its series' id, so the id alone previewed the first one on screen.
-    // Edit still opens the series by id, as the calendar's preview does.
-    val openEvent: (String, LocalDateTime?) -> Unit = { eventId, occurrenceStart ->
-        viewModel.openPreview(eventId, occurrenceStart, onMissing = { onOpenEvent(eventId) })
-    }
-    val previewEvent by viewModel.previewEvent.collectAsState()
-    previewEvent?.let { event ->
-        com.coparently.app.presentation.event.EventPreviewSheet(
-            event = event,
-            parentNames = parentNames,
-            onEdit = {
-                viewModel.closePreview()
-                onOpenEvent(event.id)
-            },
-            // No delete here: Home has no delete-with-undo, and the editor one tap away does.
-            onDelete = null,
-            onDismiss = viewModel::closePreview
-        )
     }
 
     Scaffold(
@@ -209,7 +194,14 @@ fun HomeScreen(
             is HomeUiState.Dashboard -> {
                 val homeAsks = HomeAsks(
                     proposal = pendingProposal?.let {
-                        ProposalAsk(it, pendingProposalDiff, pendingProposalCitation)
+                        ProposalAsk(
+                            proposal = it,
+                            diff = pendingProposalDiff,
+                            citation = pendingProposalCitation,
+                            current = requests.ctx?.custody?.model,
+                            overrides = requests.ctx?.custody?.dayOverrides.orEmpty(),
+                            answerByMillis = requests.proposalDeadlineMillis()
+                        )
                     },
                     split = pendingSplit?.let { SplitAsk(it, agreedSplit) },
                     swapMonths = swapMonths
@@ -223,20 +215,32 @@ fun HomeScreen(
                     }
                     onOpenChangeRequests()
                 }
+                // "See all" opens the inbox, at History while nothing waits, and counts as a look.
+                val onSeeAll = {
+                    requestsSeen.markSeen()
+                    if (requests.items.isEmpty) onOpenRequestHistory() else openInboxFromRow()
+                }
                 Dashboard(
                     state = state,
                     parentNames = parentNames,
                     contentPadding = padding,
+                    childNames = children.map { it.childName },
+                    requests = HomeRequestsSection(
+                        state = RequestsBlockState(
+                            items = requests.items,
+                            forYou = state.requests.waitingOnMe,
+                            newCount = unseenCount(state.recentChanges, seenAt, TimeZone.currentSystemDefault())
+                        ),
+                        ctx = requests.ctx,
+                        onSeeAll = onSeeAll
+                    ),
                     actions = DashboardActions(
-                        // A feed row names the event, not one occurrence of it.
-                        onOpenEvent = { eventId -> openEvent(eventId, null) },
-                        onOpenChangeRequests = openInboxFromRow,
-                        onOpenRequestHistory = onOpenRequestHistory,
                         onOpenExpenses = onOpenExpenses,
                         onOpenDay = onOpenDay,
                         money = HomeMoney(thisMonth, settleUpSource) { pendingSettleUp = it }
                     )
                 )
+                HomeRequestsOverlays(requests, changeRequestViewModel)
                 // Asked once per co-parent set (owner decision, October 2026). Composed before the
                 // asks below, so a waiting swap or proposal sits on top of it.
                 onOpenUnassignedRecords?.let { UnassignedRecordsPrompt(onChoose = it) }
@@ -282,8 +286,8 @@ fun HomeScreen(
 /**
  * What the page draws before it knows whether there is a co-parent.
  *
- * The shapes match the dashboard it is about to become — the Updates card, the week's seven tiles
- * and the two stat tiles — so the layout does not jump when the answer arrives. It deliberately
+ * The shapes match the dashboard it is about to become — the Requests block, the week's seven
+ * tiles and the Money card — so the layout does not jump when the answer arrives. It deliberately
  * contains no text and no numbers: the defect it replaces is a screen that **asserted facts** it
  * did not have, and a skeleton that guessed at content would be the same mistake with rounded
  * corners.
@@ -298,7 +302,7 @@ private fun HomeSkeleton(modifier: Modifier = Modifier) {
     ) {
         Spacer(modifier = Modifier.height(Spacing.S))
 
-        // The Updates card.
+        // The Requests block.
         SkeletonBox(
             modifier = Modifier
                 .fillMaxWidth()
@@ -323,7 +327,7 @@ private fun HomeSkeleton(modifier: Modifier = Modifier) {
     }
 }
 
-/** The skeleton's Updates card, about three rows high. */
+/** The skeleton's Requests block, about one action card high. */
 private val SKELETON_UPDATES_HEIGHT = 180.dp
 
 /** The skeleton's day tiles: seven, as the week draws them. */
@@ -369,34 +373,36 @@ private fun PairingInvitation(
 }
 
 /**
- * The paired dashboard, in variant A's order (redesign, November 2026): Updates, the open requests,
- * this week's tiles, the next handover and the money and chat tiles — one column on a phone, two
+ * The paired dashboard, in the November 2026 order (board HomeG1): the heading, the one Requests
+ * block, the Money card, this week's tiles and the next handover — one column on a phone, two
  * panes from 840 dp ([homeSections]).
  *
  * @param state Everything the page draws
  * @param parentNames Resolves a slot to that parent's name
  * @param contentPadding The scaffold's own insets
+ * @param childNames The children's names, for the heading's second line
+ * @param requests The Requests block
  * @param actions Where each card leads
  */
 @Composable
+@Suppress("LongParameterList") // the page's state, its names, insets, children, requests and links
 private fun Dashboard(
     state: HomeUiState.Dashboard,
     parentNames: ParentNames,
     contentPadding: PaddingValues,
+    childNames: List<String>,
+    requests: HomeRequestsSection,
     actions: DashboardActions
 ) {
-    val requests = state.requests
-    val (first, second) = homeSections(
-        hasOpenRequests = requests.waitingOnMe > 0 || requests.waitingOnThem > 0,
-        twoPane = rememberTwoPane()
-    )
+    val (first, second) = homeSections(twoPane = rememberTwoPane())
     val coParentName = parentNames.labelForUid(state.partner?.id)
     val listModifier = Modifier
         .fillMaxSize()
         .padding(contentPadding)
+    val page = HomePage(state, parentNames, coParentName, childNames, requests, actions)
     val column: @Composable (List<HomeSection>) -> Unit = { list ->
         HomeColumn(listModifier) {
-            list.forEach { section -> homeSection(section, state, parentNames, coParentName, actions) }
+            list.forEach { section -> homeSection(section, page) }
         }
     }
     if (second.isNotEmpty()) {
@@ -406,20 +412,24 @@ private fun Dashboard(
     }
 }
 
+/** Everything [homeSection] draws from, held together so each section reads what it needs. */
+private class HomePage(
+    val state: HomeUiState.Dashboard,
+    val parentNames: ParentNames,
+    val coParentName: String,
+    val childNames: List<String>,
+    val requests: HomeRequestsSection,
+    val actions: DashboardActions
+)
+
 /**
  * Where the dashboard's cards lead.
  *
- * @property onOpenEvent Opens an event by id
- * @property onOpenChangeRequests Opens the requests inbox
- * @property onOpenRequestHistory Opens the requests inbox at its History
  * @property onOpenExpenses Opens Expenses
  * @property onOpenDay Opens the calendar's Day view on a day
  * @property money The Money card's settle-up
  */
 private class DashboardActions(
-    val onOpenEvent: (String) -> Unit,
-    val onOpenChangeRequests: () -> Unit,
-    val onOpenRequestHistory: () -> Unit,
     val onOpenExpenses: () -> Unit,
     val onOpenDay: (LocalDate) -> Unit,
     val money: HomeMoney
@@ -436,41 +446,21 @@ private class HomeMoney(
 )
 
 /** One of [HomeSection]'s cards, as list items; nothing for a section with nothing to show. */
-private fun LazyListScope.homeSection(
-    section: HomeSection,
-    state: HomeUiState.Dashboard,
-    parentNames: ParentNames,
-    coParentName: String,
-    actions: DashboardActions
-) {
+private fun LazyListScope.homeSection(section: HomeSection, page: HomePage) {
+    val state = page.state
     when (section) {
-        // With no co-parent there is nobody for an update to come from: an empty card would say
-        // "Nothing new from Parent", so it is left out until there is something to list.
-        HomeSection.UPDATES -> if (state.partner != null || state.recentChanges.isNotEmpty()) {
-            item { SectionHeader(stringResource(Res.string.home_updates_title)) }
-            item {
-                UpdatesCard(
-                    items = state.recentChanges,
-                    coParentName = coParentName,
-                    onOpenChangeRequests = actions.onOpenChangeRequests,
-                    onOpenRequestHistory = actions.onOpenRequestHistory,
-                    onOpenEvent = actions.onOpenEvent
-                )
-            }
-        }
-        HomeSection.OPEN_REQUESTS -> item {
-            OpenRequestsCard(state.requests, coParentName, actions.onOpenChangeRequests)
+        HomeSection.HEADING -> item(key = "heading") { HomeHeading(page.childNames) }
+        HomeSection.REQUESTS -> requestsBlock(page.requests.state, page.requests.ctx, page.requests.onSeeAll)
+        HomeSection.MONEY -> {
+            item { SectionHeader(stringResource(Res.string.family_group_money)) }
+            item { HomeMoneyCard(state, page.coParentName, page.actions) }
         }
         HomeSection.THIS_WEEK -> if (state.weekDays.isNotEmpty()) {
             item { SectionHeader(stringResource(Res.string.home_section_this_week)) }
-            item { WeekTiles(state.weekDays, parentNames, actions.onOpenDay) }
+            item { WeekTiles(state.weekDays, page.parentNames, page.actions.onOpenDay) }
         }
         HomeSection.HANDOVER -> state.nextHandover?.let { handover ->
-            item { HandoverCard(handover, parentNames, state.childrenToday) }
-        }
-        HomeSection.MONEY -> {
-            item { SectionHeader(stringResource(Res.string.family_group_money)) }
-            item { HomeMoneyCard(state, coParentName, actions) }
+            item { HandoverCard(handover, page.parentNames, state.childrenToday) }
         }
     }
 }

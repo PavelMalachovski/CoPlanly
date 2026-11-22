@@ -43,6 +43,7 @@ import com.coparently.app.presentation.home.HomeIdentityDependencies
 import com.coparently.app.presentation.home.HomeViewModel
 import com.coparently.app.presentation.home.MonthSpendDependencies
 import com.coparently.app.presentation.home.PutOffAsksViewModel
+import com.coparently.app.presentation.home.RequestsSeenViewModel
 import com.coparently.app.presentation.journal.JournalEditorViewModel
 import com.coparently.app.presentation.journal.JournalListViewModel
 import com.coparently.app.presentation.onboarding.NewAccountAsk
@@ -282,7 +283,8 @@ val profileUiModule: Module = module {
 /**
  * Home (MON-24 phase 2, Task 10): the dashboard — the next handover and each child's day, today
  * and the week, the month's money, the unread count, the co-parent's changes and the Requests row
- * with what Home asks — and which of those asks this parent put off with "Later", kept per family
+ * with what Home asks — which of those asks this parent put off with "Later", and when it last
+ * opened its requests from "See all", each kept per family
  * in the sealed preference store [platformDataModule] binds. Beside them the bundle of who the
  * family is, a `factory` as in the app's `presentationModule` it came from.
  */
@@ -290,6 +292,7 @@ val homeUiModule: Module = module {
     factoryOf(::HomeIdentityDependencies)
     viewModelOf(::HomeViewModel)
     viewModelOf(::PutOffAsksViewModel)
+    viewModelOf(::RequestsSeenViewModel)
 }
 
 /**

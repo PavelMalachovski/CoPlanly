@@ -418,7 +418,10 @@ internal fun appDestinations(
             },
             onOpenUnassignedRecords = {
                 navController.navigate(Screen.UnassignedRecords.route)
-            }
+            },
+            // Child support, a professional's access and the plan wait on Home's Requests block as
+            // compact rows, each opening the screen it is answered on, as in the inbox.
+            onOpenAgreement = { screen -> navController.navigate(screen.route) }
         )
     },
 

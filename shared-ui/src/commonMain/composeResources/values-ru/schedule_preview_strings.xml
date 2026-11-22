@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A proposed schedule on a mini month (November 2026, board HomeScheduleDialog): Proposed or Now, and the days that change. -->
+<resources>
+    <string name="schedule_preview_now">Сейчас</string>
+    <!-- What the Proposed | Now switch is called by a screen reader. -->
+    <string name="schedule_preview_show">Показать</string>
+    <string name="mini_month_legend_custody_change">День, который меняется, — цветом того, к кому он перейдёт</string>
+    <string name="mini_month_mark_custody_change">день, который меняется</string>
+    <string name="mini_month_legend_proposed_day">Предложенный день</string>
+    <string name="mini_month_mark_proposed_day">предложенный день</string>
+</resources>

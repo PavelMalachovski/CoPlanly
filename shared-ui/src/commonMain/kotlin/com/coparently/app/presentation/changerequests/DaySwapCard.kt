@@ -103,19 +103,7 @@ internal fun DaySwapCard(
 /** This parent's own offer: its days as a title, and the sentence saying which way they go. */
 @Composable
 private fun OwnSwapHeader(group: DaySwapGroup, parentNames: ParentNames) {
-    TitleWithClockChip(
-        if (group.dayCount == 1) {
-            readerMediumDate(group.firstDate)
-        } else if (!isConsecutive(group.swaps.map { it.date })) {
-            group.swaps.joinToString(", ") { readerMediumDate(it.date) }
-        } else {
-            stringResource(
-                Res.string.day_swap_range,
-                readerMediumDate(group.firstDate),
-                readerMediumDate(group.lastDate)
-            )
-        }
-    )
+    TitleWithClockChip(ownSwapTitle(group))
     Text(
         text = daySwapSentence(group, offeredByMe = true, parentNames = parentNames),
         style = MaterialTheme.typography.bodyMedium,
@@ -124,6 +112,20 @@ private fun OwnSwapHeader(group: DaySwapGroup, parentNames: ParentNames) {
     group.swaps.first().override.note?.let { note ->
         Text(text = note, style = MaterialTheme.typography.bodyMedium)
     }
+}
+
+/** This parent's own offer's title: its day, its days, or the run from the first to the last. */
+@Composable
+internal fun ownSwapTitle(group: DaySwapGroup): String = if (group.dayCount == 1) {
+    readerMediumDate(group.firstDate)
+} else if (!isConsecutive(group.swaps.map { it.date })) {
+    group.swaps.joinToString(", ") { readerMediumDate(it.date) }
+} else {
+    stringResource(
+        Res.string.day_swap_range,
+        readerMediumDate(group.firstDate),
+        readerMediumDate(group.lastDate)
+    )
 }
 
 /**
@@ -159,7 +161,7 @@ private fun SwapAnswerArea(group: DaySwapGroup, uid: String, parentNames: Parent
  * without the reader counting rows — the thing five separate cards made impossible.
  */
 @Composable
-private fun daySwapSentence(group: DaySwapGroup, offeredByMe: Boolean, parentNames: ParentNames): String {
+internal fun daySwapSentence(group: DaySwapGroup, offeredByMe: Boolean, parentNames: ParentNames): String {
     val first = group.swaps.first()
     val offerer = first.override.requestedBy
     // Which way the days go, from the offer itself (second audit: "Bob is offering you a day" over

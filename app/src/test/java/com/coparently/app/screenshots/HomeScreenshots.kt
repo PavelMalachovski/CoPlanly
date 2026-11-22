@@ -1,9 +1,6 @@
 package com.coparently.app.screenshots
 
 import androidx.compose.runtime.Composable
-import com.coparently.app.domain.changerequests.HistoryEntry
-import com.coparently.app.domain.changerequests.RequestOutcome
-import com.coparently.app.domain.changerequests.RequestSubject
 import com.coparently.app.domain.custody.HandoverInfo
 import com.coparently.app.domain.expenses.CurrencyBalance
 import com.coparently.app.domain.expenses.ExpenseBalance
@@ -11,25 +8,20 @@ import com.coparently.app.domain.home.WeekDay
 import com.coparently.app.domain.payments.Payment
 import com.coparently.app.domain.payments.PaymentKind
 import com.coparently.app.presentation.calendar.components.DayAgendaCard
-import com.coparently.app.presentation.home.ActivityItem
-import com.coparently.app.presentation.home.ActivityKind
 import com.coparently.app.presentation.home.ChildWithParent
 import com.coparently.app.presentation.home.CurrencyAmount
 import com.coparently.app.presentation.home.HandoverCard
 import com.coparently.app.presentation.home.MoneyCard
 import com.coparently.app.presentation.home.MonthSpend
-import com.coparently.app.presentation.home.OpenRequestsCard
-import com.coparently.app.presentation.home.RequestsRowState
-import com.coparently.app.presentation.home.UpdatesCard
+import com.coparently.app.presentation.home.RequestDetailsBody
+import com.coparently.app.presentation.home.RequestsBlock
 import com.coparently.app.presentation.home.WeekTiles
 import com.coparently.app.presentation.payments.SettleUpPanelActions
 import com.coparently.app.presentation.payments.SettleUpPanelState
 import com.coparently.app.testing.RobolectricTestApplication
-import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.YearMonth
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDate
-import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
@@ -37,7 +29,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Home's cards (redesign, November 2026, variant A): the Updates card, the open requests, the
+ * Home's cards (November 2026, board HomeG1): the Requests block and two Details sheets, the
  * week's seven tiles, the handover card and the Money card in its five settle-up states, beside
  * the "today" agenda card (with the co-parent's contact window, MON-6b). All carry translated
  * sentences or parent colours, so they take the full [ScreenshotVariants.TEXT_HEAVY] set, 2.0×
@@ -109,58 +101,25 @@ class HomeScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
         )
     }
 
-    /** The co-parent's feed: an accepted swap, a declined new time, an event added and one changed. */
+    /**
+     * Home's one Requests block (board HomeG1): "2 for you", "See all · 3 new", Pavel's swap and
+     * new time as action cards with their deadlines, and Olya's split waiting on him.
+     */
     @Test
-    fun updatesCard() = snap("home_updates_card") {
-        val at = ScreenshotFixtures.TODAY.atTime(UPDATE_HOUR, 0).toKotlinLocalDateTime()
-        val events = ScreenshotFixtures.monthEvents.values.flatten()
-        UpdatesCard(
-            items = listOf(
-                answerItem(
-                    key = "swap",
-                    subject = RequestSubject.DaySwap(
-                        firstDate = ScreenshotFixtures.TODAY.plusDays(SWAP_IN_DAYS).toKotlinLocalDate(),
-                        dayCount = 2
-                    ),
-                    outcome = RequestOutcome.ACCEPTED,
-                    at = at
-                ),
-                answerItem(
-                    key = "time",
-                    subject = RequestSubject.NewTime(events[0].id, events[0].title, events[0].startDateTime),
-                    outcome = RequestOutcome.DECLINED,
-                    at = at
-                ),
-                ActivityItem("ev1", ActivityKind.EVENT_CREATED, events[1].title, at, events[1].id, false),
-                ActivityItem("ev2", ActivityKind.EVENT_UPDATED, events[2].title, at, events[2].id, false)
-            ),
-            coParentName = "Pavel",
-            onOpenChangeRequests = {},
-            onOpenRequestHistory = {},
-            onOpenEvent = {}
-        )
+    fun requestsBlock() = snap("home_requests_block") {
+        RequestsBlock(state = RequestFixtures.block, ctx = RequestFixtures.context)
     }
 
-    /** The empty feed says so inside the card, naming the co-parent. */
+    /** The swap's Details (board HomeSwapDetails): the offered day on Olya's month, then the answers. */
     @Test
-    fun updatesCardEmpty() = snap("home_updates_card_empty") {
-        UpdatesCard(
-            items = emptyList(),
-            coParentName = "Pavel",
-            onOpenChangeRequests = {},
-            onOpenRequestHistory = {},
-            onOpenEvent = {}
-        )
+    fun requestDetailsSwap() = snap("home_request_details_swap") {
+        RequestDetailsBody(item = RequestFixtures.swapItem, ctx = RequestFixtures.context, onDismiss = {})
     }
 
-    /** What waits on each parent, with Review. */
+    /** A schedule proposal's Details: Proposed | Now, each changed day ringed in whom it goes to. */
     @Test
-    fun openRequestsCard() = snap("home_open_requests_card") {
-        OpenRequestsCard(
-            state = RequestsRowState(waitingOnMe = 2, waitingOnThem = 1),
-            coParentName = "Pavel",
-            onOpenChangeRequests = {}
-        )
+    fun requestDetailsProposal() = snap("home_request_details_proposal") {
+        RequestDetailsBody(item = RequestFixtures.proposalItem, ctx = RequestFixtures.context, onDismiss = {})
     }
 
     /** The payee, before anything is recorded: "Ask Pavel to settle up" (board MoneySettleUp, 1). */
@@ -239,29 +198,9 @@ class HomeScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
         paidAtMillis = PAID_AT_MILLIS
     )
 
-    private fun answerItem(key: String, subject: RequestSubject, outcome: RequestOutcome, at: LocalDateTime) =
-        ActivityItem(
-            id = "ans_$key",
-            kind = ActivityKind.ANSWER,
-            title = "",
-            timestamp = at,
-            eventId = "",
-            isChangeRequest = false,
-            answer = HistoryEntry(
-                key = key,
-                subject = subject,
-                outcome = outcome,
-                askedBy = ScreenshotFixtures.MY_UID,
-                decidedBy = ScreenshotFixtures.CO_PARENT_UID,
-                decidedAt = at
-            )
-        )
-
     companion object {
         private const val HANDOVER_IN_DAYS = 5L
         private const val WEEK_DAYS = 7L
-        private const val SWAP_IN_DAYS = 9L
-        private const val UPDATE_HOUR = 9
         private const val CZK_SPENT = 4_250.0
         private const val CZK_MOM_PAID = 3_000.0
         private const val CZK_OWED_TO_ME = 875.0

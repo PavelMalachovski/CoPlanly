@@ -19,7 +19,6 @@ import com.coparently.app.domain.home.WeekDay
 import com.coparently.app.domain.home.WeekEntry
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.CustodyModel
-import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
@@ -184,56 +183,6 @@ class HomeViewModel(
     messageRepository: MessageRepository,
     homeIdentityDependencies: HomeIdentityDependencies
 ) : ViewModel() {
-
-    /** Kept for [openPreview]; the constructor parameter itself feeds the flows below. */
-    private val events: EventRepository = eventRepository
-
-    private val _previewEvent = MutableStateFlow<Event?>(null)
-
-    /**
-     * The event whose preview sheet is open, or null. Home opens an event the way the calendar
-     * does — a read-only preview first, the editor one tap further (UX item 5) — instead of
-     * dropping a parent straight into an edit form for the co-parent's event.
-     */
-    val previewEvent: StateFlow<Event?> = _previewEvent
-
-    /**
-     * Loads [eventId] into [previewEvent]. An event already on the dashboard is taken from there,
-     * because that copy is the expanded *occurrence* — a recurring event read back from Room is
-     * its master, dated to the first occurrence. The activity feed can name events outside the
-     * dashboard's window, and those are read from Room.
-     *
-     * Every occurrence of a recurring event shares the series' id, so a weekly event shows up in
-     * the week list more than once; matching by id alone opened the first of them whichever was
-     * tapped (audit L-6). [occurrenceStart] picks the tapped one, as the calendar's preview does,
-     * and the id alone is the fallback when it is null or no longer on the dashboard.
-     *
-     * @param occurrenceStart The tapped occurrence's start, or null when the tap named only the
-     *   event (the activity feed).
-     * @param onMissing Called when there is no such event on this device, so the caller can fall
-     *   back to the editor route, which reports that case itself.
-     */
-    fun openPreview(
-        eventId: String,
-        occurrenceStart: kotlinx.datetime.LocalDateTime? = null,
-        onMissing: () -> Unit
-    ) {
-        viewModelScope.launch {
-            val dashboard = uiState.value as? HomeUiState.Dashboard
-            val onDashboard = dashboard?.today?.events.orEmpty() +
-                dashboard?.week?.map { it.event }.orEmpty()
-            val onScreen = onDashboard.firstOrNull {
-                it.id == eventId && occurrenceStart != null && it.startDateTime == occurrenceStart
-            } ?: onDashboard.firstOrNull { it.id == eventId }
-            val event = onScreen ?: runCatching { events.getEventById(eventId) }.getOrNull()
-            if (event == null) onMissing() else _previewEvent.value = event
-        }
-    }
-
-    /** Closes the preview sheet. */
-    fun closePreview() {
-        _previewEvent.value = null
-    }
 
     /** App-wide default currency, used when the month has no expenses to take one from. */
     private val defaultCurrency: StateFlow<SupportedCurrency> =
@@ -555,7 +504,8 @@ class HomeViewModel(
 
     /**
      * Up to [MAX_ITEMS] most recent things the co-parent did, newest first: their event writes,
-     * their change requests and their answers to this parent's requests ([HomeFeed]).
+     * their change requests and their answers to this parent's requests ([HomeFeed]) — what Home's
+     * "N new" counts ([unseenCount]).
      */
     private val recentChanges: StateFlow<List<ActivityItem>> = combine(
         eventRepository.getAllEvents(),
@@ -577,7 +527,7 @@ class HomeViewModel(
         initialValue = emptyList()
     )
 
-    /** What Home's Open requests card counts, or nothing while the family's requests are still loading. */
+    /** What Home's Requests block counts, or nothing while the family's requests are still loading. */
     private val requestsRow: StateFlow<RequestsRowState> = requests
         .map { state ->
             val ready = state as? RequestsState.Ready ?: return@map RequestsRowState()
@@ -708,9 +658,10 @@ class HomeViewModel(
             unreadCount = 0
         )
 
-        // At most five Updates rows, then "See all" (redesign, November 2026, variant A): the feed
-        // leads the page now, and the week list it used to share the length with is seven tiles.
-        const val MAX_ITEMS = 5
+        // How many of the co-parent's latest updates Home's "N new" counts from (November 2026,
+        // board HomeG1): the feed is no longer drawn on Home, only counted, so it reaches further
+        // back than the five rows it once listed; more unopened than this reads as this many.
+        const val MAX_ITEMS = 20
         const val STOP_TIMEOUT_MS = 5000L
 
         /**

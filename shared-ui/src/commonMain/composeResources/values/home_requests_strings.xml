@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home's Requests block (November 2026, board HomeG1): the heading's counts, the action cards and their Details. -->
+<resources>
+    <!-- The heading's chip: how many requests wait on this parent. %1$d = how many. -->
+    <plurals name="home_requests_for_you">
+        <item quantity="one">%1$d for you</item>
+        <item quantity="other">%1$d for you</item>
+    </plurals>
+    <!-- Beside "See all": how many of the co-parent's updates this parent has not opened yet. -->
+    <plurals name="home_requests_new">
+        <item quantity="one">%1$d new</item>
+        <item quantity="other">%1$d new</item>
+    </plurals>
+    <string name="home_request_details">Details</string>
+    <!-- An incoming change request's title. %1$s = the co-parent, %2$s = the event's title. -->
+    <string name="home_request_change_title">%1$s asks to move %2$s</string>
+    <string name="home_requests_none">Nothing waits for an answer.</string>
+</resources>

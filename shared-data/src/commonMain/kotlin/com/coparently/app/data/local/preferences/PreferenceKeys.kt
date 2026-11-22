@@ -44,6 +44,16 @@ object PreferenceKeys {
     const val PUT_OFF_ASKS = "home_put_off_asks"
 
     /**
+     * Prefix of when this person last opened the Requests inbox from Home's "See all", one key per
+     * family (`home_requests_seen_<familyId>`), as decimal epoch millis. Home counts the
+     * co-parent's updates newer than it as "N new" (November 2026, board HomeG1), so one family's
+     * look never hides another family's news.
+     *
+     * Not exempt from `EncryptedPreferences.clear()`: the next account on this device starts unseen.
+     */
+    const val HOME_REQUESTS_SEEN_PREFIX = "home_requests_seen_"
+
+    /**
      * The user's answer to the analytics and crash-reporting question, as a
      * [com.coparently.app.domain.telemetry.TelemetryConsent] name.
      *

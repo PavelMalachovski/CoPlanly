@@ -453,7 +453,7 @@ const RULES = [
     sections: ['5.8'],
     why: 'requests: Home\'s Requests row, the co-parent\'s answers in its feed, or the inbox and its history',
     paths: ['K/presentation/changerequests/**', 'K/domain/changerequests/**',
-      'K/presentation/home/Requests*', 'K/presentation/home/HomeFeed*',
+      'K/presentation/home/Request*', 'K/presentation/home/HomeFeed*',
       'S/values*/change_requests_strings.xml'],
   },
   {

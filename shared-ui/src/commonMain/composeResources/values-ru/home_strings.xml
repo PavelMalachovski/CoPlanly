@@ -42,16 +42,9 @@
     <string name="home_timeline_meta">%1$s · чей день: %2$s</string>
     <string name="home_timeline_meta_you">%1$s · ваш день</string>
 
-
     <!-- Contacts: item 16's one button, between the changes feed and the spend tile. -->
     <string name="home_contacts">Контакты</string>
     <string name="home_contacts_supporting">Бабушки и дедушки, врачи, родители друга</string>
-
-    <string name="home_activity_event_created">Добавлено: %1$s</string>
-    <string name="home_activity_event_updated">Изменено: %1$s</string>
-    <string name="home_activity_pickup_confirmed">Подтверждено, что ребёнка забрали: %1$s</string>
-    <string name="home_activity_change_requested">Запрошено изменение: %1$s</string>
-    <string name="home_activity_review">Посмотреть</string>
 
     <string name="home_dialog_swap_title">Обмен днями</string>
     <!-- No full stop after the date: FormatStyle.FULL ends it with "г.", and a sentence ending in
@@ -64,26 +57,9 @@
     <string name="home_dialog_review">Посмотреть</string>
 
     <!-- The empty seven-day card's action. -->
-    <!-- How many requests wait in one row of Home's "Open requests" card; the row's title says on whom. -->
-    <plurals name="home_open_requests_count">
-        <item quantity="one">%1$d запрос</item>
-        <item quantity="few">%1$d запроса</item>
-        <item quantity="many">%1$d запросов</item>
-        <item quantity="other">%1$d запроса</item>
-    </plurals>
-    <!-- A noun phrase and the name in brackets, not "X принял(а)": a name cannot agree with a gendered verb. -->
-    <string name="home_activity_accepted_new_time">Ваше новое время принято: %1$s</string>
-    <string name="home_activity_declined_new_time">Ваше новое время отклонено: %1$s</string>
-    <string name="home_activity_accepted_swap">Ваш обмен днями принят: %1$s</string>
-    <string name="home_activity_declined_swap">Ваш обмен днями отклонён: %1$s</string>
-    <string name="home_activity_accepted_event">Принято: %1$s</string>
-    <string name="home_activity_declined_event">Отклонено: %1$s</string>
-    <!-- Home, variant A (redesign, November 2026): the Updates card, the open requests, the
-         handover card and the money tile. %1$s = the co-parent; %1$d = whole days. -->
-    <string name="home_updates_title">Новости</string>
-    <string name="home_updates_empty">%1$s: ничего нового</string>
+    <!-- Home (November 2026): "See all" in the Requests block, the status chips, and the handover
+         card. %1$s = the co-parent; %1$d = whole days. -->
     <string name="home_updates_see_all">Все</string>
-    <string name="home_open_requests_title">Открытые запросы</string>
     <string name="home_waiting_for_you">Ждёт вашего ответа</string>
     <string name="home_waiting_for_coparent">Ждёт ответа: %1$s</string>
     <plurals name="home_handover_in_days">

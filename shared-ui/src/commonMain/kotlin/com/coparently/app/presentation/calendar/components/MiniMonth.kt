@@ -40,13 +40,18 @@ import com.coparently.app.presentation.calendar.dayCellOverlayColor
 import com.coparently.app.presentation.calendar.eventDotColor
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.rememberToday
+import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.calendar_agenda_custody_day
 import com.coparently.app.resources.calendar_agenda_custody_day_you
+import com.coparently.app.resources.mini_month_legend_custody_change
 import com.coparently.app.resources.mini_month_legend_new_event
+import com.coparently.app.resources.mini_month_legend_proposed_day
 import com.coparently.app.resources.mini_month_legend_swap_day
+import com.coparently.app.resources.mini_month_mark_custody_change
 import com.coparently.app.resources.mini_month_mark_new_event
+import com.coparently.app.resources.mini_month_mark_proposed_day
 import com.coparently.app.resources.mini_month_mark_swap_day
 import com.coparently.app.resources.mini_month_marked_day
 import com.coparently.app.resources.mini_month_marked_day_no_custody
@@ -162,17 +167,27 @@ private fun MiniMonthCell(
             verticalArrangement = Arrangement.spacedBy(Spacing.XXS),
             modifier = Modifier.padding(vertical = Spacing.XXS)
         ) {
-            DayNumber(date = date, isToday = isToday, inMonth = inMonth, marked = date in model.marks)
+            DayNumber(
+                date = date,
+                isToday = isToday,
+                inMonth = inMonth,
+                marked = date in model.marks,
+                ringSlot = model.markSlots[date]
+            )
             DayDot(dot = model.dots[date], inMonth = inMonth, base = base)
         }
     }
 }
 
-/** The day number: a filled disc for today, a ring for a marked day, as `MonthView` marks today. */
+/**
+ * The day number: a filled disc for today, a ring for a marked day, as `MonthView` marks today. The
+ * ring is the theme's primary, or the colour of [ringSlot]'s parent where the mark names one.
+ */
 @Composable
-private fun DayNumber(date: LocalDate, isToday: Boolean, inMonth: Boolean, marked: Boolean) {
+private fun DayNumber(date: LocalDate, isToday: Boolean, inMonth: Boolean, marked: Boolean, ringSlot: String?) {
+    val ringColor = ringSlot?.let { ParentColors.fill(it) } ?: MaterialTheme.colorScheme.primary
     val ring = if (marked) {
-        Modifier.border(MARK_RING_WIDTH, MaterialTheme.colorScheme.primary, CircleShape)
+        Modifier.border(MARK_RING_WIDTH, ringColor, CircleShape)
     } else {
         Modifier
     }
@@ -239,6 +254,8 @@ private fun MiniMonthLegend(model: MiniMonthModel, parentNames: ParentNames) {
                     when (mark) {
                         MiniMonthMark.NEW_EVENT -> Res.string.mini_month_legend_new_event
                         MiniMonthMark.SWAP_DAY -> Res.string.mini_month_legend_swap_day
+                        MiniMonthMark.CUSTODY_CHANGE -> Res.string.mini_month_legend_custody_change
+                        MiniMonthMark.PROPOSED_DAY -> Res.string.mini_month_legend_proposed_day
                     }
                 )
             ) {
@@ -266,6 +283,8 @@ private fun miniMonthDescription(model: MiniMonthModel, parentNames: ParentNames
         val meaning = when (mark) {
             MiniMonthMark.NEW_EVENT -> stringResource(Res.string.mini_month_mark_new_event)
             MiniMonthMark.SWAP_DAY -> stringResource(Res.string.mini_month_mark_swap_day)
+            MiniMonthMark.CUSTODY_CHANGE -> stringResource(Res.string.mini_month_mark_custody_change)
+            MiniMonthMark.PROPOSED_DAY -> stringResource(Res.string.mini_month_mark_proposed_day)
         }
         val slot = model.custody[date]
         if (slot != null) {

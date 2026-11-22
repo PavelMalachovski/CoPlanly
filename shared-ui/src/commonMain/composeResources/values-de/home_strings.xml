@@ -36,16 +36,9 @@
     <string name="home_timeline_meta">%1$s · Tag von %2$s</string>
     <string name="home_timeline_meta_you">%1$s · dein Tag</string>
 
-
     <!-- Contacts: item 16's one button, between the changes feed and the spend tile. -->
     <string name="home_contacts">Kontakte</string>
     <string name="home_contacts_supporting">Großeltern, Ärzte, Eltern von Freunden</string>
-
-    <string name="home_activity_event_created">Hinzugefügt: %1$s</string>
-    <string name="home_activity_event_updated">Geändert: %1$s</string>
-    <string name="home_activity_pickup_confirmed">Abholung bestätigt: %1$s</string>
-    <string name="home_activity_change_requested">Änderung angefragt: %1$s</string>
-    <string name="home_activity_review">Prüfen</string>
 
     <string name="home_dialog_swap_title">Tagestausch</string>
     <string name="home_dialog_requests_title">Anfragen</string>
@@ -55,23 +48,9 @@
     <string name="home_dialog_review">Prüfen</string>
 
     <!-- The empty seven-day card's action. -->
-    <!-- How many requests wait in one row of Home's "Open requests" card; the row's title says on whom. -->
-    <plurals name="home_open_requests_count">
-        <item quantity="one">%1$d Anfrage</item>
-        <item quantity="other">%1$d Anfragen</item>
-    </plurals>
-    <string name="home_activity_accepted_new_time">Deine neue Zeit angenommen: %1$s</string>
-    <string name="home_activity_declined_new_time">Deine neue Zeit abgelehnt: %1$s</string>
-    <string name="home_activity_accepted_swap">Dein Tagestausch angenommen: %1$s</string>
-    <string name="home_activity_declined_swap">Dein Tagestausch abgelehnt: %1$s</string>
-    <string name="home_activity_accepted_event">Angenommen: %1$s</string>
-    <string name="home_activity_declined_event">Abgelehnt: %1$s</string>
-    <!-- Home, variant A (redesign, November 2026): the Updates card, the open requests, the
-         handover card and the money tile. %1$s = the co-parent; %1$d = whole days. -->
-    <string name="home_updates_title">Neuigkeiten</string>
-    <string name="home_updates_empty">Nichts Neues von %1$s</string>
+    <!-- Home (November 2026): "See all" in the Requests block, the status chips, and the handover
+         card. %1$s = the co-parent; %1$d = whole days. -->
     <string name="home_updates_see_all">Alle anzeigen</string>
-    <string name="home_open_requests_title">Offene Anfragen</string>
     <string name="home_waiting_for_you">Wartet auf dich</string>
     <string name="home_waiting_for_coparent">Wartet auf %1$s</string>
     <plurals name="home_handover_in_days">

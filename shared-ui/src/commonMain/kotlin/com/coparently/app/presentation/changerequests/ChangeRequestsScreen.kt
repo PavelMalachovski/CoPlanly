@@ -354,30 +354,44 @@ private data class InboxCards(
      * recorded while the request waits on them and they have not opened it, and the proposer's
      * button is offered while the clock says it can be.
      */
-    fun clockFor(item: InboxItem, answers: InboxAnswers): CardClock? {
-        val timed = when (item) {
-            is InboxItem.Proposal -> item.timed
-            is InboxItem.Split -> item.timed
-            is InboxItem.AwaitingEvent -> item.timed
-            is InboxItem.Swap -> item.timed
-            is InboxItem.Request -> item.timed
-            is InboxItem.Header, is InboxItem.History,
-            is InboxItem.Support, is InboxItem.Professional, is InboxItem.Plan -> null
-        } ?: return null
-        val clock = timed.clock
-        val role = if (clock.proposerUid == scope.myUid) ClockRole.PROPOSER else ClockRole.RESPONDER
-        val otherUid = if (role == ClockRole.PROPOSER) clock.responderUid else clock.proposerUid
-        return CardClock(
-            timed = timed,
-            role = role,
-            otherName = parentNames.labelForUid(otherUid),
-            onSeen = { answers.markSeen(clock.id) }
-                .takeIf { role == ClockRole.RESPONDER && clock.seenAtMillis == null && timed.waitsOnResponder },
-            onGiveLastChance = { answers.giveLastChance(clock.id) }
-                .takeIf { role == ClockRole.PROPOSER && timed.lastChanceWindowMillis != null },
-            lastChanceInFlight = clock.id in lastChanceInFlight
-        )
-    }
+    fun clockFor(item: InboxItem, answers: InboxAnswers): CardClock? =
+        inboxCardClock(item, scope, parentNames, lastChanceInFlight, answers.markSeen, answers.giveLastChance)
+}
+
+/**
+ * The clock [item]'s card shows (phase 3a), or null for an item with none — the inbox's cards and
+ * Home's action cards read the one rule. The reader is the proposer or the answering parent by the
+ * clock itself; the answering parent's first look is recorded while the request waits on them and
+ * they have not opened it, and the proposer's button is offered while the clock says it can be.
+ *
+ * @param scope The family on screen: who "you" are.
+ * @param lastChanceInFlight The clocks whose last chance is being given right now, by id.
+ * @param markSeen Records the answering parent's first look at a clock.
+ * @param giveLastChance Gives a clock's one last chance.
+ */
+@Suppress("LongParameterList") // the item, whose screen it is, and what the clock can do
+internal fun inboxCardClock(
+    item: InboxItem,
+    scope: RequestScope,
+    parentNames: ParentNames,
+    lastChanceInFlight: Set<String>,
+    markSeen: (String) -> Unit,
+    giveLastChance: (String) -> Unit
+): CardClock? {
+    val timed = item.timedRequest ?: return null
+    val clock = timed.clock
+    val role = if (clock.proposerUid == scope.myUid) ClockRole.PROPOSER else ClockRole.RESPONDER
+    val otherUid = if (role == ClockRole.PROPOSER) clock.responderUid else clock.proposerUid
+    return CardClock(
+        timed = timed,
+        role = role,
+        otherName = parentNames.labelForUid(otherUid),
+        onSeen = { markSeen(clock.id) }
+            .takeIf { role == ClockRole.RESPONDER && clock.seenAtMillis == null && timed.waitsOnResponder },
+        onGiveLastChance = { giveLastChance(clock.id) }
+            .takeIf { role == ClockRole.PROPOSER && timed.lastChanceWindowMillis != null },
+        lastChanceInFlight = clock.id in lastChanceInFlight
+    )
 }
 
 /**
@@ -393,9 +407,11 @@ internal data class InboxOpeners(
 
 /**
  * How the inbox's cards answer, open and withdraw, and act on a request's clock (phase 3a), bound
- * once to the ViewModel.
+ * once to the ViewModel. Home's Requests block answers through the same one (November 2026).
+ *
+ * Public, not internal, so the app's screenshot tests can hand Home's cards an inert one ([inert]).
  */
-internal data class InboxAnswers(
+data class InboxAnswers(
     val openEvent: (String) -> Unit,
     val answerRequest: (requestId: String, accept: Boolean) -> Unit,
     val withdrawRequest: (requestId: String) -> Unit,
@@ -416,7 +432,30 @@ internal data class InboxAnswers(
     val proposeSwapChange: (HistoryEntry) -> Unit
 ) {
     companion object {
-        fun of(
+        /** Answers that do nothing: for the screenshot tests and previews. */
+        fun inert(): InboxAnswers = InboxAnswers(
+            openEvent = {},
+            answerRequest = { _, _ -> },
+            withdrawRequest = {},
+            answerSwap = { _, _ -> },
+            answerSwapDays = { _, _ -> },
+            withdrawSwap = {},
+            answerEvent = { _, _ -> },
+            withdrawEvent = {},
+            answerProposal = {},
+            withdrawProposal = {},
+            answerSplit = {},
+            withdrawSplit = {},
+            withdrawSupport = {},
+            withdrawProfessional = {},
+            openAgreement = {},
+            markSeen = {},
+            giveLastChance = {},
+            proposeSwapChange = {}
+        )
+
+        /** The inbox's answers through [viewModel], opening what [openers] open. */
+        internal fun of(
             viewModel: ChangeRequestViewModel,
             openers: InboxOpeners,
             onProposeSwapChange: (HistoryEntry) -> Unit

@@ -18,12 +18,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.coparently.app.domain.custody.CustodyPatternDiff
 import com.coparently.app.domain.custody.CustodyProposal
+import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.SplitRatioProposal
+import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.parentingplan.CitationStatus
 import com.coparently.app.presentation.calendar.MiniMonthModel
-import com.coparently.app.presentation.changerequests.ProposedSchedulePreview
+import com.coparently.app.presentation.changerequests.SchedulePreviewWithChanges
 import com.coparently.app.presentation.changerequests.SwapDayAnswers
 import com.coparently.app.presentation.changerequests.SwapMonths
 import com.coparently.app.presentation.changerequests.SwapNoteQuote
@@ -40,6 +42,7 @@ import com.coparently.app.presentation.parentingplan.planCitationLine
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyLargeEmphasized
 import com.coparently.app.resources.Res
+import com.coparently.app.resources.answer_by_fixed
 import com.coparently.app.resources.change_request_accept
 import com.coparently.app.resources.change_request_decline
 import com.coparently.app.resources.custody_proposal_accept
@@ -57,6 +60,7 @@ import com.coparently.app.resources.home_dialog_requests_title
 import com.coparently.app.resources.home_dialog_review
 import com.coparently.app.resources.home_dialog_swap_title
 import com.coparently.app.resources.split_request_now
+import com.coparently.app.utils.ReaderDateText
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -70,11 +74,19 @@ import org.koin.compose.viewmodel.koinViewModel
  * @property diff What it would change, or null when the two patterns cannot be compared.
  * @property citation Where it came from, derived by `ChangeRequestViewModel.pendingProposalCitation`
  *   — the same live value the inbox card reads, so the two never disagree.
+ * @property current The schedule agreed now, for the preview's "Now" and its changed days; null
+ *   when it is not known.
+ * @property overrides The family's day swaps, which stand on both sides of the preview.
+ * @property answerByMillis By when the answer is due, or null when it has no clock or is no longer
+ *   asked for.
  */
 data class ProposalAsk(
     val proposal: CustodyProposal,
     val diff: CustodyPatternDiff?,
-    val citation: CitationStatus = CitationStatus.None
+    val citation: CitationStatus = CitationStatus.None,
+    val current: CustodyModel? = null,
+    val overrides: Map<String, DayOverride> = emptyMap(),
+    val answerByMillis: Long? = null
 )
 
 /**
@@ -209,9 +221,12 @@ internal fun AwaitingDialogs(
 }
 
 /**
- * Who proposed a new schedule, what it would change, and — when it was built from the parenting
- * plan — which agreed answer it cites (MON-21), worded by `planCitationLine` exactly as the inbox
- * card words it. A proposal citing nothing says nothing about it.
+ * Who proposed a new schedule, what it would change, drawn as the reader's own month with a
+ * Proposed | Now switch and each changed day ringed in the colour of whom it goes to (November
+ * 2026, board HomeScheduleDialog; [SchedulePreviewWithChanges]), and — when it was built from the
+ * parenting plan — which agreed answer it cites (MON-21), worded by `planCitationLine` exactly as
+ * the inbox card words it. A proposal citing nothing says nothing about it. Then by when the
+ * answer is due. No count of days or nights per parent: no score between the parents.
  */
 @Composable
 private fun ProposalDialog(
@@ -241,10 +256,23 @@ private fun ProposalDialog(
             ) {
                 Text(if (diff == null) who else "$who\n\n$diff")
                 // What it looks like, always — the diff above is missing when the pattern changes.
-                ProposedSchedulePreview(ask.proposal, parentNames)
+                SchedulePreviewWithChanges(
+                    proposal = ask.proposal,
+                    current = ask.current,
+                    overrides = ask.overrides,
+                    parentNames = parentNames,
+                    background = MaterialTheme.colorScheme.surfaceContainerHigh
+                )
                 citation?.let { line ->
                     Text(
                         text = line,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                ask.answerByMillis?.let { millis ->
+                    Text(
+                        text = stringResource(Res.string.answer_by_fixed, ReaderDateText.answerBy(millis)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
