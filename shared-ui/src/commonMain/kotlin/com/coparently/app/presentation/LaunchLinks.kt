@@ -91,8 +91,9 @@ object LaunchLinks {
      *
      * Pairing news opens the pairing screen with nothing prefilled, a chat message and a departed
      * co-parent's notice their thread (the list when the thread is missing or malformed, as
-     * [parse] reads `ChatUri.build`'s link), and every other type the screen
-     * [PushDestination.forType] names, or nothing more than the app for a type this build does not
+     * [parse] reads `ChatUri.build`'s link) — but a chat card other than a sticker opens Home
+     * ([PushDestination.forChatCard]), since the thread no longer draws it — and every other type
+     * the screen [PushDestination.forType] names, or nothing more than the app for a type this build does not
      * know. The family rides beside it, never inside the chat link, as on Android.
      *
      * The iPhone's local reminders (phase 4 part C) carry no type, and name their screen as Android's
@@ -104,21 +105,30 @@ object LaunchLinks {
         val addressee = data[PushPayload.TARGET_USER_ID]?.takeIf { it.isNotBlank() }
         if (signedInUid == null || (addressee != null && addressee != signedInUid)) return null
         val type = data[PushPayload.TYPE]
-        val link = when (type) {
-            PushPayload.PAIRING_ACCEPTED, PushPayload.PAIRING_REMOVED -> LaunchLink.Pair("")
-            PushPayload.CHAT_MESSAGE, PushPayload.COPARENT_ACCOUNT_DELETED ->
-                parse(ChatUri.build(data[PushPayload.CONVERSATION_ID]))
-            else -> null
+        // A chat card the thread no longer draws opens Home, as on Android (November 2026).
+        val card = if (type == PushPayload.CHAT_MESSAGE) {
+            PushDestination.forChatCard(data[PushPayload.ACTIVITY_KIND])
+        } else {
+            null
         }
+        val link = if (card != null) null else pushLink(type, data)
         return PushTap(
             familyId = data[PushPayload.FAMILY_ID]?.takeIf { it.isNotBlank() },
             link = link,
-            destination = if (link == null) {
-                PushDestination.forType(type) ?: PushDestination.fromKey(data[PushDestination.EXTRA])
-            } else {
-                null
+            destination = when {
+                card != null -> card
+                link == null -> PushDestination.forType(type) ?: PushDestination.fromKey(data[PushDestination.EXTRA])
+                else -> null
             }
         )
+    }
+
+    /** The link a push of [type] opens: pairing's, or a thread's; null for every other type. */
+    private fun pushLink(type: String?, data: Map<String, String>): LaunchLink? = when (type) {
+        PushPayload.PAIRING_ACCEPTED, PushPayload.PAIRING_REMOVED -> LaunchLink.Pair("")
+        PushPayload.CHAT_MESSAGE, PushPayload.COPARENT_ACCOUNT_DELETED ->
+            parse(ChatUri.build(data[PushPayload.CONVERSATION_ID]))
+        else -> null
     }
 
     /**

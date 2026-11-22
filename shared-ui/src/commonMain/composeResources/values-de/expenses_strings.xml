@@ -100,8 +100,8 @@
     <string name="expense_warning_receipt_upload_failed">Beleg-Upload fehlgeschlagen – Ausgabe ohne Beleg gespeichert</string>
     <string name="expense_warning_new_receipt_upload_failed">Beleg-Upload fehlgeschlagen – Ausgabe ohne den neuen Beleg gespeichert</string>
     <string name="settle_up_dialog_title">Ausgleich für %1$s</string>
-    <string name="settle_up_dialog_owed">%1$s sieht im Chat, dass du %2$s bekommst.</string>
-    <string name="settle_up_dialog_owing">%1$s sieht im Chat, dass du %2$s schuldest. Wenn ein Konto hinterlegt ist, bekommst du einen QR-Code zum Bezahlen.</string>
+    <string name="settle_up_dialog_owed">%1$s sieht im Start-Tab unter Geld, dass du %2$s bekommst.</string>
+    <string name="settle_up_dialog_owing">%1$s sieht im Start-Tab unter Geld, dass du %2$s schuldest. Wenn ein Konto hinterlegt ist, findest du in deinem Start-Tab unter Geld einen QR-Code zum Bezahlen.</string>
     <string name="settle_up_iban_label">Deine IBAN für eine QR-Zahlung (optional)</string>
     <string name="settle_up_iban_invalid">Diese IBAN scheint nicht zu stimmen. Prüfe sie oder lass das Feld leer.</string>
     <string name="settle_up_send">Senden</string>

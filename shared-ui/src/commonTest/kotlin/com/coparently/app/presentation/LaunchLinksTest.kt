@@ -182,6 +182,29 @@ class LaunchLinksTest {
     }
 
     @Test
+    fun `a chat card opens Home and keeps its family`() {
+        val data = mapOf(
+            "type" to "chat_message",
+            "familyId" to "alice__bob",
+            "conversationId" to "alice__bob",
+            "activityKind" to "DAY_SWAP_WITHDRAWN",
+        )
+
+        assertEquals(
+            PushTap(familyId = "alice__bob", link = null, destination = PushDestination.HOME),
+            LaunchLinks.forPush(data, signedInUid = "bob")
+        )
+    }
+
+    @Test
+    fun `a sticker's chat push opens its thread`() {
+        val data = mapOf("type" to "chat_message", "conversationId" to "alice__bob", "activityKind" to "STICKER_SENT")
+
+        assertEquals(LaunchLink.Chat(null, "alice__bob"), LaunchLinks.forPush(data, "bob")?.link)
+        assertNull(LaunchLinks.forPush(data, "bob")?.destination)
+    }
+
+    @Test
     fun `a departed co-parent's notice opens its thread and one with no thread the list`() {
         val notice = mapOf("type" to "coparent_account_deleted", "conversationId" to "alice__bob")
         val bare = mapOf("type" to "chat_message")

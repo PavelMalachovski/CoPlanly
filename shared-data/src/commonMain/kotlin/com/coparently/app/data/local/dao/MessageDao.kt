@@ -106,12 +106,21 @@ interface MessageDao {
      *
      * A caller with no mark yet — the thread has never been opened — passes `Long.MIN_VALUE`,
      * which is exactly what `ChatReadState` substitutes for a null mark.
+     *
+     * **Only what the thread draws counts** (`isShownInThread`, November 2026): a parent's message
+     * and a sticker, never another card the app posted, which the thread no longer shows. The
+     * card's payload is `activityJson`, the `ActivityAnnouncement.toMap()` sub-map as `StoredJson`
+     * writes it — compact, so its kind reads `"kind":"STICKER_SENT"` — and a card whose payload is
+     * missing is still typed `ACTIVITY`. A `"` inside a title is escaped there, so no title can
+     * spell the sticker's kind.
      */
     @Query(
         "SELECT COUNT(*) FROM messages " +
             "WHERE conversationId = :conversationId " +
             "AND senderId != :myUid " +
-            "AND sentAtMillis > :afterMillis"
+            "AND sentAtMillis > :afterMillis " +
+            "AND (activityJson LIKE '%\"kind\":\"STICKER_SENT\"%' " +
+            "OR (activityJson IS NULL AND messageType != 'ACTIVITY'))"
     )
     fun observeUnreadCount(conversationId: String, myUid: String, afterMillis: Long): Flow<Int>
 

@@ -307,6 +307,26 @@ class PushNotificationTest {
     }
 
     @Test
+    fun aChatCardsTap_opensHome_andCarriesTheFamily() {
+        // November 2026: the thread draws a parent's messages and stickers only, so a card's push
+        // opens Home, where what it announced is shown.
+        val data = chatPayload() + mapOf(
+            PushPayload.ACTIVITY_KIND to "EVENT_UPDATED",
+            PushPayload.ACTIVITY_ENTITY_TYPE to "EVENT",
+            PushPayload.ACTIVITY_ENTITY_ID to "e1",
+            PushPayload.ACTIVITY_TITLE to SUBJECT
+        )
+        val posted = awaitPosted(PushNotifier(appContext).receive(data, SIGNED_IN)!!)
+        val tap = tapIntentFor(data)
+
+        val launcher = appContext.packageManager.getLaunchIntentForPackage(appContext.packageName)
+        assertEquals(launcher?.component, tap.component)
+        assertEquals(PushDestination.HOME.key, tap.getStringExtra(PushDestination.EXTRA))
+        assertEquals(FAMILY, tap.getStringExtra(PushPayload.FAMILY_ID))
+        assertIsTheTapOf(posted, data, tap)
+    }
+
+    @Test
     fun aDepartedCoParentsNotice_opensTheKeptThread() {
         val data = payload(PushPayload.COPARENT_ACCOUNT_DELETED) + (PushPayload.CONVERSATION_ID to CONVERSATION)
         val posted = awaitPosted(PushNotifier(appContext).receive(data, SIGNED_IN)!!)
@@ -537,7 +557,8 @@ class PushNotificationTest {
             text = PushText("", ""),
             type = data[PushPayload.TYPE],
             conversationId = data[PushPayload.CONVERSATION_ID],
-            familyId = data[PushPayload.FAMILY_ID]?.takeIf { it.isNotBlank() }
+            familyId = data[PushPayload.FAMILY_ID]?.takeIf { it.isNotBlank() },
+            activityKind = data[PushPayload.ACTIVITY_KIND]
         )
         return requireNotNull(PushNotifier(appContext).tapIntent(target)) { "no tap intent for $data" }
     }

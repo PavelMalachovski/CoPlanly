@@ -47,6 +47,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.coparently.app.domain.chat.ToneCheck
 import com.coparently.app.domain.chat.ToneNudge
+import com.coparently.app.domain.chat.isShownInThread
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
@@ -722,11 +723,12 @@ private val HEADER_AVATAR_SIZE = 36.dp
  * The thread's identity line: who you are talking to, and whether what you sent actually left
  * the device.
  *
- * The status is derived from **your own** messages only. A co-parent's message that is still
- * SENDING is their problem to see, not yours, and folding it in here would make the header
- * flicker on every incoming message. The wording deliberately says "up to date" rather than the
- * mock's "synced just now": the app tracks no chat sync timestamp, and printing one it does not
- * have is exactly the kind of affordance this refresh removed elsewhere.
+ * The status is derived from **your own** messages only, and only those the thread draws. A
+ * co-parent's message that is still SENDING is their problem to see, not yours, and folding it
+ * in here would make the header flicker on every incoming message. The wording deliberately says
+ * "up to date" rather than the mock's "synced just now": the app tracks no chat sync timestamp,
+ * and printing one it does not have is exactly the kind of affordance this refresh removed
+ * elsewhere.
  *
  * Public rather than private so the JVM screenshot tests (`ScreenshotMatrix` and its subclasses
  * under `app/src/test`) can render it on its own: `internal` stops at `:shared-ui`'s edge.
@@ -737,7 +739,9 @@ private val HEADER_AVATAR_SIZE = 36.dp
  */
 @Composable
 fun ChatThreadHeader(title: String, messages: List<Message>, currentUserId: String) {
-    val mine = messages.filter { it.senderId == currentUserId }
+    // Only what the thread draws (isShownInThread): a card kept for the record and still in the
+    // outbox would otherwise say "not sent" over a thread with nothing unsent in it.
+    val mine = messages.filter { it.senderId == currentUserId && isShownInThread(it) }
     val status = when {
         mine.any { it.status == MessageSendStatus.ERROR } -> Res.string.chat_failed_to_send
         mine.any { it.status == MessageSendStatus.SENDING } -> Res.string.chat_sending_ellipsis

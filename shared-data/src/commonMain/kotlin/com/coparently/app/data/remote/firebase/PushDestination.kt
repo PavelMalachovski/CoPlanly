@@ -1,5 +1,7 @@
 package com.coparently.app.data.remote.firebase
 
+import com.coparently.app.domain.activity.ActivityKind
+
 /**
  * The screen a push opens when tapped (docs/AUDIT-2026-10-design.md D-13).
  *
@@ -100,5 +102,18 @@ enum class PushDestination(val key: String) {
             PushPayload.CALENDAR_FRIEND_ACCEPTED -> FRIENDS
             else -> null
         }
+
+        /**
+         * The screen a `chat_message` push opens when it carries a chat card, or null when it
+         * opens its thread (November 2026): a card the thread no longer draws (`isShownInThread`)
+         * opens Home, where what it announced is shown, never a thread it cannot be found in. A
+         * plain message and a sticker, which the thread draws, open the thread as before. A kind
+         * this build does not know is a card too. One rule for both apps: Android's
+         * `PushNotifier.tapIntent` and the iPhone's `LaunchLinks.forPush` read it.
+         *
+         * @param activityKind The push's [PushPayload.ACTIVITY_KIND], or null for a plain message.
+         */
+        fun forChatCard(activityKind: String?): PushDestination? =
+            if (activityKind.isNullOrBlank() || activityKind == ActivityKind.STICKER_SENT.name) null else HOME
     }
 }

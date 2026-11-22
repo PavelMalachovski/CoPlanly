@@ -178,7 +178,6 @@ private fun Modifier.scrollsAsPage(
  * @param onAddExpense Opens the add-expense form
  * @param onEditExpense Opens an expense for editing
  * @param onNavigateUp Back to where Expenses was opened from, or null for no up arrow
- * @param onSettleUp Opens the chat once a settle-up card has been sent ([SettleUpDialog])
  * @param viewModel Expense state
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -192,7 +191,6 @@ fun ExpenseScreen(
     onAddExpense: () -> Unit,
     onEditExpense: (String) -> Unit = {},
     onNavigateUp: (() -> Unit)? = null,
-    onSettleUp: () -> Unit = {},
     viewModel: ExpenseViewModel = koinViewModel(),
     paymentsViewModel: PaymentsViewModel = koinViewModel()
 ) {
@@ -683,10 +681,9 @@ fun ExpenseScreen(
             pending = pending,
             coParentName = parentNames.coParentLabel(),
             onDismiss = { pendingSettleUp = null },
-            onSent = {
-                pendingSettleUp = null
-                onSettleUp()
-            }
+            // The parent stays on Expenses (November 2026): the card is posted for the record,
+            // and the co-parent reads the request on Home, not in the chat.
+            onSent = { pendingSettleUp = null }
         )
     }
 }

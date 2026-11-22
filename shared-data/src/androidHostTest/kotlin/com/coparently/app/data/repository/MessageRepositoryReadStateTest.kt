@@ -8,6 +8,9 @@ import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
 import com.coparently.app.data.remote.firebase.RecordingFirestoreClient
 import com.coparently.app.data.remote.firebase.SetMerge
 import com.coparently.app.data.remote.firebase.SignedInUser
+import com.coparently.app.domain.activity.ActivityAnnouncement
+import com.coparently.app.domain.activity.ActivityEntityType
+import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
@@ -289,6 +292,34 @@ class MessageRepositoryReadStateTest {
             coVerify { messageDao.insertConversation(capture(conversations)) }
             assertEquals(SENT_AT_MILLIS, conversations.last().lastMessageAtMillis)
         }
+
+    @Test
+    fun `a card the thread does not draw is sent without moving lastMessageAt`() = runTest {
+        coEvery { messageDao.getConversationById(CONVERSATION) } returns conversationRow()
+        val card = message().copy(
+            messageType = MessageType.ACTIVITY,
+            activity = ActivityAnnouncement(ActivityKind.EVENT_UPDATED, ActivityEntityType.EVENT, "e1", "Dentist")
+        )
+
+        repository.sendMessage(card)
+
+        coVerify(exactly = 1) { firestoreMessageDataSource.sendMessage(MESSAGE_ID, any()) }
+        coVerify(exactly = 0) { firestoreMessageDataSource.bumpLastMessageAt(any(), any()) }
+        coVerify(exactly = 0) { messageDao.insertConversation(any()) }
+    }
+
+    @Test
+    fun `a sticker moves lastMessageAt like a message`() = runTest {
+        coEvery { messageDao.getConversationById(CONVERSATION) } returns conversationRow()
+        val sticker = message().copy(
+            messageType = MessageType.ACTIVITY,
+            activity = ActivityAnnouncement(ActivityKind.STICKER_SENT, ActivityEntityType.STICKER, "s1", "thank_you")
+        )
+
+        repository.sendMessage(sticker)
+
+        coVerify(exactly = 1) { firestoreMessageDataSource.bumpLastMessageAt(CONVERSATION, SENT_AT_MILLIS) }
+    }
 
     @Test
     fun `a failed send leaves the row ERROR and queued for the outbox`() = runTest {

@@ -78,7 +78,8 @@ class PushNotifier(private val context: Context) {
             type = type,
             conversationId = data[PushPayload.CONVERSATION_ID],
             familyId = data[PushPayload.FAMILY_ID]?.takeIf { it.isNotBlank() },
-            card = if (type == TYPE_CHAT_MESSAGE) chatCardOf(data) else null
+            card = if (type == TYPE_CHAT_MESSAGE) chatCardOf(data) else null,
+            activityKind = if (type == TYPE_CHAT_MESSAGE) data[PushPayload.ACTIVITY_KIND] else null
         )
         return show(target)
     }
@@ -94,17 +95,34 @@ class PushNotifier(private val context: Context) {
     /**
      * Where tapping [target] leads: pairing events into the pairing screen, a chat message into
      * its conversation (or the Chat tab's list when the conversation id is null — a manual test
-     * push or an older payload), and everything else into the app's launcher activity, naming
-     * the screen it is about as [PushDestination.EXTRA] (D-13) — the calendar for an event, the
-     * inbox for a change request, Home for an ask waiting on this parent. A type with no
-     * destination opens the app as it always did.
+     * push or an older payload), a chat card other than a sticker into Home, where what it
+     * announced is shown since the thread no longer draws it, and everything else into the app's
+     * launcher activity, naming the screen it is about as [PushDestination.EXTRA] (D-13) — the
+     * calendar for an event, the inbox for a change request, Home for an ask waiting on this
+     * parent. A type with no destination opens the app as it always did.
      *
      * **The family rides along as an intent extra** ([PushPayload.FAMILY_ID], M-8), and
      * `MainActivity` switches to it before it hands the link to navigation — a push from the
      * family this device is not showing must not open on the other family's screens.
      */
     internal fun tapIntent(target: NotificationTarget): Intent? {
-        val intent = when (target.type) {
+        // A chat card the thread no longer draws opens Home, where its news is shown
+        // (PushDestination.forChatCard, November 2026); a message and a sticker open their thread.
+        val cardDestination =
+            if (target.type == TYPE_CHAT_MESSAGE) PushDestination.forChatCard(target.activityKind) else null
+        val intent = if (cardDestination != null) {
+            context.packageManager.getLaunchIntentForPackage(context.packageName)
+                ?.putExtra(PushDestination.EXTRA, cardDestination.key)
+        } else {
+            tapIntentOf(target)
+        }
+        target.familyId?.let { intent?.putExtra(PushPayload.FAMILY_ID, it) }
+        return intent
+    }
+
+    /** [tapIntent] for every push but a chat card's, without the family. */
+    private fun tapIntentOf(target: NotificationTarget): Intent? =
+        when (target.type) {
             TYPE_PAIRING_ACCEPTED, TYPE_PAIRING_REMOVED ->
                 Intent(Intent.ACTION_VIEW, Uri.parse(PAIRING_DEEP_LINK)).setPackage(context.packageName)
             // A departed co-parent's notice opens the thread it is about: the banner there says
@@ -116,9 +134,6 @@ class PushNotifier(private val context: Context) {
                 PushRouting.destinationOf(target.type)?.let { launch.putExtra(PushDestination.EXTRA, it.key) }
             }
         }
-        target.familyId?.let { intent?.putExtra(PushPayload.FAMILY_ID, it) }
-        return intent
-    }
 
     /**
      * Shows [target] and returns its notification id.
@@ -203,13 +218,17 @@ class PushNotifier(private val context: Context) {
      *   a payload from an older sender or one that names no family.
      * @property card The chat card a [TYPE_CHAT_MESSAGE] push carries, which gives it a tray id of
      *   its own ([chatNotificationId]); null for a message, and for every other type.
+     * @property activityKind The card's kind as the push names it ([PushPayload.ACTIVITY_KIND]),
+     *   read even when [card] could not be (a kind this build does not know), so the tap opens
+     *   Home for any card but a sticker ([PushDestination.forChatCard]); null for every other type.
      */
     internal data class NotificationTarget(
         val text: PushText,
         val type: String?,
         val conversationId: String?,
         val familyId: String?,
-        val card: ActivityAnnouncement? = null
+        val card: ActivityAnnouncement? = null,
+        val activityKind: String? = null
     )
 
     /**

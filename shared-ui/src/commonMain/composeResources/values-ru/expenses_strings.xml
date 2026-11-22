@@ -99,8 +99,8 @@
     <string name="expense_warning_receipt_upload_failed">Не удалось загрузить чек — расход сохранён без чека</string>
     <string name="expense_warning_new_receipt_upload_failed">Не удалось загрузить чек — расход сохранён без нового чека</string>
     <string name="settle_up_dialog_title">Расчёт за %1$s</string>
-    <string name="settle_up_dialog_owed">%1$s увидит в чате, что вам должны %2$s.</string>
-    <string name="settle_up_dialog_owing">%1$s увидит в чате, что вы должны %2$s. Если счёт для платежей добавлен, вы получите QR-код для оплаты.</string>
+    <string name="settle_up_dialog_owed">%1$s увидит на своей Главной в разделе «Деньги», что вам должны %2$s.</string>
+    <string name="settle_up_dialog_owing">%1$s увидит на своей Главной в разделе «Деньги», что вы должны %2$s. Если счёт для платежей добавлен, QR-код для оплаты будет на вашей Главной в разделе «Деньги».</string>
     <string name="settle_up_iban_label">Ваш IBAN для оплаты по QR (необязательно)</string>
     <string name="settle_up_iban_invalid">Этот IBAN выглядит неверно. Проверьте его или оставьте поле пустым.</string>
     <string name="settle_up_send">Отправить</string>

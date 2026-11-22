@@ -49,6 +49,7 @@ import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.chat.ChatAttachmentCodec
 import com.coparently.app.domain.chat.ChatScrollPolicy
+import com.coparently.app.domain.chat.isShownInThread
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.presentation.common.AppIcon
@@ -101,7 +102,7 @@ private fun Message.localDate(): LocalDate = sentAtLocal(sentAtMillis).date
  * One entry in the rendered thread: either a day separator or a message with the grouping
  * information the renderer needs.
  */
-private sealed interface ThreadEntry {
+internal sealed interface ThreadEntry {
 
     /** A "Today" / "12 Aug 2026" pill above the first message of a day. */
     data class DayHeader(val date: LocalDate) : ThreadEntry
@@ -127,10 +128,16 @@ private sealed interface ThreadEntry {
  * its own 10sp timestamp inside it, three messages sent in the same minute looked like three
  * unrelated events, and nothing marked where yesterday ended.
  *
- * @param messages Messages in ascending time order
+ * Only what the thread draws goes in ([isShownInThread], November 2026): the parents' messages,
+ * their files and stickers. The app's other cards stay in the conversation for the export and are
+ * left out here, before the grouping and the separators, so a day that held only cards gets no
+ * separator and a card between two messages does not split their group.
+ *
+ * @param all Messages in ascending time order
  * @return Renderable entries in display order
  */
-private fun buildThread(messages: List<Message>): List<ThreadEntry> {
+internal fun buildThread(all: List<Message>): List<ThreadEntry> {
+    val messages = all.filter(::isShownInThread)
     val entries = mutableListOf<ThreadEntry>()
     messages.forEachIndexed { index, message ->
         val previous = messages.getOrNull(index - 1)
@@ -254,7 +261,9 @@ fun MessagesList(
         state = pullToRefreshState,
         modifier = modifier.fillMaxSize()
     ) {
-        if (messages.isEmpty()) {
+        // The entries, not the messages: a window holding only cards the thread does not draw is
+        // empty to the reader, unless there is more to load above it.
+        if (entries.isEmpty() && loadEarlier == null) {
             EmptyState(
                 icon = Icons.AutoMirrored.Filled.Message,
                 title = stringResource(Res.string.chat_messages_empty_title),

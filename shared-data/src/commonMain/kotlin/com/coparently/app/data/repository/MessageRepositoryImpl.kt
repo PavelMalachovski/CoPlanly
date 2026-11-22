@@ -10,6 +10,7 @@ import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.chat.AttachmentUploadGate
 import com.coparently.app.domain.chat.ChatReadState
 import com.coparently.app.domain.chat.ConversationKey
+import com.coparently.app.domain.chat.isShownInThread
 import com.coparently.app.domain.model.Conversation
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
@@ -195,7 +196,10 @@ class MessageRepositoryImpl(
         val sentAtMillis = message.sentAtMillis
         try {
             deliver(message)
-            bumpConversation(message.conversationId, message.senderId, sentAtMillis)
+            // A card the thread does not draw moves neither the thread's order nor its "new"
+            // mark (isShownInThread): the list's bold row and another family's dot would
+            // otherwise announce a message the reader cannot find in it.
+            if (isShownInThread(message)) bumpConversation(message.conversationId, message.senderId, sentAtMillis)
         } catch (e: CancellationException) {
             throw e
         } catch (
@@ -242,8 +246,12 @@ class MessageRepositoryImpl(
         messageDao.insertMessage(
             message.copy(syncedToFirestore = true, status = MessageSendStatus.SENT).toEntity()
         )
-        runRemote("lastMessageAt bump") {
-            firestoreMessageDataSource.bumpLastMessageAt(message.conversationId, message.sentAtMillis)
+        // Not for a card the thread does not draw (isShownInThread): `lastMessageAt` is what the
+        // other phone's conversation list and family switcher read as "something new to read".
+        if (isShownInThread(message)) {
+            runRemote("lastMessageAt bump") {
+                firestoreMessageDataSource.bumpLastMessageAt(message.conversationId, message.sentAtMillis)
+            }
         }
     }
 

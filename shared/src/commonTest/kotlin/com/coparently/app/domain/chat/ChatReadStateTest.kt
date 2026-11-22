@@ -1,7 +1,11 @@
 package com.coparently.app.domain.chat
 
+import com.coparently.app.domain.activity.ActivityAnnouncement
+import com.coparently.app.domain.activity.ActivityEntityType
+import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
+import com.coparently.app.domain.model.MessageType
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -24,6 +28,27 @@ class ChatReadStateTest {
         val messages = listOf(message("m1", "them", 200), message("m2", "them", 300))
 
         assertEquals(2, ChatReadState.unreadCount(messages, myUid = "me", lastReadAtMillis = 100))
+    }
+
+    @Test
+    fun `a card the thread does not draw is never unread`() {
+        val card = message("c1", "them", 200).copy(
+            messageType = MessageType.ACTIVITY,
+            activity = ActivityAnnouncement(ActivityKind.EVENT_DECLINED, ActivityEntityType.EVENT, "e1", "Dentist")
+        )
+        val messages = listOf(card, message("m2", "them", 300))
+
+        assertEquals(1, ChatReadState.unreadCount(messages, myUid = "me", lastReadAtMillis = 100))
+    }
+
+    @Test
+    fun `a sticker is unread like a message`() {
+        val sticker = message("s1", "them", 200).copy(
+            messageType = MessageType.ACTIVITY,
+            activity = ActivityAnnouncement(ActivityKind.STICKER_SENT, ActivityEntityType.STICKER, "s1", "thank_you")
+        )
+
+        assertEquals(1, ChatReadState.unreadCount(listOf(sticker), myUid = "me", lastReadAtMillis = 100))
     }
 
     @Test

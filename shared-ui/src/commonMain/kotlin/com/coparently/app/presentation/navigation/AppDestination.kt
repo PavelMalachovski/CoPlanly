@@ -1185,7 +1185,6 @@ internal fun appDestinations(
     // (design item 19's one exception): from 840 dp it lays the month out in two panes,
     // which a 640 dp column would squeeze.
     destination(route = Screen.Expenses.route) {
-        val tabSwitcher = LocalTabSwitcher.current
         com.coparently.app.presentation.expenses.ExpenseScreen(
             onNavigateUp = { navController.popBackStack() },
             onAddExpense = {
@@ -1193,15 +1192,6 @@ internal fun appDestinations(
             },
             onEditExpense = { expenseId ->
                 navController.navigate(Screen.EditExpense.createRoute(expenseId))
-            },
-            onSettleUp = {
-                // The settle-up card is already in the thread (`SettleUpDialog`); this
-                // only shows it. Same tab semantics as navigateToTab — a plain
-                // navigate() here pushed the Chat route onto the tab Expenses was
-                // opened from, so the next tab switch saved that mixed stack and a
-                // later visit restored the chat screen on top of it. Through the tab
-                // switcher, so the iPhone's shell selects its Chat tab (MON-24 phase 3).
-                tabSwitcher.selectFresh(BottomNavDestination.CHAT)
             }
         )
     },

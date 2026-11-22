@@ -22,7 +22,6 @@ import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.ExpenseRepository
-import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
@@ -80,7 +79,6 @@ class HomeViewModelTest {
     private lateinit var changeRequestRepository: ChangeRequestRepository
     private lateinit var custodyModelRepository: CustodyModelRepository
     private lateinit var monthSpendDependencies: MonthSpendDependencies
-    private lateinit var messageRepository: MessageRepository
 
     @Before
     fun setUp() {
@@ -109,7 +107,6 @@ class HomeViewModelTest {
         }
         monthSpendDependencies =
             MonthSpendDependencies(expenseRepository, preferencesRepository, testFamilyViewSource())
-        messageRepository = mockk(relaxed = true)
         val userRepository = mockk<UserRepository> {
             coEvery { getCurrentUser() } returns null
             coEvery { getCurrentUserId() } returns null
@@ -145,7 +142,6 @@ class HomeViewModelTest {
             ),
             custodyModelRepository = custodyModelRepository,
             monthSpendDependencies = monthSpendDependencies,
-            messageRepository = messageRepository,
             homeIdentityDependencies = HomeIdentityDependencies(
                 userRepository,
                 pairingRepository,
@@ -352,11 +348,11 @@ class HomeViewModelTest {
         )
 
     @Test
-    fun `the dashboard names, and counts unread for, the family on screen`() = runTest(dispatcher) {
+    fun `the dashboard names the family on screen`() = runTest(dispatcher) {
         // Tester report #11. With two families the server's link names the first co-parent and
         // the family switcher's projection the one on screen. Home named the first in its changes
-        // header, and read the projection once, at construction, for the unread count — so a
-        // switch left both on the family the parent had just left.
+        // header, and read the projection once, at construction, for its unread count (gone since
+        // November 2026) — so a switch left both on the family the parent had just left.
         val zuzana = User(id = "u1", email = "zuzana@example.com", name = "Zuzana", role = "mom", colorCode = "#FF4081")
         val barbora = PartnerSummary(id = "u2", name = "Barbora", email = "b@example.com", pairedSinceMillis = null)
         val pavel = PartnerSummary(id = "u3", name = "Pavel", email = "p@example.com", pairedSinceMillis = null)
@@ -371,21 +367,17 @@ class HomeViewModelTest {
             every { observePairingState() } returns MutableStateFlow(PairingState.Paired(barbora))
             every { observeCoParentProfile("u3") } returns flowOf(pavel)
         }
-        every { messageRepository.observeUnreadCount("u1__u3", "u1") } returns flowOf(4)
-        every { messageRepository.observeUnreadCount("u1__u2", "u1") } returns flowOf(1)
         val home = homeViewModel(users, pairing)
 
         home.uiState.test {
             dispatcher.scheduler.advanceUntilIdle()
             val onPavels = expectMostRecentItem() as HomeUiState.Dashboard
             assertEquals("Pavel", onPavels.partner?.name)
-            assertEquals(4, onPavels.unreadCount)
 
             rows.value = listOf(zuzana.copy(partnerId = "u2"))
             dispatcher.scheduler.advanceUntilIdle()
             val onBarboras = expectMostRecentItem() as HomeUiState.Dashboard
             assertEquals("Barbora", onBarboras.partner?.name)
-            assertEquals(1, onBarboras.unreadCount)
             cancelAndIgnoreRemainingEvents()
         }
     }

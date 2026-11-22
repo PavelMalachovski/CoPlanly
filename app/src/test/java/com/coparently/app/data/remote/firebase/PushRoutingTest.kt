@@ -1,5 +1,6 @@
 package com.coparently.app.data.remote.firebase
 
+import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.pushwording.PushWording
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -53,6 +54,18 @@ class PushRoutingTest {
             PushRouting.destinationOf(PushPayload.PROFESSIONAL_ACCESS_REQUESTED)
         )
         assertEquals(PushDestination.FRIENDS, PushRouting.destinationOf(PushPayload.CALENDAR_FRIEND_ACCEPTED))
+    }
+
+    @Test
+    fun `a chat card opens Home, a message and a sticker their thread`() {
+        // November 2026: the thread draws the parents' messages and stickers only.
+        for (kind in ActivityKind.entries) {
+            val expected = if (kind == ActivityKind.STICKER_SENT) null else PushDestination.HOME
+            assertEquals(expected, PushDestination.forChatCard(kind.name), "$kind")
+        }
+        assertEquals(PushDestination.HOME, PushDestination.forChatCard("FROM_THE_FUTURE"), "an unknown card")
+        assertNull(PushDestination.forChatCard(null), "a plain message")
+        assertNull(PushDestination.forChatCard(""), "a plain message")
     }
 
     @Test

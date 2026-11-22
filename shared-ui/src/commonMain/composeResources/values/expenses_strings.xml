@@ -113,8 +113,8 @@
     <string name="expense_warning_receipt_upload_failed">Receipt upload failed — expense saved without receipt</string>
     <string name="expense_warning_new_receipt_upload_failed">Receipt upload failed — expense saved without the new receipt</string>
     <string name="settle_up_dialog_title">Settle up for %1$s</string>
-    <string name="settle_up_dialog_owed">%1$s will see in the chat that they owe you %2$s.</string>
-    <string name="settle_up_dialog_owing">%1$s will see in the chat that you owe them %2$s. If they have added a bank account, you will get a QR code to pay with.</string>
+    <string name="settle_up_dialog_owed">%1$s will see on their Home, under Money, that they owe you %2$s.</string>
+    <string name="settle_up_dialog_owing">%1$s will see on their Home, under Money, that you owe them %2$s. If they have added a bank account, your Home shows a QR code to pay with under Money.</string>
     <string name="settle_up_iban_label">Your IBAN, for a QR payment (optional)</string>
     <string name="settle_up_iban_invalid">This IBAN doesn\u0027t look right. Check it, or leave the field empty.</string>
     <string name="settle_up_send">Send</string>
