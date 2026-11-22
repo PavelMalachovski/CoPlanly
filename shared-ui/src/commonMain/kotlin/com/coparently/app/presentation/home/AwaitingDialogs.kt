@@ -156,8 +156,8 @@ data class AwaitingActions(
  * proposed expense split, then day swaps. A proposal, a split and a swap carry enough context to
  * answer right here (who, what, which day), so they get real Accept/Decline buttons; event change
  * requests carry times and notes, so their dialog routes to the inbox that can show them. "Later"
- * (or tapping outside) puts the ask off until it changes ([PutOffAsksViewModel]): it stays in the
- * calendar's banner and the inbox, but Home stops interrupting with it. It used to return on every
+ * (or tapping outside) puts the ask off until it changes ([PutOffAsksViewModel]): it stays in Home's
+ * Requests block and the inbox, but Home stops interrupting with it. It used to return on every
  * visit, which the UI tour showed as the same dialog five screens running (R-2).
  *
  * @param state The dashboard, for the swaps and requests awaiting this parent.

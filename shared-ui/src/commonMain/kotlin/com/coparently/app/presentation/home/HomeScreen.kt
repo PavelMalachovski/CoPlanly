@@ -41,6 +41,7 @@ import com.coparently.app.presentation.changerequests.ChangeRequestViewModel
 import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.BrandHeader
 import com.coparently.app.presentation.common.FamilySwitcherChip
+import com.coparently.app.presentation.common.HeadingLines
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.ScreenBar
 import com.coparently.app.presentation.common.TwoPanes
@@ -449,7 +450,7 @@ private class HomeMoney(
 private fun LazyListScope.homeSection(section: HomeSection, page: HomePage) {
     val state = page.state
     when (section) {
-        HomeSection.HEADING -> item(key = "heading") { HomeHeading(page.childNames) }
+        HomeSection.HEADING -> item(key = "heading") { HeadingLines(page.childNames) }
         HomeSection.REQUESTS -> requestsBlock(page.requests.state, page.requests.ctx, page.requests.onSeeAll)
         HomeSection.MONEY -> {
             item { SectionHeader(stringResource(Res.string.family_group_money)) }
