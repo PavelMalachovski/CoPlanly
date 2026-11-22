@@ -102,7 +102,7 @@
         "TwoParentRequestsAndEventPushesTest#bobAcceptsAlicesChangeRequestAndEachSideIsNotified",
         "TwoParentRequestsAndEventPushesTest#bobDeclinesAChangeRequestAndAliceIsNotified",
         "TwoParentRequestsAndEventPushesTest#aliceCancelsHerChangeRequestAndBobIsNotified",
-        "OnScreenAgreementsTest#bobsChangeRequestRaisesTheCalendarBannerAndAliceAcceptsItInTheInbox"
+        "OnScreenAgreementsTest#bobsChangeRequestReachesAlicesHomeAndSheAcceptsItInTheInbox"
       ]
     },
     "event_versions": {

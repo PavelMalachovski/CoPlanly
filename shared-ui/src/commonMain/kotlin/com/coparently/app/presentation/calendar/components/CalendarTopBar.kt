@@ -1,8 +1,6 @@
 package com.coparently.app.presentation.calendar.components
 
 import androidx.compose.runtime.Composable
-import com.coparently.app.domain.model.ChildInfo
-import com.coparently.app.presentation.calendar.CalendarViewMode
 import com.coparently.app.presentation.calendar.SwapSelectionHeader
 import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.BarLeading
@@ -17,33 +15,16 @@ import org.jetbrains.compose.resources.stringResource
 /**
  * What the calendar's top bar shows.
  *
- * @property children The family on screen's children, in display order
- * @property viewMode The view the grid shows
- * @property filtersActive Whether any filter is narrowing the calendar
+ * @property header What the header shows while no days are chosen for a swap
  * @property swapMonth The month on screen while days are chosen for a swap, or null while they are not
  * @property backStep Undoes the inner step the Calendar's Back takes first (a Day view a month cell
  *   opened, D-11), or null while there is none. Where a shell draws the bars it then shows its bar
  *   with a back button, the screen's one visible way back out of that Day view on the iPhone.
  */
 data class CalendarTopBarState(
-    val children: List<ChildInfo>,
-    val viewMode: CalendarViewMode,
-    val filtersActive: Boolean,
+    val header: CalendarHeaderState,
     val swapMonth: YearMonth? = null,
     val backStep: (() -> Unit)? = null
-)
-
-/**
- * What the calendar's top bar does.
- *
- * @property onViewModeChange Called with the mode picked in the segmented control
- * @property onFilters Opens the filter sheet
- * @property onSettings Opens Settings, or null to offer no gear
- */
-data class CalendarTopBarActions(
-    val onViewModeChange: (CalendarViewMode) -> Unit,
-    val onFilters: () -> Unit,
-    val onSettings: (() -> Unit)?
 )
 
 /**
@@ -63,23 +44,23 @@ data class SwapSelectionBarActions(
  * The calendar's top bar slot: [SwapSelectionHeader] while days are chosen for a swap, else
  * [CalendarHeader], every row of either, on both platforms.
  *
- * Where a shell draws the bars (the iPhone, MON-24 phase 3, part C) the calendar leads with the
- * redesign's header as Android does (the wordmark, the children's photos and the gear, "Your
- * family calendar", the Month/Week/Day control and Filters), and the grid card's own bar keeps
- * Today and "+" ([CalendarMonthBar]). So the shell is handed a hidden bar: no navigation bar over
- * the Calendar's root, while "Calendar" still names it to a screen pushed over it. While an inner
- * step waits ([CalendarTopBarState.backStep]) the bar is shown with a back button instead, since
- * the root has no other way back to Month. The selection
- * header draws its close button and arrows in content too. Public for the app's `CalendarBarsTest`.
+ * Where a shell draws the bars (the iPhone, MON-24 phase 3, part C) the calendar leads with its
+ * header as Android does (calendar K1: the month title, "?", the member avatars and the gear), and
+ * the grid card's own bar keeps the view control, Today, "⇄" and "+" ([CalendarMonthBar]). So the
+ * shell is handed a hidden bar: no navigation bar over the Calendar's root, while "Calendar" still
+ * names it to a screen pushed over it. While an inner step waits ([CalendarTopBarState.backStep])
+ * the bar is shown with a back button instead, since the root has no other way back to Month. The
+ * selection header draws its close button and arrows in content too. Public for the app's
+ * `CalendarBarsTest`.
  *
  * @param state What the bar shows
- * @param actions What it does
+ * @param actions What the header does
  * @param swapActions What it does while days are chosen ([CalendarTopBarState.swapMonth] not null)
  */
 @Composable
 fun CalendarTopBar(
     state: CalendarTopBarState,
-    actions: CalendarTopBarActions,
+    actions: CalendarHeaderActions,
     swapActions: SwapSelectionBarActions
 ) {
     if (shellDrawsBars()) {
@@ -103,12 +84,5 @@ fun CalendarTopBar(
         )
         return
     }
-    CalendarHeader(
-        children = state.children,
-        viewMode = state.viewMode,
-        onViewModeChange = actions.onViewModeChange,
-        onFiltersClick = actions.onFilters,
-        filtersActive = state.filtersActive,
-        onSettingsClick = actions.onSettings
-    )
+    CalendarHeader(state = state.header, actions = actions)
 }

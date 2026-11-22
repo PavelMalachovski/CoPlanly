@@ -968,6 +968,14 @@
   "area": "Chat"
  },
  {
+  "material": "AutoMirrored.Outlined.HelpOutline",
+  "sfSymbol": "questionmark.circle",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Calendar"
+ },
+ {
   "material": "AutoMirrored.Filled.Send",
   "sfSymbol": "paperplane.fill",
   "minIos": "13.0",

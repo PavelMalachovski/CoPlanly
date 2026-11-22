@@ -15,19 +15,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -35,7 +32,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -47,8 +43,6 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.unit.dp
-import com.coparently.app.data.requests.minuteTicks
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.CustodyHistory
@@ -59,17 +53,16 @@ import com.coparently.app.domain.custody.SwapSides
 import com.coparently.app.domain.custody.receiverOf
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.holidays.Holiday
-import com.coparently.app.domain.home.HomeWeek
 import com.coparently.app.domain.time.IsoText
-import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.calendar.components.CalendarGridCard
+import com.coparently.app.presentation.calendar.components.CalendarHeaderActions
+import com.coparently.app.presentation.calendar.components.CalendarHeaderState
+import com.coparently.app.presentation.calendar.components.CalendarLegendSheet
+import com.coparently.app.presentation.calendar.components.CalendarLegendState
 import com.coparently.app.presentation.calendar.components.CalendarMonthBar
 import com.coparently.app.presentation.calendar.components.CalendarTopBar
-import com.coparently.app.presentation.calendar.components.CalendarTopBarActions
 import com.coparently.app.presentation.calendar.components.CalendarTopBarState
-import com.coparently.app.presentation.calendar.components.ChangeRequestBanner
 import com.coparently.app.presentation.calendar.components.CustodyChangedBanner
-import com.coparently.app.presentation.calendar.components.CustodyLegend
 import com.coparently.app.presentation.calendar.components.DaySwapSelectionBar
 import com.coparently.app.presentation.calendar.components.DaySwapSheet
 import com.coparently.app.presentation.calendar.components.DaySwapStrip
@@ -79,30 +72,22 @@ import com.coparently.app.presentation.calendar.components.EventTypeFilterSheet
 import com.coparently.app.presentation.calendar.components.SwapSelectionBarActions
 import com.coparently.app.presentation.calendar.components.SwapSheetActions
 import com.coparently.app.presentation.calendar.components.SwapSheetOffer
-import com.coparently.app.presentation.calendar.components.TodayCard
-import com.coparently.app.presentation.calendar.components.TodayModel
-import com.coparently.app.presentation.calendar.components.steppedDay
 import com.coparently.app.presentation.changerequests.RequestsState
 import com.coparently.app.presentation.common.AppIcon
-import com.coparently.app.presentation.common.FamilyMemberFilterStrip
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.ScreenBackStep
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberToday
-import com.coparently.app.presentation.common.rememberTwoPane
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.common.toggling
-import com.coparently.app.presentation.custody.labelRes
 import com.coparently.app.presentation.event.EventOperation
 import com.coparently.app.presentation.event.EventUiState
 import com.coparently.app.presentation.event.EventViewModel
-import com.coparently.app.presentation.home.ChildrenToday
 import com.coparently.app.presentation.navigation.CalendarDayRequests
 import com.coparently.app.presentation.navigation.CalendarTabTaps
 import com.coparently.app.presentation.parentingplan.coParentLabel
-import com.coparently.app.presentation.parentingplan.planCitationShortLine
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ScreenContainerColor
 import com.coparently.app.presentation.theme.dimensions
@@ -111,13 +96,10 @@ import com.coparently.app.resources.calendar_delete_event
 import com.coparently.app.resources.calendar_dialog_cancel
 import com.coparently.app.resources.calendar_dialog_ok
 import com.coparently.app.resources.calendar_event_moved
-import com.coparently.app.resources.calendar_filter_members
 import com.coparently.app.resources.calendar_operation_failed
 import com.coparently.app.resources.calendar_retry
 import com.coparently.app.resources.calendar_undo
 import com.coparently.app.resources.change_request_withdraw
-import com.coparently.app.resources.custody_proposal_review
-import com.coparently.app.resources.custody_proposal_waiting_named
 import com.coparently.app.resources.day_swap_error_not_ready
 import com.coparently.app.resources.day_swap_error_partial
 import com.coparently.app.resources.day_swap_error_refused
@@ -206,6 +188,11 @@ internal fun queryRangeFor(
  * chip), change requests surface as labelled banners over the grid, and the month cells carry
  * event dots. School vacation, a banner in that review, is a neutral line along each vacation
  * day's bottom edge since MON-13 (the banner changed the grid's height between months).
+ *
+ * Calendar K1 (November 2026) gave the grid the screen: one header row (the month with its year,
+ * "?" for the legend and Filters, the member avatars, the gear), the view control, Today, "⇄" and
+ * "+" in the grid card's bar, and no heading lines, member strip, legend row, Today card or request
+ * banners — Home carries what waits on the parent.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -216,7 +203,6 @@ fun CalendarScreen(
     onEventClick: (String) -> Unit = {},
     onAddEventClick: (LocalDate?, Int?) -> Unit,
     onSettingsClick: (() -> Unit)? = null,
-    onChangeRequestsClick: (() -> Unit)? = null,
     eventViewModel: EventViewModel = koinViewModel(),
     calendarViewModel: CalendarViewModel = koinViewModel(),
     changeRequestViewModel: com.coparently.app.presentation.changerequests.ChangeRequestViewModel = koinViewModel(),
@@ -271,12 +257,12 @@ fun CalendarScreen(
 
     // Event type filter sheet state
     var showTypeFilters by remember { mutableStateOf(false) }
+    // "What the colours mean", the header's "?" (calendar K1), with the way to the filters under it.
+    var showLegend by remember { mutableStateOf(false) }
 
     // Who the grid is narrowed to. Screen state rather than ViewModel state, like the parent and
     // type filters beside it: it is a way of looking at this month, not a fact about the family.
     val familyMembers by eventViewModel.familyMembers.collectAsState()
-    // The header's avatars and "Together, for …" line: the same Room list the strip names.
-    val children by eventViewModel.children.collectAsState()
     var memberFilter by remember { mutableStateOf(emptyList<FamilyMemberRef>()) }
     // A child removed while their chip was selected must not leave the grid filtered to somebody
     // with no chip left to tap. Derived, so the selection heals itself — the same reasoning
@@ -433,53 +419,12 @@ fun CalendarScreen(
         )
     }
 
-    // The Today card (redesign, November 2026) reads today's own events, whatever the grid has
-    // loaded, through `HomeWeek.todayOf` — the value Home's today card and the widget read.
-    LaunchedEffect(today) { eventViewModel.showTodayCardFor(today) }
-    val todayEvents by eventViewModel.todayEvents.collectAsState()
-    // A minute's tick, so the card's "next event" moves on while the screen stays open.
-    val now by produceState(wallClockNow()) { minuteTicks().collect { value = wallClockNow() } }
-    val todayModel = remember(
-        todayEvents,
-        today,
-        now,
-        parents,
-        getCustody,
-        getContactWindows,
-        familyMembers,
-        custodyModel,
-        dayOverrides
-    ) {
-        TodayModel.of(
-            agenda = HomeWeek.todayOf(
-                events = todayEvents,
-                today = today,
-                userId = parents.me?.uid.orEmpty(),
-                custodyFor = getCustody,
-                contactWindowsFor = getContactWindows
-            ),
-            childNames = familyMembers.filter { it.ref is FamilyMemberRef.Child }.map { it.name },
-            childrenApart = ChildrenToday.of(today, custodyModel, dayOverrides, familyMembers).isNotEmpty(),
-            now = now
-        )
-    }
-
     // Whether the swap selection header stands in for the calendar's own (design item 23).
     val swapHeaderShown = selectingSwap && viewMode == CalendarViewMode.MONTH
 
-    // The grid card's arrows: a month in Month view, a week or a day in the other two.
-    val stepPeriod: (Int) -> Unit = { step ->
-        if (viewMode == CalendarViewMode.MONTH) {
-            calendarViewModel.showMonth(if (step > 0) displayedMonth.plusMonth() else displayedMonth.minusMonth())
-        } else {
-            calendarViewModel.setSelectedDate(steppedDay(viewMode, anchorDate, step))
-        }
-    }
-
-    // What waits on this parent in the family on screen: change requests, day swaps (they live on
-    // the custody document, not in `change_requests`, and count once per offer) and pending events.
-    // Read from the source Home's Requests row reads (`RequestsSource`), so the two never disagree;
-    // the custody proposal is left out because it draws a banner of its own below.
+    // What waits in the family on screen, read from the source Home's Requests block reads
+    // (`RequestsSource`). The calendar draws no request banner since calendar K1 (they are Home's);
+    // it reads the inbox only for the swap offers past their deadline, whose days lose their mark.
     val inboxRequests by changeRequestViewModel.requests.collectAsState()
 
     // The dates a swap is being negotiated on. A pending swap has changed nothing about whose
@@ -665,20 +610,6 @@ fun CalendarScreen(
         }
     }
 
-    val pendingInboxCount =
-        (inboxRequests as? RequestsState.Ready)?.inbox?.waitingOnMe?.countWithoutProposal ?: 0
-
-    // A custody-pattern proposal draws two different banners (item 7): the parent who must
-    // answer gets a Review into the inbox; the one who proposed it gets a passive "waiting".
-    // `pendingProposal` (CalendarViewModel) is either party's; `proposalAwaitingMe`
-    // (ChangeRequestViewModel) is the co-parent's while it waits on this parent's answer — past its
-    // deadline it does not (phase 3a), so the proposer is told apart by authorship, not by absence.
-    val proposalAwaitingMe by changeRequestViewModel.pendingProposal.collectAsState()
-    // Where that proposal came from (MON-21) — the inbox card's own live derivation, re-used.
-    val proposalCitation by changeRequestViewModel.pendingProposalCitation.collectAsState()
-    val myUid by changeRequestViewModel.currentUserId.collectAsState()
-    val proposerWaiting = pendingProposal?.proposedBy?.let { it.isNotEmpty() && it == myUid } == true
-
     // Back from a day opened by tapping a month cell returns to that month instead of leaving the
     // tab (docs/AUDIT-2026-10-design.md D-11): the tap reads as drilling in, so Back has to read
     // as coming back out. A Day view reached through the view picker keeps the default Back.
@@ -733,6 +664,8 @@ fun CalendarScreen(
         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         onAddEventClick(selectedDate ?: anchorDate, null)
     }
+    // Whether a filter in the Filters sheet narrows the calendar; "?" carries a dot while one does.
+    val filtersActive = parentFilter != ParentFilter.BOTH || hiddenEventTypes.isNotEmpty() || !showHolidays
 
     Scaffold(
         containerColor = ScreenContainerColor,
@@ -741,17 +674,21 @@ fun CalendarScreen(
             // navigation bar over the Calendar's root (MON-24 phase 3, part C).
             CalendarTopBar(
                 state = CalendarTopBarState(
-                    children = children,
-                    viewMode = viewMode,
-                    filtersActive = parentFilter != ParentFilter.BOTH ||
-                        hiddenEventTypes.isNotEmpty() ||
-                        !showHolidays,
+                    header = CalendarHeaderState(
+                        month = anchorDate,
+                        // The member filter (FAM-3): the avatars stand for the strip that sat over
+                        // the grid, and appear at two members as it did.
+                        members = familyMembers,
+                        selectedMembers = activeMemberFilter,
+                        filtersActive = filtersActive
+                    ),
                     swapMonth = displayedMonth.takeIf { swapHeaderShown },
                     backStep = returnToMonth.takeIf { viewMode == CalendarViewMode.DAY && dayOpenedFromMonth }
                 ),
-                actions = CalendarTopBarActions(
-                    onViewModeChange = { mode -> calendarViewModel.setViewMode(mode) },
-                    onFilters = { showTypeFilters = true },
+                actions = CalendarHeaderActions(
+                    onJumpToDate = { showDatePicker = true },
+                    onLegend = { showLegend = true },
+                    onToggleMember = { memberFilter = activeMemberFilter.toggling(it) },
                     onSettings = onSettingsClick
                 ),
                 swapActions = SwapSelectionBarActions(
@@ -764,25 +701,8 @@ fun CalendarScreen(
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
         },
-        // The Today card over the tab bar (redesign, November 2026). In the bottom bar's slot so
-        // the "+" floats above it rather than over it; left out on a wide window (two panes).
-        bottomBar = {
-            if (!rememberTwoPane()) {
-                TodayCard(
-                    today = todayModel,
-                    parentNames = parentNames,
-                    onOpen = {
-                        endSwapSelection()
-                        // Back from it returns to the month it was opened over, as a cell's tap does,
-                        // and keeps returning there when a cell already opened this Day view (D-11).
-                        dayOpenedFromMonth = dayOpenedFromMonth || viewMode == CalendarViewMode.MONTH
-                        calendarViewModel.setSelectedDate(today)
-                        calendarViewModel.setViewMode(CalendarViewMode.DAY)
-                    },
-                    modifier = Modifier.padding(horizontal = dims.paddingMedium, vertical = dims.paddingSmall)
-                )
-            }
-        },
+        // No Today card under the grid since calendar K1 (November 2026): the grid takes the
+        // screen, and Home and the widget say what today holds (`HomeWeek.todayOf`).
         floatingActionButton = {
             Box {
                 // Red delete button - appears while an event is long-pressed or dragged. The "+" is
@@ -889,59 +809,10 @@ fun CalendarScreen(
                             )
                         )
                 ) {
-                    // A custody proposal the co-parent must answer: a Review banner into the inbox.
-                    proposalAwaitingMe?.let { proposal ->
-                        if (onChangeRequestsClick != null) {
-                            ChangeRequestBanner(
-                                pendingCount = 1,
-                                message = stringResource(
-                                    Res.string.custody_proposal_review,
-                                    parentNames.labelForUid(proposal.proposedBy)
-                                ),
-                                detail = planCitationShortLine(proposalCitation),
-                                onReview = onChangeRequestsClick,
-                                modifier = Modifier.padding(
-                                    horizontal = dims.paddingMedium,
-                                    vertical = dims.paddingSmall / 2
-                                )
-                            )
-                        }
-                    }
-
-                    // The proposer's own view: a passive note that the change is not live yet, naming
-                    // what was proposed and who has to accept it. The lighter wash under it is that
-                    // proposal; without saying so, the proposer read it as the schedule both of
-                    // them had (tester report, October 2026: "one sees 2-2-3, the other week on,
-                    // week off").
-                    if (proposerWaiting) {
-                        val proposedType = pendingProposal?.model?.modelType
-                        Text(
-                            text = stringResource(
-                                Res.string.custody_proposal_waiting_named,
-                                proposedType?.let { stringResource(it.labelRes()) }.orEmpty(),
-                                parentNames.coParentLabel()
-                            ),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(
-                                horizontal = dims.paddingMedium,
-                                vertical = dims.paddingSmall
-                            )
-                        )
-                    }
-
-                    // Change requests as a labelled banner rather than a badged glyph in the bar.
-                    // The count folds in day swaps and pending events — see pendingInboxCount.
-                    if (pendingInboxCount > 0 && onChangeRequestsClick != null) {
-                        ChangeRequestBanner(
-                            pendingCount = pendingInboxCount,
-                            onReview = onChangeRequestsClick,
-                            modifier = Modifier.padding(
-                                horizontal = dims.paddingMedium,
-                                vertical = dims.paddingSmall / 2
-                            )
-                        )
-                    }
+                    // No request banners over the grid since calendar K1 (November 2026): what waits on
+                    // this parent, the custody proposal and the proposer's own "waiting" line are Home's
+                    // Requests block now, and the Home tab's badge counts them. The custody band's
+                    // lighter proposal wash stays the grid's own.
 
                     // Custody is last-write-wins with no consent step; this is what keeps a remote
                     // change from landing silently. Never shown for this device's own write - see
@@ -961,21 +832,7 @@ fun CalendarScreen(
                         )
                     }
 
-                    // Renders nothing below two members, so a family with one child sees the grid
-                    // they always saw. Placed with the banners rather than in the Filters sheet: the
-                    // question "what does Anya's week look like" is asked at a glance, and the
-                    // Expenses screen answers the same question the same way.
-                    // A chip is 32 dp tall and Material pads its target to 48; here the row gives
-                    // up 8 of those so the grid below grows (tester feedback, 12 November 2026).
-                    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides COMPACT_CHIP_TARGET) {
-                        FamilyMemberFilterStrip(
-                            members = familyMembers,
-                            selected = activeMemberFilter,
-                            onToggle = { memberFilter = activeMemberFilter.toggling(it) },
-                            label = Res.string.calendar_filter_members,
-                            modifier = Modifier.padding(horizontal = dims.paddingMedium)
-                        )
-                    }
+                    // The member filter is the header's avatars since calendar K1, not a strip here.
 
                     // While a swap selection is open, the grid needs a way out and a way to commit —
                     // predictive back is on, so a `BackHandler` clears it too. Shown only in MONTH:
@@ -1027,20 +884,20 @@ fun CalendarScreen(
                 // also carried lives on the home screen's hero. Two answers to one question is
                 // what the design refresh removed elsewhere.
 
-                // The grid in its white card (redesign, November 2026): the month bar, the legend,
-                // then the view. The month title, Today and the arrows left the header for here.
+                // The grid in its white card (redesign, November 2026): the month bar, then the view.
+                // Since calendar K1 the bar holds the view control, Today, "⇄" and "+"; the month
+                // title is the header's, and the legend is behind the header's "?".
                 CalendarGridCard(
                     modifier = Modifier
                         .weight(1f)
                         .padding(horizontal = dims.paddingMedium, vertical = dims.paddingSmall / 2)
                 ) {
                     CalendarMonthBar(
-                        selectedDate = anchorDate,
+                        viewMode = viewMode,
+                        // While days are chosen the grid stays in Month, the one view that shows them.
+                        onViewModeChange = { mode: CalendarViewMode -> calendarViewModel.setViewMode(mode) }
+                            .takeUnless { swapHeaderShown },
                         onToday = showToday,
-                        // While days are chosen the selection header pages the month itself.
-                        onPrevious = { stepPeriod(-1) }.takeUnless { swapHeaderShown },
-                        onNext = { stepPeriod(1) }.takeUnless { swapHeaderShown },
-                        onJumpToDate = { showDatePicker = true },
                         // The visible way into a swap (SW-1): the long press alone was found by
                         // nobody. Month only, where the grid can show the chosen days; in the bar
                         // since 12 November 2026, so the legend keeps one line.
@@ -1050,18 +907,6 @@ fun CalendarScreen(
                         }?.let { { selectingSwap = true } },
                         onAddEvent = addEventOnScreenDay.takeUnless { swapHeaderShown }
                     )
-                    // Whose colour is whose and what the marks mean, in every view (new-user review,
-                    // October 2026). Only with a schedule: without one the grid has no wash to explain.
-                    if (custodyModel != null) {
-                        CustodyLegend(
-                            parentNames = parentNames,
-                            showContactWindows = custodyModel?.contactWindows?.isNotEmpty() == true,
-                            showPendingSwap = viewMode == CalendarViewMode.MONTH && grid.followsFamily &&
-                                pendingSwapTo.keys.any { it.yearMonth == displayedMonth },
-                            modifier = Modifier.padding(horizontal = dims.paddingSmall / 2)
-                        )
-                    }
-
                     // Calendar content based on view mode
                     Crossfade(
                         targetState = viewMode,
@@ -1312,6 +1157,26 @@ fun CalendarScreen(
         calendarViewModel.clearSwapSent()
     }
 
+    // "What the colours mean" (calendar K1): the legend that was a row of the grid card, and under
+    // it the way to the filters, which the header no longer has a button for.
+    if (showLegend) {
+        CalendarLegendSheet(
+            state = CalendarLegendState(
+                hasSchedule = custodyModel != null,
+                showContactWindows = custodyModel?.contactWindows?.isNotEmpty() == true,
+                showPendingSwap = viewMode == CalendarViewMode.MONTH && grid.followsFamily &&
+                    pendingSwapTo.keys.any { it.yearMonth == displayedMonth },
+                filtersActive = filtersActive
+            ),
+            parentNames = parentNames,
+            onFilters = {
+                showLegend = false
+                showTypeFilters = true
+            },
+            onDismiss = { showLegend = false }
+        )
+    }
+
     // Event type filter sheet
     if (showTypeFilters) {
         EventTypeFilterSheet(
@@ -1342,6 +1207,3 @@ private fun swapSidesOf(
     holderOf: (LocalDate) -> String?,
     offererSlot: String
 ): SwapSides = SwapSides.of(selection.toList(), holderOf, offererSlot)
-
-/** The member strip's touch target on the calendar, between a chip's 32 dp and Material's 48. */
-private val COMPACT_CHIP_TARGET = 40.dp

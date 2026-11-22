@@ -201,9 +201,11 @@ class CalendarScenarioTest : QaOnScreenTest() {
             tap(textButton(R.string.calendar_today_button))
         }
         report.step("filters_sheet", "Open Filters", "The filter sheet opens") {
-            // A labelled chip, or from 1.3x its glyph alone.
+            // Behind the header's "?" since calendar K1: the legend sheet, then its Filters row.
+            tap(hasContentDescription(string(R.string.calendar_legend_title)) and hasClickAction())
+            composeTestRule.settle()
             val filters = string(R.string.calendar_filters_button)
-            tap((hasText(filters) or hasContentDescription(filters)) and hasClickAction())
+            tap(hasText(filters) and hasClickAction())
             composeTestRule.settle()
             driver.back()
         }

@@ -122,4 +122,14 @@
         <item quantity="many">%1$s — з одним із батьків: %2$s</item>
         <item quantity="other">%1$s — з одним із батьків: %2$s</item>
     </plurals>
+    <!-- Calendar K1 (November 2026): the view control's letters (spoken as the full names),
+         the "?" sheet that explains the colours and leads to Filters, and an avatar of the
+         header's member filter. -->
+    <string name="calendar_viewmode_month_short">М</string>
+    <string name="calendar_viewmode_week_short">Т</string>
+    <string name="calendar_viewmode_day_short">Д</string>
+    <string name="calendar_legend_title">Що означають кольори</string>
+    <string name="calendar_legend_no_schedule">Дні розфарбуються, щойно буде налаштовано графік проживання.</string>
+    <string name="calendar_filters_hiding">Деякі події приховано</string>
+    <string name="calendar_filter_member_toggle">Показати для: %1$s</string>
 </resources>

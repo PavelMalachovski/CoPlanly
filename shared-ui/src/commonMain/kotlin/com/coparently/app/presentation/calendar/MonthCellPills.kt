@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,6 +21,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.Hyphens
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -36,6 +39,9 @@ internal val EVENT_PILL_MARK_WIDTH = 3.dp
 
 /** Height of the bar a cell draws instead of a pill when the title has no room (an off-grid literal). */
 private val EVENT_BAR_HEIGHT = 4.dp
+
+/** The space between two stacked pills. */
+private val PILL_GAP = Spacing.XXS
 
 /**
  * The pill's text: `labelSmall` on a tighter line, centred in it. `labelSmall`'s own 16 sp line did
@@ -60,42 +66,60 @@ private fun pillTextStyle(): TextStyle = MaterialTheme.typography.labelSmall.cop
  * month chip carries none (FAM-5). On a day borrowed from a neighbouring month the whole pill is
  * dimmed as the dot was, because the grid must still say which month it shows.
  *
- * A pill is drawn only where its line fits under the day number; a cell too short for it (a large
- * font, a short window) draws a bar in the mark's colour instead, never a title cut in half.
+ * Up to two pills since calendar K1 (November 2026), each title on up to two lines, broken at
+ * syllables (`Hyphens.Auto`) and never inside a letter, then ellipsised; "+n" ends the last pill's
+ * line. A pill is drawn only where its first line fits under the day number ([pillLines]); a cell
+ * too short for any (a large font, a short window) draws a bar in the mark's colour instead, never a
+ * title cut in half.
  *
  * No content description: the cell's own names the events.
  */
 @Composable
 internal fun DayCellPills(events: List<Event>, isCurrentMonth: Boolean, modifier: Modifier = Modifier) {
-    val pills = pillsFor(events)
-    if (pills.shown.isEmpty()) return
+    if (events.isEmpty()) return
     val style = pillTextStyle()
-    val lineHeight = with(LocalDensity.current) { style.lineHeight.toDp() }
+    val density = LocalDensity.current
+    val lineHeight = with(density) { style.lineHeight.toDp() }
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
             .alpha(if (isCurrentMonth) 1f else OUTSIDE_MONTH_DOT_ALPHA)
     ) {
-        if (maxHeight >= lineHeight) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(Spacing.XXS),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                pills.shown.forEach { event ->
-                    EventPill(event = event, style = style, modifier = Modifier.weight(1f))
-                }
-                if (pills.more > 0) {
-                    Text(
-                        text = "+${pills.more}",
-                        style = style,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        softWrap = false
-                    )
+        val lines = pillLines(
+            wanted = pillsFor(events).shown.size,
+            height = maxHeight.value,
+            lineHeight = lineHeight.value,
+            gap = PILL_GAP.value
+        )
+        val pills = pillsFor(events, max = lines.size)
+        if (pills.shown.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(PILL_GAP)) {
+                pills.shown.forEachIndexed { index, event ->
+                    val last = index == pills.shown.lastIndex
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.XXS),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        EventPill(
+                            event = event,
+                            style = style,
+                            maxLines = lines[index],
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (last && pills.more > 0) {
+                            Text(
+                                text = "+${pills.more}",
+                                style = style,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
+                    }
                 }
             }
         } else {
-            val mark = pillMarkColor(pills.shown.first())
+            val mark = pillMarkColor(events.first())
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -123,16 +147,18 @@ private fun pillMarkColor(event: Event): Color = eventDotColor(
     friendParticipates = !event.friendParticipates.isNullOrBlank()
 )
 
-/** One event's pill: the surface, a leading mark in the event's colour, the title on one line. */
+/**
+ * One event's pill: the surface, a leading mark in the event's colour, the title on up to
+ * [maxLines] lines, hyphenated where it breaks and ellipsised where it still does not fit.
+ */
 @Composable
-private fun EventPill(event: Event, style: TextStyle, modifier: Modifier = Modifier) {
+private fun EventPill(event: Event, style: TextStyle, maxLines: Int, modifier: Modifier = Modifier) {
     val mark = pillMarkColor(event)
     Text(
         text = event.title,
-        style = style,
+        style = style.copy(hyphens = Hyphens.Auto, lineBreak = LineBreak.Paragraph),
         color = MaterialTheme.colorScheme.onSurface,
-        maxLines = 1,
-        softWrap = false,
+        maxLines = maxLines,
         overflow = TextOverflow.Ellipsis,
         modifier = modifier
             .clip(CoPlanlyCorners.Tag)

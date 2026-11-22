@@ -332,41 +332,40 @@ final class ShellUITests: XCTestCase {
         shot("08-family-again")
     }
 
-    /// The Calendar tab leads with the redesign's header (MON-24 phase 3, part C, Task 8), under no
-    /// navigation bar: the wordmark row's Settings, "Your family calendar", the Month/Week/Day control
-    /// and Filters, then the month card, whose own bar holds the month, Today and "+".
+    /// The Calendar tab leads with its header (MON-24 phase 3, part C, Task 8; calendar K1), under no
+    /// navigation bar: the month with its year, "?" (what the colours mean, with Filters under it)
+    /// and Settings, then the month card, whose own bar holds the M | W | D control, Today and "+".
     private func calendarHeader() throws {
         try goToCalendarRoot()
-        try require(calendarHeading.waitForExistence(timeout: 60), "The calendar does not lead with \"Your family calendar\"")
+        try require(calendarHeading.waitForExistence(timeout: 60), "The calendar does not lead with \(calendarMonthTitle)")
         shot("17-calendar-header")
         try requireHeaderRoot("The Calendar")
-        for label in ["Settings", "Filters", "Today", "Add event"] {
+        for label in ["Settings", "What the colours mean", "Today", "Add event"] {
             let button = app.buttons.matching(NSPredicate(format: "label == %@", label)).firstMatch
             try require(button.exists, "The calendar has no \(label) button in content")
         }
-        try require(calendarMonthButton.exists, "The month card's title is not \(calendarMonthTitle)")
         try require(element(labelledContaining: "Week").exists, "The Month/Week/Day control is missing")
     }
 
-    /// The calendar's heading, the second row of its header.
-    private var calendarHeading: XCUIElement { element(labelledContaining: "Your family calendar") }
+    /// The calendar's heading, the month title that leads its header (calendar K1).
+    private var calendarHeading: XCUIElement { calendarMonthButton }
 
-    /// The month card's title, a button that opens "Jump to date": this month while nothing moved it.
+    /// The header's month title, a button that opens "Jump to date": this month while nothing moved it.
     private var calendarMonthButton: XCUIElement {
         app.buttons.matching(NSPredicate(format: "label == %@", calendarMonthTitle)).firstMatch
     }
 
-    /// The month the calendar opens on, as its card's bar titles it: this month's name, in English.
+    /// The month the calendar opens on, as its header titles it: this month's name and year, in English.
     ///
     /// Two assumptions, both true of CI's simulator: the app speaks English (the simulator's
-    /// language, so the shared `calendarMonthTitle` names the month as `en` does, with no year for
-    /// the current one), and the walk does not run across midnight at a month's end, when the app
-    /// and this test could read two different months. The test's clock is the simulator's, as the
-    /// app's is.
+    /// language, so the shared `calendarMonthTitle` names the month as `en` does, always with its
+    /// year since calendar K1), and the walk does not run across midnight at a month's end, when the
+    /// app and this test could read two different months. The test's clock is the simulator's, as
+    /// the app's is.
     private var calendarMonthTitle: String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en")
-        formatter.dateFormat = "LLLL"
+        formatter.dateFormat = "LLLL yyyy"
         return formatter.string(from: Date())
     }
 
@@ -680,7 +679,8 @@ final class ShellUITests: XCTestCase {
         try goToCalendarRoot()
         // The step before left Day view open (opened from a month cell): a tap on the Calendar tab
         // opens Month on today (`CalendarTabTaps`), and its bar, which Day view's Back needed, goes.
-        let month = app.segmentedControls.buttons["Month"]
+        // The control's segments are letters since calendar K1: "M", "W", "D".
+        let month = app.segmentedControls.buttons["M"]
         // The shell logs what it saw of the tap (COPLANLY_TABTAP); the job prints those lines.
         try require(
             month.waitForExistence(timeout: timeout) && waitUntilSelected(month),
@@ -718,7 +718,7 @@ final class ShellUITests: XCTestCase {
         try openPreview(of: deleteCheckTitle, edit: edit)
 
         let title = try previewTitle(above: edit)
-        let control = app.segmentedControls.buttons["Week"]
+        let control = app.segmentedControls.buttons["W"]
         try require(control.exists, "The calendar's Month/Week/Day is not above the preview sheet")
         try require(control.frame.maxY < title.frame.minY, "The preview sheet covers the calendar's top")
         shot("17d-event-preview-sheet")
@@ -1810,7 +1810,7 @@ final class ShellUITests: XCTestCase {
         // A segmented control: the calendar's Month/Week/Day, with Week chosen.
         tourVisit("control-segment") {
             try self.tourTab("Calendar")
-            let week = self.app.segmentedControls.buttons["Week"]
+            let week = self.app.segmentedControls.buttons["W"]
             try self.require(week.waitForExistence(timeout: 8), "The calendar's Month/Week/Day is not a segmented control")
             week.tap()
             try self.require(week.isSelected, "Week did not select")
