@@ -228,6 +228,11 @@ push_test() {
   out=$(cd "$out" && pwd)
   rm -rf "$out/pushes"
   mkdir -p "$out/pushes"
+  # A fresh install, so the push test signs in as its own account: a walk that stopped before its
+  # sign-out leaves its account signed in, the push test would take those tabs for its own, and a
+  # push addressed to its account then rightly opens nothing. The first launch after an install
+  # clears the Keychain's session too (IosApp.clearPreviousInstall).
+  reinstall_app "$udid" "$out" || status=1
   export TEST_RUNNER_COPLANLY_UITEST_PUSH_DIR="$out/pushes"
   send_pushes "$udid" "$out/pushes" &
   sender=$!
@@ -244,6 +249,20 @@ push_test() {
 
 tour() {
   ui_test "$1" "$2" tour testTour no --tour
+}
+
+# Installs app.coplanly on <udid> afresh from the copy installed there, dropping its data.
+reinstall_app() {
+  local udid=$1 out=$2 installed copy
+  installed=$(xcrun simctl get_app_container "$udid" app.coplanly app) || return 1
+  copy="$out/reinstall/CoPlanly.app"
+  rm -rf "$out/reinstall"
+  mkdir -p "$out/reinstall"
+  cp -R "$installed" "$copy" || return 1
+  xcrun simctl terminate "$udid" app.coplanly >/dev/null 2>&1 || true
+  xcrun simctl uninstall "$udid" app.coplanly || return 1
+  xcrun simctl install "$udid" "$copy" || return 1
+  rm -rf "$out/reinstall"
 }
 
 # Runs one UI test method of ShellUITests, <test>, or a whole class named `…UITests` (PushUITests),
