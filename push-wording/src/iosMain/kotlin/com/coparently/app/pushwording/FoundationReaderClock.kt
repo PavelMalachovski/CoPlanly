@@ -45,7 +45,8 @@ class FoundationReaderClock(
 
     override fun answerBy(millis: Long): String {
         val moment = instant(millis)
-        return template(ANSWER_BY_DAY, zone).stringFromDate(moment) + ", " + time(moment)
+        // A no-break space after the comma, as Android's `answerByText` writes it: the time keeps its day.
+        return template(ANSWER_BY_DAY, zone).stringFromDate(moment) + ",\u00A0" + time(moment)
     }
 
     override fun dayInSentence(isoDate: String?): String {

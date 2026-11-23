@@ -29,7 +29,7 @@
     <string name="professional_status_waiting_for_parents">Waiting for both parents’ consent</string>
     <string name="professional_status_active_until">Can read until %1$s</string>
     <string name="professional_status_expired">Access ended on %1$s</string>
-    <string name="professional_row_supporting">%1$s · %2$s</string>
+    <string name="professional_row_supporting">%1$s\u00A0· %2$s</string>
     <string name="professional_dialog_body">%1$s can read this family’s calendar, custody schedule and parenting plan until %2$s — never chat, expenses or child records. Access starts only when both parents consent, and either of you can end it at any time.</string>
     <string name="professional_revoke_confirm">End %1$s’s access now? Your co-parent does not need to agree, and it cannot be undone — a new invitation would be needed.</string>
     <string name="professional_dialog_consent">I consent</string>
@@ -50,7 +50,7 @@
     <string name="professional_calendar_no_events">No events</string>
     <string name="professional_calendar_previous">Earlier weeks</string>
     <string name="professional_calendar_next">Later weeks</string>
-    <string name="professional_calendar_event_supporting">%1$s · %2$s</string>
+    <string name="professional_calendar_event_supporting">%1$s\u00A0· %2$s</string>
     <string name="professional_unavailable">Nothing to show — access is not active. It opens when both parents have consented and ends on its end date.</string>
     <string name="professional_plan_not_answered">Not answered</string>
     <string name="professional_plan_answer_by">%1$s: %2$s</string>

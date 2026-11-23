@@ -69,7 +69,7 @@ import org.koin.compose.viewmodel.koinViewModel
 private const val DATE_SKELETON = "yMMMd"
 
 /** Between a row's parts. */
-private const val DETAIL_JOIN = " · "
+private const val DETAIL_JOIN = "\u00A0· "
 
 /** The most rows a section lists before it says how many it left out. */
 private const val MAX_ROWS = 30

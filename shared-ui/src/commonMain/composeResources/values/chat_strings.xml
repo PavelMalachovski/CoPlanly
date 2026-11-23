@@ -111,7 +111,7 @@
     <string name="chat_search_failed_title">Search did not work</string>
     <string name="chat_search_failed_description">Nothing was searched. Try again in a moment.</string>
     <string name="chat_search_truncated">Showing the %1$d newest matches. Add a word to narrow them down.</string>
-    <string name="chat_search_result_meta">%1$s · %2$s</string>
+    <string name="chat_search_result_meta">%1$s\u00A0· %2$s</string>
     <string name="chat_search_show_in_thread">Show in conversation</string>
     <!-- MON-19: pause before sending. A held message, with its countdown in seconds. -->
     <string name="chat_pending_send">Sending in %1$d s…</string>

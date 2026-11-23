@@ -3,6 +3,7 @@ package com.coparently.app.presentation.calendar.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -85,7 +86,11 @@ fun CalendarMonthBar(
         itemVerticalAlignment = Alignment.CenterVertically
     ) {
         if (onViewModeChange != null) {
-            ViewModeControl(viewMode = viewMode, onViewModeChange = onViewModeChange)
+            // At least Spacing.S before the actions: the gap counts in the row's measure, so they go
+            // under the control rather than touching it when both only just fit (German at 200 %).
+            Box(modifier = Modifier.padding(end = Spacing.S)) {
+                ViewModeControl(viewMode = viewMode, onViewModeChange = onViewModeChange)
+            }
         }
         Row(
             horizontalArrangement = Arrangement.spacedBy(Spacing.XXS),

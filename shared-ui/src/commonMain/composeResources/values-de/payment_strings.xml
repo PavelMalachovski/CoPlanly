@@ -20,7 +20,7 @@
     <string name="payment_panel_show_code">Zahlungscode erneut anzeigen</string>
     <string name="payment_panel_says_paid">%1$s sagt, am %3$s %2$s bezahlt zu haben.</string>
     <string name="payment_panel_check_bank">Prüfe zuerst dein Bankkonto.</string>
-    <string name="payment_panel_settled">%1$s ausgeglichen · %2$s</string>
+    <string name="payment_panel_settled">%1$s ausgeglichen\u00A0· %2$s</string>
     <string name="payment_chip_waiting_for_you">Wartet auf dich</string>
     <string name="payment_chip_waiting_for">Wartet auf %1$s</string>
     <string name="payment_chip_settled">Ausgeglichen</string>

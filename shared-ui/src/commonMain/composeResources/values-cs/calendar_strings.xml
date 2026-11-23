@@ -105,7 +105,7 @@
 
     <!-- MON-6b: a contact window on the grid. -->
     <string name="calendar_contact_window_desc">Styk: %1$s, %2$s–%3$s</string>
-    <string name="calendar_agenda_contact_window">%1$s–%2$s · styk: %3$s</string>
+    <string name="calendar_agenda_contact_window">%1$s–%2$s\u00A0· styk: %3$s</string>
     <string name="mini_month_legend_new_event">Nová událost</string>
     <string name="mini_month_mark_new_event">nová událost</string>
     <string name="mini_month_legend_swap_day">Nabízený den, v barvě toho, komu připadne</string>
@@ -119,7 +119,7 @@
     <string name="calendar_names_and">a</string>
     <string name="calendar_previous_period">Předchozí období</string>
     <string name="calendar_next_period">Další období</string>
-    <string name="calendar_today_card_title">Dnes · %1$s</string>
+    <string name="calendar_today_card_title">Dnes\u00A0· %1$s</string>
     <string name="calendar_today_card_open">Otevřít dnešek v zobrazení dne</string>
     <string name="calendar_today_card_nothing_more">Dnes už nic dalšího</string>
     <string name="calendar_today_card_event">%1$s – %2$s</string>

@@ -65,7 +65,7 @@ fun custodyDiffDescription(diff: CustodyPatternDiff?, parentNames: ParentNames):
     }
     if (net.isEmpty()) return summary + windowsLine
 
-    val netLine = net.joinToString(" · ") { (slot, days) ->
+    val netLine = net.joinToString("\u00A0· ") { (slot, days) ->
         // A signed integer with no unit word, deliberately: the plural above already said
         // "days", and "+3"/"-3" needs no grammatical agreement in any of the five locales.
         val signed = if (days > 0) "+$days" else days.toString()

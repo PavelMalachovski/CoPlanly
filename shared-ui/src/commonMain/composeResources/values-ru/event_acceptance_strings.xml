@@ -11,7 +11,7 @@
     <string name="event_acceptance_withdraw">Отозвать</string>
     <string name="event_acceptance_hidden_note">Пока нет ответа, оно не появится ни в одном из календарей.</string>
     <string name="event_acceptance_when">%1$s\u00A0· %2$s–%3$s</string>
-    <string name="event_acceptance_when_start">%1$s · %2$s</string>
+    <string name="event_acceptance_when_start">%1$s\u00A0· %2$s</string>
     <string name="event_acceptance_when_span">%1$s – %2$s</string>
     <string name="request_card_show_month">Показать месяц</string>
     <string name="request_card_hide_month">Скрыть месяц</string>

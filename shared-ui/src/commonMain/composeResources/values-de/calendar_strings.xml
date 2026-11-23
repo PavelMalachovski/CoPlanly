@@ -86,7 +86,7 @@
 
     <!-- MON-6b: a contact window on the grid. -->
     <string name="calendar_contact_window_desc">Umgang mit %1$s, %2$s–%3$s</string>
-    <string name="calendar_agenda_contact_window">%1$s–%2$s · Umgang mit %3$s</string>
+    <string name="calendar_agenda_contact_window">%1$s–%2$s\u00A0· Umgang mit %3$s</string>
     <string name="mini_month_legend_new_event">Neuer Termin</string>
     <string name="mini_month_mark_new_event">neuer Termin</string>
     <string name="mini_month_legend_swap_day">Angebotener Tag, in der Farbe dessen, der ihn bekommt</string>
@@ -100,7 +100,7 @@
     <string name="calendar_names_and">und</string>
     <string name="calendar_previous_period">Vorheriger Zeitraum</string>
     <string name="calendar_next_period">Nächster Zeitraum</string>
-    <string name="calendar_today_card_title">Heute · %1$s</string>
+    <string name="calendar_today_card_title">Heute\u00A0· %1$s</string>
     <string name="calendar_today_card_open">Heute in der Tagesansicht öffnen</string>
     <string name="calendar_today_card_nothing_more">Heute nichts mehr</string>
     <string name="calendar_today_card_event">%1$s – %2$s</string>

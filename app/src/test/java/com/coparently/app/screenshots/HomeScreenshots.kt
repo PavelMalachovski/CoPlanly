@@ -1,6 +1,10 @@
 package com.coparently.app.screenshots
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import com.coparently.app.domain.custody.HandoverInfo
 import com.coparently.app.domain.expenses.CurrencyBalance
 import com.coparently.app.domain.expenses.ExpenseBalance
@@ -116,10 +120,16 @@ class HomeScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
         RequestDetailsBody(item = RequestFixtures.swapItem, ctx = RequestFixtures.context, onDismiss = {})
     }
 
-    /** A schedule proposal's Details: Proposed | Now, each changed day ringed in whom it goes to. */
+    /**
+     * A schedule proposal's Details: Proposed | Now, each changed day ringed in whom it goes to. In a
+     * scrolling column, as the sheet holds it: given only the window's height, the legend's FlowRow
+     * left out the line that did not fit — the ring's — at 150 %, which no phone does.
+     */
     @Test
     fun requestDetailsProposal() = snap("home_request_details_proposal") {
-        RequestDetailsBody(item = RequestFixtures.proposalItem, ctx = RequestFixtures.context, onDismiss = {})
+        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+            RequestDetailsBody(item = RequestFixtures.proposalItem, ctx = RequestFixtures.context, onDismiss = {})
+        }
     }
 
     /** The payee, before anything is recorded: "Ask Pavel to settle up" (board MoneySettleUp, 1). */

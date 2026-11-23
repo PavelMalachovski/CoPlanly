@@ -6,10 +6,10 @@
     <string name="friend_invite_code_label">Give them this code</string>
     <string name="friend_access_until">Access until %1$s</string>
     <string name="friend_access_while_linked">Access while the parents are linked</string>
-    <string name="friend_calendar_row_supporting_while_linked">%1$s and %2$s · access while they are linked</string>
-    <string name="friend_access_several_while_linked">Families: %1$d · access while the parents are linked</string>
+    <string name="friend_calendar_row_supporting_while_linked">%1$s and %2$s\u00A0· access while they are linked</string>
+    <string name="friend_access_several_while_linked">Families: %1$d\u00A0· access while the parents are linked</string>
     <string name="friend_invite_duration_while_linked">While we are linked</string>
-    <string name="friend_access_several">Families: %1$d · the first access ends %2$s</string>
+    <string name="friend_access_several">Families: %1$d\u00A0· the first access ends %2$s</string>
     <string name="friend_revoke">Remove access</string>
     <string name="friend_revoke_confirm_title">Remove access for %1$s?</string>
     <string name="friend_revoke_confirm_message">They will stop seeing the family calendar. You can invite them again at any time.</string>
@@ -32,7 +32,7 @@
     <string name="friend_calendar_family">%1$s and %2$s</string>
     <string name="friend_calendar_read_only">View only. Private events are never shared.</string>
     <string name="friend_calendar_added_by">Added by %1$s</string>
-    <string name="friend_calendar_event_supporting">%1$s · %2$s</string>
+    <string name="friend_calendar_event_supporting">%1$s\u00A0· %2$s</string>
     <string name="friend_calendar_you_take_part">You take part</string>
     <string name="friend_calendar_access_ended">Your access to this calendar has ended</string>
     <string name="friend_calendar_failed">The calendar couldn\u0027t be loaded</string>
@@ -66,6 +66,6 @@
     <string name="friend_redeem_row_title">I have a code from the parents</string>
     <string name="friend_redeem_row_supporting">If you were invited as a family friend</string>
     <string name="friend_redeem_open_calendar">Open the family calendar</string>
-    <string name="friend_calendar_row_supporting">%1$s and %2$s · access until %3$s</string>
+    <string name="friend_calendar_row_supporting">%1$s and %2$s\u00A0· access until %3$s</string>
     <string name="friend_calendar_no_events_window">No events in these four weeks</string>
 </resources>

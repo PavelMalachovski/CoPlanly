@@ -50,6 +50,12 @@ private const val ELLIPSIS = "\u2026"
 private val PILL_GAP = Spacing.XXS
 
 /**
+ * The room after a pill's title, counted in the fit: at 2 dp a title that just fit ("Vet") ran
+ * flush into the pill's end (text review, November 2026).
+ */
+internal val PILL_END_PADDING = Spacing.XS
+
+/**
  * The pill's text: `labelSmall` on a tighter line, centred in it. `labelSmall`'s own 16 sp line did
  * not fit under the day number in a phone's 48 dp cell, and the UI tour showed the titles cut in half.
  */
@@ -198,7 +204,9 @@ private fun EventPill(
     }
     val lineHeight = with(LocalDensity.current) { textStyle.lineHeight.toDp() }
     BoxWithConstraints(modifier = modifier) {
-        val padding = with(LocalDensity.current) { (EVENT_PILL_MARK_WIDTH + Spacing.XXS * 2).roundToPx() }
+        val padding = with(LocalDensity.current) {
+            (EVENT_PILL_MARK_WIDTH + Spacing.XXS + PILL_END_PADDING).roundToPx()
+        }
         val lineWidth = (constraints.maxWidth - padding).toFloat()
         if (pillTitleFits(leastTitle.toFloat(), lineWidth)) {
             Text(
@@ -218,7 +226,7 @@ private fun EventPill(
                     .drawBehind {
                         drawRect(color = mark, size = Size(EVENT_PILL_MARK_WIDTH.toPx(), size.height))
                     }
-                    .padding(start = EVENT_PILL_MARK_WIDTH + Spacing.XXS, end = Spacing.XXS)
+                    .padding(start = EVENT_PILL_MARK_WIDTH + Spacing.XXS, end = PILL_END_PADDING)
             )
         } else {
             // Not even one letter and "…" fit: the mark's bar, centred on the line the pill would

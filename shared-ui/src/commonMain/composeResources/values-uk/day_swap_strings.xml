@@ -5,10 +5,10 @@
     <string name="day_swap_currently_with">Зараз цей день належить: %1$s</string>
     <string name="day_swap_would_go_to">Ви пропонуєте його: %1$s</string>
     <string name="day_swap_cancel">Не зараз</string>
-    <string name="day_swap_needs_coparent">Спершу зʼєднайтеся з другим із батьків — обмін ви узгоджуєте вдвох.</string>
+    <string name="day_swap_needs_coparent">Спершу зʼєднайтеся з\u00A0другим із батьків — обмін ви узгоджуєте вдвох.</string>
     <string name="day_swap_error_refused">Не вдалося запропонувати обмін</string>
     <string name="day_swap_error_not_ready">Ще зʼясовуємо, хто другий із батьків, — спробуйте за мить</string>
-    <string name="day_swap_error_partial">Запропоновано %1$d із %2$d днів — ці вже чекають відповіді другого з батьків; решту запропонуйте ще раз</string>
+    <string name="day_swap_error_partial">Запропоновано %1$d із %2$d днів — ці вже чекають відповіді другого з\u00A0батьків; решту запропонуйте ще раз</string>
     <string name="day_swap_inbox_offered_by_you">Ви запропонували цей день: %1$s</string>
     <string name="day_swap_inbox_offered_to_you">%1$s пропонує вам цей день</string>
     <string name="day_swap_inbox_accepted">Погоджено</string>
@@ -24,14 +24,14 @@
     <string name="day_swap_strip_offered_to_you">%1$s просить, щоб цей день був у: %2$s.</string>
     <string name="day_swap_strip_offered_to_reader">%1$s пропонує вам цей день.</string>
     <string name="day_swap_strip_agreed">Погоджений обмін: цей день у: %1$s.</string>
-    <string name="day_swap_strip_agreed_you">Погоджений обмін: цей день у вас.</string>
+    <string name="day_swap_strip_agreed_you">Погоджений обмін: цей день у\u00A0вас.</string>
     <string name="day_swap_range">%1$s – %2$s</string>
     <string name="day_swap_selection_cancel">Скасувати вибір</string>
     <plurals name="day_swap_skipped_days">
-        <item quantity="one">Для %1$d вибраного дня не вказано, з ким діти — він не увійде в обмін.</item>
-        <item quantity="few">Для %1$d вибраних днів не вказано, з ким діти — вони не увійдуть в обмін.</item>
-        <item quantity="many">Для %1$d вибраних днів не вказано, з ким діти — вони не увійдуть в обмін.</item>
-        <item quantity="other">Для %1$d вибраних днів не вказано, з ким діти — вони не увійдуть в обмін.</item>
+        <item quantity="one">Для %1$d вибраного дня не вказано, з\u00A0ким діти — він не увійде в\u00A0обмін.</item>
+        <item quantity="few">Для %1$d вибраних днів не вказано, з\u00A0ким діти — вони не увійдуть в\u00A0обмін.</item>
+        <item quantity="many">Для %1$d вибраних днів не вказано, з\u00A0ким діти — вони не увійдуть в\u00A0обмін.</item>
+        <item quantity="other">Для %1$d вибраних днів не вказано, з\u00A0ким діти — вони не увійдуть в\u00A0обмін.</item>
     </plurals>
     <plurals name="day_swap_inbox_offered_by_you_days">
         <item quantity="one">Ви запропонували %1$d день: %2$s</item>
@@ -46,10 +46,10 @@
         <item quantity="other">%2$s пропонує вам %1$d дня</item>
     </plurals>
     <plurals name="day_swap_inbox_asked_of_you_days">
-        <item quantity="one">%2$s просить у вас %1$d день</item>
-        <item quantity="few">%2$s просить у вас %1$d дні</item>
-        <item quantity="many">%2$s просить у вас %1$d днів</item>
-        <item quantity="other">%2$s просить у вас %1$d дня</item>
+        <item quantity="one">%2$s просить у\u00A0вас %1$d день</item>
+        <item quantity="few">%2$s просить у\u00A0вас %1$d дні</item>
+        <item quantity="many">%2$s просить у\u00A0вас %1$d днів</item>
+        <item quantity="other">%2$s просить у\u00A0вас %1$d дня</item>
     </plurals>
     <plurals name="day_swap_inbox_asked_by_you_days">
         <item quantity="one">Ви попросили %1$d день: %2$s</item>
@@ -84,7 +84,7 @@
     <string name="day_swap_cell_waiting_to_you">Обмін чекає відповіді, перейде до вас</string>
     <string name="day_swap_legend_waiting">Чекає відповіді</string>
     <!-- The bar while days are chosen (day swap design, board SW-2): one line per way the days go. -->
-    <string name="day_swap_bar_hint">Торкніться днів у календарі. Кожен перейде до того, у кого його немає.</string>
+    <string name="day_swap_bar_hint">Торкніться днів у\u00A0календарі. Кожен перейде до того, у\u00A0кого його немає.</string>
     <string name="day_swap_next">Далі</string>
     <plurals name="day_swap_bar_to">
         <item quantity="one">%1$s — %2$d\u00A0день: %3$s</item>

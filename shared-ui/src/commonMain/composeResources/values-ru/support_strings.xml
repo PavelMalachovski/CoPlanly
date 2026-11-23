@@ -9,7 +9,7 @@
     <string name="support_none_title">Алименты не согласованы</string>
     <string name="support_none_description">Предложите сумму, день месяца и кто платит. Это начнёт действовать, когда второй родитель примет предложение.</string>
     <string name="support_amount_line">%1$s в месяц</string>
-    <string name="support_terms_line">%1$d-го числа · платит %2$s · с %3$s</string>
+    <string name="support_terms_line">%1$d-го числа\u00A0· платит %2$s\u00A0· с %3$s</string>
     <string name="support_proposal_body">%1$s в месяц, %2$d-го числа, платит %3$s.</string>
     <string name="support_waiting_title">Ждём ответа: %1$s</string>
     <string name="support_asks_title">Предложение алиментов от: %1$s</string>

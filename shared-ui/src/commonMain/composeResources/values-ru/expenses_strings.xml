@@ -33,9 +33,9 @@
         <item quantity="many">%1$d\u00A0расходов</item>
         <item quantity="other">%1$d\u00A0расхода</item>
     </plurals>
-    <string name="expenses_row_subtitle">%1$s · оплата: %2$s · %3$s</string>
-    <string name="expenses_row_subtitle_you">%1$s · оплатили вы · %2$s</string>
-    <string name="expenses_row_subtitle_unknown_payer">%1$s · %2$s</string>
+    <string name="expenses_row_subtitle">%1$s\u00A0· оплата: %2$s\u00A0· %3$s</string>
+    <string name="expenses_row_subtitle_you">%1$s\u00A0· оплатили вы\u00A0· %2$s</string>
+    <string name="expenses_row_subtitle_unknown_payer">%1$s\u00A0· %2$s</string>
     <string name="expenses_split_even">разделено 50/50</string>
     <string name="expenses_split_n_ways">разделено 1/%1$d</string>
     <string name="expenses_split_none">не разделено</string>
@@ -67,11 +67,11 @@
 
     <!-- Summary card: month switcher and total. -->
     <string name="expenses_shared_spend">общие расходы</string>
-    <string name="expenses_month_and_count">%1$s · %2$s</string>
+    <string name="expenses_month_and_count">%1$s\u00A0· %2$s</string>
     <!-- The month summary folded into one pinned line; %1$s is each currency's total, joined. -->
     <string name="expenses_collapsed_totals">Общие расходы: %1$s</string>
-    <string name="expenses_row_meta">%1$s · %2$s</string>
-    <string name="expenses_row_meta_with_receipt">%1$s · %2$s · чек</string>
+    <string name="expenses_row_meta">%1$s\u00A0· %2$s</string>
+    <string name="expenses_row_meta_with_receipt">%1$s\u00A0· %2$s\u00A0· чек</string>
     <string name="expenses_split_proposal_title">Предложено новое деление расходов</string>
     <string name="expenses_split_proposal_body_named">%1$s предлагает с этого момента новое деление общих расходов: %2$s. Уже внесённые расходы сохранят своё деление.</string>
     <string name="expenses_split_shares_named">%1$s платит %2$d %5$s, %3$s платит %4$d %5$s</string>

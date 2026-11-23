@@ -111,7 +111,7 @@
     <string name="chat_search_failed_title">Поиск не сработал</string>
     <string name="chat_search_failed_description">Поиск не выполнен. Попробуйте ещё раз чуть позже.</string>
     <string name="chat_search_truncated">Показаны самые новые совпадения: %1$d. Добавьте слово, чтобы сузить поиск.</string>
-    <string name="chat_search_result_meta">%1$s · %2$s</string>
+    <string name="chat_search_result_meta">%1$s\u00A0· %2$s</string>
     <string name="chat_search_show_in_thread">Показать в переписке</string>
     <!-- MON-19: pause before sending. A held message, with its countdown in seconds. -->
     <string name="chat_pending_send">Отправка через %1$d с…</string>

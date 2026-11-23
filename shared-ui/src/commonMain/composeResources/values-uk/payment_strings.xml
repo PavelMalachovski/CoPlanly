@@ -20,7 +20,7 @@
     <string name="payment_panel_show_code">Знову показати платіжний код</string>
     <string name="payment_panel_says_paid">%1$s: переказ %2$s позначено %3$s.</string>
     <string name="payment_panel_check_bank">Спершу перевірте надходження в банку.</string>
-    <string name="payment_panel_settled">За %1$s розрахувалися · %2$s</string>
+    <string name="payment_panel_settled">За %1$s розрахувалися\u00A0· %2$s</string>
     <string name="payment_chip_waiting_for_you">Чекає на вас</string>
     <string name="payment_chip_waiting_for">Чекає на: %1$s</string>
     <string name="payment_chip_settled">Розраховано</string>

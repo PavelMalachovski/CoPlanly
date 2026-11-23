@@ -134,8 +134,10 @@ fun dateWithTime(
  * [millis] is an instant, so [zone] decides which day and hour it falls on: the device's, because
  * a deadline is a moment in the reader's own day and the other parent may live in another zone.
  * The date and the time are formatted apart and joined with a comma, as [dateWithTime] joins them
- * with a dot, for the reason [localizedDate] gives. One function for every place a deadline is
- * said — the pushes, the notices and the cards — so it reads the same in each.
+ * with a dot, for the reason [localizedDate] gives; the comma's space is no-break
+ * ([ANSWER_BY_TIME_SEPARATOR]), so the time never takes a line of its own ("13. Mai, | 20:00").
+ * One function for every place a deadline is said — the pushes, the notices and the cards — so it
+ * reads the same in each.
  *
  * @param millis The deadline, epoch milliseconds
  * @param zone The zone the reader's day is counted in; the device's by default
@@ -149,7 +151,8 @@ fun answerByText(
     is24Hour: Boolean = ClockFormat.is24Hour
 ): String {
     val moment = Instant.ofEpochMilli(millis).atZone(zone)
-    return moment.format(localizedDate(ANSWER_BY_DAY, locale)) + ", " + moment.format(shortTime(locale, is24Hour))
+    return moment.format(localizedDate(ANSWER_BY_DAY, locale)) + ANSWER_BY_TIME_SEPARATOR +
+        moment.format(shortTime(locale, is24Hour))
 }
 
 private const val PATTERN_24_HOUR = "HH:mm"

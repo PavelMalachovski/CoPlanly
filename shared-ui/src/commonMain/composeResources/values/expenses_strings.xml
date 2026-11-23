@@ -38,9 +38,9 @@
         <item quantity="one">%1$d\u00A0expense</item>
         <item quantity="other">%1$d\u00A0expenses</item>
     </plurals>
-    <string name="expenses_row_subtitle">%1$s · %2$s paid · %3$s</string>
-    <string name="expenses_row_subtitle_you">%1$s · you paid · %2$s</string>
-    <string name="expenses_row_subtitle_unknown_payer">%1$s · %2$s</string>
+    <string name="expenses_row_subtitle">%1$s\u00A0· %2$s paid\u00A0· %3$s</string>
+    <string name="expenses_row_subtitle_you">%1$s\u00A0· you paid\u00A0· %2$s</string>
+    <string name="expenses_row_subtitle_unknown_payer">%1$s\u00A0· %2$s</string>
     <string name="expenses_split_even">split 50/50</string>
     <string name="expenses_split_n_ways">split 1/%1$d</string>
     <string name="expenses_split_none">not split</string>
@@ -76,11 +76,11 @@
 
     <!-- Summary card: month switcher and total. -->
     <string name="expenses_shared_spend">shared spend</string>
-    <string name="expenses_month_and_count">%1$s · %2$s</string>
+    <string name="expenses_month_and_count">%1$s\u00A0· %2$s</string>
     <!-- The month summary folded into one pinned line; %1$s is each currency's total, joined. -->
     <string name="expenses_collapsed_totals">Shared spend: %1$s</string>
-    <string name="expenses_row_meta">%1$s · %2$s</string>
-    <string name="expenses_row_meta_with_receipt">%1$s · %2$s · receipt</string>
+    <string name="expenses_row_meta">%1$s\u00A0· %2$s</string>
+    <string name="expenses_row_meta_with_receipt">%1$s\u00A0· %2$s\u00A0· receipt</string>
     <string name="expenses_split_proposal_title">New expense split proposed</string>
     <string name="expenses_split_proposal_body_named">%1$s proposes a new split for shared expenses from now on: %2$s. Already recorded expenses keep their split.</string>
     <!-- A share of the split, "70 %": the sign is an argument (%5$s / %4$s, expenses_percent_sign)

@@ -6,10 +6,10 @@
     <string name="friend_invite_code_label">Передайте этот код</string>
     <string name="friend_access_until">Доступ до %1$s</string>
     <string name="friend_access_while_linked">Доступ, пока родители связаны</string>
-    <string name="friend_calendar_row_supporting_while_linked">%1$s и %2$s · доступ, пока они связаны</string>
-    <string name="friend_access_several_while_linked">Семьи: %1$d · доступ, пока родители связаны</string>
+    <string name="friend_calendar_row_supporting_while_linked">%1$s и %2$s\u00A0· доступ, пока они связаны</string>
+    <string name="friend_access_several_while_linked">Семьи: %1$d\u00A0· доступ, пока родители связаны</string>
     <string name="friend_invite_duration_while_linked">Пока мы связаны</string>
-    <string name="friend_access_several">Семьи: %1$d · первый доступ заканчивается %2$s</string>
+    <string name="friend_access_several">Семьи: %1$d\u00A0· первый доступ заканчивается %2$s</string>
     <string name="friend_revoke">Закрыть доступ</string>
     <string name="friend_revoke_confirm_title">Закрыть доступ для %1$s?</string>
     <string name="friend_revoke_confirm_message">Этот человек перестанет видеть семейный календарь. Вы сможете пригласить его снова в любой момент.</string>
@@ -31,7 +31,7 @@
     <string name="friend_calendar_family">%1$s и %2$s</string>
     <string name="friend_calendar_read_only">Только просмотр. Личные события никогда не передаются.</string>
     <string name="friend_calendar_added_by">Добавлено: %1$s</string>
-    <string name="friend_calendar_event_supporting">%1$s · %2$s</string>
+    <string name="friend_calendar_event_supporting">%1$s\u00A0· %2$s</string>
     <string name="friend_calendar_you_take_part">Вы участвуете</string>
     <string name="friend_calendar_access_ended">Ваш доступ к этому календарю закончился</string>
     <string name="friend_calendar_failed">Не удалось загрузить календарь</string>
@@ -63,6 +63,6 @@
     <string name="friend_redeem_row_title">У меня есть код от родителей</string>
     <string name="friend_redeem_row_supporting">Если вас пригласили как друга семьи</string>
     <string name="friend_redeem_open_calendar">Открыть календарь семьи</string>
-    <string name="friend_calendar_row_supporting">%1$s и %2$s · доступ до %3$s</string>
+    <string name="friend_calendar_row_supporting">%1$s и %2$s\u00A0· доступ до %3$s</string>
     <string name="friend_calendar_no_events_window">За эти четыре недели событий нет</string>
 </resources>

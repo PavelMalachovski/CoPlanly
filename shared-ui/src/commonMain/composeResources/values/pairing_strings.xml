@@ -45,7 +45,7 @@
     <string name="pairing_expires_in_hours">Valid for %1$d h %2$d min</string>
     <string name="pairing_expires_in_minutes">Valid for %1$d min</string>
     <string name="pairing_code_expired_generate">Code expired — tap “New code”</string>
-    <string name="pairing_share_message">%1$s invites you to CoPlanly — one calendar for our children\u0027s two homes. We both see the same days, and schedule changes need both of us to agree.\nInstall: %4$s (the code comes along)\nAlready have the app? %3$s · Code: %2$s\nOn an iPhone? Ask me for our calendar link, it opens in Apple Calendar.</string>
+    <string name="pairing_share_message">%1$s invites you to CoPlanly — one calendar for our children\u0027s two homes. We both see the same days, and schedule changes need both of us to agree.\nInstall: %4$s (the code comes along)\nAlready have the app? %3$s\u00A0· Code: %2$s\nOn an iPhone? Ask me for our calendar link, it opens in Apple Calendar.</string>
     <!-- The share text once the pairing link is a web address (BuildConfig.PAIRING_WEB_LINK):
          %1$s inviter, %2$s the link, %3$s the code for typing by hand -->
     <string name="pairing_share_message_web">%1$s invites you to CoPlanly — one calendar for our children\u0027s two homes. We both see the same days, and schedule changes need both of us to agree: %2$s\nCode, if you need it: %3$s</string>
@@ -77,7 +77,7 @@
     <string name="pairing_mode_share">Share my code</string>
     <string name="pairing_mode_enter">Enter a code</string>
     <string name="pairing_copy_code">Copy code</string>
-    <string name="pairing_tap_to_copy_and_expiry">Tap to copy · %1$s</string>
+    <string name="pairing_tap_to_copy_and_expiry">Tap to copy\u00A0· %1$s</string>
     <string name="pairing_share_link">Share link</string>
     <string name="pairing_trust_title">What pairing shares</string>
     <string name="pairing_trust_body">Shared calendar and custody schedule, shared expenses and balances, and chat. Private events never leave your device. You can unlink at any time.</string>

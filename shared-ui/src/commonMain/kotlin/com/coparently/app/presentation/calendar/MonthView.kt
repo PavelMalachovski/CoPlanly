@@ -818,7 +818,11 @@ private fun DayCell(
                 toReader = parentNames.isReader(swapMark.toSlot),
                 edge = swapEdge,
                 pending = swapMark.pending,
-                modifier = Modifier.align(Alignment.BottomCenter)
+                // Clear of the contact window's corner, which the pill counts in its fit. The pill's
+                // bottom is a few dp above the tile's, where the triangle is that much narrower.
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(end = if (windowMarkerColor != null) CONTACT_WINDOW_MARKER_SIZE - Spacing.XS else 0.dp)
             )
         }
 

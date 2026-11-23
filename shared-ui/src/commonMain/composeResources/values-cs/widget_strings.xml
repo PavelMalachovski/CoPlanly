@@ -2,7 +2,7 @@
 <resources>
     <string name="widget_today_name">Dnes</string>
     <string name="widget_today_description">Čí je dnes den, příští předání a dnešní události</string>
-    <string name="widget_today_title">Dnes · %1$s</string>
+    <string name="widget_today_title">Dnes\u00A0· %1$s</string>
     <string name="widget_today_signed_out">Přihlaste se do CoPlanly a uvidíte svůj den.</string>
     <string name="widget_today_stale">Otevřete CoPlanly pro aktualizaci</string>
     <plurals name="widget_today_more">

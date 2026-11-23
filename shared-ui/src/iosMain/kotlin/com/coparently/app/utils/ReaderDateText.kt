@@ -74,7 +74,7 @@ actual object ReaderDateText {
 
     actual fun answerBy(millis: Long, zone: TimeZone, is24Hour: Boolean): String {
         val moment = Instant.fromEpochMilliseconds(millis).toLocalDateTime(zone)
-        return date(moment.date, ANSWER_BY_DAY) + ", " + time(moment, is24Hour)
+        return date(moment.date, ANSWER_BY_DAY) + ANSWER_BY_TIME_SEPARATOR + time(moment, is24Hour)
     }
 
     actual fun isoDate(iso: String?, skeleton: String): String {

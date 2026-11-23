@@ -23,7 +23,7 @@
     <string name="documents_add_dialog_category_label">Категорія</string>
     <string name="documents_add_dialog_confirm">Завантажити й поділитися</string>
     <string name="documents_uploading">Завантаження…</string>
-    <string name="documents_row_meta">%1$s · додано: %2$s · %3$s</string>
+    <string name="documents_row_meta">%1$s\u00A0· додано: %2$s\u00A0· %3$s</string>
     <string name="documents_delete">Видалити документ</string>
     <string name="documents_delete_confirm_title">Видалити цей документ?</string>
     <string name="documents_delete_confirm_body">Він зникне з документів обох батьків. Сам файл буде видалено з сервера через 90 днів.</string>

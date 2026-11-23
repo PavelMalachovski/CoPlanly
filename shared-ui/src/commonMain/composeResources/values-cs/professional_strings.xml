@@ -24,7 +24,7 @@
     <string name="professional_status_waiting_for_parents">Čeká na souhlas obou rodičů</string>
     <string name="professional_status_active_until">Může číst do %1$s</string>
     <string name="professional_status_expired">Přístup skončil %1$s</string>
-    <string name="professional_row_supporting">%1$s · %2$s</string>
+    <string name="professional_row_supporting">%1$s\u00A0· %2$s</string>
     <string name="professional_dialog_body">%1$s může do %2$s číst kalendář, rozvrh péče a rodičovský plán této rodiny – nikdy chat, výdaje ani záznamy o dětech. Přístup začne až se souhlasem obou rodičů a kterýkoli z vás ho může kdykoli ukončit.</string>
     <string name="professional_revoke_confirm">Ukončit přístup pro %1$s? Druhý rodič nemusí souhlasit a nelze to vrátit – byla by potřeba nová pozvánka.</string>
     <string name="professional_dialog_consent">Souhlasím</string>
@@ -45,7 +45,7 @@
     <string name="professional_calendar_no_events">Žádné události</string>
     <string name="professional_calendar_previous">Předchozí týdny</string>
     <string name="professional_calendar_next">Další týdny</string>
-    <string name="professional_calendar_event_supporting">%1$s · %2$s</string>
+    <string name="professional_calendar_event_supporting">%1$s\u00A0· %2$s</string>
     <string name="professional_unavailable">Není co zobrazit – přístup není aktivní. Otevře se, až budou souhlasit oba rodiče, a skončí dnem, kdy vyprší.</string>
     <string name="professional_plan_not_answered">Bez odpovědi</string>
     <string name="professional_plan_answer_by">%1$s: %2$s</string>

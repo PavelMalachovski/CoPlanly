@@ -14,7 +14,7 @@
     <!-- When an event waiting for an answer happens: a date and two times, a date and a start, or
          two dates with times when it ends on another day. -->
     <string name="event_acceptance_when">%1$s\u00A0· %2$s–%3$s</string>
-    <string name="event_acceptance_when_start">%1$s · %2$s</string>
+    <string name="event_acceptance_when_start">%1$s\u00A0· %2$s</string>
     <string name="event_acceptance_when_span">%1$s – %2$s</string>
     <!-- A request card's month folds away, so the inbox is a list rather than a wall of grids
          (second audit). -->

@@ -412,9 +412,9 @@ private fun ContactWindowLine(window: ContactWindow, parentNames: ParentNames) {
                 parentNames.labelFor(window.parent)
             ),
             style = MaterialTheme.typography.bodyMediumEmphasized,
-            color = ParentColors.text(window.parent),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            // Wraps rather than ending in an ellipsis: the co-parent's name, the line's point, comes
+            // last, and at 150 % an ellipsis took it away (text review, November 2026).
+            color = ParentColors.text(window.parent)
         )
     }
 }

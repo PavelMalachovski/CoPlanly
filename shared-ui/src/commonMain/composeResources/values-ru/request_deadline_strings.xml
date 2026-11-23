@@ -10,10 +10,10 @@
     <string name="answer_by_pick_date">Выбрать дату…</string>
     <string name="answer_by_compressed">До %1$s</string>
     <plurals name="answer_by_reminders">
-        <item quantity="one">До %1$s. %2$s получит до %3$d напоминания, ночью — без напоминаний.</item>
-        <item quantity="few">До %1$s. %2$s получит до %3$d напоминаний, ночью — без напоминаний.</item>
-        <item quantity="many">До %1$s. %2$s получит до %3$d напоминаний, ночью — без напоминаний.</item>
-        <item quantity="other">До %1$s. %2$s получит до %3$d напоминания, ночью — без напоминаний.</item>
+        <item quantity="one">До %1$s. %2$s получит до %3$d\u00A0напоминания, ночью — без напоминаний.</item>
+        <item quantity="few">До %1$s. %2$s получит до %3$d\u00A0напоминаний, ночью — без напоминаний.</item>
+        <item quantity="many">До %1$s. %2$s получит до %3$d\u00A0напоминаний, ночью — без напоминаний.</item>
+        <item quantity="other">До %1$s. %2$s получит до %3$d\u00A0напоминания, ночью — без напоминаний.</item>
     </plurals>
     <string name="answer_by_outcome">Если к этому сроку ответа не будет, вы получите уведомление и сможете дать ещё 24 часа. Без ответа в календаре ничего не изменится.</string>
     <string name="answer_by_outcome_short">Если к этому сроку ответа не будет, вы получите уведомление и сможете дать ещё немного времени. Без ответа в календаре ничего не изменится.</string>
@@ -25,8 +25,8 @@
          answerByText; %2$s after " · " is how long is left (request_left_*). A name is the other
          parent's, never a role. -->
     <string name="request_clock_answer_by">Ответить до %1$s\u00A0· %2$s</string>
-    <string name="request_clock_sent">Отправлено · ответить до %1$s</string>
-    <string name="request_clock_opened">%1$s: открыто · %2$s</string>
+    <string name="request_clock_sent">Отправлено\u00A0· ответить до %1$s</string>
+    <string name="request_clock_opened">%1$s: открыто\u00A0· %2$s</string>
     <string name="request_clock_not_opened">%1$s: ещё не открыто</string>
     <string name="request_clock_reminders">Напоминания: %1$d\u00A0из\u00A0%2$d</string>
     <string name="request_clock_reminders_next">Напоминания: %1$d\u00A0из\u00A0%2$d\u00A0· следующее %3$s</string>
@@ -37,7 +37,7 @@
     <string name="request_clock_give_last_chance_until">Дать больше времени — до %1$s</string>
     <string name="request_clock_last_chance_once">Только один раз. %1$s сможет ответить до %2$s.</string>
     <string name="request_clock_responder_unanswered">Вы не ответили к сроку. %1$s может дать вам больше времени, до %2$s.</string>
-    <string name="request_last_chance_banner_title">Больше времени · осталось %1$s</string>
+    <string name="request_last_chance_banner_title">Больше времени\u00A0· осталось %1$s</string>
     <string name="request_last_chance_banner_text">Ответьте до %1$s. Без ответа запрос закроется как «Нет ответа».</string>
     <string name="request_last_chance_failed">Не удалось продлить срок. Попробуйте ещё раз.</string>
     <plurals name="request_left_days">

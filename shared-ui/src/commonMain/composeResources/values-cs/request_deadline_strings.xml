@@ -10,10 +10,10 @@
     <string name="answer_by_pick_date">Vybrat datum…</string>
     <string name="answer_by_compressed">Do %1$s</string>
     <plurals name="answer_by_reminders">
-        <item quantity="one">Do %1$s. %2$s dostane nejvýše %3$d připomenutí, v noci žádné.</item>
-        <item quantity="few">Do %1$s. %2$s dostane nejvýše %3$d připomenutí, v noci žádné.</item>
-        <item quantity="many">Do %1$s. %2$s dostane nejvýše %3$d připomenutí, v noci žádné.</item>
-        <item quantity="other">Do %1$s. %2$s dostane nejvýše %3$d připomenutí, v noci žádné.</item>
+        <item quantity="one">Do %1$s. %2$s dostane nejvýše %3$d\u00A0připomenutí, v noci žádné.</item>
+        <item quantity="few">Do %1$s. %2$s dostane nejvýše %3$d\u00A0připomenutí, v noci žádné.</item>
+        <item quantity="many">Do %1$s. %2$s dostane nejvýše %3$d\u00A0připomenutí, v noci žádné.</item>
+        <item quantity="other">Do %1$s. %2$s dostane nejvýše %3$d\u00A0připomenutí, v noci žádné.</item>
     </plurals>
     <string name="answer_by_outcome">Pokud do té doby nikdo neodpoví, dostanete zprávu a můžete dát dalších 24 hodin. Bez odpovědi se v kalendáři nic nezmění.</string>
     <string name="answer_by_outcome_short">Pokud do té doby nikdo neodpoví, dostanete zprávu a můžete dát ještě trochu času. Bez odpovědi se v kalendáři nic nezmění.</string>
@@ -25,8 +25,8 @@
          answerByText; %2$s after " · " is how long is left (request_left_*). A name is the other
          parent's, never a role. -->
     <string name="request_clock_answer_by">Odpovědět do %1$s\u00A0· %2$s</string>
-    <string name="request_clock_sent">Odesláno · odpovědět do %1$s</string>
-    <string name="request_clock_opened">%1$s: otevřeno · %2$s</string>
+    <string name="request_clock_sent">Odesláno\u00A0· odpovědět do %1$s</string>
+    <string name="request_clock_opened">%1$s: otevřeno\u00A0· %2$s</string>
     <string name="request_clock_not_opened">%1$s: zatím neotevřeno</string>
     <string name="request_clock_reminders">Připomenutí: %1$d\u00A0z\u00A0%2$d</string>
     <string name="request_clock_reminders_next">Připomenutí: %1$d\u00A0z\u00A0%2$d\u00A0· další %3$s</string>
@@ -37,7 +37,7 @@
     <string name="request_clock_give_last_chance_until">Dát více času — do %1$s</string>
     <string name="request_clock_last_chance_once">Jen jednou. %1$s bude moci odpovědět do %2$s.</string>
     <string name="request_clock_responder_unanswered">Do termínu jste neodpověděli. %1$s vám může dát více času, do %2$s.</string>
-    <string name="request_last_chance_banner_title">Více času · zbývá %1$s</string>
+    <string name="request_last_chance_banner_title">Více času\u00A0· zbývá %1$s</string>
     <string name="request_last_chance_banner_text">Odpovězte do %1$s. Bez odpovědi se žádost uzavře jako „Bez odpovědi“.</string>
     <string name="request_last_chance_failed">Prodloužení se nepodařilo odeslat. Zkuste to znovu.</string>
     <plurals name="request_left_days">

@@ -58,8 +58,8 @@
     <string name="request_history_day_swap">Day swap: %1$s</string>
     <string name="request_history_custody">New custody schedule</string>
     <string name="request_history_split">Expense split</string>
-    <string name="request_history_yours_answered">Your request · %1$s answered</string>
-    <string name="request_history_theirs_answered">%1$s\u0027s request · you answered</string>
+    <string name="request_history_yours_answered">Your request\u00A0· %1$s answered</string>
+    <string name="request_history_theirs_answered">%1$s\u0027s request\u00A0· you answered</string>
     <string name="request_history_withdrawn_by_you">You withdrew it</string>
     <string name="request_history_withdrawn_by">%1$s withdrew it</string>
     <string name="request_history_when">%1$s\u00A0· %2$s</string>

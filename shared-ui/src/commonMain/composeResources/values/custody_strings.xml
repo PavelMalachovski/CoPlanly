@@ -90,7 +90,7 @@
     <!-- MON-6b: contact windows over the whole-day pattern. -->
     <string name="custody_windows_title">Contact windows</string>
     <string name="custody_overview_pattern">Main schedule</string>
-    <string name="custody_overview_pattern_summary">%1$s · from %2$s</string>
+    <string name="custody_overview_pattern_summary">%1$s\u00A0· from %2$s</string>
     <string name="custody_overview_none">None</string>
     <string name="custody_overview_children_same">All follow the family schedule</string>
     <string name="custody_overview_sent_separately">Each part is sent on its own. Nothing changes in the calendar until %1$s agrees.</string>
@@ -106,7 +106,7 @@
     <string name="custody_windows_empty">No contact windows.</string>
     <string name="custody_windows_add">Add contact window</string>
     <string name="custody_window_remove">Remove contact window</string>
-    <string name="custody_window_summary">%1$s · %2$s–%3$s · %4$s</string>
+    <string name="custody_window_summary">%1$s\u00A0· %2$s–%3$s\u00A0· %4$s</string>
     <string name="custody_window_day_label">Week %1$d, %2$s</string>
     <string name="custody_window_dialog_title">New contact window</string>
     <string name="custody_window_weekday">Day</string>

@@ -92,7 +92,7 @@
 
     <!-- MON-6b: a contact window on the grid. -->
     <string name="calendar_contact_window_desc">Спілкування: %1$s, %2$s–%3$s</string>
-    <string name="calendar_agenda_contact_window">%1$s–%2$s · спілкування: %3$s</string>
+    <string name="calendar_agenda_contact_window">%1$s–%2$s\u00A0· спілкування: %3$s</string>
     <string name="mini_month_legend_new_event">Нова подія</string>
     <string name="mini_month_mark_new_event">нова подія</string>
     <string name="mini_month_legend_swap_day">Запропонований день — кольором того, до кого він перейде</string>
@@ -106,7 +106,7 @@
     <string name="calendar_names_and">і</string>
     <string name="calendar_previous_period">Попередній період</string>
     <string name="calendar_next_period">Наступний період</string>
-    <string name="calendar_today_card_title">Сьогодні · %1$s</string>
+    <string name="calendar_today_card_title">Сьогодні\u00A0· %1$s</string>
     <string name="calendar_today_card_open">Відкрити сьогоднішній день</string>
     <string name="calendar_today_card_nothing_more">Сьогодні більше нічого</string>
     <string name="calendar_today_card_event">%1$s – %2$s</string>

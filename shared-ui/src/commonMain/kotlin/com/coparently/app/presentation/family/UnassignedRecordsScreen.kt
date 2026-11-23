@@ -103,7 +103,7 @@ import org.koin.compose.viewmodel.koinViewModel
 private const val DATE_SKELETON = "yMMMd"
 
 /** Between an expense's amount and its day. */
-private const val DETAIL_JOIN = " · "
+private const val DETAIL_JOIN = "\u00A0· "
 
 /** The dialog's choice for "Keep it only mine": a family id is never blank. */
 private const val KEEP_ONLY_MINE = ""

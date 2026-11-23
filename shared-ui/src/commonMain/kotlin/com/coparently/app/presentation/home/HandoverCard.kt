@@ -84,7 +84,7 @@ fun HandoverCard(
             ) {
                 Text(text = handoverHeadline(info), style = MaterialTheme.typography.bodyMediumEmphasized)
                 Text(
-                    text = ReaderDateText.date(info.date, "EEEdMMM") + " · " + handoverGoesTo(info, parentNames),
+                    text = ReaderDateText.date(info.date, "EEEdMMM") + "\u00A0· " + handoverGoesTo(info, parentNames),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

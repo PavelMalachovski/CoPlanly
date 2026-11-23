@@ -82,7 +82,7 @@
     <!-- MON-6b: contact windows over the whole-day pattern. -->
     <string name="custody_windows_title">Časy styku</string>
     <string name="custody_overview_pattern">Hlavní rozvrh</string>
-    <string name="custody_overview_pattern_summary">%1$s · od %2$s</string>
+    <string name="custody_overview_pattern_summary">%1$s\u00A0· od %2$s</string>
     <string name="custody_overview_none">Žádné</string>
     <string name="custody_overview_children_same">Všechny podle rodinného rozvrhu</string>
     <string name="custody_overview_sent_separately">Každá část se posílá zvlášť. Dokud %1$s nesouhlasí, kalendář se nezmění.</string>
@@ -102,7 +102,7 @@
     <string name="custody_windows_empty">Žádné časy styku.</string>
     <string name="custody_windows_add">Přidat čas styku</string>
     <string name="custody_window_remove">Odebrat čas styku</string>
-    <string name="custody_window_summary">%1$s · %2$s–%3$s · %4$s</string>
+    <string name="custody_window_summary">%1$s\u00A0· %2$s–%3$s\u00A0· %4$s</string>
     <string name="custody_window_day_label">%1$d. týden, %2$s</string>
     <string name="custody_window_dialog_title">Nový čas styku</string>
     <string name="custody_window_weekday">Den</string>

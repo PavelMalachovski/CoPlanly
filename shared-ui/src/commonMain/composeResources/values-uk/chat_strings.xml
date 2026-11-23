@@ -111,7 +111,7 @@
     <string name="chat_search_failed_title">Не вдалося виконати пошук</string>
     <string name="chat_search_failed_description">Пошук не виконано. Спробуйте ще раз трохи згодом.</string>
     <string name="chat_search_truncated">Показано найновіші збіги: %1$d. Додайте слово, щоб звузити пошук.</string>
-    <string name="chat_search_result_meta">%1$s · %2$s</string>
+    <string name="chat_search_result_meta">%1$s\u00A0· %2$s</string>
     <string name="chat_search_show_in_thread">Показати в листуванні</string>
     <!-- MON-19: pause before sending. A held message, with its countdown in seconds. -->
     <string name="chat_pending_send">Надсилання через %1$d с…</string>

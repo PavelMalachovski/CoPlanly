@@ -20,7 +20,7 @@
     <string name="payment_panel_show_code">Znovu zobrazit platební kód</string>
     <string name="payment_panel_says_paid">%1$s: zaplaceno %2$s dne %3$s.</string>
     <string name="payment_panel_check_bank">Nejdřív si platbu ověřte v bance.</string>
-    <string name="payment_panel_settled">Za %1$s vyrovnáno · %2$s</string>
+    <string name="payment_panel_settled">Za %1$s vyrovnáno\u00A0· %2$s</string>
     <string name="payment_chip_waiting_for_you">Čeká na vás</string>
     <string name="payment_chip_waiting_for">Čeká na: %1$s</string>
     <string name="payment_chip_settled">Vyrovnáno</string>

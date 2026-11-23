@@ -75,6 +75,9 @@ internal fun DrawScope.drawSwapMark(hatch: Color, edge: Color, dashed: Boolean) 
  * @param name The receiver's name — the reader's own when [toReader]; only its initial is drawn.
  * @param toReader Whether the receiver is the reader, who reads "→ you".
  * @param edge The receiver's deep tone ([ParentColors.chipFill]).
+ * @param modifier Places the pill in its cell. An end padding there is room the pill keeps clear
+ *   of and counts in the fit: the cell gives one where it draws the contact window's corner, which
+ *   "→ you" sat on (text review, November 2026).
  */
 @Composable
 internal fun SwapMarkPill(
@@ -96,7 +99,7 @@ internal fun SwapMarkPill(
     val surface = MaterialTheme.colorScheme.surface
     BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.BottomCenter) {
         val density = LocalDensity.current
-        val padding = with(density) { (Spacing.XXS * 2).roundToPx() }
+        val padding = with(density) { (SWAP_PILL_PADDING * 2).roundToPx() }
         // Into the cell's own padding, which a month cell pads its content with (`DayCell`).
         val overhangPx = with(density) { swapMarkOverhang(dimensions().paddingSmall / 2).roundToPx() }
         val room = constraints.maxWidth + overhangPx * 2 - padding
@@ -121,7 +124,7 @@ internal fun SwapMarkPill(
                         Modifier.background(edge, CoPlanlyCorners.Pill)
                     }
                 )
-                .padding(horizontal = Spacing.XXS)
+                .padding(horizontal = SWAP_PILL_PADDING)
         )
     }
 }
@@ -155,6 +158,12 @@ private fun initialOf(name: String): String = name.trim().take(1).uppercase()
  */
 internal fun swapMarkText(candidates: List<String>, fits: (String) -> Boolean): String =
     candidates.distinct().firstOrNull(fits) ?: candidates.last()
+
+/**
+ * The room on each side of a swap mark's text inside its pill, counted in the fit: at 2 dp, with the
+ * waiting pill's 1 dp outline inside it, "→ P" and "→ dir" touched the pill's ends.
+ */
+private val SWAP_PILL_PADDING = Spacing.XS
 
 /** A swap mark's stripe, and the distance from one stripe to the next. */
 private val SWAP_STRIPE_WIDTH = 3.dp

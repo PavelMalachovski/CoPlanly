@@ -39,8 +39,8 @@
 
     <string name="home_section_this_week">На этой неделе</string>
 
-    <string name="home_timeline_meta">%1$s · чей день: %2$s</string>
-    <string name="home_timeline_meta_you">%1$s · ваш день</string>
+    <string name="home_timeline_meta">%1$s\u00A0· чей день: %2$s</string>
+    <string name="home_timeline_meta_you">%1$s\u00A0· ваш день</string>
 
     <!-- Contacts: item 16's one button, between the changes feed and the spend tile. -->
     <string name="home_contacts">Контакты</string>

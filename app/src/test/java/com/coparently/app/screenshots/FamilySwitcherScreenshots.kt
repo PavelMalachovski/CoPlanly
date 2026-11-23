@@ -2,6 +2,7 @@ package com.coparently.app.screenshots
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import com.coparently.app.data.family.FamilyOption
 import com.coparently.app.data.family.FamilySignal
@@ -52,7 +53,12 @@ class FamilySwitcherScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(v
             )
         }
         snap("common_family_switcher") {
-            Row(horizontalArrangement = Arrangement.spacedBy(CHIP_GAP)) {
+            // Centred, as a top bar's actions are: the switcher's chip is a button with a 48 dp
+            // touch target, the two beside it are not, and top-aligned it sat 8 dp lower.
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(CHIP_GAP),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 FamilySwitcherChip(viewModel = viewModel)
                 PillChip(label = "Olya", leadingDot = ParentColors.fill("mom"))
                 PillChip(label = "Pavel", leadingDot = ParentColors.fill("dad"))

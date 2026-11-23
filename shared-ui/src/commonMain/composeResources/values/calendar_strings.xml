@@ -118,7 +118,7 @@
     <string name="calendar_contact_window_desc">Contact with %1$s, %2$s–%3$s</string>
     <!-- MON-6b: a contact window on Home's today card. %1$s/%2$s are the start and end
          times, %3$s the parent's name from ParentLabels (never a role word). -->
-    <string name="calendar_agenda_contact_window">%1$s–%2$s · contact with %3$s</string>
+    <string name="calendar_agenda_contact_window">%1$s–%2$s\u00A0· contact with %3$s</string>
     <!-- The mini month (phase 2): its legend, and what TalkBack reads for a marked day -->
     <string name="mini_month_legend_new_event">New event</string>
     <string name="mini_month_mark_new_event">new event</string>
@@ -133,7 +133,7 @@
     <string name="calendar_names_and">and</string>
     <string name="calendar_previous_period">Previous period</string>
     <string name="calendar_next_period">Next period</string>
-    <string name="calendar_today_card_title">Today · %1$s</string>
+    <string name="calendar_today_card_title">Today\u00A0· %1$s</string>
     <string name="calendar_today_card_open">Open today in Day view</string>
     <string name="calendar_today_card_nothing_more">Nothing more today</string>
     <string name="calendar_today_card_event">%1$s – %2$s</string>

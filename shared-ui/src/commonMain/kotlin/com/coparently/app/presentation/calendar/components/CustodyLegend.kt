@@ -166,7 +166,7 @@ internal fun ParentSwatch(slot: String) {
 @Composable
 internal fun LegendEntry(label: String, swatch: @Composable () -> Unit) {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(Spacing.XS),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(

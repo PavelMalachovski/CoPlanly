@@ -80,7 +80,7 @@
     <!-- MON-6b: contact windows over the whole-day pattern. -->
     <string name="custody_windows_title">Umgangszeiten</string>
     <string name="custody_overview_pattern">Hauptplan</string>
-    <string name="custody_overview_pattern_summary">%1$s · ab %2$s</string>
+    <string name="custody_overview_pattern_summary">%1$s\u00A0· ab %2$s</string>
     <string name="custody_overview_none">Keine</string>
     <string name="custody_overview_children_same">Alle folgen dem Familienplan</string>
     <string name="custody_overview_sent_separately">Jeder Teil wird einzeln gesendet. Bis %1$s zustimmt, ändert sich im Kalender nichts.</string>
@@ -96,7 +96,7 @@
     <string name="custody_windows_empty">Keine Umgangszeiten.</string>
     <string name="custody_windows_add">Umgangszeit hinzufügen</string>
     <string name="custody_window_remove">Umgangszeit entfernen</string>
-    <string name="custody_window_summary">%1$s · %2$s–%3$s · %4$s</string>
+    <string name="custody_window_summary">%1$s\u00A0· %2$s–%3$s\u00A0· %4$s</string>
     <string name="custody_window_day_label">Woche %1$d, %2$s</string>
     <string name="custody_window_dialog_title">Neue Umgangszeit</string>
     <string name="custody_window_weekday">Tag</string>

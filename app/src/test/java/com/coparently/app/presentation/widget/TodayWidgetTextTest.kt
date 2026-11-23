@@ -81,11 +81,11 @@ class TodayWidgetTextTest {
     fun `the tall widget names both parents and lists the day`() {
         val lines = TodayWidgetText.lines(strings, clock, day, parents, maxEvents = 4)
 
-        assertTrue(lines.title, lines.title.startsWith("Today · "))
+        assertTrue(lines.title, lines.title.startsWith("Today\u00A0· "))
         // The phone's owner is "you", as on Home's hero (UX audit H4).
         assertEquals(WidgetLine("Today with you", ParentColorChoice.PURPLE.color), lines.custody)
         assertEquals(
-            listOf(WidgetLine("15:00–19:00 · contact with Sam", ParentColorChoice.ORANGE.color)),
+            listOf(WidgetLine("15:00–19:00\u00A0· contact with Sam", ParentColorChoice.ORANGE.color)),
             lines.windows
         )
         assertEquals(WidgetLine("Handover to Sam in 5 days", ParentColorChoice.ORANGE.color), lines.handover)
@@ -105,7 +105,7 @@ class TodayWidgetTextTest {
 
         val lines = TodayWidgetText.lines(strings, clock, day, parents, maxEvents = 4)
 
-        assertEquals("3:00\u00A0PM–7:00\u00A0PM · contact with Sam", lines.windows.single().text)
+        assertEquals("3:00\u00A0PM–7:00\u00A0PM\u00A0· contact with Sam", lines.windows.single().text)
         assertEquals("9:00\u00A0AM–10:00\u00A0AM", lines.events.first().time)
     }
 
@@ -184,7 +184,7 @@ class TodayWidgetTextTest {
     fun `the reader's language picks the words and the plural`() {
         val lines = TodayWidgetText.lines(strings, clock, day, parents, maxEvents = 0)
 
-        assertTrue(lines.title, lines.title.startsWith("Сегодня · "))
+        assertTrue(lines.title, lines.title.startsWith("Сегодня\u00A0· "))
         assertEquals("Передача через 5 дней, дальше — Sam", lines.handover?.text)
         assertEquals("2 события сегодня", lines.footer)
     }

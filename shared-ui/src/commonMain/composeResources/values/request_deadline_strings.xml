@@ -18,8 +18,8 @@
     <string name="answer_by_pick_date">Pick a date…</string>
     <string name="answer_by_compressed">By %1$s</string>
     <plurals name="answer_by_reminders">
-        <item quantity="one">By %1$s. %2$s gets up to %3$d reminder, none at night.</item>
-        <item quantity="other">By %1$s. %2$s gets up to %3$d reminders, none at night.</item>
+        <item quantity="one">By %1$s. %2$s gets up to %3$d\u00A0reminder, none at night.</item>
+        <item quantity="other">By %1$s. %2$s gets up to %3$d\u00A0reminders, none at night.</item>
     </plurals>
     <string name="answer_by_outcome">No answer by then — you\u0027ll be told and can give 24 more hours. Nothing changes in the calendar without an answer.</string>
     <string name="answer_by_outcome_short">No answer by then — you\u0027ll be told and can give a little more time. Nothing changes in the calendar without an answer.</string>
@@ -31,8 +31,8 @@
          answerByText; %2$s after " · " is how long is left (request_left_*). A name is the other
          parent's, never a role. -->
     <string name="request_clock_answer_by">Answer by %1$s\u00A0· %2$s</string>
-    <string name="request_clock_sent">Sent · Answer by %1$s</string>
-    <string name="request_clock_opened">%1$s opened it · %2$s</string>
+    <string name="request_clock_sent">Sent\u00A0· Answer by %1$s</string>
+    <string name="request_clock_opened">%1$s opened it\u00A0· %2$s</string>
     <string name="request_clock_not_opened">%1$s hasn\u0027t opened it yet</string>
     <string name="request_clock_reminders">Reminders: %1$d\u00A0of\u00A0%2$d</string>
     <string name="request_clock_reminders_next">Reminders: %1$d\u00A0of\u00A0%2$d\u00A0· next %3$s</string>
@@ -43,7 +43,7 @@
     <string name="request_clock_give_last_chance_until">Give more time — until %1$s</string>
     <string name="request_clock_last_chance_once">Once. %1$s will have until %2$s.</string>
     <string name="request_clock_responder_unanswered">You didn\u0027t answer by the deadline. %1$s can give you more time, until %2$s.</string>
-    <string name="request_last_chance_banner_title">More time · %1$s left</string>
+    <string name="request_last_chance_banner_title">More time\u00A0· %1$s left</string>
     <string name="request_last_chance_banner_text">Answer by %1$s. Without an answer the request closes as “No answer”.</string>
     <string name="request_last_chance_failed">The extra time couldn\u0027t be sent. Try again.</string>
     <plurals name="request_left_days">

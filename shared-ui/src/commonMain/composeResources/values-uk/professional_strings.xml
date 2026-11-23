@@ -24,7 +24,7 @@
     <string name="professional_status_waiting_for_parents">Чекає на згоду обох батьків</string>
     <string name="professional_status_active_until">Може переглядати до %1$s</string>
     <string name="professional_status_expired">Доступ завершився %1$s</string>
-    <string name="professional_row_supporting">%1$s · %2$s</string>
+    <string name="professional_row_supporting">%1$s\u00A0· %2$s</string>
     <string name="professional_dialog_body">%1$s може до %2$s переглядати календар, графік проживання та батьківський план цієї родини — ніколи чат, витрати чи записи про дітей. Доступ починається лише за згоди обох батьків, і будь-хто з вас може закрити його будь-коли.</string>
     <string name="professional_revoke_confirm">Закрити доступ зараз (%1$s)? Згода другого з батьків не потрібна, і скасувати це не можна — знадобиться нове запрошення.</string>
     <string name="professional_dialog_consent">Я погоджуюся</string>
@@ -45,7 +45,7 @@
     <string name="professional_calendar_no_events">Немає подій</string>
     <string name="professional_calendar_previous">Попередні тижні</string>
     <string name="professional_calendar_next">Наступні тижні</string>
-    <string name="professional_calendar_event_supporting">%1$s · %2$s</string>
+    <string name="professional_calendar_event_supporting">%1$s\u00A0· %2$s</string>
     <string name="professional_unavailable">Немає чого показати — доступ не активний. Він відкриється, коли погодяться обоє батьків, і завершиться в день закінчення.</string>
     <string name="professional_plan_not_answered">Немає відповіді</string>
     <string name="professional_plan_answer_by">%1$s: %2$s</string>

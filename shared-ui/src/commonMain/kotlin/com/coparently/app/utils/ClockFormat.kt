@@ -64,8 +64,10 @@ fun monthInFormatForm(pattern: String): String {
 
 /**
  * [text] — a formatted date — with its spaces made no-break, so a line never ends between a day
- * and its month ("4 | октября"). A space after a comma stays breakable: the weekday of a full
- * date ("суббота, 4 октября 2026 г.") may still take a line of its own when the rest does not fit.
+ * and its month ("4 | октября"). A space after a comma stays breakable — the weekday of a full
+ * date ("суббота, 4 октября 2026 г.") may still take a line of its own when the rest does not fit —
+ * except after a short weekday that opens the date ("Mi., 13. Mai", "сб, 16 трав.") and before a
+ * time ("13. Mai, 20:00"): an abbreviation or a time alone on a line reads as a fragment.
  *
  * @param text a date as a formatter wrote it
  * @return the same text, unbreakable between its parts
@@ -73,15 +75,36 @@ fun monthInFormatForm(pattern: String): String {
 fun unbreakableDate(text: String): String = buildString(text.length) {
     text.forEachIndexed { index, c ->
         val afterComma = index > 0 && text[index - 1] == ','
-        append(if (c == ' ' && !afterComma) NO_BREAK_SPACE else c)
+        val breakable = afterComma &&
+            !opensWithShortWeekday(text, index - 1) &&
+            !startsWithTime(text, index + 1)
+        append(if (c == ' ' && !breakable) NO_BREAK_SPACE else c)
     }
 }
+
+/** Whether the text before the comma at [commaIndex] is one short word that opens [text]: a weekday's abbreviation. */
+private fun opensWithShortWeekday(text: String, commaIndex: Int): Boolean {
+    val word = text.substring(0, commaIndex)
+    return word.isNotEmpty() && word.length <= SHORT_WEEKDAY_MAX && word.none { it == ' ' || it == NO_BREAK_SPACE }
+}
+
+/** Whether a time of day ("20:00", "8:00 PM") starts at [index] of [text]. */
+private fun startsWithTime(text: String, index: Int): Boolean {
+    val digits = text.drop(index).takeWhile { it.isDigit() }.length
+    return digits in 1..2 &&
+        text.getOrNull(index + digits) == ':' &&
+        text.getOrNull(index + digits + 1)?.isDigit() == true
+}
+
+/** The longest weekday abbreviation a formatter writes before a comma ("Mi.", "Wed", "сб", "Thu."). */
+private const val SHORT_WEEKDAY_MAX = 5
 
 /**
  * [pattern] — a date pattern a platform wrote for a skeleton — with the spaces between its fields
  * made no-break, as [unbreakableDate] does to the text: "MMM d" keeps "May 14" on one line, while
- * a space after a comma ("EEE, MMM d") stays a place to break. Spaces inside a quoted literal are
- * the language's own words and are left alone.
+ * a space after a comma ("EEEE, MMM d") stays a place to break — but not after an abbreviated
+ * weekday ("EEE, MMM d": "Wed, May 14" stays whole, never "Mi., | 13. Mai") nor before an hour
+ * ("d MMM, HH:mm"). Spaces inside a quoted literal are the language's own words and are left alone.
  *
  * @param pattern a `java.time` or Unicode date pattern
  * @return the same pattern, unbreakable between its fields
@@ -91,9 +114,27 @@ fun noBreakPattern(pattern: String): String = buildString(pattern.length) {
     pattern.forEachIndexed { index, c ->
         if (c == '\'') quoted = !quoted
         val afterComma = index > 0 && pattern[index - 1] == ','
-        append(if (c == ' ' && !quoted && !afterComma) NO_BREAK_SPACE else c)
+        val breakable = afterComma && !commaJoinsItsFields(pattern, index - 1)
+        append(if (c == ' ' && !quoted && !breakable) NO_BREAK_SPACE else c)
     }
 }
+
+/**
+ * Whether the comma at [commaIndex] of [pattern] follows an abbreviated weekday (`E`, `EE`, `EEE`,
+ * `c`/`e` up to three) or comes before an hour field: the two places a break would orphan a part.
+ */
+private fun commaJoinsItsFields(pattern: String, commaIndex: Int): Boolean {
+    val before = pattern.getOrNull(commaIndex - 1)
+    var run = 0
+    while (commaIndex - 1 - run >= 0 && pattern[commaIndex - 1 - run] == before) run++
+    val shortWeekday = before != null && before in WEEKDAY_FIELDS && run <= SHORT_FIELD_MAX
+    val next = pattern.drop(commaIndex + 1).firstOrNull { it != ' ' }
+    return shortWeekday || (next != null && next in HOUR_FIELDS)
+}
+
+private const val WEEKDAY_FIELDS = "Eec"
+private const val HOUR_FIELDS = "hHkKjJ"
+private const val SHORT_FIELD_MAX = 3
 
 /**
  * [text] — a time of day as a formatter wrote it, "3:30 PM" — with every space no-break, so the
@@ -114,6 +155,12 @@ fun unbreakableSeparator(separator: String): String = separator.replace(' ', NO_
  * one.
  */
 const val META_SEPARATOR: String = "\u00A0· "
+
+/**
+ * The comma between a deadline's day and its time ("Wed, May 13, 8:00 PM"): no-break, so the time
+ * never takes a line of its own.
+ */
+const val ANSWER_BY_TIME_SEPARATOR: String = ",\u00A0"
 
 /**
  * The separator of a time range within one day ("3:30 PM – 4:30 PM"): no-break on both sides of
