@@ -1324,9 +1324,16 @@ final class ShellUITests: XCTestCase {
     }
 
     /// Types [text] into [field] through the keyboard, once a tap has focused it.
+    /// On a simulator booted moments before, the first tap can land before the field takes focus,
+    /// and typing then fails with "Neither element nor any descendant has keyboard focus" (CI, 23
+    /// November 2026): the tap is repeated until the field holds the focus, three times at most.
     private func type(_ text: String, into field: XCUIElement) throws {
-        press(field)
-        _ = app.keyboards.firstMatch.waitForExistence(timeout: 5)
+        let focused = NSPredicate(format: "hasKeyboardFocus == true")
+        for _ in 0..<3 {
+            press(field)
+            _ = app.keyboards.firstMatch.waitForExistence(timeout: 5)
+            if app.descendants(matching: .any).matching(focused).firstMatch.waitForExistence(timeout: 5) { break }
+        }
         app.typeText(text)
     }
 

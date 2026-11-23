@@ -197,8 +197,8 @@ test('render says so when the emulator jobs were skipped on a draft, and shows t
   ];
   const md = report.render({jobs, emulatorsSkippedOnDraft: true});
   assert.match(md, /\| Android — two parents on the Firebase emulators \| skipped \|/);
-  assert.match(md, /Emulator jobs skipped on a draft: add the `full-ci` label to run them/);
+  assert.match(md, /Emulator and iPhone jobs skipped on a draft: add the `full-ci` label to run them/);
   assert.equal(JSON.parse(/<!-- ci-report-json (.*) -->/.exec(md)[1]).emulatorsSkippedOnDraft, true);
   // Absent when they ran (or were skipped for their paths): no stray note.
-  assert.doesNotMatch(report.render({jobs}), /Emulator jobs skipped on a draft/);
+  assert.doesNotMatch(report.render({jobs}), /Emulator and iPhone jobs skipped on a draft/);
 });

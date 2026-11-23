@@ -357,3 +357,18 @@ tasks.withType<Test>().configureEach {
         showCauses = true
     }
 }
+
+// The Firebase pods as CI's cache holds them (`shared-ios` and `ios-tests`, CI speed, November
+// 2026): with `-Pcoplanly.prebuiltPods=true` the plugin's pod steps do not run, and what links this
+// module links the frameworks and build settings already under `build/cocoapods`. Without it the
+// plugin runs `pod install` again first, which rewrites the Pods project, and `xcodebuild` then
+// compiled FirebaseFirestoreInternal from source on every run (22 to 33 minutes) although the
+// cache had restored it. CI passes it only when the cache was restored under its exact key (the
+// Xcode and the three lines above that decide the pods), never on a near miss: pods built from
+// another spec must not be linked. Locally there is no reason to pass it.
+if (providers.gradleProperty("coplanly.prebuiltPods").orNull == "true") {
+    val podSteps = listOf("podGen", "podInstall", "podSetupBuild", "podBuild", "podImport")
+    tasks.configureEach {
+        if (podSteps.any { name.startsWith(it) }) enabled = false
+    }
+}

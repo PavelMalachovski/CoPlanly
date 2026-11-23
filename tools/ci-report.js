@@ -253,8 +253,8 @@ function describeArtifact(name) {
   return null;
 }
 
-/** Said when the emulator jobs were left out because the pull request is a draft (ci.yml). */
-const EMULATORS_SKIPPED_NOTE = 'Emulator jobs skipped on a draft: add the `full-ci` label to run them ' +
+/** Said when the emulator and macOS jobs were left out because the pull request is a draft (ci.yml). */
+const EMULATORS_SKIPPED_NOTE = 'Emulator and iPhone jobs skipped on a draft: add the `full-ci` label to run them ' +
   '(they also run when the pull request is ready for review).';
 
 /**

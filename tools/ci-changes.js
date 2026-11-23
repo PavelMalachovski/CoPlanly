@@ -41,6 +41,20 @@ const IOS_APP = /^iosApp\//;
 const IOS_GATE_INPUTS = /^(tools\/ios\/|tools\/test\/check-ios-writes\.test\.js$|tools\/e2e\/pairing-smoke\.js$|app\/src\/test\/resources\/wire\/current\/|firestore\.rules$|functions\/)/;
 
 /**
+ * What the iPhone tours draw (`ios-tour` and `ios-tour-appearance`, owner decision of 23 November
+ * 2026: they run when a pull request touches what they show, and always on `main`): `:shared-ui`'s
+ * resources and its screens and theme (`presentation/`) and the iPhone's Kotlin shell (`ios/`) in
+ * any main source set, the iPhone app's project but for the push test, and the tour's own seed and
+ * crash filter. The build ([BUILD]) runs them too. A data, domain, wording, server, Android or test
+ * change does not: what it changes, the emulator tests and the walk hold.
+ */
+const IOS_TOUR_INPUTS = new RegExp(
+  '^(shared-ui/src/[A-Za-z]+Main/(composeResources/|kotlin/com/coparently/app/(presentation|ios)/)' +
+    '|iosApp/(?!CoPlanlyUITests/PushUITests\\.swift$)' +
+    '|tools/ios/(seed-shell-family\\.js|known-tour-crash\\.py)$)',
+);
+
+/**
  * Paths the `ios-app` job is known not to read (part B, Task 12): docs, the Android app (but for the
  * `wire/current/` fixtures, which [IOS_GATE_INPUTS] names), the web pages and their tests, the
  * scripts under `tools/` other than the gate's, the non-workflow files under `.github/`, the index
@@ -270,12 +284,12 @@ function formatEvent(decision) {
 
 /** The answer for "run everything". */
 function everything() {
-  return { android: true, e2e: true, screenshots: true, upgrade: true, matrix: FULL_MATRIX, r8runtime: true, web: true, shared: true, ios: true };
+  return { android: true, e2e: true, screenshots: true, upgrade: true, matrix: FULL_MATRIX, r8runtime: true, web: true, shared: true, ios: true, iosTour: true };
 }
 
 /** The answer for a diff no job reads. */
 function nothing() {
-  return { android: false, e2e: false, screenshots: false, upgrade: false, matrix: [LEG_30], r8runtime: false, web: false, shared: false, ios: false };
+  return { android: false, e2e: false, screenshots: false, upgrade: false, matrix: [LEG_30], r8runtime: false, web: false, shared: false, ios: false, iosTour: false };
 }
 
 /**
@@ -303,7 +317,9 @@ function decide(paths) {
   // The iPhone app links the shared modules' framework, so it runs whenever they do, and on its own project.
   // And on what the write gate is held to, and on any path it is not known to skip.
   const ios = shared || kept.some((p) => IOS_APP.test(p) || IOS_GATE_INPUTS.test(p) || !NON_IOS.test(p));
-  return { android, e2e, screenshots, upgrade, matrix: fullMatrix ? FULL_MATRIX : [LEG_30], r8runtime, web, shared, ios };
+  // The build itself, not a shared module's source: a data-layer change does not change a screen.
+  const iosTour = ios && kept.some((p) => BUILD.test(p) || IOS_TOUR_INPUTS.test(p));
+  return { android, e2e, screenshots, upgrade, matrix: fullMatrix ? FULL_MATRIX : [LEG_30], r8runtime, web, shared, ios, iosTour };
 }
 
 /** The `$GITHUB_OUTPUT` lines for a decision. */
@@ -318,6 +334,7 @@ function format(decision) {
     `web=${decision.web}`,
     `shared=${decision.shared}`,
     `ios=${decision.ios}`,
+    `ios_tour=${decision.iosTour}`,
   ].join('\n') + '\n';
 }
 
@@ -342,7 +359,7 @@ if (require.main === module) {
     process.stderr.write(
       `android=${decision.android} e2e=${decision.e2e} screenshots=${decision.screenshots} ` +
         `upgrade=${decision.upgrade} ` +
-        `emulators=[${legs}] r8runtime=${decision.r8runtime} web=${decision.web} shared=${decision.shared} ios=${decision.ios}\n`,
+        `emulators=[${legs}] r8runtime=${decision.r8runtime} web=${decision.web} shared=${decision.shared} ios=${decision.ios} ios_tour=${decision.iosTour}\n`,
     );
   }
 }
