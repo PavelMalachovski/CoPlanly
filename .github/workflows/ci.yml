@@ -2358,14 +2358,22 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+      # Each check run reads one folder: the shared modules' own tests here, the emulator tests'
+      # below (the JUnit action reads one glob, and `*/build/...` would count those twice).
+      - name: Sort the test results by check run
+        if: always()
+        run: |
+          mkdir -p build/junit/shared-ios build/junit/ios-emulators
+          cp shared/build/test-results/iosSimulatorArm64Test/*.xml push-wording/build/test-results/iosSimulatorArm64Test/*.xml build/junit/shared-ios/ 2>/dev/null || true
+          cp shared-data/build/test-results/iosSimulatorArm64Test/*.xml shared-ui/build/test-results/iosSimulatorArm64Test/*.xml build/junit/ios-emulators/ 2>/dev/null || true
+          ls build/junit/*
+
       - name: Upload test results (JUnit XML)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: junit-shared-ios
-          path: |
-            shared/build/test-results/iosSimulatorArm64Test/*.xml
-            push-wording/build/test-results/iosSimulatorArm64Test/*.xml
+          path: build/junit/shared-ios/*.xml
           if-no-files-found: ignore
           retention-days: 14
 
@@ -2374,7 +2382,7 @@ jobs:
         uses: mikepenz/action-junit-report@v6
         with:
           check_name: Shared tests (iOS simulator)
-          report_paths: shared/build/test-results/iosSimulatorArm64Test/*.xml,push-wording/build/test-results/iosSimulatorArm64Test/*.xml
+          report_paths: build/junit/shared-ios/*.xml
           detailed_summary: true
           # A job that died before writing results must not publish a green check.
           require_tests: true
@@ -2397,9 +2405,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: junit-ios-emulators
-          path: |
-            shared-data/build/test-results/iosSimulatorArm64Test/*.xml
-            shared-ui/build/test-results/iosSimulatorArm64Test/*.xml
+          path: build/junit/ios-emulators/*.xml
           if-no-files-found: ignore
           retention-days: 14
 
@@ -2408,7 +2414,7 @@ jobs:
         uses: mikepenz/action-junit-report@v6
         with:
           check_name: iPhone tests on the emulators
-          report_paths: shared-data/build/test-results/iosSimulatorArm64Test/*.xml,shared-ui/build/test-results/iosSimulatorArm64Test/*.xml
+          report_paths: build/junit/ios-emulators/*.xml
           detailed_summary: true
           # A job that died before writing results must not publish a green check.
           require_tests: true
