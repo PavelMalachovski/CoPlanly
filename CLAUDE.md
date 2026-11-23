@@ -984,8 +984,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   degrades gracefully if it is missing (see the conditional apply in `app/build.gradle.kts`).
 - **GitHub CI runs on every pull request, and on every push to `main`** — a push to a
   feature branch with no PR open is not built (`.github/workflows/ci.yml`, added
-  August 2026 — this line used to say there was none). Twenty-one jobs that test (this line used to
-  say seventeen, before `ios-app` became five jobs; sixteen, before `ios-app`; fourteen, before `shared` and `shared-ios`; thirteen, before `web`; eleven before `upgrade` and `r8-runtime`; ten before detekt left the lint job; eight before `screenshots`
+  August 2026 — this line used to say there was none). Twenty jobs that test (this line used to
+  say seventeen, before `ios-app` became four jobs and its emulator tests joined `shared-ios`; sixteen, before `ios-app`; fourteen, before `shared` and `shared-ios`; thirteen, before `web`; eleven before `upgrade` and `r8-runtime`; ten before detekt left the lint job; eight before `screenshots`
   and `e2e`; seven before `instrumented`), plus `report`, which only reads them (below): `changes` (a cheap gate,
   below), four Android ones — `build-test` (`assembleDebug` + `testDebugUnitTest` in a
   single invocation), `static` (`lint`, which since the final review of phases 1–2 also analyses the three shared
@@ -1001,7 +1001,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   alias, `single<I> { get<Impl>() }`, has no entry of its own: were R8 to merge an interface into
   its one implementer, the alias would replace the definition it asks for and the minified app would
   overflow the stack at launch, and nothing else starts the graph in a minified build) —
-  plus the shared modules' two, `shared` and `shared-ios` (below), the iPhone app's five (`ios-build`, `ios-tests`, `ios-shell`, `ios-tour`, `ios-tour-appearance`, below), Cloud Functions, `web` (below), the
+  plus the shared modules' two, `shared` and `shared-ios` (below), the iPhone app's four (`ios-build`, `ios-shell`, `ios-tour`, `ios-tour-appearance`, below), Cloud Functions, `web` (below), the
   Firestore rules suite against the emulator, and `invariants` (`node tools/check-invariants.js`, no
   dependencies and no Android SDK: locale completeness, format-argument agreement across the
   five locales, the four-way push-type agreement item 15 states, that no production code imports
@@ -1360,14 +1360,25 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   shared state's (Task 10, commonTest and `androidHostTest`) — and compiles
   `:shared-ui:compileKotlinIosSimulatorArm64`, its iOS klib with `Res`, the theme, the common
   components and the ViewModels, and `compileTestKotlinIosSimulatorArm64`, its commonTest (run on
-  the simulator since MON-24 phase 3, Task 5, by the `ios-tests` job, whose test executable links the
+  the simulator since MON-24 phase 3, Task 5, by the `shared-ios` job, whose test executable links the
   Firebase frameworks `shared-data`'s pods build, `gatherFirebaseFrameworksForTests` in
-  `shared-ui/build.gradle.kts`); the strings' parity tests run in the app, in `build-test`. **`shared-ios`** runs `:shared:iosSimulatorArm64Test`,
-  `:shared-data:iosSimulatorArm64Test` and `:shared-ui:linkDebugFrameworkIosSimulatorArm64` (the
+  `shared-ui/build.gradle.kts`); the strings' parity tests run in the app, in `build-test`. **`shared-ios`** ("Shared and iPhone tests on the simulator (macOS)") runs `:shared:iosSimulatorArm64Test`,
+  `:push-wording:iosSimulatorArm64Test` and `:shared-ui:linkDebugFrameworkIosSimulatorArm64` (the
   iPhone app's one framework, `Shared`, static, exporting `:shared` and `:shared-data`, which make
   none of their own since Task 9)
-  (check run "Shared tests (iOS simulator)", `require_tests`) on a **GitHub-hosted** `macos-latest`
-  runner, gated on `shared` like the Linux job (owner decision, 1 November 2026). The repository is
+  (check run "Shared tests (iOS simulator)", `require_tests`), and **since 23 November 2026 the
+  iPhone tests on the emulators** that were the `ios-app` job's: `:shared-data:iosSimulatorArm64Test`
+  and `:shared-ui:iosSimulatorArm64Test` on a simulator it boots (`COPLANLY_SIMULATOR_UDID`, so
+  the Keychain tests run; check run "iPhone tests on the emulators", `require_tests`), on Firebase
+  emulators, with the write gate: `IosWriteGateTest` writes every kind of shared record through
+  the iPhone data layer and `tools/ios/check-ios-writes.js` reads each back from the Firestore
+  emulator and compares its keys and types with what Android writes; a step fails the job if any
+  emulator test skipped itself or the write gate did not report that it ran. One job rather than
+  two, because each built the pods and ran `:shared-data`'s tests, and because the free plan runs
+  five macOS jobs at once and a job waiting for a runner spends its own time limit (an iPhone tour
+  was cancelled that way before its first step). It runs on a **GitHub-hosted** `macos-latest`
+  runner, gated on the iPhone jobs' `ios` (which includes `shared`) and, on a draft, on the
+  `full-ci` label (owner decisions, 1 and 23 November 2026). The repository is
   public, so macOS runners are free, and a fork's code runs on GitHub's machine, never on anybody's
   own. It replaced a self-hosted job on the owner's Mac before that job ever ran; don't bring a
   self-hosted runner back for this without reading `docs/IOS-RUNNER.md`, which keeps the setup and
@@ -1384,7 +1395,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   saved only when that step succeeded, so a run that stopped before the pods never saves a cache
   without them. **On the exact key the pods are linked as the cache holds them**
   (`-Pcoplanly.prebuiltPods=true`, which disables the plugin's `podGen`, `podInstall`,
-  `podSetupBuild`, `podBuild` and `podImport` tasks; `shared-ios` and `ios-tests` pass it only when
+  `podSetupBuild`, `podBuild` and `podImport` tasks; `shared-ios` passes it only when
   `cache-hit` is true): the plugin ran `pod install` again first, which rewrote the Pods project, and
   `xcodebuild` compiled FirebaseFirestoreInternal from source on every run, 22 minutes here and 33
   in the iPhone job, although the cache held it. Never pass it on a near miss: the pods restored by
@@ -1394,8 +1405,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `shared-ui/src` (the other
   modules' `detektBaseline` is disabled: detekt's baseline task replaces the file's findings with
   its own run's, so a second writer would erase the first's).
-- **Five jobs build and run the iPhone app** (MON-24 phase 3, November 2026; split out of one
-  `ios-app` job on 23 November 2026, which ran them one after another for about 2 h 20 min). All
+- **Four jobs build and run the iPhone app** (MON-24 phase 3, November 2026; split out of one
+  `ios-app` job on 23 November 2026, its emulator tests joining `shared-ios`, which ran them one after another for about 2 h 20 min). All
   are gated on `changes`' `ios` output: whatever runs `shared`, any path under `iosApp/`, the write
   gate's inputs (`tools/ios/`, `wire/current/`, `firestore.rules`, `functions/`,
   `tools/e2e/pairing-smoke.js`), and any path `NON_IOS` does not name, as an unfamiliar path runs
@@ -1411,16 +1422,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
     still runs 20 seconds later (artifact `ios-launch`), and hands the build products to the jobs
     after it as one tarred artifact, `ios-products` (`upload-artifact` keeps no executable bit). Its
     Swift package cache is restored and saved apart, so a red run still keeps what it resolved.
-  - **`ios-tests`** ("iPhone tests on the emulators (macOS)") starts at once, needing no app build:
-    `:shared-data:iosSimulatorArm64Test` and `:shared-ui:iosSimulatorArm64Test` on a simulator it
-    boots (`COPLANLY_SIMULATOR_UDID`, so the Keychain tests run; check run "iPhone tests on the
-    emulators", `require_tests`), on Firebase emulators, with the write gate: `IosWriteGateTest`
-    writes every kind of shared record through the iPhone data layer and
-    `tools/ios/check-ios-writes.js` reads each back from the Firestore emulator and compares its
-    keys and types with what Android writes. A step then fails the job if any emulator test skipped
-    itself or the write gate did not report that it ran. It restores the pods' cache `shared-ios`
-    saves and never saves it; on the exact key it links them as they are
-    (`-Pcoplanly.prebuiltPods=true`, below).
+  - The iPhone tests on the emulators and the write gate run in **`shared-ios`** (above), which
+    needs no app build and starts at once.
   - **`ios-shell`**, after `ios-build`, on fresh emulators: seeds a paired family
     (`tools/ios/seed-shell-family.js`) and runs the XCUITest walk of the native shell
     (`iosApp/CoPlanlyUITests/`: the tabs, Family → Expenses → the Add expense sheet, a back swipe
@@ -1586,7 +1589,7 @@ end of Task 11; returning them to `internal` is carried to phase 3 (ROADMAP MON-
   counts as passing; nothing is a required check today, so this is safe, but marking one required
   later means a PR merges on a skip rather than a build.
 - **A draft pull request runs the emulator jobs only with the `full-ci` label** (1 November 2026,
-  owner decision; the macOS jobs, `shared-ios` and the five iPhone jobs, joined them on 23 November
+  owner decision; the macOS jobs, `shared-ios` and the four iPhone jobs, joined them on 23 November
   2026). `instrumented`, `e2e`, `upgrade` and `r8-runtime` are the expensive jobs, so on
   a draft they are skipped on every push unless the pull request carries the label `full-ci`. They
   run as before once the pull request is ready for review, on a push to `main` and on a manual run.
@@ -4109,7 +4112,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     hold the two to one contract — change a behaviour in both. On the iOS simulator the contract
     runs over an in-memory store everywhere (`SealedSecurePreferencesContractTest`), and over the
     real Keychain in `KeychainSecurePreferencesTest`, which is no longer `@Ignore`d (MON-24 phase 3,
-    Task 5): the `ios-tests` job runs it on the simulator it booted (`COPLANLY_SIMULATOR_UDID`), from a
+    Task 5): the `shared-ios` job runs it on the simulator it booted (`COPLANLY_SIMULATOR_UDID`), from a
     test binary with simulated Keychain entitlements (`gradle/ios-test-entitlements.plist`).
     Elsewhere (`shared-ios`, a Mac without the variable) `shared-data/build.gradle.kts` leaves it
     out of the run, because a binary spawned `--standalone` has no Keychain (`errSecNotAvailable`)

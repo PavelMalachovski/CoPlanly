@@ -93,3 +93,12 @@ the exact path list for `ios_tour`.
 On this branch's pull request: a first run warms the pods cache (or hits it), a second run shows
 `podBuild*` skipped, and the per-job times. `ci-changes` by its unit tests. A run with the `full-ci`
 label on a draft, and a data-only test commit to see the tours skip.
+
+## Revision after the first run (23 November 2026)
+
+The first run showed two things. A job waiting for a macOS runner spends its own time limit:
+`ios-tour-appearance` waited its whole 45 minutes and was cancelled before its first step, because
+the free plan runs five macOS jobs at once and the run held five beside a run on `main`. And
+`ios-tests` and `shared-ios` each built the pods cold and each ran `:shared-data`'s tests. So
+`ios-tests` joined `shared-ios` (one pods build, one job; at most four macOS jobs of a run at once),
+and every macOS job's limit leaves room for a queue.
