@@ -170,7 +170,7 @@ test('an unfamiliar path is never skipped by the Android gate', () => {
 test('format writes one GITHUB_OUTPUT line per key, the matrix as one-line JSON', () => {
   const lines = format(decide(['app/src/main/res/values/strings.xml'])).trim().split('\n');
   assert.deepEqual(lines.map((l) => l.split('=')[0]),
-    ['android', 'e2e', 'screenshots', 'upgrade', 'matrix', 'r8runtime', 'web', 'shared', 'ios']);
+    ['android', 'e2e', 'screenshots', 'upgrade', 'matrix', 'r8runtime', 'web', 'shared', 'ios', 'ios_tour']);
   const matrix = JSON.parse(lines[4].slice('matrix='.length));
   assert.equal(matrix[0]['api-level'], 30);
 });
@@ -559,4 +559,47 @@ test('the iPhone app job skips what the app cannot read', () => {
   assert.equal(nothing().ios, false);
   assert.equal(format(nothing()).includes('ios=false'), true);
   assert.equal(format(everything()).includes('ios=true'), true);
+});
+
+test('the iPhone tours run when a screen, a string, the iPhone app or the build changes', () => {
+  for (const path of [
+    'shared-ui/src/commonMain/kotlin/com/coparently/app/presentation/home/HomeScreen.kt',
+    'shared-ui/src/commonMain/kotlin/com/coparently/app/presentation/theme/Color.kt',
+    'shared-ui/src/commonMain/composeResources/values/home_strings.xml',
+    'shared-ui/src/commonMain/composeResources/font/onest_bold.ttf',
+    'shared-ui/src/iosMain/kotlin/com/coparently/app/ios/shell/NativeShell.kt',
+    'shared-ui/src/iosMain/kotlin/com/coparently/app/presentation/common/AppIcon.ios.kt',
+    'iosApp/project.yml',
+    'iosApp/CoPlanly/AppDelegate.swift',
+    'iosApp/CoPlanlyUITests/ShellUITests.swift',
+    'iosApp/scripts/simulator.sh',
+    'tools/ios/seed-shell-family.js',
+    'tools/ios/known-tour-crash.py',
+    '.github/workflows/ci.yml',
+    'gradle/libs.versions.toml',
+  ]) {
+    assert.equal(decide([path]).iosTour, true, path);
+  }
+});
+
+test('the iPhone tours skip a data, server, Android or push test change', () => {
+  for (const path of [
+    'shared-data/src/commonMain/kotlin/com/coparently/app/data/sync/SyncService.kt',
+    'shared/src/commonMain/kotlin/com/coparently/app/domain/model/Event.kt',
+    'push-wording/src/commonMain/kotlin/com/coparently/app/pushwording/PushWording.kt',
+    'shared-ui/src/commonTest/kotlin/com/coparently/app/presentation/home/HomeFeedTest.kt',
+    'functions/index.js',
+    'firestore.rules',
+    'app/src/main/AndroidManifest.xml',
+    'iosApp/CoPlanlyUITests/PushUITests.swift',
+    'docs/ROADMAP.md',
+  ]) {
+    assert.equal(decide([path]).iosTour, false, path);
+  }
+});
+
+test('the tours never run without the iPhone app, and everything runs them', () => {
+  assert.equal(everything().iosTour, true);
+  assert.equal(nothing().iosTour, false);
+  assert.equal(decide(['docs/x.md']).iosTour, false);
 });
