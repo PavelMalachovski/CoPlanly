@@ -735,26 +735,40 @@ abstract class StringsToAndroidRes : DefaultTask() {
         dir.asFileTree.matching { include(STRING_FILES) }
     }
 
+    /**
+     * True when the Google Services plugin applies (a `google-services.json` is present): it
+     * generates `default_web_client_id` itself, and two generated resource directories defining
+     * one string is a duplicate-resource error rather than an overlay.
+     */
+    @get:Input
+    abstract val googleServicesGenerated: Property<Boolean>
+
     /** Set by AGP (`addGeneratedSourceDirectory`). */
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
     @TaskAction
     fun copy() {
+        val dropWebClientId = googleServicesGenerated.get()
         fileSystem.sync {
             from(composeResources) { include(STRING_FILES) }
             into(outputDir)
+            if (dropWebClientId) {
+                filter { line -> if (WEB_CLIENT_ID in line) "" else line }
+            }
         }
     }
 
     private companion object {
         const val STRING_FILES = "values*/*.xml"
+        const val WEB_CLIENT_ID = "name=\"default_web_client_id\""
     }
 }
 
 val stringsToAndroidRes = tasks.register<StringsToAndroidRes>("stringsToAndroidRes") {
     description = "Copies :shared-ui's string resources into this app's generated Android resources."
     composeResources.set(rootProject.layout.projectDirectory.dir("shared-ui/src/commonMain/composeResources"))
+    googleServicesGenerated.set(file("google-services.json").exists())
 }
 
 androidComponents {
