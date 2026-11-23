@@ -430,6 +430,7 @@ case "${1:-}" in
   pick) pick ;;
   launch) shift; launch "$@" ;;
   shell-test) shift; shell_test "$@" ;;
+  jump-test) shift; ui_test "$1" "$2" jump testJumpToDate yes ;;
   push-test) shift; push_test "$@" ;;
   tour) shift; tour "$@" ;;
   tour-appearance) shift; tour_appearance "$@" ;;

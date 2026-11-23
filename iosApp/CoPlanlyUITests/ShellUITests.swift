@@ -54,6 +54,18 @@ final class ShellUITests: XCTestCase {
         super.record(issue)
     }
 
+    /// The jump-to-date sheet alone: sign in, open it from the month title, close it twice. A
+    /// short reproduction of the walk's "Jump to date" step for a local run (`simulator.sh jump-test`).
+    func testJumpToDate() throws {
+        let environment = ProcessInfo.processInfo.environment
+        let email = try XCTUnwrap(environment["COPLANLY_UITEST_EMAIL"], "No seeded account was handed to the test")
+        let password = try XCTUnwrap(environment["COPLANLY_UITEST_PASSWORD"])
+        app.launchEnvironment["COPLANLY_EMULATOR_HOST"] = "127.0.0.1"
+        app.launch()
+        try signIn(email: email, password: password)
+        try jumpToDateSwipeDown()
+    }
+
     func testShellWalk() throws {
         let environment = ProcessInfo.processInfo.environment
         let email = try XCTUnwrap(environment["COPLANLY_UITEST_EMAIL"], "No seeded account was handed to the test")
