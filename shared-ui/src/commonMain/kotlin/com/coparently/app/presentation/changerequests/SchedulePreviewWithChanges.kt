@@ -1,8 +1,12 @@
 package com.coparently.app.presentation.changerequests
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -16,6 +20,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.custody.CustodyHistory
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.CustodyResolver
@@ -29,11 +36,12 @@ import com.coparently.app.presentation.custody.labelRes
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.labelLargeEmphasized
 import com.coparently.app.resources.Res
-import com.coparently.app.resources.change_request_proposed
 import com.coparently.app.resources.custody_proposal_preview
 import com.coparently.app.resources.schedule_preview_now
+import com.coparently.app.resources.schedule_preview_proposed
 import com.coparently.app.resources.schedule_preview_show
 import com.coparently.app.utils.ReaderDateText
+import com.coparently.app.utils.unbreakableDate
 import kotlinx.datetime.yearMonth
 import org.jetbrains.compose.resources.stringResource
 
@@ -87,7 +95,7 @@ fun SchedulePreviewWithChanges(
             text = stringResource(
                 Res.string.custody_proposal_preview,
                 stringResource(model.modelType.labelRes()),
-                ReaderDateText.date(model.startDate, "yMMMd")
+                unbreakableDate(ReaderDateText.date(model.startDate, "yMMMd"))
             ),
             style = MaterialTheme.typography.bodyMedium
         )
@@ -101,11 +109,19 @@ fun SchedulePreviewWithChanges(
     }
 }
 
-/** The Proposed | Now switch, the system's segmented control on the iPhone (design item 1). */
+/**
+ * The Proposed | Now switch, the system's segmented control on the iPhone (design item 1).
+ *
+ * On Android Material's segmented buttons, with no check mark, while both labels fit their half on
+ * one line; where they do not (German or Ukrainian at 150 % and more) two filter chips that wrap
+ * as wholes, because a segment broke its label inside the word ("Vorgeschlag|en") and grew taller
+ * than its neighbour (text review, November 2026).
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ProposedOrNow(showProposed: Boolean, background: Color, onShowProposed: (Boolean) -> Unit) {
     val labels = listOf(
-        stringResource(Res.string.change_request_proposed),
+        stringResource(Res.string.schedule_preview_proposed),
         stringResource(Res.string.schedule_preview_now)
     )
     val selected = if (showProposed) 0 else 1
@@ -117,15 +133,45 @@ private fun ProposedOrNow(showProposed: Boolean, background: Color, onShowPropos
         background = background,
         accessibilityLabel = stringResource(Res.string.schedule_preview_show)
     ) {
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            labels.forEachIndexed { index, label ->
-                SegmentedButton(
-                    selected = index == selected,
-                    onClick = { onShowProposed(index == 0) },
-                    shape = SegmentedButtonDefaults.itemShape(index = index, count = labels.size),
-                    label = { Text(label) }
-                )
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val measurer = rememberTextMeasurer()
+            val style = MaterialTheme.typography.labelLarge
+            val room = with(LocalDensity.current) { (maxWidth / labels.size - SEGMENT_LABEL_INSET).roundToPx() }
+            val fits = labels.all { label ->
+                measurer.measure(label, style, maxLines = 1, softWrap = false).size.width <= room
+            }
+            if (fits) {
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    labels.forEachIndexed { index, label ->
+                        SegmentedButton(
+                            selected = index == selected,
+                            onClick = { onShowProposed(index == 0) },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = labels.size),
+                            icon = {},
+                            label = { Text(label, maxLines = 1, softWrap = false) }
+                        )
+                    }
+                }
+            } else {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.XS)
+                ) {
+                    labels.forEachIndexed { index, label ->
+                        FilterChip(
+                            selected = index == selected,
+                            onClick = { onShowProposed(index == 0) },
+                            label = { Text(label) }
+                        )
+                    }
+                }
             }
         }
     }
 }
+
+/**
+ * What a segment keeps around its label: Material's 12 dp content padding on each side, and its
+ * outline.
+ */
+private val SEGMENT_LABEL_INSET = 26.dp

@@ -3,8 +3,10 @@ package com.coparently.app.presentation.support
 import com.coparently.app.domain.money.DecimalText
 import com.coparently.app.domain.payment.PaymentQr
 import com.coparently.app.domain.support.SupportTerms
+import com.coparently.app.utils.ReaderDateText
 import com.coparently.app.utils.ReaderMoneyText
 import com.coparently.app.utils.readerMonthTitle
+import com.coparently.app.utils.unbreakableDate
 import kotlinx.datetime.YearMonth
 
 /*
@@ -25,3 +27,11 @@ fun supportAmount(terms: SupportTerms): String =
  * month's own form "LLLL yyyy" in the language the app speaks.
  */
 fun supportMonth(month: YearMonth): String = readerMonthTitle(month)
+
+/**
+ * [month] where a sentence says from when the support runs ("from June 2026", "od června 2026",
+ * "с июня 2026"): the month in the form a date takes, "MMMM yyyy", so Czech, Russian and Ukrainian
+ * decline it after their preposition and write it in lower case, where the title form
+ * ([supportMonth]) read "od: Červen 2026" (text review, November 2026). Its parts never break apart.
+ */
+fun supportFromMonth(month: YearMonth): String = unbreakableDate(ReaderDateText.pattern(month, "MMMM yyyy"))

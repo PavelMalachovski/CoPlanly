@@ -22,8 +22,8 @@
     <string name="expenses_paid_by">%1$s: %2$s</string>
     <string name="expenses_balance_owed_to_you">Второй родитель должен вам %1$s</string>
     <string name="expenses_balance_you_owe">Вы должны второму родителю %1$s</string>
-    <string name="expenses_balance_owed_to_you_named">Вам должны %2$s, плательщик — %1$s</string>
-    <string name="expenses_balance_you_owe_named">Вы должны %2$s, получатель — %1$s</string>
+    <string name="expenses_balance_owed_to_you_named">Вам должны %2$s, плательщик — %1$s</string>
+    <string name="expenses_balance_you_owe_named">Вы должны %2$s, получатель — %1$s</string>
     <string name="expenses_balance_settled">Вы в расчёте</string>
     <string name="expenses_settle_up">Рассчитаться</string>
     <string name="expenses_this_month">Этот месяц</string>
@@ -74,9 +74,9 @@
     <string name="expenses_row_meta_with_receipt">%1$s · %2$s · чек</string>
     <string name="expenses_split_proposal_title">Предложено новое деление расходов</string>
     <string name="expenses_split_proposal_body_named">%1$s предлагает с этого момента новое деление общих расходов: %2$s. Уже внесённые расходы сохранят своё деление.</string>
-    <string name="expenses_split_shares_named">%1$s платит %2$d %5$s, %3$s платит %4$d %5$s</string>
-    <string name="expenses_split_shares_you_first">Вы платите %1$d %4$s, %2$s платит %3$d %4$s</string>
-    <string name="expenses_split_shares_you_second">%1$s платит %2$d %4$s, вы платите %3$d %4$s</string>
+    <string name="expenses_split_shares_named">%1$s платит %2$d %5$s, %3$s платит %4$d %5$s</string>
+    <string name="expenses_split_shares_you_first">Вы платите %1$d %4$s, %2$s платит %3$d %4$s</string>
+    <string name="expenses_split_shares_you_second">%1$s платит %2$d %4$s, вы платите %3$d %4$s</string>
     <string name="expenses_split_proposal_confirm">Подтвердить</string>
     <string name="expenses_split_proposal_decline">Отклонить</string>
     <string name="expenses_split_proposal_later">Позже</string>

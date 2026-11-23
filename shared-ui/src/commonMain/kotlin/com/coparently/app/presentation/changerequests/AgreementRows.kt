@@ -15,7 +15,7 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.professionals.labelRes
 import com.coparently.app.presentation.support.supportAmount
-import com.coparently.app.presentation.support.supportMonth
+import com.coparently.app.presentation.support.supportFromMonth
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.change_request_withdraw
 import com.coparently.app.resources.parenting_plan_title
@@ -47,7 +47,7 @@ fun SupportRequestRow(
             Res.string.request_support_mine,
             supportAmount(terms),
             terms.dayOfMonth,
-            supportMonth(terms.fromMonth)
+            supportFromMonth(terms.fromMonth)
         )
     } else {
         stringResource(
@@ -55,7 +55,7 @@ fun SupportRequestRow(
             parentNames.labelForUid(proposal.proposedBy),
             supportAmount(terms),
             terms.dayOfMonth,
-            supportMonth(terms.fromMonth)
+            supportFromMonth(terms.fromMonth)
         )
     }
     AgreementRow(
@@ -127,7 +127,7 @@ private fun AgreementRow(
                     TextButton(onClick = withdraw) { Text(stringResource(Res.string.change_request_withdraw)) }
                 }
             },
-            stackTrailingAtLargeFont = true
+            trailingUnderText = true
         )
     }
 }
