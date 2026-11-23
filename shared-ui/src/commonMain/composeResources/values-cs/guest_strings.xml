@@ -7,9 +7,9 @@
     <string name="guest_invite_title">Pozvat hosta</string>
     <string name="guest_invite_scope">Host si může přečíst záznam tohoto dítěte – léky, alergie, poznámky a fotografie. Nevidí váš kalendář, výdaje ani zprávy a nemůže nic změnit.</string>
     <string name="guest_invite_how_long">Na jak dlouho?</string>
-    <string name="guest_invite_duration_week">1 týden</string>
-    <string name="guest_invite_duration_month">30 dní</string>
-    <string name="guest_invite_duration_quarter">90 dní</string>
+    <string name="guest_invite_duration_week">1\u00A0týden</string>
+    <string name="guest_invite_duration_month">30\u00A0dní</string>
+    <string name="guest_invite_duration_quarter">90\u00A0dní</string>
     <string name="guest_invite_create">Vytvořit kód</string>
     <string name="guest_invite_ends_on">Přístup končí %1$s</string>
     <string name="guest_invite_share">Sdílet odkaz</string>

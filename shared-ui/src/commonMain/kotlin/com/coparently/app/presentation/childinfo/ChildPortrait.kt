@@ -18,12 +18,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.ChildAvatar
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
+import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.platform.LocalFilePicker
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
@@ -65,14 +67,21 @@ fun ChildPortrait(
     ) {
         Box(contentAlignment = Alignment.Center) { ChildAvatar(child, PORTRAIT_SIZE) }
         if (picker.available || child.photo != null) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(Spacing.S),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            val actions: @Composable () -> Unit = {
                 if (picker.available) PickPortraitButton(hasPhoto = child.photo != null, onPick = onPick)
                 if (child.photo != null) {
                     TextButton(onClick = onRemove) { Text(stringResource(Res.string.child_photo_remove)) }
                 }
+            }
+            // From the large-font scale the two actions stand one above the other, centred: side by
+            // side, German broke "Foto entfernen" inside the word at 200 %.
+            if (stacksAtLargeFont()) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) { actions() }
+            } else {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+                    verticalAlignment = Alignment.CenterVertically
+                ) { actions() }
             }
         }
         Text(
@@ -82,7 +91,8 @@ fun ChildPortrait(
                 stringResource(Res.string.child_photo_private, coParentName)
             },
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
         )
     }
 }

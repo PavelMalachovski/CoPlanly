@@ -54,14 +54,14 @@
     <string name="request_history_theirs_answered">Žádost: %1$s · odpověděli jste</string>
     <string name="request_history_withdrawn_by_you">Žádost jste stáhli</string>
     <string name="request_history_withdrawn_by">%1$s: žádost stažena</string>
-    <string name="request_history_when">%1$s · %2$s</string>
+    <string name="request_history_when">%1$s\u00A0· %2$s</string>
     <string name="request_history_propose_change">Navrhnout změnu</string>
     <string name="request_history_propose_change_description">Navrhnout změnu této dohodnuté výměny</string>
     <plurals name="request_swap_first_and_more">
-        <item quantity="one">%1$s a %2$d další den</item>
-        <item quantity="few">%1$s a %2$d další dny</item>
-        <item quantity="many">%1$s a %2$d dalšího dne</item>
-        <item quantity="other">%1$s a %2$d dalších dní</item>
+        <item quantity="one">%1$s a\u00A0%2$d\u00A0další\u00A0den</item>
+        <item quantity="few">%1$s a\u00A0%2$d\u00A0další\u00A0dny</item>
+        <item quantity="many">%1$s a\u00A0%2$d\u00A0dalšího\u00A0dne</item>
+        <item quantity="other">%1$s a\u00A0%2$d\u00A0dalších\u00A0dní</item>
     </plurals>
     <!-- Child support, a professional's access and the parenting plan in the Requests inbox (board SW-7) -->
     <string name="request_support_theirs">%1$s navrhuje %2$s měsíčně, %3$d. den v měsíci, od: %4$s</string>

@@ -78,7 +78,7 @@
     <string name="event_form_delete_failed">Událost se nepodařilo smazat. Zkuste to prosím znovu.</string>
     <string name="event_form_save_failed">Událost se nepodařilo uložit. Zkuste to prosím znovu.</string>
     <string name="event_form_photo_upload_failed">Nahrání fotky selhalo – událost uložena bez nové fotky</string>
-    <string name="event_form_owner_unknown">Zatím nevíme, čí je tato událost – pro uložení vyberte výše</string>
+    <string name="event_form_owner_unknown">Zatím nevíme, čí je tato událost\u00A0– pro uložení vyberte výše</string>
     <string name="event_form_for_members">Pro koho to je?</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->

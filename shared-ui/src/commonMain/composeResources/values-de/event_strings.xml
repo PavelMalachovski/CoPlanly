@@ -78,7 +78,7 @@
     <string name="event_form_delete_failed">Der Termin konnte nicht gelöscht werden. Bitte versuche es erneut.</string>
     <string name="event_form_save_failed">Der Termin konnte nicht gespeichert werden. Bitte versuche es erneut.</string>
     <string name="event_form_photo_upload_failed">Foto-Upload fehlgeschlagen – Termin ohne neues Foto gespeichert</string>
-    <string name="event_form_owner_unknown">Wir wissen noch nicht, wessen Termin das ist – wähle oben aus, um zu speichern</string>
+    <string name="event_form_owner_unknown">Wir wissen noch nicht, wessen Termin das ist\u00A0– wähle oben aus, um zu speichern</string>
     <string name="event_form_for_members">Für wen ist das?</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->

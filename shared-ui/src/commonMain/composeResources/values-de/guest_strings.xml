@@ -7,9 +7,9 @@
     <string name="guest_invite_title">Gast einladen</string>
     <string name="guest_invite_scope">Ein Gast kann die Angaben dieses Kindes lesen – Medikamente, Allergien, Notizen und Fotos. Kalender, Ausgaben und Nachrichten bleiben unsichtbar, und ändern kann ein Gast nichts.</string>
     <string name="guest_invite_how_long">Wie lange?</string>
-    <string name="guest_invite_duration_week">1 Woche</string>
-    <string name="guest_invite_duration_month">30 Tage</string>
-    <string name="guest_invite_duration_quarter">90 Tage</string>
+    <string name="guest_invite_duration_week">1\u00A0Woche</string>
+    <string name="guest_invite_duration_month">30\u00A0Tage</string>
+    <string name="guest_invite_duration_quarter">90\u00A0Tage</string>
     <string name="guest_invite_create">Code erstellen</string>
     <string name="guest_invite_ends_on">Zugang endet am %1$s</string>
     <string name="guest_invite_share">Link teilen</string>

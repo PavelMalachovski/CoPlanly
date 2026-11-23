@@ -105,8 +105,8 @@ class TodayWidgetTextTest {
 
         val lines = TodayWidgetText.lines(strings, clock, day, parents, maxEvents = 4)
 
-        assertEquals("3:00 PM–7:00 PM · contact with Sam", lines.windows.single().text)
-        assertEquals("9:00 AM–10:00 AM", lines.events.first().time)
+        assertEquals("3:00\u00A0PM–7:00\u00A0PM · contact with Sam", lines.windows.single().text)
+        assertEquals("9:00\u00A0AM–10:00\u00A0AM", lines.events.first().time)
     }
 
     @Test

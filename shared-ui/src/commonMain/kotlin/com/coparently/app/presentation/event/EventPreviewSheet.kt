@@ -39,7 +39,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.data.family.RecordPlace
 import com.coparently.app.data.family.placementFamilyId
@@ -71,7 +70,10 @@ import com.coparently.app.resources.event_preview_important_yours
 import com.coparently.app.resources.event_preview_photo
 import com.coparently.app.resources.event_preview_private
 import com.coparently.app.resources.image_viewer_open
+import com.coparently.app.utils.DAY_RANGE_SEPARATOR
+import com.coparently.app.utils.META_SEPARATOR
 import com.coparently.app.utils.ReaderDateText
+import com.coparently.app.utils.TIME_RANGE_SEPARATOR
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -197,9 +199,8 @@ fun EventPreviewContent(
             Text(
                 text = event.title,
                 style = MaterialTheme.typography.titleLargeEmphasized,
-                // Long titles used to wrap mid-word and push the sheet's actions down.
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
+                // Whole, never cut: the preview is where the event is read, and at 200 % two
+                // lines kept only "Swimming lesson at the ci…". Lines break between words.
                 modifier = Modifier.padding(start = Spacing.M)
             )
         }
@@ -372,12 +373,14 @@ fun eventTimeLine(event: Event): String {
     val timeText = buildString {
         append(ReaderDateText.time(event.startDateTime))
         event.endDateTime?.let { end ->
-            append(" – ")
             // An overnight or multi-day event names its end day too; "22:00 – 07:00" under the
-            // start date read as ending before it began.
+            // start date read as ending before it began. Within one day the range is one piece.
             if (end.date != event.startDateTime.date) {
+                append(DAY_RANGE_SEPARATOR)
                 append(ReaderDateText.date(end.date, DATE_SKELETON))
                 append(' ')
+            } else {
+                append(TIME_RANGE_SEPARATOR)
             }
             append(ReaderDateText.time(end))
         }
@@ -387,10 +390,10 @@ fun eventTimeLine(event: Event): String {
     val allDayText = stringResource(Res.string.event_all_day)
     val lastDay = AllDayEvent.lastDay(event)
     return when {
-        !AllDayEvent.isAllDay(event) -> "$dateText · $timeText"
+        !AllDayEvent.isAllDay(event) -> "$dateText$META_SEPARATOR$timeText"
         lastDay != event.startDateTime.date ->
-            "$dateText – ${ReaderDateText.date(lastDay, DATE_SKELETON)} · $allDayText"
-        else -> "$dateText · $allDayText"
+            "$dateText$DAY_RANGE_SEPARATOR${ReaderDateText.date(lastDay, DATE_SKELETON)}$META_SEPARATOR$allDayText"
+        else -> "$dateText$META_SEPARATOR$allDayText"
     }
 }
 

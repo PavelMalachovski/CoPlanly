@@ -50,6 +50,7 @@
     <string name="friend_compare_no">Nein</string>
     <string name="friend_compare_while_linked">Solange ihr verknüpft seid</string>
     <string name="friend_compare_duration_choice">%1$s oder %2$s</string>
+    <string name="friend_compare_duration_while_linked">solange ihr verknüpft seid</string>
     <string name="friend_compare_row_desc">%1$s: Co-Elternteil %2$s, Freund der Familie %3$s</string>
     <string name="friend_invite_will_see_lead">Sieht</string>
     <string name="friend_invite_will_see_body">die Termine der Familie im Kalender, außer privaten. Nur ansehen – ändern kann diese Person nichts.</string>

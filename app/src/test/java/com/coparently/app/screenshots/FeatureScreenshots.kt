@@ -10,6 +10,7 @@ import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.expenses.ExpenseBalance
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.CustodyModel
+import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.model.Message
@@ -24,7 +25,9 @@ import com.coparently.app.presentation.chat.MessageItem
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.consent.TelemetryConsentScreen
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
+import com.coparently.app.presentation.custody.CustodySetupUiState
 import com.coparently.app.presentation.custody.SchedulePreviewMonth
+import com.coparently.app.presentation.custody.custodyPreviewText
 import com.coparently.app.presentation.event.EventPreviewContent
 import com.coparently.app.presentation.expenses.CollapsedMonthSummary
 import com.coparently.app.presentation.expenses.ExpenseSettleUp
@@ -125,15 +128,23 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
     }
 
     /**
-     * A schedule as the custody editor and onboarding preview it: the month it starts in. The
-     * start is years ahead so the month drawn never follows the real calendar.
+     * A schedule as the custody editor and onboarding preview it: the month it starts in, under the
+     * editor's own description of it in the variant's language. The start is years ahead so the
+     * month drawn never follows the real calendar.
      */
     @Test
     fun schedulePreview() = snap("custody_schedule_preview") {
         SchedulePreviewMonth(
             model = CustodyModel.weekOnWeekOff(id = "preview", startDate = PREVIEW_START, momFirst = true),
             parentNames = ScreenshotFixtures.parentNames,
-            description = "Week on, week off: Olya has the first week."
+            description = custodyPreviewText(
+                CustodySetupUiState(
+                    selectedModelType = CustodyModelType.WEEK_ON_WEEK_OFF,
+                    startDate = PREVIEW_START,
+                    momFirst = true
+                ),
+                ScreenshotFixtures.parentNames
+            )
         )
     }
 

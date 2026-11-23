@@ -5,6 +5,7 @@ import com.coparently.app.domain.friends.FriendAccessDuration
 import com.coparently.app.domain.guests.GuestAccessDuration
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.friend_compare_duration_choice
+import com.coparently.app.resources.friend_compare_duration_while_linked
 import com.coparently.app.resources.friend_invite_duration_while_linked
 import com.coparently.app.resources.guest_invite_duration_month
 import com.coparently.app.resources.guest_invite_duration_quarter
@@ -33,15 +34,25 @@ internal fun FriendAccessDuration.labelRes(): StringResource = when (this) {
 }
 
 /**
- * Every length a family friend can be given, as one phrase — "1 week, 30 days, 90 days or While
- * we are linked" — for the comparison table's "How long" cell (phase 2, spec §4.2).
+ * Every length a family friend can be given, as one phrase — "1 week, 30 days, 90 days or while
+ * you are linked" — for the comparison table's "How long" cell (phase 2, spec §4.2).
  *
  * Built from [FriendAccessDuration.entries], the list the invite's chips draw, rather than written
  * out: a length added to the chips then appears in the table without anybody remembering it.
  */
 @Composable
 internal fun durationChoicesText(): String {
-    val labels = FriendAccessDuration.entries.map { stringResource(it.labelRes()) }
+    // Inside the sentence the open-ended length is worded for its reader and in lower case ("…, 90
+    // days or while you are linked"): the chip's "While we are linked" is the inviting parent's own
+    // words and starts a label.
+    val labels = FriendAccessDuration.entries.map {
+        val label = if (it == FriendAccessDuration.WHILE_LINKED) {
+            Res.string.friend_compare_duration_while_linked
+        } else {
+            it.labelRes()
+        }
+        stringResource(label)
+    }
     val choice = if (labels.size >= 2) {
         stringResource(Res.string.friend_compare_duration_choice, labels[labels.size - 2], labels.last())
     } else {

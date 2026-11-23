@@ -54,12 +54,12 @@
     <string name="request_history_theirs_answered">Anfrage von %1$s · du hast geantwortet</string>
     <string name="request_history_withdrawn_by_you">Du hast sie zurückgezogen</string>
     <string name="request_history_withdrawn_by">%1$s hat sie zurückgezogen</string>
-    <string name="request_history_when">%1$s · %2$s</string>
+    <string name="request_history_when">%1$s\u00A0· %2$s</string>
     <string name="request_history_propose_change">Änderung vorschlagen</string>
     <string name="request_history_propose_change_description">Änderung an diesem vereinbarten Tausch vorschlagen</string>
     <plurals name="request_swap_first_and_more">
-        <item quantity="one">%1$s und %2$d weiterer Tag</item>
-        <item quantity="other">%1$s und %2$d weitere Tage</item>
+        <item quantity="one">%1$s und %2$d\u00A0weiterer\u00A0Tag</item>
+        <item quantity="other">%1$s und %2$d\u00A0weitere\u00A0Tage</item>
     </plurals>
     <!-- Child support, a professional's access and the parenting plan in the Requests inbox (board SW-7) -->
     <string name="request_support_theirs">%1$s schlägt %2$s im Monat vor, am %3$d. Tag, ab %4$s</string>

@@ -20,7 +20,8 @@ import java.util.Locale
 /**
  * The shared screens' date seam writes, on Android, exactly what `LocalizedDates.kt`'s `java.time`
  * functions wrote for the screens before they moved (MON-24 phase 2, Task 11), in every language
- * the app ships and on both clocks.
+ * the app ships and on both clocks — a fixed pattern and a style with their fields joined by no-break
+ * spaces, as `localizedDate` joins them.
  */
 class ReaderDateTextTest {
 
@@ -53,7 +54,7 @@ class ReaderDateTextTest {
         )
         assertEquals(
             tag,
-            java.time.YearMonth.of(2026, 10).format(DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault())),
+            java.time.YearMonth.of(2026, 10).format(DateTimeFormatter.ofPattern("LLLL\u00A0yyyy", Locale.getDefault())),
             ReaderDateText.pattern(YearMonth(2026, 10), "LLLL yyyy")
         )
         assertEquals(
@@ -69,12 +70,12 @@ class ReaderDateTextTest {
         assertEquals("not a date", ReaderDateText.isoDate("not a date", DAY_IN_SENTENCE))
         assertEquals(
             tag,
-            day.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)),
+            unbreakableDate(day.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))),
             readerMediumDate(day)
         )
         assertEquals(
             tag,
-            day.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)),
+            unbreakableDate(day.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG))),
             readerLongDate(day)
         )
     }

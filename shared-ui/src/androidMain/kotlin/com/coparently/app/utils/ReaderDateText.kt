@@ -15,7 +15,9 @@ import java.util.Locale
 
 /**
  * `LocalizedDates.kt`'s `java.time` code, unchanged, in `Locale.getDefault()` — the language the
- * app speaks (`AppLocale.follow`), which is what each of those functions defaulted to.
+ * app speaks (`AppLocale.follow`), which is what each of those functions defaulted to. A fixed
+ * pattern and a style keep their fields together with no-break spaces, as `localizedDate` does
+ * ([noBreakPattern], [unbreakableDate]).
  */
 actual object ReaderDateText {
 
@@ -25,10 +27,10 @@ actual object ReaderDateText {
         month.toJavaYearMonth().atDay(1).format(localizedDate(skeleton))
 
     actual fun pattern(date: LocalDate, pattern: String): String =
-        date.toJavaLocalDate().format(DateTimeFormatter.ofPattern(pattern, Locale.getDefault()))
+        date.toJavaLocalDate().format(DateTimeFormatter.ofPattern(noBreakPattern(pattern), Locale.getDefault()))
 
     actual fun pattern(month: YearMonth, pattern: String): String =
-        month.toJavaYearMonth().format(DateTimeFormatter.ofPattern(pattern, Locale.getDefault()))
+        month.toJavaYearMonth().format(DateTimeFormatter.ofPattern(noBreakPattern(pattern), Locale.getDefault()))
 
     actual fun time(time: LocalTime, is24Hour: Boolean): String = time.format(shortTime(is24Hour = is24Hour))
 
@@ -40,7 +42,7 @@ actual object ReaderDateText {
         skeleton: String,
         separator: String,
         is24Hour: Boolean
-    ): String = date(dateTime.date, skeleton) + separator + time(dateTime, is24Hour)
+    ): String = date(dateTime.date, skeleton) + unbreakableSeparator(separator) + time(dateTime, is24Hour)
 
     actual fun hour(hour: Int, is24Hour: Boolean): String = hourLabel(hour, is24Hour = is24Hour)
 
@@ -52,19 +54,19 @@ actual object ReaderDateText {
 
 /** `FormatStyle.MEDIUM` in `Locale.getDefault()`, the chat's day separator as it was formatted. */
 actual fun readerMediumDate(date: LocalDate): String =
-    date.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
+    unbreakableDate(date.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)))
 
 /** `FormatStyle.SHORT` in `Locale.getDefault()`, as the seasonal layer's suggestions were formatted. */
 actual fun readerShortDate(date: LocalDate): String =
-    date.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT))
+    unbreakableDate(date.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT)))
 
 /**
  * `FormatStyle.LONG` in `Locale.getDefault()`, as a guest's or a grant's end was formatted (slice
  * 11g): the screens formatted the instant's date in the device's zone, which is this date.
  */
 actual fun readerLongDate(date: LocalDate): String =
-    date.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG))
+    unbreakableDate(date.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)))
 
 /** `FormatStyle.FULL` in `Locale.getDefault()`, as the custody schedule's start date was formatted. */
 actual fun readerFullDate(date: LocalDate): String =
-    date.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL))
+    unbreakableDate(date.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)))

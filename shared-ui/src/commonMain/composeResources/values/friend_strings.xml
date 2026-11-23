@@ -53,6 +53,7 @@
     <string name="friend_compare_no">No</string>
     <string name="friend_compare_while_linked">While you are linked</string>
     <string name="friend_compare_duration_choice">%1$s or %2$s</string>
+    <string name="friend_compare_duration_while_linked">while you are linked</string>
     <string name="friend_compare_row_desc">%1$s: co-parent %2$s, family friend %3$s</string>
     <string name="friend_invite_will_see_lead">Will see</string>
     <string name="friend_invite_will_see_body">the family\u0027s events in the calendar, except private ones. View only — they can\u0027t change anything.</string>
