@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -66,8 +65,9 @@ import org.jetbrains.compose.resources.stringResource
  *   the grid's last row once the six rows reached the card's bottom.
  *
  * The iPhone draws the same row (MON-24 phase 3, part C), the control as `UISegmentedControl`
- * there ([AdaptiveSegmented]), with no navigation bar over the Calendar. The row wraps rather than
- * cuts at a large font: the actions go under the control when both do not fit.
+ * there ([AdaptiveSegmented]), with no navigation bar over the Calendar. The control is as wide as
+ * its letters, so the row is one line at the default font size in every language; it wraps rather
+ * than cuts at a large font: the actions go under the control when both do not fit.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -141,18 +141,19 @@ private fun ViewModeControl(viewMode: CalendarViewMode, onViewModeChange: (Calen
         accessibilityLabel = names.joinToString(", "),
         // A segment a letter wide: the native control fills its width, which in this row would push
         // Today, "⇄" and "+" onto a line of their own.
-        modifier = Modifier.width(SEGMENT_WIDTH * modes.size)
+        modifier = Modifier.width(NATIVE_SEGMENT_WIDTH * modes.size)
     ) {
-        SingleChoiceSegmentedButtonRow {
+        // Sized to its letters: Material's segment is at least 58 dp wide with 12 dp of padding on
+        // each side, which made the control 190 dp and pushed Today, "⇄" and "+" under it.
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.width(SEGMENT_WIDTH * modes.size)) {
             modes.forEachIndexed { index, mode ->
                 val name = names[index]
                 SegmentedButton(
                     selected = mode == viewMode,
                     onClick = { onViewModeChange(mode) },
                     shape = SegmentedButtonDefaults.itemShape(index = index, count = modes.size),
-                    modifier = Modifier
-                        .widthIn(min = SEGMENT_WIDTH)
-                        .semantics { contentDescription = name },
+                    contentPadding = PaddingValues(horizontal = Spacing.XS),
+                    modifier = Modifier.semantics { contentDescription = name },
                     // No check mark: a letter needs the segment's width, not a tick beside it.
                     icon = {},
                     label = {
@@ -184,8 +185,11 @@ private fun viewModeName(mode: CalendarViewMode): String = when (mode) {
     CalendarViewMode.DAY -> stringResource(Res.string.calendar_viewmode_day)
 }
 
-/** A segment of the view control, wide enough for its letter's touch target. */
-private val SEGMENT_WIDTH = 40.dp
+/** A segment of the iPhone's native view control, wide enough for its letter. */
+private val NATIVE_SEGMENT_WIDTH = 40.dp
+
+/** A segment of the Material view control: a letter and a touch target's width, no more. */
+private val SEGMENT_WIDTH = 48.dp
 
 /**
  * The white card the grid sits in, with its head row (redesign, November 2026; the legend left it

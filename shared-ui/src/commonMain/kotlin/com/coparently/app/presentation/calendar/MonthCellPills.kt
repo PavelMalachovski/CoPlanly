@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -20,7 +21,9 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.LineHeightStyle
@@ -66,11 +69,11 @@ private fun pillTextStyle(): TextStyle = MaterialTheme.typography.labelSmall.cop
  * month chip carries none (FAM-5). On a day borrowed from a neighbouring month the whole pill is
  * dimmed as the dot was, because the grid must still say which month it shows.
  *
- * Up to two pills since calendar K1 (November 2026), each title on up to two lines, broken at
- * syllables (`Hyphens.Auto`) and never inside a letter, then ellipsised; "+n" ends the last pill's
- * line. A pill is drawn only where its first line fits under the day number ([pillLines]); a cell
- * too short for any (a large font, a short window) draws a bar in the mark's colour instead, never a
- * title cut in half.
+ * Up to two pills since calendar K1 (November 2026), each title on up to two lines broken at its
+ * spaces and never inside a word ([pillTitleLines]): a title with a word wider than the pill takes
+ * one line and ends in an ellipsis instead. "+n" ends the last pill's line. A pill is drawn only
+ * where its first line fits under the day number ([pillLines]); a cell too short for any (a large
+ * font, a short window) draws a bar in the mark's colour instead, never a title cut in half.
  *
  * No content description: the cell's own names the events.
  */
@@ -80,6 +83,7 @@ internal fun DayCellPills(events: List<Event>, isCurrentMonth: Boolean, modifier
     val style = pillTextStyle()
     val density = LocalDensity.current
     val lineHeight = with(density) { style.lineHeight.toDp() }
+    val measurer = rememberTextMeasurer()
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
@@ -103,6 +107,7 @@ internal fun DayCellPills(events: List<Event>, isCurrentMonth: Boolean, modifier
                         EventPill(
                             event = event,
                             style = style,
+                            measurer = measurer,
                             maxLines = lines[index],
                             modifier = Modifier.weight(1f)
                         )
@@ -149,23 +154,46 @@ private fun pillMarkColor(event: Event): Color = eventDotColor(
 
 /**
  * One event's pill: the surface, a leading mark in the event's colour, the title on up to
- * [maxLines] lines, hyphenated where it breaks and ellipsised where it still does not fit.
+ * [maxLines] lines broken at its spaces, or on one line when a word of it is wider than the pill
+ * ([pillTitleLines]), ellipsised where it still does not fit. No hyphenation: whether it works
+ * depends on the locale and the platform, and the break must not.
  */
 @Composable
-private fun EventPill(event: Event, style: TextStyle, maxLines: Int, modifier: Modifier = Modifier) {
+private fun EventPill(
+    event: Event,
+    style: TextStyle,
+    measurer: TextMeasurer,
+    maxLines: Int,
+    modifier: Modifier = Modifier
+) {
     val mark = pillMarkColor(event)
-    Text(
-        text = event.title,
-        style = style.copy(hyphens = Hyphens.Auto, lineBreak = LineBreak.Paragraph),
-        color = MaterialTheme.colorScheme.onSurface,
-        maxLines = maxLines,
-        overflow = TextOverflow.Ellipsis,
-        modifier = modifier
-            .clip(CoPlanlyCorners.Tag)
-            .background(MaterialTheme.colorScheme.surface)
-            .drawBehind {
-                drawRect(color = mark, size = Size(EVENT_PILL_MARK_WIDTH.toPx(), size.height))
-            }
-            .padding(start = EVENT_PILL_MARK_WIDTH + Spacing.XXS, end = Spacing.XXS)
-    )
+    val textStyle = style.copy(hyphens = Hyphens.None, lineBreak = LineBreak.Paragraph)
+    val widestWord = remember(event.title, textStyle, measurer) {
+        titleWords(event.title).maxOfOrNull { word ->
+            measurer.measure(text = word, style = textStyle, maxLines = 1, softWrap = false).size.width
+        } ?: 0
+    }
+    BoxWithConstraints(modifier = modifier) {
+        val padding = with(LocalDensity.current) { (EVENT_PILL_MARK_WIDTH + Spacing.XXS * 2).roundToPx() }
+        val lines = pillTitleLines(
+            widestWord = widestWord.toFloat(),
+            lineWidth = (constraints.maxWidth - padding).toFloat(),
+            maxLines = maxLines
+        )
+        Text(
+            text = event.title,
+            style = textStyle,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = lines,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(CoPlanlyCorners.Tag)
+                .background(MaterialTheme.colorScheme.surface)
+                .drawBehind {
+                    drawRect(color = mark, size = Size(EVENT_PILL_MARK_WIDTH.toPx(), size.height))
+                }
+                .padding(start = EVENT_PILL_MARK_WIDTH + Spacing.XXS, end = Spacing.XXS)
+        )
+    }
 }

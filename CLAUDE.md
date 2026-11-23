@@ -252,8 +252,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    (`CoPlanlyCorners.Cell`, a 3 dp gap) that **carry event pills** (November 2026 redesign,
    `MonthCellPills.kt`, `CellPills.kt`): since K1 up to two (`MAX_CELL_PILLS`) — the `surface`, a
    3 dp mark in the event's colour, the title on up to two lines (`MAX_PILL_LINES`), broken at
-   syllables (`Hyphens.Auto` with `LineBreak.Paragraph`) and never inside a letter, then ellipsised
-   — and "+n" for the rest at the end of the last pill's line, the cell's description still naming
+   its spaces and **never inside a word** (owner rule; `Hyphens.None`, since hyphenation depends on
+   the locale and the platform): a title with a word wider than the pill takes one line and an
+   ellipsis (`pillTitleLines`, measured per word) — and "+n" for the rest at the end of the last pill's line, the cell's description still naming
    the events; they replaced the dots. **A pill is drawn only where its first line fits** under the
    22 dp day number (its own 13 sp line): `pillLines` shares the lines a cell has between at most two
    pills, so a short cell draws fewer, and the six rows split the card's height equally with no

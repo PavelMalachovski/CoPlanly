@@ -60,7 +60,6 @@ import com.coparently.app.presentation.common.AnswerButtons
 import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.WhenScreenVisible
-import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.custody.custodyDiffDescription
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
@@ -92,7 +91,7 @@ import org.jetbrains.compose.resources.stringResource
 
 /**
  * One request waiting on this parent, as an action card: "Waiting for you" with its deadline, an
- * icon by kind, the inbox's own words for it, the proposer's note, then Details beside Decline and
+ * icon by kind, the inbox's own words for it, the proposer's note, then Details over Decline and
  * Accept. The answers are the inbox's ([InboxAnswers]), refused there when the family on screen
  * changed meanwhile. Child support, a professional's access and the plan draw the inbox's compact
  * rows instead, opening their own screens.
@@ -145,25 +144,16 @@ private fun ActionCardBody(item: InboxItem, ctx: HomeRequestsContext) {
     }
 }
 
-/** Details, then Decline and Accept: one row, or Details under the buttons from font scale 1.3. */
+/**
+ * Details on a line of its own, then Decline and Accept at the card's full width. Details used to sit
+ * beside the two answers, which left each a third of the card: in Russian "Отклонить" and "Принять"
+ * broke inside the word. The answers stack from font scale 1.3 ([AnswerButtons]).
+ */
 @Composable
 private fun DetailsAndAnswers(item: InboxItem, ctx: HomeRequestsContext) {
-    val details: @Composable () -> Unit = {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.XS)) {
         if (hasDetails(item)) DetailsButton { ctx.onDetails(item) }
-    }
-    if (stacksAtLargeFont()) {
-        Column(verticalArrangement = Arrangement.spacedBy(Spacing.XS)) {
-            RequestAnswerButtons(item, ctx)
-            details()
-        }
-    } else {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.S),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            details()
-            Box(modifier = Modifier.weight(1f)) { RequestAnswerButtons(item, ctx) }
-        }
+        RequestAnswerButtons(item, ctx)
     }
 }
 
@@ -297,10 +287,11 @@ private fun WaitingRowBody(item: InboxItem, ctx: HomeRequestsContext) {
     SectionGroup {
         Row(
             modifier = Modifier.padding(horizontal = Spacing.L, vertical = Spacing.M),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.M),
-            verticalAlignment = Alignment.CenterVertically
+            horizontalArrangement = Arrangement.spacedBy(Spacing.M)
         ) {
             KindDisc(icon = kindIcon(item), outlined = true)
+            // The summary takes the row's whole width and the action sits under it: beside the text,
+            // Withdraw squeezed a split's shares into a column a word wide ("40 / %").
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.XXS)) {
                 Text(text = requestTitle(item, ctx), style = MaterialTheme.typography.bodyMediumEmphasized)
                 if (mine) {
@@ -309,17 +300,24 @@ private fun WaitingRowBody(item: InboxItem, ctx: HomeRequestsContext) {
                     // The co-parent's request past its deadline: where it stands, in the clock's words.
                     CardClockDetails()
                 }
-            }
-            when (waitingRowAction(item, ctx.scope.myUid)) {
-                WaitingRowAction.WITHDRAW -> TextButton(onClick = { withdraw(item, ctx) }) {
-                    Text(stringResource(Res.string.change_request_withdraw))
-                }
-                WaitingRowAction.DECLINE -> TextButton(onClick = { answerOf(item, ctx)?.onAnswer?.invoke(false) }) {
-                    Text(stringResource(Res.string.change_request_decline))
-                }
-                WaitingRowAction.NONE -> Unit
+                WaitingRowActionButton(item, ctx, Modifier.align(Alignment.End))
             }
         }
+    }
+}
+
+/** Withdraw or Decline under a waiting row's summary ([waitingRowAction]), or nothing. */
+@Composable
+private fun WaitingRowActionButton(item: InboxItem, ctx: HomeRequestsContext, modifier: Modifier) {
+    when (waitingRowAction(item, ctx.scope.myUid)) {
+        WaitingRowAction.WITHDRAW -> TextButton(onClick = { withdraw(item, ctx) }, modifier = modifier) {
+            Text(stringResource(Res.string.change_request_withdraw))
+        }
+        WaitingRowAction.DECLINE ->
+            TextButton(onClick = { answerOf(item, ctx)?.onAnswer?.invoke(false) }, modifier = modifier) {
+                Text(stringResource(Res.string.change_request_decline))
+            }
+        WaitingRowAction.NONE -> Unit
     }
 }
 

@@ -25,7 +25,7 @@ class ScheduleChangesTest {
 
     @Test
     fun `a changed day is ringed in the colour of whom it would go to`() {
-        val month = scheduleChangeMonth(december, proposed, current, showProposed = true)
+        val month = scheduleChangeMonth(december, proposed, current, showProposed = true, effectiveFrom = START)
 
         // Tuesday 1 December: the second parent's now, the first's under the proposal.
         assertEquals("mom", month.markSlots[LocalDate(2026, 12, 1)])
@@ -39,7 +39,7 @@ class ScheduleChangesTest {
 
     @Test
     fun `the proposed month is drawn in the proposed pattern`() {
-        val month = scheduleChangeMonth(december, proposed, current, showProposed = true)
+        val month = scheduleChangeMonth(december, proposed, current, showProposed = true, effectiveFrom = START)
 
         assertEquals("dad", month.custody[LocalDate(2026, 12, 9)])
         assertEquals("mom", month.custody[LocalDate(2026, 12, 1)])
@@ -47,7 +47,7 @@ class ScheduleChangesTest {
 
     @Test
     fun `now is drawn in the current pattern and rings nothing`() {
-        val month = scheduleChangeMonth(december, proposed, current, showProposed = false)
+        val month = scheduleChangeMonth(december, proposed, current, showProposed = false, effectiveFrom = START)
 
         assertEquals("dad", month.custody[LocalDate(2026, 12, 1)])
         assertTrue(month.marks.isEmpty())
@@ -56,7 +56,7 @@ class ScheduleChangesTest {
 
     @Test
     fun `borrowed days carry the band and never a ring`() {
-        val month = scheduleChangeMonth(december, proposed, current, showProposed = true)
+        val month = scheduleChangeMonth(december, proposed, current, showProposed = true, effectiveFrom = START)
 
         // Monday 30 November leads December's grid.
         assertEquals("mom", month.custody[LocalDate(2026, 11, 30)])
@@ -65,8 +65,40 @@ class ScheduleChangesTest {
 
     @Test
     fun `a day the proposal leaves to nobody is not a change`() {
-        val changed = changedDays(december, proposed = { null }, current = current)
+        val changed = changedDays(december, proposed = { null }, current = current, effectiveFrom = START)
 
         assertTrue(changed.isEmpty())
+    }
+
+    @Test
+    fun `days before the proposal takes effect keep the current schedule and are never ringed`() {
+        // Accepted today, the proposal decides from Tuesday 15 December: the days before keep the
+        // schedule agreed now as history (CustodyHistory, item 30).
+        val from = LocalDate(2026, 12, 15)
+        val month = scheduleChangeMonth(december, proposed, current, showProposed = true, effectiveFrom = from)
+
+        // Tuesday 1 December changes under the proposal, but before the 15th it keeps its parent.
+        assertEquals("dad", month.custody[LocalDate(2026, 12, 1)])
+        assertTrue(LocalDate(2026, 12, 1) !in month.marks)
+        // Wednesday 9 December too.
+        assertEquals("mom", month.custody[LocalDate(2026, 12, 9)])
+        assertTrue(month.marks.keys.all { it >= from })
+        // Wednesday 16 December is the first changed day on or after it.
+        assertEquals("dad", month.custody[LocalDate(2026, 12, 16)])
+        assertEquals("dad", month.markSlots[LocalDate(2026, 12, 16)])
+    }
+
+    @Test
+    fun `changed days start on the effective date`() {
+        val from = LocalDate(2026, 12, 9)
+        val changed = changedDays(december, proposed, current, effectiveFrom = from)
+
+        assertEquals(LocalDate(2026, 12, 9), changed.keys.minOrNull())
+        assertEquals("dad", changed[LocalDate(2026, 12, 9)])
+    }
+
+    private companion object {
+        /** The proposal decides the whole of December: it takes effect before the month begins. */
+        val START = LocalDate(2026, 11, 1)
     }
 }

@@ -90,6 +90,33 @@ class MonthCellPillsTest {
         assertTrue(pillLines(wanted = 0, height = 5 * LINE, lineHeight = LINE, gap = GAP).isEmpty())
     }
 
+    @Test
+    fun `a title whose words all fit wraps at its spaces on the lines it has`() {
+        assertEquals(2, pillTitleLines(widestWord = 30f, lineWidth = 40f, maxLines = 2))
+    }
+
+    @Test
+    fun `a word exactly as wide as the line still fits`() {
+        assertEquals(2, pillTitleLines(widestWord = 40f, lineWidth = 40f, maxLines = 2))
+    }
+
+    @Test
+    fun `a word wider than the line puts the title on one line with an ellipsis`() {
+        // "Football" in a narrow cell: never "Foot" over "ball".
+        assertEquals(1, pillTitleLines(widestWord = 41f, lineWidth = 40f, maxLines = 2))
+    }
+
+    @Test
+    fun `a pill with room for one line keeps one`() {
+        assertEquals(1, pillTitleLines(widestWord = 10f, lineWidth = 40f, maxLines = 1))
+    }
+
+    @Test
+    fun `the words of a title are what lies between its spaces`() {
+        assertEquals(listOf("Parent", "meeting"), titleWords("  Parent\tmeeting "))
+        assertTrue(titleWords(" ").isEmpty())
+    }
+
     private fun event(title: String) = Event(
         id = title,
         title = title,

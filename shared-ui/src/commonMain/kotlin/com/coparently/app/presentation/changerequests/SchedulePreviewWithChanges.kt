@@ -16,6 +16,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import com.coparently.app.domain.custody.CustodyHistory
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.custody.DayOverride
@@ -40,7 +41,9 @@ import org.jetbrains.compose.resources.stringResource
  * A proposed custody schedule on a mini month of the reader's own calendar (November 2026, board
  * HomeScheduleDialog): its pattern's name and start, a Proposed | Now switch, and the month drawn in
  * the proposed pattern or the agreed one. In the proposed one each day whose parent would change is
- * ringed in the colour of whom it would go to ([scheduleChangeMonth]), with a legend line saying so.
+ * ringed in the colour of whom it would go to ([scheduleChangeMonth]), with a legend line saying so;
+ * the days before the proposal would take effect if accepted today keep the current schedule and
+ * are never ringed, because an accepted change keeps the past (item 30).
  * No count of days or nights per parent: no score between the parents.
  *
  * The month is the first the proposal reaches from today, as [ProposedSchedulePreview] draws it.
@@ -66,14 +69,17 @@ fun SchedulePreviewWithChanges(
 ) {
     val today = rememberToday().value
     val model = proposal.model
-    val month = maxOf(today, model.startDate).yearMonth
+    // An accept today keeps the days before this as history (CustodyHistory, item 30).
+    val effectiveFrom = CustodyHistory.effectiveFrom(model, acceptedOn = today)
+    val month = effectiveFrom.yearMonth
     var showProposed by rememberSaveable(proposal.proposedAt) { mutableStateOf(true) }
-    val shown = remember(model, current, overrides, month, showProposed) {
+    val shown = remember(model, current, overrides, effectiveFrom, showProposed) {
         scheduleChangeMonth(
             month = month,
             proposed = CustodyResolver.resolver(model, overrides, legacy = { null }),
             current = CustodyResolver.resolver(current, overrides, legacy = { null }),
-            showProposed = showProposed
+            showProposed = showProposed,
+            effectiveFrom = effectiveFrom
         )
     }
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.S)) {

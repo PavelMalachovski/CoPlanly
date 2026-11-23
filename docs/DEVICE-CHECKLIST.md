@@ -3067,15 +3067,16 @@ system's controls and hyphenation on a phone, VoiceOver and the push that arrive
       Swipe for the next and previous month (and week and day); Today returns. TalkBack reads the
       segments as "Month", "Week", "Day".
 - [ ] **Pills** (Android). A day with three events shows two pills and "+1"; a long Czech or German
-      title ("Rodičovské sdružení", "Elternsprechtag") breaks over two lines at a syllable with a
-      hyphen, never inside a letter, then ellipsises. At 200 % font a cell too short for a line
+      title ("Rodičovské sdružení", "Parent meeting") breaks over two lines at a space, never inside a
+      word; one with a word wider than the pill ("Elternsprechtag") takes one line and ellipsises. At 200 % font a cell too short for a line
       draws the coloured bar, never half a title.
 - [ ] **The Calendar on an iPhone.** No system bar over it; the same header under the status bar,
       the M | W | D control the system's `UISegmentedControl`, a letter wide per segment, with
       Today, "⇄" and "+" on its row. **VoiceOver reads each segment as its letter** ("M", "W", "D";
       only the control as a whole carries "Month, Week, Day") — record what it says:
-      ______. Pills: a long title hyphenates over two lines as on Android (Compose's `Hyphens.Auto`
-      on iOS); note any title broken without a hyphen or inside a letter: ______. Push Settings from
+      ______. Pills: a long title breaks over two lines at a space as on Android, or takes one line
+      with an ellipsis when a word is wider than the pill; note any title broken inside a word:
+      ______. Push Settings from
       the gear: its system bar returns, its back button reads "Calendar".
 - [ ] **The thread holds the parents' words** (2P). Bob adds an event, sends a day swap and a
       message with a photo, then a sticker. Alice's thread shows the message, the photo and the

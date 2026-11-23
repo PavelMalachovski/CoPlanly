@@ -259,12 +259,18 @@ private fun MiniMonthLegend(model: MiniMonthModel, parentNames: ParentNames) {
                     }
                 )
             ) {
-                // The ring the grid draws round a marked day, in a day-cell swatch like the rest.
+                // The ring the grid draws round a marked day, in a day-cell swatch like the rest. A
+                // changed day's ring takes the colour of whom it goes to, so its swatch is neutral.
+                val ring = if (mark == MiniMonthMark.CUSTODY_CHANGE) {
+                    MaterialTheme.colorScheme.outline
+                } else {
+                    MaterialTheme.colorScheme.primary
+                }
                 Box(modifier = Modifier.size(LEGEND_SWATCH), contentAlignment = Alignment.Center) {
                     Box(
                         modifier = Modifier
                             .size(LEGEND_SWATCH.height)
-                            .border(MARK_RING_WIDTH, MaterialTheme.colorScheme.primary, CircleShape)
+                            .border(MARK_RING_WIDTH, ring, CircleShape)
                     )
                 }
             }

@@ -54,3 +54,22 @@ internal fun pillLines(wanted: Int, height: Float, lineHeight: Float, gap: Float
     }
     return emptyList()
 }
+
+/** What separates a title's words: a pill breaks a title only here, never inside a word. */
+private val WORD_SEPARATOR = Regex("\\s+")
+
+/** [title]'s words, in order, without the spaces between them. */
+internal fun titleWords(title: String): List<String> = title.split(WORD_SEPARATOR).filter { it.isNotEmpty() }
+
+/**
+ * How many lines a pill's title may take, given the width of its widest word ([widestWord]) and of
+ * the pill's line ([lineWidth]), in one unit, when the cell has room for [maxLines].
+ *
+ * A title is never broken inside a word (owner rule, November 2026): hyphenation depends on the
+ * locale and is not available everywhere — not under Robolectric, not on the iPhone, not for an
+ * English title in a Russian interface — and without it a word too wide for the line was cut
+ * between letters ("Foot/ball"). So while every word fits the line the title wraps at its spaces on
+ * up to [maxLines] lines; once one does not, it takes one line and ends in an ellipsis.
+ */
+internal fun pillTitleLines(widestWord: Float, lineWidth: Float, maxLines: Int): Int =
+    if (maxLines <= 1 || widestWord > lineWidth) 1 else maxLines

@@ -350,7 +350,8 @@ private fun WeekdayHeader(firstDayOfWeek: DayOfWeek) {
         modifier = Modifier
             .fillMaxWidth()
             .height(dims.buttonHeight * 0.8f)
-            .background(MaterialTheme.colorScheme.surface)
+            // No band of its own: the row sits on the grid card's surface, which a `surface` band
+            // drew darker than in the dark theme.
             .semantics {
                 contentDescription = headerDescription
             },
