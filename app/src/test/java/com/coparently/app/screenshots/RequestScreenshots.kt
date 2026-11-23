@@ -18,6 +18,7 @@ import com.coparently.app.presentation.changerequests.AwaitingEventCard
 import com.coparently.app.presentation.changerequests.PlanRequestRow
 import com.coparently.app.presentation.changerequests.ProfessionalRequestRow
 import com.coparently.app.presentation.changerequests.RequestHistoryGroup
+import com.coparently.app.presentation.changerequests.SchedulePreviewWithChanges
 import com.coparently.app.presentation.changerequests.SupportRequestRow
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.testing.RobolectricTestApplication
@@ -104,6 +105,20 @@ class RequestScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
             miniMonth = MiniMonthModel.forAwaitingEvent(event, monthEvents, ScreenshotFixtures::custodyOn),
             parentNames = ScreenshotFixtures.parentNames,
             actions = null
+        )
+    }
+
+    /**
+     * Pavel's 2-2-3 on Olya's May (board HomeScheduleDialog): the proposed pattern, each day that
+     * would change ringed in the colour of whom it goes to, and the Proposed | Now switch.
+     */
+    @Test
+    fun schedulePreviewWithChanges() = snap("requests_schedule_preview_with_changes") {
+        SchedulePreviewWithChanges(
+            proposal = RequestFixtures.proposal,
+            current = RequestFixtures.agreed,
+            overrides = emptyMap(),
+            parentNames = ScreenshotFixtures.parentNames
         )
     }
 

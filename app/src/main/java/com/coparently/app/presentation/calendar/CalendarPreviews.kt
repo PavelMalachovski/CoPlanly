@@ -6,6 +6,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.presentation.calendar.components.CalendarHeader
+import com.coparently.app.presentation.calendar.components.CalendarHeaderActions
+import com.coparently.app.presentation.calendar.components.CalendarHeaderState
 import com.coparently.app.presentation.calendar.components.DayAgendaCard
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.LightDarkPreviews
@@ -28,26 +30,29 @@ import kotlin.time.Clock
 private fun CalendarHeaderTodayPreview() {
     PreviewWrapper {
         CalendarHeader(
-            children = emptyList(),
-            viewMode = CalendarViewMode.MONTH,
-            onViewModeChange = {},
-            onFiltersClick = {},
-            onSettingsClick = {}
+            state = CalendarHeaderState(
+                month = Clock.System.todayIn(TimeZone.currentSystemDefault()),
+                members = emptyList(),
+                selectedMembers = emptyList(),
+                filtersActive = false
+            ),
+            actions = CalendarHeaderActions(onJumpToDate = {}, onLegend = {}, onToggleMember = {}, onSettings = {})
         )
     }
 }
 
-@Preview(name = "Week mode, filters active", showBackground = true)
+@Preview(name = "Filters active", showBackground = true)
 @Composable
-private fun CalendarHeaderWeekPreview() {
+private fun CalendarHeaderFiltersPreview() {
     PreviewWrapper {
         CalendarHeader(
-            children = emptyList(),
-            viewMode = CalendarViewMode.WEEK,
-            onViewModeChange = {},
-            onFiltersClick = {},
-            filtersActive = true,
-            onSettingsClick = {}
+            state = CalendarHeaderState(
+                month = Clock.System.todayIn(TimeZone.currentSystemDefault()),
+                members = emptyList(),
+                selectedMembers = emptyList(),
+                filtersActive = true
+            ),
+            actions = CalendarHeaderActions(onJumpToDate = {}, onLegend = {}, onToggleMember = {}, onSettings = {})
         )
     }
 }

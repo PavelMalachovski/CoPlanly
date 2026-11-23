@@ -14,7 +14,6 @@ import com.coparently.app.presentation.chat.ChatSearchViewModel
 import com.coparently.app.presentation.chat.ChatViewModel
 import com.coparently.app.presentation.chat.DictationViewModel
 import com.coparently.app.presentation.chat.ReplySuggestionViewModel
-import com.coparently.app.presentation.chat.SettleUpPaymentViewModel
 import com.coparently.app.presentation.childinfo.ChildInfoViewModel
 import com.coparently.app.presentation.common.ConnectivityViewModel
 import com.coparently.app.presentation.common.FamilyKindSource
@@ -44,6 +43,7 @@ import com.coparently.app.presentation.home.HomeIdentityDependencies
 import com.coparently.app.presentation.home.HomeViewModel
 import com.coparently.app.presentation.home.MonthSpendDependencies
 import com.coparently.app.presentation.home.PutOffAsksViewModel
+import com.coparently.app.presentation.home.RequestsSeenViewModel
 import com.coparently.app.presentation.journal.JournalEditorViewModel
 import com.coparently.app.presentation.journal.JournalListViewModel
 import com.coparently.app.presentation.onboarding.NewAccountAsk
@@ -55,6 +55,7 @@ import com.coparently.app.presentation.pairing.PendingCustodyConflict
 import com.coparently.app.presentation.parentingplan.ParentingPlanViewModel
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
 import com.coparently.app.presentation.payments.PaymentsViewModel
+import com.coparently.app.presentation.payments.SettleUpPaymentViewModel
 import com.coparently.app.presentation.pets.PetsViewModel
 import com.coparently.app.presentation.professionals.ProfessionalCalendarViewModel
 import com.coparently.app.presentation.professionals.ProfessionalPlanViewModel
@@ -101,11 +102,10 @@ val commonUiModule: Module = module {
 
 /**
  * The chat (MON-24 phase 2, Task 10): the thread and its conversations, a file's sending and
- * opening, the card that names an event, the search, dictation, the suggested reply and the
- * payment a settle-up card shows. What they take from the platform — the sealed preference store,
- * the signed-in account, on-device speech and the AI callable with whether the build offers it — is
- * bound by [platformDataModule] and the app's modules on Android, and by [platformDataModule] and
- * [platformUiModule] on the iPhone.
+ * opening, the card that names an event, the search, dictation and the suggested reply. What they
+ * take from the platform — the sealed preference store, the signed-in account, on-device speech
+ * and the AI callable with whether the build offers it — is bound by [platformDataModule] and the
+ * app's modules on Android, and by [platformDataModule] and [platformUiModule] on the iPhone.
  */
 val chatUiModule: Module = module {
     viewModelOf(::ChatAttachmentViewModel)
@@ -114,7 +114,6 @@ val chatUiModule: Module = module {
     viewModelOf(::ChatViewModel)
     viewModelOf(::DictationViewModel)
     viewModelOf(::ReplySuggestionViewModel)
-    viewModelOf(::SettleUpPaymentViewModel)
 }
 
 /**
@@ -197,6 +196,7 @@ val expensesUiModule: Module = module {
  */
 val paymentsUiModule: Module = module {
     viewModelOf(::PaymentsViewModel)
+    viewModelOf(::SettleUpPaymentViewModel)
 }
 
 /**
@@ -283,7 +283,8 @@ val profileUiModule: Module = module {
 /**
  * Home (MON-24 phase 2, Task 10): the dashboard — the next handover and each child's day, today
  * and the week, the month's money, the unread count, the co-parent's changes and the Requests row
- * with what Home asks — and which of those asks this parent put off with "Later", kept per family
+ * with what Home asks — which of those asks this parent put off with "Later", and when it last
+ * opened its requests from "See all", each kept per family
  * in the sealed preference store [platformDataModule] binds. Beside them the bundle of who the
  * family is, a `factory` as in the app's `presentationModule` it came from.
  */
@@ -291,6 +292,7 @@ val homeUiModule: Module = module {
     factoryOf(::HomeIdentityDependencies)
     viewModelOf(::HomeViewModel)
     viewModelOf(::PutOffAsksViewModel)
+    viewModelOf(::RequestsSeenViewModel)
 }
 
 /**

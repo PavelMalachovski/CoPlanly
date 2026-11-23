@@ -18,7 +18,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.calendar.MiniMonthModel
@@ -42,9 +41,6 @@ import org.jetbrains.compose.resources.stringResource
 
 /** The creator's initial sits on a disc this wide, beside the bubble holding their words. */
 private val CREATOR_DISC_SIZE = 28.dp
-
-/** How much of the creator's words the card shows before an ellipsis. */
-private const val CREATOR_WORDS_MAX_LINES = 6
 
 /**
  * An event created for the other parent's days, waiting on their answer (phase 2, spec §5.1).
@@ -161,7 +157,7 @@ private fun WaitingLine() {
  * no end, or both sides in full when it ends on another day.
  */
 @Composable
-private fun eventWhenText(event: Event): String {
+internal fun eventWhenText(event: Event): String {
     val start = event.startDateTime
     val end = event.endDateTime
     return when {
@@ -185,7 +181,7 @@ private fun eventWhenText(event: Event): String {
 }
 
 /**
- * The creator's own words, in a bubble headed by their name, beside a disc with their initial in
+ * The creator's own words, whole, in a bubble headed by their name, beside a disc with their initial in
  * their colour. A creator this phone cannot place in a slot is drawn in the neutral tones.
  */
 @Composable
@@ -220,12 +216,9 @@ private fun CreatorWords(words: String, authorUid: String?, parentNames: ParentN
                 verticalArrangement = Arrangement.spacedBy(Spacing.XS)
             ) {
                 Text(text = name, style = MaterialTheme.typography.labelMedium, color = nameColor)
-                Text(
-                    text = words,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = CREATOR_WORDS_MAX_LINES,
-                    overflow = TextOverflow.Ellipsis
-                )
+                // Whole, never cut: the answering parent answers what the words ask, and a cut at a
+                // paragraph's end read as "five.…".
+                Text(text = words, style = MaterialTheme.typography.bodyMedium)
             }
         }
     }

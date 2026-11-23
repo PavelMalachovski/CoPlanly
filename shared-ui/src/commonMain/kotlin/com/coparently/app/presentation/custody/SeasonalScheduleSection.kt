@@ -246,7 +246,7 @@ private fun layerSummary(layer: SeasonalLayer, parentNames: ParentNames): String
         counts[slot]?.let { "${parentNames.labelFor(slot)} $it" }
     }
     return (listOf("${readerMediumDate(layer.fromDate)} – ${readerMediumDate(layer.toDate)}") + shares)
-        .joinToString(" · ")
+        .joinToString("\u00A0· ")
 }
 
 /** How long a new layer runs before the parent picks its dates. */

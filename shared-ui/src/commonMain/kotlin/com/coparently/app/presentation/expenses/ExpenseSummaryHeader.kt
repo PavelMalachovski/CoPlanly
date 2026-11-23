@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,10 +33,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.expenses.ExpenseBalance
-import com.coparently.app.domain.payments.PaymentState
 import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.ParentNames
-import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.payments.SettleUpPanel
+import com.coparently.app.presentation.payments.SettleUpPanelActions
+import com.coparently.app.presentation.payments.SettleUpPanelState
 import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
@@ -56,16 +56,7 @@ import com.coparently.app.resources.expenses_month_and_count
 import com.coparently.app.resources.expenses_next_month
 import com.coparently.app.resources.expenses_paid_by
 import com.coparently.app.resources.expenses_prev_month
-import com.coparently.app.resources.expenses_settle_up
 import com.coparently.app.resources.expenses_shared_spend
-import com.coparently.app.resources.payment_i_paid
-import com.coparently.app.resources.payment_money_arrived
-import com.coparently.app.resources.payment_paid_to_you
-import com.coparently.app.resources.payment_paid_to_you_named
-import com.coparently.app.resources.payment_settled
-import com.coparently.app.resources.payment_waiting
-import com.coparently.app.resources.payment_waiting_named
-import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.abs
@@ -81,7 +72,7 @@ private const val BALANCE_STRIP_ALPHA = 0.12f
 
 /**
  * From this font scale the card's side-by-side pairs stack: the month's total over its label, and
- * the settle-up sentence over its Settle up chip. Side by side at 150 % German broke both
+ * the two parents' amounts under the split bar. Side by side at 150 % German broke both
  * ("gemeinsam|e", "820,0|0 CZK").
  */
 private const val STACK_FONT_SCALE = 1.3f
@@ -113,11 +104,10 @@ private const val STACK_FONT_SCALE = 1.3f
  * @param balance The selected month's paid/owed figures for one currency
  * @param currency ISO currency code for formatting
  * @param parentNames Resolves a slot to that parent's name
- * @param onSettleUp Invoked with the balance to settle when the user taps Settle up
  * @param modifier Modifier for the card
  * @param monthNavigation Month switcher to render at the top of the card, or null for none
- * @param payment Where the month's payment stands in this currency, and what this parent can do
- *   about it ("I paid", "Money arrived"), or null where nothing is known yet
+ * @param settleUp Where the month's settle-up stands in this currency and what this parent can do
+ *   about it ([SettleUpPanel]), or null for none
  */
 @Composable
 @Suppress("LongParameterList") // one card, one parameter per thing it displays
@@ -125,10 +115,9 @@ fun ExpenseSummaryHeader(
     balance: ExpenseBalance,
     currency: String,
     parentNames: ParentNames,
-    onSettleUp: (SettleUpAsk) -> Unit,
     modifier: Modifier = Modifier,
     monthNavigation: MonthNavigation? = null,
-    payment: PaymentStrip? = null
+    settleUp: ExpenseSettleUp? = null
 ) {
     val format = remember(currency) { MoneyFormat(currency) }
 
@@ -171,9 +160,8 @@ fun ExpenseSummaryHeader(
                     balance = balance,
                     format = format,
                     coParentName = parentNames.parents.coParent?.name?.takeIf { it.isNotBlank() },
-                    onSettleUp = { net -> onSettleUp(SettleUpAsk(net, currency)) },
                     modifier = Modifier.padding(top = Spacing.M),
-                    payment = payment
+                    settleUp = settleUp?.takeIf { it.state.currency == currency }
                 )
             }
         }
@@ -432,40 +420,29 @@ private fun SplitBar(momShare: Float, modifier: Modifier = Modifier) {
 }
 
 /**
- * "Bob owes you $29.85" plus the Settle up action, on its own tinted strip.
+ * "Bob owes you $29.85" on its own tinted strip, and under it what this parent can do about the
+ * month ([SettleUpPanel]): ask the co-parent to settle up, pay them with the code, or say the money
+ * arrived (redesign, November 2026: settle up left the chat for Money).
  *
  * The net figure carries no slot, but in a family of two the other side of it is the co-parent on
  * screen, so the line names them (new-user review, October 2026: "your co-parent" read as a form
  * letter). With no name known it falls back to "your co-parent". The named lines are worded so the
  * name stays in the nominative in every locale ("Bob: вы должны …"), never declined.
  *
- * The strip and the filled chip are the August 2026 refresh: this line answers the question the
- * screen exists for, and it used to sit below a divider as plain text next to an outlined
- * button — quieter than the row of numbers above it.
- *
- * Settle up asks before it sends anything — see [SettleUpDialog] — and then posts a card whose
- * amount cannot be edited (tester report, October 2026: the draft it used to put in the composer
- * could be changed before it was sent).
+ * A confirmed payment reads as square, as Home's Money card does, though the expenses themselves
+ * do not change when one parent pays the other (25 October 2026).
  */
 @Composable
-@Suppress("LongParameterList") // the month's figures, who they are with, and the two actions
 private fun BalanceRow(
     balance: ExpenseBalance,
     format: MoneyFormat,
     coParentName: String?,
-    onSettleUp: (net: Double) -> Unit,
     modifier: Modifier = Modifier,
-    payment: PaymentStrip? = null
+    settleUp: ExpenseSettleUp? = null
 ) {
     val net = balance.netForCurrentUser
     val amount = format.format(abs(net))
-    val settled = abs(net) < SETTLED_EPSILON
-    // A payment recorded for the month says where the money stands, whatever the balance still
-    // reads: the expenses do not change when one parent pays the other (25 October 2026).
-    if (payment != null && payment.state != PaymentState.NONE) {
-        PaymentBalanceStrip(payment, format, coParentName, modifier)
-        return
-    }
+    val settled = abs(net) < SETTLED_EPSILON || settleUp?.state is SettleUpPanelState.Settled
 
     val label = when {
         settled -> stringResource(Res.string.expenses_balance_settled)
@@ -482,79 +459,44 @@ private fun BalanceRow(
         net > 0 -> MaterialTheme.colorScheme.tertiary
         else -> MaterialTheme.colorScheme.primary
     }
-    BalanceStrip(
-        label = label,
-        accent = accent,
-        onSettleUp = if (settled) null else { { onSettleUp(net) } },
-        modifier = modifier,
-        // The parent who owes may say they paid, once they have.
-        onIPaid = payment?.onMarkPaid?.takeIf { !settled && net < 0 }
-    )
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.M)) {
+        BalanceStrip(label = label, accent = accent)
+        settleUp?.let {
+            SettleUpPanel(
+                state = it.state,
+                coParentName = coParentName ?: it.coParentFallback,
+                payeeIban = it.payeeIban,
+                actions = it.actions
+            )
+        }
+    }
 }
 
 /**
- * Where a month's payment stands, for [ExpenseSummaryHeader]: its [state] for this parent, the
- * amount recorded (plain decimal text, "450.00", the payment's minor units with two places), and
- * the one step this parent can take — say they paid, or that it arrived.
+ * Where a month's settle-up stands in one currency, for [ExpenseSummaryHeader], and what its
+ * buttons do — the panel Home's Money card draws too.
+ *
+ * @property coParentFallback The name a sentence uses while the co-parent's is not known
  */
-data class PaymentStrip(
-    val state: PaymentState,
-    val amount: String? = null,
-    val onMarkPaid: (() -> Unit)? = null,
-    val onConfirm: (() -> Unit)? = null
+class ExpenseSettleUp(
+    val state: SettleUpPanelState,
+    val payeeIban: String?,
+    val actions: SettleUpPanelActions,
+    val coParentFallback: String
 )
 
-/** The balance strip once a payment is recorded: waiting for its confirmation, or settled. */
+/** The tinted strip [BalanceRow] draws: the sentence with its icon. */
 @Composable
-private fun PaymentBalanceStrip(
-    payment: PaymentStrip,
-    format: MoneyFormat,
-    coParentName: String?,
-    modifier: Modifier
-) {
-    val amount = payment.amount?.let { format.format(it) }.orEmpty()
-    val label = when (payment.state) {
-        PaymentState.CONFIRMED -> stringResource(Res.string.payment_settled, amount)
-        PaymentState.PAID_BY_ME -> coParentName?.let { stringResource(Res.string.payment_waiting_named, amount, it) }
-            ?: stringResource(Res.string.payment_waiting, amount)
-        else -> coParentName?.let { stringResource(Res.string.payment_paid_to_you_named, it, amount) }
-            ?: stringResource(Res.string.payment_paid_to_you, amount)
-    }
-    BalanceStrip(
-        label = label,
-        accent = if (payment.state == PaymentState.CONFIRMED) {
-            MaterialTheme.colorScheme.outline
-        } else {
-            MaterialTheme.colorScheme.tertiary
-        },
-        onSettleUp = null,
-        modifier = modifier,
-        onMoneyArrived = payment.onConfirm.takeIf { payment.state == PaymentState.PAID_TO_ME }
-    )
-}
-
-/**
- * The tinted strip [BalanceRow] draws: the sentence with its icon, and the Settle up chip beside
- * it — or under it from [STACK_FONT_SCALE], where beside it left the sentence a word per line.
- *
- * @param onSettleUp What Settle up does, or null for a settled month, which offers none.
- */
-@Composable
-@Suppress("LongParameterList", "LongMethod") // a sentence and up to two steps, in two layouts
-private fun BalanceStrip(
-    label: String,
-    accent: Color,
-    onSettleUp: (() -> Unit)?,
-    modifier: Modifier = Modifier,
-    onIPaid: (() -> Unit)? = null,
-    onMoneyArrived: (() -> Unit)? = null
-) {
-    val strip = modifier
-        .fillMaxWidth()
-        .clip(MaterialTheme.shapes.small)
-        .background(accent.copy(alpha = BALANCE_STRIP_ALPHA))
-        .padding(horizontal = Spacing.M, vertical = Spacing.M)
-    val sentence: @Composable RowScope.() -> Unit = {
+private fun BalanceStrip(label: String, accent: Color) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.small)
+            .background(accent.copy(alpha = BALANCE_STRIP_ALPHA))
+            .padding(horizontal = Spacing.M, vertical = Spacing.M),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S)
+    ) {
         AppIcon(
             imageVector = Icons.Default.AccountBalanceWallet,
             contentDescription = null,
@@ -569,50 +511,5 @@ private fun BalanceStrip(
             style = MaterialTheme.typography.titleSmallEmphasized,
             modifier = Modifier.weight(1f)
         )
-    }
-    val settleUp: @Composable (Modifier, () -> Unit) -> Unit = { chipModifier, onClick ->
-        PillChip(
-            label = stringResource(Res.string.expenses_settle_up),
-            modifier = chipModifier,
-            container = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            onClick = onClick
-        )
-    }
-    // "I paid" and "Money arrived" (25 October 2026) sit under the sentence, as a second action
-    // beside Settle up would squeeze the sentence to a word per line.
-    val payStep: Pair<StringResource, () -> Unit>? = onMoneyArrived?.let { Res.string.payment_money_arrived to it }
-        ?: onIPaid?.let { Res.string.payment_i_paid to it }
-    if (LocalDensity.current.fontScale >= STACK_FONT_SCALE || payStep != null) {
-        Column(modifier = strip, verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.S),
-                content = sentence
-            )
-            Row(
-                modifier = Modifier.align(Alignment.End),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.S)
-            ) {
-                payStep?.let { (label, onClick) ->
-                    PillChip(
-                        label = stringResource(label),
-                        container = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                        onClick = onClick
-                    )
-                }
-                if (onSettleUp != null) settleUp(Modifier, onSettleUp)
-            }
-        }
-    } else {
-        Row(
-            modifier = strip,
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.S)
-        ) {
-            sentence()
-            if (onSettleUp != null) settleUp(Modifier, onSettleUp)
-        }
     }
 }

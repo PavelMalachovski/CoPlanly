@@ -9,11 +9,11 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -23,9 +23,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.calendar.CustodyHelper
 import com.coparently.app.presentation.calendar.DayCellFills
@@ -40,13 +45,18 @@ import com.coparently.app.presentation.calendar.dayCellOverlayColor
 import com.coparently.app.presentation.calendar.eventDotColor
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.rememberToday
+import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.calendar_agenda_custody_day
 import com.coparently.app.resources.calendar_agenda_custody_day_you
+import com.coparently.app.resources.mini_month_legend_custody_change
 import com.coparently.app.resources.mini_month_legend_new_event
+import com.coparently.app.resources.mini_month_legend_proposed_day
 import com.coparently.app.resources.mini_month_legend_swap_day
+import com.coparently.app.resources.mini_month_mark_custody_change
 import com.coparently.app.resources.mini_month_mark_new_event
+import com.coparently.app.resources.mini_month_mark_proposed_day
 import com.coparently.app.resources.mini_month_mark_swap_day
 import com.coparently.app.resources.mini_month_marked_day
 import com.coparently.app.resources.mini_month_marked_day_no_custody
@@ -54,6 +64,7 @@ import com.coparently.app.utils.ReaderDateText
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.yearMonth
 import org.jetbrains.compose.resources.stringResource
+import kotlin.math.sqrt
 
 /**
  * The one small calendar (phase 2, spec §5.3): a month of custody colours with the day it is
@@ -162,23 +173,33 @@ private fun MiniMonthCell(
             verticalArrangement = Arrangement.spacedBy(Spacing.XXS),
             modifier = Modifier.padding(vertical = Spacing.XXS)
         ) {
-            DayNumber(date = date, isToday = isToday, inMonth = inMonth, marked = date in model.marks)
+            DayNumber(
+                date = date,
+                isToday = isToday,
+                inMonth = inMonth,
+                marked = date in model.marks,
+                ringSlot = model.markSlots[date]
+            )
             DayDot(dot = model.dots[date], inMonth = inMonth, base = base)
         }
     }
 }
 
-/** The day number: a filled disc for today, a ring for a marked day, as `MonthView` marks today. */
+/**
+ * The day number: a filled disc for today, a ring for a marked day, as `MonthView` marks today. The
+ * ring is the theme's primary, or the colour of [ringSlot]'s parent where the mark names one.
+ */
 @Composable
-private fun DayNumber(date: LocalDate, isToday: Boolean, inMonth: Boolean, marked: Boolean) {
+private fun DayNumber(date: LocalDate, isToday: Boolean, inMonth: Boolean, marked: Boolean, ringSlot: String?) {
+    val ringColor = ringSlot?.let { ParentColors.fill(it) } ?: MaterialTheme.colorScheme.primary
     val ring = if (marked) {
-        Modifier.border(MARK_RING_WIDTH, MaterialTheme.colorScheme.primary, CircleShape)
+        Modifier.border(MARK_RING_WIDTH, ringColor, CircleShape)
     } else {
         Modifier
     }
     Box(
         modifier = Modifier
-            .defaultMinSize(minWidth = NUMBER_DISC, minHeight = NUMBER_DISC)
+            .roundDisc(rememberNumberDisc())
             .background(
                 color = if (isToday) MaterialTheme.colorScheme.primary else Color.Transparent,
                 shape = CircleShape
@@ -194,10 +215,54 @@ private fun DayNumber(date: LocalDate, isToday: Boolean, inMonth: Boolean, marke
                 !inMonth -> MaterialTheme.colorScheme.onSurface.copy(alpha = OUTSIDE_MONTH_NUMBER_ALPHA)
                 else -> MaterialTheme.colorScheme.onSurface
             },
-            modifier = Modifier.padding(horizontal = Spacing.XS)
+            softWrap = false,
+            modifier = Modifier.wrapContentSize(unbounded = true)
         )
     }
 }
+
+/**
+ * The day number's disc: [NUMBER_DISC], or more where the font is larger — a circle whose inside,
+ * within the ring's stroke, clears the widest two-digit number's corners by [RING_CLEARANCE], the
+ * same for every day so the rows stay level. A disc only as wide as the digits plus a margin still
+ * let the ring cut the corners of "30" at 150 % and 200 % (text review, November 2026): the digits'
+ * box is wider than tall, so its corners reach past a circle its width barely exceeds.
+ */
+@Composable
+private fun rememberNumberDisc(): Dp {
+    val style = MaterialTheme.typography.labelMedium
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    return remember(style, density, measurer) {
+        val width = DAY_NUMBERS.maxOf { measurer.measure(it, style, softWrap = false).size.width }
+        with(density) {
+            val halfWidth = width / 2f
+            val halfHeight = style.fontSize.toPx() * DIGIT_HEIGHT_EM / 2f
+            val corner = sqrt(halfWidth * halfWidth + halfHeight * halfHeight)
+            val radius = corner + MARK_RING_WIDTH.toPx() + RING_CLEARANCE.toPx()
+            maxOf((radius * 2f).toDp(), NUMBER_DISC)
+        }
+    }
+}
+
+/**
+ * A circle of [diameter], or of the room the cell gives when that is less, so the disc and the
+ * ring are always round rather than squeezed into an oval.
+ */
+private fun Modifier.roundDisc(diameter: Dp): Modifier = layout { measurable, constraints ->
+    val side = minOf(diameter.roundToPx(), constraints.maxWidth, constraints.maxHeight)
+    val placeable = measurable.measure(Constraints.fixed(side, side))
+    layout(side, side) { placeable.place(0, 0) }
+}
+
+/** The two-digit day numbers, the widest of which the disc is sized around. */
+private val DAY_NUMBERS = (10..31).map { it.toString() }
+
+/** A digit's height as a share of the font size, Onest's and SF Pro's figures with a margin. */
+private const val DIGIT_HEIGHT_EM = 0.75f
+
+/** The least room between the digits' corners and the inside of the ring. */
+private val RING_CLEARANCE = 2.dp
 
 /**
  * The day's dot, in a ring of the cell's base so it keeps 3:1 on its own parent's wash, as the
@@ -239,15 +304,23 @@ private fun MiniMonthLegend(model: MiniMonthModel, parentNames: ParentNames) {
                     when (mark) {
                         MiniMonthMark.NEW_EVENT -> Res.string.mini_month_legend_new_event
                         MiniMonthMark.SWAP_DAY -> Res.string.mini_month_legend_swap_day
+                        MiniMonthMark.CUSTODY_CHANGE -> Res.string.mini_month_legend_custody_change
+                        MiniMonthMark.PROPOSED_DAY -> Res.string.mini_month_legend_proposed_day
                     }
                 )
             ) {
-                // The ring the grid draws round a marked day, in a day-cell swatch like the rest.
+                // The ring the grid draws round a marked day, in a day-cell swatch like the rest. A
+                // changed day's ring takes the colour of whom it goes to, so its swatch is neutral.
+                val ring = if (mark == MiniMonthMark.CUSTODY_CHANGE) {
+                    MaterialTheme.colorScheme.outline
+                } else {
+                    MaterialTheme.colorScheme.primary
+                }
                 Box(modifier = Modifier.size(LEGEND_SWATCH), contentAlignment = Alignment.Center) {
                     Box(
                         modifier = Modifier
                             .size(LEGEND_SWATCH.height)
-                            .border(MARK_RING_WIDTH, MaterialTheme.colorScheme.primary, CircleShape)
+                            .border(MARK_RING_WIDTH, ring, CircleShape)
                     )
                 }
             }
@@ -266,6 +339,8 @@ private fun miniMonthDescription(model: MiniMonthModel, parentNames: ParentNames
         val meaning = when (mark) {
             MiniMonthMark.NEW_EVENT -> stringResource(Res.string.mini_month_mark_new_event)
             MiniMonthMark.SWAP_DAY -> stringResource(Res.string.mini_month_mark_swap_day)
+            MiniMonthMark.CUSTODY_CHANGE -> stringResource(Res.string.mini_month_mark_custody_change)
+            MiniMonthMark.PROPOSED_DAY -> stringResource(Res.string.mini_month_mark_proposed_day)
         }
         val slot = model.custody[date]
         if (slot != null) {

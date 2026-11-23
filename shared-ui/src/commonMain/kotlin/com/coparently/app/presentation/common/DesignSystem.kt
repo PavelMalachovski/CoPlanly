@@ -185,6 +185,9 @@ private class SectionGroupScopeImpl : SectionGroupScope {
  *   pill — which at 150 % squeezed the title and supporting line into a column one or two words
  *   wide. Still one trailing control; only where it sits changes. Leave it off for a switch or a
  *   chevron, which are narrow and belong at the row's end.
+ * @param trailingUnderText Whether [trailing] sits under the text at every font scale: for a text
+ *   button as wide as "Withdraw request", which squeezed the text into a narrow column even at
+ *   100 % (text review, November 2026).
  * @param onToggle For a row whose [trailing] control is a switch: what flipping it does. Used only
  *   under native controls ([nativeControls]), where the whole row flips the switch, as a grouped
  *   list's switch row does on the iPhone. Ignored where Material draws the row (Android), so the
@@ -214,11 +217,12 @@ fun SectionRow(
     leading: @Composable (() -> Unit)? = null,
     trailing: @Composable (() -> Unit)? = null,
     stackTrailingAtLargeFont: Boolean = false,
+    trailingUnderText: Boolean = false,
     onToggle: (() -> Unit)? = null,
     toggled: Boolean? = null,
     nativeChevron: Boolean = true
 ) {
-    val trailingBelow = stackTrailingAtLargeFont && stacksAtLargeFont()
+    val trailingBelow = trailingUnderText || (stackTrailingAtLargeFont && stacksAtLargeFont())
     val native = nativeControls() != null
     val rowToggle = onToggle.takeIf { onClick == null && native }
     Row(

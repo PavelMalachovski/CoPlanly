@@ -312,7 +312,7 @@ private fun SpecialDaysRow(review: MonthReview, names: ParentNames) {
     SectionRow(
         icon = Icons.Default.Celebration,
         title = stringResource(Res.string.month_review_special_days),
-        supporting = perParent.joinToString(separator = " · ").ifEmpty { null },
+        supporting = perParent.joinToString(separator = "\u00A0· ").ifEmpty { null },
         trailing = { Value(review.specialDays.toString()) }
     )
 }

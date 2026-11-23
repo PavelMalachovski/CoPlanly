@@ -39,19 +39,12 @@
 
     <string name="home_section_this_week">Цього тижня</string>
 
-    <string name="home_timeline_meta">%1$s · чий день: %2$s</string>
-    <string name="home_timeline_meta_you">%1$s · ваш день</string>
-
+    <string name="home_timeline_meta">%1$s\u00A0· чий день: %2$s</string>
+    <string name="home_timeline_meta_you">%1$s\u00A0· ваш день</string>
 
     <!-- Contacts: item 16's one button, between the changes feed and the spend tile. -->
     <string name="home_contacts">Контакти</string>
     <string name="home_contacts_supporting">Бабусі й дідусі, лікарі, батьки друга</string>
-
-    <string name="home_activity_event_created">Додано: %1$s</string>
-    <string name="home_activity_event_updated">Змінено: %1$s</string>
-    <string name="home_activity_pickup_confirmed">Підтверджено, що забрали: %1$s</string>
-    <string name="home_activity_change_requested">Запит на зміну: %1$s</string>
-    <string name="home_activity_review">Переглянути</string>
 
     <string name="home_dialog_swap_title">Обмін днями</string>
     <!-- No full stop after the date: FormatStyle.FULL ends it with "р.", and a sentence ending in
@@ -64,26 +57,9 @@
     <string name="home_dialog_review">Переглянути</string>
 
     <!-- The empty seven-day card's action. -->
-    <!-- How many requests wait in one row of Home's "Open requests" card; the row's title says on whom. -->
-    <plurals name="home_open_requests_count">
-        <item quantity="one">%1$d запит</item>
-        <item quantity="few">%1$d запити</item>
-        <item quantity="many">%1$d запитів</item>
-        <item quantity="other">%1$d запиту</item>
-    </plurals>
-    <!-- A noun phrase and the name in brackets, not "X прийняв(ла)": a name cannot agree with a gendered verb. -->
-    <string name="home_activity_accepted_new_time">Ваш новий час прийнято: %1$s</string>
-    <string name="home_activity_declined_new_time">Ваш новий час відхилено: %1$s</string>
-    <string name="home_activity_accepted_swap">Ваш обмін днями прийнято: %1$s</string>
-    <string name="home_activity_declined_swap">Ваш обмін днями відхилено: %1$s</string>
-    <string name="home_activity_accepted_event">Прийнято: %1$s</string>
-    <string name="home_activity_declined_event">Відхилено: %1$s</string>
-    <!-- Home, variant A (redesign, November 2026): the Updates card, the open requests, the
-         handover card and the money tile. %1$s = the co-parent; %1$d = whole days. -->
-    <string name="home_updates_title">Новини</string>
-    <string name="home_updates_empty">%1$s: нічого нового</string>
+    <!-- Home (November 2026): "See all" in the Requests block, the status chips, and the handover
+         card. %1$s = the co-parent; %1$d = whole days. -->
     <string name="home_updates_see_all">Усі</string>
-    <string name="home_open_requests_title">Відкриті запити</string>
     <string name="home_waiting_for_you">Чекає на вашу відповідь</string>
     <string name="home_waiting_for_coparent">Чекає на відповідь: %1$s</string>
     <plurals name="home_handover_in_days">
@@ -95,8 +71,10 @@
     <string name="home_handover_today">Передача сьогодні</string>
     <string name="home_expenses_tile">Витрати за місяць</string>
     <!-- Under the handover card's headline: whom the days go to. -->
-    <string name="home_handover_goes_to_you">Далі — у вас</string>
-    <string name="home_handover_goes_to">Далі — %1$s</string>
+    <string name="home_handover_goes_to_you">Далі\u00A0— у\u00A0вас</string>
+    <string name="home_handover_goes_to">Далі\u00A0— %1$s</string>
     <!-- A week tile's spoken description on a day with events. %1$s = the day and whose it is. -->
     <string name="home_week_tile_with_events">%1$s, є події</string>
+    <!-- The Money card's top line. %1$s = the month's standalone name ("November"). -->
+    <string name="home_money_spent_in">Витрачено за %1$s</string>
 </resources>

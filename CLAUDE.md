@@ -77,7 +77,8 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    - `MiniMonth` (`presentation/calendar/components/`, built by `presentation/calendar/
      MiniMonthModel`) is the one small calendar (October 2026, tester feedback phase 2): a month
      with the custody wash, event dots and a ringed day, on the card of an event that waits for an
-     answer. Don't draw a second one; phase 3's day swaps reuse it.
+     answer. Don't draw a second one; phase 3's day swaps reuse it, and so do Home's Details sheet
+     and `SchedulePreviewWithChanges` (November 2026).
    - `AnswerByField` (`common/AnswerByField.kt`, with `rememberAnswerByOffer` and
      `AnswerByPickSaver`) is the "Answer by" block of every form that asks the co-parent something
      (phase 3a, item 42): the day swap sheet, the change request, the event form while the event
@@ -87,6 +88,20 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
      the deadline line, the proposer's status rows, "No answer", the last-chance banner and
      button. A CompositionLocal, not a parameter, for `LocalChatEventCard`'s reason: the detekt
      baseline keys entries on the cards' signatures.
+   - `SettleUpPanel` (`presentation/payments/`, November 2026) is a month's settle-up, under its
+     balance on Home's Money card and in the Expenses summary header, both read through
+     `rememberSettleUpSource`: five states from the pure `settleUpPanelState` (ask to settle, pay,
+     waiting for the co-parent, confirm, settled), a status chip, a sentence and at most this
+     parent's one step. Don't draw the payment code or "I paid" anywhere else (item 45).
+   - `RequestDetailsSheet` (`home/`, an `AdaptiveSheet`; its body `RequestDetailsBody`) is a request
+     waiting on this parent drawn on a mini month of the reader's own calendar, with Decline and
+     Accept again; `SchedulePreviewWithChanges` (`changerequests/`, its month from the pure
+     `scheduleChangeMonth`) is how a custody proposal is drawn there and in Home's proposal pop-up: a
+     Proposed | Now switch (`AdaptiveSegmented`) and each changed day ringed in the colour of whom it
+     goes to. No count of days or nights per parent.
+   - `HeadingLines` (`common/HeadingLines.kt`) is "Your family calendar" over "Together, for Emma
+     and Leo" (the second line left out with no children). Home draws it under the wordmark since
+     calendar K1 gave the Calendar's header to the month; don't give a screen its own copy.
 
    **Icon sizes come from `theme/IconSizes.kt`** (October 2026 audit, D-25): `Inline` 16 dp (a
    mark in a line of text), `Small` 18 (buttons, chips, banners, status lines — Material's own),
@@ -110,17 +125,18 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
 
    `GroupLabel` and the screens' section headers carry `heading()` semantics for TalkBack. Don't
    draw a second anatomy for any of these. The calendar's compact banners over the grid
-   (`CalendarBanners.kt`, one row of icon, text and action, which wraps rather than cuts) are the
-   deliberate exception.
+   (`CalendarBanners.kt`, one row of icon, text and action, which wraps rather than cuts; since
+   calendar K1 only the custody-changed line is drawn there) are the deliberate exception.
    **On the iPhone the controls are the system's, and nothing else changes** (MON-24 phase 3, part
    C; owner rulings of 15 November 2026 and the eight control boards on the canvas). The iPhone
    keeps this refresh's look — the lavender ground, the white cards with their hairline, the indigo
-   tint, the wordmark header on Calendar and Home. `presentation/common/NativeControls.kt` declares
+   tint, the wordmark header on Home and, since calendar K1, the Calendar's header led by the month
+   title (design item 5). `presentation/common/NativeControls.kt` declares
    one `@Composable` member per control and `LocalNativeControls` (null unless a shell provides one;
    only the iPhone's `ScreenController` does, with `IosNativeControls`). Every adaptive control asks
    `nativeControls()` and, on null, makes **exactly the Material call the site made before**, with
-   the same parameters, modifiers, colours and semantics — that branch is Android, and the 470
-   screenshots hold it: `AdaptiveSwitch` (`UISwitch`, the system's green), `AdaptiveSegmented`
+   the same parameters, modifiers, colours and semantics — that branch is Android, and the
+   screenshot baselines hold it: `AdaptiveSwitch` (`UISwitch`, the system's green), `AdaptiveSegmented`
    (`UISegmentedControl`; a choice of more than five stays chips), the date and time pickers
    (`LocalDatePickerDialog`, `TimePickerDialog`, `DatePickerField` and the event form's rows: a sheet
    with the inline calendar, wheels, the compact pill), `AdaptiveOptionRow` and `MenuFieldRow` (a
@@ -144,15 +160,15 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    dismissal when UIKit drops it, so `onDismiss` is called once and a second open works.
    **On the iPhone the type, the icons and the theme are the system's too** (MON-24 phase 3, part
    D; owner rulings of 16 November 2026 and the canvas's fourth row). Still the redesign's look;
-   Android draws what it drew, and the 470 screenshots hold it. Four things not to undo.
+   Android draws what it drew, and the screenshot baselines hold it. Four things not to undo.
    **Text is SF Pro, the wordmark Onest**: `CoPlanlyTheme`'s scale takes `appFontFamily()` (Onest
    on Android, `FontFamily.Default` on the iPhone, which Compose Multiplatform draws in SF Pro), and
    `BrandHeader` sets its "coplanly." through `wordmarkStyle(…, onestFontFamily())`, so it stays
    Onest Bold on both. **Every icon is drawn through `AppIcon`** (`common/AppIcon.kt`, an `expect`
    with material3 `Icon`'s parameters; on Android exactly that `Icon` call): `AppIconGuardTest`
    refuses Material's `Icon` called or imported in `commonMain`. On the iPhone `AppIcon` looks the
-   vector's `ImageVector.name` up in `SF_SYMBOLS` (`common/SfSymbolTable.kt`: 117 symbols, 120
-   mapped rows of the 132 in the owner-approved
+   vector's `ImageVector.name` up in `SF_SYMBOLS` (`common/SfSymbolTable.kt`: 118 symbols, 121
+   mapped rows of the 133 in the owner-approved
    `docs/superpowers/plans/2026-11-16-iphone-phase-3d-sf-symbols.json`, where `Default` and `Filled`
    share a key; 12 keep Material) and draws that SF Symbol rasterised inside Compose, in the call site's tint, size and semantics, never a
    native view; an icon with no row, or whose symbol the running iOS cannot load, draws its
@@ -195,68 +211,118 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    the journal; M5), People (the unassigned-records row first, and the co-parent's details named
    "What {name} has shared"), Only mine — with the stickers at the bottom. It reuses Settings' dialogs (`FamilyKindDialog`, `SplitRatioDialog`) rather than
    drawing its own, and its money figures come from `home/MonthMoney`, the one computation Home's
-   tile reads too.
-5. **Calendar header is three rows** (redesign, November 2026; `components/CalendarHeader.kt`):
-   the brand row (`BrandHeader`: wordmark, the children's avatars, gear), "Your family calendar"
-   with "Together, for Emma and Leo" under it (left out with no children and from font scale
-   1.3), then the Month/Week/Day segmented control and Filters. The header and the member strip
-   are tight on purpose (tester feedback, 12 November 2026): `titleMediumEmphasized` over
-   `bodySmall`, 4 dp gaps, and the strip's chips at a 40 dp target (`LocalMinimumInteractiveComponentSize` around it in `CalendarScreen`), so the grid
-   gets the height. The month title, Today, the
-   arrows, the swap button and the "+" for a new event head the grid's own white card in one row
-   (`CalendarMonthBar` in `CalendarGridCard`, the legend under them on the full width; the title
-   steps its size down before it ellipsises, and from font scale 1.3 takes a line of its own above
-   the actions); tapping the title opens "Jump to
-   date". **The "+" is the bar's, not a floating button** (tester feedback, 12 November 2026): once
-   the six rows reached the card's bottom a floating "+" covered the last row's cells. The Scaffold's
-   floating slot holds only the red delete button a long press or a drag brings up. **On the iPhone the
+   Money card reads too.
+5. **The Calendar's header is one row, and the month grid gets the screen** (calendar K1, November
+   2026, owner review of the K1 board; `components/CalendarHeader.kt`). Left to right: the month on
+   screen **always with its year** ("November 2026 ▾", the year lighter in `onSurfaceVariant`;
+   `calendarMonthTitle`) where the wordmark used to be — a tap opens "Jump to date"; "?"
+   (`LegendButton`), which opens "What the colours mean" (`CalendarLegendSheet`: the
+   `CustodyLegend` and, under it, a Filters row into the unchanged filter sheet) and wears a dot
+   while a filter narrows the calendar, since Filters lives behind it; the children's and pets'
+   avatars as **the member filter** (`MemberFilterAvatars`: the same filter state the strip over the
+   grid drove, drawn from two members as the strip was, three in sight and the rest scrolling, a
+   40 dp target each, a chosen one ringed in `primary`); and the gear. **This reverses "the month
+   title omits the current year"** (D-3): the title is the screen's heading now, and an abbreviated
+   "’26" would read as a day beside a grid that holds a 26 — never shorten it. The title steps its
+   size down before it ellipsises, and from font scale 1.3 the avatars and the gear take a line
+   under the title and "?". The header is tight on purpose (tester feedback, 12 November 2026):
+   every dp it gives up goes to the grid. **The grid card's bar** (`CalendarMonthBar` in
+   `CalendarGridCard`) holds the Month | Week | Day control as letters ("M | W | D",
+   `AdaptiveSegmented`, each segment named in full for TalkBack), Today as an outlined **text**
+   button — never an icon, which testers did not understand — the swap button and the "+" for a new
+   event. **There are no arrows**: months page by swipe, and so do weeks and days. The bar wraps
+   rather than cuts at a large font, the actions going under the control. **The "+" is the bar's,
+   not a floating button** (tester feedback, 12 November 2026): once the six rows reached the
+   card's bottom a floating "+" covered the last row's cells. The Scaffold's floating slot holds only
+   the red delete button a long press or a drag brings up. **What K1 took off the calendar stays
+   off it**: the wordmark, the heading lines ("Your family calendar", Home's `HeadingLines` now),
+   the member strip ("Show for"), the legend row, the Today card under the grid, and the request
+   banners with the proposer's "waiting" line — what waits on this parent is Home's Requests block
+   and the Home tab's badge (item 40 of "Things that are easy to get wrong"). The custody-changed
+   banner, the swap selection bar and Day view's swap strip stay over the grid. **On the iPhone the
    same header leads the screen, with no system bar over it** (MON-24 phase 3, part C, reversing
    part B's month-titled bar; `components/CalendarTopBar.kt`): the Calendar and Home roots hand the
-   shell a `ScreenBar(hidden = true)` (`StackHost.HIDDEN_BAR_ROUTES`), so the brand row, the
-   heading, the Month/Week/Day control and Filters, the card's Today and "+" and, while days are
-   chosen, `SwapSelectionHeader` are all drawn in content, under the status bar; a screen pushed
-   over them gets its system bar back. The Today card
-   (`TodayCard`, built through `HomeWeek.todayOf` like the widget's) sits in the
-   Scaffold's bottom bar slot, and is left out on two panes. What waits on this parent's answer is an inline banner over the grid
-   (`components/CalendarBanners.kt`), not a badged glyph, and its number is the one Home's
-   open requests card shows (item 40 of "Things that are easy to get wrong"). School vacation is neither a banner (it
-   changed the grid's height between months) nor the old teal strip: since MON-13 it is a thin
-   neutral line along each vacation day's bottom edge (`DayCellFill.schoolVacation`, theme
-   `outline`, no height). Month
-   cells are **rounded tiles** (`CoPlanlyCorners.Cell`, a 3 dp gap) that **carry event pills**
-   (November 2026 redesign, `MonthCellPills.kt`, `CellPills.kt`): one pill — the `surface`, a 3 dp mark in the
-   event's colour, the title on one line, ellipsised — and "+n" for the rest (`pillsFor`, one
-   whatever the cell's height), the cell's description still naming the events; they replaced the
-   dots. **A pill is drawn only where its line fits** under the 22 dp day number (its own 13 sp
-   line), and the six rows split the card's height equally with no floor, so the last row is never
-   cut short; a cell too short for it draws a 4 dp bar in the mark's colour instead — never a title cut
-   in half, which is what the first UI tour of the redesign showed. Tapping a day selects it **and opens Day view** (an owner
-   decision from the Aug 2026 walkthrough — a select-only tap left no route to creating an
-   event on a chosen day; an empty hour slot in Day view is that route), and
-   the grid fills its screen. **Back from a Day view opened that way returns to Month** (D-11);
-   a Day view chosen in the title's picker keeps the default Back. Day view's header carries
-   **"Swap this day"** beside the date (D-10), the visible twin of the month cell's long-press.
-   The member filter is **one scrolling row, label first** (`FamilyMemberFilterStrip`) and stays
-   with the banners over the grid on purpose, not in Filters. **Every tap on the Calendar tab (the start screen) opens
-   Month on today** (`navigation/CalendarTabTaps`, tester feedback, October 2026), from another
-   tab and from the tab itself; a restored Day view on another month read as a broken calendar. The month title omits the current
-   year. In Day and Week view **a drag deletes only when it ends over the red delete button**
-   (its bounds, via a file-private local in `DayWeekView`), never over a screen region. **Today's agenda is the Calendar's `TodayCard`** (November 2026
-   redesign), built from `HomeWeek.todayOf`, the value the widget reads too; Home shows no today
-   agenda, and `DayAgendaCard` survives only in the screenshots and previews. Month paging is
-   snapped by `MonthView`'s own nestedScroll settle — one 500 ms tween, identical in both
-   directions — with `calendarScrollPaged = false`; don't hand snapping back to the library,
-   whose spring read differently per direction. **A Day view opened from Home's week tiles**
-   (`CalendarDayRequests`) **returns to Month on Back** too, as from a month cell (D-11): the
-   Calendar is the back stack's root, so the default Back would leave the app.
-   **Home is variant A** (redesign, November 2026; `home/HomeSection.kt` decides the order):
-   the brand header, then **Updates** (`UpdatesCard`: `HomeFeed.items`, at most five rows, a
-   status disc each — `updateMark` — and "See all" to the inbox's History; empty, "Nothing new from
-   Bob" inside the card), **Open requests** (`OpenRequestsCard`, the Requests row's counts; left out
-   when nothing waits on either parent), **This week** (`WeekTiles`: seven tiles from today in each
-   day's custody wash, `HomeWeek.daysOf`, today ringed, a dot on a day with events; a tap opens Day
-   view on it through `navigation/CalendarDayRequests`), the **next handover** (`HandoverCard`), and
-   the expenses and chat tiles (`StatTiles`). The handover hero and the week list are gone.
+   shell a `ScreenBar(hidden = true)` (`StackHost.HIDDEN_BAR_ROUTES`), so the month header, the
+   card's bar (the control a `UISegmentedControl`, whose letters VoiceOver reads as letters, so the
+   control as a whole is named in full) and, while days are chosen, `SwapSelectionHeader` are all
+   drawn in content, under the status bar; a screen pushed over them gets its system bar back.
+   School vacation is neither a banner (it changed the grid's height between months) nor the old
+   teal strip: since MON-13 it is a thin neutral line along each vacation day's bottom edge
+   (`DayCellFill.schoolVacation`, theme `outline`, no height). Month cells are **rounded tiles**
+   (`CoPlanlyCorners.Cell`, a 3 dp gap) that **carry event pills** (November 2026 redesign,
+   `MonthCellPills.kt`, `CellPills.kt`): since K1 up to two (`MAX_CELL_PILLS`) — the `surface`, a
+   3 dp mark in the event's colour, the title on up to two lines (`MAX_PILL_LINES`), broken at
+   its spaces and **never inside a word** (owner rule; `Hyphens.None`, since hyphenation depends on
+   the locale and the platform): a title with a word wider than the pill takes one line and an
+   ellipsis (`pillTitleLines`, measured per word) — and "+n" for the rest at the end of the last pill's line, the cell's description still naming
+   the events; they replaced the dots. **A pill is drawn only where its first line fits** under the
+   22 dp day number (its own 13 sp line): `pillLines` shares the lines a cell has between at most two
+   pills, so a short cell draws fewer, and the six rows split the card's height equally with no
+   floor, so the last row is never cut short; a cell with room for none draws a 4 dp bar in the
+   mark's colour instead — never a title cut in half, which is what the first UI tour of the
+   redesign showed. A phone's cell is about 47 dp wide, so a long title still ends in an ellipsis.
+   Tapping a day selects it **and opens Day view** (an owner decision from the Aug 2026 walkthrough
+   — a select-only tap left no route to creating an event on a chosen day; an empty hour slot in
+   Day view is that route), and the grid fills its screen. **Back from a Day view opened that way
+   returns to Month** (D-11); a Day view chosen in the title's picker keeps the default Back. Day
+   view's header carries **"Swap this day"** beside the date (D-10), the visible twin of the month
+   cell's long-press. The member filter is **in sight over the grid on purpose, not in Filters**
+   (owner rule); since K1 it is the header's avatars, and `FamilyMemberFilterStrip` is Expenses'
+   alone. **Every tap on the Calendar tab (the start screen) opens Month on today**
+   (`navigation/CalendarTabTaps`, tester feedback, October 2026), from another tab and from the tab
+   itself; a restored Day view on another month read as a broken calendar. In Day and Week view
+   **a drag deletes only when it ends over the red delete button** (its bounds, via a file-private
+   local in `DayWeekView`), never over a screen region. **The Calendar has no today agenda since
+   K1**: Home and the widget say what today holds (`HomeWeek.todayOf`), and `TodayCard`
+   and `DayAgendaCard` survive only in the screenshot tests and previews. Month paging is snapped by
+   `MonthView`'s own nestedScroll settle — one 500 ms tween, identical in both directions — with
+   `calendarScrollPaged = false`; don't hand snapping back to the library, whose spring read
+   differently per direction. **A Day view opened from Home's week tiles** (`CalendarDayRequests`)
+   **returns to Month on Back** too, as from a month cell (D-11): the Calendar is the back stack's
+   root, so the default Back would leave the app.
+   **Home is variant G1** (Home Requests, November 2026, board HomeG1; spec
+   `docs/superpowers/specs/2026-11-22-home-requests-calendar-concepts-design.md`;
+   `home/HomeSection.kt` decides the order): the brand row (`BrandHeader`: wordmark, the
+   children's avatars, gear), the heading lines (`HeadingLines`; Home scrolls, so the second line
+   stays at every font scale), the **Requests** block (`home/RequestsBlock.kt`, from
+   `RequestsBlockState`), the **Money** card (`MoneyCard`), **This week** (`WeekTiles`: seven tiles
+   from today in each day's custody wash, `HomeWeek.daysOf`, today ringed, a dot on a day with
+   events; a tap opens Day view on it through `navigation/CalendarDayRequests`) and the **next
+   handover** (`HandoverCard`). From two panes the first holds the heading and Requests, the second
+   Money, the week and the handover. Seven things not to undo.
+   - **The heading counts what waits on this parent and what is new.** "Requests" carries "N for
+     you" in a filled `primary` chip — the Home tab's badge's count, `inbox.waitingOnMe.count` — and
+     "See all" carries "N new" in `secondaryContainer`: the co-parent's updates (`HomeFeed`) newer
+     than a **per-family** seen mark (`RequestsSeenViewModel`, `home_requests_seen_<familyId>` in
+     `SecurePreferences`, `unseenCount`), set when See all is tapped. A mark per family, so one
+     family's look never hides another's news. See all opens the inbox, on History while nothing
+     waits.
+   - **An action card per request waiting on this parent** (`RequestActionCard`), taken from the
+     inbox's own flat list (`HomeRequestItems` over `InboxItems`) and its clocks, so Home and the
+     inbox cannot disagree: `RequestStatusChip` "Waiting for you" with the deadline, an icon disc by
+     kind, the inbox's words, the proposer's note as a quote, then Details beside Decline and Accept
+     — the inbox's own answers (`InboxAnswers`, refused when the family on screen changed), under
+     the clock's rules (`declineOnly`, `hidesAnswers`; item 42). Child support, a professional's
+     access and the plan draw the inbox's compact rows, which open their own screens.
+   - **"Waiting for {co-parent}" rows** (`WaitingForThemRow`, `waitingRowAction`): Withdraw on this
+     parent's own request, Decline on the co-parent's custody or split proposal past its deadline,
+     nothing otherwise. With nothing waiting on either parent the block is one quiet line.
+   - **There is no "Recent" section and no Updates card**: informational updates (added, accepted,
+     declined) live in the inbox, and "N new" keeps them from going unseen. `UpdatesCard`,
+     `OpenRequestsCard`, `UpdateMark`, `StatTiles` and Home's event preview are gone.
+   - **Status is a word, and its colour is a theme role**: waiting for you `primary` filled, waiting
+     for the co-parent outlined, settled `tertiaryContainer` — never a parent's hue, which is a
+     person. The type is told by its icon, never a colour per type.
+   - **Details** (`RequestDetailsSheet`) shows the request on a mini month of the reader's own
+     calendar — a swap's days in the colour of whom they go to, a custody proposal through
+     `SchedulePreviewWithChanges`, a new time or a waiting event on the month of its day — and offers
+     Decline and Accept again; an answer closes it.
+   - **The pop-ups stay, one per visit** (`HomeAskQueue`, item 21), and the custody proposal's is
+     graphical like the day swap's: `SchedulePreviewWithChanges`, the plan citation and the deadline.
+     No count of days or nights per parent, here or in Details: no score between the parents.
+   **The Money card** is "Spent in {month}" and the balance sentence, which open Expenses, and under
+   them one `SettleUpPanel` per currency with something to settle (item 45). It replaced the stat
+   tiles; the chat tile went with them, since the Chat tab has its own badge.
 6. **There is no weekly-summary screen any more** (commit `340af30` removed the screen, its
    ViewModel, the route and the strings; this line used to say it had "exactly one entry point").
    Home's week tiles (`WeekTiles`) are the surviving surface — don't add a summary route back, and don't
@@ -275,6 +341,25 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    "Synced just now" — the app tracks no chat sync timestamp, so printing one would be the
    same defect. Destructive actions follow the sign-out anatomy: a red `SectionRow` that
    confirms, not a filled error button (Settings sign-out, Pairing unpair).
+   **The thread draws the parents' own words, their files and stickers, and nothing else**
+   (November 2026, owner decision; `domain/chat/ThreadMessages.kt`'s `isShownInThread`, which
+   `buildThread` applies before grouping and day separators, so a day of cards alone gets no
+   separator and a window of cards alone draws the empty state). Four things not to undo.
+   - **Not drawn is not unwritten.** Every activity card is still posted to `messages`, for the
+     communication record the export prints (a custody proposal's plan citation, item 32) and for
+     older builds, which still draw them; what a card announces is on Home now. A card of a kind this
+     build cannot read, or a message typed `ACTIVITY` with no payload, is a card too, and hidden.
+   - **Counts follow what is drawn.** `ChatReadState.unreadCount` and
+     `MessageDao.observeUnreadCount` (its SQL twin, reading `activityJson`'s stored kind, no schema
+     change) count only shown messages; a hidden card does not bump the conversation's
+     `lastMessageAt`, which the conversations list and another family's chat dot read; and the thread
+     header's "not sent" reads drawn messages only. Change `isShownInThread` and the query together.
+   - **A card's push opens Home** (`PushDestination.forChatCard`, through `PushNotifier` on
+     Android and `LaunchLinks.forPush` on the iPhone), never a thread that no longer shows it; a
+     plain message's push opens its thread as before (a sticker pushes as `sticker_received`, its
+     card is silent).
+   - **Settle up is not in the thread** (item 45): its cards are written for the record, and the
+     payment code and the two buttons are Home's and Expenses' `SettleUpPanel`.
 9. **New user-facing strings go into all five locales** (`values`, `values-cs`, `values-de`,
    `values-ru`, `values-uk`) in the same commit — see "Localization" below.
 10. **The weekend is a base layer, never a competing fill.** `presentation/calendar/DayCellFills.kt`
@@ -425,7 +510,7 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
 15. **Money is never cut off** (October 2026 audit, D-1). No `maxLines`, ellipsis or
     `softWrap = false` on an amount, a total or the sentence saying who owes whom; a figure that
     does not fit wraps. Pairs that sit side by side at the default size stack **from font scale
-    1.3**: Home's two stat tiles, the Expenses total and its label, the paid-by amounts under the
+    1.3**: the month's label and its total on Home's Money card, the Expenses total and its label, the paid-by amounts under the
     split bar, the balance sentence and Settle up, and the event preview's Delete and Edit. Each
     reads `LocalDensity.current.fontScale` against a `STACK_*_FONT_SCALE` beside it. Text with a
     chip beside it follows the same scale through `common/LargeFontLayout.kt` (`stacksAtLargeFont`;
@@ -476,8 +561,10 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     nothing loses contrast; `ContrastScreenshots` renders three components at high contrast. The
     parent colours, the weekend grey and the holiday reds are the app's own tokens and do not
     change with the level; they are held to AA by `ParentColorsTest` in both themes.
-18. **The "Today" widget is the Calendar's today card on the home screen, never a second opinion**
-    (October 2026 audit, week 6; `presentation/widget/`). A Glance 1.1.1 widget: whose day it is,
+18. **The "Today" widget says what the app says about today, never a second opinion** (October
+    2026 audit, week 6; `presentation/widget/`). It was the Calendar's today card on the home
+    screen; that card left the Calendar in calendar K1 (November 2026, design item 5), and the
+    widget keeps its computation, `HomeWeek.todayOf`. A Glance 1.1.1 widget: whose day it is,
     the day's contact windows, the next handover and today's events. The compact layout counts the
     events (from font scale 1.3 it keeps three lines, `compactAtLargeText`, since a widget cannot
     measure its text); the tall one lists four, lets the handover and a title wrap to two lines,
@@ -506,7 +593,7 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     periodic work a minute past midnight, and hourly `updatePeriodMillis` as the backstop. A table the widget starts to read joins `WATCHED_TABLES`. **Nothing the schema does
     not hold**: a handover is a day and a person, never an hour, as on Home. It is home-screen
     only. It adds no XML layout: `initialLayout` is Glance's own, and the picker preview is a
-    vector drawable. Its text takes the today card's type roles through `role()` (the role's size,
+    vector drawable. Its text takes the former today card's type roles through `role()` (the role's size,
     and the nearest lighter of the three weights a widget's system font has), its corner is the
     launcher's own `system_app_widget_background_radius`, and its paddings are `Spacing` steps —
     no size of its own. It follows the system's dark theme, not the app's own theme setting (a
@@ -545,8 +632,8 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     `ReadablePaneTest` measures both widths. The UI tour's `light-en-100-wide` variant (a
     1280 × 800 dp display) shows it next to the rail.
     **The tabs go to two panes from 840 dp** (release audit R-8, week 8; `common/TwoPane.kt`,
-    `rememberTwoPane()` off the window width, as the rail is). Home puts Updates, the open requests
-    and the handover beside this week's tiles and the month's figures (`homeSections`); Expenses puts the month's summary and
+    `rememberTwoPane()` off the window width, as the rail is). Home puts its heading and the Requests block
+    beside the Money card, this week's tiles and the handover (`homeSections`); Expenses puts the month's summary and
     where the money went beside its expenses, with no List/Analytics switch; Chat puts the list
     beside the open thread when there is more than one, and caps a single thread at 840 dp
     (`WideColumn`). The pair is at most 1200 dp, centred. Deliberately not
@@ -562,11 +649,12 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     the owner's decision to make first.
 21. **The second new-user audit (24 October 2026) fixed these; keep them** (each with its test):
     - **Home asks one thing per visit** (`HomeAskQueue.nextThisVisit`): what already waited beside
-      the first ask waits for the next visit, on the open requests card; an ask that arrives during the
+      the first ask waits for the next visit, in Home's Requests block; an ask that arrives during the
       visit is asked. Two dialogs in a row on opening the app read as pressure.
-    - **A request is called "Requests" everywhere** — the inbox, the calendar's banner and Home's
-      dialog (Home's card says "Open requests") — and the banner counts "waiting for your answer",
-      as Home's card does.
+    - **A request is called "Requests" everywhere** — the inbox, Home's Requests block and Home's
+      dialog — and what waits is counted as "for you" / "waiting for your answer", one count: the
+      Home tab's badge and the block's "N for you" (the calendar's banner that also counted it left
+      in calendar K1).
     - **A swap says whom the days go to** (`home_dialog_swap_goes_to_*`), and nothing about a
       schedule says "the child": a family with two read it as wrong.
     - **A schedule is described from its dated start, and the presets named by weekdays start on a
@@ -589,7 +677,7 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
       never from the offerer's: Home's dialog and the inbox card read the one rule, and an unknown
       slot says "proposes swapping", never a direction it cannot know.
     - **The reader is "you"** (H4): `ParentNames.isReader`/`labelOrYou` word every line that would
-      otherwise name the reader to themselves — Home's handover card, the today card and widget, the
+      otherwise name the reader to themselves — Home's handover card, the widget (and the today card it shared), the
       calendar's swap strip, expenses' rows and shares.
     - **A parent answers through `AnswerButtons`** (`common/AnswerButtons.kt`, M1): outlined Decline,
       filled Accept, stacked from font scale 1.3, a text "Later" under them on a dialog. Home's three
@@ -624,7 +712,7 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
       a long press, owner decision) in the month bar, before the "+" (12 November 2026; it ended the
       legend's row before) opens selection mode empty; the long
       press stays. While choosing, the calendar header is `SwapSelectionHeader` (close, title, month
-      arrows), **a tap only chooses** — a borrowed day pages to its month and is chosen there
+      arrows — the one place the calendar still has arrows since K1), **a tap only chooses** — a borrowed day pages to its month and is chosen there
       (`SwapTap`), never opens Day view — and the selection is `rememberSaveable` across paging and
       rotation.
     - **A chosen or waiting day is marked by whom it would go to** (`SwapMark`, `drawSwapMark`,
@@ -666,10 +754,10 @@ When touching the UI, keep these invariants:
    Calendar and from the Calendar leaves the app. What Home used to put first — what waits for
    this parent — is **the Home tab's badge** (`RequestsBadgeViewModel`, `rememberHomeRequestsCount`
    beside the Chat badge in `NavGraph`, the `home_requests_badge` plural): exactly the count Home's
-   Open requests card shows waiting on this parent, `inbox.waitingOnMe.count`, and nothing while it
+   Requests block shows as "N for you", `inbox.waitingOnMe.count`, and nothing while it
    is loading. Home stays a tab,
    declared as before. **Expenses is not a tab either since October 2026** (new-user review): it is a
-   detail screen opened from the Family tab's money card and Home's month tile, with an up-arrow,
+   detail screen opened from the Family tab's money card and Home's Money card, with an up-arrow,
    and a money push opens Family and then Expenses so Back lands on the tab. **Settings is NOT a tab** — it opens from a gear action in each top-level
    screen's top bar and is a detail screen (`onNavigateUp = popBackStack`, bottom bar
    hidden). `QuickActionsBottomSheet` was dead code and is gone — genuinely so as of the
@@ -682,8 +770,8 @@ When touching the UI, keep these invariants:
    `budgets` table (dropping a table is a schema bump and a migration), `FamilyIdBackfill`'s stamp
    of that table, and the `budgets` block in `firestore.rules` with its `firestore-tests` and the
    server's sweeps and account deletion, because an older build may still write one. Don't bring
-   a budget screen back without a product decision. Tab switches, including Home's stat-tile deep
-   links, go through `NavHostController.navigateToTab` so they share one back-stack policy.)*
+   a budget screen back without a product decision. Tab switches, including Home's deep
+   links (the Money card's, the week tiles'), go through `NavHostController.navigateToTab` so they share one back-stack policy.)*
 2. **Toolchain**: compileSdk 37 and targetSdk 36, **AGP 9.3.3** on **Gradle 9.5.1** (MON-24 phase 2,
    Task 13: AGP 9 compiles Kotlin itself, so the app applies no `org.jetbrains.kotlin.android`, and
    the three shared modules' Android target is AGP's `com.android.kotlin.multiplatform.library`,
@@ -801,10 +889,12 @@ When touching the UI, keep these invariants:
    (`getCustody`): active `CustodyModel` first, legacy `CustodyScheduleEntity` as fallback.
    Don't read the legacy schedules directly in a view — model-based custody would vanish.
 5. **Event tap opens a preview bottom sheet** (`EventPreviewSheet`, details + Edit/Delete);
-   the editor is the second step — on Home too since September 2026 (`HomeViewModel.
-   openPreview`; Home passes `onDelete = null` because it has no delete-with-undo), and from a
-   chat card about an event since October 2026 (`ChatEventCardHost`, `onDelete = null` for the same
-   reason). Where a chat card leads is `ChatCardTarget`'s decision, from the message alone: a card
+   the editor is the second step. Home opened it too from September 2026 (`HomeViewModel.
+   openPreview`) until its event rows left Home in the November 2026 Home Requests work, and a
+   chat card about an event did from October 2026 (`ChatEventCardHost`, `onDelete = null`
+   because the thread has no delete-with-undo). **Since November 2026 the thread draws no cards**
+   (design item 8), so no card reaches the host or the rule below today; they stay with the thread's card
+   code, which still draws a sticker. Where a chat card leads is `ChatCardTarget`'s decision, from the message alone: a card
    about an event opens its preview over the thread — or the **Requests** inbox while it still
    waits on this parent's answer (`AwaitingAnswers.eventAwaitsAnswerFrom`, the rule its *Waiting
    on you* section applies), or says
@@ -1066,7 +1156,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `KoinTestApplication` (`HiltTestApplication` before MON-24 phase 2) never runs
   `CoPlanlyApplication.onCreate`. Its setup is the abstract
   `AliceOnScreenTest`, which two more classes share: `OnScreenAgreementsTest` (Bob's change request
-  raising the calendar banner and accepted from the inbox; his custody proposal, day swaps and a
+  reaching Home's requests pop-up and accepted from the inbox — the calendar drew a banner for it
+  until calendar K1; his custody proposal, day swaps and a
   seasonal layer popping up on Home and answered there, the layer then naming him in today's
   month-cell description) and `OnScreenFamiliesTest` (a third parent's family reaching Alice's
   open phone with no sync run by hand and without taking over the screen, her message dotting the
@@ -1375,8 +1466,9 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   ("Unable to parse JSON") — unset the proxy variables for the run; nothing in it needs the network.
 - **The `screenshots` job is how UI is reviewed without a phone** (September 2026). Roborazzi on
   Robolectric's native graphics renders the tests in `app/src/test/java/com/coparently/app/
-  screenshots/` — Home's cards, the month grid with every `DayCellFills` layer, the calendar
-  banners, the day-swap bar and review sheet, a Settings group, `EmptyState`, `ErrorState`, `InlineBanner`, `StickyActionBar`, the
+  screenshots/` — Home's cards (the Requests block with its action cards, the Details sheet, the Money card in
+  each settle-up state), the month grid with every `DayCellFills` layer, the calendar header, its
+  legend sheet and banners, the day-swap bar and review sheet, a Settings group, `EmptyState`, `ErrorState`, `InlineBanner`, `StickyActionBar`, the
   offline banner, the Expenses summary header and its collapsed line, a chat thread, the event
   preview body, the consent screen, the family switcher chip, the "My colour" picker, the requests
   inbox's cards, mini month and history, and the family-friend comparison, invite sheet, agenda day
@@ -1385,7 +1477,9 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   audit found money cut off at sizes the matrix never rendered) and the default vs a purple/orange
   parent palette (`ScreenshotVariants`: ten variants for text-heavy components, four for the rest,
   and high contrast in both themes for the month grid, a Settings group and a banner
-  (`ContrastScreenshots`, design item 17); 470 images — the count the committed baselines hold).
+  (`ContrastScreenshots`, design item 17)). The count is whatever the committed baselines hold: it was
+  470 before the November 2026 Home Requests, Money and calendar K1 work, whose re-recorded
+  baselines change it, so read it off `app/src/test/screenshots/` rather than this line.
   The window is a phone's, 393 × 851 dp, so a component taller than that at 2.0× is cut at the
   window's bottom edge (a Settings group in German, the friend comparison); the screen itself scrolls.
   **To view:** open the run's `screenshots` artefact, unzip, open `index.html`
@@ -3052,7 +3146,8 @@ uid from `SignedInUser`, its thumbnails and `OpenedFile` a kotlinx-io `Path`, wh
 and `FamilyDocumentsScreen` open as `File(path.toString())`), `ChatEventCardViewModel`,
 `ChatSearchViewModel`, `DictationViewModel`, `ReplySuggestionViewModel` with `presentation/ai/`'s
 `AiAssistSession`, and `SettleUpPaymentViewModel` (out of `SettleUpPayment.kt`, whose ZXing and share
-code stays with the screen), in `chatUiModule`; `sharedFileError` left `SharedFileViewer.kt` for
+code stays with the screen; since November 2026 in `presentation/payments/` and `paymentsUiModule`,
+beside `SettleUpPanel`, and `SettleUpPayment.kt` is gone), in `chatUiModule`; `sharedFileError` left `SharedFileViewer.kt` for
 `SharedFileErrors.kt`, and `data/ai/AiConsentManager` moved to `:shared-data` (`aiDataModule`).
 On the iPhone `platformUiModule` binds the chat's AI assist seam as unavailable
 (`AiAssistAvailability(false)`, `NoAiAssist` answering `Disabled`, `di/koin/NoAiAssist.kt`);
@@ -3782,6 +3877,10 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       code and the keep file to the list), and `PushWordingGoldenTest` holds the text, byte for
       byte, to the code it moved out of (`LegacyPushText`, kept in the app's tests as the oracle). The preview is the card's base-English
       fallback, which an older build shows; every reader used to get it.
+      **A tap on a card's push opens Home** (November 2026, `PushDestination.forChatCard`, on both
+      platforms), where what the card announces now lives: the thread no longer draws cards
+      (design item 8), so opening it would show a thread without the news. A plain message's push
+      still opens its thread.
     - **A card whose news has a push type of its own pushes nobody** (`SILENT_CARD_KINDS`: a
       change request, a day swap offered or answered, a custody proposal and its answer, a new
       expense, a split proposal and its answer; an important event's card through
@@ -4134,7 +4233,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     grid's colour, the handover walk, swaps and every older build read it, and whose *day* it is
     does not move for an afternoon. `CustodyModel.contactWindowsOn(date)` is the separate question,
     and `CustodyResolver.contactWindowsResolver` drops a window naming the day's own parent — the
-    one filter the grid and Home's today card both read, so don't re-inline it. Four things
+    one filter the grid, Home's view of today (`HomeViewModel`, the today card's until calendar K1)
+    and the widget all read, so don't re-inline it. Four things
     not to undo. **The wire form is `ContactWindowCodec` strings** (`"9|15:00|19:00|dad"`), never
     Gson over the data class, and `encodeAll` is canonical (sorted, de-duplicated). **A missing
     `contactWindows` key is not "none"**: an older build rewrites the whole document without it on
@@ -4469,8 +4569,10 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     — never an error. The calendar feed never reads `proposal`, so it never reads this.
     The same live `pendingProposalCitation` is printed by Home's proposal pop-up
     (`presentation/home/AwaitingDialogs.kt`, which takes a `ProposalAsk` and an `AwaitingActions`
-    so its signature stays small) and by the calendar's review banner (`ChangeRequestBanner`'s one
-    optional `detail` line, worded by `planCitationShortLine`). Don't re-derive it per screen.
+    so its signature stays small) and by Home's Details sheet (`RequestDetailsSheet`, through
+    `HomeRequestsContext.proposalCitation`); the calendar's review banner printed it too
+    (`ChangeRequestBanner`'s `detail` line) until calendar K1 took that banner off the grid. Don't
+    re-derive it per screen.
     **The export reads the citation from the chat, not the custody document**: the
     `CUSTODY_PROPOSED` card carries the same codec string as `activity.planCitation`, because
     messages can't be edited and the document drops the key once the proposal is answered. The
@@ -4797,11 +4899,14 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     family the switcher shows
     (`domain/changerequests/RequestScope`), and everything that speaks of requests reads it: the
     inbox (`ChangeRequestsScreen`, titled **Requests**, in three sections — *Waiting for your
-    answer*, *Waiting for {co-parent}*, *History*), Home's **Requests** row, its swap pop-up and the
-    co-parent's feed (`RequestsRow`, `HomeFeed`), and the calendar banner — so the row and the
-    banner count from one `RequestInbox`: the row its `count`, the banner `countWithoutProposal`,
-    because a waiting custody proposal draws a banner of its own (and a split is about money, not
-    the calendar, so it counts on the row only). Seven things not to undo.
+    answer*, *Waiting for {co-parent}*, *History*), Home's **Requests** block (design item 5: its
+    action cards and "Waiting for {co-parent}" rows come from the inbox's own flat list and answer
+    through the inbox's own actions), Home's pop-ups, the co-parent's feed behind "N new"
+    (`HomeFeed`) and the Home tab's badge — so Home counts from one `RequestInbox`, its `count`, and
+    the badge and the block's "N for you" are one number. **Home is where requests are counted and
+    answered since calendar K1** (November 2026): the calendar's banner over the grid, which counted
+    `countWithoutProposal` beside a banner of the custody proposal's own, is gone, and nothing on the
+    calendar counts requests now. Seven things not to undo.
     - **Swaps and the proposal come from the family's own custody document**, asked for by its id
       (`CustodyModelRepository.observeSharedOf`), and so do the mini months' custody days — never
       from `observeShared` alone, which replays the previous family's document until the next
@@ -4833,7 +4938,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     - **The expense split proposal is a request like the custody proposal** (October 2026, owner
       request: "I don't know whether she got it"). It is read from the family's own
       `family_settings/{familyId}` by id (`FamilySettingsRepository.observeSettingsOf`), waits in
-      `Waiting.split`, counts on Home's Requests row but not the calendar banner, pops up once on the
+      `Waiting.split`, counts on Home's Requests block, pops up once on the
       answering parent's Home (`HomeAsks`/`SplitAsk`, key `split_<proposedAtMillis>`), and is
       answered or withdrawn from its inbox card (`SplitProposalCard`). Its history row is the
       document's `lastDecision` — only the latest answer is stored, so older ones live in the chat.
@@ -4854,8 +4959,9 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       (`ParentingPlanComparison.questionsAwaitingYou`). `FamilyAgreementsSource` reads the three for
       the family on screen alone, each starting empty and turning empty when its listener fails, so
       they never hold the inbox back; `RequestInbox.withAgreements` places them in `Waiting.support`,
-      `professionals` and `planQuestions`. They count on Home's row (the plan as one row however many
-      questions) and **never** on the calendar banner; they raise no pop-up, write no history and send
+      `professionals` and `planQuestions`. They count on Home's Requests block (the plan as one row
+      however many questions; the calendar's banner, while it existed, never counted them); they
+      raise no pop-up, write no history and send
       no push. Each is a compact row (`AgreementRows.kt`) that opens its own screen — Child support,
       Professionals, the plan — where it is answered. The sender's own support proposal and a
       professional they consented to sit under *Waiting for {co-parent}* with **Withdraw request**
@@ -5103,19 +5209,30 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     Day view says where the day's swap stands and acts on it (`DaySwapStrip`). Nothing in the
     stored form changed: a group was always written one date at a time.
 
-45. **Settle up is a card, and the payer's phone draws the payment code** (October 2026, tester
-    reports: the settle-up draft could be edited before it was sent; "a QR code for the amount").
+45. **Settle up is a card in the record, and the payer's phone draws the payment code on Home and
+    Expenses** (October 2026, tester reports: the settle-up draft could be edited before it was
+    sent; "a QR code for the amount"; moved out of the chat in November 2026, owner decision).
     `SettleUpDialog` asks first and `SettleUpMessages` posts `SETTLE_UP_OWED`/`SETTLE_UP_OWING`
     (amount as a plain two-decimal string, currency, month); the reader words it by who reads it
     (`ActivityKind.readerPays`, `ActivityCardText.settleUpResource`), and a message cannot be
-    edited. Each parent may add the IBAN they are paid on, `users/{uid}.paymentIban` (`PaymentAccounts`,
-    Firestore only, mod-97 checked; the rules bound its shape), and under the card, on the payer's
-    phone only, `SettleUpPayment.kt` (`:shared-ui` since slice 11b; the matrix and the shared PNG from
-    the platform's `QrCodes`, ZXing in the app's `AndroidQrCodes`) draws `PaymentQr`: Czech QR Platba for a CZ account, Slovak PAY
+    edited. **The card is written for the record and no longer drawn in the thread** (design item
+    8); the dialog tells the asker that the co-parent sees it on Home under Money. **What a parent
+    does about the month is `SettleUpPanel`** (`presentation/payments/`, design item 1), under the
+    balance on Home's Money card and in the Expenses summary header, both through
+    `rememberSettleUpSource` so the two never disagree: ask to settle (the payee, owed money), pay
+    (the payer), waiting for the co-parent, confirm "Money arrived" (the payee, once the payer said
+    paid) and settled — `settleUpPanelState` decides from the month's balance and its recorded
+    payment (item 48), the payment first. Each parent may add the IBAN they are paid on,
+    `users/{uid}.paymentIban` (`PaymentAccounts`, Firestore only, mod-97 checked; the rules bound
+    its shape), and the payer's panel (the matrix and the shared PNG from the platform's `QrCodes`,
+    ZXing in the app's `AndroidQrCodes`) draws `PaymentQr`: Czech QR Platba for a CZ account, Slovak PAY
     by square (raw LZMA1 through `org.tukaani:xz` on Android and the common `Lzma1Encoder` port on
     the iPhone, which part E1 holds byte for byte to xz-java) for an SK one, the EPC code for another euro
     account, and nothing for another currency — the IBAN to copy and **Share QR code** either way,
-    because a bank's app cannot scan the screen it runs on. Three things not to undo. **The codes
+    because a bank's app cannot scan the screen it runs on, and "I paid" (also without an account:
+    a parent may pay by other means). Four things not to undo. **The code and the two buttons live
+    in the panel and nowhere else** — `SettleUpPayment.kt`, which drew them under the chat card, is
+    gone; don't bring them back to the thread. **The codes
     are made on the phone and nothing goes to a bank**; the privacy policy says so. **PAY by square
     is pinned byte for byte to liblzma's encoder** (`PaymentQrTest`); change the document and the
     expected text together, from a reference encoder, never by editing both to agree. And **a real
@@ -5175,7 +5292,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       so before this it went on listening to the first family. `FamilySettingsRepository.
       observeSplit()` gives the split of the family on screen, cached per family. Propose, accept,
       decline and withdraw take the family the screen showed. `addExpense` reads the family and
-      the co-parent once for the whole save. Totals, balances, Home's month tile and the month
+      the co-parent once for the whole save. Totals, balances, Home's Money card and the month
       review count only `FamilyView.counts`. A settle-up card goes to the family whose balance was
       tapped.
     - **Screens.** `CustodyModelRepository.observeShared()` answers only for the family on screen.
@@ -5230,6 +5347,9 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     alone, never by a guest, a friend or a professional. **A sent sticker is also a card in the
     pair's thread** (owner decision, 25 October 2026: `STICKER_SENT`, worded by the sender's neutral
     phrase on both phones), which pushes nobody (`SILENT_CARD_KINDS`) and which the export leaves out.
+    **It stays drawn in the thread** (owner decision, November 2026): `isShownInThread` keeps
+    `STICKER_SENT` while it hides every other card (design item 8), and it counts as unread like a
+    message.
     A parent sends one of seven fixed kinds (`StickerKind`, no free text) with a `sticker_received`
     push. **The app gives none of its own** (second audit, 24 October 2026, owner decision): it gave
     `on_time` and `regular` for answering before a request's deadline, and answer times read as a
@@ -5263,9 +5383,10 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     paid or received. **The id spells the document's own fields** and the rule rebuilds it, so a
     payment cannot be filed under another family or month, and there is one per month and currency.
     **No Room table** — the state is the server's, as for the requests' clocks. **A recorded
-    payment changes no expense and no balance figure**: the Expenses header says "Paid, waiting for
-    confirmation" or "Settled" (`PaymentStrip`), and the chat cards (`SETTLE_UP_PAID`,
-    `SETTLE_UP_CONFIRMED`) carry "I paid" and "Money arrived" (`SettleUpPaymentHost`). Kept after an
+    payment changes no expense and no balance figure**: "I paid" and "Money arrived" are
+    `SettleUpPanel`'s, on Home's Money card and in the Expenses header (item 45), which then say who waits on whom
+    ("Waiting for Bob", "Waiting for you") or "Settled", and the chat cards (`SETTLE_UP_PAID`,
+    `SETTLE_UP_CONFIRMED`) are posted for the record, not drawn in the thread. Kept after an
     unpair as the family's history; deleted with either account.
 49. **Child support is agreed like the expense split: a proposal the other parent accepts as it
     stands** (owner decisions, 25 October 2026). `support_agreements/{familyId}`
@@ -5276,8 +5397,9 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     field, and either parent clears it (a decline or a withdrawal). Even the first agreement is a
     proposal: money is never set for somebody else. **Separate from expenses, never in their
     balance.** Each month is a `payments` document of kind `support`, paid and confirmed as in item
-    48. The cards (`SUPPORT_*`) push as chat messages and open Family → Money → Child support
-    (`SupportScreen`, `LocalOpenSupport`). **The reminder is on the payer's phone only**
+    48. The cards (`SUPPORT_*`) push as chat messages; since November 2026 the thread does not draw
+    them and their push opens Home (design item 8), where a waiting proposal is a row of the
+    Requests block that opens Family → Money → Child support (`SupportScreen`). **The reminder is on the payer's phone only**
     (`SupportReminders` in `EncryptedPreferences`, `SupportReminderWorker` every six hours,
     `SupportReminderRule`): from 0, 1, 3 or 7 days before the due day, once a month, never once
     paid, never in the quiet hours, and silent when the server cannot be read. Unpair and account

@@ -40,7 +40,7 @@
     <string name="pairing_expires_in_hours">Действителен ещё %1$d ч %2$d мин</string>
     <string name="pairing_expires_in_minutes">Действителен ещё %1$d мин</string>
     <string name="pairing_code_expired_generate">Код истёк — нажмите «Новый код»</string>
-    <string name="pairing_share_message">%1$s приглашает вас в CoPlanly — один календарь для двух домов наших детей. Мы оба видим одни и те же дни, а изменения графика требуют согласия обоих.\nУстановить: %4$s (код подставится сам)\nУже есть приложение? %3$s · Код: %2$s\nУ вас iPhone? Попросите у меня ссылку на наш календарь, она откроется в Календаре Apple.</string>
+    <string name="pairing_share_message">%1$s приглашает вас в CoPlanly — один календарь для двух домов наших детей. Мы оба видим одни и те же дни, а изменения графика требуют согласия обоих.\nУстановить: %4$s (код подставится сам)\nУже есть приложение? %3$s\u00A0· Код: %2$s\nУ вас iPhone? Попросите у меня ссылку на наш календарь, она откроется в Календаре Apple.</string>
     <!-- The share text once the pairing link is a web address (BuildConfig.PAIRING_WEB_LINK):
          %1$s inviter, %2$s the link, %3$s the code for typing by hand -->
     <string name="pairing_share_message_web">%1$s приглашает вас в CoPlanly — один календарь для двух домов наших детей. Мы оба видим одни и те же дни, а изменения графика требуют согласия обоих: %2$s\nКод, если понадобится: %3$s</string>
@@ -72,7 +72,7 @@
     <string name="pairing_mode_share">Мой код</string>
     <string name="pairing_mode_enter">Ввести код</string>
     <string name="pairing_copy_code">Скопировать код</string>
-    <string name="pairing_tap_to_copy_and_expiry">Нажмите, чтобы скопировать · %1$s</string>
+    <string name="pairing_tap_to_copy_and_expiry">Нажмите, чтобы скопировать\u00A0· %1$s</string>
     <string name="pairing_share_link">Отправить ссылку</string>
     <string name="pairing_trust_title">Что становится общим</string>
     <string name="pairing_trust_body">Общий календарь и график проживания, общие расходы и балансы, а также чат. Личные события никогда не покидают ваше устройство. Связь можно разорвать в любой момент.</string>

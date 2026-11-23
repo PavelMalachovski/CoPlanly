@@ -22,7 +22,6 @@ import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.ExpenseRepository
-import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
@@ -80,7 +79,6 @@ class HomeViewModelTest {
     private lateinit var changeRequestRepository: ChangeRequestRepository
     private lateinit var custodyModelRepository: CustodyModelRepository
     private lateinit var monthSpendDependencies: MonthSpendDependencies
-    private lateinit var messageRepository: MessageRepository
 
     @Before
     fun setUp() {
@@ -89,8 +87,6 @@ class HomeViewModelTest {
         eventRepository = mockk {
             every { getAllEvents() } returns flowOf(emptyList())
             every { getEventsByDateRange(any(), any()) } returns agendaEvents
-            coEvery { getEventById("e1") } returns storedEvent
-            coEvery { getEventById("gone") } returns null
         }
         changeRequestRepository = mockk {
             every { getAllChangeRequests() } returns flowOf(emptyList())
@@ -111,7 +107,6 @@ class HomeViewModelTest {
         }
         monthSpendDependencies =
             MonthSpendDependencies(expenseRepository, preferencesRepository, testFamilyViewSource())
-        messageRepository = mockk(relaxed = true)
         val userRepository = mockk<UserRepository> {
             coEvery { getCurrentUser() } returns null
             coEvery { getCurrentUserId() } returns null
@@ -147,7 +142,6 @@ class HomeViewModelTest {
             ),
             custodyModelRepository = custodyModelRepository,
             monthSpendDependencies = monthSpendDependencies,
-            messageRepository = messageRepository,
             homeIdentityDependencies = HomeIdentityDependencies(
                 userRepository,
                 pairingRepository,
@@ -155,18 +149,6 @@ class HomeViewModelTest {
                 testFamilyMembersSource()
             )
         )
-
-    private val storedEvent = kotlinx.datetime.LocalDateTime(2026, 9, 1, 9, 0).let { at ->
-        com.coparently.app.domain.model.Event(
-            id = "e1",
-            title = "Dentist",
-            startDateTime = at,
-            eventType = "medical",
-            parentOwner = "mom",
-            createdAt = at,
-            updatedAt = at
-        )
-    }
 
     @After
     fun tearDown() {
@@ -301,83 +283,6 @@ class HomeViewModelTest {
         }
 
     @Test
-    fun `a tapped event opens its preview, and a missing one falls back to the editor`() =
-        runTest(dispatcher) {
-            var missing: String? = null
-
-            viewModel.openPreview("e1", onMissing = { missing = "e1" })
-            dispatcher.scheduler.advanceUntilIdle()
-            assertEquals(storedEvent, viewModel.previewEvent.value)
-            assertEquals(null, missing)
-
-            viewModel.closePreview()
-            assertEquals(null, viewModel.previewEvent.value)
-
-            // No such event on this device: the sheet stays shut and the caller is told, so it
-            // can route to the editor as Home did before the preview existed.
-            viewModel.openPreview("gone", onMissing = { missing = "gone" })
-            dispatcher.scheduler.advanceUntilIdle()
-            assertEquals(null, viewModel.previewEvent.value)
-            assertEquals("gone", missing)
-        }
-
-    @Test
-    fun `a tapped occurrence of a recurring event previews that occurrence, not the first`() =
-        runTest(dispatcher) {
-            // Audit L-6. Every occurrence shares the series' id, so the week list holds "weekly"
-            // twice; matching by id alone previewed tomorrow's whichever row was tapped.
-            val tomorrow = LocalDate.now().plusDays(1).atTime(9, 0)
-            val first = storedEvent.copy(
-                id = "weekly",
-                title = "Swimming",
-                startDateTime = tomorrow.toKotlinLocalDateTime(),
-                endDateTime = tomorrow.plusHours(1).toKotlinLocalDateTime(),
-                isRecurring = true,
-                recurrencePattern = "daily"
-            )
-            val second = first.copy(
-                startDateTime = tomorrow.plusDays(1).toKotlinLocalDateTime(),
-                endDateTime = tomorrow.plusDays(1).plusHours(1).toKotlinLocalDateTime()
-            )
-            agendaEvents.value = listOf(first, second)
-
-            viewModel.uiState.test {
-                assertEquals(HomeUiState.Loading, awaitItem())
-                pairingState.value = PairingState.Paired(
-                    PartnerSummary(
-                        id = "partner-1",
-                        name = "Alex",
-                        email = "alex@example.com",
-                        pairedSinceMillis = null
-                    )
-                )
-                dispatcher.scheduler.advanceUntilIdle()
-                val dashboard = expectMostRecentItem() as HomeUiState.Dashboard
-                assertEquals(listOf(first, second), dashboard.week.map { it.event })
-
-                var missing = false
-                viewModel.openPreview("weekly", second.startDateTime, onMissing = { missing = true })
-                dispatcher.scheduler.advanceUntilIdle()
-                assertEquals(second, viewModel.previewEvent.value)
-                assertFalse(missing)
-
-                // The activity feed names the event, not an occurrence: the first one on screen.
-                viewModel.openPreview("weekly", onMissing = { missing = true })
-                dispatcher.scheduler.advanceUntilIdle()
-                assertEquals(first, viewModel.previewEvent.value)
-
-                // An occurrence that has since left the dashboard falls back to the id alone.
-                val gone = tomorrow.plusDays(30).toKotlinLocalDateTime()
-                viewModel.openPreview("weekly", gone, onMissing = { missing = true })
-                dispatcher.scheduler.advanceUntilIdle()
-                assertEquals(first, viewModel.previewEvent.value)
-                assertFalse(missing)
-
-                cancelAndIgnoreRemainingEvents()
-            }
-        }
-
-    @Test
     fun `the spend tile adds up the family's own expenses, not one only mine or from an earlier family`() =
         runTest(dispatcher) {
             // Owner decision, October 2026: an expense that is "only mine" (no family while the
@@ -443,11 +348,11 @@ class HomeViewModelTest {
         )
 
     @Test
-    fun `the dashboard names, and counts unread for, the family on screen`() = runTest(dispatcher) {
+    fun `the dashboard names the family on screen`() = runTest(dispatcher) {
         // Tester report #11. With two families the server's link names the first co-parent and
         // the family switcher's projection the one on screen. Home named the first in its changes
-        // header, and read the projection once, at construction, for the unread count — so a
-        // switch left both on the family the parent had just left.
+        // header, and read the projection once, at construction, for its unread count (gone since
+        // November 2026) — so a switch left both on the family the parent had just left.
         val zuzana = User(id = "u1", email = "zuzana@example.com", name = "Zuzana", role = "mom", colorCode = "#FF4081")
         val barbora = PartnerSummary(id = "u2", name = "Barbora", email = "b@example.com", pairedSinceMillis = null)
         val pavel = PartnerSummary(id = "u3", name = "Pavel", email = "p@example.com", pairedSinceMillis = null)
@@ -462,21 +367,17 @@ class HomeViewModelTest {
             every { observePairingState() } returns MutableStateFlow(PairingState.Paired(barbora))
             every { observeCoParentProfile("u3") } returns flowOf(pavel)
         }
-        every { messageRepository.observeUnreadCount("u1__u3", "u1") } returns flowOf(4)
-        every { messageRepository.observeUnreadCount("u1__u2", "u1") } returns flowOf(1)
         val home = homeViewModel(users, pairing)
 
         home.uiState.test {
             dispatcher.scheduler.advanceUntilIdle()
             val onPavels = expectMostRecentItem() as HomeUiState.Dashboard
             assertEquals("Pavel", onPavels.partner?.name)
-            assertEquals(4, onPavels.unreadCount)
 
             rows.value = listOf(zuzana.copy(partnerId = "u2"))
             dispatcher.scheduler.advanceUntilIdle()
             val onBarboras = expectMostRecentItem() as HomeUiState.Dashboard
             assertEquals("Barbora", onBarboras.partner?.name)
-            assertEquals(1, onBarboras.unreadCount)
             cancelAndIgnoreRemainingEvents()
         }
     }

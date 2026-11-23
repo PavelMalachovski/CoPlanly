@@ -248,7 +248,7 @@ private fun SupportBody(
                             Res.string.support_terms_line,
                             terms.dayOfMonth,
                             names.labelForUid(terms.payerUid),
-                            supportMonth(terms.fromMonth)
+                            supportFromMonth(terms.fromMonth)
                         )
                     )
                 }

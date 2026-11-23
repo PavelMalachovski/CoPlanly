@@ -127,8 +127,8 @@ class UiTourTest : AliceOnScreenTest() {
         driver.pressIfPresent(dialogButton(R.string.home_dialog_later))
         camera.shot("change_requests_inbox") {
             driver.press(
-                "the open requests card",
-                hasText(string(R.string.home_waiting_for_coparent, "").trim(), substring = true) and hasClickAction()
+                "the Requests block's See all",
+                hasText(string(R.string.home_updates_see_all)) and hasClickAction()
             )
             driver.appeared(hasText(content.events.dentist, substring = true))
             driver.linger()
@@ -198,11 +198,16 @@ class UiTourTest : AliceOnScreenTest() {
         }
         camera.shot("calendar_week") { viewMode(R.string.calendar_viewmode_week) }
         camera.shot("calendar_day") { viewMode(R.string.calendar_viewmode_day) }
-        camera.shot("calendar_filters") {
+        camera.shot("calendar_legend") {
             viewMode(R.string.calendar_viewmode_month)
-            // A labelled chip, or from 1.3x its glyph alone (the light-ru-130 variant).
+            // The header's "?" (calendar K1): what the colours mean, with the way to Filters under it.
+            val legend = string(R.string.calendar_legend_title)
+            driver.press("What the colours mean", hasContentDescription(legend) and hasClickAction())
+            driver.linger()
+        }
+        camera.shot("calendar_filters") {
             val filters = string(R.string.calendar_filters_button)
-            driver.press("Filters", (hasText(filters) or hasContentDescription(filters)) and hasClickAction())
+            driver.press("Filters", hasText(filters) and hasClickAction())
             driver.linger()
         }
         driver.back()
@@ -214,9 +219,9 @@ class UiTourTest : AliceOnScreenTest() {
         }
     }
 
-    /** Switches the calendar through the header's Month/Week/Day control. */
+    /** Switches the calendar through the grid card's M | W | D control, whose letters are named in full. */
     private fun viewMode(label: Int) {
-        driver.press("the mode", textButton(label))
+        driver.press("the mode", hasContentDescription(string(label)) and hasClickAction())
         driver.linger()
     }
 

@@ -7,9 +7,9 @@
     <string name="guest_invite_title">Invite a guest</string>
     <string name="guest_invite_scope">A guest can read this child\u0027s record — medications, allergies, notes and photographs. They cannot see your calendar, expenses or messages, and they cannot change anything.</string>
     <string name="guest_invite_how_long">How long?</string>
-    <string name="guest_invite_duration_week">1 week</string>
-    <string name="guest_invite_duration_month">30 days</string>
-    <string name="guest_invite_duration_quarter">90 days</string>
+    <string name="guest_invite_duration_week">1\u00A0week</string>
+    <string name="guest_invite_duration_month">30\u00A0days</string>
+    <string name="guest_invite_duration_quarter">90\u00A0days</string>
     <string name="guest_invite_create">Create a code</string>
     <string name="guest_invite_ends_on">Access ends on %1$s</string>
     <string name="guest_invite_share">Share the link</string>

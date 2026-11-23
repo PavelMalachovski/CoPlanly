@@ -38,9 +38,9 @@
         <item quantity="one">%1$d\u00A0expense</item>
         <item quantity="other">%1$d\u00A0expenses</item>
     </plurals>
-    <string name="expenses_row_subtitle">%1$s · %2$s paid · %3$s</string>
-    <string name="expenses_row_subtitle_you">%1$s · you paid · %2$s</string>
-    <string name="expenses_row_subtitle_unknown_payer">%1$s · %2$s</string>
+    <string name="expenses_row_subtitle">%1$s\u00A0· %2$s paid\u00A0· %3$s</string>
+    <string name="expenses_row_subtitle_you">%1$s\u00A0· you paid\u00A0· %2$s</string>
+    <string name="expenses_row_subtitle_unknown_payer">%1$s\u00A0· %2$s</string>
     <string name="expenses_split_even">split 50/50</string>
     <string name="expenses_split_n_ways">split 1/%1$d</string>
     <string name="expenses_split_none">not split</string>
@@ -76,20 +76,20 @@
 
     <!-- Summary card: month switcher and total. -->
     <string name="expenses_shared_spend">shared spend</string>
-    <string name="expenses_month_and_count">%1$s · %2$s</string>
+    <string name="expenses_month_and_count">%1$s\u00A0· %2$s</string>
     <!-- The month summary folded into one pinned line; %1$s is each currency's total, joined. -->
     <string name="expenses_collapsed_totals">Shared spend: %1$s</string>
-    <string name="expenses_row_meta">%1$s · %2$s</string>
-    <string name="expenses_row_meta_with_receipt">%1$s · %2$s · receipt</string>
+    <string name="expenses_row_meta">%1$s\u00A0· %2$s</string>
+    <string name="expenses_row_meta_with_receipt">%1$s\u00A0· %2$s\u00A0· receipt</string>
     <string name="expenses_split_proposal_title">New expense split proposed</string>
     <string name="expenses_split_proposal_body_named">%1$s proposes a new split for shared expenses from now on: %2$s. Already recorded expenses keep their split.</string>
     <!-- A share of the split, "70 %": the sign is an argument (%5$s / %4$s, expenses_percent_sign)
          rather than a literal percent beside arguments, which Compose Multiplatform would print as
          written (CLAUDE.md "Localization"). -->
     <string name="expenses_percent_sign" translatable="false">%</string>
-    <string name="expenses_split_shares_named">%1$s pays %2$d %5$s, %3$s pays %4$d %5$s</string>
-    <string name="expenses_split_shares_you_first">You pay %1$d %4$s, %2$s pays %3$d %4$s</string>
-    <string name="expenses_split_shares_you_second">%1$s pays %2$d %4$s, you pay %3$d %4$s</string>
+    <string name="expenses_split_shares_named">%1$s pays %2$d %5$s, %3$s pays %4$d %5$s</string>
+    <string name="expenses_split_shares_you_first">You pay %1$d %4$s, %2$s pays %3$d %4$s</string>
+    <string name="expenses_split_shares_you_second">%1$s pays %2$d %4$s, you pay %3$d %4$s</string>
     <string name="expenses_split_proposal_confirm">Confirm</string>
     <string name="expenses_split_proposal_decline">Decline</string>
     <string name="expenses_split_proposal_later">Later</string>
@@ -113,8 +113,8 @@
     <string name="expense_warning_receipt_upload_failed">Receipt upload failed — expense saved without receipt</string>
     <string name="expense_warning_new_receipt_upload_failed">Receipt upload failed — expense saved without the new receipt</string>
     <string name="settle_up_dialog_title">Settle up for %1$s</string>
-    <string name="settle_up_dialog_owed">%1$s will see in the chat that they owe you %2$s.</string>
-    <string name="settle_up_dialog_owing">%1$s will see in the chat that you owe them %2$s. If they have added a bank account, you will get a QR code to pay with.</string>
+    <string name="settle_up_dialog_owed">%1$s will see on their Home, under Money, that they owe you %2$s.</string>
+    <string name="settle_up_dialog_owing">%1$s will see on their Home, under Money, that you owe them %2$s. If they have added a bank account, your Home shows a QR code to pay with under Money.</string>
     <string name="settle_up_iban_label">Your IBAN, for a QR payment (optional)</string>
     <string name="settle_up_iban_invalid">This IBAN doesn\u0027t look right. Check it, or leave the field empty.</string>
     <string name="settle_up_send">Send</string>

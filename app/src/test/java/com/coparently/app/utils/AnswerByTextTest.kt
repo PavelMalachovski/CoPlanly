@@ -35,7 +35,7 @@ class AnswerByTextTest {
 
         assertTrue("\"$text\" names the day", text.contains("13"))
         assertTrue("\"$text\" names the time", text.contains("10:00"))
-        assertTrue("\"$text\" puts the time after the date, set off by a comma", text.endsWith(", 10:00"))
+        assertTrue("\"$text\" puts the time after the date, set off by a comma", text.endsWith(",\u00A010:00"))
     }
 
     @Test
@@ -44,7 +44,7 @@ class AnswerByTextTest {
 
         assertTrue("\"$text\" names the time", text.contains("10:00"))
         assertTrue("\"$text\" says AM", text.contains("AM"))
-        assertTrue("\"$text\" puts the time after the date, set off by a comma", text.endsWith(", 10:00 AM"))
+        assertTrue("\"$text\" puts the time after the date, set off by a comma", text.endsWith(",\u00A010:00\u00A0AM"))
     }
 
     @Test
@@ -55,7 +55,7 @@ class AnswerByTextTest {
         val inPrague = answerByText(lateInPrague, prague, Locale.ENGLISH, is24Hour = true)
         val inNewYork = answerByText(lateInPrague, ZoneId.of("America/New_York"), Locale.ENGLISH, is24Hour = true)
 
-        assertTrue("\"$inPrague\" is the 14th", inPrague.contains("14") && inPrague.endsWith(", 01:30"))
-        assertTrue("\"$inNewYork\" is the 13th", inNewYork.contains("13") && inNewYork.endsWith(", 19:30"))
+        assertTrue("\"$inPrague\" is the 14th", inPrague.contains("14") && inPrague.endsWith(",\u00A001:30"))
+        assertTrue("\"$inNewYork\" is the 13th", inNewYork.contains("13") && inNewYork.endsWith(",\u00A019:30"))
     }
 }

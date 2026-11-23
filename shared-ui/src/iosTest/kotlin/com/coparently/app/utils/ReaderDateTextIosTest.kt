@@ -48,14 +48,14 @@ class ReaderDateTextIosTest {
     fun `dateWithTime follows the clock it is given`() {
         preferredLanguagesForTest = listOf("en-US")
         val text = ReaderDateText.dateWithTime(LocalDateTime(2026, 1, 5, 18, 0), "MMMd", " ", is24Hour = false)
-        assertTrue(text.endsWith("6:00 PM"), text)
+        assertTrue(text.endsWith("6:00\u00A0PM"), text)
     }
 
     @Test
     fun `a date reads the same west of Greenwich`() {
         preferredLanguagesForTest = listOf("en-US")
         zone("America/New_York")
-        assertEquals("Mar 29, 2026", ReaderDateText.date(LocalDate(2026, 3, 29), "yMMMd"))
+        assertEquals("Mar\u00A029, 2026", ReaderDateText.date(LocalDate(2026, 3, 29), "yMMMd"))
         assertEquals("18:00", ReaderDateText.time(LocalTime(18, 0), is24Hour = true))
     }
 

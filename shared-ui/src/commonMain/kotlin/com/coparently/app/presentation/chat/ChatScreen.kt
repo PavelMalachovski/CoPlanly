@@ -26,6 +26,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -46,6 +47,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.coparently.app.domain.chat.ToneCheck
 import com.coparently.app.domain.chat.ToneNudge
+import com.coparently.app.domain.chat.isShownInThread
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
@@ -294,10 +296,11 @@ fun ChatScreen(
                 // The attachment renderer and the tap-to-open handling (MON-23), provided rather
                 // than passed so `MessageItem`'s baselined signature stays as it is.
                 ChatAttachmentsHost {
-                    // Long-press "Report message" on the co-parent's bubbles (F-10), and what to pay
-                    // under a settle-up card.
+                    // Long-press "Report message" on the co-parent's bubbles (F-10), and where a child
+                    // support card leads. What to pay under a settle-up card left the thread for the
+                    // Money card and Expenses (November 2026).
                     ChatReportHost {
-                        SettleUpPaymentHost(parentNames, onOpenSupport) {
+                        CompositionLocalProvider(LocalOpenSupport provides onOpenSupport) {
                             // A card about an event opens that event — its preview, or the inbox while
                             // it waits on this parent — never the change-request inbox on a request
                             // that does not exist.
@@ -720,11 +723,12 @@ private val HEADER_AVATAR_SIZE = 36.dp
  * The thread's identity line: who you are talking to, and whether what you sent actually left
  * the device.
  *
- * The status is derived from **your own** messages only. A co-parent's message that is still
- * SENDING is their problem to see, not yours, and folding it in here would make the header
- * flicker on every incoming message. The wording deliberately says "up to date" rather than the
- * mock's "synced just now": the app tracks no chat sync timestamp, and printing one it does not
- * have is exactly the kind of affordance this refresh removed elsewhere.
+ * The status is derived from **your own** messages only, and only those the thread draws. A
+ * co-parent's message that is still SENDING is their problem to see, not yours, and folding it
+ * in here would make the header flicker on every incoming message. The wording deliberately says
+ * "up to date" rather than the mock's "synced just now": the app tracks no chat sync timestamp,
+ * and printing one it does not have is exactly the kind of affordance this refresh removed
+ * elsewhere.
  *
  * Public rather than private so the JVM screenshot tests (`ScreenshotMatrix` and its subclasses
  * under `app/src/test`) can render it on its own: `internal` stops at `:shared-ui`'s edge.
@@ -735,7 +739,9 @@ private val HEADER_AVATAR_SIZE = 36.dp
  */
 @Composable
 fun ChatThreadHeader(title: String, messages: List<Message>, currentUserId: String) {
-    val mine = messages.filter { it.senderId == currentUserId }
+    // Only what the thread draws (isShownInThread): a card kept for the record and still in the
+    // outbox would otherwise say "not sent" over a thread with nothing unsent in it.
+    val mine = messages.filter { it.senderId == currentUserId && isShownInThread(it) }
     val status = when {
         mine.any { it.status == MessageSendStatus.ERROR } -> Res.string.chat_failed_to_send
         mine.any { it.status == MessageSendStatus.SENDING } -> Res.string.chat_sending_ellipsis

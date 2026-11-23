@@ -39,12 +39,16 @@ fun ChildAvatar(child: ChildInfo, size: Dp, modifier: Modifier = Modifier) {
             .background(MaterialTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center
     ) {
+        val style = MaterialTheme.typography.titleMedium
         val initial: @Composable () -> Unit = {
-            Text(
-                text = child.childName.trim().take(1).uppercase(),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+            // The disc does not grow with the font, so neither does its letter past half its side.
+            CappedFontScale(max = fontScaleToFit(size, style.fontSize, INITIAL_SHARE)) {
+                Text(
+                    text = child.childName.trim().take(1).uppercase(),
+                    style = style,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
         }
         if (photo == null) {
             initial()
@@ -59,3 +63,6 @@ fun ChildAvatar(child: ChildInfo, size: Dp, modifier: Modifier = Modifier) {
         }
     }
 }
+
+/** How much of an avatar's side its initial may take at most, at any font scale. */
+internal const val INITIAL_SHARE = 0.5f

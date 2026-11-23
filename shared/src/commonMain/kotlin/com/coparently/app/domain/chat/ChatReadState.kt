@@ -17,16 +17,17 @@ import com.coparently.app.domain.model.MessageSendStatus
 object ChatReadState {
 
     /**
-     * Number of messages the other parent sent after [lastReadAtMillis].
+     * Number of messages the other parent sent after [lastReadAtMillis] that the thread draws.
      *
      * A message whose timestamp equals the mark is read — the mark is written *after*
-     * the messages it covers. My own messages never count.
+     * the messages it covers. My own messages never count, and neither does a card the thread
+     * does not draw ([isShownInThread]): a badge must not count what opening the thread cannot show.
      *
      * @param lastReadAtMillis My mark, or null when I have never opened the thread.
      */
     fun unreadCount(messages: List<Message>, myUid: String, lastReadAtMillis: Long?): Int {
         val mark = lastReadAtMillis ?: Long.MIN_VALUE
-        return messages.count { it.senderId != myUid && it.sentAtMillis > mark }
+        return messages.count { it.senderId != myUid && it.sentAtMillis > mark && isShownInThread(it) }
     }
 
     /**

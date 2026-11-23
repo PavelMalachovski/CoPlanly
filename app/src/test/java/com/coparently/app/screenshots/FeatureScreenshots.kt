@@ -10,27 +10,35 @@ import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.expenses.ExpenseBalance
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.CustodyModel
+import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
+import com.coparently.app.domain.model.MessageType
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.repository.PreferencesRepository
+import com.coparently.app.domain.stickers.StickerKind
 import com.coparently.app.domain.telemetry.TelemetryConsent
 import com.coparently.app.presentation.chat.ChatThreadHeader
 import com.coparently.app.presentation.chat.MessageItem
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.consent.TelemetryConsentScreen
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
+import com.coparently.app.presentation.custody.CustodySetupUiState
 import com.coparently.app.presentation.custody.SchedulePreviewMonth
+import com.coparently.app.presentation.custody.custodyPreviewText
 import com.coparently.app.presentation.event.EventPreviewContent
 import com.coparently.app.presentation.expenses.CollapsedMonthSummary
+import com.coparently.app.presentation.expenses.ExpenseSettleUp
 import com.coparently.app.presentation.expenses.ExpenseSummaryHeader
 import com.coparently.app.presentation.expenses.MonthNavigation
 import com.coparently.app.presentation.expenses.currencyFormat
 import com.coparently.app.presentation.family.FamilyMoneyCard
 import com.coparently.app.presentation.home.MonthMoney
 import com.coparently.app.presentation.pairing.InvitationView
+import com.coparently.app.presentation.payments.SettleUpPanelActions
+import com.coparently.app.presentation.payments.SettleUpPanelState
 import com.coparently.app.presentation.settings.CUSTOM_COLOUR
 import com.coparently.app.presentation.settings.ParentColorPicker
 import com.coparently.app.testing.RobolectricTestApplication
@@ -38,6 +46,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.YearMonth
 import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -73,7 +82,18 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
             ),
             currency = "CZK",
             parentNames = ScreenshotFixtures.parentNames,
-            onSettleUp = {}
+            // The payee's settle-up, since settle up left the chat (November 2026).
+            settleUp = ExpenseSettleUp(
+                state = SettleUpPanelState.AskToSettle(
+                    YearMonth(2026, 5),
+                    "CZK",
+                    OWED_TO_ME_MINOR,
+                    OWED_TO_ME
+                ),
+                payeeIban = null,
+                actions = SettleUpPanelActions(onAskToSettle = {}, onMarkPaid = {}, onConfirm = {}),
+                coParentFallback = "Co-parent"
+            )
         )
     }
 
@@ -108,15 +128,23 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
     }
 
     /**
-     * A schedule as the custody editor and onboarding preview it: the month it starts in. The
-     * start is years ahead so the month drawn never follows the real calendar.
+     * A schedule as the custody editor and onboarding preview it: the month it starts in, under the
+     * editor's own description of it in the variant's language. The start is years ahead so the
+     * month drawn never follows the real calendar.
      */
     @Test
     fun schedulePreview() = snap("custody_schedule_preview") {
         SchedulePreviewMonth(
             model = CustodyModel.weekOnWeekOff(id = "preview", startDate = PREVIEW_START, momFirst = true),
             parentNames = ScreenshotFixtures.parentNames,
-            description = "Week on, week off: Olya has the first week."
+            description = custodyPreviewText(
+                CustodySetupUiState(
+                    selectedModelType = CustodyModelType.WEEK_ON_WEEK_OFF,
+                    startDate = PREVIEW_START,
+                    momFirst = true
+                ),
+                ScreenshotFixtures.parentNames
+            )
         )
     }
 
@@ -187,9 +215,9 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
     }
 
     /**
-     * An incoming message, one of mine the co-parent has read, a card the app composed for the
-     * co-parent's decline (drawn centred and neutral, not in either bubble), and one of mine that
-     * failed.
+     * An incoming message, one of mine the co-parent has read, a sticker the co-parent sent (the
+     * one card the thread still draws, centred and neutral, not in either bubble), and one of mine
+     * that failed.
      */
     private fun chatMessages(): List<Message> {
         val base = ScreenshotFixtures.TODAY.atTime(MESSAGE_HOUR, 0)
@@ -204,16 +232,17 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
                 MessageSendStatus.READ
             ),
             message(
-                "c1",
+                "s1",
                 ScreenshotFixtures.CO_PARENT_UID,
-                "Event declined: Parent-teacher meeting",
+                "Sticker: Thank you",
                 base + MINUTE_MS + MINUTE_MS / 2
             ).copy(
+                messageType = MessageType.ACTIVITY,
                 activity = ActivityAnnouncement(
-                    kind = ActivityKind.EVENT_DECLINED,
-                    entityType = ActivityEntityType.EVENT,
-                    entityId = "e1",
-                    title = "Parent-teacher meeting"
+                    kind = ActivityKind.STICKER_SENT,
+                    entityType = ActivityEntityType.STICKER,
+                    entityId = "s1",
+                    title = StickerKind.THANK_YOU.wire
                 )
             ),
             message(
@@ -265,6 +294,7 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
         private const val MOM_PAID = 3_120.0
         private const val DAD_PAID = 1_480.0
         private const val OWED_TO_ME = 820.0
+        private const val OWED_TO_ME_MINOR = 82_000L
         private const val EUR_TOTAL = 145.0
         private const val EXPENSE_COUNT = 5
         private const val PREVIEW_HOUR = 15

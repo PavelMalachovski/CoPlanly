@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.events.AllDayEvent
@@ -43,6 +44,7 @@ import com.coparently.app.resources.calendar_today_card_open
 import com.coparently.app.resources.calendar_today_card_title
 import com.coparently.app.resources.event_all_day
 import com.coparently.app.utils.ReaderDateText
+import com.coparently.app.utils.unbreakableDate
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -105,12 +107,19 @@ fun TodayCard(
 private fun TodayLines(today: TodayModel, parentNames: ParentNames, modifier: Modifier) {
     Column(modifier = modifier) {
         Text(
-            text = stringResource(Res.string.calendar_today_card_title, ReaderDateText.date(today.date, "MMMEEEd")),
+            text = stringResource(
+                Res.string.calendar_today_card_title,
+                unbreakableDate(ReaderDateText.date(today.date, "MMMEEEd"))
+            ),
             style = MaterialTheme.typography.labelMediumEmphasized,
             color = MaterialTheme.colorScheme.primary
         )
         headline(today, parentNames)?.let { line ->
-            Text(text = line, style = MaterialTheme.typography.titleSmallEmphasized)
+            // Balanced, so a line that wraps does not leave its last word alone ("… sind bei / dir").
+            Text(
+                text = line,
+                style = MaterialTheme.typography.titleSmallEmphasized.copy(lineBreak = LineBreak.Heading)
+            )
         }
         Row(
             verticalAlignment = Alignment.CenterVertically,

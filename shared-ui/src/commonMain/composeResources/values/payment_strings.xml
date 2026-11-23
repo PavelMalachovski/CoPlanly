@@ -11,4 +11,17 @@
     <string name="payment_error_not_saved">That could not be saved. Check your connection and try again.</string>
     <string name="payment_card_waiting">Waiting for confirmation</string>
     <string name="payment_card_received">Received</string>
+    <!-- Settle up on the Money card and the Expenses header (November 2026). The month is its
+         standalone name ("October"); the amount is formatted; a date is the day and month. -->
+    <string name="payment_panel_not_settled">%1$s is not settled yet</string>
+    <string name="payment_panel_ask">Ask %1$s to settle up</string>
+    <string name="payment_panel_pay">Pay %1$s %2$s for %3$s</string>
+    <string name="payment_panel_paid_on">You paid %1$s on %2$s. %3$s will confirm when it arrives.</string>
+    <string name="payment_panel_show_code">Show payment code again</string>
+    <string name="payment_panel_says_paid">%1$s says they paid %2$s on %3$s.</string>
+    <string name="payment_panel_check_bank">Check your bank first.</string>
+    <string name="payment_panel_settled">%1$s settled\u00A0· %2$s</string>
+    <string name="payment_chip_waiting_for_you">Waiting for you</string>
+    <string name="payment_chip_waiting_for">Waiting for %1$s</string>
+    <string name="payment_chip_settled">Settled</string>
 </resources>

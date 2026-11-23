@@ -118,7 +118,7 @@
     <string name="calendar_contact_window_desc">Contact with %1$s, %2$s–%3$s</string>
     <!-- MON-6b: a contact window on Home's today card. %1$s/%2$s are the start and end
          times, %3$s the parent's name from ParentLabels (never a role word). -->
-    <string name="calendar_agenda_contact_window">%1$s–%2$s · contact with %3$s</string>
+    <string name="calendar_agenda_contact_window">%1$s–%2$s\u00A0· contact with %3$s</string>
     <!-- The mini month (phase 2): its legend, and what TalkBack reads for a marked day -->
     <string name="mini_month_legend_new_event">New event</string>
     <string name="mini_month_mark_new_event">new event</string>
@@ -133,7 +133,7 @@
     <string name="calendar_names_and">and</string>
     <string name="calendar_previous_period">Previous period</string>
     <string name="calendar_next_period">Next period</string>
-    <string name="calendar_today_card_title">Today · %1$s</string>
+    <string name="calendar_today_card_title">Today\u00A0· %1$s</string>
     <string name="calendar_today_card_open">Open today in Day view</string>
     <string name="calendar_today_card_nothing_more">Nothing more today</string>
     <string name="calendar_today_card_event">%1$s – %2$s</string>
@@ -145,4 +145,14 @@
         <item quantity="one">%1$s is with %2$s</item>
         <item quantity="other">%1$s are with %2$s</item>
     </plurals>
+    <!-- Calendar K1 (November 2026): the view control's letters (spoken as the full names),
+         the "?" sheet that explains the colours and leads to Filters, and an avatar of the
+         header's member filter. -->
+    <string name="calendar_viewmode_month_short">M</string>
+    <string name="calendar_viewmode_week_short">W</string>
+    <string name="calendar_viewmode_day_short">D</string>
+    <string name="calendar_legend_title">What the colours mean</string>
+    <string name="calendar_legend_no_schedule">The days are coloured once a custody schedule is set up.</string>
+    <string name="calendar_filters_hiding">Some events are hidden</string>
+    <string name="calendar_filter_member_toggle">Show for %1$s</string>
 </resources>

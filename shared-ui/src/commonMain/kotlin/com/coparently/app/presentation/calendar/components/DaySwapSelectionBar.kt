@@ -17,12 +17,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.custody.SwapSides
 import com.coparently.app.domain.custody.receiverOf
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.ScreenBackStep
+import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.titleSmallEmphasized
@@ -91,25 +93,43 @@ fun DaySwapSelectionBar(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.S, Alignment.End),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(onClick = onCancel) {
-                    Text(
-                        text = stringResource(Res.string.day_swap_selection_cancel),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                Button(onClick = onNext, enabled = !sides.isEmpty) {
-                    Text(
-                        text = stringResource(Res.string.day_swap_next),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+            SelectionBarActions(canGoOn = !sides.isEmpty, onNext = onNext, onCancel = onCancel)
+        }
+    }
+}
+
+/**
+ * Cancel and Next. They share a row at the default size; from [stacksAtLargeFont]'s scale each takes
+ * a full-width row of its own, Next first, because at 150 % German "Auswahl abbrechen" left "Weiter"
+ * a button too narrow for even its first letter (the screenshots showed "W…", then an empty disc).
+ */
+@Composable
+private fun SelectionBarActions(canGoOn: Boolean, onNext: () -> Unit, onCancel: () -> Unit) {
+    val next = stringResource(Res.string.day_swap_next)
+    val cancel = stringResource(Res.string.day_swap_selection_cancel)
+    if (stacksAtLargeFont()) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(Spacing.XS)
+        ) {
+            Button(onClick = onNext, enabled = canGoOn, modifier = Modifier.fillMaxWidth()) {
+                Text(text = next, textAlign = TextAlign.Center)
+            }
+            TextButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) {
+                Text(text = cancel, textAlign = TextAlign.Center)
+            }
+        }
+    } else {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.S, Alignment.End),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(onClick = onCancel) {
+                Text(text = cancel, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Button(onClick = onNext, enabled = canGoOn) {
+                Text(text = next, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }

@@ -25,7 +25,16 @@ enum class MiniMonthMark {
      * A day offered in a swap (21 October 2026, Zuzana's test), drawn in the wash of the parent
      * it would go to, so the reader sees each day's direction before answering.
      */
-    SWAP_DAY
+    SWAP_DAY,
+
+    /**
+     * A day a proposed schedule gives to the other parent (November 2026, Home's schedule
+     * preview), ringed in the colour of whom it would go to ([MiniMonthModel.markSlots]).
+     */
+    CUSTODY_CHANGE,
+
+    /** The day a change request would move an event to (November 2026, Home's request details). */
+    PROPOSED_DAY
 }
 
 /**
@@ -52,12 +61,15 @@ data class MiniMonthDot(val parentOwner: String, val friendParticipates: Boolean
  * @property custody The custody slot of each grid date that has one; a date absent here has none.
  * @property dots The first event of each grid date that has one.
  * @property marks The days that carry a mark.
+ * @property markSlots The slot whose colour a marked day's ring takes, where it is not the theme's
+ *   primary: the parent a changed day would go to ([MiniMonthMark.CUSTODY_CHANGE]).
  */
 data class MiniMonthModel(
     val month: YearMonth,
     val custody: Map<LocalDate, String>,
     val dots: Map<LocalDate, MiniMonthDot>,
-    val marks: Map<LocalDate, MiniMonthMark>
+    val marks: Map<LocalDate, MiniMonthMark>,
+    val markSlots: Map<LocalDate, String> = emptyMap()
 ) {
     companion object {
         /**

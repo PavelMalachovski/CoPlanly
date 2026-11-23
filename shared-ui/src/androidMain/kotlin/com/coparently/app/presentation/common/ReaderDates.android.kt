@@ -3,6 +3,7 @@ package com.coparently.app.presentation.common
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalConfiguration
+import com.coparently.app.utils.unbreakableDate
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toJavaDayOfWeek
@@ -24,11 +25,16 @@ internal actual fun rememberReaderDates(): ReaderDates {
     return remember<ReaderDates>(locale) { JavaTimeDates(locale) }
 }
 
-/** `java.time`'s wording in [locale]: the medium localized date, the full day name. */
+/**
+ * `java.time`'s wording in [locale]: the medium localized date, its fields joined by no-break spaces
+ * ([unbreakableDate]), and the full day name.
+ */
 private class JavaTimeDates(private val locale: Locale) : ReaderDates {
 
     override fun date(date: LocalDate): String =
-        DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale).format(date.toJavaLocalDate())
+        unbreakableDate(
+            DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale).format(date.toJavaLocalDate())
+        )
 
     override fun weekday(day: DayOfWeek): String =
         day.toJavaDayOfWeek().getDisplayName(TextStyle.FULL, locale).replaceFirstChar { it.titlecase(locale) }

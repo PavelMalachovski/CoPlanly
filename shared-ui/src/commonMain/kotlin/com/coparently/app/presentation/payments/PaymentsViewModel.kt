@@ -42,10 +42,16 @@ class PaymentsViewModel(
 
     val myUid: String? = auth.getCurrentUid()
 
-    /** The family on screen's payments; empty while none can be read. */
-    val payments: StateFlow<List<Payment>> = familyViewSource.observe()
+    private val onScreen = familyViewSource.observe()
         .map { it.onScreen }
         .distinctUntilChanged()
+
+    /** The family on screen, whose month "I paid" records; null while there is none. */
+    val familyOnScreen: StateFlow<String?> = onScreen
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+
+    /** The family on screen's payments; empty while none can be read. */
+    val payments: StateFlow<List<Payment>> = onScreen
         .flatMapLatest { family ->
             if (family == null) flowOf(emptyList()) else store.observe(family).map { it.orEmpty() }
         }

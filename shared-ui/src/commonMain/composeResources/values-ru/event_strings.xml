@@ -78,7 +78,7 @@
     <string name="event_form_delete_failed">Не удалось удалить событие. Попробуйте ещё раз.</string>
     <string name="event_form_save_failed">Не удалось сохранить событие. Попробуйте ещё раз.</string>
     <string name="event_form_photo_upload_failed">Не удалось загрузить фото — событие сохранено без нового фото</string>
-    <string name="event_form_owner_unknown">Пока неясно, чьё это событие, — выберите выше, чтобы сохранить</string>
+    <string name="event_form_owner_unknown">Пока неясно, чьё это событие,\u00A0— выберите выше, чтобы сохранить</string>
     <string name="event_form_for_members">Для кого это?</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->

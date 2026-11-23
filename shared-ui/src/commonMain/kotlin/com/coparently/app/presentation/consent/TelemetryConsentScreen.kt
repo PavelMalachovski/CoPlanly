@@ -20,6 +20,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.common.HeroIcon
 import com.coparently.app.presentation.platform.LocalAppBuildValues
@@ -73,7 +74,9 @@ fun TelemetryConsentScreen(
         Text(
             text = stringResource(Res.string.consent_title),
             style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
+            // Centred on every line, as on one: a wrapped title was drawn start-aligned.
+            textAlign = TextAlign.Center
         )
         Text(
             text = stringResource(Res.string.consent_body),

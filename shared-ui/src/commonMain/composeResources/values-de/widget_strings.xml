@@ -2,7 +2,7 @@
 <resources>
     <string name="widget_today_name">Heute</string>
     <string name="widget_today_description">Wessen Tag heute ist, die nächste Übergabe und die Termine von heute</string>
-    <string name="widget_today_title">Heute · %1$s</string>
+    <string name="widget_today_title">Heute\u00A0· %1$s</string>
     <string name="widget_today_signed_out">Melde dich bei CoPlanly an, um deinen Tag zu sehen.</string>
     <string name="widget_today_stale">Öffne CoPlanly zum Aktualisieren</string>
     <plurals name="widget_today_more">

@@ -11,4 +11,17 @@
     <string name="payment_error_not_saved">Das konnte nicht gespeichert werden. Prüfe die Verbindung und versuche es erneut.</string>
     <string name="payment_card_waiting">Wartet auf Bestätigung</string>
     <string name="payment_card_received">Erhalten</string>
+    <!-- Settle up on the Money card and the Expenses header (November 2026). The month is its
+         standalone name ("October"); the amount is formatted; a date is the day and month. -->
+    <string name="payment_panel_not_settled">%1$s ist noch nicht ausgeglichen</string>
+    <string name="payment_panel_ask">%1$s um Ausgleich bitten</string>
+    <string name="payment_panel_pay">%1$s %2$s für %3$s zahlen</string>
+    <string name="payment_panel_paid_on">Du hast am %2$s %1$s bezahlt. %3$s bestätigt, sobald das Geld angekommen ist.</string>
+    <string name="payment_panel_show_code">Zahlungscode erneut anzeigen</string>
+    <string name="payment_panel_says_paid">%1$s sagt, am %3$s %2$s bezahlt zu haben.</string>
+    <string name="payment_panel_check_bank">Prüfe zuerst dein Bankkonto.</string>
+    <string name="payment_panel_settled">%1$s ausgeglichen\u00A0· %2$s</string>
+    <string name="payment_chip_waiting_for_you">Wartet auf dich</string>
+    <string name="payment_chip_waiting_for">Wartet auf %1$s</string>
+    <string name="payment_chip_settled">Ausgeglichen</string>
 </resources>

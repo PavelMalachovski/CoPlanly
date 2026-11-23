@@ -11,6 +11,7 @@ import com.coparently.app.resources.request_history_meta_unchanged
 import com.coparently.app.resources.request_left_days
 import com.coparently.app.resources.request_left_hours
 import com.coparently.app.resources.request_left_minutes
+import com.coparently.app.utils.META_SEPARATOR
 import com.coparently.app.utils.ReaderDateText
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -46,7 +47,7 @@ object RequestClockText {
      * when the clock knows it: the deadline's date; when the last chance ran to, if one was given;
      * the date it was opened, if it was; how many reminders were sent, once the answering phone or
      * the server had planned them; and that the calendar did not change, which is always true of a request nobody
-     * answered. The caller joins them with " · ".
+     * answered. The caller joins them with [META_SEPARATOR].
      *
      * @param zone The zone the dates and the time fall in: the device's.
      */
@@ -66,6 +67,14 @@ object RequestClockText {
         add(UiText.Res(Res.string.request_history_meta_unchanged))
     }
 
+    /**
+     * A day of the meta line in the one form the line names every day in — weekday, day and month,
+     * the date of [ReaderDateText.answerBy] — so a deadline, its last chance and the first opening
+     * never read "12.05.2026 · … Wed, May 13" side by side.
+     */
     private fun dateOf(millis: Long, zone: TimeZone): UiText =
-        UiText.Date(Instant.fromEpochMilliseconds(millis).toLocalDateTime(zone).date)
+        UiText.Raw(ReaderDateText.date(Instant.fromEpochMilliseconds(millis).toLocalDateTime(zone).date, META_DAY))
+
+    /** The skeleton of a day in the meta line: weekday, day and month ("Wed, May 13"). */
+    const val META_DAY: String = "EEEMMMd"
 }

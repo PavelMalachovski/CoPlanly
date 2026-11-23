@@ -49,10 +49,12 @@ import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.chat.ChatAttachmentCodec
 import com.coparently.app.domain.chat.ChatScrollPolicy
+import com.coparently.app.domain.chat.isShownInThread
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.EmptyState
+import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.chatBubbleShape
@@ -101,7 +103,7 @@ private fun Message.localDate(): LocalDate = sentAtLocal(sentAtMillis).date
  * One entry in the rendered thread: either a day separator or a message with the grouping
  * information the renderer needs.
  */
-private sealed interface ThreadEntry {
+internal sealed interface ThreadEntry {
 
     /** A "Today" / "12 Aug 2026" pill above the first message of a day. */
     data class DayHeader(val date: LocalDate) : ThreadEntry
@@ -127,10 +129,16 @@ private sealed interface ThreadEntry {
  * its own 10sp timestamp inside it, three messages sent in the same minute looked like three
  * unrelated events, and nothing marked where yesterday ended.
  *
- * @param messages Messages in ascending time order
+ * Only what the thread draws goes in ([isShownInThread], November 2026): the parents' messages,
+ * their files and stickers. The app's other cards stay in the conversation for the export and are
+ * left out here, before the grouping and the separators, so a day that held only cards gets no
+ * separator and a card between two messages does not split their group.
+ *
+ * @param all Messages in ascending time order
  * @return Renderable entries in display order
  */
-private fun buildThread(messages: List<Message>): List<ThreadEntry> {
+internal fun buildThread(all: List<Message>): List<ThreadEntry> {
+    val messages = all.filter(::isShownInThread)
     val entries = mutableListOf<ThreadEntry>()
     messages.forEachIndexed { index, message ->
         val previous = messages.getOrNull(index - 1)
@@ -254,7 +262,9 @@ fun MessagesList(
         state = pullToRefreshState,
         modifier = modifier.fillMaxSize()
     ) {
-        if (messages.isEmpty()) {
+        // The entries, not the messages: a window holding only cards the thread does not draw is
+        // empty to the reader, unless there is more to load above it.
+        if (entries.isEmpty() && loadEarlier == null) {
             EmptyState(
                 icon = Icons.AutoMirrored.Filled.Message,
                 title = stringResource(Res.string.chat_messages_empty_title),
@@ -549,7 +559,10 @@ fun MessageItem(
         // A co-parent's own words can be reported with a long press (play-final audit F-10); a
         // card the app composed cannot, and nothing changes while no support address is set.
         ReportableBubble(message = message, isCurrentUser = isCurrentUser) {
-            Row(
+            // From the large-font scale the time goes under the text: beside it, the trailer kept
+            // its width while the text grew, and a message wrapped two words to a line.
+            val metaBelow = stacksAtLargeFont()
+            Column(
                 modifier = Modifier
                     .widthIn(max = BUBBLE_MAX_WIDTH)
                     .clip(
@@ -581,59 +594,65 @@ fun MessageItem(
                             Modifier
                         }
                     )
-                    .padding(horizontal = Spacing.M, vertical = Spacing.S),
-                // Bottom, not centre: the meta trailer sits beside the *last* line of a
-                // multi-line message, hugging the bubble's bottom-end corner.
-                verticalAlignment = Alignment.Bottom
+                    .padding(horizontal = Spacing.M, vertical = Spacing.S)
             ) {
-                Column(modifier = Modifier.weight(1f, fill = false)) {
-                    cardActor?.let { actor ->
+                Row(
+                    // Bottom, not centre: the meta trailer sits beside the *last* line of a
+                    // multi-line message, hugging the bubble's bottom-end corner.
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Column(modifier = Modifier.weight(1f, fill = false)) {
+                        cardActor?.let { actor ->
+                            Text(
+                                text = actor,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                         Text(
-                            text = actor,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = bubbleText,
+                            color = when {
+                                isCard -> MaterialTheme.colorScheme.onSurfaceVariant
+                                isCurrentUser -> MaterialTheme.colorScheme.onPrimary
+                                else -> MaterialTheme.colorScheme.onSurface
+                            },
+                            // Hyphenated, because the bubble is capped in dp while the text scales: at
+                            // 1.5x a German compound broke mid-word with no hyphen ("…erklär / ung").
+                            style = MaterialTheme.typography.bodyMedium.copy(hyphens = Hyphens.Auto)
                         )
                     }
-                    Text(
-                        text = bubbleText,
-                        color = when {
-                            isCard -> MaterialTheme.colorScheme.onSurfaceVariant
-                            isCurrentUser -> MaterialTheme.colorScheme.onPrimary
-                            else -> MaterialTheme.colorScheme.onSurface
-                        },
-                        // Hyphenated, because the bubble is capped in dp while the text scales: at
-                        // 1.5x a German compound broke mid-word with no hyphen ("…erklär / ung").
-                        style = MaterialTheme.typography.bodyMedium.copy(hyphens = Hyphens.Auto)
+                    if (onCardTap != null) {
+                        AppIcon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .padding(start = Spacing.XS)
+                                .size(RECEIPT_ICON_SIZE * CHEVRON_SCALE),
+                            tint = if (isCurrentUser && !isCard) {
+                                MaterialTheme.colorScheme.onPrimary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        )
+                    }
+                    // A card carries its time and no ticks: the neutral surface has no onPrimary to
+                    // draw them in, and whether the other phone has the card is the thread's business.
+                    if (!metaBelow) {
+                        BubbleMeta(
+                            message = message,
+                            isCurrentUser = isCurrentUser && !isCard,
+                            modifier = Modifier.padding(start = Spacing.S)
+                        )
+                    }
+                }
+                if (metaBelow) {
+                    BubbleMeta(
+                        message = message,
+                        isCurrentUser = isCurrentUser && !isCard,
+                        modifier = Modifier.align(Alignment.End)
                     )
                 }
-                if (onCardTap != null) {
-                    AppIcon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .padding(start = Spacing.XS)
-                            .size(RECEIPT_ICON_SIZE * CHEVRON_SCALE),
-                        tint = if (isCurrentUser && !isCard) {
-                            MaterialTheme.colorScheme.onPrimary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        }
-                    )
-                }
-                // A card carries its time and no ticks: the neutral surface has no onPrimary to
-                // draw them in, and whether the other phone has the card is the thread's business.
-                BubbleMeta(
-                    message = message,
-                    isCurrentUser = isCurrentUser && !isCard,
-                    modifier = Modifier.padding(start = Spacing.S)
-                )
             }
-        }
-
-        // What to pay, under a settle-up card on the payer's phone: the code, the IBAN, a share.
-        // And under a payment card, the payee's "Money arrived" (25 October 2026).
-        if (activity?.kind?.isSettleUp == true || activity?.kind?.isPayment == true) {
-            LocalSettleUpPayment.current?.invoke(message, isCurrentUser)
         }
 
         // The one delivery state loud enough to leave the bubble: error red on the filled

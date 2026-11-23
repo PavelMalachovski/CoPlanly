@@ -67,6 +67,7 @@ import com.coparently.app.resources.change_request_send
 import com.coparently.app.resources.change_request_to_time
 import com.coparently.app.resources.change_request_to_unset
 import com.coparently.app.utils.ReaderDateText
+import com.coparently.app.utils.TIME_RANGE_SEPARATOR
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import org.jetbrains.compose.resources.stringResource
@@ -240,7 +241,7 @@ private fun RequestChangeForm(
                 // The resource takes the date and the time as two arguments; the end time,
                 // when the event has one, is appended to the second one as a range.
                 val currentTime = ReaderDateText.time(event.startDateTime) +
-                    (event.endDateTime?.let { " – " + ReaderDateText.time(it) } ?: "")
+                    (event.endDateTime?.let { TIME_RANGE_SEPARATOR + ReaderDateText.time(it) } ?: "")
                 Text(
                     text = stringResource(
                         Res.string.change_request_currently,

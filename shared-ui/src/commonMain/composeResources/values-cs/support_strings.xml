@@ -9,8 +9,8 @@
     <string name="support_none_title">Výživné není dohodnuté</string>
     <string name="support_none_description">Navrhněte částku, den v měsíci a kdo platí. Platí, jakmile to druhý rodič přijme.</string>
     <string name="support_amount_line">%1$s měsíčně</string>
-    <string name="support_terms_line">%1$d. den v měsíci · platí %2$s · od: %3$s</string>
-    <string name="support_proposal_body">%1$s měsíčně, %2$d. den v měsíci, platí %3$s.</string>
+    <string name="support_terms_line">%1$d. den v měsíci\u00A0· platí %2$s\u00A0· od %3$s</string>
+    <string name="support_proposal_body">%1$s měsíčně, %2$d. den v měsíci, platí %3$s.</string>
     <string name="support_waiting_title">Čeká se na odpověď: %1$s</string>
     <string name="support_asks_title">Návrh výživného od: %1$s</string>
     <string name="support_accept">Přijmout</string>

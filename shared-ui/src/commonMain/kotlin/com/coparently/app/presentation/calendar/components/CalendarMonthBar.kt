@@ -2,151 +2,120 @@ package com.coparently.app.presentation.calendar.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.text.BasicText
-import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.AssistChip
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.coparently.app.presentation.calendar.CalendarViewMode
 import com.coparently.app.presentation.calendar.SwapDaysButton
+import com.coparently.app.presentation.common.AdaptiveSegmented
 import com.coparently.app.presentation.common.AppIcon
-import com.coparently.app.presentation.common.rememberToday
-import com.coparently.app.presentation.common.stacksAtLargeFont
-import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.calendar_add_event
-import com.coparently.app.resources.calendar_jump_to_date
-import com.coparently.app.resources.calendar_next_period
-import com.coparently.app.resources.calendar_previous_period
 import com.coparently.app.resources.calendar_today_button
-import com.coparently.app.utils.ReaderDateText
-import kotlinx.datetime.DateTimeUnit
-import kotlinx.datetime.LocalDate
-import kotlinx.datetime.plus
-import kotlinx.datetime.yearMonth
+import com.coparently.app.resources.calendar_viewmode_day
+import com.coparently.app.resources.calendar_viewmode_day_short
+import com.coparently.app.resources.calendar_viewmode_month
+import com.coparently.app.resources.calendar_viewmode_month_short
+import com.coparently.app.resources.calendar_viewmode_week
+import com.coparently.app.resources.calendar_viewmode_week_short
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * The grid card's head row: the month on screen, Today, and the arrows either side of it.
+ * The grid card's head row (calendar K1, November 2026): the Month | Week | Day control on the
+ * left, as letters spoken as the views' names, then Today, "⇄" and "+".
  *
- * The month title was the calendar header's until the November 2026 redesign, where it was also
- * the view picker; the picker is now the header's segmented control, so a tap on the title does
- * the one thing left for it — "Jump to date", the picker that opens on the selected day.
+ * The month title left this row for the screen's header ([CalendarHeader]), where the wordmark was,
+ * and the arrows went with it: months page by swipe, and Week and Day view page by swipe too. Today
+ * is a word, never an icon, because an icon for it was not understood.
  *
- * @param selectedDate The day whose month titles the card: the first of the month in Month view,
- *   the selected day in Week and Day view, as the header's title always read it
+ * @param viewMode The view the grid shows
+ * @param onViewModeChange Called with the view picked, or null to draw no control (while days are
+ *   chosen for a swap, which only Month view shows)
  * @param onToday Brings the calendar back to today
- * @param onPrevious One period back: a month, a week or a day, as the view shows; null draws no
- *   arrows (while days are chosen for a swap, the selection header pages the month)
- * @param onNext One period on; null as [onPrevious]
- * @param onJumpToDate Opens the date picker
  * @param onSwapDays Opens the day swap's selection, or null to draw no "⇄" (outside Month view,
  *   while days are chosen, without a family schedule)
  * @param onAddEvent Opens the new-event form, or null to draw no "+" (while days are chosen for a
  *   swap). It closes the row since the tester redesign of 12 November 2026: a floating "+" sat on
- *   the grid's last row once the six rows reached the card's bottom. "⇄" sits before it, in one row
- *   of actions, where it used to end the legend's row and push the legend onto two lines.
+ *   the grid's last row once the six rows reached the card's bottom.
  *
- * The iPhone draws the same row (MON-24 phase 3, part C): Today and "+" are the card's there too,
- * as the redesign's board for the iPhone shows them, with no navigation bar over the Calendar.
+ * The iPhone draws the same row (MON-24 phase 3, part C), the control as `UISegmentedControl`
+ * there ([AdaptiveSegmented]), with no navigation bar over the Calendar. The control is as wide as
+ * its letters, so the row is one line at the default font size in every language; it wraps rather
+ * than cuts at a large font: the actions go under the control when both do not fit.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-@Suppress("LongParameterList") // the bar's actions are this component's API surface
 fun CalendarMonthBar(
-    selectedDate: LocalDate,
+    viewMode: CalendarViewMode,
+    onViewModeChange: ((CalendarViewMode) -> Unit)?,
     onToday: () -> Unit,
-    onPrevious: (() -> Unit)?,
-    onNext: (() -> Unit)?,
-    onJumpToDate: () -> Unit,
     onSwapDays: (() -> Unit)? = null,
     onAddEvent: (() -> Unit)? = null
 ) {
-    // From font scale 1.3 the actions alone fill the row (German's "Heute" chip at 200 % left the
-    // month no room at all), so the title takes a line of its own above them.
-    if (stacksAtLargeFont()) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            MonthTitle(selectedDate, onJumpToDate, Modifier.fillMaxWidth())
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                MonthBarActions(onToday, onPrevious, onNext, onSwapDays, onAddEvent)
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalArrangement = Arrangement.spacedBy(Spacing.XS),
+        itemVerticalAlignment = Alignment.CenterVertically
+    ) {
+        if (onViewModeChange != null) {
+            // At least Spacing.S before the actions: the gap counts in the row's measure, so they go
+            // under the control rather than touching it when both only just fit (German at 200 %).
+            Box(modifier = Modifier.padding(end = Spacing.S)) {
+                ViewModeControl(viewMode = viewMode, onViewModeChange = onViewModeChange)
             }
         }
-    } else {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.XXS),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            MonthTitle(selectedDate, onJumpToDate, Modifier.weight(1f))
-            MonthBarActions(onToday, onPrevious, onNext, onSwapDays, onAddEvent)
+            MonthBarActions(onToday, onSwapDays, onAddEvent)
         }
     }
 }
 
-/** Today, the arrows, "⇄" and "+", in that order; see [CalendarMonthBar]. */
+/** Today, "⇄" and "+", in that order; see [CalendarMonthBar]. */
 @Composable
 private fun MonthBarActions(
     onToday: () -> Unit,
-    onPrevious: (() -> Unit)?,
-    onNext: (() -> Unit)?,
     onSwapDays: (() -> Unit)?,
     onAddEvent: (() -> Unit)?
 ) {
-    AssistChip(
+    OutlinedButton(
         onClick = onToday,
-        label = {
-            Text(
-                text = stringResource(Res.string.calendar_today_button),
-                style = MaterialTheme.typography.labelMedium
-            )
-        }
-    )
-    onPrevious?.let { onClick ->
-        IconButton(onClick = onClick) {
-            AppIcon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                contentDescription = stringResource(Res.string.calendar_previous_period),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-    onNext?.let { onClick ->
-        IconButton(onClick = onClick) {
-            AppIcon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = stringResource(Res.string.calendar_next_period),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        contentPadding = PaddingValues(horizontal = Spacing.M)
+    ) {
+        Text(
+            text = stringResource(Res.string.calendar_today_button),
+            style = MaterialTheme.typography.labelLarge
+        )
     }
     onSwapDays?.let { onClick -> SwapDaysButton(onClick = onClick) }
     onAddEvent?.let { onClick ->
@@ -160,56 +129,81 @@ private fun MonthBarActions(
 }
 
 /**
- * "November", or "November 2027" outside this year: the year only when it is not this one, as
- * calendar apps do (docs/AUDIT-2026-10-design.md D-3). A button for TalkBack, labelled with
- * where it leads.
+ * Month, Week and Day as one segmented control of letters, "M | W | D", each segment named in full
+ * for TalkBack: the view is a choice always in sight, and the letters leave the row its actions.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MonthTitle(selectedDate: LocalDate, onJumpToDate: () -> Unit, modifier: Modifier) {
-    val label = calendarMonthTitle(selectedDate)
-    val style = MaterialTheme.typography.titleMedium
-    // The row holds up to six actions now, so a long month name ("Сентябрь", "September 2027")
-    // steps its size down before it ends in an ellipsis.
-    BasicText(
-        text = label,
-        style = style.copy(color = MaterialTheme.colorScheme.onSurface),
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        autoSize = TextAutoSize.StepBased(minFontSize = MIN_TITLE_SIZE, maxFontSize = style.fontSize),
-        modifier = modifier
-            .clip(MaterialTheme.shapes.extraSmall)
-            .clickable(
-                role = Role.Button,
-                onClickLabel = stringResource(Res.string.calendar_jump_to_date),
-                onClick = onJumpToDate
-            )
-            .defaultMinSize(minHeight = LayoutConstants.MIN_TOUCH_TARGET)
-            .padding(horizontal = Spacing.XS)
-            .wrapContentHeight(Alignment.CenterVertically)
-            .semantics { heading() }
-    )
+private fun ViewModeControl(viewMode: CalendarViewMode, onViewModeChange: (CalendarViewMode) -> Unit) {
+    val modes = CalendarViewMode.entries
+    val letters = modes.map { viewModeLetter(it) }
+    val names = modes.map { viewModeName(it) }
+    AdaptiveSegmented(
+        labels = letters,
+        selectedIndex = modes.indexOf(viewMode),
+        onSelect = { onViewModeChange(modes[it]) },
+        // VoiceOver reads the segments' letters; the control as a whole is named in full.
+        accessibilityLabel = names.joinToString(", "),
+        // A segment a letter wide: the native control fills its width, which in this row would push
+        // Today, "⇄" and "+" onto a line of their own.
+        modifier = Modifier.width(NATIVE_SEGMENT_WIDTH * modes.size)
+    ) {
+        // Sized to its letters: Material's segment is at least 58 dp wide with 12 dp of padding on
+        // each side, which made the control 190 dp and pushed Today, "⇄" and "+" under it.
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.width(SEGMENT_WIDTH * modes.size)) {
+            modes.forEachIndexed { index, mode ->
+                val name = names[index]
+                SegmentedButton(
+                    selected = mode == viewMode,
+                    onClick = { onViewModeChange(mode) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = modes.size),
+                    contentPadding = PaddingValues(horizontal = Spacing.XS),
+                    modifier = Modifier.semantics { contentDescription = name },
+                    // No check mark: a letter needs the segment's width, not a tick beside it.
+                    icon = {},
+                    label = {
+                        Text(
+                            text = letters[index],
+                            maxLines = 1,
+                            modifier = Modifier.clearAndSetSemantics { }
+                        )
+                    }
+                )
+            }
+        }
+    }
 }
 
-/**
- * The month title the grid card shows for [selectedDate]: "November", or "November 2027" outside
- * this year.
- */
+/** A view's letter on the control: "M", "W", "D" in English. */
 @Composable
-internal fun calendarMonthTitle(selectedDate: LocalDate): String {
-    val yearMonth = selectedDate.yearMonth
-    // The month's stand-alone name, "LLLL": `java.time`'s `Month.getDisplayName(FULL_STANDALONE)`.
-    val monthName = ReaderDateText.pattern(yearMonth, "LLLL").replaceFirstChar { it.uppercase() }
-    val today by rememberToday()
-    return if (yearMonth.year == today.year) monthName else "$monthName ${yearMonth.year}"
+private fun viewModeLetter(mode: CalendarViewMode): String = when (mode) {
+    CalendarViewMode.MONTH -> stringResource(Res.string.calendar_viewmode_month_short)
+    CalendarViewMode.WEEK -> stringResource(Res.string.calendar_viewmode_week_short)
+    CalendarViewMode.DAY -> stringResource(Res.string.calendar_viewmode_day_short)
 }
 
+/** A view's name, which TalkBack reads for its letter. */
+@Composable
+private fun viewModeName(mode: CalendarViewMode): String = when (mode) {
+    CalendarViewMode.MONTH -> stringResource(Res.string.calendar_viewmode_month)
+    CalendarViewMode.WEEK -> stringResource(Res.string.calendar_viewmode_week)
+    CalendarViewMode.DAY -> stringResource(Res.string.calendar_viewmode_day)
+}
+
+/** A segment of the iPhone's native view control, wide enough for its letter. */
+private val NATIVE_SEGMENT_WIDTH = 40.dp
+
+/** A segment of the Material view control: a letter and a touch target's width, no more. */
+private val SEGMENT_WIDTH = 48.dp
+
 /**
- * The white card the grid sits in, with its head row and legend (redesign, November 2026):
+ * The white card the grid sits in, with its head row (redesign, November 2026; the legend left it
+ * for the header's "?" sheet in calendar K1):
  * `surfaceContainer` on the lavender ground, `shapes.large` and a 1 dp `outlineVariant` edge, as
  * `SectionGroup` draws every card.
  *
  * @param modifier Modifier for the card; the screen gives it the space left under the banners
- * @param content The month bar, the legend and the grid, top to bottom
+ * @param content The month bar and the grid, top to bottom
  */
 @Composable
 fun CalendarGridCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
@@ -224,17 +218,3 @@ fun CalendarGridCard(modifier: Modifier = Modifier, content: @Composable ColumnS
         content = content
     )
 }
-
-/**
- * The day the arrows move to in Week or Day view: one week or one day from [anchor]. Month view
- * pages by month, through `CalendarViewModel.showMonth`, and is not asked.
- *
- * @param step 1 for on, -1 for back
- */
-internal fun steppedDay(viewMode: CalendarViewMode, anchor: LocalDate, step: Int): LocalDate = when (viewMode) {
-    CalendarViewMode.WEEK -> anchor.plus(step, DateTimeUnit.WEEK)
-    CalendarViewMode.DAY, CalendarViewMode.MONTH -> anchor.plus(step, DateTimeUnit.DAY)
-}
-
-/** The smallest the month title steps down to before it ends in an ellipsis. */
-private val MIN_TITLE_SIZE = 12.sp

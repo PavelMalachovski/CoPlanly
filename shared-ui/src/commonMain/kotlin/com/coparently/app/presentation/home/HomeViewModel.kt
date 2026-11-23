@@ -2,10 +2,7 @@ package com.coparently.app.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.data.platform.logger
 import com.coparently.app.data.repository.CustodyModelRepository
-import com.coparently.app.domain.chat.ChatReadState
-import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DaySwapGroup
@@ -19,13 +16,11 @@ import com.coparently.app.domain.home.WeekDay
 import com.coparently.app.domain.home.WeekEntry
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.CustodyModel
-import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.repository.EventRepository
-import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.time.plus
@@ -39,18 +34,14 @@ import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.coParentOnScreen
 import com.coparently.app.presentation.common.observeSignedInUser
 import com.coparently.app.presentation.common.projectedCoParentUid
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -138,7 +129,6 @@ sealed interface HomeUiState {
      * @property recentChanges What the co-parent changed, newest first.
      * @property monthSpend This month's spending, one subtotal per currency.
      * @property monthBalances This month's settle-up position, per currency.
-     * @property unreadCount Unread messages from the co-parent.
      * @property awaitingSwaps Day-swap offers still waiting for **this** parent's answer, soonest
      *   first. Owner ask (Aug 2026 walkthrough, items 4/13): an incoming swap must be visible —
      *   and answerable — from the main page, not only from an inbox nothing pointed at.
@@ -161,7 +151,6 @@ sealed interface HomeUiState {
         val recentChanges: List<ActivityItem>,
         val monthSpend: MonthSpend,
         val monthBalances: List<CurrencyBalance>,
-        val unreadCount: Int,
         val awaitingSwaps: List<DaySwapGroup> = emptyList(),
         val awaitingRequestIds: List<String> = emptyList(),
         val childrenToday: List<ChildWithParent> = emptyList(),
@@ -172,68 +161,16 @@ sealed interface HomeUiState {
 
 /**
  * ViewModel for the home dashboard. Surfaces the at-a-glance co-parenting state:
- * the next custody handover, the next few events, this month's spend, unread
- * messages, and the recent changes the *other* parent made.
+ * the next custody handover, the next few events, this month's spend and the recent changes
+ * the *other* parent made.
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel(
     eventRepository: EventRepository,
     requestsSource: RequestsSource,
     custodyModelRepository: CustodyModelRepository,
     monthSpendDependencies: MonthSpendDependencies,
-    messageRepository: MessageRepository,
     homeIdentityDependencies: HomeIdentityDependencies
 ) : ViewModel() {
-
-    /** Kept for [openPreview]; the constructor parameter itself feeds the flows below. */
-    private val events: EventRepository = eventRepository
-
-    private val _previewEvent = MutableStateFlow<Event?>(null)
-
-    /**
-     * The event whose preview sheet is open, or null. Home opens an event the way the calendar
-     * does — a read-only preview first, the editor one tap further (UX item 5) — instead of
-     * dropping a parent straight into an edit form for the co-parent's event.
-     */
-    val previewEvent: StateFlow<Event?> = _previewEvent
-
-    /**
-     * Loads [eventId] into [previewEvent]. An event already on the dashboard is taken from there,
-     * because that copy is the expanded *occurrence* — a recurring event read back from Room is
-     * its master, dated to the first occurrence. The activity feed can name events outside the
-     * dashboard's window, and those are read from Room.
-     *
-     * Every occurrence of a recurring event shares the series' id, so a weekly event shows up in
-     * the week list more than once; matching by id alone opened the first of them whichever was
-     * tapped (audit L-6). [occurrenceStart] picks the tapped one, as the calendar's preview does,
-     * and the id alone is the fallback when it is null or no longer on the dashboard.
-     *
-     * @param occurrenceStart The tapped occurrence's start, or null when the tap named only the
-     *   event (the activity feed).
-     * @param onMissing Called when there is no such event on this device, so the caller can fall
-     *   back to the editor route, which reports that case itself.
-     */
-    fun openPreview(
-        eventId: String,
-        occurrenceStart: kotlinx.datetime.LocalDateTime? = null,
-        onMissing: () -> Unit
-    ) {
-        viewModelScope.launch {
-            val dashboard = uiState.value as? HomeUiState.Dashboard
-            val onDashboard = dashboard?.today?.events.orEmpty() +
-                dashboard?.week?.map { it.event }.orEmpty()
-            val onScreen = onDashboard.firstOrNull {
-                it.id == eventId && occurrenceStart != null && it.startDateTime == occurrenceStart
-            } ?: onDashboard.firstOrNull { it.id == eventId }
-            val event = onScreen ?: runCatching { events.getEventById(eventId) }.getOrNull()
-            if (event == null) onMissing() else _previewEvent.value = event
-        }
-    }
-
-    /** Closes the preview sheet. */
-    fun closePreview() {
-        _previewEvent.value = null
-    }
 
     /** App-wide default currency, used when the month has no expenses to take one from. */
     private val defaultCurrency: StateFlow<SupportedCurrency> =
@@ -253,7 +190,7 @@ class HomeViewModel(
 
     /**
      * The co-parent of the family on screen, with their profile: the one [partner] and
-     * [partnerId] both follow, so the changes header and the unread tile cannot name two
+     * [partnerId] both follow, so the changes header and the changes feed cannot name two
      * different families.
      *
      * Not the pairing state's partner, which is the *first* co-parent whatever the family
@@ -277,7 +214,7 @@ class HomeViewModel(
         .map { (it as? CoParentOnScreen.Linked)?.profile }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
 
-    /** The uid of the co-parent of the family on screen, for the unread count and the changes feed. */
+    /** The uid of the co-parent of the family on screen, for the changes feed. */
     private val partnerId: Flow<String?> = coParent
         .map { (it as? CoParentOnScreen.Linked)?.uid }
         .distinctUntilChanged()
@@ -504,49 +441,6 @@ class HomeViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
     /**
-     * Number of unread **messages** from the co-parent, matching the tile's label.
-     *
-     * Counted per message, by the rule [ChatReadState.unreadCount] states: the co-parent's own
-     * messages against this user's `lastReadAt` mark. The interim version counted
-     * *conversations* with activity, which — chat being 1:1 — could only ever render 0 or 1
-     * under a label that says messages.
-     *
-     * Both the id and the flows are derived, not fetched: the conversation id is a pure
-     * function of the two uids, so the tile needs no list query. A remote failure inside the
-     * repository is already contained there; the [catch] here is the last resort that keeps
-     * a Room-level failure from taking down `viewModelScope` and, with it, the process.
-     *
-     * **Counted in SQL rather than by loading the thread** (CQ-6). This used to combine the
-     * conversation with `observeMessages` and run `ChatReadState.unreadCount` over the result —
-     * so the first screen the app opens subscribed to every message in the thread and mapped
-     * all of them into domain objects on every emission, to render one integer. Ten messages a
-     * day for three years is about eleven thousand rows, on the home screen, forever.
-     * `MessageRepository.observeUnreadCount` answers the same question with a `COUNT(*)`.
-     *
-     * That also drops this screen's second subscription to the remote message listener. The
-     * badge stays live because `ChatViewModel.unreadCount`, held for the process lifetime by
-     * `NavGraph.rememberChatUnreadCount()`, is still mirroring into Room — which is what this
-     * now reads. It is the one subscription that has to stay, and CQ-8 explains why untangling
-     * it is a separate job.
-     */
-    private val unreadCount: StateFlow<Int> = combine(_userId, partnerId) { userId, partnerId ->
-        userId to partnerId
-    }
-        .flatMapLatest { (userId, partnerId) ->
-            val conversationId = partnerId?.let { conversationIdOrNull(userId, it) }
-            if (conversationId == null) {
-                flowOf(0)
-            } else {
-                messageRepository.observeUnreadCount(conversationId, userId)
-            }
-        }
-        .catch { e ->
-            logger.w(TAG, "Home unread count failed; showing zero", e)
-            emit(0)
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), 0)
-
-    /**
      * The family on screen's requests (phase 2): one upstream for the Requests row, the answers in
      * the feed and the pop-ups' count, the same source the inbox and the calendar banner read.
      */
@@ -555,7 +449,8 @@ class HomeViewModel(
 
     /**
      * Up to [MAX_ITEMS] most recent things the co-parent did, newest first: their event writes,
-     * their change requests and their answers to this parent's requests ([HomeFeed]).
+     * their change requests and their answers to this parent's requests ([HomeFeed]) — what Home's
+     * "N new" counts ([unseenCount]).
      */
     private val recentChanges: StateFlow<List<ActivityItem>> = combine(
         eventRepository.getAllEvents(),
@@ -577,7 +472,7 @@ class HomeViewModel(
         initialValue = emptyList()
     )
 
-    /** What Home's Open requests card counts, or nothing while the family's requests are still loading. */
+    /** What Home's Requests block counts, or nothing while the family's requests are still loading. */
     private val requestsRow: StateFlow<RequestsRowState> = requests
         .map { state ->
             val ready = state as? RequestsState.Ready ?: return@map RequestsRowState()
@@ -627,12 +522,10 @@ class HomeViewModel(
         combine(partner, nextHandover, agenda) { coParent, handover, sections ->
             Triple(coParent, handover, sections)
         },
-        combine(monthSpend, monthBalances, unreadCount) { spend, balances, unread ->
-            Triple(spend, balances, unread)
-        },
+        combine(monthSpend, monthBalances) { spend, balances -> spend to balances },
         combine(recentChanges, childrenToday) { changes, children -> changes to children },
         combine(awaitingSwaps, awaitingRequestIds, requestsRow) { swaps, ids, row -> Triple(swaps, ids, row) }
-    ) { (coParent, handover, sections), (spend, balances, unread), (changes, children), (swaps, requestIds, row) ->
+    ) { (coParent, handover, sections), (spend, balances), (changes, children), (swaps, requestIds, row) ->
         HomeUiState.Dashboard(
             partner = coParent,
             nextHandover = handover,
@@ -641,7 +534,6 @@ class HomeViewModel(
             recentChanges = changes,
             monthSpend = spend,
             monthBalances = balances,
-            unreadCount = unread,
             awaitingSwaps = swaps,
             awaitingRequestIds = requestIds,
             childrenToday = children,
@@ -677,14 +569,6 @@ class HomeViewModel(
         HomeUiState.Loading
     )
 
-    /**
-     * The deterministic conversation id for [userId] and [partnerId], or `null` when the
-     * pair cannot form one — an unresolved session (blank uid), or a partner id that
-     * somehow equals this user's.
-     */
-    private fun conversationIdOrNull(userId: String, partnerId: String): String? =
-        runCatching { ConversationKey.of(userId, partnerId) }.getOrNull()
-
     private companion object {
         /** Today's agenda before any repository has answered: today, empty, no custody. */
         val EMPTY_TODAY = TodayAgenda(
@@ -704,13 +588,13 @@ class HomeViewModel(
             week = emptyList(),
             recentChanges = emptyList(),
             monthSpend = MonthSpend(listOf(CurrencyAmount(SupportedCurrency.DEFAULT.code, 0.0))),
-            monthBalances = emptyList(),
-            unreadCount = 0
+            monthBalances = emptyList()
         )
 
-        // At most five Updates rows, then "See all" (redesign, November 2026, variant A): the feed
-        // leads the page now, and the week list it used to share the length with is seven tiles.
-        const val MAX_ITEMS = 5
+        // How many of the co-parent's latest updates Home's "N new" counts from (November 2026,
+        // board HomeG1): the feed is no longer drawn on Home, only counted, so it reaches further
+        // back than the five rows it once listed; more unopened than this reads as this many.
+        const val MAX_ITEMS = 20
         const val STOP_TIMEOUT_MS = 5000L
 
         /**
@@ -719,7 +603,6 @@ class HomeViewModel(
          * a permanently failed one does not leave the user shimmering.
          */
         const val PAIRING_SETTLE_TIMEOUT_MS = 3000L
-        const val TAG = "HomeViewModel"
     }
 }
 

@@ -52,7 +52,7 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /** How the numbers on one row are joined. Punctuation, not text — nothing to translate. */
-private const val NUMBER_SEPARATOR = " · "
+private const val NUMBER_SEPARATOR = "\u00A0· "
 
 /**
  * Important phone numbers, one tap from the dialler: grandparents, doctors, a friend's parents.

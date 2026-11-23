@@ -6,10 +6,10 @@
     <string name="friend_invite_code_label">Gib diesen Code weiter</string>
     <string name="friend_access_until">Zugriff bis %1$s</string>
     <string name="friend_access_while_linked">Zugriff, solange die Eltern verbunden sind</string>
-    <string name="friend_calendar_row_supporting_while_linked">%1$s und %2$s · Zugriff, solange sie verbunden sind</string>
-    <string name="friend_access_several_while_linked">Familien: %1$d · Zugriff, solange die Eltern verbunden sind</string>
+    <string name="friend_calendar_row_supporting_while_linked">%1$s und %2$s\u00A0· Zugriff, solange sie verbunden sind</string>
+    <string name="friend_access_several_while_linked">Familien: %1$d\u00A0· Zugriff, solange die Eltern verbunden sind</string>
     <string name="friend_invite_duration_while_linked">Solange wir verbunden sind</string>
-    <string name="friend_access_several">Familien: %1$d · der erste Zugriff endet am %2$s</string>
+    <string name="friend_access_several">Familien: %1$d\u00A0· der erste Zugriff endet am %2$s</string>
     <string name="friend_revoke">Zugriff entziehen</string>
     <string name="friend_revoke_confirm_title">Zugriff für %1$s entziehen?</string>
     <string name="friend_revoke_confirm_message">Diese Person sieht den Familienkalender dann nicht mehr. Du kannst sie jederzeit erneut einladen.</string>
@@ -31,7 +31,7 @@
     <string name="friend_calendar_family">%1$s und %2$s</string>
     <string name="friend_calendar_read_only">Nur ansehen. Private Termine werden nie geteilt.</string>
     <string name="friend_calendar_added_by">Hinzugefügt von %1$s</string>
-    <string name="friend_calendar_event_supporting">%1$s · %2$s</string>
+    <string name="friend_calendar_event_supporting">%1$s\u00A0· %2$s</string>
     <string name="friend_calendar_you_take_part">Du nimmst teil</string>
     <string name="friend_calendar_access_ended">Dein Zugang zu diesem Kalender ist beendet</string>
     <string name="friend_calendar_failed">Der Kalender konnte nicht geladen werden</string>
@@ -50,6 +50,7 @@
     <string name="friend_compare_no">Nein</string>
     <string name="friend_compare_while_linked">Solange ihr verknüpft seid</string>
     <string name="friend_compare_duration_choice">%1$s oder %2$s</string>
+    <string name="friend_compare_duration_while_linked">solange ihr verknüpft seid</string>
     <string name="friend_compare_row_desc">%1$s: Co-Elternteil %2$s, Freund der Familie %3$s</string>
     <string name="friend_invite_will_see_lead">Sieht</string>
     <string name="friend_invite_will_see_body">die Termine der Familie im Kalender, außer privaten. Nur ansehen – ändern kann diese Person nichts.</string>
@@ -62,6 +63,6 @@
     <string name="friend_redeem_row_title">Ich habe einen Code von den Eltern</string>
     <string name="friend_redeem_row_supporting">Wenn du als Freund der Familie eingeladen wurdest</string>
     <string name="friend_redeem_open_calendar">Familienkalender öffnen</string>
-    <string name="friend_calendar_row_supporting">%1$s und %2$s · Zugriff bis %3$s</string>
+    <string name="friend_calendar_row_supporting">%1$s und %2$s\u00A0· Zugriff bis %3$s</string>
     <string name="friend_calendar_no_events_window">Keine Termine in diesen vier Wochen</string>
 </resources>

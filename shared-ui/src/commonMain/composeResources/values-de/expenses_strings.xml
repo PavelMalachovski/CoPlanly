@@ -34,9 +34,9 @@
         <item quantity="one">%1$d Ausgabe</item>
         <item quantity="other">%1$d Ausgaben</item>
     </plurals>
-    <string name="expenses_row_subtitle">%1$s · %2$s bezahlt · %3$s</string>
-    <string name="expenses_row_subtitle_you">%1$s · du hast bezahlt · %2$s</string>
-    <string name="expenses_row_subtitle_unknown_payer">%1$s · %2$s</string>
+    <string name="expenses_row_subtitle">%1$s\u00A0· %2$s bezahlt\u00A0· %3$s</string>
+    <string name="expenses_row_subtitle_you">%1$s\u00A0· du hast bezahlt\u00A0· %2$s</string>
+    <string name="expenses_row_subtitle_unknown_payer">%1$s\u00A0· %2$s</string>
     <string name="expenses_split_even">50/50 geteilt</string>
     <string name="expenses_split_n_ways">1/%1$d geteilt</string>
     <string name="expenses_split_none">nicht geteilt</string>
@@ -68,16 +68,16 @@
 
     <!-- Summary card: month switcher and total. -->
     <string name="expenses_shared_spend">gemeinsame Ausgaben</string>
-    <string name="expenses_month_and_count">%1$s · %2$s</string>
+    <string name="expenses_month_and_count">%1$s\u00A0· %2$s</string>
     <!-- The month summary folded into one pinned line; %1$s is each currency's total, joined. -->
     <string name="expenses_collapsed_totals">Gemeinsame Ausgaben: %1$s</string>
-    <string name="expenses_row_meta">%1$s · %2$s</string>
-    <string name="expenses_row_meta_with_receipt">%1$s · %2$s · Beleg</string>
+    <string name="expenses_row_meta">%1$s\u00A0· %2$s</string>
+    <string name="expenses_row_meta_with_receipt">%1$s\u00A0· %2$s\u00A0· Beleg</string>
     <string name="expenses_split_proposal_title">Neue Kostenaufteilung vorgeschlagen</string>
     <string name="expenses_split_proposal_body_named">%1$s schlägt ab jetzt eine neue Aufteilung gemeinsamer Ausgaben vor: %2$s. Bereits erfasste Ausgaben behalten ihre Aufteilung.</string>
-    <string name="expenses_split_shares_named">%1$s zahlt %2$d %5$s, %3$s zahlt %4$d %5$s</string>
-    <string name="expenses_split_shares_you_first">Du zahlst %1$d %4$s, %2$s zahlt %3$d %4$s</string>
-    <string name="expenses_split_shares_you_second">%1$s zahlt %2$d %4$s, du zahlst %3$d %4$s</string>
+    <string name="expenses_split_shares_named">%1$s zahlt %2$d %5$s, %3$s zahlt %4$d %5$s</string>
+    <string name="expenses_split_shares_you_first">Du zahlst %1$d %4$s, %2$s zahlt %3$d %4$s</string>
+    <string name="expenses_split_shares_you_second">%1$s zahlt %2$d %4$s, du zahlst %3$d %4$s</string>
     <string name="expenses_split_proposal_confirm">Bestätigen</string>
     <string name="expenses_split_proposal_decline">Ablehnen</string>
     <string name="expenses_split_proposal_later">Später</string>
@@ -100,8 +100,8 @@
     <string name="expense_warning_receipt_upload_failed">Beleg-Upload fehlgeschlagen – Ausgabe ohne Beleg gespeichert</string>
     <string name="expense_warning_new_receipt_upload_failed">Beleg-Upload fehlgeschlagen – Ausgabe ohne den neuen Beleg gespeichert</string>
     <string name="settle_up_dialog_title">Ausgleich für %1$s</string>
-    <string name="settle_up_dialog_owed">%1$s sieht im Chat, dass du %2$s bekommst.</string>
-    <string name="settle_up_dialog_owing">%1$s sieht im Chat, dass du %2$s schuldest. Wenn ein Konto hinterlegt ist, bekommst du einen QR-Code zum Bezahlen.</string>
+    <string name="settle_up_dialog_owed">%1$s sieht im Start-Tab unter Geld, dass du %2$s bekommst.</string>
+    <string name="settle_up_dialog_owing">%1$s sieht im Start-Tab unter Geld, dass du %2$s schuldest. Wenn ein Konto hinterlegt ist, findest du in deinem Start-Tab unter Geld einen QR-Code zum Bezahlen.</string>
     <string name="settle_up_iban_label">Deine IBAN für eine QR-Zahlung (optional)</string>
     <string name="settle_up_iban_invalid">Diese IBAN scheint nicht zu stimmen. Prüfe sie oder lass das Feld leer.</string>
     <string name="settle_up_send">Senden</string>

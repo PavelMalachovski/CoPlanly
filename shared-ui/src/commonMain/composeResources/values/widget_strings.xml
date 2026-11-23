@@ -6,7 +6,7 @@
     <string name="widget_today_name">Today</string>
     <string name="widget_today_description">Whose day it is, the next handover and today\u0027s events</string>
     <!-- %1$s = today's date, formatted for the reader's locale -->
-    <string name="widget_today_title">Today · %1$s</string>
+    <string name="widget_today_title">Today\u00A0· %1$s</string>
     <string name="widget_today_signed_out">Sign in to CoPlanly to see your day.</string>
     <!-- The iPhone widget's last line once its seven days have run out: the app has not
          been opened, or has not run in the background, for a week. -->

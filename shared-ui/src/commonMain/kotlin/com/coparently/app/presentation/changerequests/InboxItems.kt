@@ -287,3 +287,33 @@ object InboxItems {
         if (waiting.planQuestions.isNotEmpty()) add(InboxItem.Plan(waiting.planQuestions.size))
     }
 }
+
+/**
+ * The clock [this] item's card shows, as the inbox saw it; null for a header, the history, an
+ * agreement row and a request without a clock.
+ */
+val InboxItem.timedRequest: TimedRequest?
+    get() = when (this) {
+        is InboxItem.Proposal -> timed
+        is InboxItem.Split -> timed
+        is InboxItem.AwaitingEvent -> timed
+        is InboxItem.Swap -> timed
+        is InboxItem.Request -> timed
+        is InboxItem.Header, is InboxItem.History,
+        is InboxItem.Support, is InboxItem.Professional, is InboxItem.Plan -> null
+    }
+
+/**
+ * Whether [myUid] made the request [this] item is — then nothing on its card answers it, and it may
+ * carry Withdraw. A section's header, the history and the plan's questions are nobody's request.
+ */
+fun InboxItem.isMadeBy(myUid: String): Boolean = when (this) {
+    is InboxItem.Proposal -> mine
+    is InboxItem.Split -> mine
+    is InboxItem.AwaitingEvent -> mine
+    is InboxItem.Swap -> group.swaps.first().override.requestedBy == myUid
+    is InboxItem.Request -> request.requestedBy == myUid
+    is InboxItem.Support -> mine
+    is InboxItem.Professional -> mine
+    is InboxItem.Header, is InboxItem.History, is InboxItem.Plan -> false
+}

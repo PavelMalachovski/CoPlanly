@@ -234,7 +234,7 @@ private val ROW_LABEL_GAP = 16.dp
 private const val SENTENCE_JOIN = ". "
 
 /** Joins a dialog row's per-kind phrases. */
-private const val PHRASE_JOIN = " · "
+private const val PHRASE_JOIN = "\u00A0· "
 
 /** The chip's sentence for one kind: "… in another family". */
 private val FamilySignal.otherFamilyText: StringResource

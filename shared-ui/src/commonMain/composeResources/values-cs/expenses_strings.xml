@@ -35,9 +35,9 @@
         <item quantity="many">%1$d\u00A0výdaje</item>
         <item quantity="other">%1$d\u00A0výdajů</item>
     </plurals>
-    <string name="expenses_row_subtitle">%1$s · platba: %2$s · %3$s</string>
-    <string name="expenses_row_subtitle_you">%1$s · platili jste vy · %2$s</string>
-    <string name="expenses_row_subtitle_unknown_payer">%1$s · %2$s</string>
+    <string name="expenses_row_subtitle">%1$s\u00A0· platba: %2$s\u00A0· %3$s</string>
+    <string name="expenses_row_subtitle_you">%1$s\u00A0· platili jste vy\u00A0· %2$s</string>
+    <string name="expenses_row_subtitle_unknown_payer">%1$s\u00A0· %2$s</string>
     <string name="expenses_split_even">rozděleno 50/50</string>
     <string name="expenses_split_n_ways">rozděleno 1/%1$d</string>
     <string name="expenses_split_none">nerozděleno</string>
@@ -69,16 +69,16 @@
 
     <!-- Summary card: month switcher and total. -->
     <string name="expenses_shared_spend">sdílené výdaje</string>
-    <string name="expenses_month_and_count">%1$s · %2$s</string>
+    <string name="expenses_month_and_count">%1$s\u00A0· %2$s</string>
     <!-- The month summary folded into one pinned line; %1$s is each currency's total, joined. -->
     <string name="expenses_collapsed_totals">Sdílené výdaje: %1$s</string>
-    <string name="expenses_row_meta">%1$s · %2$s</string>
-    <string name="expenses_row_meta_with_receipt">%1$s · %2$s · účtenka</string>
+    <string name="expenses_row_meta">%1$s\u00A0· %2$s</string>
+    <string name="expenses_row_meta_with_receipt">%1$s\u00A0· %2$s\u00A0· účtenka</string>
     <string name="expenses_split_proposal_title">Navrženo nové rozdělení výdajů</string>
     <string name="expenses_split_proposal_body_named">%1$s navrhuje od této chvíle nové rozdělení sdílených výdajů: %2$s. Již zadané výdaje si ponechají své rozdělení.</string>
-    <string name="expenses_split_shares_named">%1$s platí %2$d %5$s, %3$s platí %4$d %5$s</string>
-    <string name="expenses_split_shares_you_first">Vy platíte %1$d %4$s, %2$s platí %3$d %4$s</string>
-    <string name="expenses_split_shares_you_second">%1$s platí %2$d %4$s, vy platíte %3$d %4$s</string>
+    <string name="expenses_split_shares_named">%1$s platí %2$d %5$s, %3$s platí %4$d %5$s</string>
+    <string name="expenses_split_shares_you_first">Vy platíte %1$d %4$s, %2$s platí %3$d %4$s</string>
+    <string name="expenses_split_shares_you_second">%1$s platí %2$d %4$s, vy platíte %3$d %4$s</string>
     <string name="expenses_split_proposal_confirm">Potvrdit</string>
     <string name="expenses_split_proposal_decline">Odmítnout</string>
     <string name="expenses_split_proposal_later">Později</string>
@@ -101,8 +101,8 @@
     <string name="expense_warning_receipt_upload_failed">Nahrání účtenky selhalo – výdaj byl uložen bez účtenky</string>
     <string name="expense_warning_new_receipt_upload_failed">Nahrání účtenky selhalo – výdaj byl uložen bez nové účtenky</string>
     <string name="settle_up_dialog_title">Vyrovnání za %1$s</string>
-    <string name="settle_up_dialog_owed">%1$s uvidí v chatu, že vám dluží %2$s.</string>
-    <string name="settle_up_dialog_owing">%1$s uvidí v chatu, že dlužíte %2$s. Pokud má přidaný účet, dostanete QR kód k platbě.</string>
+    <string name="settle_up_dialog_owed">%1$s uvidí na své obrazovce Domů v části Peníze, že vám dluží %2$s.</string>
+    <string name="settle_up_dialog_owing">%1$s uvidí na své obrazovce Domů v části Peníze, že dlužíte %2$s. Pokud má přidaný účet, najdete QR kód k platbě na obrazovce Domů v části Peníze.</string>
     <string name="settle_up_iban_label">Váš IBAN pro QR platbu (nepovinné)</string>
     <string name="settle_up_iban_invalid">Tento IBAN nevypadá správně. Zkontrolujte ho, nebo pole nechte prázdné.</string>
     <string name="settle_up_send">Odeslat</string>

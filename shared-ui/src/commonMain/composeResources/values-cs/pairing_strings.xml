@@ -40,7 +40,7 @@
     <string name="pairing_expires_in_hours">Platný ještě %1$d h %2$d min</string>
     <string name="pairing_expires_in_minutes">Platný ještě %1$d min</string>
     <string name="pairing_code_expired_generate">Kód vypršel – klepněte na „Nový kód“</string>
-    <string name="pairing_share_message">%1$s vás zve do CoPlanly — jednoho kalendáře pro dva domovy našich dětí. Oba vidíme stejné dny a změny rozvrhu musíme odsouhlasit oba.\nInstalace: %4$s (kód se přenese sám)\nUž aplikaci máte? %3$s · Kód: %2$s\nMáte iPhone? Požádejte mě o odkaz na náš kalendář, otevře se v Kalendáři Apple.</string>
+    <string name="pairing_share_message">%1$s vás zve do CoPlanly — jednoho kalendáře pro dva domovy našich dětí. Oba vidíme stejné dny a změny rozvrhu musíme odsouhlasit oba.\nInstalace: %4$s (kód se přenese sám)\nUž aplikaci máte? %3$s\u00A0· Kód: %2$s\nMáte iPhone? Požádejte mě o odkaz na náš kalendář, otevře se v Kalendáři Apple.</string>
     <!-- The share text once the pairing link is a web address (BuildConfig.PAIRING_WEB_LINK):
          %1$s inviter, %2$s the link, %3$s the code for typing by hand -->
     <string name="pairing_share_message_web">%1$s vás zve do CoPlanly — jednoho kalendáře pro dva domovy našich dětí. Oba vidíme stejné dny a změny rozvrhu musíme odsouhlasit oba: %2$s\nKód, kdybyste ho potřebovali: %3$s</string>
@@ -72,7 +72,7 @@
     <string name="pairing_mode_share">Sdílet můj kód</string>
     <string name="pairing_mode_enter">Zadat kód</string>
     <string name="pairing_copy_code">Kopírovat kód</string>
-    <string name="pairing_tap_to_copy_and_expiry">Klepnutím zkopírujete · %1$s</string>
+    <string name="pairing_tap_to_copy_and_expiry">Klepnutím zkopírujete\u00A0· %1$s</string>
     <string name="pairing_share_link">Sdílet odkaz</string>
     <string name="pairing_trust_title">Co se propojením sdílí</string>
     <string name="pairing_trust_body">Sdílený kalendář a rozvrh péče, sdílené výdaje a zůstatky a chat. Soukromé události nikdy neopustí vaše zařízení. Propojení můžete kdykoli zrušit.</string>
@@ -86,11 +86,11 @@
     <!-- The invitation an unlinked parent answers before a code is redeemed (InvitationView). -->
     <string name="pairing_invitation_title">%1$s vás zve do CoPlanly</string>
     <string name="pairing_invitation_title_unnamed">Máte pozvánku do CoPlanly</string>
-    <string name="pairing_invitation_lede">Jeden kalendář pro dva domovy vašich dětí — čí je který den, co se změnilo a kdo co zaplatil.</string>
+    <string name="pairing_invitation_lede">Jeden kalendář pro dva domovy vašich dětí\u00A0— čí je který den, co se změnilo a\u00A0kdo co zaplatil.</string>
     <string name="pairing_invitation_fact_same">Oba vidíte jeden společný kalendář. Soukromé záznamy zůstávají soukromé.</string>
     <string name="pairing_invitation_fact_agree">Změna rozvrhu nebo výměna dne čeká na vaše ano.</string>
-    <string name="pairing_invitation_fact_messages">Odeslanou zprávu nemůže nikdo z vás upravit ani smazat.</string>
-    <string name="pairing_invitation_fact_unlink">Propojení můžete kdykoli zrušit v Nastavení.</string>
+    <string name="pairing_invitation_fact_messages">Odeslanou zprávu nemůže nikdo z\u00A0vás upravit ani smazat.</string>
+    <string name="pairing_invitation_fact_unlink">Propojení můžete kdykoli zrušit v\u00A0Nastavení.</string>
     <string name="pairing_invitation_link">Přijmout pozvánku</string>
     <string name="pairing_invitation_not_now">Teď ne</string>
 </resources>

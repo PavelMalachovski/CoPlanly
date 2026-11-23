@@ -39,8 +39,7 @@ private fun ExpenseSummaryHeaderPairedPreview() {
                 splitKnown = true
             ),
             currency = "USD",
-            parentNames = previewParentNames,
-            onSettleUp = {}
+            parentNames = previewParentNames
         )
     }
 }
@@ -58,8 +57,7 @@ private fun ExpenseSummaryHeaderUnpairedPreview() {
                 splitKnown = false
             ),
             currency = "USD",
-            parentNames = previewParentNames,
-            onSettleUp = {}
+            parentNames = previewParentNames
         )
     }
 }

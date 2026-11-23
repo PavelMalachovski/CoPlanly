@@ -405,14 +405,10 @@ internal fun appDestinations(
             onNavigateToPairing = {
                 navController.navigate(Screen.Pairing.routeWithCode(null))
             },
-            // The dashboard's stat tiles deep-link into what owns those numbers:
-            // Expenses, a detail screen since the Family tab replaced its tab, and the
-            // Chat tab, through the tab switcher like tapping the tab itself.
+            // The Money card deep-links into what owns its numbers: Expenses, a detail
+            // screen since the Family tab replaced its tab.
             onOpenExpenses = {
                 navController.navigate(Screen.Expenses.route)
-            },
-            onOpenChat = {
-                tabSwitcher.select(BottomNavDestination.CHAT)
             },
             // A week tile opens the calendar's Day view on its day (redesign, November
             // 2026, variant A): the request first, then the tab, which answers it.
@@ -422,7 +418,10 @@ internal fun appDestinations(
             },
             onOpenUnassignedRecords = {
                 navController.navigate(Screen.UnassignedRecords.route)
-            }
+            },
+            // Child support, a professional's access and the plan wait on Home's Requests block as
+            // compact rows, each opening the screen it is answered on, as in the inbox.
+            onOpenAgreement = { screen -> navController.navigate(screen.route) }
         )
     },
 
@@ -439,9 +438,6 @@ internal fun appDestinations(
             },
             onSettingsClick = {
                 navController.navigate(Screen.Settings.route)
-            },
-            onChangeRequestsClick = {
-                navController.navigate(Screen.ChangeRequests.createRoute())
             }
         )
     },
@@ -1189,7 +1185,6 @@ internal fun appDestinations(
     // (design item 19's one exception): from 840 dp it lays the month out in two panes,
     // which a 640 dp column would squeeze.
     destination(route = Screen.Expenses.route) {
-        val tabSwitcher = LocalTabSwitcher.current
         com.coparently.app.presentation.expenses.ExpenseScreen(
             onNavigateUp = { navController.popBackStack() },
             onAddExpense = {
@@ -1197,15 +1192,6 @@ internal fun appDestinations(
             },
             onEditExpense = { expenseId ->
                 navController.navigate(Screen.EditExpense.createRoute(expenseId))
-            },
-            onSettleUp = {
-                // The settle-up card is already in the thread (`SettleUpDialog`); this
-                // only shows it. Same tab semantics as navigateToTab — a plain
-                // navigate() here pushed the Chat route onto the tab Expenses was
-                // opened from, so the next tab switch saved that mixed stack and a
-                // later visit restored the chat screen on top of it. Through the tab
-                // switcher, so the iPhone's shell selects its Chat tab (MON-24 phase 3).
-                tabSwitcher.selectFresh(BottomNavDestination.CHAT)
             }
         )
     },

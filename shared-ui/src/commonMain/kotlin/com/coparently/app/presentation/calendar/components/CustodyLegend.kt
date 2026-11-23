@@ -40,8 +40,9 @@ internal val LEGEND_PARENT_SLOTS = listOf("mom", "dad")
 internal val LEGEND_SWATCH = DpSize(20.dp, 14.dp)
 
 /**
- * What the calendar's colours and marks mean, in one row over the grid (new-user review, October
- * 2026: a new parent could not tell whose pink it was, nor what a cell's triangle said).
+ * What the calendar's colours and marks mean (new-user review, October 2026: a new parent could not
+ * tell whose pink it was, nor what a cell's triangle said). A row of the grid card until calendar K1
+ * (November 2026); since then the body of the header's "?" sheet ([CalendarLegendSheet]).
  *
  * Each parent's name beside a swatch of their wash, the handover diagonal and, when the family has
  * any, the contact-time corner. It reads nothing about the month on screen, so it keeps one height
@@ -165,7 +166,7 @@ internal fun ParentSwatch(slot: String) {
 @Composable
 internal fun LegendEntry(label: String, swatch: @Composable () -> Unit) {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(Spacing.XS),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(

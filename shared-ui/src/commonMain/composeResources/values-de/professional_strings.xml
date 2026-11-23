@@ -16,15 +16,15 @@
     <string name="professional_role_guardian_ad_litem">Verfahrensbeistand</string>
     <string name="professional_role_therapist">Therapeut/in</string>
     <string name="professional_role_other">Sonstige</string>
-    <string name="professional_duration_month">30 Tage</string>
-    <string name="professional_duration_quarter">90 Tage</string>
+    <string name="professional_duration_month">30\u00A0Tage</string>
+    <string name="professional_duration_quarter">90\u00A0Tage</string>
     <string name="professional_duration_half_year">6 Monate</string>
     <string name="professional_status_waiting_for_you">Wartet auf deine Zustimmung</string>
     <string name="professional_status_waiting_for_co_parent">Wartet auf die Zustimmung des anderen Elternteils</string>
     <string name="professional_status_waiting_for_parents">Wartet auf die Zustimmung beider Eltern</string>
     <string name="professional_status_active_until">Lesezugriff bis %1$s</string>
     <string name="professional_status_expired">Zugang endete am %1$s</string>
-    <string name="professional_row_supporting">%1$s · %2$s</string>
+    <string name="professional_row_supporting">%1$s\u00A0· %2$s</string>
     <string name="professional_dialog_body">%1$s kann bis %2$s den Kalender, den Betreuungsplan und den Elternplan dieser Familie lesen – nie den Chat, Ausgaben oder Kinderdaten. Der Zugang beginnt erst mit der Zustimmung beider Eltern, und jeder von euch kann ihn jederzeit beenden.</string>
     <string name="professional_revoke_confirm">Zugang für %1$s jetzt beenden? Der andere Elternteil muss nicht zustimmen, und es lässt sich nicht rückgängig machen – dafür wäre eine neue Einladung nötig.</string>
     <string name="professional_dialog_consent">Ich stimme zu</string>
@@ -45,7 +45,7 @@
     <string name="professional_calendar_no_events">Keine Termine</string>
     <string name="professional_calendar_previous">Frühere Wochen</string>
     <string name="professional_calendar_next">Spätere Wochen</string>
-    <string name="professional_calendar_event_supporting">%1$s · %2$s</string>
+    <string name="professional_calendar_event_supporting">%1$s\u00A0· %2$s</string>
     <string name="professional_unavailable">Nichts anzuzeigen – der Zugang ist nicht aktiv. Er öffnet sich, wenn beide Eltern zugestimmt haben, und endet an seinem Enddatum.</string>
     <string name="professional_plan_not_answered">Nicht beantwortet</string>
     <string name="professional_plan_answer_by">%1$s: %2$s</string>

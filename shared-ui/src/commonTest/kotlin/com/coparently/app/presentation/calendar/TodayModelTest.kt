@@ -3,7 +3,6 @@ package com.coparently.app.presentation.calendar
 import com.coparently.app.domain.home.TodayAgenda
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.calendar.components.TodayModel
-import com.coparently.app.presentation.calendar.components.steppedDay
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlin.test.Test
@@ -46,12 +45,6 @@ class TodayModelTest {
         val now = LocalDateTime(2026, 11, 12, 8, 0)
         assertEquals(listOf("Emma", "Leo"), TodayModel.of(agenda, listOf("Emma", "Leo"), false, now).childNames)
         assertEquals(emptyList(), TodayModel.of(agenda, listOf("Emma", "Leo"), true, now).childNames)
-    }
-
-    @Test
-    fun `the arrows step a week in Week view and a day in Day view`() {
-        assertEquals(LocalDate(2026, 11, 19), steppedDay(CalendarViewMode.WEEK, today, 1))
-        assertEquals(LocalDate(2026, 11, 11), steppedDay(CalendarViewMode.DAY, today, -1))
     }
 
     private fun model(events: List<Event>, now: LocalDateTime) =

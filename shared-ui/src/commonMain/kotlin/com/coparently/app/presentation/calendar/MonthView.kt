@@ -44,13 +44,16 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
@@ -338,6 +341,10 @@ private val CONTACT_WINDOW_MARKER_SIZE = 14.dp
 
 /**
  * Weekday header row (Mon, Tue, Wed, etc.)
+ *
+ * Each name stays on one line and whole. The short form ("Mon", "Mo.") is drawn while every one of
+ * the seven fits its column; otherwise all seven take the narrow form ("M", "Д"), measured, so the
+ * row never breaks a name ("Mo/n" at 150 %) or loses its end ("Mo" for "Mo." at 200 %).
  */
 @Composable
 private fun WeekdayHeader(firstDayOfWeek: DayOfWeek) {
@@ -345,62 +352,88 @@ private fun WeekdayHeader(firstDayOfWeek: DayOfWeek) {
     val today by rememberToday()
     // Resolved here: the semantics lambda is not a composable context.
     val headerDescription = stringResource(Res.string.calendar_weekday_header_description)
+    val style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Normal)
+    val measurer = rememberTextMeasurer()
+    // Each weekday's name is read off a date that falls on it, `today`'s week: a name is
+    // `java.time`'s `getDisplayName(TextStyle.SHORT)`, which is the pattern letters "EEE".
+    val weekdays = remember(firstDayOfWeek, today) {
+        (0 until DAYS_PER_WEEK).map { offset ->
+            today.plus(
+                (firstDayOfWeek.isoDayNumber - today.dayOfWeek.isoDayNumber + offset),
+                DateTimeUnit.DAY
+            )
+        }
+    }
+    val shortNames = weekdays.map { ReaderDateText.pattern(it, WEEKDAY_SHORT) }
+    val narrowNames = weekdays.map { ReaderDateText.pattern(it, WEEKDAY_NARROW) }
+    val widestShort = remember(shortNames, style, measurer) {
+        shortNames.maxOf { measurer.measure(it, style = style, maxLines = 1, softWrap = false).size.width }
+    }
 
-    Row(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
             .height(dims.buttonHeight * 0.8f)
-            .background(MaterialTheme.colorScheme.surface)
+            // No band of its own: the row sits on the grid card's surface, which a `surface` band
+            // drew darker than in the dark theme.
             .semantics {
                 contentDescription = headerDescription
-            },
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Each weekday's name is read off a date that falls on it, `today`'s week: a name is
-        // `java.time`'s `getDisplayName(TextStyle.SHORT)`, which is the pattern letters "EEE".
-        val weekdays = remember(firstDayOfWeek, today) {
-            (0 until DAYS_PER_WEEK).map { offset ->
-                today.plus(
-                    (firstDayOfWeek.isoDayNumber - today.dayOfWeek.isoDayNumber + offset),
-                    DateTimeUnit.DAY
-                )
             }
+    ) {
+        // A column's room for its name: a seventh of the row, less the two paddings each side.
+        val inset = with(LocalDensity.current) {
+            ((dims.paddingSmall / 8 + dims.paddingSmall / 2) * 2).roundToPx()
         }
-
-        weekdays.forEach { weekday ->
-            val dayOfWeek = weekday.dayOfWeek
-            val isToday = dayOfWeek == today.dayOfWeek
-
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .padding(dims.paddingSmall / 8)
-                    .background(
-                        color = if (isToday) {
-                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
-                        } else {
-                            Color.Transparent
-                        },
-                        shape = MaterialTheme.shapes.extraSmall
-                    )
-                    .padding(dims.paddingSmall / 2),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = ReaderDateText.pattern(weekday, "EEE"),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Normal,
-                    color = if (isToday) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }
+        val names = if (widestShort <= constraints.maxWidth / DAYS_PER_WEEK - inset) shortNames else narrowNames
+        Row(modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+            weekdays.forEachIndexed { index, weekday ->
+                WeekdayName(
+                    name = names[index],
+                    style = style,
+                    isToday = weekday.dayOfWeek == today.dayOfWeek,
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
     }
 }
+
+/** One weekday's name in the header, on today's tint when it is today's weekday. */
+@Composable
+private fun WeekdayName(name: String, style: TextStyle, isToday: Boolean, modifier: Modifier) {
+    val dims = dimensions()
+    Box(
+        modifier = modifier
+            .fillMaxHeight()
+            .padding(dims.paddingSmall / 8)
+            .background(
+                color = if (isToday) {
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+                } else {
+                    Color.Transparent
+                },
+                shape = MaterialTheme.shapes.extraSmall
+            )
+            .padding(dims.paddingSmall / 2),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = name,
+            style = style,
+            maxLines = 1,
+            softWrap = false,
+            color = if (isToday) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            }
+        )
+    }
+}
+
+/** A weekday's short name ("Mon", "Mo."), and its narrow one ("M") when the short one has no room. */
+private const val WEEKDAY_SHORT = "EEE"
+private const val WEEKDAY_NARROW = "EEEEE"
 
 /**
  * Individual day cell: day number, custody/holiday backgrounds and event pills, on a rounded tile.
@@ -785,7 +818,11 @@ private fun DayCell(
                 toReader = parentNames.isReader(swapMark.toSlot),
                 edge = swapEdge,
                 pending = swapMark.pending,
-                modifier = Modifier.align(Alignment.BottomCenter)
+                // Clear of the contact window's corner, which the pill counts in its fit. The pill's
+                // bottom is a few dp above the tile's, where the triangle is that much narrower.
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(end = if (windowMarkerColor != null) CONTACT_WINDOW_MARKER_SIZE - Spacing.XS else 0.dp)
             )
         }
 

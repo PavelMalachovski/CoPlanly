@@ -6,10 +6,10 @@
     <string name="friend_invite_code_label">Передайте цей код</string>
     <string name="friend_access_until">Доступ до %1$s</string>
     <string name="friend_access_while_linked">Доступ, поки батьки пов\u0027язані</string>
-    <string name="friend_calendar_row_supporting_while_linked">%1$s і %2$s · доступ, поки вони пов\u0027язані</string>
-    <string name="friend_access_several_while_linked">Родини: %1$d · доступ, поки батьки пов\u0027язані</string>
+    <string name="friend_calendar_row_supporting_while_linked">%1$s і %2$s\u00A0· доступ, поки вони пов\u0027язані</string>
+    <string name="friend_access_several_while_linked">Родини: %1$d\u00A0· доступ, поки батьки пов\u0027язані</string>
     <string name="friend_invite_duration_while_linked">Поки ми пов\u0027язані</string>
-    <string name="friend_access_several">Родини: %1$d · перший доступ закінчується %2$s</string>
+    <string name="friend_access_several">Родини: %1$d\u00A0· перший доступ закінчується %2$s</string>
     <string name="friend_revoke">Закрити доступ</string>
     <string name="friend_revoke_confirm_title">Закрити доступ: %1$s?</string>
     <string name="friend_revoke_confirm_message">Ця людина перестане бачити сімейний календар. Ви зможете запросити її знову будь-коли.</string>
@@ -31,7 +31,7 @@
     <string name="friend_calendar_family">%1$s і %2$s</string>
     <string name="friend_calendar_read_only">Лише перегляд. Приватні події ніколи не передаються.</string>
     <string name="friend_calendar_added_by">Додано: %1$s</string>
-    <string name="friend_calendar_event_supporting">%1$s · %2$s</string>
+    <string name="friend_calendar_event_supporting">%1$s\u00A0· %2$s</string>
     <string name="friend_calendar_you_take_part">Ви берете участь</string>
     <string name="friend_calendar_access_ended">Ваш доступ до цього календаря завершився</string>
     <string name="friend_calendar_failed">Не вдалося завантажити календар</string>
@@ -50,6 +50,7 @@
     <string name="friend_compare_no">Ні</string>
     <string name="friend_compare_while_linked">Поки ви повʼязані</string>
     <string name="friend_compare_duration_choice">%1$s або %2$s</string>
+    <string name="friend_compare_duration_while_linked">поки ви повʼязані</string>
     <string name="friend_compare_row_desc">%1$s: другий із батьків — %2$s, друг родини — %3$s</string>
     <string name="friend_invite_will_see_lead">Побачить</string>
     <string name="friend_invite_will_see_body">події родини в календарі, крім приватних. Лише перегляд — змінити нічого не можна.</string>
@@ -62,6 +63,6 @@
     <string name="friend_redeem_row_title">У мене є код від батьків</string>
     <string name="friend_redeem_row_supporting">Якщо вас запросили як друга родини</string>
     <string name="friend_redeem_open_calendar">Відкрити календар родини</string>
-    <string name="friend_calendar_row_supporting">%1$s і %2$s · доступ до %3$s</string>
+    <string name="friend_calendar_row_supporting">%1$s і %2$s\u00A0· доступ до %3$s</string>
     <string name="friend_calendar_no_events_window">За ці чотири тижні подій немає</string>
 </resources>

@@ -10,6 +10,7 @@ import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.resources.ResourceParity.LANGUAGES
 import com.coparently.app.resources.ResourceParity.androidResources
 import com.coparently.app.testing.RobolectricTestApplication
+import com.coparently.app.utils.unbreakableDate
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
@@ -57,8 +58,11 @@ class UiTextParityTest(private val language: String) {
 
     private val locale: Locale = Locale.forLanguageTag(language)
 
+    /** The medium date as a `UiText.Date` is worded: its fields joined by no-break spaces. */
     private fun medium(date: LocalDate): String =
-        DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale).format(date.toJavaLocalDate())
+        unbreakableDate(
+            DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale).format(date.toJavaLocalDate())
+        )
 
     private fun dayName(day: DayOfWeek): String =
         day.toJavaDayOfWeek().getDisplayName(TextStyle.FULL, locale).replaceFirstChar { it.titlecase(locale) }

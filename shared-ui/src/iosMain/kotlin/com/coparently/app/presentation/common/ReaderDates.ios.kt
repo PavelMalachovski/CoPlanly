@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.text.intl.Locale
 import com.coparently.app.utils.readerLocale
+import com.coparently.app.utils.unbreakableDate
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.isoDayNumber
@@ -45,7 +46,7 @@ private class FoundationDates(private val readerLocale: NSLocale) : ReaderDates 
         formatter.timeZone = gregorian.timeZone
         formatter.dateStyle = NSDateFormatterMediumStyle
         formatter.timeStyle = NSDateFormatterNoStyle
-        return formatter.stringFromDate(instant)
+        return unbreakableDate(formatter.stringFromDate(instant))
     }
 
     override fun weekday(day: DayOfWeek): String {

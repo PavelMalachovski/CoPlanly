@@ -7,9 +7,10 @@ package com.coparently.app.presentation.common
  * `Icons.AutoMirrored.Filled.X` is `"AutoMirrored.Filled.X"`.
  *
  * Data only, copied from the owner-approved table
- * `docs/superpowers/plans/2026-11-16-iphone-phase-3d-sf-symbols.json` (132 rows, approved on
- * 16 November 2026). Don't change a choice here: change the approved table first. `SfSymbolTableTest`
- * holds the two to each other and fails when a shared screen uses an icon with no row.
+ * `docs/superpowers/plans/2026-11-16-iphone-phase-3d-sf-symbols.json` (133 rows: 132 approved on
+ * 16 November 2026, and the calendar header's "?" added with calendar K1, 22 November 2026). Don't
+ * change a choice here: change the approved table first. `SfSymbolTableTest` holds the two to each
+ * other and fails when a shared screen uses an icon with no row.
  *
  * Twelve icons have no row on purpose and keep the Material vector on the iPhone too:
  * - `Filled.AccountBalanceWallet`: SF wallet is iOS 18 (wallet.bifold); wallet.pass means an Apple Wallet pass.
@@ -42,6 +43,7 @@ internal val SF_SYMBOLS: Map<String, String> = mapOf(
     "AutoMirrored.Filled.Send" to "paperplane.fill",
     "AutoMirrored.Filled.Undo" to "arrow.uturn.backward",
     "AutoMirrored.Outlined.Chat" to "bubble.left",
+    "AutoMirrored.Outlined.HelpOutline" to "questionmark.circle",
     "Filled.AccountCircle" to "person.crop.circle.fill",
     "Filled.Add" to "plus",
     "Filled.AddAPhoto" to "photo.badge.plus",

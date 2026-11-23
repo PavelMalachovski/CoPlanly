@@ -74,12 +74,12 @@
     <string name="day_swap_bar_hint">Tap days on the calendar. Each goes to whoever does not have it.</string>
     <string name="day_swap_next">Next</string>
     <plurals name="day_swap_bar_to">
-        <item quantity="one">%1$s — %2$d day: %3$s</item>
-        <item quantity="other">%1$s — %2$d days: %3$s</item>
+        <item quantity="one">%1$s — %2$d\u00A0day: %3$s</item>
+        <item quantity="other">%1$s — %2$d\u00A0days: %3$s</item>
     </plurals>
     <plurals name="day_swap_bar_to_you">
-        <item quantity="one">You — %1$d day: %2$s</item>
-        <item quantity="other">You — %1$d days: %2$s</item>
+        <item quantity="one">You — %1$d\u00A0day: %2$s</item>
+        <item quantity="other">You — %1$d\u00A0days: %2$s</item>
     </plurals>
     <!-- The review sheet (day swap design, board SW-3). -->
     <string name="day_swap_sheet_title_with">Swap with %1$s</string>
@@ -102,12 +102,12 @@
     <string name="day_swap_no">No</string>
     <string name="day_swap_by_day_back">Back</string>
     <plurals name="day_swap_heading_gives">
-        <item quantity="one">%1$s offers you %2$d day</item>
-        <item quantity="other">%1$s offers you %2$d days</item>
+        <item quantity="one">%1$s offers you %2$d day</item>
+        <item quantity="other">%1$s offers you %2$d days</item>
     </plurals>
     <plurals name="day_swap_heading_asks">
-        <item quantity="one">%1$s asks for %2$d of your days</item>
-        <item quantity="other">%1$s asks for %2$d of your days</item>
+        <item quantity="one">%1$s asks for %2$d of your days</item>
+        <item quantity="other">%1$s asks for %2$d of your days</item>
     </plurals>
     <string name="day_swap_day_to_you">%1$s → you</string>
     <plurals name="day_swap_sheet_title_count">

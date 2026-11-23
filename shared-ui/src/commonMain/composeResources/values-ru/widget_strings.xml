@@ -2,7 +2,7 @@
 <resources>
     <string name="widget_today_name">Сегодня</string>
     <string name="widget_today_description">Чей сегодня день, ближайшая передача и события на сегодня</string>
-    <string name="widget_today_title">Сегодня · %1$s</string>
+    <string name="widget_today_title">Сегодня\u00A0· %1$s</string>
     <string name="widget_today_signed_out">Войдите в CoPlanly, чтобы увидеть свой день.</string>
     <string name="widget_today_stale">Откройте CoPlanly, чтобы обновить</string>
     <plurals name="widget_today_more">

@@ -28,7 +28,7 @@
     <string name="documents_add_dialog_category_label">Category</string>
     <string name="documents_add_dialog_confirm">Upload and share</string>
     <string name="documents_uploading">Uploading…</string>
-    <string name="documents_row_meta">%1$s · added by %2$s · %3$s</string>
+    <string name="documents_row_meta">%1$s\u00A0· added by %2$s\u00A0· %3$s</string>
     <string name="documents_delete">Delete document</string>
     <string name="documents_delete_confirm_title">Delete this document?</string>
     <string name="documents_delete_confirm_body">It disappears from both parents’ documents. The file itself is removed from the server after 90 days.</string>

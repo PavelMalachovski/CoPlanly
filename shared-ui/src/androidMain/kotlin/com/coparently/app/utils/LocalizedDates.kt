@@ -32,11 +32,16 @@ import java.util.Locale
  *
  * The platform's pattern goes through [monthInFormatForm] first: it can name the month in its
  * stand-alone form (`LLL`/`LLLL`) beside a day, which is the nominative in Russian and Ukrainian
- * ("25 вересень" for "25 вересня").
+ * ("25 вересень" for "25 вересня"). Then through [noBreakPattern]: the spaces between the fields
+ * are no-break, so a line never ends between a day and its month ("May | 14", "13. | Mai"); a space
+ * after a comma stays a place to break.
  */
 fun localizedDate(skeleton: String, locale: Locale = Locale.getDefault()): DateTimeFormatter =
     runCatching {
-        DateTimeFormatter.ofPattern(monthInFormatForm(DateFormat.getBestDateTimePattern(locale, skeleton)), locale)
+        DateTimeFormatter.ofPattern(
+            noBreakPattern(monthInFormatForm(DateFormat.getBestDateTimePattern(locale, skeleton))),
+            locale
+        )
     }.getOrElse { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale) }
 
 /**
@@ -64,6 +69,9 @@ fun kotlinx.datetime.LocalDateTime.format(formatter: DateTimeFormatter): String 
  * short style in the rest, so Home's week said "10:00 AM" over a today card saying "15:30". Every
  * time the app shows goes through here now. Two fixed patterns rather than the platform's
  * preferred-hour skeleton, whose letters `java.time` on older Android cannot always parse.
+ *
+ * The 12-hour pattern joins the time and its day-period marker with a no-break space, so "PM"
+ * never takes a line of its own ("3:30 | PM").
  *
  * @param locale The language, for the day-period marker of a 12-hour clock
  * @param is24Hour Whether the reader's clock is 24-hour; [ClockFormat] by default
@@ -105,7 +113,8 @@ fun hourLabel(
 
 /**
  * A date in [locale]'s own order for [skeleton], then [separator], then the time on the reader's
- * clock ([shortTime]) — "Wed, Sep 2 · 3:30 PM", "st 2. 9. · 15:30".
+ * clock ([shortTime]) — "Wed, Sep 2 · 3:30 PM", "st 2. 9. · 15:30". The separator's spaces are
+ * no-break ([unbreakableSeparator]), so the time never takes a line of its own.
  */
 fun dateWithTime(
     skeleton: String,
@@ -114,7 +123,7 @@ fun dateWithTime(
 ): DateTimeFormatter =
     DateTimeFormatterBuilder()
         .append(localizedDate(skeleton, locale))
-        .appendLiteral(separator)
+        .appendLiteral(unbreakableSeparator(separator))
         .append(shortTime(locale))
         .toFormatter(locale)
 
@@ -125,8 +134,10 @@ fun dateWithTime(
  * [millis] is an instant, so [zone] decides which day and hour it falls on: the device's, because
  * a deadline is a moment in the reader's own day and the other parent may live in another zone.
  * The date and the time are formatted apart and joined with a comma, as [dateWithTime] joins them
- * with a dot, for the reason [localizedDate] gives. One function for every place a deadline is
- * said — the pushes, the notices and the cards — so it reads the same in each.
+ * with a dot, for the reason [localizedDate] gives; the comma's space is no-break
+ * ([ANSWER_BY_TIME_SEPARATOR]), so the time never takes a line of its own ("13. Mai, | 20:00").
+ * One function for every place a deadline is said — the pushes, the notices and the cards — so it
+ * reads the same in each.
  *
  * @param millis The deadline, epoch milliseconds
  * @param zone The zone the reader's day is counted in; the device's by default
@@ -140,12 +151,13 @@ fun answerByText(
     is24Hour: Boolean = ClockFormat.is24Hour
 ): String {
     val moment = Instant.ofEpochMilli(millis).atZone(zone)
-    return moment.format(localizedDate(ANSWER_BY_DAY, locale)) + ", " + moment.format(shortTime(locale, is24Hour))
+    return moment.format(localizedDate(ANSWER_BY_DAY, locale)) + ANSWER_BY_TIME_SEPARATOR +
+        moment.format(shortTime(locale, is24Hour))
 }
 
 private const val PATTERN_24_HOUR = "HH:mm"
-private const val PATTERN_12_HOUR = "h:mm a"
-private const val PATTERN_12_HOUR_GUTTER = "h a"
+private const val PATTERN_12_HOUR = "h:mm\u00A0a"
+private const val PATTERN_12_HOUR_GUTTER = "h\u00A0a"
 
 /** The skeleton for the day of a deadline: weekday, month and day, no year ("Tue, Oct 13"). */
 private const val ANSWER_BY_DAY = "EEEMMMd"

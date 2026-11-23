@@ -23,7 +23,7 @@
     <string name="documents_add_dialog_category_label">Kategorie</string>
     <string name="documents_add_dialog_confirm">Hochladen und teilen</string>
     <string name="documents_uploading">Wird hochgeladen…</string>
-    <string name="documents_row_meta">%1$s · hinzugefügt von %2$s · %3$s</string>
+    <string name="documents_row_meta">%1$s\u00A0· hinzugefügt von %2$s\u00A0· %3$s</string>
     <string name="documents_delete">Dokument löschen</string>
     <string name="documents_delete_confirm_title">Dieses Dokument löschen?</string>
     <string name="documents_delete_confirm_body">Es verschwindet aus den Dokumenten beider Eltern. Die Datei selbst wird nach 90 Tagen vom Server entfernt.</string>

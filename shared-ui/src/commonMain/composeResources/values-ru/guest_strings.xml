@@ -7,9 +7,9 @@
     <string name="guest_invite_title">Пригласить гостя</string>
     <string name="guest_invite_scope">Гость сможет читать карточку этого ребёнка — лекарства, аллергии, заметки и фотографии. Календарь, расходы и переписка ему не видны, и изменить он ничего не может.</string>
     <string name="guest_invite_how_long">На какой срок?</string>
-    <string name="guest_invite_duration_week">1 неделя</string>
-    <string name="guest_invite_duration_month">30 дней</string>
-    <string name="guest_invite_duration_quarter">90 дней</string>
+    <string name="guest_invite_duration_week">1\u00A0неделя</string>
+    <string name="guest_invite_duration_month">30\u00A0дней</string>
+    <string name="guest_invite_duration_quarter">90\u00A0дней</string>
     <string name="guest_invite_create">Создать код</string>
     <string name="guest_invite_ends_on">Доступ закончится %1$s</string>
     <string name="guest_invite_share">Отправить ссылку</string>

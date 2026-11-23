@@ -82,7 +82,7 @@ invocation is yours.
 | **MON-3** | The export ships, ungated; left: a PDF read on a device, and the paywall with MON-11 | P2 | S |
 | **MON-4** | **Built**, `Event.updatedAt`'s compared instant included (schema 39, `39.json` committed); left: the deploy in 💻 | P1 | — |
 | **MON-5** | The plan ships; swapping in the Ministry's own wording needs the form itself | P1 | S |
-| **MON-6b** | Contact windows ship (schema 36), on the grid and on Home's today card; left: verifying the mixed-version path on two phones | P2 | S |
+| **MON-6b** | Contact windows ship (schema 36), on the grid and in the Today widget (on a today card until the November 2026 redesign removed it); left: verifying the mixed-version path on two phones | P2 | S |
 | **MON-8** | Bakaláři import **built**; EduPage **built behind a release flag**, waits for one real run (`DEVICE-CHECKLIST.md` §3.36) | P2 | L |
 | **MON-11** | Payments (MVP 3) — the entitlement model; MON-1 is decided (per family, 129 CZK / 1,190 CZK, 14-day trial from pairing). Cancelling is designed in `docs/DESIGN-stickers-and-subscription.md` §2 (tester feedback, 21 October 2026) | P2 | L |
 | **MON-12** | **Server half built** (September 2026): the `aiAssist` callable — reply suggestion and month summary, Claude on Vertex AI in an EU region, consent-gated, quota'd, off until configured; left: the Android client behind its flag, the owner's Vertex set-up and retention check, counsel on ROPA P15 | P3 | M |

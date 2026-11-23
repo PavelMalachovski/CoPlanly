@@ -82,7 +82,7 @@
     <!-- MON-6b: contact windows over the whole-day pattern. -->
     <string name="custody_windows_title">Периоды общения</string>
     <string name="custody_overview_pattern">Основной график</string>
-    <string name="custody_overview_pattern_summary">%1$s · с %2$s</string>
+    <string name="custody_overview_pattern_summary">%1$s\u00A0· с %2$s</string>
     <string name="custody_overview_none">Нет</string>
     <string name="custody_overview_children_same">Все по общему графику</string>
     <string name="custody_overview_sent_separately">Каждая часть отправляется отдельно. Пока %1$s не согласится, календарь не изменится.</string>
@@ -102,7 +102,7 @@
     <string name="custody_windows_empty">Периодов общения нет.</string>
     <string name="custody_windows_add">Добавить период общения</string>
     <string name="custody_window_remove">Удалить период общения</string>
-    <string name="custody_window_summary">%1$s · %2$s–%3$s · %4$s</string>
+    <string name="custody_window_summary">%1$s\u00A0· %2$s–%3$s\u00A0· %4$s</string>
     <string name="custody_window_day_label">Неделя %1$d, %2$s</string>
     <string name="custody_window_dialog_title">Новый период общения</string>
     <string name="custody_window_weekday">День</string>

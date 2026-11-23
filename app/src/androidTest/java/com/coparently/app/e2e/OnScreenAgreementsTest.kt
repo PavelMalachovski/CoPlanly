@@ -80,23 +80,23 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
     val custodyRepository: CustodyModelRepository by lazy { koinRule.get() }
 
     @Test
-    fun bobsChangeRequestRaisesTheCalendarBannerAndAliceAcceptsItInTheInbox() {
+    fun bobsChangeRequestReachesAlicesHomeAndSheAcceptsItInTheInbox() {
         val title = "Swimming ${shortId()}"
         val event = runBlocking { aliceSavesAnEvent(title) }
 
-        // On the calendar before it arrives, so the banner is what she sees — on Home the same
-        // request would open the requests pop-up instead.
+        // On the calendar while it arrives: since calendar K1 the grid draws no request banner, and
+        // Home is where what waits on her is asked, through its requests pop-up.
         step("request: open the calendar")
         openTab(BottomNavDestination.CALENDAR)
         val request = runBlocking { bobAsksToMove(event) }
 
-        val banner = hasText(
-            context.resources.getQuantityString(R.plurals.calendar_change_requests_banner, 1, 1)
-        ) and hasClickAction()
-        waitFor("the change-request banner over the grid", banner)
-        tap(banner)
+        step("request: Home asks her to review it")
+        openTab(BottomNavDestination.HOME)
+        val review = dialogButton(R.string.home_dialog_review)
+        waitFor("the requests pop-up on Home", review)
+        tap(review)
 
-        // The inbox, opened from the banner: the request's card and its Accept.
+        // The inbox, opened from the pop-up: the request's card and its Accept.
         val accept = hasText(string(R.string.change_request_accept)) and hasClickAction() and
             hasAnyAncestor(hasText(title, substring = true))
         waitFor("Bob's request in the inbox", accept)
@@ -229,10 +229,10 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
         // The grid draws a layer only through the custody band; its description names the parent.
         step("layer: today's cell on the month grid")
         openTab(BottomNavDestination.CALENDAR)
-        val todayCell = hasContentDescription(
+        // The app keeps a date whole with no-break spaces, so compare with every space made plain.
+        val todayCell = descriptionContainsAnySpace(
             "${today.toJavaLocalDate().format(DateTimeFormatter.ofPattern("EEEE, MMMM d", Locale.getDefault()))}, " +
-                string(R.string.calendar_day_desc_today),
-            substring = true
+                string(R.string.calendar_day_desc_today)
         )
         val withBob = hasContentDescription(string(R.string.calendar_day_desc_with_parent, bob.name), substring = true)
         waitFor("today's cell naming Bob", todayCell and withBob)
@@ -404,6 +404,8 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
     /** Home's swap pop-up for one day offered by Bob: the day's chip, dated as `SwapSideGroup` dates it. */
     private fun swapDialogFor(date: LocalDate): SemanticsMatcher = hasAnyAncestor(isDialog()) and hasText(
         swapDateList(listOf(date), Locale.getDefault())
+            // The screens keep a day whole with no-break spaces (`swapDateList` in :shared-ui).
+            .replace(' ', '\u00A0')
     )
 
     private companion object {
@@ -427,5 +429,15 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
 
         /** Stands in for the shares in the split pop-up's sentence, to cut the sentence before them. */
         const val SHARES_MARK = "\u0000"
+    }
+
+    /** A content description containing [expected], whatever kind of space either side uses. */
+    private fun descriptionContainsAnySpace(expected: String): SemanticsMatcher {
+        fun plain(text: String) = text.replace('\u00A0', ' ').replace('\u202F', ' ')
+        val wanted = plain(expected)
+        return SemanticsMatcher("content description contains \"$expected\"") { node ->
+            node.config.getOrNull(SemanticsProperties.ContentDescription)
+                ?.any { plain(it).contains(wanted) } == true
+        }
     }
 }

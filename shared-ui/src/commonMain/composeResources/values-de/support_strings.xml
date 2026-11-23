@@ -9,7 +9,7 @@
     <string name="support_none_title">Kein Unterhalt vereinbart</string>
     <string name="support_none_description">Schlag einen Betrag, einen Tag im Monat und vor, wer zahlt. Er gilt, sobald der andere Elternteil zustimmt.</string>
     <string name="support_amount_line">%1$s im Monat</string>
-    <string name="support_terms_line">Am %1$d. · %2$s zahlt · ab %3$s</string>
+    <string name="support_terms_line">Am %1$d.\u00A0· %2$s zahlt\u00A0· ab %3$s</string>
     <string name="support_proposal_body">%1$s im Monat, am %2$d., %3$s zahlt.</string>
     <string name="support_waiting_title">Wartet auf %1$s</string>
     <string name="support_asks_title">%1$s schlägt Unterhalt vor</string>
