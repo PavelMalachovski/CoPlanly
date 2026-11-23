@@ -50,6 +50,7 @@
     <string name="friend_compare_no">Ne</string>
     <string name="friend_compare_while_linked">Dokud jste propojeni</string>
     <string name="friend_compare_duration_choice">%1$s nebo %2$s</string>
+    <string name="friend_compare_duration_while_linked">dokud jste propojeni</string>
     <string name="friend_compare_row_desc">%1$s: druhý rodič %2$s, přítel rodiny %3$s</string>
     <string name="friend_invite_will_see_lead">Uvidí</string>
     <string name="friend_invite_will_see_body">události rodiny v kalendáři kromě soukromých. Jen k prohlížení – nic nemůže změnit.</string>

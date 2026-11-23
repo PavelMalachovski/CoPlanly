@@ -55,14 +55,14 @@
     <string name="request_history_theirs_answered">Запрос: %1$s · вы ответили</string>
     <string name="request_history_withdrawn_by_you">Вы отозвали запрос</string>
     <string name="request_history_withdrawn_by">%1$s: запрос отозван</string>
-    <string name="request_history_when">%1$s · %2$s</string>
+    <string name="request_history_when">%1$s\u00A0· %2$s</string>
     <string name="request_history_propose_change">Предложить изменение</string>
     <string name="request_history_propose_change_description">Предложить изменение этого согласованного обмена</string>
     <plurals name="request_swap_first_and_more">
-        <item quantity="one">%1$s и ещё %2$d день</item>
-        <item quantity="few">%1$s и ещё %2$d дня</item>
-        <item quantity="many">%1$s и ещё %2$d дней</item>
-        <item quantity="other">%1$s и ещё %2$d дня</item>
+        <item quantity="one">%1$s и ещё %2$d\u00A0день</item>
+        <item quantity="few">%1$s и ещё %2$d\u00A0дня</item>
+        <item quantity="many">%1$s и ещё %2$d\u00A0дней</item>
+        <item quantity="other">%1$s и ещё %2$d\u00A0дня</item>
     </plurals>
     <!-- Child support, a professional's access and the parenting plan in the Requests inbox (board SW-7) -->
     <string name="request_support_theirs">%1$s предлагает %2$s в месяц, %3$d-го числа, с %4$s</string>

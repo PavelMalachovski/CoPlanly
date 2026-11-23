@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -23,10 +22,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.calendar.CustodyHelper
 import com.coparently.app.presentation.calendar.DayCellFills
@@ -194,13 +195,12 @@ private fun DayNumber(date: LocalDate, isToday: Boolean, inMonth: Boolean, marke
     }
     Box(
         modifier = Modifier
+            .size(rememberNumberDisc())
             .background(
                 color = if (isToday) MaterialTheme.colorScheme.primary else Color.Transparent,
                 shape = CircleShape
             )
-            .then(ring)
-            .squareAroundContent()
-            .defaultMinSize(minWidth = NUMBER_DISC, minHeight = NUMBER_DISC),
+            .then(ring),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -211,22 +211,35 @@ private fun DayNumber(date: LocalDate, isToday: Boolean, inMonth: Boolean, marke
                 !inMonth -> MaterialTheme.colorScheme.onSurface.copy(alpha = OUTSIDE_MONTH_NUMBER_ALPHA)
                 else -> MaterialTheme.colorScheme.onSurface
             },
-            modifier = Modifier.padding(Spacing.XS)
+            softWrap = false
         )
     }
 }
 
 /**
- * The disc and the ring a circle, as wide as the number and as tall as its line, whichever is more:
- * at 150 % and 200 % a two-digit number's box was wider than tall, and the ring, drawn on it, became
- * an oval whose stroke cut through the digits (text review, November 2026). At 100 % the number fits
- * the 24 dp disc as before.
+ * The day number's disc: [NUMBER_DISC], or more where the font is larger — wide enough for two
+ * digits with room around them, the same for every day so the rows stay level. At 200 % the 24 dp
+ * disc was barely larger than the digits, and today's disc and the ring touched them.
  */
-private fun Modifier.squareAroundContent(): Modifier = layout { measurable, constraints ->
-    val placeable = measurable.measure(constraints)
-    val side = maxOf(placeable.width, placeable.height)
-    layout(side, side) { placeable.place((side - placeable.width) / 2, (side - placeable.height) / 2) }
+@Composable
+private fun rememberNumberDisc(): Dp {
+    val style = MaterialTheme.typography.labelMedium
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    return remember(style, density, measurer) {
+        val digits = measurer.measure(TWO_DIGITS, style).size
+        with(density) {
+            val side = maxOf(
+                digits.width + 2 * Spacing.XS.roundToPx(),
+                digits.height + 2 * Spacing.XXS.roundToPx()
+            )
+            maxOf(side.toDp(), NUMBER_DISC)
+        }
+    }
 }
+
+/** The widest day number, which the disc is sized around. */
+private const val TWO_DIGITS = "28"
 
 /**
  * The day's dot, in a ring of the cell's base so it keeps 3:1 on its own parent's wash, as the

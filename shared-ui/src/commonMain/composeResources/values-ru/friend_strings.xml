@@ -50,6 +50,7 @@
     <string name="friend_compare_no">Нет</string>
     <string name="friend_compare_while_linked">Пока вы связаны</string>
     <string name="friend_compare_duration_choice">%1$s или %2$s</string>
+    <string name="friend_compare_duration_while_linked">пока вы связаны</string>
     <string name="friend_compare_row_desc">%1$s: второй родитель — %2$s, друг семьи — %3$s</string>
     <string name="friend_invite_will_see_lead">Увидит</string>
     <string name="friend_invite_will_see_body">события семьи в календаре, кроме личных. Только просмотр — изменить ничего нельзя.</string>

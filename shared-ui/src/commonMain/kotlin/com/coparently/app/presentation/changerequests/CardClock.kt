@@ -299,13 +299,17 @@ private fun OpenedRow(clock: CardClock) {
  * The reminders to the answering parent: how many were sent of how many were planned, and the next.
  * Planned is the phone's count, else the server's plan; sent is the server's count, or an older
  * build's shown count when that is more (iPhone phase 4 part C, spec §11 call 1).
+ *
+ * The next one is named only while one is still to come: while the request is open and fewer were
+ * sent than planned. Past the deadline nobody is reminded, so "3 of 3 · next …" would promise a
+ * reminder that never comes.
  */
 @Composable
 private fun RemindersRow(timed: TimedRequest) {
     val planned = timed.clock.plannedReminders ?: 0
     if (planned == 0) return
     val shown = timed.clock.remindersSent
-    val next = timed.nextReminderMillis
+    val next = timed.nextReminderMillis?.takeIf { timed.state == ClockState.OPEN && shown < planned }
     ClockRow(
         Icons.Default.Notifications,
         if (next != null) {

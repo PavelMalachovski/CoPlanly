@@ -54,6 +54,7 @@ import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.EmptyState
+import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.chatBubbleShape
@@ -558,7 +559,10 @@ fun MessageItem(
         // A co-parent's own words can be reported with a long press (play-final audit F-10); a
         // card the app composed cannot, and nothing changes while no support address is set.
         ReportableBubble(message = message, isCurrentUser = isCurrentUser) {
-            Row(
+            // From the large-font scale the time goes under the text: beside it, the trailer kept
+            // its width while the text grew, and a message wrapped two words to a line.
+            val metaBelow = stacksAtLargeFont()
+            Column(
                 modifier = Modifier
                     .widthIn(max = BUBBLE_MAX_WIDTH)
                     .clip(
@@ -590,52 +594,64 @@ fun MessageItem(
                             Modifier
                         }
                     )
-                    .padding(horizontal = Spacing.M, vertical = Spacing.S),
-                // Bottom, not centre: the meta trailer sits beside the *last* line of a
-                // multi-line message, hugging the bubble's bottom-end corner.
-                verticalAlignment = Alignment.Bottom
+                    .padding(horizontal = Spacing.M, vertical = Spacing.S)
             ) {
-                Column(modifier = Modifier.weight(1f, fill = false)) {
-                    cardActor?.let { actor ->
+                Row(
+                    // Bottom, not centre: the meta trailer sits beside the *last* line of a
+                    // multi-line message, hugging the bubble's bottom-end corner.
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Column(modifier = Modifier.weight(1f, fill = false)) {
+                        cardActor?.let { actor ->
+                            Text(
+                                text = actor,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                         Text(
-                            text = actor,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = bubbleText,
+                            color = when {
+                                isCard -> MaterialTheme.colorScheme.onSurfaceVariant
+                                isCurrentUser -> MaterialTheme.colorScheme.onPrimary
+                                else -> MaterialTheme.colorScheme.onSurface
+                            },
+                            // Hyphenated, because the bubble is capped in dp while the text scales: at
+                            // 1.5x a German compound broke mid-word with no hyphen ("…erklär / ung").
+                            style = MaterialTheme.typography.bodyMedium.copy(hyphens = Hyphens.Auto)
                         )
                     }
-                    Text(
-                        text = bubbleText,
-                        color = when {
-                            isCard -> MaterialTheme.colorScheme.onSurfaceVariant
-                            isCurrentUser -> MaterialTheme.colorScheme.onPrimary
-                            else -> MaterialTheme.colorScheme.onSurface
-                        },
-                        // Hyphenated, because the bubble is capped in dp while the text scales: at
-                        // 1.5x a German compound broke mid-word with no hyphen ("…erklär / ung").
-                        style = MaterialTheme.typography.bodyMedium.copy(hyphens = Hyphens.Auto)
+                    if (onCardTap != null) {
+                        AppIcon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .padding(start = Spacing.XS)
+                                .size(RECEIPT_ICON_SIZE * CHEVRON_SCALE),
+                            tint = if (isCurrentUser && !isCard) {
+                                MaterialTheme.colorScheme.onPrimary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        )
+                    }
+                    // A card carries its time and no ticks: the neutral surface has no onPrimary to
+                    // draw them in, and whether the other phone has the card is the thread's business.
+                    if (!metaBelow) {
+                        BubbleMeta(
+                            message = message,
+                            isCurrentUser = isCurrentUser && !isCard,
+                            modifier = Modifier.padding(start = Spacing.S)
+                        )
+                    }
+                }
+                if (metaBelow) {
+                    BubbleMeta(
+                        message = message,
+                        isCurrentUser = isCurrentUser && !isCard,
+                        modifier = Modifier.align(Alignment.End)
                     )
                 }
-                if (onCardTap != null) {
-                    AppIcon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .padding(start = Spacing.XS)
-                            .size(RECEIPT_ICON_SIZE * CHEVRON_SCALE),
-                        tint = if (isCurrentUser && !isCard) {
-                            MaterialTheme.colorScheme.onPrimary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        }
-                    )
-                }
-                // A card carries its time and no ticks: the neutral surface has no onPrimary to
-                // draw them in, and whether the other phone has the card is the thread's business.
-                BubbleMeta(
-                    message = message,
-                    isCurrentUser = isCurrentUser && !isCard,
-                    modifier = Modifier.padding(start = Spacing.S)
-                )
             }
         }
 

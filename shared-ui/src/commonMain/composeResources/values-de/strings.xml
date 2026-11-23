@@ -53,7 +53,7 @@
     <string name="settings_theme_dark">Dunkel</string>
     <string name="settings_theme_description">Bevorzugtes Design auswählen</string>
     <string name="settings_notifications">Benachrichtigungen</string>
-    <string name="settings_push_notifications">Push-Benachrichtigungen</string>
+    <string name="settings_push_notifications">Push-Mitteilungen</string>
     <string name="settings_push_notifications_description">Bei Änderungen benachrichtigt werden</string>
 
     <!-- Pairing Screen -->

@@ -21,8 +21,8 @@
     <string name="professional_role_guardian_ad_litem">Guardian ad litem</string>
     <string name="professional_role_therapist">Therapist</string>
     <string name="professional_role_other">Other</string>
-    <string name="professional_duration_month">30 days</string>
-    <string name="professional_duration_quarter">90 days</string>
+    <string name="professional_duration_month">30\u00A0days</string>
+    <string name="professional_duration_quarter">90\u00A0days</string>
     <string name="professional_duration_half_year">6 months</string>
     <string name="professional_status_waiting_for_you">Waiting for your consent</string>
     <string name="professional_status_waiting_for_co_parent">Waiting for your co-parent’s consent</string>

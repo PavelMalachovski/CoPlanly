@@ -43,6 +43,7 @@ import com.coparently.app.resources.request_history_when
 import com.coparently.app.resources.request_history_withdrawn_by
 import com.coparently.app.resources.request_history_withdrawn_by_you
 import com.coparently.app.resources.request_history_yours_answered
+import com.coparently.app.utils.META_SEPARATOR
 import com.coparently.app.utils.ReaderDateText
 import org.jetbrains.compose.resources.stringResource
 
@@ -138,7 +139,7 @@ private fun HistoryRow(
         if (entry.outcome == RequestOutcome.NO_ANSWER) {
             entry.clock?.let { clock ->
                 Text(
-                    text = RequestClockText.historyMeta(clock).map { it.asString() }.joinToString(" · "),
+                    text = RequestClockText.historyMeta(clock).map { it.asString() }.joinToString(META_SEPARATOR),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

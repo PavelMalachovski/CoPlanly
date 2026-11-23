@@ -60,8 +60,8 @@
     <string name="home_handover_today">Übergabe heute</string>
     <string name="home_expenses_tile">Ausgaben diesen Monat</string>
     <!-- Under the handover card's headline: whom the days go to. -->
-    <string name="home_handover_goes_to_you">Dann bei dir</string>
-    <string name="home_handover_goes_to">Dann bei %1$s</string>
+    <string name="home_handover_goes_to_you">Dann bei\u00A0dir</string>
+    <string name="home_handover_goes_to">Dann bei\u00A0%1$s</string>
     <!-- A week tile's spoken description on a day with events. %1$s = the day and whose it is. -->
     <string name="home_week_tile_with_events">%1$s, mit Terminen</string>
     <!-- The Money card's top line. %1$s = the month's standalone name ("November"). -->

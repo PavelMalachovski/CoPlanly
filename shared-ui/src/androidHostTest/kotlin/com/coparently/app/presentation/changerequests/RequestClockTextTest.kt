@@ -13,6 +13,7 @@ import com.coparently.app.resources.request_history_meta_unchanged
 import com.coparently.app.resources.request_left_days
 import com.coparently.app.resources.request_left_hours
 import com.coparently.app.resources.request_left_minutes
+import com.coparently.app.utils.ReaderDateText
 import com.coparently.app.utils.answerByText
 import kotlinx.datetime.TimeZone
 import org.junit.Assert.assertEquals
@@ -87,9 +88,9 @@ class RequestClockTextTest {
     private companion object {
         const val MINUTE = 60_000L
 
-        /** A history line's date, as the clock text carries it (kotlinx-datetime since slice 9c). */
+        /** A history line's date, as the clock text carries it: in the form of the last chance's date. */
         fun dateText(year: Int, month: Int, day: Int): UiText =
-            UiText.Date(kotlinx.datetime.LocalDate(year, month, day))
+            UiText.Raw(ReaderDateText.date(kotlinx.datetime.LocalDate(year, month, day), RequestClockText.META_DAY))
         const val HOUR = 60 * MINUTE
 
         /** Wednesday 13 May 2026, 10:00 UTC. */

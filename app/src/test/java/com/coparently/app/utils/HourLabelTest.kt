@@ -25,23 +25,23 @@ class HourLabelTest {
 
     @Test
     fun `a 12-hour clock names the hour with its day period`() {
-        assertEquals("12 AM", hourLabel(0, Locale.US, is24Hour = false))
-        assertEquals("9 AM", hourLabel(9, Locale.US, is24Hour = false))
-        assertEquals("12 PM", hourLabel(12, Locale.US, is24Hour = false))
-        assertEquals("1 PM", hourLabel(13, Locale.US, is24Hour = false))
+        assertEquals("12\u00A0AM", hourLabel(0, Locale.US, is24Hour = false))
+        assertEquals("9\u00A0AM", hourLabel(9, Locale.US, is24Hour = false))
+        assertEquals("12\u00A0PM", hourLabel(12, Locale.US, is24Hour = false))
+        assertEquals("1\u00A0PM", hourLabel(13, Locale.US, is24Hour = false))
     }
 
     @Test
     fun `the day-period marker is the language's own`() {
         val czech = Locale.forLanguageTag("cs")
-        assertEquals("9 dop.", hourLabel(9, czech, is24Hour = false))
-        assertEquals("1 odp.", hourLabel(13, czech, is24Hour = false))
+        assertEquals("9\u00A0dop.", hourLabel(9, czech, is24Hour = false))
+        assertEquals("1\u00A0odp.", hourLabel(13, czech, is24Hour = false))
     }
 
     @Test
     fun `no 12-hour label shows an hour past twelve`() {
         (0..23).forEach { hour ->
-            val number = hourLabel(hour, Locale.US, is24Hour = false).substringBefore(' ').toInt()
+            val number = hourLabel(hour, Locale.US, is24Hour = false).substringBefore('\u00A0').toInt()
             assertTrue("$hour -> $number", number in 1..12)
         }
     }

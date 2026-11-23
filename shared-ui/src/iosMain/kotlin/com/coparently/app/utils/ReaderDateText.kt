@@ -26,13 +26,15 @@ import kotlin.time.Instant
  * `java.time`'s ISO dates use on Android (as `rememberReaderDates` does): a skeleton is a date
  * format template, which Foundation orders, punctuates and declines for the language itself. Dates
  * and times here are zone-less wall clocks, so every formatter and the calendar run in UTC: the
- * phone's zone, and a daylight-saving gap in it, never shifts what was written.
+ * phone's zone, and a daylight-saving gap in it, never shifts what was written. A date's fields and
+ * a time's day period are joined with no-break spaces, as on Android ([unbreakableDate],
+ * [unbreakableTime]).
  */
 actual object ReaderDateText {
 
     actual fun date(date: LocalDate, skeleton: String): String {
         val instant = nsDate(LocalDateTime(date, LocalTime(0, 0))) ?: return date.toString()
-        return formatter(skeleton).stringFromDate(instant)
+        return unbreakableDate(formatter(skeleton).stringFromDate(instant))
     }
 
     actual fun month(month: YearMonth, skeleton: String): String =
@@ -40,7 +42,7 @@ actual object ReaderDateText {
 
     actual fun pattern(date: LocalDate, pattern: String): String {
         val instant = nsDate(LocalDateTime(date, LocalTime(0, 0))) ?: return date.toString()
-        return fixedPattern(pattern).stringFromDate(instant)
+        return fixedPattern(noBreakPattern(pattern)).stringFromDate(instant)
     }
 
     actual fun pattern(month: YearMonth, pattern: String): String =
@@ -51,7 +53,8 @@ actual object ReaderDateText {
 
     actual fun time(dateTime: LocalDateTime, is24Hour: Boolean): String {
         val instant = nsDate(dateTime) ?: return dateTime.time.toString()
-        return fixedPattern(if (is24Hour) PATTERN_24_HOUR else PATTERN_12_HOUR).stringFromDate(instant)
+        val pattern = if (is24Hour) PATTERN_24_HOUR else PATTERN_12_HOUR
+        return unbreakableTime(fixedPattern(pattern).stringFromDate(instant))
     }
 
     actual fun dateWithTime(
@@ -59,14 +62,14 @@ actual object ReaderDateText {
         skeleton: String,
         separator: String,
         is24Hour: Boolean
-    ): String = date(dateTime.date, skeleton) + separator + time(dateTime, is24Hour)
+    ): String = date(dateTime.date, skeleton) + unbreakableSeparator(separator) + time(dateTime, is24Hour)
 
     actual fun hour(hour: Int, is24Hour: Boolean): String =
         if (is24Hour) {
             hour.toString().padStart(2, '0')
         } else {
             val at = nsDate(LocalDateTime(REFERENCE_DATE, LocalTime(hour, 0))) ?: return hour.toString()
-            fixedPattern(PATTERN_12_HOUR_GUTTER).stringFromDate(at)
+            unbreakableTime(fixedPattern(PATTERN_12_HOUR_GUTTER).stringFromDate(at))
         }
 
     actual fun answerBy(millis: Long, zone: TimeZone, is24Hour: Boolean): String {
@@ -110,7 +113,7 @@ private fun styledDate(date: LocalDate, style: NSDateFormatterStyle): String {
         dateStyle = style
         timeStyle = NSDateFormatterNoStyle
     }
-    return formatter.stringFromDate(instant)
+    return unbreakableDate(formatter.stringFromDate(instant))
 }
 
 /** Wall clocks carry no zone, so they are read and written in UTC. */

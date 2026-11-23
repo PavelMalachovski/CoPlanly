@@ -10,7 +10,7 @@
     <string name="event_acceptance_decline">Odmítnout</string>
     <string name="event_acceptance_withdraw">Stáhnout</string>
     <string name="event_acceptance_hidden_note">Do žádného kalendáře se nedostane, dokud neodpoví.</string>
-    <string name="event_acceptance_when">%1$s · %2$s–%3$s</string>
+    <string name="event_acceptance_when">%1$s\u00A0· %2$s–%3$s</string>
     <string name="event_acceptance_when_start">%1$s · %2$s</string>
     <string name="event_acceptance_when_span">%1$s – %2$s</string>
     <string name="request_card_show_month">Zobrazit měsíc</string>

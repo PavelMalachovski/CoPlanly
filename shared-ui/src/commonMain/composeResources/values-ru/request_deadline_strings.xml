@@ -24,13 +24,13 @@
     <!-- The deadline on each inbox card (phase 3a, spec §6.2–§6.5). Every time is worded by
          answerByText; %2$s after " · " is how long is left (request_left_*). A name is the other
          parent's, never a role. -->
-    <string name="request_clock_answer_by">Ответить до %1$s · %2$s</string>
+    <string name="request_clock_answer_by">Ответить до %1$s\u00A0· %2$s</string>
     <string name="request_clock_sent">Отправлено · ответить до %1$s</string>
     <string name="request_clock_opened">%1$s: открыто · %2$s</string>
     <string name="request_clock_not_opened">%1$s: ещё не открыто</string>
-    <string name="request_clock_reminders">Напоминания: %1$d из %2$d</string>
-    <string name="request_clock_reminders_next">Напоминания: %1$d из %2$d · следующее %3$s</string>
-    <string name="request_clock_last_chance_until">Больше времени до %1$s · %2$s</string>
+    <string name="request_clock_reminders">Напоминания: %1$d\u00A0из\u00A0%2$d</string>
+    <string name="request_clock_reminders_next">Напоминания: %1$d\u00A0из\u00A0%2$d\u00A0· следующее %3$s</string>
+    <string name="request_clock_last_chance_until">Больше времени до %1$s\u00A0· %2$s</string>
     <string name="request_clock_deadline_passed">Срок истёк %1$s</string>
     <string name="request_clock_calendar_unchanged">В календаре ничего не изменилось.</string>
     <string name="request_clock_give_last_chance">Дать ещё 24 часа</string>
@@ -41,22 +41,22 @@
     <string name="request_last_chance_banner_text">Ответьте до %1$s. Без ответа запрос закроется как «Нет ответа».</string>
     <string name="request_last_chance_failed">Не удалось продлить срок. Попробуйте ещё раз.</string>
     <plurals name="request_left_days">
-        <item quantity="one">%1$d день</item>
-        <item quantity="few">%1$d дня</item>
-        <item quantity="many">%1$d дней</item>
-        <item quantity="other">%1$d дня</item>
+        <item quantity="one">%1$d\u00A0день</item>
+        <item quantity="few">%1$d\u00A0дня</item>
+        <item quantity="many">%1$d\u00A0дней</item>
+        <item quantity="other">%1$d\u00A0дня</item>
     </plurals>
     <plurals name="request_left_hours">
-        <item quantity="one">%1$d ч</item>
-        <item quantity="few">%1$d ч</item>
-        <item quantity="many">%1$d ч</item>
-        <item quantity="other">%1$d ч</item>
+        <item quantity="one">%1$d\u00A0ч</item>
+        <item quantity="few">%1$d\u00A0ч</item>
+        <item quantity="many">%1$d\u00A0ч</item>
+        <item quantity="other">%1$d\u00A0ч</item>
     </plurals>
     <plurals name="request_left_minutes">
-        <item quantity="one">%1$d мин</item>
-        <item quantity="few">%1$d мин</item>
-        <item quantity="many">%1$d мин</item>
-        <item quantity="other">%1$d мин</item>
+        <item quantity="one">%1$d\u00A0мин</item>
+        <item quantity="few">%1$d\u00A0мин</item>
+        <item quantity="many">%1$d\u00A0мин</item>
+        <item quantity="other">%1$d\u00A0мин</item>
     </plurals>
     <!-- The meta line of a "No answer" row in History (spec §6.6), parts joined with " · ". -->
     <string name="request_history_meta_deadline">Срок %1$s</string>
@@ -64,9 +64,9 @@
     <string name="request_history_meta_opened">открыто %1$s</string>
     <string name="request_history_meta_unchanged">календарь без изменений</string>
     <plurals name="request_history_meta_reminders">
-        <item quantity="one">%1$d напоминание</item>
-        <item quantity="few">%1$d напоминания</item>
-        <item quantity="many">%1$d напоминаний</item>
-        <item quantity="other">%1$d напоминания</item>
+        <item quantity="one">%1$d\u00A0напоминание</item>
+        <item quantity="few">%1$d\u00A0напоминания</item>
+        <item quantity="many">%1$d\u00A0напоминаний</item>
+        <item quantity="other">%1$d\u00A0напоминания</item>
     </plurals>
 </resources>

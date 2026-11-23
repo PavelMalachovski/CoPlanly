@@ -44,7 +44,7 @@ class AnswerByTextTest {
 
         assertTrue("\"$text\" names the time", text.contains("10:00"))
         assertTrue("\"$text\" says AM", text.contains("AM"))
-        assertTrue("\"$text\" puts the time after the date, set off by a comma", text.endsWith(", 10:00 AM"))
+        assertTrue("\"$text\" puts the time after the date, set off by a comma", text.endsWith(", 10:00\u00A0AM"))
     }
 
     @Test

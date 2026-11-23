@@ -30,13 +30,13 @@
     <!-- The deadline on each inbox card (phase 3a, spec §6.2–§6.5). Every time is worded by
          answerByText; %2$s after " · " is how long is left (request_left_*). A name is the other
          parent's, never a role. -->
-    <string name="request_clock_answer_by">Answer by %1$s · %2$s</string>
+    <string name="request_clock_answer_by">Answer by %1$s\u00A0· %2$s</string>
     <string name="request_clock_sent">Sent · Answer by %1$s</string>
     <string name="request_clock_opened">%1$s opened it · %2$s</string>
     <string name="request_clock_not_opened">%1$s hasn\u0027t opened it yet</string>
-    <string name="request_clock_reminders">Reminders: %1$d of %2$d</string>
-    <string name="request_clock_reminders_next">Reminders: %1$d of %2$d · next %3$s</string>
-    <string name="request_clock_last_chance_until">More time until %1$s · %2$s</string>
+    <string name="request_clock_reminders">Reminders: %1$d\u00A0of\u00A0%2$d</string>
+    <string name="request_clock_reminders_next">Reminders: %1$d\u00A0of\u00A0%2$d\u00A0· next %3$s</string>
+    <string name="request_clock_last_chance_until">More time until %1$s\u00A0· %2$s</string>
     <string name="request_clock_deadline_passed">Deadline passed %1$s</string>
     <string name="request_clock_calendar_unchanged">Nothing has changed in the calendar.</string>
     <string name="request_clock_give_last_chance">Give 24 more hours</string>
@@ -47,16 +47,16 @@
     <string name="request_last_chance_banner_text">Answer by %1$s. Without an answer the request closes as “No answer”.</string>
     <string name="request_last_chance_failed">The extra time couldn\u0027t be sent. Try again.</string>
     <plurals name="request_left_days">
-        <item quantity="one">%1$d day</item>
-        <item quantity="other">%1$d days</item>
+        <item quantity="one">%1$d\u00A0day</item>
+        <item quantity="other">%1$d\u00A0days</item>
     </plurals>
     <plurals name="request_left_hours">
-        <item quantity="one">%1$d h</item>
-        <item quantity="other">%1$d h</item>
+        <item quantity="one">%1$d\u00A0h</item>
+        <item quantity="other">%1$d\u00A0h</item>
     </plurals>
     <plurals name="request_left_minutes">
-        <item quantity="one">%1$d min</item>
-        <item quantity="other">%1$d min</item>
+        <item quantity="one">%1$d\u00A0min</item>
+        <item quantity="other">%1$d\u00A0min</item>
     </plurals>
     <!-- The meta line of a "No answer" row in History (spec §6.6), parts joined with " · ". -->
     <string name="request_history_meta_deadline">Deadline %1$s</string>
@@ -64,7 +64,7 @@
     <string name="request_history_meta_opened">opened %1$s</string>
     <string name="request_history_meta_unchanged">calendar unchanged</string>
     <plurals name="request_history_meta_reminders">
-        <item quantity="one">%1$d reminder</item>
-        <item quantity="other">%1$d reminders</item>
+        <item quantity="one">%1$d\u00A0reminder</item>
+        <item quantity="other">%1$d\u00A0reminders</item>
     </plurals>
 </resources>
