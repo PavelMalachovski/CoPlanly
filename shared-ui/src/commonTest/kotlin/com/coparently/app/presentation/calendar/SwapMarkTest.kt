@@ -44,4 +44,17 @@ class SwapMarkTest {
         val marks = swapMarks(setOf(nov9), holderOf = { "mom" }, pendingTo = mapOf(nov9 to "mom"))
         assertEquals(SwapMark(toSlot = "dad", pending = false), marks[nov9])
     }
+
+    @Test
+    fun `a swap mark that fits is drawn in full`() {
+        assertEquals("→ you", swapMarkText(listOf("→ you", "→ A", SWAP_ARROW)) { true })
+    }
+
+    @Test
+    fun `a swap mark too wide falls back to the initial and then the arrow`() {
+        val candidates = listOf("→ you", "→ A", SWAP_ARROW)
+        assertEquals("→ A", swapMarkText(candidates) { it.length <= 3 })
+        assertEquals(SWAP_ARROW, swapMarkText(candidates) { it.length <= 1 })
+        assertEquals(SWAP_ARROW, swapMarkText(candidates) { false })
+    }
 }

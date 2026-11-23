@@ -4,6 +4,7 @@ import com.coparently.app.domain.model.Event
 import kotlinx.datetime.LocalDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /** How many of a day's events a month cell draws as pills, and the "+n" it leaves for the rest. */
@@ -109,6 +110,16 @@ class MonthCellPillsTest {
     @Test
     fun `a pill with room for one line keeps one`() {
         assertEquals(1, pillTitleLines(widestWord = 10f, lineWidth = 40f, maxLines = 1))
+    }
+
+    @Test
+    fun `a pill with room for a letter and the ellipsis draws its title`() {
+        assertTrue(pillTitleFits(leastTitle = 12f, lineWidth = 12f))
+    }
+
+    @Test
+    fun `a pill too narrow for a letter and the ellipsis is drawn as a bar`() {
+        assertFalse(pillTitleFits(leastTitle = 12f, lineWidth = 11f))
     }
 
     @Test

@@ -43,6 +43,9 @@ internal val EVENT_PILL_MARK_WIDTH = 3.dp
 /** Height of the bar a cell draws instead of a pill when the title has no room (an off-grid literal). */
 private val EVENT_BAR_HEIGHT = 4.dp
 
+/** The ellipsis a pill's title ends in when it is cut ([TextOverflow.Ellipsis]'s own). */
+private const val ELLIPSIS = "\u2026"
+
 /** The space between two stacked pills. */
 private val PILL_GAP = Spacing.XXS
 
@@ -73,7 +76,9 @@ private fun pillTextStyle(): TextStyle = MaterialTheme.typography.labelSmall.cop
  * spaces and never inside a word ([pillTitleLines]): a title with a word wider than the pill takes
  * one line and ends in an ellipsis instead. "+n" ends the last pill's line. A pill is drawn only
  * where its first line fits under the day number ([pillLines]); a cell too short for any (a large
- * font, a short window) draws a bar in the mark's colour instead, never a title cut in half.
+ * font, a short window) draws a bar in the mark's colour instead, never a title cut in half, and so
+ * does a pill too narrow for its title's first letter and "…" ([pillTitleFits]: beside "+n", or at
+ * 200 %), never a pill that holds only "…".
  *
  * No content description: the cell's own names the events.
  */
@@ -124,16 +129,25 @@ internal fun DayCellPills(events: List<Event>, isCurrentMonth: Boolean, modifier
                 }
             }
         } else {
-            val mark = pillMarkColor(events.first())
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(EVENT_BAR_HEIGHT)
-                    .clip(CoPlanlyCorners.Mark)
-                    .background(mark)
-            )
+            EventBar(pillMarkColor(events.first()))
         }
     }
+}
+
+/**
+ * The bar a cell draws in place of a pill whose title has no room — under the day number, or beside
+ * "+n" in a narrow column: a [EVENT_BAR_HEIGHT] stroke in the mark's colour, never a pill that holds
+ * only "…".
+ */
+@Composable
+private fun EventBar(color: Color, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(EVENT_BAR_HEIGHT)
+            .clip(CoPlanlyCorners.Mark)
+            .background(color)
+    )
 }
 
 /** The colour of an event's mark: its owner's hue, a friend's teal, or neutral for an earlier family. */
@@ -173,27 +187,48 @@ private fun EventPill(
             measurer.measure(text = word, style = textStyle, maxLines = 1, softWrap = false).size.width
         } ?: 0
     }
+    // The least a title can show: its first letter and the ellipsis.
+    val leastTitle = remember(event.title, textStyle, measurer) {
+        measurer.measure(
+            text = event.title.trim().take(1) + ELLIPSIS,
+            style = textStyle,
+            maxLines = 1,
+            softWrap = false
+        ).size.width
+    }
+    val lineHeight = with(LocalDensity.current) { textStyle.lineHeight.toDp() }
     BoxWithConstraints(modifier = modifier) {
         val padding = with(LocalDensity.current) { (EVENT_PILL_MARK_WIDTH + Spacing.XXS * 2).roundToPx() }
-        val lines = pillTitleLines(
-            widestWord = widestWord.toFloat(),
-            lineWidth = (constraints.maxWidth - padding).toFloat(),
-            maxLines = maxLines
-        )
-        Text(
-            text = event.title,
-            style = textStyle,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = lines,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(CoPlanlyCorners.Tag)
-                .background(MaterialTheme.colorScheme.surface)
-                .drawBehind {
-                    drawRect(color = mark, size = Size(EVENT_PILL_MARK_WIDTH.toPx(), size.height))
-                }
-                .padding(start = EVENT_PILL_MARK_WIDTH + Spacing.XXS, end = Spacing.XXS)
-        )
+        val lineWidth = (constraints.maxWidth - padding).toFloat()
+        if (pillTitleFits(leastTitle.toFloat(), lineWidth)) {
+            Text(
+                text = event.title,
+                style = textStyle,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = pillTitleLines(
+                    widestWord = widestWord.toFloat(),
+                    lineWidth = lineWidth,
+                    maxLines = maxLines
+                ),
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(CoPlanlyCorners.Tag)
+                    .background(MaterialTheme.colorScheme.surface)
+                    .drawBehind {
+                        drawRect(color = mark, size = Size(EVENT_PILL_MARK_WIDTH.toPx(), size.height))
+                    }
+                    .padding(start = EVENT_PILL_MARK_WIDTH + Spacing.XXS, end = Spacing.XXS)
+            )
+        } else {
+            // Not even one letter and "…" fit: the mark's bar, centred on the line the pill would
+            // take, says there is an event, as a short cell's bar does.
+            Box(
+                modifier = Modifier.fillMaxWidth().height(lineHeight),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                EventBar(mark)
+            }
+        }
     }
 }

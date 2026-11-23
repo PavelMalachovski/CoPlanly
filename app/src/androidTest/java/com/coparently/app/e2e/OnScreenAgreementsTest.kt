@@ -404,6 +404,8 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
     /** Home's swap pop-up for one day offered by Bob: the day's chip, dated as `SwapSideGroup` dates it. */
     private fun swapDialogFor(date: LocalDate): SemanticsMatcher = hasAnyAncestor(isDialog()) and hasText(
         swapDateList(listOf(date), Locale.getDefault())
+            // The screens keep a day whole with no-break spaces (`swapDateList` in :shared-ui).
+            .replace(' ', '\u00A0')
     )
 
     private companion object {

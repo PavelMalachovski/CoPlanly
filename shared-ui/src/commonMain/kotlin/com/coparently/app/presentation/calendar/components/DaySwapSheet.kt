@@ -292,16 +292,27 @@ private fun SwapSheetRowLine(row: SwapSheetRow, parentNames: ParentNames) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(Modifier.size(DOT_SIZE).background(ParentColors.fill(row.receiverSlot), CircleShape))
-        Text(
-            text = swapDateList(row.dates),
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f)
-        )
-        Text(
-            text = target,
-            style = MaterialTheme.typography.labelLargeEmphasized,
-            color = ParentColors.text(row.receiverSlot)
-        )
+        val dates: @Composable (Modifier) -> Unit = { modifier ->
+            Text(text = swapDateList(row.dates), style = MaterialTheme.typography.bodyLarge, modifier = modifier)
+        }
+        val receiver: @Composable () -> Unit = {
+            Text(
+                text = target,
+                style = MaterialTheme.typography.labelLargeEmphasized,
+                color = ParentColors.text(row.receiverSlot)
+            )
+        }
+        // From a large font the receiver goes under the days: beside them it left a column a date
+        // did not fit, and the days broke inside their words ("14. Ma/i").
+        if (stacksAtLargeFont()) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.XXS)) {
+                dates(Modifier)
+                receiver()
+            }
+        } else {
+            dates(Modifier.weight(1f))
+            receiver()
+        }
     }
 }
 

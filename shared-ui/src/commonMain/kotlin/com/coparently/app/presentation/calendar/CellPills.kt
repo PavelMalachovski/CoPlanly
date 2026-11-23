@@ -73,3 +73,10 @@ internal fun titleWords(title: String): List<String> = title.split(WORD_SEPARATO
  */
 internal fun pillTitleLines(widestWord: Float, lineWidth: Float, maxLines: Int): Int =
     if (maxLines <= 1 || widestWord > lineWidth) 1 else maxLines
+
+/**
+ * Whether a pill has room for a title at all: [leastTitle] is the width of the title's first letter
+ * and the ellipsis, [lineWidth] the pill's line, in one unit. A pill without that room is drawn as
+ * its mark's bar (owner rule, November 2026): a pill holding only "…" says nothing the bar does not.
+ */
+internal fun pillTitleFits(leastTitle: Float, lineWidth: Float): Boolean = lineWidth >= leastTitle
