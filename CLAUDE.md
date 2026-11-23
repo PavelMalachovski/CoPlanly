@@ -984,8 +984,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   degrades gracefully if it is missing (see the conditional apply in `app/build.gradle.kts`).
 - **GitHub CI runs on every pull request, and on every push to `main`** — a push to a
   feature branch with no PR open is not built (`.github/workflows/ci.yml`, added
-  August 2026 — this line used to say there was none). Seventeen jobs that test (this line used to
-  say sixteen, before `ios-app`; fourteen, before `shared` and `shared-ios`; thirteen, before `web`; eleven before `upgrade` and `r8-runtime`; ten before detekt left the lint job; eight before `screenshots`
+  August 2026 — this line used to say there was none). Twenty-one jobs that test (this line used to
+  say seventeen, before `ios-app` became five jobs; sixteen, before `ios-app`; fourteen, before `shared` and `shared-ios`; thirteen, before `web`; eleven before `upgrade` and `r8-runtime`; ten before detekt left the lint job; eight before `screenshots`
   and `e2e`; seven before `instrumented`), plus `report`, which only reads them (below): `changes` (a cheap gate,
   below), four Android ones — `build-test` (`assembleDebug` + `testDebugUnitTest` in a
   single invocation), `static` (`lint`, which since the final review of phases 1–2 also analyses the three shared
@@ -1001,7 +1001,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   alias, `single<I> { get<Impl>() }`, has no entry of its own: were R8 to merge an interface into
   its one implementer, the alias would replace the definition it asks for and the minified app would
   overflow the stack at launch, and nothing else starts the graph in a minified build) —
-  plus the shared modules' two, `shared` and `shared-ios` (below), the iPhone app's `ios-app` (below), Cloud Functions, `web` (below), the
+  plus the shared modules' two, `shared` and `shared-ios` (below), the iPhone app's five (`ios-build`, `ios-tests`, `ios-shell`, `ios-tour`, `ios-tour-appearance`, below), Cloud Functions, `web` (below), the
   Firestore rules suite against the emulator, and `invariants` (`node tools/check-invariants.js`, no
   dependencies and no Android SDK: locale completeness, format-argument agreement across the
   five locales, the four-way push-type agreement item 15 states, that no production code imports
@@ -1360,7 +1360,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   shared state's (Task 10, commonTest and `androidHostTest`) — and compiles
   `:shared-ui:compileKotlinIosSimulatorArm64`, its iOS klib with `Res`, the theme, the common
   components and the ViewModels, and `compileTestKotlinIosSimulatorArm64`, its commonTest (run on
-  the simulator since MON-24 phase 3, Task 5, by the `ios-app` job, whose test executable links the
+  the simulator since MON-24 phase 3, Task 5, by the `ios-tests` job, whose test executable links the
   Firebase frameworks `shared-data`'s pods build, `gatherFirebaseFrameworksForTests` in
   `shared-ui/build.gradle.kts`); the strings' parity tests run in the app, in `build-test`. **`shared-ios`** runs `:shared:iosSimulatorArm64Test`,
   `:shared-data:iosSimulatorArm64Test` and `:shared-ui:linkDebugFrameworkIosSimulatorArm64` (the
@@ -1382,53 +1382,71 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   Xcode version and on the three lines of `shared-data/build.gradle.kts` that decide the pods
   (`firebaseIosVersion`, `ios.deploymentTarget`, the pod list), with prefix `restore-keys`, and is
   saved only when that step succeeded, so a run that stopped before the pods never saves a cache
-  without them. `:shared:detekt`, `:shared-data:detekt` and `:shared-ui:detekt` run in the `detekt`
+  without them. **On the exact key the pods are linked as the cache holds them**
+  (`-Pcoplanly.prebuiltPods=true`, which disables the plugin's `podGen`, `podInstall`,
+  `podSetupBuild`, `podBuild` and `podImport` tasks; `shared-ios` and `ios-tests` pass it only when
+  `cache-hit` is true): the plugin ran `pod install` again first, which rewrote the Pods project, and
+  `xcodebuild` compiled FirebaseFirestoreInternal from source on every run, 22 minutes here and 33
+  in the iPhone job, although the cache held it. Never pass it on a near miss: the pods restored by
+  a prefix may be another spec's. `:shared:detekt`, `:shared-data:detekt` and `:shared-ui:detekt` run in the `detekt`
   job against the app's config and the app's baseline file — one baseline for every module, which
   `:app:detektBaseline` writes because it also reads `shared/src`, `shared-data/src` and
   `shared-ui/src` (the other
   modules' `detektBaseline` is disabled: detekt's baseline task replaces the file's findings with
   its own run's, so a second writer would erase the first's).
-- **The `ios-app` job builds and runs the iPhone app** ("iPhone app — build and launch (macOS)",
-  MON-24 phase 3, November 2026), gated on `changes`' ninth output, `ios`: whatever runs `shared`,
-  any path under `iosApp/`, and the write gate's inputs (`tools/ios/`, `wire/current/`,
-  `firestore.rules`, `functions/`, `tools/e2e/pairing-smoke.js`), and any path `NON_IOS` does not
-  name, as an unfamiliar path runs every job (part B, Task 12). It is not draft-gated. On a
-  GitHub-hosted `macos-latest` runner it uses the image's Xcode (26.6 in November 2026, above the
-  26.4 Kotlin 2.4.21 names; Kotlin warns and it works) and a simulator `iosApp/scripts/simulator.sh
-  pick` chooses at run time (an "iPhone 16" if the image has one, else the first iPhone on the newest
-  iOS: an iPhone 17 Pro on iOS 26.5 so far). It generates the project with XcodeGen, builds the app
-  and its UI tests (`build-for-testing`), launches the app and fails unless it still runs 20 seconds
-  later (artifact `ios-launch`), then, on fresh Firebase emulators, seeds a paired family
-  (`tools/ios/seed-shell-family.js`) and runs the XCUITest walk of the native shell
-  (`iosApp/CoPlanlyUITests/`: the tabs, Family → Expenses → the Add expense sheet, a back swipe
-  completed and one let go of, a tab tap popping two screens, a dirty sheet swiped down asking
-  "Discard changes?", sign-out to fresh tabs; artifact `ios-shell`) and, on a family seeded for
-  it, the push test (`PushUITests`, `simulator.sh push-test`, phase 4 part C: `simctl push` with the
-  server's neutral alert, the banners read back, one for another uid never worded, a chat push
-  tapped into its thread; **the simulator does not run the Notification Service Extension for a
-  `simctl push`**, so the banners read the server's alert and the extension's wording is held by
-  `:push-wording`'s simulator tests and device check §3.43, and its logged memory,
-  `COPLANLY_NSE_MEMORY`, would fail the step above 20 MB but is never logged there), then, on
-  emulators again,
-  `:shared-data:iosSimulatorArm64Test` and `:shared-ui:iosSimulatorArm64Test` on the same booted
-  simulator (`COPLANLY_SIMULATOR_UDID`, so the Keychain tests run; check run "iPhone tests on the
-  emulators", `require_tests`) with the write gate: `IosWriteGateTest` writes every kind of shared
-  record through the iPhone data layer and `tools/ios/check-ios-writes.js` reads each back from the
-  Firestore emulator and compares its keys and types with what Android writes. A step then fails the
-  job if any emulator test skipped itself or the write gate did not report that it ran. **Then comes
-  the tour**, on a family of its own (`ShellUITests.testTour`: a screenshot per destination it
-  reaches and a reason for each it skips, artifact `ios-tour`, with the `tour-crashed` marker;
-  `continue-on-error` and a 50-minute step limit, and only a crash or a failed launch fails the job,
-  at its end, through the `tour-crashed` marker `simulator.sh tour` writes for testTour's own two
-  failure texts; a timeout or a failed seed is a notice). It runs after the write gate so a slow run
-  loses the tour, never the gate, and on every run, not by request as part B's spec §8 asked,
-  because the owner check reads the branch's own `ios-tour` artifact (ROADMAP MON-24). The
-  appearance tour (`testTourAppearance`, part D) follows it as the job's last step, under the same
-  rules.
-  Its timeout is 240 minutes, for a cold Firebase pods build (77 minutes once), the walk, the
-  emulator tests and the tour. It restores the
-  pods' cache `shared-ios` saves and never saves it; it gets no secret, and CI never has a
-  `GoogleService-Info.plist`, so it never offers Google and never reaches the real project.
+- **Five jobs build and run the iPhone app** (MON-24 phase 3, November 2026; split out of one
+  `ios-app` job on 23 November 2026, which ran them one after another for about 2 h 20 min). All
+  are gated on `changes`' `ios` output: whatever runs `shared`, any path under `iosApp/`, the write
+  gate's inputs (`tools/ios/`, `wire/current/`, `firestore.rules`, `functions/`,
+  `tools/e2e/pairing-smoke.js`), and any path `NON_IOS` does not name, as an unfamiliar path runs
+  every job (part B, Task 12); and **on a draft only with the `full-ci` label** (`emulators`, as the
+  Android emulator jobs and `shared-ios`). Each uses a GitHub-hosted `macos-latest` runner, the
+  image's Xcode (26.6 in November 2026, above the 26.4 Kotlin 2.4.21 names; Kotlin warns and it
+  works) and a simulator `iosApp/scripts/simulator.sh pick` chooses at run time (an "iPhone 16" if
+  the image has one, else the first iPhone on the newest iOS: an iPhone 17 Pro on iOS 26.5 so far).
+  None gets a secret, and CI never has a `GoogleService-Info.plist`, so none offers Google or
+  reaches the real project.
+  - **`ios-build`** ("iPhone app — build and launch (macOS)") generates the project with XcodeGen,
+    builds the app and its UI tests (`build-for-testing`), launches the app and fails unless it
+    still runs 20 seconds later (artifact `ios-launch`), and hands the build products to the jobs
+    after it as one tarred artifact, `ios-products` (`upload-artifact` keeps no executable bit). Its
+    Swift package cache is restored and saved apart, so a red run still keeps what it resolved.
+  - **`ios-tests`** ("iPhone tests on the emulators (macOS)") starts at once, needing no app build:
+    `:shared-data:iosSimulatorArm64Test` and `:shared-ui:iosSimulatorArm64Test` on a simulator it
+    boots (`COPLANLY_SIMULATOR_UDID`, so the Keychain tests run; check run "iPhone tests on the
+    emulators", `require_tests`), on Firebase emulators, with the write gate: `IosWriteGateTest`
+    writes every kind of shared record through the iPhone data layer and
+    `tools/ios/check-ios-writes.js` reads each back from the Firestore emulator and compares its
+    keys and types with what Android writes. A step then fails the job if any emulator test skipped
+    itself or the write gate did not report that it ran. It restores the pods' cache `shared-ios`
+    saves and never saves it; on the exact key it links them as they are
+    (`-Pcoplanly.prebuiltPods=true`, below).
+  - **`ios-shell`**, after `ios-build`, on fresh emulators: seeds a paired family
+    (`tools/ios/seed-shell-family.js`) and runs the XCUITest walk of the native shell
+    (`iosApp/CoPlanlyUITests/`: the tabs, Family → Expenses → the Add expense sheet, a back swipe
+    completed and one let go of, a tab tap popping two screens, a dirty sheet swiped down asking
+    "Discard changes?", sign-out to fresh tabs; artifact `ios-shell`) and, on a family seeded for
+    it and **a fresh install of the app** (`simulator.sh push-test` reinstalls it first, so a walk
+    that stopped before its sign-out cannot leave its account signed in under the push test), the
+    push test (`PushUITests`, phase 4 part C: `simctl push` with the server's neutral alert, the
+    banners read back, one for another uid never worded, a chat push tapped into its thread; **the
+    simulator does not run the Notification Service Extension for a `simctl push`**, so the banners
+    read the server's alert and the extension's wording is held by `:push-wording`'s simulator tests
+    and device check §3.43, and its logged memory, `COPLANLY_NSE_MEMORY`, would fail the step above
+    20 MB but is never logged there).
+  - **`ios-tour`** and **`ios-tour-appearance`**, after `ios-build`, **only when `changes`'
+    `ios_tour` is true**: on `main` and a manual run, and on a pull request whose diff reaches what
+    they draw — `:shared-ui`'s `composeResources/`, its `presentation/` and `ios/` Kotlin in a main
+    source set, `iosApp/` but the push test, the tour's seed and crash filter, or the build
+    (`IOS_TOUR_INPUTS` in `tools/ci-changes.js`). **This reverses "on every run"** (owner decision,
+    23 November 2026): a data, domain, wording, server, Android or test change skips them, and the
+    owner check reads the tours of a branch that changes the screens, and those of `main`. Each is
+    on a family of its own: `ShellUITests.testTour` (a screenshot per destination it reaches and a
+    reason for each it skips, artifact `ios-tour`, with the `tour-crashed` marker) and
+    `testTourAppearance` (part D, artifact `ios-tour-appearance`, a folder per variant). Each step
+    is `continue-on-error` with its own limit, and only a crash or a failed launch fails the job,
+    at its end, through the `tour-crashed` marker `simulator.sh` writes for testTour's own two
+    failure texts; a timeout or a failed seed is a notice.
 - **The `web` job tests what a court and an iPhone see** ("Web — verification page and calendar
   feed", September 2026; check run "Web — verify page and ICS", artefact `junit-web`). `web-tests/`
   is its own small package (Playwright and Mozilla's `ical.js`), deliberately **not** under `web/`,
@@ -1542,7 +1560,7 @@ end of Task 11; returning them to `internal` is carried to phase 3 (ROADMAP MON-
   `ScreenshotFixtures`) so an image does not change with the calendar — keep it that way, or the
   suite can never move to verify.
 - **A pull request runs only the jobs its diff can affect** (September 2026). The `changes` job
-  pipes `git diff --name-only` into `tools/ci-changes.js`, which decides nine outputs (the ninth, `ios`, gates `ios-app`) and is tested
+  pipes `git diff --name-only` into `tools/ci-changes.js`, which decides ten outputs (the ninth, `ios`, gates the iPhone jobs, and the tenth, `ios_tour`, their two tours) and is tested
   by `tools/test/ci-changes.test.js` in `invariants`: docs/functions/rules only → no Android job;
   a screen-only change (`presentation/` outside `common/`, `res/`, `app/src/test/`) → no e2e
   (`common/` stays in because the e2e parents construct `ParentsSource`); nothing the screenshots
@@ -1568,7 +1586,8 @@ end of Task 11; returning them to `internal` is carried to phase 3 (ROADMAP MON-
   counts as passing; nothing is a required check today, so this is safe, but marking one required
   later means a PR merges on a skip rather than a build.
 - **A draft pull request runs the emulator jobs only with the `full-ci` label** (1 November 2026,
-  owner decision). `instrumented`, `e2e`, `upgrade` and `r8-runtime` are the expensive jobs, so on
+  owner decision; the macOS jobs, `shared-ios` and the five iPhone jobs, joined them on 23 November
+  2026). `instrumented`, `e2e`, `upgrade` and `r8-runtime` are the expensive jobs, so on
   a draft they are skipped on every push unless the pull request carries the label `full-ci`. They
   run as before once the pull request is ready for review, on a push to `main` and on a manual run.
   The `changes` job decides it from the event (`node tools/ci-changes.js --event`, tested in
@@ -2060,8 +2079,8 @@ shell alone, so Android reads a null and behaves as before:
 - **`StartOnce`** refuses a second `IosApp.start`.
 - **`StackHost`** ends a disposed stack's back-stack entries one second after their screens
   (`ENTRIES_END_AFTER_MS`), so a sign-out does not end an entry UIKit is still drawing.
-- **The iPhone tour** is `ShellUITests.testTour`, an `ios-app` step after the write gate (only part D's
-  appearance tour comes after it), on a
+- **The iPhone tour** is `ShellUITests.testTour`, the `ios-tour` job (its own runner since 23
+  November 2026, and only when `ios_tour` says so), on a
   family seeded with `tools/ios/seed-shell-family.js --tour`. It saves a screenshot per route it
   reaches (artifact `ios-tour`) and records each route it cannot reach in `tour.txt` with the
   reason, as the Android UI tour does. Only a crash or a failed launch fails the job (the
@@ -2123,11 +2142,10 @@ the rules):
   (`AppIcon` passes `FontWeight.Normal`; ruling of 16 November 2026), rendered to a PNG and decoded by Skia, kept in an 8 MB LRU, tinted by
   Material's colour-filter rule; with no bitmap at draw time it draws the Material vector.
   `AutoMirrored` icons are not mirrored right to left (no such language ships).
-- **`testTourAppearance`** (`ShellUITests`, run by `simulator.sh tour-appearance`, its own step of
-  the `ios-app` job after the tour) shoots the seven board screens (Home, Calendar, Chat, New event,
+- **`testTourAppearance`** (`ShellUITests`, run by `simulator.sh tour-appearance`, the
+  `ios-tour-appearance` job, beside the tour) shoots the seven board screens (Home, Calendar, Chat, New event,
   Family, Expenses, Settings) once in dark, once with Increase Contrast and once at the
-  accessibility-extra-large text size, as `tour-<variant>-<route>` in the `ios-tour` artifact's
-  `appearance/`, then puts the simulator back to light, contrast off and Large. Only a crash fails it.
+  accessibility-extra-large text size, as `tour-<variant>-<route>` in the `ios-tour-appearance` artifact, then puts the simulator back to light, contrast off and Large. Only a crash fails it.
 - **Three Kotlin/Native lessons from its compiles.** A UIKit `NS_ENUM` is a Kotlin enum or a set of
   top-level constants depending on how the klib maps it: `UIUserInterfaceStyle`'s are entries,
   imported as `platform.UIKit.UIUserInterfaceStyle.UIUserInterfaceStyleDark`, while
@@ -2187,7 +2205,7 @@ rules; spec `docs/superpowers/specs/2026-11-17-iphone-phase-4c-pushes-design.md`
   `com.apple.developer.usernotifications.filtering` (owner step, applied for), a push for another
   uid or of a type it cannot word shows that fallback, which names nothing (owner decision); once
   granted, it is suppressed, as Android drops it. Its memory is the physical footprint (and its
-  peak), logged once per push as `COPLANLY_NSE_MEMORY`; the `ios-app` job fails above 20 MB once a
+  peak), logged once per push as `COPLANLY_NSE_MEMORY`; the `ios-shell` job fails above 20 MB once a
   simulator runs the extension (none does for a `simctl push` today, so a phone measures it).
 - **A tap** goes to `IosApp.openPush(data)` → `LaunchLinks.forPush`, which opens nothing for another
   uid, switches the family first and then arms the screen (`PushDestination.forType`, the one table
@@ -4091,7 +4109,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     hold the two to one contract — change a behaviour in both. On the iOS simulator the contract
     runs over an in-memory store everywhere (`SealedSecurePreferencesContractTest`), and over the
     real Keychain in `KeychainSecurePreferencesTest`, which is no longer `@Ignore`d (MON-24 phase 3,
-    Task 5): the `ios-app` job runs it on the simulator it booted (`COPLANLY_SIMULATOR_UDID`), from a
+    Task 5): the `ios-tests` job runs it on the simulator it booted (`COPLANLY_SIMULATOR_UDID`), from a
     test binary with simulated Keychain entitlements (`gradle/ios-test-entitlements.plist`).
     Elsewhere (`shared-ios`, a Mac without the variable) `shared-data/build.gradle.kts` leaves it
     out of the run, because a binary spawned `--standalone` has no Keychain (`errSecNotAvailable`)
