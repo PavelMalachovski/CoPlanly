@@ -73,12 +73,12 @@
     <string name="day_swap_bar_hint">Tippe auf Tage im Kalender. Jeder geht an den, der ihn nicht hat.</string>
     <string name="day_swap_next">Weiter</string>
     <plurals name="day_swap_bar_to">
-        <item quantity="one">%1$s — %2$d Tag: %3$s</item>
-        <item quantity="other">%1$s — %2$d Tage: %3$s</item>
+        <item quantity="one">%1$s — %2$d\u00A0Tag: %3$s</item>
+        <item quantity="other">%1$s — %2$d\u00A0Tage: %3$s</item>
     </plurals>
     <plurals name="day_swap_bar_to_you">
-        <item quantity="one">Dir — %1$d Tag: %2$s</item>
-        <item quantity="other">Dir — %1$d Tage: %2$s</item>
+        <item quantity="one">Dir — %1$d\u00A0Tag: %2$s</item>
+        <item quantity="other">Dir — %1$d\u00A0Tage: %2$s</item>
     </plurals>
     <!-- The review sheet (day swap design, board SW-3). -->
     <string name="day_swap_sheet_title_with">Tausch mit\u00A0%1$s</string>

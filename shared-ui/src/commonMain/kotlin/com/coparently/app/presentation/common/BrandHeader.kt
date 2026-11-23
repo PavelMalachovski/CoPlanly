@@ -75,17 +75,26 @@ fun BrandHeader(
     }
 }
 
+/**
+ * The "coplanly." wordmark. A logo set in type, so it grows with the font only to
+ * [WORDMARK_MAX_FONT_SCALE]: at 200 % it took half the row, and three avatars and the gear beside it
+ * ran into its full stop.
+ */
 @Composable
 private fun Wordmark() {
     val ink = MaterialTheme.colorScheme.onPrimaryContainer
     val accent = MaterialTheme.colorScheme.primary
-    Text(
-        text = buildAnnotatedString {
-            withStyle(SpanStyle(color = ink)) { append(stringResource(Res.string.brand_wordmark)) }
-            withStyle(SpanStyle(color = accent)) { append(".") }
-        },
-        style = wordmarkStyle(MaterialTheme.typography.headlineSmallEmphasized, onestFontFamily())
-    )
+    CappedFontScale(max = WORDMARK_MAX_FONT_SCALE) {
+        Text(
+            text = buildAnnotatedString {
+                withStyle(SpanStyle(color = ink)) { append(stringResource(Res.string.brand_wordmark)) }
+                withStyle(SpanStyle(color = accent)) { append(".") }
+            },
+            style = wordmarkStyle(MaterialTheme.typography.headlineSmallEmphasized, onestFontFamily()),
+            maxLines = 1,
+            softWrap = false
+        )
+    }
 }
 
 /**
@@ -122,11 +131,14 @@ internal fun ChildAvatarStack(children: List<ChildInfo>, size: Dp = AVATAR_SIZE)
                         .background(MaterialTheme.colorScheme.secondaryContainer),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = stringResource(Res.string.children_avatars_more, overflow),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
+                    val style = MaterialTheme.typography.labelLarge
+                    CappedFontScale(max = fontScaleToFit(size, style.fontSize, INITIAL_SHARE)) {
+                        Text(
+                            text = stringResource(Res.string.children_avatars_more, overflow),
+                            style = style,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
                 }
             }
         }
@@ -155,6 +167,9 @@ internal object AvatarStack {
     /** How many of [count] children the "+n" disc stands for. */
     fun overflow(count: Int): Int = (count - MAX_VISIBLE).coerceAtLeast(0)
 }
+
+/** The largest font scale the wordmark is drawn at ([Wordmark]). */
+private const val WORDMARK_MAX_FONT_SCALE = 1.3f
 
 private val AVATAR_SIZE = 38.dp
 private val OVERLAP = 12.dp

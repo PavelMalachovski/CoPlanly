@@ -1,6 +1,7 @@
 package com.coparently.app.presentation.navigation
 
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.outlined.Chat
@@ -25,7 +26,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.navigation.NavHostController
 import com.coparently.app.presentation.common.AppIcon
+import com.coparently.app.presentation.common.CappedFontScale
 import com.coparently.app.presentation.common.windowWidthDp
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.chat_unread_count_overflow
 import com.coparently.app.resources.chat_unread_messages_badge
@@ -238,7 +241,16 @@ fun CoPlanlyNavigationRail(
                 selected = selected,
                 onClick = { onTabClick(destination, selected, onNavigate) },
                 icon = { TabIcon(destination, selected, chatUnreadCount, homeBadgeCount) },
-                label = { Text(stringResource(destination.labelRes)) }
+                // Room at the sides: the rail widens to its longest label, which otherwise ran to its
+                // edges ("Календар" at 150 %). One line, as the bar's.
+                label = {
+                    Text(
+                        text = stringResource(destination.labelRes),
+                        maxLines = 1,
+                        softWrap = false,
+                        modifier = Modifier.padding(horizontal = Spacing.XS)
+                    )
+                }
             )
         }
     }
@@ -300,10 +312,15 @@ private fun CountBadgedIcon(icon: ImageVector, count: Int, description: String) 
     BadgedBox(
         badge = {
             Badge(modifier = Modifier.semantics { contentDescription = description }) {
-                Text(badgeText)
+                // The icon does not grow with the font, so the count on it grows only a little:
+                // at 150 % it covered half the icon. TalkBack reads the count in full.
+                CappedFontScale(max = BADGE_MAX_FONT_SCALE) { Text(badgeText) }
             }
         }
     ) {
         AppIcon(imageVector = icon, contentDescription = null)
     }
 }
+
+/** The largest font scale a tab's count badge is drawn at ([CountBadgedIcon]). */
+private const val BADGE_MAX_FONT_SCALE = 1.15f

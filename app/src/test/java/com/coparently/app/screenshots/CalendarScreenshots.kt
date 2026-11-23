@@ -35,6 +35,9 @@ import com.coparently.app.presentation.calendar.components.VacationBanner
 import com.coparently.app.presentation.calendar.swapMiniMonths
 import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.testing.RobolectricTestApplication
+import com.coparently.app.utils.ReaderDateText
+import com.coparently.app.utils.unbreakableDate
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.atTime
 import kotlinx.datetime.toJavaLocalDate
@@ -145,7 +148,11 @@ class CalendarScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant
     fun banners() = snap("calendar_banners") {
         Column(verticalArrangement = Arrangement.spacedBy(BANNER_GAP)) {
             ChangeRequestBanner(pendingCount = PENDING_REQUESTS, onReview = {})
-            VacationBanner(label = "Summer holidays · 27 Jun – 31 Aug")
+            // The layer's name is the family's own words; its dates are the reader's, each kept whole and
+            // the dash kept with the first, so a narrow line breaks only after the dash.
+            val from = unbreakableDate(ReaderDateText.date(LocalDate(VACATION_YEAR, 6, 27), "dMMM"))
+            val to = unbreakableDate(ReaderDateText.date(LocalDate(VACATION_YEAR, 8, 31), "dMMM"))
+            VacationBanner(label = "Summer holidays · $from\u00A0– $to")
             CustodyChangedBanner(byName = "Pavel", onDismiss = {})
         }
     }
@@ -192,7 +199,8 @@ class CalendarScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant
                     toOther = give.map { it.toKotlinLocalDate() },
                     toOfferer = take.map { it.toKotlinLocalDate() }
                 ),
-                coParentName = "Bob",
+                // The fixture family's co-parent, whom the rows name too ("→ Pavel").
+                coParentName = ScreenshotFixtures.parentNames.parents.coParent?.name.orEmpty(),
                 months = swapMiniMonths(
                     days = (give.associateWith { "dad" } + take.associateWith { "mom" })
                         .mapKeys { (day, _) -> day.toKotlinLocalDate() },
@@ -215,6 +223,7 @@ class CalendarScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant
         private const val PENDING_REQUESTS = 2
         private const val SWAP_GIVE_DAY = 13
         private const val SWAP_TAKE_DAY = 20
+        private const val VACATION_YEAR = 2026
 
         /** The variants this class runs over. */
         @JvmStatic

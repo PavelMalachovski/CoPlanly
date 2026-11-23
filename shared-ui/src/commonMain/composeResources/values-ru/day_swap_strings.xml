@@ -87,16 +87,16 @@
     <string name="day_swap_bar_hint">Нажмите на дни в календаре. Каждый перейдёт к тому, у кого его нет.</string>
     <string name="day_swap_next">Далее</string>
     <plurals name="day_swap_bar_to">
-        <item quantity="one">%1$s — %2$d день: %3$s</item>
-        <item quantity="few">%1$s — %2$d дня: %3$s</item>
-        <item quantity="many">%1$s — %2$d дней: %3$s</item>
-        <item quantity="other">%1$s — %2$d дня: %3$s</item>
+        <item quantity="one">%1$s — %2$d\u00A0день: %3$s</item>
+        <item quantity="few">%1$s — %2$d\u00A0дня: %3$s</item>
+        <item quantity="many">%1$s — %2$d\u00A0дней: %3$s</item>
+        <item quantity="other">%1$s — %2$d\u00A0дня: %3$s</item>
     </plurals>
     <plurals name="day_swap_bar_to_you">
-        <item quantity="one">Вам — %1$d день: %2$s</item>
-        <item quantity="few">Вам — %1$d дня: %2$s</item>
-        <item quantity="many">Вам — %1$d дней: %2$s</item>
-        <item quantity="other">Вам — %1$d дня: %2$s</item>
+        <item quantity="one">Вам — %1$d\u00A0день: %2$s</item>
+        <item quantity="few">Вам — %1$d\u00A0дня: %2$s</item>
+        <item quantity="many">Вам — %1$d\u00A0дней: %2$s</item>
+        <item quantity="other">Вам — %1$d\u00A0дня: %2$s</item>
     </plurals>
     <!-- The review sheet (day swap design, board SW-3). -->
     <string name="day_swap_sheet_title_with">Обмен: %1$s</string>
