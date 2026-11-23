@@ -2647,6 +2647,15 @@ jobs:
         id: simulator
         run: echo "udid=$(iosApp/scripts/simulator.sh pick)" >> "$GITHUB_OUTPUT"
 
+      # Boots the simulator and runs the app once before the UI tests, as `ios-build` does: on a
+      # cold simulator XCUITest took 82 s to set up and the first tap on a field took no focus.
+      - name: Warm the simulator up
+        env:
+          UDID: ${{ steps.simulator.outputs.udid }}
+        run: |
+          iosApp/scripts/simulator.sh launch "$UDID" \
+            iosApp/build/Build/Products/Debug-iphonesimulator/CoPlanly.app "$RUNNER_TEMP/warm-up"
+
       - name: The native shell on the emulators (XCUITest)
         env:
           FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
@@ -2748,6 +2757,15 @@ jobs:
       - name: Pick a simulator
         id: simulator
         run: echo "udid=$(iosApp/scripts/simulator.sh pick)" >> "$GITHUB_OUTPUT"
+
+      # Boots the simulator and runs the app once before the UI tests, as `ios-build` does: on a
+      # cold simulator XCUITest took 82 s to set up and the first tap on a field took no focus.
+      - name: Warm the simulator up
+        env:
+          UDID: ${{ steps.simulator.outputs.udid }}
+        run: |
+          iosApp/scripts/simulator.sh launch "$UDID" \
+            iosApp/build/Build/Products/Debug-iphonesimulator/CoPlanly.app "$RUNNER_TEMP/warm-up"
 
       - name: The iPhone tour on the emulators (XCUITest)
         id: tour
@@ -2871,6 +2889,15 @@ jobs:
       - name: Pick a simulator
         id: simulator
         run: echo "udid=$(iosApp/scripts/simulator.sh pick)" >> "$GITHUB_OUTPUT"
+
+      # Boots the simulator and runs the app once before the UI tests, as `ios-build` does: on a
+      # cold simulator XCUITest took 82 s to set up and the first tap on a field took no focus.
+      - name: Warm the simulator up
+        env:
+          UDID: ${{ steps.simulator.outputs.udid }}
+        run: |
+          iosApp/scripts/simulator.sh launch "$UDID" \
+            iosApp/build/Build/Products/Debug-iphonesimulator/CoPlanly.app "$RUNNER_TEMP/warm-up"
 
       - name: The iPhone tour in dark, Increase Contrast and large text (XCUITest)
         id: tour-appearance
