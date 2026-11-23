@@ -125,9 +125,12 @@ private fun keyWindowRoot(): UIViewController? =
         .firstNotNullOfOrNull { it.keyWindow?.rootViewController }
 
 /**
- * A `UIDatePicker` presented as a sheet at the medium height, with a grabber, Cancel on the left of
- * its bar and Done on the right (MON-24 phase 3, part C, Task 3): what the shared date and time
- * dialogs are on the iPhone.
+ * A `UIDatePicker` presented as a sheet with a grabber, Cancel on the left of its bar and Done on the
+ * right (MON-24 phase 3, part C, Task 3): what the shared date and time dialogs are on the iPhone.
+ * The time wheels open at the medium height; the inline calendar opens [fullHeight], because a
+ * medium sheet is shorter than the calendar and UIKit then lays `UICalendarView` out again and again
+ * on the main thread, allocating as it goes, until the app stops answering (iOS 27 every time,
+ * iOS 26 now and then: the jump to a date hung at 3.6 GB, November 2026).
  *
  * It ends once, whichever way: Done reports the picker's value through [onDone] and then calls
  * [onClosed], as Material's dialogs call their confirm and then their dismiss; Cancel and a swipe
@@ -142,7 +145,8 @@ internal class PickerSheet(
     confirmLabel: String,
     dismissLabel: String,
     private val onDone: (NSDate) -> Unit,
-    private val onClosed: () -> Unit
+    private val onClosed: () -> Unit,
+    fullHeight: Boolean = false
 ) {
     /** Whether the sheet has ended, by any of its four ways. */
     var finished: Boolean = false
@@ -181,7 +185,13 @@ internal class PickerSheet(
         navigation = UINavigationController(rootViewController = content).also { sheet ->
             sheet.modalPresentationStyle = UIModalPresentationPageSheet
             sheet.sheetPresentationController?.let { controller ->
-                controller.detents = listOf(UISheetPresentationControllerDetent.mediumDetent())
+                controller.detents = listOf(
+                    if (fullHeight) {
+                        UISheetPresentationControllerDetent.largeDetent()
+                    } else {
+                        UISheetPresentationControllerDetent.mediumDetent()
+                    }
+                )
                 controller.prefersGrabberVisible = true
             }
             sheet.presentationController?.delegate = actions
@@ -274,7 +284,9 @@ internal fun dateSheet(
     confirmLabel = confirmLabel,
     dismissLabel = dismissLabel,
     onDone = { onConfirm(localDateOf(it)) },
-    onClosed = onDismiss
+    onClosed = onDismiss,
+    // The inline calendar is taller than a medium sheet (see PickerSheet).
+    fullHeight = true
 )
 
 /** A time sheet: wheels in time mode on the phone's own clock, opening on [initial]. */

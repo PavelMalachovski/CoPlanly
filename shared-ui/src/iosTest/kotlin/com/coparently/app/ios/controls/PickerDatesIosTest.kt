@@ -5,6 +5,10 @@ import kotlinx.datetime.LocalTime
 import platform.Foundation.NSTimeZone
 import platform.Foundation.defaultTimeZone
 import platform.Foundation.timeZoneWithName
+import platform.UIKit.UISheetPresentationControllerDetent
+import platform.UIKit.UISheetPresentationControllerDetentIdentifierLarge
+import platform.UIKit.UISheetPresentationControllerDetentIdentifierMedium
+import platform.UIKit.sheetPresentationController
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -126,6 +130,21 @@ class PickerDatesIosTest {
 
         assertEquals(emptyList(), picked)
     }
+
+    @Test
+    fun `the inline calendar opens full height and the time wheels at medium height`() {
+        // A medium sheet is shorter than the inline calendar, and UIKit then lays it out again and
+        // again until the app stops answering (iOS 27, November 2026).
+        val date = dateSheet(LocalDate(2026, 11, 1), "Done", "Cancel", onConfirm = {}, onDismiss = {})
+        val time = timeSheet(LocalTime(9, 0), "Done", "Cancel", onConfirm = {}, onDismiss = {})
+
+        assertEquals(listOf(UISheetPresentationControllerDetentIdentifierLarge), detentsOf(date))
+        assertEquals(listOf(UISheetPresentationControllerDetentIdentifierMedium), detentsOf(time))
+    }
+
+    private fun detentsOf(sheet: PickerSheet): List<String?> =
+        checkNotNull(sheet.navigation.sheetPresentationController).detents
+            .map { (it as UISheetPresentationControllerDetent).identifier }
 
     private companion object {
         const val LABEL = "Starts"

@@ -165,8 +165,31 @@ final class PushUITests: XCTestCase {
         if app.keyboards.firstMatch.exists { app.typeText("\n") }
         let signIn = app.buttons.matching(NSPredicate(format: "label == %@", "Sign In")).firstMatch
         XCTAssertTrue(signIn.waitForExistence(timeout: 10), "No Sign In button")
+        scrollWhollyIntoView(signIn)
         signIn.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         XCTAssertTrue(home.waitForExistence(timeout: 120), "No tab bar after signing in")
+    }
+
+    /// Scrolls the screen until [element] is drawn wholly above the bottom edge's home indicator. The
+    /// sign-in form ends with Sign In at the screen's bottom edge since Sign in with Apple joined it,
+    /// and a tap on the part the home indicator covers never reaches the button. A swipe leaves the
+    /// form flinging after XCUITest calls the app idle, and a tap during a fling only stops it, so this
+    /// waits until [element] stays put.
+    private func scrollWhollyIntoView(_ element: XCUIElement) {
+        let limit = app.windows.firstMatch.frame.maxY - 60
+        var swiped = false
+        for _ in 0..<4 where element.frame.maxY > limit {
+            app.swipeUp()
+            swiped = true
+        }
+        guard swiped else { return }
+        var last = element.frame
+        for _ in 0..<20 {
+            usleep(250_000)
+            let now = element.frame
+            if now == last { return }
+            last = now
+        }
     }
 
     /// A text field by its label, as `ShellUITests` finds Compose's fields.

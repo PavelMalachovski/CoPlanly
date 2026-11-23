@@ -54,6 +54,18 @@ final class ShellUITests: XCTestCase {
         super.record(issue)
     }
 
+    /// The jump-to-date sheet alone: sign in, open it from the month title, close it twice. A
+    /// short reproduction of the walk's "Jump to date" step for a local run (`simulator.sh jump-test`).
+    func testJumpToDate() throws {
+        let environment = ProcessInfo.processInfo.environment
+        let email = try XCTUnwrap(environment["COPLANLY_UITEST_EMAIL"], "No seeded account was handed to the test")
+        let password = try XCTUnwrap(environment["COPLANLY_UITEST_PASSWORD"])
+        app.launchEnvironment["COPLANLY_EMULATOR_HOST"] = "127.0.0.1"
+        app.launch()
+        try signIn(email: email, password: password)
+        try jumpToDateSwipeDown()
+    }
+
     func testShellWalk() throws {
         let environment = ProcessInfo.processInfo.environment
         let email = try XCTUnwrap(environment["COPLANLY_UITEST_EMAIL"], "No seeded account was handed to the test")
@@ -145,7 +157,9 @@ final class ShellUITests: XCTestCase {
         try type(email, into: field(labelled: "Email address"))
         try type(password, into: field(labelled: "Password"))
         dismissKeyboard()
-        press(try element(labelled: "Sign In", in: app.buttons))
+        let signInButton = try element(labelled: "Sign In", in: app.buttons)
+        scrollWhollyIntoView(signInButton)
+        press(signInButton)
         try require(app.tabBars.firstMatch.buttons["Home"].waitForExistence(timeout: 120), "No tab bar after signing in")
     }
 
@@ -1333,6 +1347,28 @@ final class ShellUITests: XCTestCase {
             usleep(500_000)
         }
         throw StepFailure(description: "Nothing on screen can be touched for \(what)")
+    }
+
+    /// Scrolls the screen until [element] is drawn wholly above the bottom edge's home indicator. The
+    /// sign-in form ends with Sign In at the screen's bottom edge since Sign in with Apple joined it,
+    /// and a tap on the part the home indicator covers never reaches the button. A swipe leaves the
+    /// form flinging after XCUITest calls the app idle, and a tap during a fling only stops it, so this
+    /// waits until [element] stays put.
+    private func scrollWhollyIntoView(_ element: XCUIElement) {
+        let limit = app.windows.firstMatch.frame.maxY - 60
+        var swiped = false
+        for _ in 0..<4 where element.frame.maxY > limit {
+            app.swipeUp()
+            swiped = true
+        }
+        guard swiped else { return }
+        var last = element.frame
+        for _ in 0..<20 {
+            usleep(250_000)
+            let now = element.frame
+            if now == last { return }
+            last = now
+        }
     }
 
     /// Taps [element] where it is drawn. Compose's elements are not always reported hittable, so a
