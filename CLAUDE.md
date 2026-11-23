@@ -398,7 +398,15 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     the skeleton shimmer — stands still under `rememberReducedMotion()`. **There is one splash,
     the system's** (`installSplashScreen` in `MainActivity`), held by `setKeepOnScreenCondition`
     until `startDestinationFor` no longer answers Loading, for at most `SPLASH_HOLD_MAX_MS`; the
-    branded Compose splash that followed it is gone, so don't add a second one. `MotionScheme`
+    branded Compose splash that followed it is gone, so don't add a second one. **The splash, the
+    app icon and the sign-in logo are one mark on both platforms** (owner decision, 23 November
+    2026; `docs/superpowers/specs/2026-11-23-family-brand-mark-design.md`): a calendar whose grid of
+    days is two adults holding a child by the hands, on the brand colour, with "coplanly." at the
+    bottom of both splash screens (Android's branding image, `values-v31/themes.xml`; the iPhone's
+    `LaunchScreen.storyboard`). Every copy is written by `tools/brand/generate-brand-assets.py`
+    from one drawing; change it there and rerun, never edit a generated file. The sign-in logo is
+    `Res.drawable.brand_mark` through `Image`, never an icon `AppIcon` may swap for an SF Symbol,
+    which is how the iPhone once showed a different logo there. `MotionScheme`
     is not set because material3 1.4 does not make it public — it is alpha with the rest of M3
     Expressive. Don't add a literal duration — pick a token, or add one here with its reason.
 12. **The chosen parent colour reaches every screen through one CompositionLocal** (UX-15,

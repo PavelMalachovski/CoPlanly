@@ -82,6 +82,16 @@ fun BrandHeader(
  */
 @Composable
 private fun Wordmark() {
+    BrandWordmark(MaterialTheme.typography.headlineSmallEmphasized)
+}
+
+/**
+ * "coplanly." set in Onest at [base]'s size: the letters in `onPrimaryContainer`, the full stop in
+ * `primary`. The header's wordmark and the sign-in screen's title are this one composable, and the
+ * two splash screens draw the same word as a picture (tools/brand/generate-brand-assets.py).
+ */
+@Composable
+internal fun BrandWordmark(base: TextStyle, modifier: Modifier = Modifier) {
     val ink = MaterialTheme.colorScheme.onPrimaryContainer
     val accent = MaterialTheme.colorScheme.primary
     CappedFontScale(max = WORDMARK_MAX_FONT_SCALE) {
@@ -90,9 +100,10 @@ private fun Wordmark() {
                 withStyle(SpanStyle(color = ink)) { append(stringResource(Res.string.brand_wordmark)) }
                 withStyle(SpanStyle(color = accent)) { append(".") }
             },
-            style = wordmarkStyle(MaterialTheme.typography.headlineSmallEmphasized, onestFontFamily()),
+            style = wordmarkStyle(base, onestFontFamily()),
             maxLines = 1,
-            softWrap = false
+            softWrap = false,
+            modifier = modifier
         )
     }
 }
