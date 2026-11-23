@@ -87,9 +87,9 @@
          rather than a literal percent beside arguments, which Compose Multiplatform would print as
          written (CLAUDE.md "Localization"). -->
     <string name="expenses_percent_sign" translatable="false">%</string>
-    <string name="expenses_split_shares_named">%1$s pays %2$d %5$s, %3$s pays %4$d %5$s</string>
-    <string name="expenses_split_shares_you_first">You pay %1$d %4$s, %2$s pays %3$d %4$s</string>
-    <string name="expenses_split_shares_you_second">%1$s pays %2$d %4$s, you pay %3$d %4$s</string>
+    <string name="expenses_split_shares_named">%1$s pays %2$d %5$s, %3$s pays %4$d %5$s</string>
+    <string name="expenses_split_shares_you_first">You pay %1$d %4$s, %2$s pays %3$d %4$s</string>
+    <string name="expenses_split_shares_you_second">%1$s pays %2$d %4$s, you pay %3$d %4$s</string>
     <string name="expenses_split_proposal_confirm">Confirm</string>
     <string name="expenses_split_proposal_decline">Decline</string>
     <string name="expenses_split_proposal_later">Later</string>

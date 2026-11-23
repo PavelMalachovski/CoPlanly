@@ -9,7 +9,7 @@
     <string name="support_none_title">Аліменти не погоджено</string>
     <string name="support_none_description">Запропонуйте суму, день місяця і хто платить. Це почне діяти, коли другий із батьків прийме пропозицію.</string>
     <string name="support_amount_line">%1$s на місяць</string>
-    <string name="support_terms_line">%1$d-го числа · платить %2$s · з: %3$s</string>
+    <string name="support_terms_line">%1$d-го числа · платить %2$s · з %3$s</string>
     <string name="support_proposal_body">%1$s на місяць, %2$d-го числа, платить %3$s.</string>
     <string name="support_waiting_title">Чекаємо на відповідь: %1$s</string>
     <string name="support_asks_title">Пропозиція аліментів від: %1$s</string>

@@ -82,7 +82,8 @@ class StringsParityTest {
         val arguments = arrayOf<Any>("Alice", 70, "Bob", 30, percent)
         val android = androidResources("en").getString(androidId(STRING, name)!!, *arguments)
         val compose = inLanguage("en") { getString(Res.allStringResources.getValue(name), *arguments) }
-        assertEquals("Alice pays 70 %, Bob pays 30 %", android)
+        // A no-break space before each sign keeps it with its number (text review, November 2026).
+        assertEquals("Alice pays 70\u00A0%, Bob pays 30\u00A0%", android)
         assertEquals(android, compose)
     }
 

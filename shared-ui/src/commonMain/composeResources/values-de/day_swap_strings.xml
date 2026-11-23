@@ -101,12 +101,12 @@
     <string name="day_swap_no">Nein</string>
     <string name="day_swap_by_day_back">Zurück</string>
     <plurals name="day_swap_heading_gives">
-        <item quantity="one">%1$s bietet dir %2$d Tag an</item>
-        <item quantity="other">%1$s bietet dir %2$d Tage an</item>
+        <item quantity="one">%1$s bietet dir %2$d Tag an</item>
+        <item quantity="other">%1$s bietet dir %2$d Tage an</item>
     </plurals>
     <plurals name="day_swap_heading_asks">
-        <item quantity="one">%1$s bittet um %2$d deiner Tage</item>
-        <item quantity="other">%1$s bittet um %2$d deiner Tage</item>
+        <item quantity="one">%1$s bittet um %2$d deiner Tage</item>
+        <item quantity="other">%1$s bittet um %2$d deiner Tage</item>
     </plurals>
     <string name="day_swap_day_to_you">%1$s → dir</string>
     <plurals name="day_swap_sheet_title_count">

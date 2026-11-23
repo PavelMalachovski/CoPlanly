@@ -86,6 +86,7 @@ import com.coparently.app.resources.split_request_now
 import com.coparently.app.resources.split_request_proposed
 import com.coparently.app.resources.split_request_title
 import com.coparently.app.utils.ReaderDateText
+import com.coparently.app.utils.unbreakableDate
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -189,7 +190,7 @@ internal fun StatusLine(waitingForYou: Boolean, coParentName: String) {
         RequestStatusChip(waitingForYou = waitingForYou, coParentName = coParentName)
         clock?.let(::responderDeadlineMillis)?.let { millis ->
             Text(
-                text = stringResource(Res.string.answer_by_fixed, ReaderDateText.answerBy(millis)),
+                text = stringResource(Res.string.answer_by_fixed, unbreakableDate(ReaderDateText.answerBy(millis))),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -417,21 +418,28 @@ internal fun requestTitle(item: InboxItem, ctx: HomeRequestsContext): String {
             swapOfferHeading(shown.sidesAsked(names), names.labelForUid(item.group.swaps.first().override.requestedBy))
         }
         is InboxItem.Request -> if (mine) {
-            item.request.eventTitle
+            dashKeptWithItsWord(item.request.eventTitle)
         } else {
             stringResource(
                 Res.string.home_request_change_title,
                 names.labelForUid(item.request.requestedBy),
-                item.request.eventTitle
+                dashKeptWithItsWord(item.request.eventTitle)
             )
         }
-        is InboxItem.AwaitingEvent -> item.event.title
+        is InboxItem.AwaitingEvent -> dashKeptWithItsWord(item.event.title)
         is InboxItem.Proposal -> stringResource(Res.string.custody_proposal_inbox_title)
         is InboxItem.Split -> stringResource(Res.string.split_request_title)
         is InboxItem.Support, is InboxItem.Professional, is InboxItem.Plan,
         is InboxItem.Header, is InboxItem.History -> ""
     }
 }
+
+/**
+ * [title] — a parent's own words — with the space before a dash made no-break, so a wrapped title
+ * never starts a line with the dash ("«Dentist" over "— Leo»", text review, November 2026).
+ */
+internal fun dashKeptWithItsWord(title: String): String =
+    title.replace(" \u2014", "\u00A0\u2014").replace(" \u2013", "\u00A0\u2013")
 
 /** What a request asks, under its title, in the inbox's words. */
 @Composable

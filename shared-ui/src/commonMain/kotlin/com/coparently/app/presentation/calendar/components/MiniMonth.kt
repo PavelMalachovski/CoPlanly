@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextAlign
@@ -193,12 +194,13 @@ private fun DayNumber(date: LocalDate, isToday: Boolean, inMonth: Boolean, marke
     }
     Box(
         modifier = Modifier
-            .defaultMinSize(minWidth = NUMBER_DISC, minHeight = NUMBER_DISC)
             .background(
                 color = if (isToday) MaterialTheme.colorScheme.primary else Color.Transparent,
                 shape = CircleShape
             )
-            .then(ring),
+            .then(ring)
+            .squareAroundContent()
+            .defaultMinSize(minWidth = NUMBER_DISC, minHeight = NUMBER_DISC),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -209,9 +211,21 @@ private fun DayNumber(date: LocalDate, isToday: Boolean, inMonth: Boolean, marke
                 !inMonth -> MaterialTheme.colorScheme.onSurface.copy(alpha = OUTSIDE_MONTH_NUMBER_ALPHA)
                 else -> MaterialTheme.colorScheme.onSurface
             },
-            modifier = Modifier.padding(horizontal = Spacing.XS)
+            modifier = Modifier.padding(Spacing.XS)
         )
     }
+}
+
+/**
+ * The disc and the ring a circle, as wide as the number and as tall as its line, whichever is more:
+ * at 150 % and 200 % a two-digit number's box was wider than tall, and the ring, drawn on it, became
+ * an oval whose stroke cut through the digits (text review, November 2026). At 100 % the number fits
+ * the 24 dp disc as before.
+ */
+private fun Modifier.squareAroundContent(): Modifier = layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints)
+    val side = maxOf(placeable.width, placeable.height)
+    layout(side, side) { placeable.place((side - placeable.width) / 2, (side - placeable.height) / 2) }
 }
 
 /**

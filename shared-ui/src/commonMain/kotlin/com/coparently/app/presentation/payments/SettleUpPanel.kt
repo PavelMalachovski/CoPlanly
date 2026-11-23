@@ -28,6 +28,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.money.DecimalText
 import com.coparently.app.domain.payment.Iban
@@ -37,6 +38,7 @@ import com.coparently.app.domain.payments.Payment
 import com.coparently.app.domain.time.IsoText
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.platform.LocalQrCodes
 import com.coparently.app.presentation.platform.LocalSensitiveClipboard
 import com.coparently.app.presentation.platform.LocalShareSheet
@@ -68,6 +70,7 @@ import com.coparently.app.resources.settle_up_share_chooser
 import com.coparently.app.resources.settle_up_share_qr
 import com.coparently.app.utils.ReaderDateText
 import com.coparently.app.utils.ReaderMoneyText
+import com.coparently.app.utils.unbreakableDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.stringResource
@@ -112,7 +115,7 @@ fun SettleUpPanel(
             is SettleUpPanelState.AskToSettle -> {
                 Note(stringResource(Res.string.payment_panel_not_settled, month))
                 Button(onClick = actions.onAskToSettle, enabled = actions.enabled) {
-                    Text(stringResource(Res.string.payment_panel_ask, coParentName))
+                    ButtonLabel(stringResource(Res.string.payment_panel_ask, coParentName))
                 }
             }
             is SettleUpPanelState.Pay -> {
@@ -125,12 +128,14 @@ fun SettleUpPanel(
                 StatusChip(PanelStatus.WAITING_FOR_YOU, coParentName)
                 val paidOn = paidOnText(state.paidAtMillis)
                 Title(
-                    paidOn?.let { stringResource(Res.string.payment_panel_says_paid, coParentName, amount, it) }
-                        ?: stringResource(Res.string.payment_paid_to_you_named, coParentName, amount)
+                    withoutDoubledFullStop(
+                        paidOn?.let { stringResource(Res.string.payment_panel_says_paid, coParentName, amount, it) }
+                            ?: stringResource(Res.string.payment_paid_to_you_named, coParentName, amount)
+                    )
                 )
                 Note(stringResource(Res.string.payment_panel_check_bank))
                 Button(onClick = { actions.onConfirm(state.payment) }, enabled = actions.enabled) {
-                    Text(stringResource(Res.string.payment_money_arrived))
+                    ButtonLabel(stringResource(Res.string.payment_money_arrived))
                 }
             }
             is SettleUpPanelState.Settled -> {
@@ -192,8 +197,10 @@ private fun WaitingForConfirm(
     StatusChip(PanelStatus.WAITING_FOR_THEM, coParentName)
     val paidOn = paidOnText(state.paidAtMillis)
     Title(
-        paidOn?.let { stringResource(Res.string.payment_panel_paid_on, amount, it, coParentName) }
-            ?: stringResource(Res.string.payment_waiting_named, amount, coParentName)
+        withoutDoubledFullStop(
+            paidOn?.let { stringResource(Res.string.payment_panel_paid_on, amount, it, coParentName) }
+                ?: stringResource(Res.string.payment_waiting_named, amount, coParentName)
+        )
     )
     // The code is not offered again unasked (25 October 2026), but a payer whose bank refused the
     // first transfer still needs it.
@@ -250,22 +257,53 @@ private fun PaymentCode(
     val chooser = stringResource(Res.string.settle_up_share_chooser)
     val canShare = qr != null && shareSheet.available
     if (!canShare && onMarkPaid == null) return
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.S, Alignment.End),
-        verticalArrangement = Arrangement.spacedBy(Spacing.S)
-    ) {
+    val buttons = buildList<@Composable (Modifier) -> Unit> {
         if (canShare && qr != null) {
-            OutlinedButton(onClick = { qrCodes.shareImage(qr, chooser) }) {
-                Text(stringResource(Res.string.settle_up_share_qr))
+            add { sized ->
+                OutlinedButton(onClick = { qrCodes.shareImage(qr, chooser) }, modifier = sized) {
+                    ButtonLabel(stringResource(Res.string.settle_up_share_qr))
+                }
             }
         }
         if (onMarkPaid != null) {
-            Button(onClick = onMarkPaid, enabled = enabled) {
-                Text(stringResource(Res.string.payment_i_paid))
+            add { sized ->
+                Button(onClick = onMarkPaid, enabled = enabled, modifier = sized) {
+                    ButtonLabel(stringResource(Res.string.payment_i_paid))
+                }
             }
         }
     }
+    PaymentButtons(buttons)
+}
+
+/**
+ * Share and "I paid" at the row's end, or, from font scale 1.3 ([stacksAtLargeFont]), one above
+ * the other at full width (text review, November 2026), so a German or Ukrainian label at 150 %
+ * neither breaks inside a word nor pushes "I paid" away. A button is never left out; the panel
+ * only changes where it sits.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun PaymentButtons(buttons: List<@Composable (Modifier) -> Unit>) {
+    if (stacksAtLargeFont()) {
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
+            buttons.forEach { button -> button(Modifier.fillMaxWidth()) }
+        }
+    } else {
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.S, Alignment.End),
+            verticalArrangement = Arrangement.spacedBy(Spacing.S)
+        ) {
+            buttons.forEach { button -> button(Modifier) }
+        }
+    }
+}
+
+/** A button's label, centred when it wraps inside a button wider than its lines. */
+@Composable
+private fun ButtonLabel(text: String) {
+    Text(text = text, textAlign = TextAlign.Center)
 }
 
 /**
@@ -284,7 +322,7 @@ private fun IbanRow(iban: String) {
         horizontalArrangement = Arrangement.spacedBy(Spacing.S),
         itemVerticalAlignment = Alignment.CenterVertically
     ) {
-        Text(Iban.grouped(iban), style = MaterialTheme.typography.bodyMedium)
+        Text(ibanText(Iban.grouped(iban)), style = MaterialTheme.typography.bodyMedium)
         if (clipboard.available) {
             TextButton(onClick = {
                 clipboard.copySensitive("IBAN", iban)
@@ -294,6 +332,18 @@ private fun IbanRow(iban: String) {
             }
         }
     }
+}
+
+/**
+ * [grouped] — an IBAN in groups of four — with its groups held together: on one line where it
+ * fits, else in two even halves ("CZ65 0800 0000" over "1920 0014 5399"), the one break being
+ * between them, so a group is never left alone on a line (text review, November 2026).
+ */
+internal fun ibanText(grouped: String): String {
+    val groups = grouped.split(' ').filter { it.isNotEmpty() }
+    val firstHalf = (groups.size + 1) / 2
+    val halves = listOf(groups.take(firstHalf), groups.drop(firstHalf)).filter { it.isNotEmpty() }
+    return halves.joinToString(" ") { half -> half.joinToString(NO_BREAK_SPACE) }
 }
 
 /**
@@ -323,6 +373,12 @@ private fun Title(text: String) {
     Text(text = text, style = MaterialTheme.typography.titleSmallEmphasized)
 }
 
+/**
+ * [text] without the doubled full stop a date abbreviated with its own ("22. 5.", "22 трав.")
+ * leaves where a sentence ends on it (text review, November 2026: "dne 22. 5..").
+ */
+internal fun withoutDoubledFullStop(text: String): String = text.replace("..", ".")
+
 @Composable
 private fun Note(text: String) {
     Text(
@@ -341,8 +397,10 @@ private fun panelAmount(state: SettleUpPanelState): String {
 /** The day [paidAtMillis] fell on, on this phone's calendar ("22 Nov"), or null while unknown. */
 private fun paidOnText(paidAtMillis: Long?): String? = paidAtMillis?.let { millis ->
     val day = Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.currentSystemDefault()).date
-    ReaderDateText.date(day, "dMMM")
+    unbreakableDate(ReaderDateText.date(day, "dMMM"))
 }
+
+private const val NO_BREAK_SPACE = "\u00A0"
 
 private val QR_SIZE = 200.dp
 private val QR_QUIET_ZONE = 12.dp
