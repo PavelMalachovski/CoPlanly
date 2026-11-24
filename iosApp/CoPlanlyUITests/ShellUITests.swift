@@ -348,7 +348,7 @@ final class ShellUITests: XCTestCase {
 
     /// The Calendar tab leads with its header (MON-24 phase 3, part C, Task 8; calendar K1), under no
     /// navigation bar: the month with its year, "?" (what the colours mean, with Filters under it)
-    /// and Settings, then the month card, whose own bar holds the M | W | D control, Today and "+".
+    /// and Settings, then the month card, whose own bar holds the "Month ▾" pop-up button, Today and "+".
     private func calendarHeader() throws {
         try goToCalendarRoot()
         try require(calendarHeading.waitForExistence(timeout: 60), "The calendar does not lead with \(calendarMonthTitle)")
@@ -358,7 +358,18 @@ final class ShellUITests: XCTestCase {
             let button = app.buttons.matching(NSPredicate(format: "label == %@", label)).firstMatch
             try require(button.exists, "The calendar has no \(label) button in content")
         }
-        try require(element(labelledContaining: "Week").exists, "The Month/Week/Day control is missing")
+        try require(viewButton.exists, "The calendar's view button (\"View: Month\") is missing")
+    }
+
+    /// The grid card's view button, the system's pop-up button that reads "View: Month" (24 November
+    /// 2026; the "M | W | D" segments before it).
+    private var viewButton: XCUIElement {
+        app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "View:")).firstMatch
+    }
+
+    /// The view button once it reads [name]: "View: Week".
+    private func viewButton(reading name: String) -> XCUIElement {
+        app.buttons.matching(NSPredicate(format: "label == %@", "View: \(name)")).firstMatch
     }
 
     /// The calendar's heading, the month title that leads its header (calendar K1).
@@ -693,13 +704,10 @@ final class ShellUITests: XCTestCase {
         try goToCalendarRoot()
         // The step before left Day view open (opened from a month cell): a tap on the Calendar tab
         // opens Month on today (`CalendarTabTaps`), and its bar, which Day view's Back needed, goes.
-        // The control's segments are letters since calendar K1: "M", "W", "D".
-        let month = app.segmentedControls.buttons["M"]
+        // The view button reads the view: "View: Month".
+        let month = viewButton(reading: "Month")
         // The shell logs what it saw of the tap (COPLANLY_TABTAP); the job prints those lines.
-        try require(
-            month.waitForExistence(timeout: timeout) && waitUntilSelected(month),
-            "A tap on the Calendar tab did not return Day view to Month"
-        )
+        try require(month.waitForExistence(timeout: timeout), "A tap on the Calendar tab did not return Day view to Month")
         try require(waitForNoNavigationBar(), "The Calendar's Month still shows a navigation bar")
         let edit = app.buttons.matching(NSPredicate(format: "label == %@", "Edit")).firstMatch
         // A failure leaves no preview over the tab bar, so the steps after it start from a tab.
@@ -714,12 +722,6 @@ final class ShellUITests: XCTestCase {
         }
     }
 
-    /// Waits a little for [element] to read as selected.
-    private func waitUntilSelected(_ element: XCUIElement) -> Bool {
-        let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == 1"), object: element)
-        return XCTWaiter().wait(for: [selected], timeout: 10) == .completed
-    }
-
     /// Waits a little for no navigation bar to be drawn (one leaving may still be animating away).
     private func waitForNoNavigationBar() -> Bool {
         let noBar = XCTNSPredicateExpectation(predicate: NSPredicate(format: "count == 0"), object: app.navigationBars)
@@ -732,15 +734,18 @@ final class ShellUITests: XCTestCase {
         try openPreview(of: deleteCheckTitle, edit: edit)
 
         let title = try previewTitle(above: edit)
-        let control = app.segmentedControls.buttons["W"]
-        try require(control.exists, "The calendar's Month/Week/Day is not above the preview sheet")
+        let control = viewButton
+        try require(control.exists, "The calendar's view button is not above the preview sheet")
         try require(control.frame.maxY < title.frame.minY, "The preview sheet covers the calendar's top")
         shot("17d-event-preview-sheet")
         // In reach means a tap on it works: `isHittable` reads false for every element under an
-        // undimmed sheet's pass-through container (run 10), so the segment is tapped where it is
-        // drawn and must then read as selected; the calendar shows Week under the sheet.
+        // undimmed sheet's pass-through container (run 10), so the button is tapped where it is
+        // drawn, its menu must open and Week must then be the view under the sheet.
         control.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-        try require(waitUntilSelected(control), "The calendar above the preview sheet is out of reach")
+        let week = app.buttons.matching(NSPredicate(format: "label == %@", "Week")).firstMatch
+        try require(week.waitForExistence(timeout: timeout), "The calendar above the preview sheet is out of reach")
+        week.tap()
+        try require(viewButton(reading: "Week").waitForExistence(timeout: timeout), "Week did not take over the calendar")
         shot("17d2-event-preview-sheet-week-tapped")
         // Looked up again: the calendar under the sheet changed, and with it the elements' order.
         // (The week's events load anew, so the sheet may have gone and come back meanwhile.)
@@ -1496,7 +1501,7 @@ final class ShellUITests: XCTestCase {
         "parenting_plan", "export?thread={thread}&family={family}", "month_review", "unassigned_records",
         "family_documents?family={family}", "support", "earlier_families", "earlier_family/{familyId}",
         "journal", "stickers", "journal_entry/{entryId}", "child_info", "child_detail/{childInfoId}",
-        "edit_child_info/{childInfoId}", "pets", "edit_pet/{petId}",
+        "edit_child_info/{childInfoId}", "pets", "pet_detail/{petId}", "edit_pet/{petId}",
         "pairing?code={code}&enter={enter}&unpair={unpair}", "guest_accept?code={code}", "custody_conflict",
         "school_import", "school_connect?connectionId={connectionId}", "calendar_feed", "data_sources",
         "friends", "friend_detail/{friendUid}", "friend_profile", "friend_calendar/{familyId}",
@@ -1510,7 +1515,7 @@ final class ShellUITests: XCTestCase {
     /// after the destinations, shot as `tour-control-…`. They are not routes: the summary counts
     /// them apart, and one the tour cannot show is skipped with the reason, as a route is.
     private let tourControls = [
-        "control-switch", "control-segment", "control-date-sheet", "control-option-menu",
+        "control-switch", "control-view-menu", "control-date-sheet", "control-option-menu",
         "control-action-sheet", "control-preview-sheet", "control-paste",
     ]
 
@@ -1796,9 +1801,15 @@ final class ShellUITests: XCTestCase {
             try self.tourOpen(containing: "Emma", from: nil)
             try self.tourOpenSheet(labelled: "Edit")
         }
+        // A pet opens its own screen first, then its editor, as a child does (24 November 2026).
+        tourVisit("pet_detail/{petId}") {
+            try self.tourFamilyRow("Pets")
+            try self.tourOpen(containing: "Max", from: nil)
+        }
         tourVisit("edit_pet/{petId}") {
             try self.tourFamilyRow("Pets")
-            try self.tourOpenSheet(containing: "Max")
+            try self.tourOpen(containing: "Max", from: nil)
+            try self.tourOpenSheet(labelled: "Edit")
         }
         tourVisit("journal_entry/{entryId}") {
             try self.tourFamilyRow("Private journal")
@@ -1867,13 +1878,16 @@ final class ShellUITests: XCTestCase {
             self.shot("tour-control-switch-on")
             toggle.tap()
         }
-        // A segmented control: the calendar's Month/Week/Day, with Week chosen.
-        tourVisit("control-segment") {
+        // A pop-up button: the calendar's view, its menu open, then Week chosen.
+        tourVisit("control-view-menu") {
             try self.tourTab("Calendar")
-            let week = self.app.segmentedControls.buttons["W"]
-            try self.require(week.waitForExistence(timeout: 8), "The calendar's Month/Week/Day is not a segmented control")
+            try self.require(self.viewButton.waitForExistence(timeout: 8), "The calendar has no view button")
+            self.press(self.viewButton)
+            let week = self.app.buttons.matching(NSPredicate(format: "label == %@", "Week")).firstMatch
+            try self.require(week.waitForExistence(timeout: 8), "The view button opened no menu")
+            self.shot("tour-control-view-menu-open")
             week.tap()
-            try self.require(week.isSelected, "Week did not select")
+            try self.require(self.viewButton(reading: "Week").waitForExistence(timeout: 8), "Week did not select")
         }
         // The date sheet: "Jump to date", the inline calendar at half the screen.
         tourVisit("control-date-sheet") {

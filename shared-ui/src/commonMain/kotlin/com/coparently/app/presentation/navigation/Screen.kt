@@ -277,6 +277,15 @@ sealed class Screen(val route: String) {
         }
     }
 
+    /** One pet's read-only record, between the pets list and the editor (24 November 2026). */
+    data object PetDetail : Screen("pet_detail/{petId}") {
+        const val ARG_PET_ID = "petId"
+
+        fun createRoute(petId: String): String {
+            return "pet_detail/$petId"
+        }
+    }
+
     data object EditPet : Screen("edit_pet/{petId}") {
         const val ARG_PET_ID = "petId"
 

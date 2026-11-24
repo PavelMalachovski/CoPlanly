@@ -8,6 +8,13 @@
     <string name="pets_group_label">Питомцы</string>
     <string name="pets_empty_state">Питомцев пока нет</string>
 
+    <!-- One pet's own screen, between the list and the editor (24 November 2026). %1$s = a date; %1$s, %2$s = a medication's dosage and frequency. -->
+    <string name="pet_edit">Изменить</string>
+    <string name="pet_dob_value">Дата рождения: %1$s</string>
+    <string name="pet_medication_summary">%1$s — %2$s</string>
+    <string name="pet_record_gone_title">Эта запись больше не существует</string>
+    <string name="pet_record_gone_description">Её удалили на этом телефоне или на телефоне второго родителя.</string>
+
     <!-- Editor -->
     <string name="pet_title_add">Добавить питомца</string>
     <string name="pet_title_edit">Изменить питомца</string>

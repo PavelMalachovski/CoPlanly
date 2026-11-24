@@ -104,16 +104,22 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
      `scheduleChangeMonth`) is how a custody proposal is drawn there and in Home's proposal pop-up: a
      Proposed | Now switch (`AdaptiveSegmented`) and each changed day ringed in the colour of whom it
      goes to. No count of days or nights per parent.
-   - `HeadingLines` (`common/HeadingLines.kt`) is "Together, for" over the children's names and a
-     heart, both lines in one regular weight (`bodyLarge`, `onSurface`), nothing with no children.
+   - `HeadingLines` (`common/HeadingLines.kt`) is "Together, for" over the children's and then the
+     pets' names (the avatars' list, `FamilyMember`; owner, 24 November 2026: the family's dog
+     belongs there too) and a heart, both lines in one regular weight (`bodyLarge`, `onSurface`),
+     nothing with neither.
      The two lines are cut from the one translated `calendar_together_for` at its placeholder
      (`togetherForLines`); "Your family calendar" left on 24 November 2026 (owner, on the phone).
      Home draws it under the wordmark; don't give a screen its own copy.
    - `AppHeaderRow` with `FamilyAvatarsAndGear` (`common/FamilyAvatars.kt`) is the first row of Home
      and of the Calendar: one height (`APP_HEADER_HEIGHT`, 56 dp) and one padding, then the
-     children's and pets' avatars (30 dp in a 2 dp ring, in 40 dp slots overlapping by 12 dp, at most
-     three slots) and the gear. **The avatars and the gear stand still between the two tabs** (owner,
-     24 November 2026): don't give either screen its own avatars, size, padding or gear. On the
+     children's and pets' avatars (36 dp in a 2 dp ring, which fills its 40 dp slot, the slots
+     overlapping by 12 dp, at most three slots; a pet shows its first photo, `PetAvatar`) and the
+     gear as a 40 dp disc in the icon button's touch target (`SettingsDisc`). The avatars were 30 dp
+     until 24 November 2026 (owner: larger, as long as nothing moves): growing inside the slot is
+     what keeps the row's width, so don't widen a slot to grow them further. **The avatars and the
+     gear stand still between the two tabs** (owner, 24 November 2026): don't give either screen its
+     own avatars, size, padding or gear. On the
      Calendar, from two members, each avatar toggles the member filter; otherwise they only show,
      with "+n" in the third slot.
 
@@ -177,7 +183,7 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    Android draws what it drew, and the screenshot baselines hold it. Four things not to undo.
    **Text is SF Pro, the wordmark Onest**: `CoPlanlyTheme`'s scale takes `appFontFamily()` (Onest
    on Android, `FontFamily.Default` on the iPhone, which Compose Multiplatform draws in SF Pro), and
-   `BrandHeader` sets its "coplanly." through `wordmarkStyle(…, onestFontFamily())`, so it stays
+   `BrandHeader` sets its "CoPlanly" through `wordmarkStyle(…, onestFontFamily())`, so it stays
    Onest Bold on both. **Every icon is drawn through `AppIcon`** (`common/AppIcon.kt`, an `expect`
    with material3 `Icon`'s parameters; on Android exactly that `Icon` call): `AppIconGuardTest`
    refuses Material's `Icon` called or imported in `commonMain`. On the iPhone `AppIcon` looks the
@@ -245,11 +251,13 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    2026: from 1.3 the avatars and the gear used to take a line under the title, which read unevenly
    and moved them against Home's). The header is tight on purpose (tester feedback, 12 November 2026):
    every dp it gives up goes to the grid. **The grid card's bar** (`CalendarMonthBar` in
-   `CalendarGridCard`) holds the Month | Week | Day control as letters ("M | W | D",
-   `AdaptiveSegmented`, each segment named in full for TalkBack), Today as an outlined **text**
+   `CalendarGridCard`) holds the view written out in full, "Month ▾", a button whose menu lists
+   Month, Week and Day with the current one checked (owner, 24 November 2026; the "M | W | D" letters
+   before it read as initials; `ViewModeControl`, named "View: Month" for TalkBack), Today as an
+   outlined **text**
    button — never an icon, which testers did not understand — the swap button and the "+" for a new
    event. **There are no arrows**: months page by swipe, and so do weeks and days. The bar wraps
-   rather than cuts at a large font, the actions going under the control. **The "+" is the bar's,
+   rather than cuts at a large font, the actions going under the view button. **The "+" is the bar's,
    not a floating button** (tester feedback, 12 November 2026): once the six rows reached the
    card's bottom a floating "+" covered the last row's cells. The Scaffold's floating slot holds only
    the red delete button a long press or a drag brings up. **What K1 took off the calendar stays
@@ -261,8 +269,8 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    same header leads the screen, with no system bar over it** (MON-24 phase 3, part C, reversing
    part B's month-titled bar; `components/CalendarTopBar.kt`): the Calendar and Home roots hand the
    shell a `ScreenBar(hidden = true)` (`StackHost.HIDDEN_BAR_ROUTES`), so the month header, the
-   card's bar (the control a `UISegmentedControl`, whose letters VoiceOver reads as letters, so the
-   control as a whole is named in full) and, while days are chosen, `SwapSelectionHeader` are all
+   card's bar (the view button the system's pop-up button, `NativeControls.MenuButton`, its
+   `UIMenu` the three views) and, while days are chosen, `SwapSelectionHeader` are all
    drawn in content, under the status bar; a screen pushed over them gets its system bar back.
    School vacation is neither a banner (it changed the grid's height between months) nor the old
    teal strip: since MON-13 it is a thin neutral line along each vacation day's bottom edge
@@ -423,8 +431,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     branded Compose splash that followed it is gone, so don't add a second one. **The splash, the
     app icon and the sign-in logo are one mark on both platforms** (owner decision, 23 November
     2026; `docs/superpowers/specs/2026-11-23-family-brand-mark-design.md`): a calendar whose grid of
-    days is two adults holding a child by the hands, on the brand colour, with "coplanly." at the
-    bottom of both splash screens (Android's branding image, `values-v31/themes.xml`; the iPhone's
+    days is two adults holding a child by the hands, on the brand colour, with "CoPlanly" (Onest Bold,
+    white; "coplanly." with a lavender full stop until 24 November 2026) at the bottom of both splash
+    screens (Android's branding image, `values-v31/themes.xml`; the iPhone's
     `LaunchScreen.storyboard`). Every copy is written by `tools/brand/generate-brand-assets.py`
     from one drawing; change it there and rerun, never edit a generated file. The sign-in logo is
     `Res.drawable.brand_mark` through `Image`, never an icon `AppIcon` may swap for an SF Symbol,

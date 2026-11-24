@@ -47,6 +47,7 @@ import com.coparently.app.presentation.onboarding.OnboardingScreen
 import com.coparently.app.presentation.pairing.PairingScreen
 import com.coparently.app.presentation.parentingplan.ParentingPlanScreen
 import com.coparently.app.presentation.pets.AddEditPetScreen
+import com.coparently.app.presentation.pets.PetDetailScreen
 import com.coparently.app.presentation.pets.PetsScreen
 import com.coparently.app.presentation.review.MonthReviewScreen
 import com.coparently.app.presentation.settings.SettingsScreen
@@ -179,6 +180,7 @@ object AppDestinationCatalog {
         Screen.ChildDetail.route to DestinationKind.PUSH,
         Screen.EditChildInfo.route to DestinationKind.FORM,
         Screen.Pets.route to DestinationKind.PUSH,
+        Screen.PetDetail.route to DestinationKind.PUSH,
         Screen.EditPet.route to DestinationKind.FORM,
         Screen.Pairing.route to DestinationKind.PUSH,
         Screen.GuestAccept.route to DestinationKind.PUSH,
@@ -724,9 +726,10 @@ internal fun appDestinations(
         )
     },
 
-    // The child's own record. A third level rather than the two Pets uses: the summary
-    // here carries medical photos, the medical profile and the guest-access group, none
-    // of which belong in a form.
+    // The child's own record, a third level between the list and the editor: the summary
+    // here carries the portrait, medical photos, the medical profile and the guest-access
+    // group, none of which belong in a form. Pets have the same three levels since
+    // 24 November 2026.
     destination(
         route = Screen.ChildDetail.route,
         arguments = listOf(
@@ -765,8 +768,9 @@ internal fun appDestinations(
         )
     },
 
-    // Pets: a list screen plus its editor, both detail routes (bottom bar hidden),
-    // mirroring the ChildInfo pair above.
+    // Pets: the list, one pet's own record and its editor, all detail routes (bottom bar
+    // hidden), the same three levels as the children above (24 November 2026, owner: "the
+    // pet screen like the child's").
     destination(
         route = Screen.Pets.route,
         transitions = DestinationTransitions.PUSH
@@ -775,6 +779,28 @@ internal fun appDestinations(
             onNavigateBack = { navController.popBackStack() },
             onEditPet = { petId ->
                 navController.navigate(Screen.EditPet.createRoute(petId))
+            },
+            onOpenPet = { petId ->
+                navController.navigate(Screen.PetDetail.createRoute(petId))
+            }
+        )
+    },
+
+    destination(
+        route = Screen.PetDetail.route,
+        arguments = listOf(
+            navArgument(Screen.PetDetail.ARG_PET_ID) {
+                type = NavType.StringType
+            }
+        ),
+        transitions = DestinationTransitions.PUSH
+    ) { backStackEntry ->
+        val petId = backStackEntry.stringArgument(Screen.PetDetail.ARG_PET_ID).orEmpty()
+        PetDetailScreen(
+            petId = petId,
+            onNavigateBack = { navController.popBackStack() },
+            onEditClick = { id ->
+                navController.navigate(Screen.EditPet.createRoute(id))
             }
         )
     },

@@ -28,6 +28,7 @@ import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ErrorState
 import com.coparently.app.presentation.common.GroupLabel
+import com.coparently.app.presentation.common.PetAvatar
 import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
@@ -47,7 +48,8 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * The pets list: one row per pet, tapping opens the editor, the FAB adds a new one.
+ * The pets list: one row per pet, led by its photo, tapping opens the pet's own screen
+ * ([PetDetailScreen], 24 November 2026), the FAB adds a new one in the editor.
  *
  * This comment used to say the child screen showed only the first record, "a documented
  * limitation". That stopped being true when `ChildInfoScreen` became a genuine list, and the
@@ -56,6 +58,7 @@ import org.koin.compose.viewmodel.koinViewModel
  *
  * @param onNavigateBack Callback for navigation back
  * @param onEditPet Opens the editor for a pet id (or "new")
+ * @param onOpenPet Opens one pet's own screen, by id
  * @param viewModel ViewModel for managing pets
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,6 +66,7 @@ import org.koin.compose.viewmodel.koinViewModel
 fun PetsScreen(
     onNavigateBack: () -> Unit,
     onEditPet: (String) -> Unit,
+    onOpenPet: (String) -> Unit,
     viewModel: PetsViewModel = koinViewModel()
 ) {
     val haptic = LocalHapticFeedback.current
@@ -101,46 +105,62 @@ fun PetsScreen(
             }
         }
     ) { paddingValues ->
-        Box(
+        PetsContent(
+            state = uiState,
+            onRetry = viewModel::loadPets,
+            onAddPet = addPet,
+            onOpenPet = onOpenPet,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-        ) {
-            when (val state = uiState) {
-                is PetsUiState.Loading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                }
-                is PetsUiState.Error -> {
-                    ErrorState(
-                        message = state.message.asString(),
-                        onRetry = viewModel::loadPets,
+        )
+    }
+}
+
+/** The list, or what stands in for it: a spinner while loading, the error with Retry, or the empty state. */
+@Composable
+private fun PetsContent(
+    state: PetsUiState,
+    onRetry: () -> Unit,
+    onAddPet: () -> Unit,
+    onOpenPet: (String) -> Unit,
+    modifier: Modifier
+) {
+    Box(modifier = modifier) {
+        when (state) {
+            is PetsUiState.Loading -> {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            }
+            is PetsUiState.Error -> {
+                ErrorState(
+                    message = state.message.asString(),
+                    onRetry = onRetry,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+            is PetsUiState.Success -> {
+                if (state.pets.isEmpty()) {
+                    EmptyState(
+                        icon = Icons.Default.Pets,
+                        title = stringResource(Res.string.pets_empty_state),
+                        actionLabel = stringResource(Res.string.pets_add),
+                        onAction = onAddPet,
                         modifier = Modifier.fillMaxSize()
                     )
-                }
-                is PetsUiState.Success -> {
-                    if (state.pets.isEmpty()) {
-                        EmptyState(
-                            icon = Icons.Default.Pets,
-                            title = stringResource(Res.string.pets_empty_state),
-                            actionLabel = stringResource(Res.string.pets_add),
-                            onAction = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onEditPet("new")
-                            },
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                        PetsList(pets = state.pets, onEditPet = onEditPet)
-                    }
+                } else {
+                    PetsList(pets = state.pets, onOpenPet = onOpenPet)
                 }
             }
         }
     }
 }
 
-/** One row per pet: name as the title, species (and breed when known) as the summary line. */
+/**
+ * One row per pet: its round photo (or its initial) leading, the name as the title, species (and
+ * breed when known) as the summary line. A tap opens the pet's own screen, as a child's row does.
+ */
 @Composable
-private fun PetsList(pets: List<Pet>, onEditPet: (String) -> Unit) {
+private fun PetsList(pets: List<Pet>, onOpenPet: (String) -> Unit) {
     val haptic = LocalHapticFeedback.current
     LazyColumn(
         modifier = Modifier
@@ -154,15 +174,13 @@ private fun PetsList(pets: List<Pet>, onEditPet: (String) -> Unit) {
                 GroupLabel(stringResource(Res.string.pets_group_label))
                 SectionGroup {
                     pets.forEachIndexed { index, pet ->
-                        val species = stringResource(pet.species.labelRes())
                         SectionRow(
-                            icon = Icons.Default.Pets,
+                            leading = { PetAvatar(pet, LIST_AVATAR_SIZE) },
                             title = pet.name,
-                            supporting = pet.breed?.takeIf { it.isNotBlank() }
-                                ?.let { "$species · $it" } ?: species,
+                            supporting = petSummary(pet),
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onEditPet(pet.id)
+                                onOpenPet(pet.id)
                             }
                         )
                         if (index != pets.lastIndex) Divider()
@@ -172,3 +190,13 @@ private fun PetsList(pets: List<Pet>, onEditPet: (String) -> Unit) {
         }
     }
 }
+
+/** The pet's species, and its breed after it when one is known ("Dog · Beagle"). */
+@Composable
+internal fun petSummary(pet: Pet): String {
+    val species = stringResource(pet.species.labelRes())
+    return pet.breed?.takeIf { it.isNotBlank() }?.let { "$species · $it" } ?: species
+}
+
+/** Diameter of a pet's photo at the start of its row on the list. */
+private val LIST_AVATAR_SIZE = 40.dp

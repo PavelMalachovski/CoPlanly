@@ -22,8 +22,8 @@ import com.coparently.app.resources.calendar_together_for
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * "Together, for" over the children's names and a heart, under Home's wordmark; nothing with no
- * children.
+ * "Together, for" over the children's and pets' names and a heart, under Home's wordmark; nothing
+ * with neither.
  *
  * "Your family calendar" led these lines until 24 November 2026 (owner, on the phone: the header
  * read unevenly), and the names now take a line of their own, in the same type as the line above
@@ -31,13 +31,14 @@ import org.jetbrains.compose.resources.stringResource
  * placeholder ([togetherForLines]), so no language needs a second string; a language whose names do
  * not end the sentence keeps it on one line.
  *
- * @param childNames The family on screen's children's names, in display order
+ * @param names The family on screen's children and then pets, as the avatars beside them name them
+ *   (owner, 24 November 2026: the family's dog belongs in "Together, for" too)
  * @param modifier Modifier for the column
  */
 @Composable
-fun HeadingLines(childNames: List<String>, modifier: Modifier = Modifier) {
-    val names = childrenList(childNames, stringResource(Res.string.calendar_names_and)) ?: return
-    val lines = togetherForLines(stringResource(Res.string.calendar_together_for, NAMES_MARK), names)
+fun HeadingLines(names: List<String>, modifier: Modifier = Modifier) {
+    val joined = childrenList(names, stringResource(Res.string.calendar_names_and)) ?: return
+    val lines = togetherForLines(stringResource(Res.string.calendar_together_for, NAMES_MARK), joined)
     val style = MaterialTheme.typography.bodyLarge
     val color = MaterialTheme.colorScheme.onSurface
     Column(

@@ -109,9 +109,10 @@ class MainNavigationSmokeTest {
         )
         for (mode in views) {
             chooseCalendarView(mode)
-            composeTestRule.onAllNodes(hasContentDescription(string(mode)) and hasClickAction() and isMenuItem())
+            // The button names the chosen view once its menu has closed: "View: Week".
+            composeTestRule.onAllNodes(hasContentDescription(viewButtonLabel(mode)) and hasClickAction())
                 .onFirst()
-                .assertIsSelected()
+                .assertIsDisplayed()
             composeTestRule.onNode(bottomBar).assertIsDisplayed()
         }
 
@@ -217,12 +218,21 @@ class MainNavigationSmokeTest {
     }
 
     private fun chooseCalendarView(@StringRes mode: Int) {
-        // The grid card's segmented M | W | D control, its letters named in full (calendar K1).
-        composeTestRule.onAllNodes(hasContentDescription(string(mode)) and hasClickAction() and isMenuItem())
+        // The grid card's "Month ▾" button opens a menu of the three views (24 November 2026).
+        composeTestRule.onAllNodes(
+            hasContentDescription("${string(R.string.calendar_viewmode_label)}: ", substring = true) and
+                hasClickAction() and isMenuItem()
+        ).onFirst().performClick()
+        composeTestRule.settle()
+        composeTestRule.onAllNodes(hasContentDescription(string(mode)) and hasClickAction())
             .onFirst()
             .performClick()
         composeTestRule.settle()
     }
+
+    /** What the view button reads once [mode] is chosen: "View: Week". */
+    private fun viewButtonLabel(@StringRes mode: Int): String =
+        "${string(R.string.calendar_viewmode_label)}: ${string(mode)}"
 
     private fun openSettingsFromHome() {
         openTab(BottomNavDestination.HOME)

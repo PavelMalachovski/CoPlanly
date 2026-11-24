@@ -11,6 +11,7 @@ import com.coparently.app.resources.Res
 import com.coparently.app.resources.pets_delete_failed
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -196,9 +197,116 @@ class PetsViewModelTest {
         assertEquals(PetsUiState.Error(UiText.Res(Res.string.pets_delete_failed)), vm.uiState.value)
     }
 
+    @Test
+    fun `a new portrait goes first and is saved before the old first object is deleted`() = runTest(dispatcher) {
+        every { authService.getCurrentUid() } returns signedIn
+        coEvery { photoStorage.upload(RecordPhotoKind.PET, "p1", FAMILY, "content://x") } returns REF_C
+        coEvery { photoStorage.delete(REF_A, FAMILY) } returns Unit
+        coEvery { petRepository.getPetById("p1") } returns rex.copy(photos = listOf(REF_A, REF_B))
+        val vm = viewModel()
+
+        vm.setPhoto(rex.copy(photos = listOf(REF_A, REF_B)), "content://x")
+        advanceUntilIdle()
+
+        coVerifyOrder {
+            photoStorage.upload(RecordPhotoKind.PET, "p1", FAMILY, "content://x")
+            petRepository.upsertPet(match { it.photos == listOf(REF_C, REF_B) })
+            photoStorage.delete(REF_A, FAMILY)
+        }
+    }
+
+    @Test
+    fun `a first portrait lands on the record as it stands after the upload`() = runTest(dispatcher) {
+        every { authService.getCurrentUid() } returns signedIn
+        coEvery { photoStorage.upload(any(), any(), any(), any()) } returns REF_C
+        coEvery { petRepository.getPetById("p1") } returns rex.copy(name = "Rex edited")
+        val saved = slot<Pet>()
+        coEvery { petRepository.upsertPet(capture(saved)) } returns Unit
+        val vm = viewModel()
+
+        vm.setPhoto(rex, "content://x")
+        advanceUntilIdle()
+
+        assertEquals(listOf(REF_C), saved.captured.photos)
+        assertEquals("Rex edited", saved.captured.name)
+        coVerify(exactly = 0) { photoStorage.delete(any(), any()) }
+    }
+
+    @Test
+    fun `a portrait whose save failed is deleted again`() = runTest(dispatcher) {
+        every { authService.getCurrentUid() } returns null
+        coEvery { photoStorage.upload(any(), any(), any(), any()) } returns REF_C
+        coEvery { photoStorage.delete(REF_C, FAMILY) } returns Unit
+        coEvery { petRepository.getPetById("p1") } returns rex.copy(photos = listOf(REF_A))
+        val vm = viewModel()
+
+        vm.setPhoto(rex.copy(photos = listOf(REF_A)), "content://x")
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { photoStorage.delete(REF_C, FAMILY) }
+        coVerify(exactly = 0) { photoStorage.delete(REF_A, any()) }
+    }
+
+    @Test
+    fun `a failed portrait upload changes nothing`() = runTest(dispatcher) {
+        coEvery { photoStorage.upload(any(), any(), any(), any()) } throws IllegalStateException("rules")
+        val vm = viewModel()
+
+        vm.setPhoto(rex.copy(photos = listOf(REF_A)), "content://x")
+        advanceUntilIdle()
+
+        assertEquals(PetPhotoError.UPLOAD_FAILED, vm.photoError.value)
+        coVerify(exactly = 0) { petRepository.upsertPet(any()) }
+    }
+
+    @Test
+    fun `removing the portrait deletes its object then saves the other photos`() = runTest(dispatcher) {
+        every { authService.getCurrentUid() } returns signedIn
+        coEvery { photoStorage.delete(REF_A, FAMILY) } returns Unit
+        coEvery { petRepository.getPetById("p1") } returns rex.copy(photos = listOf(REF_A, REF_B))
+        val vm = viewModel()
+
+        vm.removePhoto(rex.copy(photos = listOf(REF_A, REF_B)))
+        advanceUntilIdle()
+
+        coVerifyOrder {
+            photoStorage.delete(REF_A, FAMILY)
+            petRepository.upsertPet(match { it.photos == listOf(REF_B) })
+        }
+    }
+
+    @Test
+    fun `a failed delete on removal keeps the portrait`() = runTest(dispatcher) {
+        coEvery { photoStorage.delete(any(), any()) } throws IllegalStateException("offline")
+        val vm = viewModel()
+
+        vm.removePhoto(rex.copy(photos = listOf(REF_A)))
+        advanceUntilIdle()
+
+        assertEquals(PetPhotoError.DELETE_FAILED, vm.photoError.value)
+        coVerify(exactly = 0) { petRepository.upsertPet(any()) }
+    }
+
+    @Test
+    fun `a legacy first photo is dropped on removal without a delete`() = runTest(dispatcher) {
+        every { authService.getCurrentUid() } returns signedIn
+        val legacy = "https://firebasestorage.googleapis.com/v0/b/x/o/pet?token=t"
+        coEvery { petRepository.getPetById("p1") } returns rex.copy(photos = listOf(legacy, REF_B))
+        val saved = slot<Pet>()
+        coEvery { petRepository.upsertPet(capture(saved)) } returns Unit
+        val vm = viewModel()
+
+        vm.removePhoto(rex.copy(photos = listOf(legacy, REF_B)))
+        advanceUntilIdle()
+
+        assertEquals(listOf(REF_B), saved.captured.photos)
+        coVerify(exactly = 0) { photoStorage.delete(any(), any()) }
+    }
+
     private companion object {
         const val FAMILY = "u1__u2"
         val REF_A = "ph1|pet_photos/u1__u2/p1/a.jpg|image/jpeg|100|" + "a".repeat(64)
         val REF_B = "ph1|pet_photos/u1__u2/p1/b.jpg|image/jpeg|100|" + "b".repeat(64)
+        val REF_C = "ph1|pet_photos/u1__u2/p1/c.jpg|image/jpeg|100|" + "c".repeat(64)
     }
 }

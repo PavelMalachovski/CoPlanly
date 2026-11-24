@@ -28,6 +28,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.family.names
@@ -78,7 +79,10 @@ val APP_HEADER_HEIGHT = 56.dp
  * children alone and larger, the Calendar the pets too).
  *
  * Every avatar takes a [ITEM] slot, 40 dp, the Calendar's touch target, and the slots overlap by
- * [OVERLAP], so the 30 dp avatars in their 2 dp ring overlap a little, on both screens alike.
+ * [OVERLAP]. The avatar fills its slot, 36 dp in a 2 dp ring (owner, 24 November 2026: 30 dp before,
+ * which left the slot's edge empty), so it grew without the row growing by a dp; a pet shows its
+ * first photo ([PetAvatar]). The gear is a 40 dp disc of the same size ([SettingsDisc]) in the
+ * touch target the bare icon had.
  *
  * With a [filter] (the Calendar) and two members or more, each avatar is a toggle of the member
  * filter, ringed in `primary` while chosen, and more than [MAX_VISIBLE] scroll within the room three
@@ -98,14 +102,32 @@ fun FamilyAvatarsAndGear(
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (filter != null && members.size >= 2) FilterAvatars(members, filter) else PictureAvatars(members)
-        onSettings?.let { onClick ->
-            IconButton(onClick = onClick) {
-                AppIcon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = stringResource(Res.string.calendar_settings),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+        onSettings?.let { onClick -> SettingsDisc(onClick) }
+    }
+}
+
+/**
+ * The settings gear as a disc as large as a ringed avatar ([ITEM]): `surfaceContainerHigh` with a
+ * hairline `outlineVariant` edge, in an [IconButton], so its touch target and its place in the row are
+ * the bare icon's.
+ */
+@Composable
+private fun SettingsDisc(onClick: () -> Unit) {
+    IconButton(onClick = onClick) {
+        Box(
+            modifier = Modifier
+                .size(ITEM)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .border(width = Dp.Hairline, color = MaterialTheme.colorScheme.outlineVariant, shape = CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            AppIcon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = stringResource(Res.string.calendar_settings),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(GEAR_ICON)
+            )
         }
     }
 }
@@ -174,7 +196,12 @@ private fun PictureAvatars(members: List<FamilyMember>) {
 private fun RingedAvatar(member: FamilyMember, chosen: Boolean) {
     Ring(chosen) {
         val child = member.child
-        if (child != null) ChildAvatar(child, AVATAR) else InitialDisc(member.name.trim().take(1).uppercase())
+        val pet = member.pet
+        when {
+            child != null -> ChildAvatar(child, AVATAR)
+            pet != null -> PetAvatar(pet, AVATAR)
+            else -> InitialDisc(member.name.trim().take(1).uppercase())
+        }
     }
 }
 
@@ -214,9 +241,12 @@ private fun InitialDisc(text: String) {
 private const val MAX_VISIBLE = 3
 
 /** An avatar, the ring around it and the slot it takes: the slot is the Calendar's touch target. */
-private val AVATAR = 30.dp
+private val AVATAR = 36.dp
 private val RING = 2.dp
 private val ITEM = 40.dp
 
-/** How much neighbouring slots overlap: the 34 dp ringed avatars then overlap by 6 dp. */
+/** How much neighbouring slots overlap: the 40 dp ringed avatars then overlap by 12 dp. */
 private val OVERLAP = 12.dp
+
+/** The gear's glyph inside its [ITEM] disc. */
+private val GEAR_ICON = 22.dp

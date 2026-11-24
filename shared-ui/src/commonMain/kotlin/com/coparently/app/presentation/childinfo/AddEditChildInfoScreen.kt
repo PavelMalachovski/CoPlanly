@@ -25,6 +25,7 @@ import com.coparently.app.presentation.common.FormTopBar
 import com.coparently.app.presentation.common.MedicalProfileEditor
 import com.coparently.app.presentation.common.PhotoOwner
 import com.coparently.app.presentation.common.field
+import com.coparently.app.presentation.common.rememberCoParentName
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.consent.HealthConsentDialog

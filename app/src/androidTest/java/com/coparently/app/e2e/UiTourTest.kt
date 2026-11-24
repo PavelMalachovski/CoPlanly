@@ -221,6 +221,7 @@ class UiTourTest : AliceOnScreenTest() {
 
     /** Switches the calendar through the grid card's M | W | D control, whose letters are named in full. */
     private fun viewMode(label: Int) {
+        driver.press("the view button", calendarViewButton())
         driver.press("the mode", hasContentDescription(string(label)) and hasClickAction())
         driver.linger()
     }
@@ -326,8 +327,13 @@ class UiTourTest : AliceOnScreenTest() {
         }
         scrolls("child_detail", 2)
         fromFamily("pets_list", R.string.settings_pets_title, UiTourSeed.MAX)
-        camera.shot("pet_edit") {
+        // A pet opens its own screen, and a row there the editor (24 November 2026).
+        camera.shot("pet_detail") {
             driver.press("Max", hasText(UiTourSeed.MAX, substring = true) and hasClickAction())
+            driver.linger()
+        }
+        camera.shot("pet_edit") {
+            driver.press("Max's vet", hasText(UiTourSeed.MAX_VET, substring = true) and hasClickAction())
             driver.linger()
         }
         fromFamily("custody_setup", R.string.settings_custody_title)

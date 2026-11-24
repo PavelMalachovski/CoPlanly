@@ -9,6 +9,7 @@
     <string name="calendar_viewmode_month">Měsíc</string>
     <string name="calendar_viewmode_week">Týden</string>
     <string name="calendar_viewmode_day">Den</string>
+    <string name="calendar_viewmode_label">Zobrazení</string>
     <string name="calendar_filters_button">Filtry</string>
     <string name="calendar_today_button">Dnes</string>
 
@@ -132,12 +133,8 @@
         <item quantity="many">%1$s – u rodiče %2$s</item>
         <item quantity="other">%1$s – u rodiče %2$s</item>
     </plurals>
-    <!-- Calendar K1 (November 2026): the view control's letters (spoken as the full names),
-         the "?" sheet that explains the colours and leads to Filters, and an avatar of the
+    <!-- Calendar K1 (November 2026): the "?" sheet that explains the colours and leads to Filters, and an avatar of the
          header's member filter. -->
-    <string name="calendar_viewmode_month_short">M</string>
-    <string name="calendar_viewmode_week_short">T</string>
-    <string name="calendar_viewmode_day_short">D</string>
     <string name="calendar_legend_title">Co znamenají barvy</string>
     <string name="calendar_legend_no_schedule">Dny se obarví, jakmile nastavíte rozvrh péče.</string>
     <string name="calendar_filters_hiding">Některé události jsou skryté</string>

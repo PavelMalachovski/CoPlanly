@@ -47,7 +47,7 @@ class BrandHeaderScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(vari
             Column {
                 BrandHeader(members = MEMBERS, onSettingsClick = {})
                 HeadingLines(
-                    childNames = MEMBERS.mapNotNull { it.child?.childName },
+                    names = MEMBERS.map { it.name },
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }

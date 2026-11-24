@@ -328,7 +328,7 @@ class UiTourSeed(
                     Vaccination(pet.vaccination, family.today.minusMonths(PET_VACCINE_MONTHS).toKotlinLocalDate())
                 ),
                 feedingNotes = pet.feedingNotes,
-                vetName = "Veterinární klinika Vinohrady",
+                vetName = MAX_VET,
                 vetPhone = "+420 222 555 111",
                 createdAt = now.toKotlinLocalDateTime(),
                 updatedAt = now.toKotlinLocalDateTime(),
@@ -560,6 +560,9 @@ class UiTourSeed(
         const val EMMA = "Emma"
         const val LEO = "Leo"
         const val MAX = "Max"
+
+        /** Max's vet: a row on his own screen that is the same in every language, so the tour opens the editor through it. */
+        const val MAX_VET = "Veterinární klinika Vinohrady"
 
         private const val LAYER_ID = "autumn-break"
 

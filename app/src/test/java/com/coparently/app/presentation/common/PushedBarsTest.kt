@@ -35,6 +35,8 @@ import com.coparently.app.presentation.family.UnassignedRecordsViewModel
 import com.coparently.app.presentation.journal.JournalListScreen
 import com.coparently.app.presentation.journal.JournalListState
 import com.coparently.app.presentation.journal.JournalListViewModel
+import com.coparently.app.presentation.pets.PetDetailScreen
+import com.coparently.app.presentation.pets.PetPhotoError
 import com.coparently.app.presentation.pets.PetsScreen
 import com.coparently.app.presentation.pets.PetsUiState
 import com.coparently.app.presentation.pets.PetsViewModel
@@ -147,6 +149,28 @@ class PushedBarsTest : PushedBarsHarness() {
 
     // endregion
 
+    // region A pet
+
+    @Test
+    fun `a pet's bar names the pet and edits the record`() {
+        startGraph()
+        compose(withHost = true) { petDetailScreen() }
+        assertBar(title = "Max", back = "Back", actions = listOf("pencil" to "Edit"))
+
+        clickAction("Edit")
+        assertEquals(listOf("edit pet ${PET.id}"), clicks)
+    }
+
+    @Test
+    fun `without a host a pet's bar names the pet and has no pencil`() {
+        startGraph()
+        compose(withHost = false) { petDetailScreen() }
+        assertAndroidBar(title = "Max", back = "Back")
+        rule.onAllNodesWithContentDescription("Edit").assertCountEquals(0)
+    }
+
+    // endregion
+
     // region Screens with no actions
 
     @Test
@@ -237,8 +261,22 @@ class PushedBarsTest : PushedBarsHarness() {
         PetsScreen(
             onNavigateBack = { clicks += "up" },
             onEditPet = { clicks += "edit pet $it" },
+            onOpenPet = { clicks += "open pet $it" },
             viewModel = mockk<PetsViewModel>(relaxed = true) {
                 every { uiState } returns MutableStateFlow<PetsUiState>(PetsUiState.Success(listOf(PET)))
+            }
+        )
+    }
+
+    @Composable
+    private fun petDetailScreen() {
+        PetDetailScreen(
+            petId = PET.id,
+            onNavigateBack = { clicks += "up" },
+            onEditClick = { clicks += "edit pet $it" },
+            viewModel = mockk<PetsViewModel>(relaxed = true) {
+                every { uiState } returns MutableStateFlow<PetsUiState>(PetsUiState.Success(listOf(PET)))
+                every { photoError } returns MutableStateFlow<PetPhotoError?>(null)
             }
         )
     }

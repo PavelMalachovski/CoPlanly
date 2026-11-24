@@ -15,11 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.model.ChildInfo
@@ -33,7 +30,7 @@ import com.coparently.app.resources.children_avatars_more
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * Home's first row: the "coplanly." wordmark, then the children's and pets' avatars and the settings
+ * Home's first row: the "CoPlanly" wordmark, then the children's and pets' avatars and the settings
  * gear, in [AppHeaderRow] with the Calendar's header so the avatars and the gear stand still between
  * the two tabs ([FamilyAvatarsAndGear]; owner, 24 November 2026).
  *
@@ -57,7 +54,7 @@ fun BrandHeader(
 }
 
 /**
- * The "coplanly." wordmark. A logo set in type, so it grows with the font only to
+ * The "CoPlanly" wordmark. A logo set in type, so it grows with the font only to
  * [WORDMARK_MAX_FONT_SCALE]: at 200 % it took half the row, and three avatars and the gear beside it
  * ran into its full stop.
  */
@@ -67,20 +64,17 @@ private fun Wordmark() {
 }
 
 /**
- * "coplanly." set in Onest at [base]'s size: the letters in `onPrimaryContainer`, the full stop in
- * `primary`. The header's wordmark and the sign-in screen's title are this one composable, and the
- * two splash screens draw the same word as a picture (tools/brand/generate-brand-assets.py).
+ * "CoPlanly" set in Onest at [base]'s size, in `onPrimaryContainer` (owner, 24 November 2026: it was
+ * "coplanly." in lower case with the full stop in `primary`). The header's wordmark and the sign-in
+ * screen's title are this one composable, and the two splash screens draw the same word as a picture
+ * (tools/brand/generate-brand-assets.py).
  */
 @Composable
 internal fun BrandWordmark(base: TextStyle, modifier: Modifier = Modifier) {
-    val ink = MaterialTheme.colorScheme.onPrimaryContainer
-    val accent = MaterialTheme.colorScheme.primary
     CappedFontScale(max = WORDMARK_MAX_FONT_SCALE) {
         Text(
-            text = buildAnnotatedString {
-                withStyle(SpanStyle(color = ink)) { append(stringResource(Res.string.brand_wordmark)) }
-                withStyle(SpanStyle(color = accent)) { append(".") }
-            },
+            text = stringResource(Res.string.brand_wordmark),
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
             style = wordmarkStyle(base, onestFontFamily()),
             maxLines = 1,
             softWrap = false,
