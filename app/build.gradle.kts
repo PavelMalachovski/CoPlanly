@@ -175,9 +175,11 @@ android {
         // Overridden per upload by the release workflow (-PCOPLANLY_VERSION_CODE), because Play
         // refuses a second bundle with the same versionCode.
         versionCode = (project.findProperty("COPLANLY_VERSION_CODE") as String?)?.toInt() ?: 2
-        // 1.5.0 (versionCode 113) is the last build uploaded to Play by hand; 1.6.0 is the Home
-        // requests, calendar K1 and the steady headers (24 November 2026).
-        versionName = "1.6.0"
+        // 1.5.0 (versionCode 113) and 1.6.0 (114) were uploaded to Play by hand; 1.6.0 is the Home
+        // requests, calendar K1 and the steady headers, 1.6.1 (115) the pet's own screen, "Month" as
+        // a menu, the larger avatars, the CoPlanly wordmark, the EduPage import and the 30-minute
+        // reminder (24 November 2026).
+        versionName = "1.6.1"
 
         testInstrumentationRunner = "com.coparently.app.KoinTestRunner"
 
