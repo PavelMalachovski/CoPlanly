@@ -4,13 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,47 +28,32 @@ import com.coparently.app.presentation.theme.headlineSmallEmphasized
 import com.coparently.app.presentation.theme.onestFontFamily
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.brand_wordmark
-import com.coparently.app.resources.calendar_settings
 import com.coparently.app.resources.children_avatars_description
 import com.coparently.app.resources.children_avatars_more
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * The top row of the start screen: the "coplanly." wordmark on the left, the children's
- * avatars overlapping and then the settings gear on the right.
+ * Home's first row: the "coplanly." wordmark, then the children's and pets' avatars and the settings
+ * gear, in [AppHeaderRow] with the Calendar's header so the avatars and the gear stand still between
+ * the two tabs ([FamilyAvatarsAndGear]; owner, 24 November 2026).
  *
- * Draws no avatars for a family without children, and at most [AvatarStack.MAX_VISIBLE] of
- * them otherwise, followed by a "+n" disc for the rest.
- *
- * @param children The family's children, in the order they are shown
+ * @param members The family's children and pets, in the order they are shown
  * @param onSettingsClick Opens Settings; null draws no gear (a screen with nowhere to send it)
  * @param modifier Modifier for the row
  */
 @Composable
 fun BrandHeader(
-    children: List<ChildInfo>,
+    members: List<FamilyMember>,
     onSettingsClick: (() -> Unit)?,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Wordmark()
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            ChildAvatarStack(children)
-            onSettingsClick?.let { onClick ->
-                IconButton(onClick = onClick) {
-                    AppIcon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = stringResource(Res.string.calendar_settings),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-    }
+    AppHeaderRow(
+        modifier = modifier,
+        leading = {
+            Box(modifier = Modifier.weight(1f)) { Wordmark() }
+        },
+        trailing = { FamilyAvatarsAndGear(members = members, onSettings = onSettingsClick) }
+    )
 }
 
 /**

@@ -47,7 +47,6 @@
     <string name="calendar_day_desc_today">Dnes</string>
     <string name="calendar_day_desc_outside_month">Mimo aktuální měsíc</string>
     <string name="calendar_day_desc_with_parent">V péči: %1$s</string>
-    <string name="calendar_day_desc_handover">Předání: předává %1$s, přebírá %2$s</string>
     <string name="calendar_day_desc_school_vacation">Školní prázdniny</string>
     <string name="calendar_day_desc_proposal_pending">Navrženo pro %1$s, zatím neodsouhlaseno</string>
     <plurals name="calendar_day_desc_events">
@@ -100,7 +99,6 @@
     <string name="calendar_week_number">T %1$d</string>
     <string name="calendar_agenda_custody_day_you">Váš den</string>
     <string name="calendar_filter_members">Zobrazit pro</string>
-    <string name="calendar_legend_handover">Předání</string>
     <string name="calendar_legend_contact">Čas na styk</string>
 
     <!-- MON-6b: a contact window on the grid. -->
@@ -114,7 +112,6 @@
     <string name="mini_month_marked_day_no_custody">%1$s: %2$s.</string>
 
     <!-- The calendar's header and Today card (redesign, November 2026). -->
-    <string name="calendar_heading">Váš rodinný kalendář</string>
     <string name="calendar_together_for">Společně pro %1$s</string>
     <string name="calendar_names_and">a</string>
     <string name="calendar_previous_period">Předchozí období</string>

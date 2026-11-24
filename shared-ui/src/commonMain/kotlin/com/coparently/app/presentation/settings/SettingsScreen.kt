@@ -429,8 +429,11 @@ fun SettingsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                // The bar's inset before the scroll, so the rows scroll below the bar, not under its
+                // title: the bar is transparent over the ground (design item 3), and taking the
+                // inset inside the scroll let the first rows run under it (owner's phone, November 2026).
                 .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = Spacing.L, vertical = Spacing.S),
             verticalArrangement = Arrangement.spacedBy(Spacing.L)
         ) {

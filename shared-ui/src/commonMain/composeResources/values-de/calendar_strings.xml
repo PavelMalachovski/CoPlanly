@@ -35,7 +35,6 @@
     <string name="calendar_day_desc_today">Heute</string>
     <string name="calendar_day_desc_outside_month">Außerhalb des aktuellen Monats</string>
     <string name="calendar_day_desc_with_parent">Bei %1$s</string>
-    <string name="calendar_day_desc_handover">Übergabe von %1$s an %2$s</string>
     <string name="calendar_day_desc_school_vacation">Schulferien</string>
     <string name="calendar_day_desc_proposal_pending">Vorgeschlagen für %1$s, noch nicht vereinbart</string>
     <plurals name="calendar_day_desc_events">
@@ -81,7 +80,6 @@
     <string name="calendar_week_number">KW %1$d</string>
     <string name="calendar_agenda_custody_day_you">Dein Tag</string>
     <string name="calendar_filter_members">Anzeigen für</string>
-    <string name="calendar_legend_handover">Übergabe</string>
     <string name="calendar_legend_contact">Umgangszeit</string>
 
     <!-- MON-6b: a contact window on the grid. -->
@@ -95,7 +93,6 @@
     <string name="mini_month_marked_day_no_custody">%1$s: %2$s.</string>
 
     <!-- The calendar's header and Today card (redesign, November 2026). -->
-    <string name="calendar_heading">Dein Familienkalender</string>
     <string name="calendar_together_for">Gemeinsam für %1$s</string>
     <string name="calendar_names_and">und</string>
     <string name="calendar_previous_period">Vorheriger Zeitraum</string>

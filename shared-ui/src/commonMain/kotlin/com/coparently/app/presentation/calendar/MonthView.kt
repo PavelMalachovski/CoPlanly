@@ -74,7 +74,6 @@ import com.coparently.app.resources.Res
 import com.coparently.app.resources.calendar_contact_window_desc
 import com.coparently.app.resources.calendar_day_click_label
 import com.coparently.app.resources.calendar_day_desc_events
-import com.coparently.app.resources.calendar_day_desc_handover
 import com.coparently.app.resources.calendar_day_desc_outside_month
 import com.coparently.app.resources.calendar_day_desc_proposal_pending
 import com.coparently.app.resources.calendar_day_desc_school_vacation
@@ -139,9 +138,6 @@ private const val DAYS_PER_WEEK = 7
  *   whom it would go to ([SwapMark], day swap design, 28 October 2026). Deliberately separate from
  *   [getCustody]: a swap not yet agreed has changed nothing about whose day it is, so the wash
  *   stays and the mark is drawn over it. In-month cells only.
- * @param swappedDates Dates an **accepted** swap decides. [getCustody] already answers whose day
- *   each one is; this set only tells the cell the answer came from a swap, so it (and the day
- *   after it) draws one solid fill instead of the handover diagonal — see `DayCellFills`.
  * @param onDayLongClick Offers that day to the co-parent. Null when there is nobody to offer it
  *   to — an unpaired account gets no long-press at all, because a swap that applies itself is
  *   just an edit and the custody editor already does that.
@@ -167,7 +163,6 @@ fun MonthView(
     holidays: Map<LocalDate, Holiday> = emptyMap(),
     schoolVacationDays: Set<LocalDate> = emptySet(),
     swapMarks: Map<LocalDate, SwapMark> = emptyMap(),
-    swappedDates: Set<LocalDate> = emptySet(),
     onDayLongClick: ((LocalDate) -> Unit)? = null,
     onSwapDragTo: ((LocalDate) -> Unit)? = null,
     selectingSwap: Boolean = false,
@@ -301,8 +296,6 @@ fun MonthView(
                         // A borrowed cell refuses what you would act on (design item 10): a swap is
                         // chosen and answered in its own month.
                         swapMark = swapMarks[day.date]?.takeIf { day.position == DayPosition.MonthDate },
-                        isSwapped = day.date in swappedDates,
-                        previousSwapped = day.date.minus(1, DateTimeUnit.DAY) in swappedDates,
                         onDayLongClick = onDayLongClick,
                         onSwapDragTo = onSwapDragTo,
                         dayBounds = dayBounds,
@@ -456,8 +449,6 @@ private fun DayCell(
     holiday: Holiday? = null,
     isSchoolVacation: Boolean = false,
     swapMark: SwapMark? = null,
-    isSwapped: Boolean = false,
-    previousSwapped: Boolean = false,
     onDayLongClick: ((LocalDate) -> Unit)? = null,
     onSwapDragTo: ((LocalDate) -> Unit)? = null,
     dayBounds: MutableMap<LocalDate, Rect> = mutableMapOf(),
@@ -482,33 +473,17 @@ private fun DayCell(
     // signal and still wins over the holiday tint. School vacation is intentionally NOT a
     // full-cell fill at all (it used to drown custody colors); it is a thin neutral line along
     // the bottom edge instead — see `DayCellFill.schoolVacation`.
-    val previousCustody = getCustody(date.minus(1, DateTimeUnit.DAY))
     val proposedCustody = getProposedCustody(date)
     val fill = DayCellFills.monthCell(
         isWeekend = isWeekend,
         isCurrentMonth = isCurrentMonth,
         custody = custody,
-        previousCustody = previousCustody,
         isPublicHoliday = isPublicHoliday,
         proposedCustody = proposedCustody,
-        isSwapped = isSwapped,
-        previousSwapped = previousSwapped,
         isSchoolVacation = isSchoolVacation
     )
     val baseColor = dayCellBaseColor(fill.base)
-    // One alpha for the whole custody channel of this cell, so the band and the handover
-    // triangle cannot come out at different strengths. A day borrowed from a neighbouring month
-    // keeps the band and gets it recessively — see `ADJACENT_MONTH_TINT_SCALE`.
-    val custodyAlpha = ParentColors.custodyTintAlpha * adjacentScale(fill.isAdjacentMonth)
     val overlayColor = dayCellOverlayColor(fill)
-
-    // The parent the child is coming *from* on a handover day, at the same custody alpha as the
-    // overlay: the two triangles must read as one system, not as a tint and a competing block.
-    val handoverColor = when (fill.handoverFrom) {
-        DayCellOverlay.CUSTODY_MOM -> ParentColors.container("mom", alpha = custodyAlpha)
-        DayCellOverlay.CUSTODY_DAD -> ParentColors.container("dad", alpha = custodyAlpha)
-        else -> null
-    }
 
     // A pending proposal's preview: the proposed parent's hue at a lower alpha than an agreed
     // day, laid over the agreed fill rather than replacing it. Same colour, less of it — the
@@ -533,7 +508,7 @@ private fun DayCell(
 
     // A contact window (MON-6b) is marked, not filled: a small corner in the window parent's
     // full hue — the saturation rule's "marker" strength — laid over everything else, so the
-    // weekend base, the custody band and the handover diagonal all read exactly as before. The
+    // weekend base and the custody band read exactly as before. The
     // whole-day tint cannot carry it (it already says whose day it is), and a sixth fill would
     // fight the five this cell stacks. The hours are in the description and in Day view, one tap
     // away. On a borrowed day the marker is scaled like the band: a window is part of the pattern,
@@ -586,13 +561,6 @@ private fun DayCell(
         )
     }
     val swapEdge = swapMark?.let { ParentColors.chipFill(it.toSlot) }
-    val handoverLabel = fill.handoverFrom?.let {
-        stringResource(
-            Res.string.calendar_day_desc_handover,
-            parentNames.labelFor(previousCustody.orEmpty()),
-            parentNames.labelFor(custody.orEmpty())
-        )
-    }
     val eventsLabel = if (events.isNotEmpty()) {
         pluralStringResource(Res.plurals.calendar_day_desc_events, events.size, events.size)
     } else {
@@ -617,10 +585,6 @@ private fun DayCell(
             append(it)
         }
         custodyLabel?.let {
-            append(", ")
-            append(it)
-        }
-        handoverLabel?.let {
             append(", ")
             append(it)
         }
@@ -728,35 +692,9 @@ private fun DayCell(
                 color = overlayColor,
                 shape = CoPlanlyCorners.Cell
             )
-            // A handover day is split on a diagonal: the parent who had the child yesterday in
-            // the top-left triangle, today's parent in the bottom-right, reading the way time
-            // does. This replaces the full-hue left edge that used to mark the first day of a
-            // custody run — both answered "the child changes hands here", and two answers to one
-            // question is what the design refresh removed elsewhere. The diagonal answers more:
-            // it names *both* parents, which the edge could not.
-            //
-            // Two `drawPath` calls rather than one diagonal gradient: a gradient would smear the
-            // boundary across the cell, and the point is that the day belongs to one parent until
-            // the handover and the other after it. The first repaints the triangle with the
-            // opaque base so the overlay's tint underneath is replaced rather than blended with —
-            // two translucent parent hues stacked would read as a muddy third colour — and the
-            // second lays yesterday's parent over it at the same custody alpha. The weekend base
-            // still shows through both halves, so this file's invariant survives.
             .clip(CoPlanlyCorners.Cell)
             .drawBehind {
-                handoverColor?.let { color ->
-                    val triangle = Path().apply {
-                        moveTo(0f, 0f)
-                        lineTo(size.width, 0f)
-                        lineTo(0f, size.height)
-                        close()
-                    }
-                    drawPath(triangle, baseColor)
-                    drawPath(triangle, color)
-                }
-                // After the diagonal, deliberately: the preview is about the whole day, so a
-                // handover boundary drawn inside it must be previewed too rather than punching
-                // a hole in it.
+                // The preview is about the whole day.
                 proposalColor?.let { drawRect(it) }
                 // The school-vacation line along the bottom edge, full width so consecutive days
                 // read as one run. Under the contact-window corner, which is the rarer mark.

@@ -61,7 +61,6 @@ import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.BarLeading
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.FamilyMemberFilterStrip
-import com.coparently.app.presentation.common.FamilySwitcherChip
 import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.ListSkeleton
 import com.coparently.app.presentation.common.Loadable
@@ -295,9 +294,8 @@ fun ExpenseScreen(
                     // A detail screen since the Family tab replaced the Expenses tab (new-user review,
                     // October 2026): opened from the tab's money card, Home's tile or a push.
                     leading = onNavigateUp?.let { BarLeading.Back(backLabel, it) } ?: BarLeading.None,
-                    // Only with two families or more (M-8). A ledger is the screen where being in
-                    // the wrong family costs most: an expense is recorded against the one shown.
-                    trailingContent = { FamilySwitcherChip() },
+                    // No family switcher (owner, 24 November 2026): it is the Family tab's alone, and
+                    // this screen opens from that tab, on the family it shows.
                     actions = if (inShellBar) {
                         listOf(
                             BarAction(

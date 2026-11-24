@@ -1,40 +1,23 @@
 package com.coparently.app.presentation.calendar.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -44,26 +27,22 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.family.names
+import com.coparently.app.presentation.common.AppHeaderRow
 import com.coparently.app.presentation.common.AppIcon
-import com.coparently.app.presentation.common.ChildAvatar
+import com.coparently.app.presentation.common.FamilyAvatarsAndGear
 import com.coparently.app.presentation.common.FamilyMember
-import com.coparently.app.presentation.common.stacksAtLargeFont
+import com.coparently.app.presentation.common.MemberFilter
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.titleLargeEmphasized
 import com.coparently.app.resources.Res
-import com.coparently.app.resources.calendar_filter_member_toggle
 import com.coparently.app.resources.calendar_filters_hiding
 import com.coparently.app.resources.calendar_jump_to_date
 import com.coparently.app.resources.calendar_legend_title
-import com.coparently.app.resources.calendar_names_and
-import com.coparently.app.resources.calendar_settings
-import com.coparently.app.resources.calendar_together_for
 import com.coparently.app.utils.ReaderDateText
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.yearMonth
@@ -81,8 +60,10 @@ import org.jetbrains.compose.resources.stringResource
  * ([CalendarMonthBar]), Filters into the "?" sheet ([CalendarLegendSheet]), and the member strip
  * over the grid became the avatars here.
  *
- * From font scale 1.3 the title keeps the first line with "?", and the avatars and gear take a line
- * under it; before that the title steps its size down rather than end in an ellipsis.
+ * One row at every font scale, in [AppHeaderRow] with Home's, so the avatars and the gear stand still
+ * between the two tabs (owner, 24 November 2026; from font scale 1.3 they used to take a line under
+ * the title, which read unevenly on the owner's phone): the title steps its size down instead, and
+ * ends in an ellipsis only at its smallest.
  *
  * The iPhone draws it too (MON-24 phase 3, part C): its shell hides the navigation bar over the
  * Calendar's root ([CalendarTopBar]), so this header leads the screen there as on Android.
@@ -92,52 +73,25 @@ import org.jetbrains.compose.resources.stringResource
  */
 @Composable
 fun CalendarHeader(state: CalendarHeaderState, actions: CalendarHeaderActions) {
-    val trailing: @Composable () -> Unit = {
-        MemberFilterAvatars(
-            members = state.members,
-            selected = state.selectedMembers,
-            onToggle = actions.onToggleMember
-        )
-        actions.onSettings?.let { onClick ->
-            IconButton(onClick = onClick) {
-                AppIcon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = stringResource(Res.string.calendar_settings),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+    AppHeaderRow(
+        leading = {
+            Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                MonthTitle(
+                    date = state.month,
+                    onJumpToDate = actions.onJumpToDate,
+                    modifier = Modifier.weight(1f, fill = false)
                 )
+                LegendButton(filtersActive = state.filtersActive, onClick = actions.onLegend)
             }
-        }
-    }
-    val leading: @Composable (Modifier) -> Unit = { modifier ->
-        Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
-            MonthTitle(
-                date = state.month,
-                onJumpToDate = actions.onJumpToDate,
-                modifier = Modifier.weight(1f, fill = false)
+        },
+        trailing = {
+            FamilyAvatarsAndGear(
+                members = state.members,
+                onSettings = actions.onSettings,
+                filter = MemberFilter(selected = state.selectedMembers, onToggle = actions.onToggleMember)
             )
-            LegendButton(filtersActive = state.filtersActive, onClick = actions.onLegend)
         }
-    }
-    // Tight on purpose (tester feedback, 12 November 2026): every dp the header gives up goes to
-    // the month grid under it. The gear's own padding stands in for the end margin.
-    val padding = Modifier
-        .fillMaxWidth()
-        .padding(start = Spacing.L, end = Spacing.XS, top = Spacing.XXS, bottom = Spacing.XXS)
-    if (stacksAtLargeFont()) {
-        Column(modifier = padding) {
-            leading(Modifier.fillMaxWidth())
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) { trailing() }
-        }
-    } else {
-        Row(modifier = padding, verticalAlignment = Alignment.CenterVertically) {
-            leading(Modifier.weight(1f))
-            trailing()
-        }
-    }
+    )
 }
 
 /**
@@ -261,85 +215,6 @@ private fun LegendButton(filtersActive: Boolean, onClick: () -> Unit) {
 }
 
 /**
- * The member filter as avatars: one per child and pet, a tap toggling that member in the same
- * filter the strip over the grid drove before calendar K1. A chosen member wears a ring in
- * `primary`. Renders nothing below two members, as the strip did (FAM-1: a picker for a set of one
- * is design item 8 in miniature). More than three scroll within the room three take, so the month
- * keeps the row. A target is 40 dp, as the strip's chips were (tester feedback, 12 November 2026).
- */
-@Composable
-private fun MemberFilterAvatars(
-    members: List<FamilyMember>,
-    selected: List<FamilyMemberRef>,
-    onToggle: (FamilyMemberRef) -> Unit
-) {
-    if (members.size < 2) return
-    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides AVATAR_TARGET) {
-        Row(
-            modifier = Modifier
-                .widthIn(max = AVATAR_TARGET * VISIBLE_AVATARS)
-                .horizontalScroll(rememberScrollState()),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            members.forEach { member ->
-                MemberFilterAvatar(
-                    member = member,
-                    chosen = selected.names(member.ref),
-                    onToggle = { onToggle(member.ref) }
-                )
-            }
-        }
-    }
-}
-
-/** One avatar of [MemberFilterAvatars]: a toggle named for the member, ringed while chosen. */
-@Composable
-private fun MemberFilterAvatar(member: FamilyMember, chosen: Boolean, onToggle: () -> Unit) {
-    val description = stringResource(Res.string.calendar_filter_member_toggle, member.name)
-    Box(
-        modifier = Modifier
-            .minimumInteractiveComponentSize()
-            .clip(CircleShape)
-            .toggleable(value = chosen, role = Role.Checkbox, onValueChange = { onToggle() })
-            .semantics { contentDescription = description },
-        contentAlignment = Alignment.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .border(
-                    width = RING_WIDTH,
-                    color = if (chosen) MaterialTheme.colorScheme.primary else Color.Transparent,
-                    shape = CircleShape
-                )
-                .padding(RING_WIDTH)
-        ) { MemberAvatar(member) }
-    }
-}
-
-/** A child's own avatar, or a pet's initial on a tonal disc. */
-@Composable
-private fun MemberAvatar(member: FamilyMember) {
-    val child = member.child
-    if (child != null) {
-        ChildAvatar(child, AVATAR_SIZE)
-    } else {
-        Box(
-            modifier = Modifier
-                .size(AVATAR_SIZE)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondaryContainer),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = member.name.trim().take(1).uppercase(),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-        }
-    }
-}
-
-/**
  * The month title's two parts: the month's stand-alone name ("LLLL", `java.time`'s
  * `Month.getDisplayName(FULL_STANDALONE)` on Android) and its year, which is always shown.
  *
@@ -358,13 +233,6 @@ internal fun calendarMonthTitle(selectedDate: LocalDate): CalendarMonthTitle {
     return CalendarMonthTitle(month = monthName, year = yearMonth.year.toString())
 }
 
-/** "Together, for Emma and Leo", or null for a family without children. */
-@Composable
-internal fun togetherFor(childNames: List<String>): String? {
-    val names = childrenList(childNames, stringResource(Res.string.calendar_names_and)) ?: return null
-    return stringResource(Res.string.calendar_together_for, names)
-}
-
 /**
  * Children's names as one phrase: "Emma", "Emma and Leo", "Emma, Leo and Max", or null for
  * none. Pure, so the joining is tested without a composition.
@@ -380,13 +248,3 @@ internal fun childrenList(names: List<String>, and: String): String? = when (nam
 
 /** The smallest the month title steps down to before it ends in an ellipsis. */
 private val MIN_TITLE_SIZE = 14.sp
-
-/** An avatar of the member filter, and the ring a chosen one wears. */
-private val AVATAR_SIZE = 30.dp
-private val RING_WIDTH = 2.dp
-
-/** One avatar's touch target, as the member strip's chips had it. */
-private val AVATAR_TARGET = 40.dp
-
-/** How many avatars the row shows before the rest scroll. */
-private const val VISIBLE_AVATARS = 3

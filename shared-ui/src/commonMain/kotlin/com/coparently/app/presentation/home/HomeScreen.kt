@@ -40,7 +40,6 @@ import com.coparently.app.presentation.changerequests.AgreementScreen
 import com.coparently.app.presentation.changerequests.ChangeRequestViewModel
 import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.BrandHeader
-import com.coparently.app.presentation.common.FamilySwitcherChip
 import com.coparently.app.presentation.common.HeadingLines
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.ScreenBar
@@ -122,6 +121,7 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val children by viewModel.children.collectAsState()
+    val members by viewModel.members.collectAsState()
     val parentNames = rememberParentNames(viewModel.parents.collectAsState().value)
     val pendingProposal by changeRequestViewModel.pendingProposal.collectAsState()
     val pendingProposalDiff by changeRequestViewModel.pendingProposalDiff.collectAsState()
@@ -168,14 +168,10 @@ fun HomeScreen(
                 // screen to the back button of a screen pushed over it.
                 AppTopBar(ScreenBar(title = stringResource(Res.string.nav_home), hidden = true))
             }
-            // The wordmark header, as on the Calendar (redesign, November 2026, variant A), with
-            // the family switcher under it: it draws nothing with one family (M-8).
-            Column(modifier = Modifier.padding(horizontal = Spacing.L, vertical = Spacing.S)) {
-                BrandHeader(children = children, onSettingsClick = onOpenSettings)
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    FamilySwitcherChip()
-                }
-            }
+            // The wordmark row, the Calendar header's twin: the avatars and the gear stand still
+            // between the two tabs. No family switcher here since 24 November 2026 (owner): it is
+            // the Family tab's alone.
+            BrandHeader(members = members, onSettingsClick = onOpenSettings)
         }
     ) { padding ->
         when (val state = uiState) {

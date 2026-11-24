@@ -99,9 +99,18 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
      `scheduleChangeMonth`) is how a custody proposal is drawn there and in Home's proposal pop-up: a
      Proposed | Now switch (`AdaptiveSegmented`) and each changed day ringed in the colour of whom it
      goes to. No count of days or nights per parent.
-   - `HeadingLines` (`common/HeadingLines.kt`) is "Your family calendar" over "Together, for Emma
-     and Leo" (the second line left out with no children). Home draws it under the wordmark since
-     calendar K1 gave the Calendar's header to the month; don't give a screen its own copy.
+   - `HeadingLines` (`common/HeadingLines.kt`) is "Together, for" over the children's names and a
+     heart, both lines in one regular weight (`bodyLarge`, `onSurface`), nothing with no children.
+     The two lines are cut from the one translated `calendar_together_for` at its placeholder
+     (`togetherForLines`); "Your family calendar" left on 24 November 2026 (owner, on the phone).
+     Home draws it under the wordmark; don't give a screen its own copy.
+   - `AppHeaderRow` with `FamilyAvatarsAndGear` (`common/FamilyAvatars.kt`) is the first row of Home
+     and of the Calendar: one height (`APP_HEADER_HEIGHT`, 56 dp) and one padding, then the
+     children's and pets' avatars (30 dp in a 2 dp ring, in 40 dp slots overlapping by 12 dp, at most
+     three slots) and the gear. **The avatars and the gear stand still between the two tabs** (owner,
+     24 November 2026): don't give either screen its own avatars, size, padding or gear. On the
+     Calendar, from two members, each avatar toggles the member filter; otherwise they only show,
+     with "+n" in the third slot.
 
    **Icon sizes come from `theme/IconSizes.kt`** (October 2026 audit, D-25): `Inline` 16 dp (a
    mark in a line of text), `Small` 18 (buttons, chips, banners, status lines — Material's own),
@@ -196,7 +205,10 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    (`#1F1F25` = `surfaceContainer`, `#C2C1FF` = `primary`, …). Using roles is what keeps
    light theme working on the redesigned screens. Every screen's `TopAppBar` takes
    `screenTopAppBarColors()` (`theme/AppGround.kt`): transparent over the ground at rest,
-   `surfaceContainer` once content scrolls under it — never an opaque `surface` band.
+   `surfaceContainer` once content scrolls under it — never an opaque `surface` band. **A scrolling
+   column takes its Scaffold's padding before `verticalScroll`, never inside it** (owner's phone, 24
+   November 2026): inside, the first rows scrolled up under the transparent bar's title on Settings
+   and the Family tab, since the bar has no scroll behaviour to turn opaque.
 4. **Settings is five labelled groups** — Sync, App, Chat, Privacy and data, Account, in that
    order (design audit, 27 October 2026, M6: App had grown to eleven rows; the pause before sending
    is Chat's, telemetry, health, AI and the data sources are Privacy and data's, and My details sits
@@ -219,13 +231,14 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    (`LegendButton`), which opens "What the colours mean" (`CalendarLegendSheet`: the
    `CustodyLegend` and, under it, a Filters row into the unchanged filter sheet) and wears a dot
    while a filter narrows the calendar, since Filters lives behind it; the children's and pets'
-   avatars as **the member filter** (`MemberFilterAvatars`: the same filter state the strip over the
-   grid drove, drawn from two members as the strip was, three in sight and the rest scrolling, a
-   40 dp target each, a chosen one ringed in `primary`); and the gear. **This reverses "the month
+   avatars as **the member filter** and the gear (`FamilyAvatarsAndGear`, item 1, the same as Home's:
+   the filter state the strip over the grid drove, toggles from two members as the strip was, three
+   in sight and the rest scrolling, a 40 dp target each, a chosen one ringed in `primary`). **This reverses "the month
    title omits the current year"** (D-3): the title is the screen's heading now, and an abbreviated
    "’26" would read as a day beside a grid that holds a 26 — never shorten it. The title steps its
-   size down before it ellipsises, and from font scale 1.3 the avatars and the gear take a line
-   under the title and "?". The header is tight on purpose (tester feedback, 12 November 2026):
+   size down before it ellipsises; **the header is one row at every font scale** (owner, 24 November
+   2026: from 1.3 the avatars and the gear used to take a line under the title, which read unevenly
+   and moved them against Home's). The header is tight on purpose (tester feedback, 12 November 2026):
    every dp it gives up goes to the grid. **The grid card's bar** (`CalendarMonthBar` in
    `CalendarGridCard`) holds the Month | Week | Day control as letters ("M | W | D",
    `AdaptiveSegmented`, each segment named in full for TalkBack), Today as an outlined **text**
@@ -235,7 +248,7 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    not a floating button** (tester feedback, 12 November 2026): once the six rows reached the
    card's bottom a floating "+" covered the last row's cells. The Scaffold's floating slot holds only
    the red delete button a long press or a drag brings up. **What K1 took off the calendar stays
-   off it**: the wordmark, the heading lines ("Your family calendar", Home's `HeadingLines` now),
+   off it**: the wordmark, the heading lines (Home's `HeadingLines` now),
    the member strip ("Show for"), the legend row, the Today card under the grid, and the request
    banners with the proposer's "waiting" line — what waits on this parent is Home's Requests block
    and the Home tab's badge (item 40 of "Things that are easy to get wrong"). The custody-changed
@@ -283,8 +296,8 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    **Home is variant G1** (Home Requests, November 2026, board HomeG1; spec
    `docs/superpowers/specs/2026-11-22-home-requests-calendar-concepts-design.md`;
    `home/HomeSection.kt` decides the order): the brand row (`BrandHeader`: wordmark, the
-   children's avatars, gear), the heading lines (`HeadingLines`; Home scrolls, so the second line
-   stays at every font scale), the **Requests** block (`home/RequestsBlock.kt`, from
+   children's and pets' avatars and the gear, the Calendar header's twin, item 1), "Together, for"
+   over the names (`HeadingLines`), with **no family switcher** (it is the Family tab's alone), the **Requests** block (`home/RequestsBlock.kt`, from
    `RequestsBlockState`), the **Money** card (`MoneyCard`), **This week** (`WeekTiles`: seven tiles
    from today in each day's custody wash, `HomeWeek.daysOf`, today ringed, a dot on a day with
    events; a tap opens Day view on it through `navigation/CalendarDayRequests`) and the **next
@@ -373,18 +386,22 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     strength — the old per-call-site 0.3/0.5 alphas are gone, so month and week read as one
     system. Don't "fix" a weekend that looks too subtle by putting it back ahead of custody:
     weekends are the days a separated parent checks first.
+    **A handover day is one colour, like every other day** (owner decision, 24 November 2026): the
+    parent the child is with that day, as `getCustodyFor` answers. The cell used to be split on a
+    diagonal with yesterday's parent in the top-left (and the legend had an entry for it); the
+    parents know their handovers, the schema holds no hour for one, and Home's handover card still
+    names the next. Don't bring the diagonal back.
     **The custody band runs to the edge of the grid, borrowed days included** (Aug 2026, second
     pass). Those cells used to take the base and no overlay at all, so a band stopped mid-row and
     the reader had no rule to infer the rest of the pattern from — the same complaint the weekend
-    fix answered, one layer up. They carry the band and the handover diagonal now, at
+    fix answered, one layer up. They carry the band now, at
     `ADJACENT_MONTH_TINT_SCALE` of the custody alpha, because the grid must still say which month
     it is showing. What a borrowed cell still refuses is everything you would *act on*: the
     holiday tint, the proposal preview, the swap arrows, the long press. That is the line — a
     pattern crosses the month boundary, a thing you would answer does not. The school-vacation
     line (MON-13) is a pattern too and crosses into borrowed days at the same scale; it is a line,
     never a fill or a hue. **Since the November 2026 redesign a cell is a tile** with a 3 dp gap;
-    the band still runs edge to edge as a row of tiles, and the handover diagonal stays inside its
-    tile. An event pill on a borrowed day is dimmed like the dot it replaced.
+    the band still runs edge to edge as a row of tiles. An event pill on a borrowed day is dimmed like the dot it replaced.
 
 11. **Motion has one vocabulary** (September 2026 audit, `docs/AUDIT-2026-09.md` §4).
     `presentation/theme/Motion.kt` holds the only durations — `SHORT_MS` 150 (fades, crossfades),
@@ -471,8 +488,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     `acceptPairingInvitation` keeps on the *first* co-parent, and it is how the new-event form in a
     parent's second family named the first family's co-parent, in their colour.
 13. **The family switcher is one state and one dialog, and it appears at two** (M-8, September
-    2026). `presentation/common/FamilySwitcher.kt` holds `FamilySwitcherChip` (Home, Family and
-    Expenses top bars, beside the gear; a `Groups` icon) and `FamilySwitcherDialog`, which the
+    2026). `presentation/common/FamilySwitcher.kt` holds `FamilySwitcherChip` (the Family tab's top
+    bar alone since 24 November 2026, owner decision: it left Home and Expenses, which opens from
+    that tab on the family it shows; a `Groups` icon) and `FamilySwitcherDialog`, which the
     Settings row opens too; both
     read `FamilySwitcherViewModel`, observed off the signed-in Room row. Don't give Settings its
     own copy of the family list again — two sources for "which family is on screen" is how they

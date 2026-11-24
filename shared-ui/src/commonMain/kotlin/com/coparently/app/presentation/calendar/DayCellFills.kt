@@ -21,19 +21,15 @@ enum class DayCellOverlay {
 }
 
 /**
- * A day cell's fills: the [base] it starts from, the [overlay] drawn over it, and — on a day the
- * child changes hands — the parent the day is coming *from*.
+ * A day cell's fills: the [base] it starts from and the [overlay] drawn over it.
+ *
+ * **A handover day is one colour** (owner decision, 24 November 2026): the parent the child is with
+ * that day, as on every other day. The cell used to be split on a diagonal with yesterday's parent
+ * in the top-left; the parents know their handovers, the schema holds no hour for one, and Home's
+ * handover card still names the next one.
  *
  * @property base Always decided by the weekday alone, so the weekend band is continuous.
  * @property overlay The cell's meaning — custody, holiday or today — or [DayCellOverlay.NONE].
- * @property handoverFrom The parent who had the child *yesterday*, when the child changes hands
- *   on this cell's morning; null on every other day. Only ever [DayCellOverlay.CUSTODY_MOM] or
- *   [DayCellOverlay.CUSTODY_DAD]. It is a **shape**, not a fourth colour: the cell is split on a
- *   diagonal with this parent in the top-left and [overlay]'s parent in the bottom-right, so the
- *   weekend base still shows through both halves and this file's invariant survives. Reserved
- *   for **pattern** boundaries: a day decided by an accepted one-off swap (and the day after it)
- *   renders as a single solid fill instead — an owner decision from the Aug 2026 walkthrough,
- *   where the split read as "the swap only half-happened".
  * @property pendingProposalFor The parent a **pending, unanswered** custody proposal would give
  *   this day to, when that differs from whose day it is now; null on every other day. Only ever
  *   [DayCellOverlay.CUSTODY_MOM] or [DayCellOverlay.CUSTODY_DAD]. It is drawn *over* [overlay],
@@ -60,7 +56,6 @@ enum class DayCellOverlay {
 data class DayCellFill(
     val base: DayCellBase,
     val overlay: DayCellOverlay,
-    val handoverFrom: DayCellOverlay? = null,
     val pendingProposalFor: DayCellOverlay? = null,
     val isAdjacentMonth: Boolean = false,
     val schoolVacation: Boolean = false
@@ -83,7 +78,7 @@ data class DayCellFill(
  * the cells the screen exists to give it in.
  *
  * **Every case a cell can be in is decided here, in one place**: weekend base, custody overlay,
- * public holiday, today, the handover diagonal, the pending-proposal preview and the
+ * public holiday, today, the pending-proposal preview and the
  * school-vacation line. Two functions
  * that each knew some of the cases is precisely how the weekend band became unreachable, so a new
  * case folds in rather than growing a second decision beside this one. (Pending *swap* arrows are
@@ -107,20 +102,11 @@ object DayCellFills {
      *   refuses every gesture.
      * @param custody `"mom"`, `"dad"`, or null when no custody model or legacy schedule applies.
      *   Any other value is treated as no custody rather than guessed at.
-     * @param previousCustody Whose day *yesterday* was, resolved through the same lookup. When it
-     *   differs from [custody] the child changes hands on this cell's morning, and the cell is
-     *   split diagonally — see [DayCellFill.handoverFrom].
      * @param isPublicHoliday A public holiday, not a school vacation — school vacation is never a
      *   cell fill.
      * @param proposedCustody Whose day this would be under a **pending** custody proposal, or
      *   null when nothing is pending. Resolved from the proposal's own pattern, never from the
      *   agreed one. See [pendingProposal].
-     * @param isSwapped Whether an **accepted** one-off swap decides this day. A swapped day is a
-     *   whole day in the other parent's care, so it renders as one solid fill — the diagonal
-     *   would say the swap only half-happened. The custody lookup already resolves *whose* day it
-     *   is; this flag only says the answer came from a swap rather than the pattern.
-     * @param previousSwapped Whether an accepted swap decides *yesterday*. Suppresses the split
-     *   this cell would otherwise inherit from the swap's far edge, for the same reason.
      * @param isSchoolVacation Whether the day falls in a school vacation — on a public holiday
      *   inside one too, which is why it is its own input and not read off the day's `Holiday`.
      *   Passed through unchanged on a borrowed day; see [DayCellFill.schoolVacation].
@@ -130,11 +116,8 @@ object DayCellFills {
         isWeekend: Boolean,
         isCurrentMonth: Boolean,
         custody: String?,
-        previousCustody: String?,
         isPublicHoliday: Boolean,
         proposedCustody: String? = null,
-        isSwapped: Boolean = false,
-        previousSwapped: Boolean = false,
         isSchoolVacation: Boolean = false
     ): DayCellFill = DayCellFill(
         base = baseFor(isWeekend),
@@ -147,14 +130,6 @@ object DayCellFills {
             } else {
                 DayCellOverlay.NONE
             },
-        // The diagonal travels with the band, on a borrowed day too. Drawing the band but not the
-        // handover would put the change of hands a day late — wrong information, where leaving
-        // the whole cell blank was merely silent.
-        handoverFrom = if (isSwapped || previousSwapped) {
-            null
-        } else {
-            handoverFrom(custody, previousCustody)
-        },
         pendingProposalFor = if (isCurrentMonth) pendingProposal(custody, proposedCustody) else null,
         isAdjacentMonth = !isCurrentMonth,
         // Independent of every layer above: a vacation neither changes whose day it is nor hides
@@ -163,27 +138,14 @@ object DayCellFills {
     )
 
     /**
-     * The parent a handover on this day comes from, or null when there is no handover.
-     *
-     * Both days must resolve to something. An unanswered day is not a handover, it is an unknown,
-     * and splitting the cell for it would invent an arrangement neither parent agreed to — the
-     * same rule `CustodyResolver.isHandoverDay` applies, kept in step with it deliberately.
-     */
-    private fun handoverFrom(custody: String?, previousCustody: String?): DayCellOverlay? {
-        if (custody == null || previousCustody == null || custody == previousCustody) return null
-        return custodyOverlay(previousCustody)
-    }
-
-    /**
      * The parent a pending proposal would move this day to, or null when the day is not moving.
      *
      * Null when the proposal agrees with the agreed pattern, which is most of the grid: a
      * proposal is a whole pattern, so marking every day it covers would wash the month and say
      * nothing. Only the days that would actually change are drawn as a preview.
      *
-     * Null when either side is unknown, for the same reason [handoverFrom] refuses one: an
-     * unanswered day is not a change, it is an unknown, and previewing a move away from nothing
-     * would invent the arrangement it claims to be previewing.
+     * Null when either side is unknown: an unanswered day is not a change, it is an unknown, and
+     * previewing a move away from nothing would invent the arrangement it claims to be previewing.
      */
     private fun pendingProposal(custody: String?, proposedCustody: String?): DayCellOverlay? {
         if (custody == null || proposedCustody == null || custody == proposedCustody) return null
@@ -202,9 +164,8 @@ object DayCellFills {
      * @param custody `"mom"`, `"dad"`, or null.
      * @param proposedCustody Whose day this would be under a pending proposal, or null when
      *   nothing is pending. The week view gets the same preview as the month grid: unlike the
-     *   handover diagonal and the swap arrows — which package C kept to the month, because the
-     *   week already shows a handover as the boundary between two washed columns — a
-     *   pending proposal has no other form in this layout. Leaving it out would make the week
+     *   swap arrows, which package C kept to the month, a pending proposal has no other form in
+     *   this layout. Leaving it out would make the week
      *   the one view that shows a schedule as settled while the month says it is not.
      */
     fun weekHourCell(

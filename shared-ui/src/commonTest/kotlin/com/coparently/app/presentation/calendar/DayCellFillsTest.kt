@@ -24,7 +24,6 @@ class DayCellFillsTest {
                 isWeekend = true,
                 isCurrentMonth = true,
                 custody = "mom",
-                previousCustody = "mom",
                 isPublicHoliday = false
             )
         )
@@ -45,7 +44,6 @@ class DayCellFillsTest {
                 isWeekend = false,
                 isCurrentMonth = false,
                 custody = "mom",
-                previousCustody = "mom",
                 isPublicHoliday = false
             )
         )
@@ -63,7 +61,6 @@ class DayCellFillsTest {
                 isWeekend = true,
                 isCurrentMonth = false,
                 custody = "dad",
-                previousCustody = "dad",
                 isPublicHoliday = false
             )
         )
@@ -84,7 +81,6 @@ class DayCellFillsTest {
                 isWeekend = false,
                 isCurrentMonth = false,
                 custody = null,
-                previousCustody = null,
                 isPublicHoliday = true
             )
         )
@@ -98,7 +94,6 @@ class DayCellFillsTest {
                 isWeekend = false,
                 isCurrentMonth = false,
                 custody = "mom",
-                previousCustody = "mom",
                 isPublicHoliday = false,
                 proposedCustody = "dad"
             ).pendingProposalFor
@@ -113,7 +108,6 @@ class DayCellFillsTest {
                 isWeekend = false,
                 isCurrentMonth = true,
                 custody = "dad",
-                previousCustody = "dad",
                 isPublicHoliday = true
             )
         )
@@ -127,7 +121,6 @@ class DayCellFillsTest {
                 isWeekend = true,
                 isCurrentMonth = true,
                 custody = null,
-                previousCustody = null,
                 isPublicHoliday = true
             )
         )
@@ -141,7 +134,6 @@ class DayCellFillsTest {
                 isWeekend = false,
                 isCurrentMonth = true,
                 custody = null,
-                previousCustody = null,
                 isPublicHoliday = false
             )
         )
@@ -155,7 +147,6 @@ class DayCellFillsTest {
                 isWeekend = false,
                 isCurrentMonth = true,
                 custody = "grandma",
-                previousCustody = "grandma",
                 isPublicHoliday = false
             )
         )
@@ -186,120 +177,15 @@ class DayCellFillsTest {
     }
 
     @Test
-    fun `a day the child changes hands on is split from yesterday's parent`() {
+    fun `a day the child changes hands on is one fill in its own parent's colour`() {
         val fill = DayCellFills.monthCell(
             isWeekend = false,
             isCurrentMonth = true,
             custody = "dad",
-            previousCustody = "mom",
             isPublicHoliday = false
         )
-
         assertEquals(DayCellOverlay.CUSTODY_DAD, fill.overlay)
-        assertEquals(DayCellOverlay.CUSTODY_MOM, fill.handoverFrom)
-    }
-
-    @Test
-    fun `the day after a handover is not split`() {
-        val fill = DayCellFills.monthCell(
-            isWeekend = false,
-            isCurrentMonth = true,
-            custody = "dad",
-            previousCustody = "dad",
-            isPublicHoliday = false
-        )
-
-        assertNull(fill.handoverFrom)
-    }
-
-    @Test
-    fun `a swapped day is one solid fill never split`() {
-        // An accepted override hands Thursday to the other parent. The resolver answers "dad"
-        // while the pattern still answers "mom" for the day before — but the day is a whole day
-        // in dad's care, and a diagonal would say the swap only half-happened (owner decision,
-        // Aug 2026 walkthrough). The overlay keeps the swapped-to parent at full strength.
-        val fill = DayCellFills.monthCell(
-            isWeekend = false,
-            isCurrentMonth = true,
-            custody = "dad",
-            previousCustody = "mom",
-            isPublicHoliday = false,
-            isSwapped = true
-        )
-
-        assertEquals(DayCellOverlay.CUSTODY_DAD, fill.overlay)
-        assertNull(fill.handoverFrom)
-    }
-
-    @Test
-    fun `the day after a swap is one solid fill too`() {
-        // The far edge of the swap: yesterday was overridden to dad, today the pattern's "mom"
-        // resumes. Without the suppression this cell would inherit a second split.
-        val fill = DayCellFills.monthCell(
-            isWeekend = false,
-            isCurrentMonth = true,
-            custody = "mom",
-            previousCustody = "dad",
-            isPublicHoliday = false,
-            previousSwapped = true
-        )
-
-        assertEquals(DayCellOverlay.CUSTODY_MOM, fill.overlay)
-        assertNull(fill.handoverFrom)
-    }
-
-    @Test
-    fun `a swap removes the split it displaced`() {
-        // Swapping the pattern's own switch day back to the parent who already had the day
-        // before it leaves no handover there at all.
-        val fill = DayCellFills.monthCell(
-            isWeekend = false,
-            isCurrentMonth = true,
-            custody = "mom",
-            previousCustody = "mom",
-            isPublicHoliday = false
-        )
-
-        assertNull(fill.handoverFrom)
-    }
-
-    @Test
-    fun `an unanswered day is never split because an unknown is not a handover`() {
-        assertNull(
-            DayCellFills.monthCell(
-                isWeekend = false,
-                isCurrentMonth = true,
-                custody = "dad",
-                previousCustody = null,
-                isPublicHoliday = false
-            ).handoverFrom
-        )
-        assertNull(
-            DayCellFills.monthCell(
-                isWeekend = false,
-                isCurrentMonth = true,
-                custody = null,
-                previousCustody = "dad",
-                isPublicHoliday = false
-            ).handoverFrom
-        )
-    }
-
-    @Test
-    fun `a handover on a borrowed day is still split`() {
-        // The diagonal travels with the band. Drawing the band but not the handover would put
-        // the change of hands a day late — wrong information, where the old blank cell was
-        // merely silent.
-        assertEquals(
-            DayCellOverlay.CUSTODY_MOM,
-            DayCellFills.monthCell(
-                isWeekend = false,
-                isCurrentMonth = false,
-                custody = "dad",
-                previousCustody = "mom",
-                isPublicHoliday = false
-            ).handoverFrom
-        )
+        assertNull(fill.pendingProposalFor)
     }
 
     @Test
@@ -311,7 +197,6 @@ class DayCellFillsTest {
             isWeekend = false,
             isCurrentMonth = true,
             custody = "mom",
-            previousCustody = "mom",
             isPublicHoliday = false,
             proposedCustody = "dad"
         )
@@ -326,7 +211,6 @@ class DayCellFillsTest {
             isWeekend = false,
             isCurrentMonth = true,
             custody = "mom",
-            previousCustody = "mom",
             isPublicHoliday = false
         )
 
@@ -343,7 +227,6 @@ class DayCellFillsTest {
             isWeekend = false,
             isCurrentMonth = true,
             custody = "dad",
-            previousCustody = "dad",
             isPublicHoliday = false,
             proposedCustody = null
         )
@@ -351,7 +234,6 @@ class DayCellFillsTest {
             isWeekend = false,
             isCurrentMonth = true,
             custody = "dad",
-            previousCustody = "dad",
             isPublicHoliday = false
         )
 
@@ -366,7 +248,6 @@ class DayCellFillsTest {
             isWeekend = false,
             isCurrentMonth = true,
             custody = "mom",
-            previousCustody = "mom",
             isPublicHoliday = false,
             proposedCustody = "mom"
         )
@@ -381,7 +262,6 @@ class DayCellFillsTest {
             isWeekend = false,
             isCurrentMonth = true,
             custody = null,
-            previousCustody = null,
             isPublicHoliday = false,
             proposedCustody = "dad"
         )
@@ -395,7 +275,6 @@ class DayCellFillsTest {
             isWeekend = false,
             isCurrentMonth = false,
             custody = "mom",
-            previousCustody = "mom",
             isPublicHoliday = false,
             proposedCustody = "dad"
         )
@@ -425,7 +304,6 @@ class DayCellFillsTest {
             isWeekend = false,
             isCurrentMonth = true,
             custody = "mom",
-            previousCustody = "mom",
             isPublicHoliday = false,
             proposedCustody = "guardian"
         )
@@ -447,7 +325,6 @@ class DayCellFillsTest {
                 isWeekend = true,
                 isCurrentMonth = true,
                 custody = "dad",
-                previousCustody = "dad",
                 isPublicHoliday = false,
                 isSchoolVacation = true
             )
@@ -460,7 +337,6 @@ class DayCellFillsTest {
             isWeekend = false,
             isCurrentMonth = true,
             custody = null,
-            previousCustody = null,
             isPublicHoliday = true,
             isSchoolVacation = true
         )
@@ -477,7 +353,6 @@ class DayCellFillsTest {
             isWeekend = false,
             isCurrentMonth = false,
             custody = "mom",
-            previousCustody = "mom",
             isPublicHoliday = false,
             isSchoolVacation = true
         )
@@ -492,7 +367,6 @@ class DayCellFillsTest {
             isWeekend = false,
             isCurrentMonth = true,
             custody = "mom",
-            previousCustody = "mom",
             isPublicHoliday = false
         )
 

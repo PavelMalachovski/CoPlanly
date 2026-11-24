@@ -149,9 +149,9 @@ class IsolationScenarioTest : QaOnScreenTest() {
         report.step(
             id = "switcher_dot",
             title = "The switcher says the other family has something new",
-            expected = "Home's family chip carries the dot for new messages in another family"
+            expected = "The Family tab's family chip carries the dot for new messages in another family"
         ) {
-            openTab(BottomNavDestination.HOME)
+            openTab(BottomNavDestination.FAMILY)
             waitFor(
                 "the dot naming new messages in another family",
                 hasContentDescription(string(R.string.family_switcher_unread_other), substring = true)
