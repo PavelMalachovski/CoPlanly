@@ -3715,8 +3715,9 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    `DueReminders` re-checks it against Room when due (`ReminderPlanner.isOccurrence`) and then arms
    the next, so a weekly event reminds every week. `cancelAll()` runs at sign-out, account switch
    and deletion, because the reminder reads the title from Room and Room survives sign-out; `null`
-   `reminderMinutes` is "no reminder". **A new event opens with a one-hour reminder** (owner
-   decision, 9 November 2026; `DEFAULT_REMINDER_MINUTES` in `AddEditEventScreen`, in `:shared-ui`),
+   `reminderMinutes` is "no reminder". **A new event opens with a 30-minute reminder** (owner
+   decisions, 9 November 2026, and 24 November 2026 for half an hour rather than an hour;
+   `DEFAULT_REMINDER_MINUTES` in `AddEditEventScreen`, in `:shared-ui`),
    which the parent can set to None; an edit keeps what the event holds, and imports set none.
    **A reminder is an alarm, on the minute** (owner decision, 9 November 2026: a 30-minute reminder
    arrived 25 minutes before the event). `EventReminderScheduler` arms one `AlarmManager` alarm per
@@ -4780,9 +4781,10 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     - **A second factor is not handled by the app**: `EdupageException.SecondFactor` says "approve
       the sign-in in EduPage, then try again"; the app never sees the code, and the cookies it was
       given are kept for the retry. A captcha is refused the same plain way.
-    - **Hidden in release**: the connect screen's EduPage row follows `AppBuildValues.edupageImport`
-      (`BuildConfig.EDUPAGE_IMPORT`, `COPLANLY_EDUPAGE_IMPORT`, default on in debug, off in
-      release) until the device check is run; turning it on in release is its own pull request.
+    - **On in release since 24 November 2026** (owner: tested on a phone): the connect screen's
+      EduPage row follows `AppBuildValues.edupageImport` (`BuildConfig.EDUPAGE_IMPORT`,
+      `COPLANLY_EDUPAGE_IMPORT`, default on in debug and in release; `-PCOPLANLY_EDUPAGE_IMPORT=false`
+      hides it for one build). The iPhone does not offer it yet (`IosApp.start`).
       The R8 probe runs the client and parsers on `CannedEngine` (`HttpImportProbe`, the case
       "EduPage sign-in, timetable and timeline through the minified Ktor pipeline", required by
       `check-r8-probe.js`).

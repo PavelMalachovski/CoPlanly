@@ -257,8 +257,8 @@ android {
             buildConfigField("Boolean", "ENABLE_ANALYTICS", "true")
             // Premium, and gated until billing (MON-11) exists: no AI affordance in a release.
             buildConfigField("Boolean", "AI_ASSIST_ENABLED", aiAssistFlag(default = false))
-            // The EduPage import is hidden in a release until the owner turns it on.
-            buildConfigField("boolean", "EDUPAGE_IMPORT", edupageImportFlag(default = false))
+            // The EduPage import is on in a release since 24 November 2026 (owner: tested on a phone).
+            buildConfigField("boolean", "EDUPAGE_IMPORT", edupageImportFlag(default = true))
             // Sign in with Apple is hidden in a release until Apple is set up in Firebase.
             buildConfigField("boolean", "APPLE_SIGN_IN", appleSignInFlag(default = false))
         }

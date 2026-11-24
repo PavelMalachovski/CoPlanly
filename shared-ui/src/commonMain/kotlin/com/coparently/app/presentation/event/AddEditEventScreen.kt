@@ -248,11 +248,12 @@ private val REMINDER_OPTIONS: List<Pair<Int?, StringResource>> = listOf(
 )
 
 /**
- * The reminder a new event opens with: an hour before (owner decision, 9 November 2026 — every
- * event should remind unless the parent says otherwise). One of [REMINDER_OPTIONS], so the row names
- * it. An edit keeps what the event holds, None included, and imports set none.
+ * The reminder a new event opens with: 30 minutes before (owner decisions: 9 November 2026, every
+ * event should remind unless the parent says otherwise; 24 November 2026, half an hour rather than
+ * an hour). One of [REMINDER_OPTIONS], so the row names it. An edit keeps what the event holds,
+ * None included, and imports set none.
  */
-internal const val DEFAULT_REMINDER_MINUTES = 60
+internal const val DEFAULT_REMINDER_MINUTES = 30
 
 /**
  * Whether the parent-owner picker (the two animated cards) should render.
