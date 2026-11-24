@@ -1654,7 +1654,13 @@ end of Task 11; returning them to `internal` is carried to phase 3 (ROADMAP MON-
   for: input", and nothing runs — PR #130 lost the instrumented, e2e, R8 and upgrade jobs to it, the
   upgrade job twice in a row. Every emulator script now touches `$STARTED_FILE` first; when the step
   failed and that file is missing, a "Did … start?" step stops what is left of the emulator and the
-  same step runs again with `-no-snapshot`, where boot completes only once every service is up. The
+  same step runs again with `-no-snapshot`, where boot completes only once every service is up. **And
+  every emulator script first waits for the services it installs through**
+  (`tools/wait-for-device-services.sh`: `package`, `activity`, `window`, `input` published and
+  `pm path android` answering, up to 180 s) **before** it touches `$STARTED_FILE`: on 24 November
+  2026 an API 35 leg read `boot_completed` without its package service, the APK install failed
+  ("Can't find service: package") and no test ran, so an emulator whose services never answer now
+  counts as one that never started and is booted again, cold. The
   check step reads whichever attempt ran last and leaves a notice when it was the second. Two things
   not to undo: **a test that started and then failed or hung is never retried** — that is a result,
   and "flake" is not a root cause — and the retry is a **cold** boot, because a second snapshot boot
