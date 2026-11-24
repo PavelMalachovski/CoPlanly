@@ -12,19 +12,15 @@ generator only adds a headline and a device frame around what the app drew.
 | `feature-graphic-cs.png` | 1024 × 500 | Feature graphic, Czech listing |
 | `feature-graphic-en.png` | 1024 × 500 | Feature graphic, English listing |
 | `icon-512.png` | 512 × 512, 32-bit PNG | The Play Store icon, both listings. Made from `icon-512.svg` |
-| `icon-512.svg` | — | Its source: the launcher icon's two layers, generated from `app/src/main/res/mipmap/ic_launcher_foreground.xml` on the brand colour |
+| `icon-512.svg` | — | Its source: the launcher icon on the brand colour |
 
-The store icon is the launcher icon, not a second drawing of it: `icon-512.svg` copies the
-foreground's paths and its scale group unchanged onto `#4F46E5` (`@color/brand_primary`) and crops
-the 108-unit canvas to the 72-unit area a launcher mask shows, so the calendar sits in the Play
-icon at the size it sits on a home screen. It is full bleed and square; Play rounds the corners
-itself. Re-render it after any change to the launcher icon, from the repository root:
-
-```bash
-pip install cairosvg pillow
-python3 -c "import cairosvg; cairosvg.svg2png(url='docs/play-listing/icon-512.svg', write_to='docs/play-listing/icon-512.png', output_width=512, output_height=512)"
-python3 -c "from PIL import Image; Image.open('docs/play-listing/icon-512.png').convert('RGBA').save('docs/play-listing/icon-512.png')"
-```
+The store icon is the launcher icon, not a second drawing of it. Both, with every other copy of the
+CoPlanly mark (a calendar with two adults holding a child by the hands), are written by
+`tools/brand/generate-brand-assets.py` from one drawing: the mark on `#4F46E5`
+(`@color/brand_primary`), cropped to the 72-unit area a launcher mask shows, full bleed and square
+(Play rounds the corners itself). Change the mark there and run it; its docstring says how. The
+feature graphics draw the same mark: `tools/play-promo/render.js` reads
+`docs/design-system/assets/Logos/coplanly-mark-indigo.svg`.
 
 ## Regenerating
 

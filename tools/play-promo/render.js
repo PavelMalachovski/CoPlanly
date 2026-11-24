@@ -87,17 +87,15 @@ function fontFaces() {
     .join('\n');
 }
 
-/** The launcher glyph (res/mipmap/ic_launcher_foreground.xml), unscaled, in the brand colour. */
+/**
+ * The CoPlanly mark in the brand colour, at [size] px wide: the design system's
+ * `coplanly-mark-indigo.svg`, which tools/brand/generate-brand-assets.py writes from the same
+ * drawing as the launcher icon.
+ */
 function logoSvg(size) {
-  const dot = (x, y) => `<rect x="${x}" y="${y}" width="6" height="6" rx="1.5"/>`;
-  const dots = [54, 63, 72].flatMap((y) => [37, 51, 65].map((x) => dot(x, y))).join('');
-  return `<svg width="${size}" height="${size}" viewBox="22 24 64 64" fill="${COLORS.primary}">
-    <path d="M40,28 A3,3 0 0 1 43,31 V39 A3,3 0 0 1 37,39 V31 A3,3 0 0 1 40,28 Z"/>
-    <path d="M68,28 A3,3 0 0 1 71,31 V39 A3,3 0 0 1 65,39 V31 A3,3 0 0 1 68,28 Z"/>
-    <path fill-rule="evenodd" d="M35,34 H73 A9,9 0 0 1 82,43 V75 A9,9 0 0 1 73,84 H35 A9,9 0 0 1 26,75 V43 A9,9 0 0 1 35,34 Z M35,38 H73 A5,5 0 0 1 78,43 V75 A5,5 0 0 1 73,80 H35 A5,5 0 0 1 30,75 V43 A5,5 0 0 1 35,38 Z"/>
-    <path d="M35,38 H73 A5,5 0 0 1 78,43 V49 H30 V43 A5,5 0 0 1 35,38 Z"/>
-    ${dots}
-  </svg>`;
+  const file = path.join(REPO, 'docs', 'design-system', 'assets', 'Logos', 'coplanly-mark-indigo.svg');
+  return fs.readFileSync(file, 'utf8').trim()
+    .replace(/ width="[^"]*" height="[^"]*"/, ` width="${size}" height="${size}"`);
 }
 
 const BASE_CSS = `

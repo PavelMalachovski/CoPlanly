@@ -7,12 +7,12 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material3.*
@@ -22,10 +22,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.common.AppIcon
+import com.coparently.app.presentation.common.BrandWordmark
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.platform.LocalAppBuildValues
@@ -39,7 +41,6 @@ import com.coparently.app.presentation.theme.labelLargeEmphasized
 import com.coparently.app.presentation.theme.rememberReducedMotion
 import com.coparently.app.presentation.theme.titleMediumEmphasized
 import com.coparently.app.resources.Res
-import com.coparently.app.resources.app_name
 import com.coparently.app.resources.auth_action_create_account
 import com.coparently.app.resources.auth_action_sign_in
 import com.coparently.app.resources.auth_action_sign_up
@@ -56,7 +57,9 @@ import com.coparently.app.resources.auth_sign_in_subtitle
 import com.coparently.app.resources.auth_sign_up_subtitle
 import com.coparently.app.resources.auth_tagline
 import com.coparently.app.resources.auth_welcome_back
+import com.coparently.app.resources.brand_mark
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -123,25 +126,24 @@ fun AuthScreen(
                 // Decoration that loops forever stands still when animations are switched off.
                 val pulse = if (rememberReducedMotion()) 1f else pulsing
 
-                AppIcon(
-                    imageVector = Icons.Default.ChildCare,
+                // The CoPlanly mark (tools/brand/generate-brand-assets.py), the app's icon and the
+                // splash's centre: one picture on both platforms, never an icon a platform swaps for
+                // its own, which is how the iPhone came to show a different logo here.
+                Image(
+                    painter = painterResource(Res.drawable.brand_mark),
                     contentDescription = stringResource(Res.string.auth_cd_logo),
+                    colorFilter = ColorFilter.tint(CoPlanlyColors.BrandPrimary),
                     modifier = Modifier
                         .size(AUTH_LOGO_SIZE)
                         .graphicsLayer {
                             scaleX = pulse
                             scaleY = pulse
-                        },
-                    tint = CoPlanlyColors.BrandPrimary
+                        }
                 )
 
                 Spacer(modifier = Modifier.height(Spacing.L))
 
-                Text(
-                    text = stringResource(Res.string.app_name),
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
+                BrandWordmark(MaterialTheme.typography.headlineLarge)
 
                 Text(
                     text = stringResource(Res.string.auth_tagline),

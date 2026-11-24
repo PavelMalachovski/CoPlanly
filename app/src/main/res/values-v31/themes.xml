@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The splash on Android 12 and later: the same as values/themes.xml, plus the "coplanly."
+         wordmark the system draws at the bottom of the screen (its branding image, 200 x 80 dp).
+         The platform attribute exists only from API 31, and the compat library has no twin of it,
+         so the style is repeated here. The iPhone's launch screen (iosApp/CoPlanly/
+         LaunchScreen.storyboard) puts the same wordmark in the same place. Both pictures are
+         written by tools/brand/generate-brand-assets.py. -->
+    <style name="Theme.CoPlanly.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/brand_primary</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+        <item name="windowSplashScreenAnimationDuration">300</item>
+        <item name="android:windowSplashScreenBrandingImage">@drawable/splash_wordmark</item>
+        <item name="postSplashScreenTheme">@style/Theme.CoPlanly</item>
+    </style>
+</resources>
