@@ -175,7 +175,9 @@ android {
         // Overridden per upload by the release workflow (-PCOPLANLY_VERSION_CODE), because Play
         // refuses a second bundle with the same versionCode.
         versionCode = (project.findProperty("COPLANLY_VERSION_CODE") as String?)?.toInt() ?: 2
-        versionName = "1.1.0"
+        // 1.5.0 (versionCode 113) is the last build uploaded to Play by hand; 1.6.0 is the Home
+        // requests, calendar K1 and the steady headers (24 November 2026).
+        versionName = "1.6.0"
 
         testInstrumentationRunner = "com.coparently.app.KoinTestRunner"
 
