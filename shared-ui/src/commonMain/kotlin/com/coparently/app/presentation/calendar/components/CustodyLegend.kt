@@ -26,7 +26,6 @@ import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.calendar_legend_contact
-import com.coparently.app.resources.calendar_legend_handover
 import com.coparently.app.resources.day_swap_legend_waiting
 import org.jetbrains.compose.resources.stringResource
 
@@ -34,8 +33,7 @@ import org.jetbrains.compose.resources.stringResource
 internal val LEGEND_PARENT_SLOTS = listOf("mom", "dad")
 
 /**
- * A legend swatch: a small day cell, so the mark in it reads as the grid's own (UX audit M9). At a
- * 12 dp circle the handover diagonal was a pink dot, the same as one parent's.
+ * A legend swatch: a small day cell, so the mark in it reads as the grid's own (UX audit M9).
  */
 internal val LEGEND_SWATCH = DpSize(20.dp, 14.dp)
 
@@ -44,8 +42,9 @@ internal val LEGEND_SWATCH = DpSize(20.dp, 14.dp)
  * tell whose pink it was, nor what a cell's triangle said). A row of the grid card until calendar K1
  * (November 2026); since then the body of the header's "?" sheet ([CalendarLegendSheet]).
  *
- * Each parent's name beside a swatch of their wash, the handover diagonal and, when the family has
- * any, the contact-time corner. It reads nothing about the month on screen, so it keeps one height
+ * Each parent's name beside a swatch of their wash and, when the family has any, the contact-time
+ * corner. A handover day is drawn in one parent's colour like any other day (owner decision, 24
+ * November 2026), so it has no entry. It reads nothing about the month on screen, so it keeps one height
  * as the month pages — the calendar's banners must not move the grid (design refresh item 5). It
  * wraps rather than cuts at a large font.
  *
@@ -83,8 +82,6 @@ private fun LegendEntries(
     showPendingSwap: Boolean,
     modifier: Modifier
 ) {
-    val first = ParentColors.container(LEGEND_PARENT_SLOTS[0], alpha = ParentColors.custodyTintAlpha)
-    val second = ParentColors.container(LEGEND_PARENT_SLOTS[1], alpha = ParentColors.custodyTintAlpha)
     val surface = MaterialTheme.colorScheme.surface
     val mark = MaterialTheme.colorScheme.onSurfaceVariant
     FlowRow(
@@ -94,27 +91,6 @@ private fun LegendEntries(
     ) {
         slots.forEach { slot ->
             LegendEntry(label = parentNames.labelFor(slot)) { ParentSwatch(slot) }
-        }
-        if (slots.size == LEGEND_PARENT_SLOTS.size) {
-            LegendEntry(label = stringResource(Res.string.calendar_legend_handover)) {
-                // A day split corner to corner, as the grid draws the day one parent hands over.
-                Canvas(
-                    modifier = Modifier
-                        .size(LEGEND_SWATCH)
-                        .clip(MaterialTheme.shapes.extraSmall)
-                ) {
-                    drawRect(surface)
-                    drawRect(first)
-                    val lower = Path().apply {
-                        moveTo(size.width, 0f)
-                        lineTo(size.width, size.height)
-                        lineTo(0f, size.height)
-                        close()
-                    }
-                    drawPath(lower, surface)
-                    drawPath(lower, second)
-                }
-            }
         }
         if (showContactWindows) {
             LegendEntry(label = stringResource(Res.string.calendar_legend_contact)) {

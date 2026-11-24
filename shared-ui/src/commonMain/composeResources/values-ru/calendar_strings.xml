@@ -35,7 +35,6 @@
     <string name="calendar_day_desc_today">Сегодня</string>
     <string name="calendar_day_desc_outside_month">Вне текущего месяца</string>
     <string name="calendar_day_desc_with_parent">С кем: %1$s</string>
-    <string name="calendar_day_desc_handover">Передача. До: %1$s, после: %2$s</string>
     <string name="calendar_day_desc_school_vacation">Школьные каникулы</string>
     <string name="calendar_day_desc_proposal_pending">Предложено: %1$s, ещё не согласовано</string>
     <plurals name="calendar_day_desc_events">
@@ -87,7 +86,6 @@
     <string name="calendar_week_number">Н. %1$d</string>
     <string name="calendar_agenda_custody_day_you">Ваш день</string>
     <string name="calendar_filter_members">Показать для</string>
-    <string name="calendar_legend_handover">Передача</string>
     <string name="calendar_legend_contact">Время общения</string>
 
     <!-- MON-6b: a contact window on the grid. -->
@@ -101,7 +99,6 @@
     <string name="mini_month_marked_day_no_custody">%1$s: %2$s.</string>
 
     <!-- The calendar's header and Today card (redesign, November 2026). -->
-    <string name="calendar_heading">Ваш семейный календарь</string>
     <string name="calendar_together_for">Вместе ради: %1$s</string>
     <string name="calendar_names_and">и</string>
     <string name="calendar_previous_period">Предыдущий период</string>

@@ -119,6 +119,7 @@
     <ID>MagicNumber:ValidationUtils.kt$ValidationUtils$50</ID>
     <ID>MatchingDeclarationName:Color.kt$CoPlanlyColors</ID>
     <ID>MatchingDeclarationName:WindowSize.kt$Dimensions</ID>
+    <ID>MaxLineLength:BrandHeaderScreenshots.kt$BrandHeaderScreenshots$*</ID>
     <ID>MaxLineLength:DatabaseMigrations.kt$DatabaseMigrations.&lt;no name provided&gt;$"CREATE INDEX IF NOT EXISTS index_events_parentOwner_startDateTime ON events(parentOwner, startDateTime)"</ID>
     <ID>MaximumLineLength:DatabaseMigrations.kt$DatabaseMigrations.&lt;no name provided&gt;$ </ID>
     <ID>NoWildcardImports:ActivityEditor.kt$import androidx.compose.foundation.layout.*</ID>

@@ -28,6 +28,7 @@ import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.changerequests.RequestsSource
 import com.coparently.app.presentation.changerequests.RequestsState
 import com.coparently.app.presentation.common.CoParentOnScreen
+import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.FamilyMembersSource
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
@@ -397,6 +398,10 @@ class HomeViewModel(
      * Room list the calendar header reads, through the same source.
      */
     val children: StateFlow<List<ChildInfo>> = homeIdentityDependencies.familyMembersSource.observeChildren()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
+    /** The children and the pets, as the header's avatars draw them, the Calendar's alike. */
+    val members: StateFlow<List<FamilyMember>> = homeIdentityDependencies.familyMembersSource.observe()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
     /**

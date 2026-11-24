@@ -453,17 +453,6 @@ fun CalendarScreen(
         pendingTo = pendingSwapTo
     )
 
-    // The dates an accepted swap decides. `getCustody` already answers whose day each one is;
-    // this set only tells the grid the answer came from a swap, so the cell (and the one after
-    // it) draws one solid fill instead of the handover diagonal.
-    val swappedDates: Set<LocalDate> = remember(dayOverrides) {
-        dayOverrides
-            .filterValues { it.agreedToParent != null }
-            .keys
-            .mapNotNull { iso -> runCatching { LocalDate.parse(iso) }.getOrNull() }
-            .toSet()
-    }
-
     // Events filtered by parent view, hidden event types, and who they are about
     val filteredEvents = remember(events, parentFilter, hiddenEventTypes, activeMemberFilter) {
         events
@@ -975,7 +964,6 @@ fun CalendarScreen(
                                         parentNames = parentNames,
                                         // A child's own band (FAM-4) is not the schedule a swap moves.
                                         swapMarks = if (grid.followsFamily) swapMarksShown else emptyMap(),
-                                        swappedDates = if (grid.followsFamily) swappedDates else emptySet(),
                                         onDayLongClick = offerSwapDay?.takeIf { grid.followsFamily },
                                         // A finger that long-pressed and kept moving redraws the run
                                         // from the anchor, so coming back shortens it again.

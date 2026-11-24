@@ -151,13 +151,12 @@ private fun MiniMonthCell(
     modifier: Modifier
 ) {
     val inMonth = date.yearMonth == model.month
-    // The month grid's two layers. No previous day and no holiday, so no handover diagonal and no
-    // holiday tint: neither reads at this size, and the spec leaves both to the full grid.
+    // The month grid's two layers. No holiday tint: it does not read at this size, and the spec
+    // leaves it to the full grid.
     val fill = DayCellFills.monthCell(
         isWeekend = CustodyHelper.isWeekend(date),
         isCurrentMonth = inMonth,
         custody = model.custody[date],
-        previousCustody = null,
         isPublicHoliday = false
     )
     val base = dayCellBaseColor(fill.base)

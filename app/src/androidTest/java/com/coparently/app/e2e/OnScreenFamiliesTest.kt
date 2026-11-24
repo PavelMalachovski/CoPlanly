@@ -40,7 +40,7 @@ import java.util.UUID
  * `MultiFamilyTest` proves the data side — what Alice writes in Carol's family stays there. This
  * proves what she **sees**: Carol's family reaching the switcher while the app is open, by Alice's
  * own pairing listener and without taking over the screen (tester report #4); with Bob's family on
- * screen, a message from Carol puts a dot on Home's switcher chip whose description names the kind
+ * screen, a message from Carol puts a dot on the Family tab's switcher chip whose description names the kind
  * ("New messages in another family"), Carol's row in the switcher dialog says the same; switching
  * there makes the new-event form name Carol rather than Bob (tester report #11) and brings Carol's
  * thread onto the Chat tab (chat follows the selected family, `ChatPartnerSource`), and what Alice
@@ -64,7 +64,9 @@ class OnScreenFamiliesTest : AliceOnScreenTest() {
             hasClickAction()
         // Nothing runs Alice's sync: her open app learns Carol's family from its own pairing
         // listener, which adds the co-parent the server's set gained while `partnerId` stays on Bob.
-        waitFor("the family switcher chip on Home", switcher)
+        // The chip is the Family tab's alone (owner, 24 November 2026).
+        openTab(BottomNavDestination.FAMILY)
+        waitFor("the family switcher chip on the Family tab", switcher)
         runBlocking {
             assertEquals(
                 "Alice's phone does not know both families",

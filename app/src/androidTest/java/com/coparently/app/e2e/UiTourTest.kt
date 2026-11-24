@@ -438,10 +438,10 @@ class UiTourTest : AliceOnScreenTest() {
         }
         val switcher = hasContentDescription(string(R.string.settings_family_switch), substring = true) and
             hasClickAction()
-        camera.shot("home_with_family_switcher") {
+        camera.shot("family_with_family_switcher") {
             paired.getOrThrow()
             driver.backToTabs()
-            openTab(BottomNavDestination.HOME)
+            openTab(BottomNavDestination.FAMILY)
             repeat(MAX_DIALOGS) { driver.pressIfPresent(dialogButton(R.string.home_dialog_later)) }
             driver.await("the switcher chip", switcher, CROSS_DEVICE_TIMEOUT_MS)
         }

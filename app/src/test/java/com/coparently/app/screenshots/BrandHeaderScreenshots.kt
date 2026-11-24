@@ -5,8 +5,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.presentation.common.BrandHeader
+import com.coparently.app.presentation.common.FamilyMember
+import com.coparently.app.presentation.common.HeadingLines
 import com.coparently.app.testing.RobolectricTestApplication
 import kotlinx.datetime.LocalDateTime
 import org.junit.Test
@@ -16,8 +19,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The start screen's brand header with no children, two and four (the fourth folds into "+1"),
- * over the standard variant matrix.
+ * Home's brand header, and Home's first rows with "Together, for" under it, with no members, two children, and three children and a pet (the last two
+ * fold into "+2", in the room three take, as on the Calendar), over the standard variant matrix.
  *
  * @param variant Language, theme, font scale and palette for this run
  */
@@ -29,13 +32,24 @@ class BrandHeaderScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(vari
     @Test
     fun brandHeader() {
         snap("common_brand_header") {
-            Column(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                BrandHeader(children = emptyList(), onSettingsClick = {})
-                BrandHeader(children = CHILDREN.take(2), onSettingsClick = {})
-                BrandHeader(children = CHILDREN, onSettingsClick = {})
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                BrandHeader(members = emptyList(), onSettingsClick = {})
+                BrandHeader(members = MEMBERS.take(2), onSettingsClick = {})
+                BrandHeader(members = MEMBERS, onSettingsClick = {})
+            }
+        }
+    }
+
+    /** Home's first rows as they stand together: the brand row, then "Together, for" and the names. */
+    @Test
+    fun homeHeader() {
+        snap("home_header") {
+            Column {
+                BrandHeader(members = MEMBERS, onSettingsClick = {})
+                HeadingLines(
+                    childNames = MEMBERS.mapNotNull { it.child?.childName },
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
             }
         }
     }
@@ -43,9 +57,11 @@ class BrandHeaderScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(vari
     companion object {
         private val STAMP = LocalDateTime(2026, 5, 1, 9, 0)
 
-        private val CHILDREN = listOf("Mia", "Leo", "Max", "Eva").map {
-            ChildInfo(id = it, childName = it, dateOfBirth = null, createdAt = STAMP, updatedAt = STAMP)
-        }
+        /** Three children and a pet: the fourth folds into "+2" with the third. */
+        private val MEMBERS = listOf("Mia", "Leo", "Eva").map {
+            val child = ChildInfo(id = it, childName = it, dateOfBirth = null, createdAt = STAMP, updatedAt = STAMP)
+            FamilyMember(ref = FamilyMemberRef.Child(it), name = it, child = child)
+        } + FamilyMember(ref = FamilyMemberRef.Pet("Max"), name = "Max")
 
         /** The variants this class runs over. */
         @JvmStatic
