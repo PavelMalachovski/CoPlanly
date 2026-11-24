@@ -72,6 +72,21 @@ val canSignRelease = run {
         file(store).exists()
 }
 
+// A signed release built without `google-services.json` installs, then dies on its first launch
+// with "Default FirebaseApp is not initialized" (24 November 2026: 1.6.1, versionCode 115, built in
+// a fresh worktree, which holds no such file because it is gitignored, reached Play that way). A
+// machine that can sign is a machine that uploads, so it refuses to build a signed release bundle
+// or APK without the file. CI cannot sign, so its unsigned `assembleRelease` is unaffected.
+if (canSignRelease && !hasGoogleServicesJson &&
+    gradle.startParameter.taskNames.any { it.endsWith("bundleRelease") || it.endsWith("assembleRelease") }
+) {
+    throw GradleException(
+        "A signed release needs app/google-services.json, or the app crashes on its first launch " +
+            "(Default FirebaseApp is not initialized). Copy it from the Firebase console or from your " +
+            "main checkout before building a release to upload."
+    )
+}
+
 /**
  * The published privacy policy (REL-4), `web/privacy/` — see `web/README.md`. Set in October 2026
  * when hosting went live, on the owner's decision, while the page is still the draft with its
@@ -176,9 +191,10 @@ android {
         // refuses a second bundle with the same versionCode.
         versionCode = (project.findProperty("COPLANLY_VERSION_CODE") as String?)?.toInt() ?: 2
         // 1.5.0 (versionCode 113) and 1.6.0 (114) were uploaded to Play by hand; 1.6.0 is the Home
-        // requests, calendar K1 and the steady headers, 1.6.1 (115) the pet's own screen, "Month" as
-        // a menu, the larger avatars, the CoPlanly wordmark, the EduPage import and the 30-minute
-        // reminder (24 November 2026).
+        // requests, calendar K1 and the steady headers, 1.6.1 the pet's own screen, "Month" as a
+        // menu, the larger avatars, the CoPlanly wordmark, the EduPage import and the 30-minute
+        // reminder (24 November 2026). 1.6.1's first bundle (115) was built without
+        // google-services.json and crashed at launch; 116 is the same code built with it.
         versionName = "1.6.1"
 
         testInstrumentationRunner = "com.coparently.app.KoinTestRunner"

@@ -1022,6 +1022,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   Add a check there when you ship something CI cannot see.
 - `google-services.json` is required for the Google Services plugin, but the build
   degrades gracefully if it is missing (see the conditional apply in `app/build.gradle.kts`).
+  **Except a signed release**: a machine that can sign refuses `bundleRelease`/`assembleRelease`
+  without it, because such a build installs and then dies at launch ("Default FirebaseApp is not
+  initialized"). 1.6.1's first bundle (115) reached Play that way, built in a fresh `git worktree`,
+  which never holds the gitignored file: copy it in before building a release there.
 - **GitHub CI runs on every pull request, and on every push to `main`** — a push to a
   feature branch with no PR open is not built (`.github/workflows/ci.yml`, added
   August 2026 — this line used to say there was none). Twenty jobs that test (this line used to
