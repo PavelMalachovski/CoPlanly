@@ -623,7 +623,7 @@ jobs:
           force-avd-creation: false
           disable-animations: true
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: touch "$STARTED_FILE"; bash tools/ci-background-build.sh wait && bash tools/run-r8-probe.sh
+          script: bash tools/wait-for-device-services.sh || exit 1; touch "$STARTED_FILE"; bash tools/ci-background-build.sh wait && bash tools/run-r8-probe.sh
 
       # As in the `instrumented` job: a boot that died before the script started is booted again, cold.
       - name: Did the R8 probe start?
@@ -660,7 +660,7 @@ jobs:
           force-avd-creation: false
           disable-animations: true
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: touch "$STARTED_FILE"; bash tools/ci-background-build.sh wait && bash tools/run-r8-probe.sh
+          script: bash tools/wait-for-device-services.sh || exit 1; touch "$STARTED_FILE"; bash tools/ci-background-build.sh wait && bash tools/run-r8-probe.sh
 
       - name: The probe finished and passed
         if: always()
@@ -1013,13 +1013,15 @@ jobs:
           # Waits for the background build, then records the screen in 170 s segments while the
           # tests run (on legs with `record`) and pulls the MP4s after; the exit status is the
           # tests', and a recorder that fails never fails the job.
-          script: touch "$STARTED_FILE"; bash tools/ci-background-build.sh wait && bash tools/clear-system-dialogs.sh && bash tools/with-screen-recording.sh ./gradlew :app:connectedDebugAndroidTest ${{ matrix.test-args }}
+          script: bash tools/wait-for-device-services.sh || exit 1; touch "$STARTED_FILE"; bash tools/ci-background-build.sh wait && bash tools/clear-system-dialogs.sh && bash tools/with-screen-recording.sh ./gradlew :app:connectedDebugAndroidTest ${{ matrix.test-args }}
 
       # **A boot that dies before the script starts is booted again, once, cold.** The cached API 30
       # snapshot sometimes comes up without its input service: `sys.boot_completed` reads 1 at once,
       # the action's own unlock (`adb shell input keyevent 82`) fails with "No service published for:
-      # input", and the script never runs (PR #130: runs 366, 369 and 373, in four jobs). The script's
-      # first command touches $STARTED_FILE, so "never started" is a fact on disk; when the step
+      # input", and the script never runs (PR #130: runs 366, 369 and 373, in four jobs). The script
+      # first waits for the system services (`tools/wait-for-device-services.sh`: an API 35 leg came
+      # up without its package service on 24 November 2026, and the install failed) and only then
+      # touches $STARTED_FILE, so "never started" is a fact on disk; when the step
       # failed without it, the next step boots the same AVD again with `-no-snapshot`, where
       # boot_completed waits for every service. A test that started and then failed or hung is a
       # result, and is never retried. The check step after reads whichever attempt ran last and
@@ -1059,7 +1061,7 @@ jobs:
           force-avd-creation: false
           disable-animations: true
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: touch "$STARTED_FILE"; bash tools/ci-background-build.sh wait && bash tools/clear-system-dialogs.sh && bash tools/with-screen-recording.sh ./gradlew :app:connectedDebugAndroidTest ${{ matrix.test-args }}
+          script: bash tools/wait-for-device-services.sh || exit 1; touch "$STARTED_FILE"; bash tools/ci-background-build.sh wait && bash tools/clear-system-dialogs.sh && bash tools/with-screen-recording.sh ./gradlew :app:connectedDebugAndroidTest ${{ matrix.test-args }}
 
       - name: The instrumented tests finished and passed
         if: always()
@@ -1254,7 +1256,7 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           # Stops the emulator itself once the tests are done (tools/stop-emulator.sh), since a
           # snapshot boot is what the `instrumented` job's shutdown hang was seen on.
-          script: touch "$STARTED_FILE"; adb logcat -G 16M || true; bash tools/ci-background-build.sh wait && bash tools/e2e/run-two-parent-tests.sh; status=$?; echo "$status" > "$STATUS_FILE"; mkdir -p app/build/outputs && adb logcat -d -v time > app/build/outputs/e2e-logcat.txt 2>&1; echo "::group::logcat — E2E steps (timed), failures, crashes"; grep -E "I/E2E|E/E2E.*FAILED|AndroidRuntime|[WE]/(ChatViewModel|MessageRepo|ChatMirror)" app/build/outputs/e2e-logcat.txt | tail -n 400; echo "::endgroup::"; echo "::group::logcat — thread dumps of failed tests"; grep -E "E/E2E" app/build/outputs/e2e-logcat.txt | tail -n 800; echo "::endgroup::"; bash tools/stop-emulator.sh; exit $status
+          script: bash tools/wait-for-device-services.sh || exit 1; touch "$STARTED_FILE"; adb logcat -G 16M || true; bash tools/ci-background-build.sh wait && bash tools/e2e/run-two-parent-tests.sh; status=$?; echo "$status" > "$STATUS_FILE"; mkdir -p app/build/outputs && adb logcat -d -v time > app/build/outputs/e2e-logcat.txt 2>&1; echo "::group::logcat — E2E steps (timed), failures, crashes"; grep -E "I/E2E|E/E2E.*FAILED|AndroidRuntime|[WE]/(ChatViewModel|MessageRepo|ChatMirror)" app/build/outputs/e2e-logcat.txt | tail -n 400; echo "::endgroup::"; echo "::group::logcat — thread dumps of failed tests"; grep -E "E/E2E" app/build/outputs/e2e-logcat.txt | tail -n 800; echo "::endgroup::"; bash tools/stop-emulator.sh; exit $status
 
       # As in the `instrumented` job: a boot that died before the script started is booted again, cold.
       - name: Did the two-parent tests start?
@@ -1291,7 +1293,7 @@ jobs:
           force-avd-creation: false
           disable-animations: true
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: touch "$STARTED_FILE"; adb logcat -G 16M || true; bash tools/ci-background-build.sh wait && bash tools/e2e/run-two-parent-tests.sh; status=$?; echo "$status" > "$STATUS_FILE"; mkdir -p app/build/outputs && adb logcat -d -v time > app/build/outputs/e2e-logcat.txt 2>&1; echo "::group::logcat — E2E steps (timed), failures, crashes"; grep -E "I/E2E|E/E2E.*FAILED|AndroidRuntime|[WE]/(ChatViewModel|MessageRepo|ChatMirror)" app/build/outputs/e2e-logcat.txt | tail -n 400; echo "::endgroup::"; echo "::group::logcat — thread dumps of failed tests"; grep -E "E/E2E" app/build/outputs/e2e-logcat.txt | tail -n 800; echo "::endgroup::"; bash tools/stop-emulator.sh; exit $status
+          script: bash tools/wait-for-device-services.sh || exit 1; touch "$STARTED_FILE"; adb logcat -G 16M || true; bash tools/ci-background-build.sh wait && bash tools/e2e/run-two-parent-tests.sh; status=$?; echo "$status" > "$STATUS_FILE"; mkdir -p app/build/outputs && adb logcat -d -v time > app/build/outputs/e2e-logcat.txt 2>&1; echo "::group::logcat — E2E steps (timed), failures, crashes"; grep -E "I/E2E|E/E2E.*FAILED|AndroidRuntime|[WE]/(ChatViewModel|MessageRepo|ChatMirror)" app/build/outputs/e2e-logcat.txt | tail -n 400; echo "::endgroup::"; echo "::group::logcat — thread dumps of failed tests"; grep -E "E/E2E" app/build/outputs/e2e-logcat.txt | tail -n 800; echo "::endgroup::"; bash tools/stop-emulator.sh; exit $status
 
       - name: The two-parent tests finished and passed
         if: always()
@@ -1589,7 +1591,7 @@ jobs:
           force-avd-creation: false
           disable-animations: true
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: touch "$STARTED_FILE"; adb logcat -G 16M || true; bash tools/ci-background-build.sh wait && bash tools/upgrade/run-upgrade-test.sh; status=$?; echo "$status" > "$STATUS_FILE"; bash tools/stop-emulator.sh; exit $status
+          script: bash tools/wait-for-device-services.sh || exit 1; touch "$STARTED_FILE"; adb logcat -G 16M || true; bash tools/ci-background-build.sh wait && bash tools/upgrade/run-upgrade-test.sh; status=$?; echo "$status" > "$STATUS_FILE"; bash tools/stop-emulator.sh; exit $status
 
       # As in the `instrumented` job: a boot that died before the script started is booted again, cold.
       - name: Did the upgrade check start?
@@ -1627,7 +1629,7 @@ jobs:
           force-avd-creation: false
           disable-animations: true
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: touch "$STARTED_FILE"; adb logcat -G 16M || true; bash tools/ci-background-build.sh wait && bash tools/upgrade/run-upgrade-test.sh; status=$?; echo "$status" > "$STATUS_FILE"; bash tools/stop-emulator.sh; exit $status
+          script: bash tools/wait-for-device-services.sh || exit 1; touch "$STARTED_FILE"; adb logcat -G 16M || true; bash tools/ci-background-build.sh wait && bash tools/upgrade/run-upgrade-test.sh; status=$?; echo "$status" > "$STATUS_FILE"; bash tools/stop-emulator.sh; exit $status
 
       - name: The upgrade finished and passed
         if: always()
