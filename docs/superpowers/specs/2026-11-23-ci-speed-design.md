@@ -102,3 +102,12 @@ the free plan runs five macOS jobs at once and the run held five beside a run on
 `ios-tests` and `shared-ios` each built the pods cold and each ran `:shared-data`'s tests. So
 `ios-tests` joined `shared-ios` (one pods build, one job; at most four macOS jobs of a run at once),
 and every macOS job's limit leaves room for a queue.
+
+## Round two (24 November 2026, owner: "all three")
+
+What was left on the critical path: `ios-build` (17 min, 6 of them its launch check) and then
+`ios-shell` (35) or the tour (41), each spending 4 to 5 minutes booting a cold simulator.
+
+1. The launch check moved from `ios-build` to `ios-shell`, whose warm-up launched the app anyway.
+2. Every UI test job starts booting its simulator right after the checkout.
+3. The tour runs in two halves on two runners (`COPLANLY_TOUR_SHARD`), the visits dealt out in turn.

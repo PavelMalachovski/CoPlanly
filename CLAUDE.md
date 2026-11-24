@@ -1426,13 +1426,21 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   None gets a secret, and CI never has a `GoogleService-Info.plist`, so none offers Google or
   reaches the real project.
   - **`ios-build`** ("iPhone app — build and launch (macOS)") generates the project with XcodeGen,
-    builds the app and its UI tests (`build-for-testing`), launches the app and fails unless it
-    still runs 20 seconds later (artifact `ios-launch`), and hands the build products to the jobs
+    builds the app and its UI tests (`build-for-testing`) and hands the build products to the jobs
     after it as one tarred artifact, `ios-products` (`upload-artifact` keeps no executable bit). Its
-    Swift package cache is restored and saved apart, so a red run still keeps what it resolved.
+    Swift package cache is restored and saved apart, so a red run still keeps what it resolved. It
+    launches nothing since 24 November 2026: the launch check is `ios-shell`'s first step.
+  - **Every UI test job starts its simulator booting right after the checkout** ("Start booting a
+    simulator": `simulator.sh pick`, then `simctl boot`, which only starts it), so the 4 to 5
+    minutes a cold boot takes on a hosted runner pass while the job sets up, and then **runs the
+    app once before its tests** (`simulator.sh launch`): on a cold simulator XCUITest took 82 s to
+    set up and the walk's first tap on a field took no focus. `ShellUITests.type` also taps a
+    field again until it holds the focus. `shared-ios` starts its simulator the same way.
   - The iPhone tests on the emulators and the write gate run in **`shared-ios`** (above), which
     needs no app build and starts at once.
-  - **`ios-shell`**, after `ios-build`, on fresh emulators: seeds a paired family
+  - **`ios-shell`**, after `ios-build`: first the launch check `ios-build` ran until 24 November
+    2026 (`simulator.sh launch` installs the app, launches it and fails unless it still runs 20
+    seconds later; artifact `ios-launch`), then, on fresh emulators, seeds a paired family
     (`tools/ios/seed-shell-family.js`) and runs the XCUITest walk of the native shell
     (`iosApp/CoPlanlyUITests/`: the tabs, Family → Expenses → the Add expense sheet, a back swipe
     completed and one let go of, a tab tap popping two screens, a dirty sheet swiped down asking
@@ -1453,7 +1461,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
     23 November 2026): a data, domain, wording, server, Android or test change skips them, and the
     owner check reads the tours of a branch that changes the screens, and those of `main`. Each is
     on a family of its own: `ShellUITests.testTour` (a screenshot per destination it reaches and a
-    reason for each it skips, artifact `ios-tour`, with the `tour-crashed` marker) and
+    reason for each it skips, with the `tour-crashed` marker), **in two halves on two runners**
+    since 24 November 2026 (`ios-tour`'s matrix `part: [1, 2]`, artifacts `ios-tour-1-of-2` and
+    `ios-tour-2-of-2`; `COPLANLY_TOUR_SHARD` deals the visits out in turn and each half signs in
+    itself, a visit of the other half being an "in another part of the tour" line), and
     `testTourAppearance` (part D, artifact `ios-tour-appearance`, a folder per variant). Each step
     is `continue-on-error` with its own limit, and only a crash or a failed launch fails the job,
     at its end, through the `tour-crashed` marker `simulator.sh` writes for testTour's own two
@@ -2092,8 +2103,9 @@ shell alone, so Android reads a null and behaves as before:
   (`ENTRIES_END_AFTER_MS`), so a sign-out does not end an entry UIKit is still drawing.
 - **The iPhone tour** is `ShellUITests.testTour`, the `ios-tour` job (its own runner since 23
   November 2026, and only when `ios_tour` says so), on a
-  family seeded with `tools/ios/seed-shell-family.js --tour`. It saves a screenshot per route it
-  reaches (artifact `ios-tour`) and records each route it cannot reach in `tour.txt` with the
+  family seeded with `tools/ios/seed-shell-family.js --tour`, in two halves on two runners since 24
+  November 2026 (`COPLANLY_TOUR_SHARD`, "1/2" and "2/2"). It saves a screenshot per route it
+  reaches (artifacts `ios-tour-1-of-2` and `ios-tour-2-of-2`) and records each route it cannot reach in `tour.txt` with the
   reason, as the Android UI tour does. Only a crash or a failed launch fails the job (the
   `tour-crashed` marker); its step's other failures, a timeout or the seed, are a notice, and the
   tour stops visiting after 35 minutes so it always writes its summary. A new
