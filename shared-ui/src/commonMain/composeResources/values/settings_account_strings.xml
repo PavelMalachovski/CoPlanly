@@ -108,10 +108,9 @@
     <string name="family_switcher_schedule_row">A schedule proposal is waiting</string>
     <string name="family_switcher_split_other">An expense split proposal is waiting in another family</string>
     <string name="family_switcher_split_row">An expense split proposal is waiting</string>
-    <!-- The school import row (MON-8). Bakaláři opens the import. EduPage's inert "Coming soon" row
-         was removed before the first release (owner decision, September 2026); it returns only
-         with a real import. -->
-    <string name="settings_school_import_title">Import from Bakaláři</string>
+    <!-- The school import row (MON-8): Bakaláři and, since November 2026, EduPage, so the row names
+         neither system (owner, 24 November 2026: it read "Import from Bakaláři"). -->
+    <string name="settings_school_import_title">Import from school</string>
     <string name="settings_school_import_description">Your child’s school events and school hours, straight into the calendar.</string>
     <string name="settings_operation_failed">That didn\u0027t work. Check your connection and try again.</string>
 
