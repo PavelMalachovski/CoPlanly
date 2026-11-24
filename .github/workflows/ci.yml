@@ -2119,6 +2119,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The simulator the emulator tests run on boots while the job sets up and links (two minutes
+      # cold on a hosted runner): `simctl boot` only starts it, and "Boot a simulator" waits for it.
+      - name: Start booting a simulator
+        id: simulator-start
+        run: |
+          udid=$(iosApp/scripts/simulator.sh pick)
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+          xcrun simctl boot "$udid" 2>/dev/null || true
+
       - name: Set up JDK 21 (Firebase emulators)
         id: jdk21
         uses: actions/setup-java@v4
@@ -2256,11 +2265,12 @@ jobs:
       - name: Boot a simulator
         id: simulator
         if: ${{ !cancelled() && steps.link.outcome == 'success' }}
+        env:
+          UDID: ${{ steps.simulator-start.outputs.udid }}
         run: |
-          udid=$(iosApp/scripts/simulator.sh pick)
-          xcrun simctl boot "$udid" 2>/dev/null || true
-          xcrun simctl bootstatus "$udid" -b
-          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+          xcrun simctl boot "$UDID" 2>/dev/null || true
+          xcrun simctl bootstatus "$UDID" -b
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
 
       # The simulator hands a test process only `SIMCTL_CHILD_`-prefixed variables, without the
       # prefix: both forms are exported here, and the two modules' build files also forward the plain
@@ -2550,22 +2560,6 @@ jobs:
           path: ${{ runner.temp }}/ios-products.tgz
           retention-days: 1
 
-      - name: Launch it on the simulator
-        env:
-          UDID: ${{ steps.simulator.outputs.udid }}
-        run: |
-          iosApp/scripts/simulator.sh launch "$UDID" \
-            iosApp/build/Build/Products/Debug-iphonesimulator/CoPlanly.app iosApp/build/launch
-
-      - name: Upload the launch screenshot and logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-launch
-          path: iosApp/build/launch/
-          if-no-files-found: ignore
-          retention-days: 14
-
       - name: Upload the build log
         if: failure()
         uses: actions/upload-artifact@v4
@@ -2598,6 +2592,15 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+
+      # The simulator boots while the job sets up (4 to 5 minutes cold on a hosted runner, CI speed,
+      # 24 November 2026): `simctl boot` only starts it, and the warm-up below waits for it.
+      - name: Start booting a simulator
+        id: simulator
+        run: |
+          udid=$(iosApp/scripts/simulator.sh pick)
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+          xcrun simctl boot "$udid" 2>/dev/null || true
 
       - name: Set up JDK 21 (Firebase emulators)
         id: jdk21
@@ -2649,18 +2652,25 @@ jobs:
           mkdir -p iosApp/build
           tar -C iosApp/build -xzf "$RUNNER_TEMP/ios-products.tgz"
 
-      - name: Pick a simulator
-        id: simulator
-        run: echo "udid=$(iosApp/scripts/simulator.sh pick)" >> "$GITHUB_OUTPUT"
-
-      # Boots the simulator and runs the app once before the UI tests, as `ios-build` does: on a
-      # cold simulator XCUITest took 82 s to set up and the first tap on a field took no focus.
-      - name: Warm the simulator up
+      # Waits for the simulator started above, then runs the app once before the UI tests: on a cold
+      # simulator XCUITest took 82 s to set up and the first tap on a field took no focus. This is
+      # also the launch check `ios-build` ran until 24 November 2026: `simulator.sh launch` fails
+      # unless the app still runs 20 s after launch, and its screenshot is the `ios-launch` artifact.
+      - name: Launch the app on the simulator
         env:
           UDID: ${{ steps.simulator.outputs.udid }}
         run: |
           iosApp/scripts/simulator.sh launch "$UDID" \
-            iosApp/build/Build/Products/Debug-iphonesimulator/CoPlanly.app "$RUNNER_TEMP/warm-up"
+            iosApp/build/Build/Products/Debug-iphonesimulator/CoPlanly.app iosApp/build/launch
+
+      - name: Upload the launch screenshot and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-launch
+          path: iosApp/build/launch/
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: The native shell on the emulators (XCUITest)
         env:
@@ -2702,14 +2712,30 @@ jobs:
   # step is `continue-on-error` and bounds its own visits (35 minutes) to finish inside its
   # limit. The `ios-tour` artifact. It runs when `ios_tour` says so (above).
   ios-tour:
-    name: iPhone tour (macOS)
+    name: iPhone tour, part ${{ matrix.part }} of 2 (macOS)
     needs: [changes, ios-build]
     if: needs.changes.outputs.ios_tour == 'true'
+    # Two halves of `testTour` on two runners (CI speed, 24 November 2026; about 29 minutes of
+    # visits on one): `COPLANLY_TOUR_SHARD` deals the visits out in turn, and each half signs in on a
+    # family seeded for it. A visit of the other half is a "in another part of the tour" line.
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [1, 2]
     runs-on: macos-latest
     # The tour's step limit (50) and time in the queue, which counts.
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+
+      # The simulator boots while the job sets up (4 to 5 minutes cold on a hosted runner, CI speed,
+      # 24 November 2026): `simctl boot` only starts it, and the warm-up below waits for it.
+      - name: Start booting a simulator
+        id: simulator
+        run: |
+          udid=$(iosApp/scripts/simulator.sh pick)
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+          xcrun simctl boot "$udid" 2>/dev/null || true
 
       - name: Set up JDK 21 (Firebase emulators)
         id: jdk21
@@ -2760,12 +2786,8 @@ jobs:
           mkdir -p iosApp/build
           tar -C iosApp/build -xzf "$RUNNER_TEMP/ios-products.tgz"
 
-      - name: Pick a simulator
-        id: simulator
-        run: echo "udid=$(iosApp/scripts/simulator.sh pick)" >> "$GITHUB_OUTPUT"
-
-      # Boots the simulator and runs the app once before the UI tests, as `ios-build` does: on a
-      # cold simulator XCUITest took 82 s to set up and the first tap on a field took no focus.
+      # Waits for the simulator started above, then runs the app once before the UI tests: on a cold
+      # simulator XCUITest took 82 s to set up and the first tap on a field took no focus.
       - name: Warm the simulator up
         env:
           UDID: ${{ steps.simulator.outputs.udid }}
@@ -2781,6 +2803,8 @@ jobs:
           FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
           FUNCTIONS_DISCOVERY_TIMEOUT: 60
           UDID: ${{ steps.simulator.outputs.udid }}
+          # xcodebuild hands the test runner every TEST_RUNNER_-prefixed variable, without the prefix.
+          TEST_RUNNER_COPLANLY_TOUR_SHARD: ${{ matrix.part }}/2
         run: |
           set -o pipefail
           export PATH="$FIREBASE_JAVA_HOME/bin:$PATH"
@@ -2797,7 +2821,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ios-tour
+          name: ios-tour-${{ matrix.part }}-of-2
           path: |
             iosApp/build/tour/shots/
             iosApp/build/tour/tour.txt
@@ -2843,6 +2867,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The simulator boots while the job sets up (4 to 5 minutes cold on a hosted runner, CI speed,
+      # 24 November 2026): `simctl boot` only starts it, and the warm-up below waits for it.
+      - name: Start booting a simulator
+        id: simulator
+        run: |
+          udid=$(iosApp/scripts/simulator.sh pick)
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+          xcrun simctl boot "$udid" 2>/dev/null || true
+
       - name: Set up JDK 21 (Firebase emulators)
         id: jdk21
         uses: actions/setup-java@v4
@@ -2892,12 +2925,8 @@ jobs:
           mkdir -p iosApp/build
           tar -C iosApp/build -xzf "$RUNNER_TEMP/ios-products.tgz"
 
-      - name: Pick a simulator
-        id: simulator
-        run: echo "udid=$(iosApp/scripts/simulator.sh pick)" >> "$GITHUB_OUTPUT"
-
-      # Boots the simulator and runs the app once before the UI tests, as `ios-build` does: on a
-      # cold simulator XCUITest took 82 s to set up and the first tap on a field took no focus.
+      # Waits for the simulator started above, then runs the app once before the UI tests: on a cold
+      # simulator XCUITest took 82 s to set up and the first tap on a field took no focus.
       - name: Warm the simulator up
         env:
           UDID: ${{ steps.simulator.outputs.udid }}

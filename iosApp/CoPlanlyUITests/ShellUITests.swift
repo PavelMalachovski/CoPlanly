@@ -1474,6 +1474,14 @@ final class ShellUITests: XCTestCase {
     /// The tour's own time budget, from its first visit.
     private let tourBudget: TimeInterval = 35 * 60
 
+    /// The part of `testTour` this run takes, from `COPLANLY_TOUR_SHARD` ("1/2", "2/2"): CI runs the
+    /// halves on two runners at once (CI speed, 24 November 2026). The visits are dealt out in turn,
+    /// in the order `tourSignedIn` makes them, and every part signs in itself. Nil runs every visit.
+    private var tourShard: (index: Int, count: Int)?
+
+    /// How many visits the tour has dealt out so far, to [tourShard]'s parts.
+    private var tourVisitsDealt = 0
+
     /// The title of the event `tools/ios/seed-shell-family.js --tour` writes for today.
     private let tourEventTitle = "Tour dentist"
 
@@ -1542,6 +1550,7 @@ final class ShellUITests: XCTestCase {
         let environment = ProcessInfo.processInfo.environment
         let email = try XCTUnwrap(environment["COPLANLY_UITEST_EMAIL"], "No seeded account was handed to the tour")
         let password = try XCTUnwrap(environment["COPLANLY_UITEST_PASSWORD"])
+        tourShard = Self.shard(from: environment["COPLANLY_TOUR_SHARD"])
 
         app.launchEnvironment["COPLANLY_EMULATOR_HOST"] = "127.0.0.1"
         app.launch()
@@ -1583,6 +1592,14 @@ final class ShellUITests: XCTestCase {
         }
         touring = false
         tourFinish(routes: tourRoutes, controls: tourControls)
+    }
+
+    /// "1/2" as part 1 of 2; nil for anything else, which runs the whole tour.
+    private static func shard(from text: String?) -> (index: Int, count: Int)? {
+        guard let parts = text?.split(separator: "/"), parts.count == 2,
+              let index = Int(parts[0]), let count = Int(parts[1]),
+              count > 1, (1...count).contains(index) else { return nil }
+        return (index, count)
     }
 
     /// The tour's summary, printed and attached: one `COPLANLY_TOUR <route>: <outcome>` line per
@@ -1932,6 +1949,14 @@ final class ShellUITests: XCTestCase {
     /// (what a visit leaves open that `tourReset` cannot close). A visit that throws, or during which
     /// XCUITest recorded an issue, is skipped with the reason, a screenshot and the element tree.
     private func tourVisit(_ route: String, afterShot: (() -> Void)? = nil, _ reach: () throws -> Void) {
+        if let shard = tourShard {
+            let mine = tourVisitsDealt % shard.count == shard.index - 1
+            tourVisitsDealt += 1
+            if !mine {
+                tourOutcomes.append((route, "in another part of the tour"))
+                return
+            }
+        }
         if Date() > tourDeadline {
             let outcome = "skipped: the tour's \(Int(activeTourBudget / 60)) minutes ran out before this visit"
             print("COPLANLY_TOUR_VISIT \(route): \(outcome)")
