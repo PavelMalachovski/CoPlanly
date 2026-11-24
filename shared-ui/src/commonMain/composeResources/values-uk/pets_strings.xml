@@ -8,6 +8,13 @@
     <string name="pets_group_label">Улюбленці</string>
     <string name="pets_empty_state">Улюбленців ще немає</string>
 
+    <!-- One pet's own screen, between the list and the editor (24 November 2026). %1$s = a date; %1$s, %2$s = a medication's dosage and frequency. -->
+    <string name="pet_edit">Редагувати</string>
+    <string name="pet_dob_value">Дата народження: %1$s</string>
+    <string name="pet_medication_summary">%1$s - %2$s</string>
+    <string name="pet_record_gone_title">Цей запис більше не існує</string>
+    <string name="pet_record_gone_description">Його видалили на цьому телефоні або на телефоні другого з батьків.</string>
+
     <!-- Editor -->
     <string name="pet_title_add">Додати улюбленця</string>
     <string name="pet_title_edit">Редагувати улюбленця</string>

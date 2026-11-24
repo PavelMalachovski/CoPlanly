@@ -312,6 +312,19 @@ abstract class AliceOnScreenTest {
     }
 
     /**
+     * Switches the calendar to the view named by the app's string [label]: the grid card's "Month ▾"
+     * button (named "View: Month") opens its menu, whose entries are named by their views.
+     */
+    protected fun chooseCalendarView(label: Int) {
+        tap(calendarViewButton())
+        tap(hasContentDescription(string(label)) and hasClickAction())
+    }
+
+    /** The grid card's view button, "View: Month" for TalkBack. */
+    protected fun calendarViewButton(): SemanticsMatcher =
+        hasContentDescription("${string(R.string.calendar_viewmode_label)}: ", substring = true) and hasClickAction()
+
+    /**
      * Opens the Requests inbox from Home (November 2026, board HomeG1): through the Requests block's
      * "See all", which opens it while something waits on either parent and at History when nothing
      * does. Given a bounded while for the requests to load first, since the block names what waits

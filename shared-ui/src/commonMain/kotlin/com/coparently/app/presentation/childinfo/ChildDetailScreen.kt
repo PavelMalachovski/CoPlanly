@@ -27,6 +27,7 @@ import com.coparently.app.presentation.common.ListSkeleton
 import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.rememberCoParentName
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.common.shellDrawsBars
 import com.coparently.app.presentation.platform.LocalShareSheet

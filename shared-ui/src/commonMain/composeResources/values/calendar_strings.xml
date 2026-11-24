@@ -14,6 +14,7 @@
     <string name="calendar_viewmode_month">Month</string>
     <string name="calendar_viewmode_week">Week</string>
     <string name="calendar_viewmode_day">Day</string>
+    <string name="calendar_viewmode_label">View</string>
     <string name="calendar_filters_button">Filters</string>
     <string name="calendar_today_button">Today</string>
     <!-- Header subtitle when the selected day is today, e.g. "Sat 25 · today" -->
@@ -142,12 +143,8 @@
         <item quantity="one">%1$s is with %2$s</item>
         <item quantity="other">%1$s are with %2$s</item>
     </plurals>
-    <!-- Calendar K1 (November 2026): the view control's letters (spoken as the full names),
-         the "?" sheet that explains the colours and leads to Filters, and an avatar of the
+    <!-- Calendar K1 (November 2026): the "?" sheet that explains the colours and leads to Filters, and an avatar of the
          header's member filter. -->
-    <string name="calendar_viewmode_month_short">M</string>
-    <string name="calendar_viewmode_week_short">W</string>
-    <string name="calendar_viewmode_day_short">D</string>
     <string name="calendar_legend_title">What the colours mean</string>
     <string name="calendar_legend_no_schedule">The days are coloured once a custody schedule is set up.</string>
     <string name="calendar_filters_hiding">Some events are hidden</string>

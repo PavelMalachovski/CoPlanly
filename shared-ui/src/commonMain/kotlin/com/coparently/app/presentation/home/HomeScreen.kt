@@ -120,7 +120,6 @@ fun HomeScreen(
     requestsSeen: RequestsSeenViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val children by viewModel.children.collectAsState()
     val members by viewModel.members.collectAsState()
     val parentNames = rememberParentNames(viewModel.parents.collectAsState().value)
     val pendingProposal by changeRequestViewModel.pendingProposal.collectAsState()
@@ -221,7 +220,7 @@ fun HomeScreen(
                     state = state,
                     parentNames = parentNames,
                     contentPadding = padding,
-                    childNames = children.map { it.childName },
+                    memberNames = members.map { it.name },
                     requests = HomeRequestsSection(
                         state = RequestsBlockState(
                             items = requests.items,
@@ -377,7 +376,7 @@ private fun PairingInvitation(
  * @param state Everything the page draws
  * @param parentNames Resolves a slot to that parent's name
  * @param contentPadding The scaffold's own insets
- * @param childNames The children's names, for the heading's second line
+ * @param memberNames The children's and then the pets' names, for the heading's second line
  * @param requests The Requests block
  * @param actions Where each card leads
  */
@@ -387,7 +386,7 @@ private fun Dashboard(
     state: HomeUiState.Dashboard,
     parentNames: ParentNames,
     contentPadding: PaddingValues,
-    childNames: List<String>,
+    memberNames: List<String>,
     requests: HomeRequestsSection,
     actions: DashboardActions
 ) {
@@ -396,7 +395,7 @@ private fun Dashboard(
     val listModifier = Modifier
         .fillMaxSize()
         .padding(contentPadding)
-    val page = HomePage(state, parentNames, coParentName, childNames, requests, actions)
+    val page = HomePage(state, parentNames, coParentName, memberNames, requests, actions)
     val column: @Composable (List<HomeSection>) -> Unit = { list ->
         HomeColumn(listModifier) {
             list.forEach { section -> homeSection(section, page) }
@@ -414,7 +413,7 @@ private class HomePage(
     val state: HomeUiState.Dashboard,
     val parentNames: ParentNames,
     val coParentName: String,
-    val childNames: List<String>,
+    val memberNames: List<String>,
     val requests: HomeRequestsSection,
     val actions: DashboardActions
 )
@@ -446,7 +445,7 @@ private class HomeMoney(
 private fun LazyListScope.homeSection(section: HomeSection, page: HomePage) {
     val state = page.state
     when (section) {
-        HomeSection.HEADING -> item(key = "heading") { HeadingLines(page.childNames) }
+        HomeSection.HEADING -> item(key = "heading") { HeadingLines(page.memberNames) }
         HomeSection.REQUESTS -> requestsBlock(page.requests.state, page.requests.ctx, page.requests.onSeeAll)
         HomeSection.MONEY -> {
             item { SectionHeader(stringResource(Res.string.family_group_money)) }

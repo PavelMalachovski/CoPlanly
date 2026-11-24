@@ -5,6 +5,7 @@
     <string name="calendar_viewmode_month">Месяц</string>
     <string name="calendar_viewmode_week">Неделя</string>
     <string name="calendar_viewmode_day">День</string>
+    <string name="calendar_viewmode_label">Вид</string>
     <string name="calendar_filters_button">Фильтры</string>
     <string name="calendar_today_button">Сегодня</string>
 
@@ -119,12 +120,8 @@
         <item quantity="many">%1$s — у родителя %2$s</item>
         <item quantity="other">%1$s — у родителя %2$s</item>
     </plurals>
-    <!-- Calendar K1 (November 2026): the view control's letters (spoken as the full names),
-         the "?" sheet that explains the colours and leads to Filters, and an avatar of the
+    <!-- Calendar K1 (November 2026): the "?" sheet that explains the colours and leads to Filters, and an avatar of the
          header's member filter. -->
-    <string name="calendar_viewmode_month_short">М</string>
-    <string name="calendar_viewmode_week_short">Н</string>
-    <string name="calendar_viewmode_day_short">Д</string>
     <string name="calendar_legend_title">Что означают цвета</string>
     <string name="calendar_legend_no_schedule">Дни окрасятся, когда будет настроен график проживания.</string>
     <string name="calendar_filters_hiding">Некоторые события скрыты</string>

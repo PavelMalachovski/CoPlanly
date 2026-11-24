@@ -5,7 +5,8 @@ The mark is a calendar: binder rings, a frame, a white header bar, and in place 
 days two adults holding a child by the hands (owner decision, 23 November 2026, board "C3" in
 docs/superpowers/specs/2026-11-23-family-brand-mark-design.md). It is the app's icon on both
 platforms, the logo on the sign-in screen and the centre of both splash screens, and the
-wordmark "coplanly." sits at the bottom of both splash screens.
+wordmark "CoPlanly" sits at the bottom of both splash screens (owner, 24 November 2026: it was
+"coplanly." in lower case with a lavender full stop).
 
 The drawing lives here, in `mark_shapes()`, as filled shapes only (no strokes), in the
 108 x 108 grid of an Android adaptive icon. Everything else is generated:
@@ -21,7 +22,7 @@ The drawing lives here, in `mark_shapes()`, as filled shapes only (no strokes), 
   docs/design-system/assets/Logos/*.svg                                the design system's logos
   web/index.html                                                       the site's header icon
 
-The wordmark is Onest Bold (the font the app's header sets "coplanly." in), turned into
+The wordmark is Onest Bold (the font the app's header sets "CoPlanly" in), turned into
 outlines with fontTools so no platform needs the font to draw the splash.
 
 PNGs are drawn by headless Chrome (or Chromium): set CHROME to its binary if it is not at the
@@ -48,7 +49,7 @@ from PIL import Image
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 BRAND = "#4F46E5"        # @color/brand_primary, CoPlanlyColors.BrandPrimary
-WORDMARK_DOT = "#C2C1FF"  # the dark theme's primary: the wordmark's "." on the brand colour
+WORDMARK = "CoPlanly"     # the wordmark's letters, all in white on the brand colour
 WHITE = "#FFFFFF"
 FONT = ROOT / "shared-ui/src/commonMain/composeResources/font/onest_bold.ttf"
 
@@ -213,32 +214,32 @@ def tight_mark_xml(shapes):
 
 
 def wordmark_glyphs():
-    """'coplanly' and '.' as SVG path data in font units (y up), with the total advance."""
+    """[WORDMARK] as SVG path data in font units (y up), with the total advance."""
     font = TTFont(FONT)
     glyph_set = font.getGlyphSet()
     cmap = font.getBestCmap()
     head = font["head"]
     os2 = font["OS/2"]
     x = 0
-    parts = {"letters": [], "dot": []}
-    for ch in "coplanly.":
+    letters = []
+    for ch in WORDMARK:
         name = cmap[ord(ch)]
         pen = SVGPathPen(glyph_set)
         glyph_set[name].draw(TransformPen(pen, (1, 0, 0, -1, x, 0)))
-        parts["dot" if ch == "." else "letters"].append(pen.getCommands())
+        letters.append(pen.getCommands())
         x += glyph_set[name].width
     ink_top = os2.sCapHeight if getattr(os2, "sCapHeight", 0) else head.unitsPerEm * 0.7
-    return " ".join(parts["letters"]), " ".join(parts["dot"]), x, ink_top, font
+    return " ".join(letters), x, ink_top, font
 
 
-def wordmark_box(font, letters_and_dot):
+def wordmark_box(font, text):
     """The wordmark's ink bounds in font units, measured with fontTools' bounds pen."""
     from fontTools.pens.boundsPen import BoundsPen
     glyph_set = font.getGlyphSet()
     cmap = font.getBestCmap()
     pen = BoundsPen(glyph_set)
     x = 0
-    for ch in letters_and_dot:
+    for ch in text:
         name = cmap[ord(ch)]
         glyph_set[name].draw(TransformPen(pen, (1, 0, 0, -1, x, 0)))
         x += glyph_set[name].width
@@ -248,12 +249,12 @@ def wordmark_box(font, letters_and_dot):
 def wordmark_geometry(height):
     """Wordmark path data scaled so its x-height-to-descender ink is [height] units tall.
 
-    Returns (letters, dot, width, height) with the ink's top-left at (0, 0).
+    Returns (letters, transform, width, height) with the ink's top-left at (0, 0).
     """
-    letters, dot, _advance, _cap, font = wordmark_glyphs()
-    x0, y0, x1, y1 = wordmark_box(font, "coplanly.")
+    letters, _advance, _cap, font = wordmark_glyphs()
+    x0, y0, x1, y1 = wordmark_box(font, WORDMARK)
     scale = height / (y1 - y0)
-    return letters, dot, (x0, y0, scale), (x1 - x0) * scale, height
+    return letters, (x0, y0, scale), (x1 - x0) * scale, height
 
 
 def scaled_group(transform):
@@ -262,13 +263,13 @@ def scaled_group(transform):
 
 
 def splash_wordmark_xml():
-    letters, dot, (x0, y0, s), w, h = wordmark_geometry(SPLASH_WORDMARK_HEIGHT)
+    letters, (x0, y0, s), w, h = wordmark_geometry(SPLASH_WORDMARK_HEIGHT)
     bw, bh = BRANDING_SIZE
     tx = (bw - w) / 2
     ty = (bh - h) / 2
     return f'''<?xml version="1.0" encoding="utf-8"?>
 <!--
-  "coplanly." in Onest Bold as outlines: the Android 12+ splash screen's branding image
+  "{WORDMARK}" in Onest Bold as outlines: the Android 12+ splash screen's branding image
   (200 x 80 dp, drawn at the bottom of the screen; values-v31/themes.xml).
   {GENERATED}
 -->
@@ -288,8 +289,6 @@ def splash_wordmark_xml():
                 android:translateY="{fmt(-y0)}">
                 <path android:fillColor="{WHITE}"
                     android:pathData="{letters}" />
-                <path android:fillColor="{WORDMARK_DOT}"
-                    android:pathData="{dot}" />
             </group>
         </group>
     </group>
@@ -334,10 +333,10 @@ def mark_svg(shapes, colour):
 
 
 def wordmark_svg(height):
-    letters, dot, (x0, y0, s), w, h = wordmark_geometry(height)
+    letters, (x0, y0, s), w, h = wordmark_geometry(height)
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {fmt(w)} {fmt(h)}">'
             f'<g transform="scale({fmt(s)}) translate({fmt(-x0)} {fmt(-y0)})">'
-            f'<path fill="{WHITE}" d="{letters}"/><path fill="{WORDMARK_DOT}" d="{dot}"/></g></svg>'), w, h
+            f'<path fill="{WHITE}" d="{letters}"/></g></svg>'), w, h
 
 
 def write(rel, text):

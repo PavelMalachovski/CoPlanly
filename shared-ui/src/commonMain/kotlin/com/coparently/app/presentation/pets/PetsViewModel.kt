@@ -10,6 +10,7 @@ import com.coparently.app.data.platform.logPetUpdated
 import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.files.RecordPhotoAccess
+import com.coparently.app.domain.files.RecordPhotoCodec
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.repository.PetRepository
@@ -294,6 +295,61 @@ class PetsViewModel(
         _photoError.value = PetPhotoError.UPLOAD_FAILED
         null
     }
+
+    /**
+     * Sets or replaces the pet's portrait from its own screen (24 November 2026): the portrait is
+     * the **first** of `Pet.photos`, so a pet has no field of its own and an older build's record
+     * and wire form are untouched.
+     *
+     * Upload-then-delete, as every record photo (Legal item 8) and as the child's portrait
+     * (`ChildInfoViewModel.setPhoto`): the new object is uploaded under
+     * `pet_photos/{family or solo}/{petId}/`, the record **as the repository holds it now** is
+     * saved with the new reference first and its other photos after it, and only then is the old
+     * first object deleted. A failed upload keeps the old portrait; a failed save removes the new
+     * object again; a failed delete keeps the new reference (the old object is an orphan the sweep
+     * removes with the record, never a missing photo). Failures reach [photoError].
+     *
+     * @param pet The pet as it stands on screen.
+     * @param localUri Content URI of the picked photo.
+     */
+    fun setPhoto(pet: Pet, localUri: String) {
+        viewModelScope.launch {
+            val reference = uploadPhoto(pet.id, pet.familyId, localUri) ?: return@launch
+            // The upload takes seconds, and the record may have changed meanwhile (an edit, a sync):
+            // only the first photo is this call's to change, on the record as it stands now.
+            val current = current(pet)
+            val old = current.photos.firstOrNull()
+            val photos = (listOf(reference) + current.photos.drop(1)).distinct()
+            if (!persist(current.copy(photos = photos), isNewPet = false)) {
+                deletePhoto(reference, pet.familyId)
+                return@launch
+            }
+            if (old != null && old !in photos && RecordPhotoCodec.isReference(old)) {
+                deletePhoto(old, pet.familyId)
+            }
+        }
+    }
+
+    /**
+     * Removes the pet's portrait, its first photo: the object is deleted first and the reference is
+     * kept when that fails ([PetPhotoError.DELETE_FAILED]), so a photo is never left in the bucket
+     * with nothing pointing at it. A legacy value (never drawn, Legal item 8) has no object to
+     * delete and is simply dropped. The pet's other photos stay, the next one becoming its portrait.
+     *
+     * @param pet The pet as it stands on screen.
+     */
+    fun removePhoto(pet: Pet) {
+        val old = pet.photos.firstOrNull() ?: return
+        viewModelScope.launch {
+            val objectGone = !RecordPhotoCodec.isReference(old) || deletePhoto(old, pet.familyId)
+            if (!objectGone) return@launch
+            val current = current(pet)
+            persist(current.copy(photos = current.photos.filterNot { it == old }), isNewPet = false)
+        }
+    }
+
+    /** The pet as the repository holds it now, or [pet] when it holds none. */
+    private suspend fun current(pet: Pet): Pet = petRepository.getPetById(pet.id) ?: pet
 
     /**
      * Deletes a pet.

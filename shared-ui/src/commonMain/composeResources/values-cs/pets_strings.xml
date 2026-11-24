@@ -8,6 +8,13 @@
     <string name="pets_group_label">Mazlíčci</string>
     <string name="pets_empty_state">Zatím žádní mazlíčci</string>
 
+    <!-- One pet's own screen, between the list and the editor (24 November 2026). %1$s = a date; %1$s, %2$s = a medication's dosage and frequency. -->
+    <string name="pet_edit">Upravit</string>
+    <string name="pet_dob_value">Datum narození: %1$s</string>
+    <string name="pet_medication_summary">%1$s – %2$s</string>
+    <string name="pet_record_gone_title">Tento záznam už neexistuje</string>
+    <string name="pet_record_gone_description">Byl smazán v tomto telefonu nebo v telefonu druhého rodiče.</string>
+
     <!-- Editor -->
     <string name="pet_title_add">Přidat mazlíčka</string>
     <string name="pet_title_edit">Upravit mazlíčka</string>

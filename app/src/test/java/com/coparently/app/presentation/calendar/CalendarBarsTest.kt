@@ -86,7 +86,7 @@ class CalendarBarsTest : PushedBarsHarness() {
     fun `the iPhone draws the month title, the legend, the avatars and the gear in content`() {
         compose(withHost = true) { calendarBar() }
         assertTrue(rule.onAllNodesWithText("May 2026").fetchSemanticsNodes().isNotEmpty())
-        assertTrue(rule.onAllNodesWithText("coplanly", substring = true).fetchSemanticsNodes().isEmpty())
+        assertTrue(rule.onAllNodesWithText("CoPlanly", substring = true).fetchSemanticsNodes().isEmpty())
         assertTrue(rule.onAllNodesWithText("Your family calendar").fetchSemanticsNodes().isEmpty())
         rule.onNodeWithText("May 2026").performClick()
         rule.onNodeWithContentDescription("What the colours mean").performClick()
@@ -181,13 +181,19 @@ class CalendarBarsTest : PushedBarsHarness() {
     }
 
     @Test
-    fun `on Android the month bar draws the view control as letters named in full`() {
+    fun `on Android the month bar names the view in full and opens a menu of the three`() {
         compose(withHost = false) { monthBar() }
         assertTrue(shown.isEmpty())
         assertTrue(rule.onAllNodesWithText("Today").fetchSemanticsNodes().isNotEmpty())
         assertTrue(rule.onAllNodesWithContentDescription("Add event").fetchSemanticsNodes().isNotEmpty())
+        assertTrue(rule.onAllNodesWithText("Month").fetchSemanticsNodes().isNotEmpty())
+        assertTrue(rule.onAllNodesWithContentDescription("Week").fetchSemanticsNodes().isEmpty())
+        rule.onNodeWithContentDescription("View: Month").performClick()
         rule.onNodeWithContentDescription("Month").assertIsSelected()
         rule.onNodeWithContentDescription("Week").performClick()
+        rule.waitForIdle()
+        assertTrue("the menu closes", rule.onAllNodesWithContentDescription("Day").fetchSemanticsNodes().isEmpty())
+        rule.onNodeWithContentDescription("View: Month").performClick()
         rule.onNodeWithContentDescription("Day").performClick()
         rule.waitForIdle()
         assertEquals(listOf("view WEEK", "view DAY"), clicks)

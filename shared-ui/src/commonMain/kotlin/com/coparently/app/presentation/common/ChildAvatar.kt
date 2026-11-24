@@ -10,10 +10,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import com.coparently.app.domain.files.RecordPhotoKind
+import com.coparently.app.domain.files.ViewablePhoto
 import com.coparently.app.domain.model.ChildInfo
+import com.coparently.app.domain.model.Pet
 import com.coparently.app.presentation.platform.AppImage
 
 /**
@@ -31,23 +34,60 @@ import com.coparently.app.presentation.platform.AppImage
  */
 @Composable
 fun ChildAvatar(child: ChildInfo, size: Dp, modifier: Modifier = Modifier) {
-    val photo = rememberRecordPhoto(child.photo, RecordPhotoKind.CHILD, child.id, child.familyId)
+    RecordAvatar(
+        name = child.childName,
+        photo = rememberRecordPhoto(child.photo, RecordPhotoKind.CHILD, child.id, child.familyId),
+        size = size,
+        container = MaterialTheme.colorScheme.primaryContainer,
+        content = MaterialTheme.colorScheme.onPrimaryContainer,
+        modifier = modifier
+    )
+}
+
+/**
+ * A pet's avatar: its first photo when it has one this viewer may see (only the family's two
+ * parents, as for a child's portrait), else the first letter of its name on a `secondaryContainer`
+ * circle, a pet's neutral tone beside a child's. The pet's photo is the first of `Pet.photos`
+ * (24 November 2026): no field of its own, so an older build's record and wire form are untouched.
+ *
+ * @param pet The pet the avatar stands for
+ * @param size Diameter of the circle
+ * @param modifier Modifier for the circle
+ */
+@Composable
+fun PetAvatar(pet: Pet, size: Dp, modifier: Modifier = Modifier) {
+    RecordAvatar(
+        name = pet.name,
+        photo = rememberRecordPhoto(pet.photos.firstOrNull(), RecordPhotoKind.PET, pet.id, pet.familyId),
+        size = size,
+        container = MaterialTheme.colorScheme.secondaryContainer,
+        content = MaterialTheme.colorScheme.onSecondaryContainer,
+        modifier = modifier
+    )
+}
+
+@Composable
+@Suppress("LongParameterList") // a name, a photo, its size, its two colours and the caller's modifier
+private fun RecordAvatar(
+    name: String,
+    photo: ViewablePhoto?,
+    size: Dp,
+    container: Color,
+    content: Color,
+    modifier: Modifier
+) {
     Box(
         modifier = modifier
             .size(size)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.primaryContainer),
+            .background(container),
         contentAlignment = Alignment.Center
     ) {
         val style = MaterialTheme.typography.titleMedium
         val initial: @Composable () -> Unit = {
             // The disc does not grow with the font, so neither does its letter past half its side.
             CappedFontScale(max = fontScaleToFit(size, style.fontSize, INITIAL_SHARE)) {
-                Text(
-                    text = child.childName.trim().take(1).uppercase(),
-                    style = style,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                Text(text = name.trim().take(1).uppercase(), style = style, color = content)
             }
         }
         if (photo == null) {

@@ -8,6 +8,13 @@
     <string name="pets_group_label">Haustiere</string>
     <string name="pets_empty_state">Noch keine Haustiere</string>
 
+    <!-- One pet's own screen, between the list and the editor (24 November 2026). %1$s = a date; %1$s, %2$s = a medication's dosage and frequency. -->
+    <string name="pet_edit">Bearbeiten</string>
+    <string name="pet_dob_value">Geburtsdatum: %1$s</string>
+    <string name="pet_medication_summary">%1$s – %2$s</string>
+    <string name="pet_record_gone_title">Dieser Eintrag existiert nicht mehr</string>
+    <string name="pet_record_gone_description">Er wurde auf diesem Telefon oder auf dem des anderen Elternteils gelöscht.</string>
+
     <!-- Editor -->
     <string name="pet_title_add">Haustier hinzufügen</string>
     <string name="pet_title_edit">Haustier bearbeiten</string>

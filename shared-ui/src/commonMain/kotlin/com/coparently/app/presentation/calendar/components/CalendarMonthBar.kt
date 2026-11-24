@@ -10,46 +10,54 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.calendar.CalendarViewMode
 import com.coparently.app.presentation.calendar.SwapDaysButton
-import com.coparently.app.presentation.common.AdaptiveSegmented
 import com.coparently.app.presentation.common.AppIcon
+import com.coparently.app.presentation.common.nativeControls
+import com.coparently.app.presentation.common.optionMenuItems
+import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.calendar_add_event
 import com.coparently.app.resources.calendar_today_button
 import com.coparently.app.resources.calendar_viewmode_day
-import com.coparently.app.resources.calendar_viewmode_day_short
+import com.coparently.app.resources.calendar_viewmode_label
 import com.coparently.app.resources.calendar_viewmode_month
-import com.coparently.app.resources.calendar_viewmode_month_short
 import com.coparently.app.resources.calendar_viewmode_week
-import com.coparently.app.resources.calendar_viewmode_week_short
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * The grid card's head row (calendar K1, November 2026): the Month | Week | Day control on the
- * left, as letters spoken as the views' names, then Today, "⇄" and "+".
+ * The grid card's head row (calendar K1, November 2026): the view's name with its menu ("Month ▾") on
+ * the left, then Today, "⇄" and "+".
  *
  * The month title left this row for the screen's header ([CalendarHeader]), where the wordmark was,
  * and the arrows went with it: months page by swipe, and Week and Day view page by swipe too. Today
@@ -129,44 +137,83 @@ private fun MonthBarActions(
 }
 
 /**
- * Month, Week and Day as one segmented control of letters, "M | W | D", each segment named in full
- * for TalkBack: the view is a choice always in sight, and the letters leave the row its actions.
+ * The view the grid shows, written out in full ("Month ▾"), which opens a menu of Month, Week and
+ * Day with the current one checked (owner, 24 November 2026; it replaced the "M | W | D" letters,
+ * which read as initials). Choosing a view, or a tap outside, closes the menu.
+ *
+ * On the iPhone it is the system's pop-up button ([NativeControls.MenuButton]): the view's name and
+ * the system's up-and-down chevron, its `UIMenu` the three views; on Android a tonal button with a
+ * downward chevron over Material's `DropdownMenu`. Both are named "View: Month" for TalkBack and
+ * VoiceOver, and each menu entry by its view.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ViewModeControl(viewMode: CalendarViewMode, onViewModeChange: (CalendarViewMode) -> Unit) {
     val modes = CalendarViewMode.entries
-    val letters = modes.map { viewModeLetter(it) }
     val names = modes.map { viewModeName(it) }
-    AdaptiveSegmented(
-        labels = letters,
-        selectedIndex = modes.indexOf(viewMode),
-        onSelect = { onViewModeChange(modes[it]) },
-        // VoiceOver reads the segments' letters; the control as a whole is named in full.
-        accessibilityLabel = names.joinToString(", "),
-        // A segment a letter wide: the native control fills its width, which in this row would push
-        // Today, "⇄" and "+" onto a line of their own.
-        modifier = Modifier.width(NATIVE_SEGMENT_WIDTH * modes.size)
-    ) {
-        // Sized to its letters: Material's segment is at least 58 dp wide with 12 dp of padding on
-        // each side, which made the control 190 dp and pushed Today, "⇄" and "+" under it.
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.width(SEGMENT_WIDTH * modes.size)) {
+    val current = names[modes.indexOf(viewMode)]
+    val description = "${stringResource(Res.string.calendar_viewmode_label)}: $current"
+    val native = nativeControls()
+    if (native != null) {
+        native.MenuButton(
+            items = optionMenuItems(modes.zip(names), viewMode, onViewModeChange),
+            title = current,
+            sfSymbol = null,
+            accessibilityLabel = description,
+            tint = MaterialTheme.colorScheme.primary,
+            background = MaterialTheme.colorScheme.surfaceContainer,
+            modifier = Modifier
+        )
+        return
+    }
+    ViewModeMenu(modes, names, viewMode, description, onViewModeChange)
+}
+
+/** Android's view button and its menu; see [ViewModeControl]. */
+@Composable
+private fun ViewModeMenu(
+    modes: List<CalendarViewMode>,
+    names: List<String>,
+    viewMode: CalendarViewMode,
+    description: String,
+    onViewModeChange: (CalendarViewMode) -> Unit
+) {
+    val current = names[modes.indexOf(viewMode)]
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        FilledTonalButton(
+            onClick = { expanded = true },
+            contentPadding = PaddingValues(start = Spacing.M, end = Spacing.S),
+            modifier = Modifier.semantics {
+                contentDescription = description
+                role = Role.DropdownList
+            }
+        ) {
+            Text(text = current, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+            AppIcon(
+                imageVector = Icons.Default.ExpandMore,
+                contentDescription = null,
+                modifier = Modifier.size(IconSizes.Small)
+            )
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             modes.forEachIndexed { index, mode ->
-                val name = names[index]
-                SegmentedButton(
-                    selected = mode == viewMode,
-                    onClick = { onViewModeChange(mode) },
-                    shape = SegmentedButtonDefaults.itemShape(index = index, count = modes.size),
-                    contentPadding = PaddingValues(horizontal = Spacing.XS),
-                    modifier = Modifier.semantics { contentDescription = name },
-                    // No check mark: a letter needs the segment's width, not a tick beside it.
-                    icon = {},
-                    label = {
-                        Text(
-                            text = letters[index],
-                            maxLines = 1,
-                            modifier = Modifier.clearAndSetSemantics { }
-                        )
+                val chosen = mode == viewMode
+                DropdownMenuItem(
+                    text = { Text(names[index]) },
+                    onClick = {
+                        expanded = false
+                        onViewModeChange(mode)
+                    },
+                    leadingIcon = {
+                        if (chosen) {
+                            AppIcon(Icons.Default.Check, contentDescription = null)
+                        } else {
+                            Spacer(Modifier.size(IconSizes.Standard))
+                        }
+                    },
+                    modifier = Modifier.semantics {
+                        contentDescription = names[index]
+                        selected = chosen
                     }
                 )
             }
@@ -174,27 +221,13 @@ private fun ViewModeControl(viewMode: CalendarViewMode, onViewModeChange: (Calen
     }
 }
 
-/** A view's letter on the control: "M", "W", "D" in English. */
-@Composable
-private fun viewModeLetter(mode: CalendarViewMode): String = when (mode) {
-    CalendarViewMode.MONTH -> stringResource(Res.string.calendar_viewmode_month_short)
-    CalendarViewMode.WEEK -> stringResource(Res.string.calendar_viewmode_week_short)
-    CalendarViewMode.DAY -> stringResource(Res.string.calendar_viewmode_day_short)
-}
-
-/** A view's name, which TalkBack reads for its letter. */
+/** A view's name: on the button, in its menu and for TalkBack. */
 @Composable
 private fun viewModeName(mode: CalendarViewMode): String = when (mode) {
     CalendarViewMode.MONTH -> stringResource(Res.string.calendar_viewmode_month)
     CalendarViewMode.WEEK -> stringResource(Res.string.calendar_viewmode_week)
     CalendarViewMode.DAY -> stringResource(Res.string.calendar_viewmode_day)
 }
-
-/** A segment of the iPhone's native view control, wide enough for its letter. */
-private val NATIVE_SEGMENT_WIDTH = 40.dp
-
-/** A segment of the Material view control: a letter and a touch target's width, no more. */
-private val SEGMENT_WIDTH = 48.dp
 
 /**
  * The white card the grid sits in, with its head row (redesign, November 2026; the legend left it

@@ -3,7 +3,6 @@ package com.coparently.app.qa
 import android.content.Context
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import com.coparently.app.R
 import com.coparently.app.e2e.AliceOnScreenTest
@@ -112,10 +111,8 @@ abstract class QaOnScreenTest : AliceOnScreenTest() {
     /** A clickable node whose text is the app's string [label]. */
     protected fun textButton(label: Int): SemanticsMatcher = hasText(string(label)) and hasClickAction()
 
-    /** Switches the calendar through the grid card's M | W | D control, whose letters are named in full. */
-    protected fun viewMode(label: Int) {
-        tap(hasContentDescription(string(label)) and hasClickAction())
-    }
+    /** Switches the calendar through the grid card's "Month ▾" menu. */
+    protected fun viewMode(label: Int) = chooseCalendarView(label)
 
     /**
      * A third phone, [name], paired with the parent on screen through the real callable — the
