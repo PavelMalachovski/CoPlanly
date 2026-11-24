@@ -18,7 +18,6 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -74,6 +73,7 @@ import com.coparently.app.presentation.calendar.components.SwapSheetActions
 import com.coparently.app.presentation.calendar.components.SwapSheetOffer
 import com.coparently.app.presentation.changerequests.RequestsState
 import com.coparently.app.presentation.common.AppIcon
+import com.coparently.app.presentation.common.AppSnackbarHost
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.ScreenBackStep
 import com.coparently.app.presentation.common.UiText
@@ -699,7 +699,7 @@ fun CalendarScreen(
             )
         },
         snackbarHost = {
-            SnackbarHost(hostState = snackbarHostState)
+            AppSnackbarHost(hostState = snackbarHostState)
         },
         // No Today card under the grid since calendar K1 (November 2026): the grid takes the
         // screen, and Home and the widget say what today holds (`HomeWeek.todayOf`).
@@ -1145,7 +1145,9 @@ fun CalendarScreen(
         val result = snackbarHostState.showSnackbar(
             message = swapSentMessage,
             actionLabel = swapWithdrawLabel,
-            duration = SnackbarDuration.Long
+            // Short (owner, 24 November 2026: it stayed too long over the grid), and it can be
+            // swiped away (`AppSnackbarHost`); Withdraw stays on the request's inbox card.
+            duration = SnackbarDuration.Short
         )
         if (result == SnackbarResult.ActionPerformed) {
             val sentDays = dayOverrides.mapNotNull { (iso, offer) ->

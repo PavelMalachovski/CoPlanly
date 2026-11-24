@@ -64,6 +64,11 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    - `ErrorState` is the `EmptyState` anatomy with Retry. It is not red.
    - `InviteCodeText` is how every invitation code is drawn.
    - `ConnectivityBanner` is the offline line in the root Scaffold's top bar.
+   - `AppSnackbarHost` is every Scaffold's `snackbarHost` (owner, 24 November 2026): a message in
+     CoPlanly's colours (`primaryContainer`, its text in `onPrimaryContainer`, the action in
+     `primary`, the `large` corner) that can be swiped away, with a "Dismiss" action for TalkBack.
+     Don't put Material's bare `SnackbarHost` on a screen again. The day swap's "Sent" message is
+     `SnackbarDuration.Short`.
    - `HeroIcon` (in `DesignSystem.kt`) is the icon a whole screen leads with, on its tonal disc:
      `EmptyState`, `ErrorState` and the telemetry question share it.
    - `DatePickerField` is how a form shows a date it opens a picker for (release audit R-7, week

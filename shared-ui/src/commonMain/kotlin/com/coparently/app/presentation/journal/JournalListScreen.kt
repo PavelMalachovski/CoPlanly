@@ -20,7 +20,6 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
@@ -37,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.coparently.app.domain.journal.JournalEntry
 import com.coparently.app.presentation.common.AppIcon
+import com.coparently.app.presentation.common.AppSnackbarHost
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.PushedTopBar
@@ -119,7 +119,7 @@ fun JournalListScreen(
                 actions = listOfNotNull(addBarAction(addLabel, onNewEntry).takeIf { inShellBar && hasEntries })
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { AppSnackbarHost(hostState = snackbarHostState) },
         floatingActionButton = {
             if (hasEntries && !inShellBar) {
                 FloatingActionButton(onClick = onNewEntry) {

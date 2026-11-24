@@ -20,7 +20,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -46,6 +45,7 @@ import com.coparently.app.domain.export.RecordColumns
 import com.coparently.app.domain.export.RecordLabels
 import com.coparently.app.domain.export.VerificationLabels
 import com.coparently.app.domain.parentingplan.ParentingPlanCatalogue
+import com.coparently.app.presentation.common.AppSnackbarHost
 import com.coparently.app.presentation.common.ExpandableDetails
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.LocalDatePickerDialog
@@ -209,7 +209,7 @@ fun ExportScreen(
 
     Scaffold(
         containerColor = ScreenContainerColor,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { AppSnackbarHost(hostState = snackbarHostState) },
         topBar = { ExportTopBar(onNavigateBack) }
     ) { padding ->
         ExportContent(

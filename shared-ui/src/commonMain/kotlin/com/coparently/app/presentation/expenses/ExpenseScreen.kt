@@ -27,7 +27,6 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
@@ -55,6 +54,7 @@ import com.coparently.app.domain.model.Expense
 import com.coparently.app.presentation.changerequests.splitSharesText
 import com.coparently.app.presentation.common.AdaptiveSegmented
 import com.coparently.app.presentation.common.AppIcon
+import com.coparently.app.presentation.common.AppSnackbarHost
 import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.BannerTone
 import com.coparently.app.presentation.common.BarAction
@@ -313,7 +313,7 @@ fun ExpenseScreen(
                 )
             )
         },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        snackbarHost = { AppSnackbarHost(hostState = snackbarHostState) },
         floatingActionButton = {
             // Leaves while the list moves forward (R-1): the amounts are the rows' trailing
             // column, exactly where the button floats, so something was always under it.

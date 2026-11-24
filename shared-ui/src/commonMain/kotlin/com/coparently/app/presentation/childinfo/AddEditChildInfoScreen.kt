@@ -16,6 +16,7 @@ import com.coparently.app.domain.model.*
 import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.childinfo.components.*
 import com.coparently.app.presentation.common.AppIcon
+import com.coparently.app.presentation.common.AppSnackbarHost
 import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.DatePickerField
@@ -321,7 +322,7 @@ fun AddEditChildInfoScreen(
                 }
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { AppSnackbarHost(hostState = snackbarHostState) }
     ) { paddingValues ->
         Column(
             modifier = Modifier
