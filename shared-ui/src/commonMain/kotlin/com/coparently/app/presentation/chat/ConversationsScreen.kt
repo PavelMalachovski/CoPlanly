@@ -23,7 +23,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
@@ -41,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.model.Conversation
 import com.coparently.app.presentation.common.AppIcon
+import com.coparently.app.presentation.common.AppSnackbarHost
 import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.EmptyState
@@ -243,7 +243,7 @@ private fun ConversationList(
     val inShellBar = shellDrawsBars()
     Scaffold(
         containerColor = ScreenContainerColor,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { AppSnackbarHost(hostState = snackbarHostState) },
         topBar = {
             if (inShellBar) {
                 ConversationsShellBar(

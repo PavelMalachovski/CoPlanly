@@ -16,7 +16,6 @@ import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,6 +31,7 @@ import androidx.compose.ui.semantics.semantics
 import com.coparently.app.domain.school.SchoolConnectionStatus
 import com.coparently.app.domain.school.SchoolSystem
 import com.coparently.app.presentation.common.AdaptiveSwitch
+import com.coparently.app.presentation.common.AppSnackbarHost
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.InlineBanner
@@ -106,7 +106,7 @@ fun SchoolImportScreen(
 
     Scaffold(
         containerColor = ScreenContainerColor,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { AppSnackbarHost(hostState = snackbarHostState) },
         topBar = {
             PushedTopBar(
                 title = stringResource(Res.string.school_import_title),

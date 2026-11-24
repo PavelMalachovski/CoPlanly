@@ -11,7 +11,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,6 +25,7 @@ import androidx.compose.ui.Modifier
 import com.coparently.app.domain.documents.FamilyDocument
 import com.coparently.app.domain.files.SharedFilePolicy
 import com.coparently.app.presentation.common.AppIcon
+import com.coparently.app.presentation.common.AppSnackbarHost
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.PushedTopBar
@@ -98,7 +98,7 @@ fun FamilyDocumentsScreen(
 
     Scaffold(
         containerColor = ScreenContainerColor,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { AppSnackbarHost(hostState = snackbarHostState) },
         topBar = {
             PushedTopBar(
                 title = stringResource(Res.string.documents_title),

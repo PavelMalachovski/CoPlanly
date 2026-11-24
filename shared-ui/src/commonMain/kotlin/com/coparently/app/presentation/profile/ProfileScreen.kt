@@ -15,7 +15,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,6 +33,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.model.User
+import com.coparently.app.presentation.common.AppSnackbarHost
 import com.coparently.app.presentation.common.DatePickerField
 import com.coparently.app.presentation.common.ErrorState
 import com.coparently.app.presentation.common.FormSave
@@ -125,7 +125,7 @@ fun ProfileScreen(
     Scaffold(
         containerColor = ScreenContainerColor,
         topBar = { ProfileTopBar(editable = editable, onNavigateUp = onNavigateUp, save = save) },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { AppSnackbarHost(hostState = snackbarHostState) },
         bottomBar = {
             if (save != null) ProfileSaveBar(isSaving = uiState.isSaving, onSave = onSave)
         }

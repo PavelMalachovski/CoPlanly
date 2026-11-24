@@ -28,7 +28,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,6 +47,7 @@ import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.model.activeInviteOrNull
 import com.coparently.app.presentation.common.AdaptiveSegmented
 import com.coparently.app.presentation.common.AppIcon
+import com.coparently.app.presentation.common.AppSnackbarHost
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.PushedTopBar
 import com.coparently.app.presentation.common.SectionGroup
@@ -199,7 +199,7 @@ fun PairingScreen(
     Scaffold(
         containerColor = ScreenContainerColor,
         topBar = { PairingTopBar(state, partnerOnScreen, onNavigateBack) },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { AppSnackbarHost(hostState = snackbarHostState) }
     ) { padding ->
         LazyColumn(
             modifier = Modifier

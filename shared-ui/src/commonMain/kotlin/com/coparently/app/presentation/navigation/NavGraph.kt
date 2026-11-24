@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -28,6 +27,7 @@ import com.coparently.app.data.remote.firebase.PushDestination
 import com.coparently.app.domain.telemetry.TelemetryConsent
 import com.coparently.app.presentation.changerequests.RequestsBadgeViewModel
 import com.coparently.app.presentation.chat.ChatViewModel
+import com.coparently.app.presentation.common.AppSnackbarHost
 import com.coparently.app.presentation.common.ConnectivityBanner
 import com.coparently.app.presentation.common.ConnectivityViewModel
 import com.coparently.app.presentation.common.LocalAppMessages
@@ -157,7 +157,7 @@ private fun NavGraphScaffold(
         topBar = { ConnectivityBanner(offline = offline) },
         // Messages that outlive their screen (D-25): a save that navigates away and still owes a
         // warning. Above the bottom bar on a tab; at the bottom on a detail screen.
-        snackbarHost = { LocalAppMessages.current?.let { SnackbarHost(it.hostState) } },
+        snackbarHost = { LocalAppMessages.current?.let { AppSnackbarHost(hostState = it.hostState) } },
         bottomBar = {
             BottomBarSlot(
                 layout = navigationLayout,

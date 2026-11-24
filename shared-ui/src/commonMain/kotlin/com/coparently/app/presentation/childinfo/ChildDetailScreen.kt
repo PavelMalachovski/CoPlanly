@@ -8,7 +8,6 @@ import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -21,6 +20,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.presentation.childinfo.components.GuestInviteSheet
+import com.coparently.app.presentation.common.AppSnackbarHost
 import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ListSkeleton
@@ -141,7 +141,7 @@ fun ChildDetailScreen(
 
     Scaffold(
         containerColor = ScreenContainerColor,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { AppSnackbarHost(hostState = snackbarHostState) },
         topBar = {
             ChildDetailTopBar(
                 childInfo = childInfo,

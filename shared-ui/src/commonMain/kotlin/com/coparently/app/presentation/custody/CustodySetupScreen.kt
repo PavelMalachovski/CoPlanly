@@ -35,7 +35,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -63,6 +62,7 @@ import com.coparently.app.presentation.common.AdaptiveSwitch
 import com.coparently.app.presentation.common.AnswerByField
 import com.coparently.app.presentation.common.AnswerByPickSaver
 import com.coparently.app.presentation.common.AppIcon
+import com.coparently.app.presentation.common.AppSnackbarHost
 import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.FormSave
 import com.coparently.app.presentation.common.LocalAppMessages
@@ -214,7 +214,7 @@ fun CustodySetupScreen(
                 ).takeIf { shown == CustodySection.PATTERN || shown == CustodySection.WINDOWS }
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { AppSnackbarHost(hostState = snackbarHostState) },
         bottomBar = {
             // Only the parts this button sends: the seasonal ones go on their own, and the overview
             // sends nothing (the old "the Save button below saves only the pattern above").

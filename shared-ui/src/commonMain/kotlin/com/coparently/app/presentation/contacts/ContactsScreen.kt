@@ -14,7 +14,6 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -25,6 +24,7 @@ import androidx.compose.ui.Modifier
 import com.coparently.app.domain.contacts.ContactDirectory
 import com.coparently.app.domain.contacts.ContactGroup
 import com.coparently.app.domain.contacts.DirectoryContact
+import com.coparently.app.presentation.common.AppSnackbarHost
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.ListSkeleton
@@ -95,7 +95,7 @@ fun ContactsScreen(
     Scaffold(
         containerColor = ScreenContainerColor,
         topBar = { ContactsTopBar(onNavigateUp = onNavigateUp) },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { AppSnackbarHost(hostState = snackbarHostState) }
     ) { padding ->
         if (groupsState is Loadable.Loading) {
             // The emergency surface. A parent opening this in a hurry must not be told there

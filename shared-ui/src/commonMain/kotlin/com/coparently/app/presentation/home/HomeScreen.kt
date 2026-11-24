@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.presentation.changerequests.AgreementScreen
 import com.coparently.app.presentation.changerequests.ChangeRequestViewModel
+import com.coparently.app.presentation.common.AppSnackbarHost
 import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.BrandHeader
 import com.coparently.app.presentation.common.HeadingLines
@@ -160,7 +160,7 @@ fun HomeScreen(
 
     Scaffold(
         containerColor = ScreenContainerColor,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { AppSnackbarHost(hostState = snackbarHostState) },
         topBar = {
             if (shellDrawsBars()) {
                 // On the iPhone too the wordmark header leads Home (MON-24 phase 3, part C): the

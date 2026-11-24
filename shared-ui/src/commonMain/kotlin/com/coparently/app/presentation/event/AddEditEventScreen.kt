@@ -49,7 +49,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
@@ -96,6 +95,7 @@ import com.coparently.app.presentation.common.AdaptiveSwitch
 import com.coparently.app.presentation.common.AnswerByField
 import com.coparently.app.presentation.common.AnswerByPickSaver
 import com.coparently.app.presentation.common.AppIcon
+import com.coparently.app.presentation.common.AppSnackbarHost
 import com.coparently.app.presentation.common.BarAction
 import com.coparently.app.presentation.common.FamilyMemberChips
 import com.coparently.app.presentation.common.FamilyMemberRefListSaver
@@ -248,11 +248,12 @@ private val REMINDER_OPTIONS: List<Pair<Int?, StringResource>> = listOf(
 )
 
 /**
- * The reminder a new event opens with: an hour before (owner decision, 9 November 2026 — every
- * event should remind unless the parent says otherwise). One of [REMINDER_OPTIONS], so the row names
- * it. An edit keeps what the event holds, None included, and imports set none.
+ * The reminder a new event opens with: 30 minutes before (owner decisions: 9 November 2026, every
+ * event should remind unless the parent says otherwise; 24 November 2026, half an hour rather than
+ * an hour). One of [REMINDER_OPTIONS], so the row names it. An edit keeps what the event holds,
+ * None included, and imports set none.
  */
-internal const val DEFAULT_REMINDER_MINUTES = 60
+internal const val DEFAULT_REMINDER_MINUTES = 30
 
 /**
  * Whether the parent-owner picker (the two animated cards) should render.
@@ -922,7 +923,7 @@ fun AddEditEventScreen(
             )
         },
         snackbarHost = {
-            SnackbarHost(hostState = snackbarHostState)
+            AppSnackbarHost(hostState = snackbarHostState)
         },
         bottomBar = {
             // Sticky Save: the primary action stays reachable without scrolling
