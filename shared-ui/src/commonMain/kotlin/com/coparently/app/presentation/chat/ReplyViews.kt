@@ -52,6 +52,7 @@ import com.coparently.app.domain.chat.ReplyExcerpt
 import com.coparently.app.domain.chat.ReplyQuote
 import com.coparently.app.domain.model.Message
 import com.coparently.app.presentation.common.AppIcon
+import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Motion
@@ -81,13 +82,15 @@ import org.jetbrains.compose.resources.stringResource
  *   the departed co-parent can no longer answer)
  * @property pressed The message whose long-press menu is open, or null: the thread highlights it and
  *   dims the others while the menu is open (see `PressFocus`)
+ * @property names How a quote names the co-parent ([chatAuthor]), or null where none are known
  */
 internal class BubbleReplies(
     val quotes: Map<String, ReplyQuote>,
     val readerId: String,
     val onQuoteClick: (ReplyQuote.Shown) -> Unit,
     val onReply: ((Message) -> Unit)?,
-    val pressed: MutableState<String?>
+    val pressed: MutableState<String?>,
+    val names: ParentNames? = null
 )
 
 /**
@@ -107,6 +110,18 @@ enum class BubbleEmphasis {
 val BubbleEmphasisKey = SemanticsPropertyKey<BubbleEmphasis>("BubbleEmphasis")
 
 internal var SemanticsPropertyReceiver.bubbleEmphasis by BubbleEmphasisKey
+
+/**
+ * How the thread names the author of a message: through the family's [ParentNames] by uid, so a
+ * co-parent who renamed is named as they are now (design item 12), and by the name the message
+ * stored only when [authorId] is not one of the family's two parents (a message from before a
+ * re-pairing) or no names are known yet.
+ */
+internal fun ParentNames?.chatAuthor(authorId: String, storedName: String): String {
+    if (this == null) return storedName
+    val label = labelForUid(authorId)
+    return if (label == unknownFallback) storedName.ifBlank { label } else label
+}
 
 /** The thread's [BubbleReplies], or null outside a thread (a bubble then draws no quote or reply). */
 internal val LocalBubbleReplies = compositionLocalOf<BubbleReplies?> { null }
@@ -143,7 +158,8 @@ internal fun BubbleQuote(message: Message, isCurrentUser: Boolean) {
         onOwnBubble = isCurrentUser,
         readerId = replies.readerId,
         onClick = replies.onQuoteClick,
-        modifier = Modifier.padding(bottom = Spacing.XS)
+        modifier = Modifier.padding(bottom = Spacing.XS),
+        names = replies.names
     )
 }
 
@@ -159,14 +175,19 @@ internal fun BubbleQuote(message: Message, isCurrentUser: Boolean) {
  * @param readerId The signed-in parent's uid
  * @param onClick Called with the original when the quote is tapped
  * @param modifier Modifier for the quote
+ * @param names Names the co-parent as the family does now ([chatAuthor]); null falls back to the
+ *   name the original stored
  */
 @Composable
+// LongParameterList: the bubble's own facts and its tap, plus the names the quote is worded with.
+@Suppress("LongParameterList")
 fun ReplyQuoteBlock(
     quote: ReplyQuote,
     onOwnBubble: Boolean,
     readerId: String,
     onClick: (ReplyQuote.Shown) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    names: ParentNames? = null
 ) {
     val colors = MaterialTheme.colorScheme
     val accent = if (onOwnBubble) colors.onPrimary else colors.primary
@@ -199,7 +220,7 @@ fun ReplyQuoteBlock(
                     text = if (shown.authorId == readerId) {
                         stringResource(Res.string.parent_label_you)
                     } else {
-                        shown.authorName
+                        names.chatAuthor(shown.authorId, shown.authorName)
                     },
                     style = MaterialTheme.typography.labelMediumEmphasized,
                     color = accent,
@@ -227,9 +248,17 @@ fun ReplyQuoteBlock(
  * @param readerId The signed-in parent's uid
  * @param onCancel Drops the reply
  * @param modifier Modifier for the bar
+ * @param names Names the co-parent as the family does now ([chatAuthor]); null falls back to the
+ *   name the original stored
  */
 @Composable
-fun ReplyBar(quote: ReplyQuote.Shown, readerId: String, onCancel: () -> Unit, modifier: Modifier = Modifier) {
+fun ReplyBar(
+    quote: ReplyQuote.Shown,
+    readerId: String,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+    names: ParentNames? = null
+) {
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -250,7 +279,7 @@ fun ReplyBar(quote: ReplyQuote.Shown, readerId: String, onCancel: () -> Unit, mo
                 text = if (quote.authorId == readerId) {
                     stringResource(Res.string.chat_reply_to_own)
                 } else {
-                    stringResource(Res.string.chat_reply_to, quote.authorName)
+                    stringResource(Res.string.chat_reply_to, names.chatAuthor(quote.authorId, quote.authorName))
                 },
                 style = MaterialTheme.typography.labelMediumEmphasized,
                 color = MaterialTheme.colorScheme.primary,

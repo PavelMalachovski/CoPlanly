@@ -1,6 +1,7 @@
 package com.coparently.app.domain.chat
 
 import com.coparently.app.domain.model.Message
+import com.coparently.app.domain.model.MessageSendStatus
 
 /**
  * When the thread's "newest messages" button shows, and the count it carries (chat: newest message
@@ -13,7 +14,7 @@ import com.coparently.app.domain.model.Message
  */
 object NewestButton {
 
-    /** Items the reader may be away from the newest before the button shows: about a screen. */
+    /** Items the reader may be away from the newest before the button shows: a few messages. */
     const val NEAR_NEWEST = 3
 
     /**
@@ -21,6 +22,17 @@ object NewestButton {
      * being the newest message.
      */
     fun shows(firstVisibleIndex: Int): Boolean = firstVisibleIndex > NEAR_NEWEST
+
+    /**
+     * Whether [newest], arriving while the reader is up the list, brings the newest into view: only
+     * a message the reader sent **from this phone**, which is still SENDING (or failed, ERROR) when
+     * it first appears, since a send always shows what was sent. The reader's own message from
+     * another phone arrives already sent and leaves them where they are reading, as a co-parent's
+     * message does (without counting on the button, [unseen]).
+     */
+    fun followsOwnSend(newest: Message, currentUserId: String): Boolean =
+        newest.senderId == currentUserId &&
+            (newest.status == MessageSendStatus.SENDING || newest.status == MessageSendStatus.ERROR)
 
     /**
      * How many of the co-parent's messages arrived since the reader left the newest: those before

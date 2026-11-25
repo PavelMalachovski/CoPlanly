@@ -24,7 +24,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -83,8 +82,9 @@ internal fun PressFocus(messageId: String, content: @Composable () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .graphicsLayer { this.alpha = alpha }
-            .clip(MaterialTheme.shapes.small)
-            .background(wash)
+            // The shape bounds the wash only: a clip here would cut a bubble swiped to the right
+            // at the row's edge, which one's own end-aligned bubble reaches at once.
+            .background(wash, MaterialTheme.shapes.small)
             .semantics { emphasis?.let { bubbleEmphasis = it } }
     ) {
         content()

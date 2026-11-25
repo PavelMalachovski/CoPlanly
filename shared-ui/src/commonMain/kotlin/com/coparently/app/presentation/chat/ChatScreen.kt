@@ -347,7 +347,8 @@ fun ChatScreen(
                                     quotes = quotes,
                                     onQuoteClick = revealOriginal,
                                     // A thread the departed co-parent can no longer answer takes no reply.
-                                    onReply = startReply.takeIf { departed == null }
+                                    onReply = startReply.takeIf { departed == null },
+                                    names = parentNames
                                 )
                             }
                         }
@@ -378,7 +379,12 @@ fun ChatScreen(
                 dictation.failure?.let { DictationFailureNotice(it) }
                 // The message being answered, over the composer until a text is sent or ✕.
                 replyTarget?.let { quote ->
-                    ReplyBar(quote = quote, readerId = currentUserId, onCancel = viewModel::cancelReply)
+                    ReplyBar(
+                        quote = quote,
+                        readerId = currentUserId,
+                        onCancel = viewModel::cancelReply,
+                        names = parentNames
+                    )
                 }
 
                 // The `+` beside the field, not inside `MessageInput`: a file, a change request and

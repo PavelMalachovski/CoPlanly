@@ -70,6 +70,7 @@ import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.LocalScreenVisible
+import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.Spacing
@@ -230,6 +231,8 @@ internal fun threadNewestFirst(messages: List<Message>): List<ThreadEntry> = bui
  * @param onQuoteClick Called with the quoted original when a reply's quote is tapped
  * @param onReply Called with a message the parent chose to answer, by a swipe to the right or from
  *   its long-press menu; null where the thread takes no reply, which then offers none
+ * @param names How a quote names the co-parent (design item 12); null falls back to the name each
+ *   original stored
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -249,7 +252,8 @@ fun MessagesList(
     onRevealed: () -> Unit = {},
     quotes: Map<String, ReplyQuote> = emptyMap(),
     onQuoteClick: (ReplyQuote.Shown) -> Unit = {},
-    onReply: ((Message) -> Unit)? = null
+    onReply: ((Message) -> Unit)? = null,
+    names: ParentNames? = null
 ) {
     // Not rememberSaveable, on purpose: a saved position is what brought a returning reader back to
     // the place they left instead of the newest message. A new state starts at item 0, the newest.
@@ -270,8 +274,8 @@ fun MessagesList(
     NewestWhenShownAgain(listState, revealing)
     // The message whose long-press menu is open: it is highlighted and the others dimmed.
     val pressed = remember { mutableStateOf<String?>(null) }
-    val replies = remember(quotes, currentUserId, onQuoteClick, onReply) {
-        BubbleReplies(quotes, currentUserId, onQuoteClick, onReply, pressed)
+    val replies = remember(quotes, currentUserId, onQuoteClick, onReply, names) {
+        BubbleReplies(quotes, currentUserId, onQuoteClick, onReply, pressed, names)
     }
 
     PullToRefreshBox(
@@ -389,7 +393,8 @@ private fun ThreadColumn(
  * A message inserted at item 0 is placed below a reader who was looking at the previous newest:
  * the list keeps its first visible item by key. So when the newest message changes this brings
  * item 0 into view if the reader was at the newest (the previous newest is on screen), if the
- * message is the reader's own (a send always shows what was sent), or if the previous newest is
+ * message is one the reader sent from this phone ([NewestButton.followsOwnSend]: a send always shows
+ * what was sent, while their own message from another phone moves nothing), or if the previous newest is
  * gone (another conversation is on screen). A reader in history otherwise stays where
  * they are, and nothing moves while a search result is being revealed.
  */
@@ -415,7 +420,7 @@ private fun FollowNewestMessage(
             // which may not have happened yet, and overrides the list's keeping of its first item.
             // Instant, too: a flight through another conversation is its own defect.
             replaced || wasReadingNewest -> listState.requestScrollToItem(0)
-            newest.senderId == currentUserId -> listState.animateScrollToItem(0)
+            NewestButton.followsOwnSend(newest, currentUserId) -> listState.animateScrollToItem(0)
         }
     }
 }
@@ -503,7 +508,9 @@ private fun BoxScope.NewestMessagesButton(
             }
             SmallFloatingActionButton(
                 onClick = { scope.launch { listState.animateScrollToItem(0) } },
-                modifier = Modifier.semantics { count?.let { stateDescription = it } }
+                modifier = Modifier
+                    .size(SMALL_FAB_SIZE)
+                    .semantics { count?.let { stateDescription = it } }
             ) {
                 AppIcon(
                     imageVector = Icons.Default.ExpandMore,
@@ -600,8 +607,8 @@ private fun RevealHighlight(highlighted: Boolean, content: @Composable () -> Uni
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(MaterialTheme.shapes.small)
-            .background(tint)
+            // The shape bounds the tint only, never the bubble: a clip would cut one swiped to reply.
+            .background(tint, MaterialTheme.shapes.small)
     ) {
         content()
     }
@@ -1008,10 +1015,16 @@ private const val REVEAL_TINT_ALPHA = 0.6f
 private const val REFRESH_SETTLE_MS = 500L
 
 /**
+ * The newest-messages button's size: Material's small floating action button, whose size material3
+ * does not make public. Set on the button too, so [REVEAL_CLEARANCE] cannot drift from it.
+ */
+private val SMALL_FAB_SIZE = 40.dp
+
+/**
  * How far above the thread's bottom edge a revealed message is kept at the least: the button's
  * own padding, the small button and the same padding again.
  */
-private val REVEAL_CLEARANCE = 16.dp + 40.dp + 16.dp
+private val REVEAL_CLEARANCE = Spacing.L + SMALL_FAB_SIZE + Spacing.L
 
 /** Above this, the newest-messages badge reads "99+". */
 private const val MAX_BADGE_COUNT = 99

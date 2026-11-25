@@ -1,6 +1,7 @@
 package com.coparently.app.domain.chat
 
 import com.coparently.app.domain.model.Message
+import com.coparently.app.domain.model.MessageSendStatus
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -19,6 +20,16 @@ class NewestButtonTest {
     fun `shown far up`() {
         assertTrue(NewestButton.shows(firstVisibleIndex = NewestButton.NEAR_NEWEST + 1))
         assertTrue(NewestButton.shows(firstVisibleIndex = 40))
+    }
+
+    @Test
+    fun `only a message sent from this phone brings the newest into view`() {
+        assertTrue(NewestButton.followsOwnSend(message("m1", ME).copy(status = MessageSendStatus.SENDING), ME))
+        assertTrue(NewestButton.followsOwnSend(message("m1", ME).copy(status = MessageSendStatus.ERROR), ME))
+        // The reader's own message from another phone arrives already sent.
+        assertFalse(NewestButton.followsOwnSend(message("m1", ME).copy(status = MessageSendStatus.SENT), ME))
+        assertFalse(NewestButton.followsOwnSend(message("m1", ME).copy(status = MessageSendStatus.READ), ME))
+        assertFalse(NewestButton.followsOwnSend(message("m1", THEM).copy(status = MessageSendStatus.SENDING), ME))
     }
 
     @Test

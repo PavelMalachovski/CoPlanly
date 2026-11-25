@@ -33,6 +33,9 @@ import com.coparently.app.domain.chat.ChatAttachmentCodec
 import com.coparently.app.domain.chat.ReplyExcerpt
 import com.coparently.app.domain.chat.ReplyQuote
 import com.coparently.app.domain.model.Message
+import com.coparently.app.presentation.common.NamedParent
+import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.platform.ProvideAndroidPlatform
 import com.coparently.app.presentation.theme.CoPlanlyTheme
 import com.coparently.app.presentation.theme.ContrastLevel
@@ -224,6 +227,47 @@ class ChatReplyTest {
         rule.onNodeWithText("You").assertIsDisplayed()
         rule.onNodeWithText("Reply to your message").assertIsDisplayed()
         rule.onNodeWithText("Alice", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `a quote and the reply bar name the co-parent as the family does now - not as the message stored`() {
+        val names = ParentNames(
+            parents = Parents(
+                me = NamedParent(uid = ME, slot = "mom", name = "Alice"),
+                coParent = NamedParent(uid = THEM, slot = "dad", name = "Robert"),
+                isPaired = true,
+                loaded = true
+            ),
+            youFallback = "You",
+            coParentFallback = "Co-parent",
+            unknownFallback = "Parent"
+        )
+        rule.setContent {
+            Themed {
+                androidx.compose.foundation.layout.Column {
+                    MessagesList(
+                        messages = listOf(
+                            message("a", "Pick-up at five?", from = THEM),
+                            message("b", "Yes", replyTo = "a")
+                        ),
+                        currentUserId = ME,
+                        modifier = Modifier.height(300.dp),
+                        quotes = mapOf("b" to shown("a", ReplyExcerpt.Text("Pick-up at five?"))),
+                        names = names
+                    )
+                    ReplyBar(
+                        quote = shown("a", ReplyExcerpt.Text("Pick-up at five?")),
+                        readerId = ME,
+                        onCancel = {},
+                        names = names
+                    )
+                }
+            }
+        }
+
+        rule.onNodeWithText("Robert").assertIsDisplayed()
+        rule.onNodeWithText("Reply to Robert").assertIsDisplayed()
+        rule.onNodeWithText("Bob", substring = true).assertDoesNotExist()
     }
 
     @Test
