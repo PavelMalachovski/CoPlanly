@@ -196,8 +196,11 @@ android {
         // reminder (24 November 2026). 1.6.1's first bundle (115) was built without
         // google-services.json and crashed at launch; 116 is the same code built with it. 1.6.2 (117)
         // names the school import "Import from school" and logs why a school connection failed
-        // (25 November 2026).
-        versionName = "1.6.2"
+        // (25 November 2026). 1.6.3 (118) opens the thread on its newest message, lets a message be
+        // answered, and carries the fixes from the 25 November meeting (a child's photo from Home, the
+        // colour clash notice, the request history in each author's colour, the EduPage wording and
+        // required address, the swap's deadline line and the swap phrased by the children's names).
+        versionName = "1.6.3"
 
         testInstrumentationRunner = "com.coparently.app.KoinTestRunner"
 
