@@ -90,4 +90,59 @@ class ReplyQuoteTest {
         assertEquals("", ReplyExcerpt.Sticker.plain(80))
         assertEquals("a.pdf", ReplyExcerpt.File("a.pdf").plain(80))
     }
+
+    private fun fileEntry() = ChatAttachmentCodec.encode(
+        ChatAttachment(
+            storagePath = "chat_attachments/c/m1/form.pdf",
+            contentType = "application/pdf",
+            sizeBytes = 10L,
+            sha256 = "a".repeat(64),
+            fileName = "form.pdf"
+        )
+    )
+
+    @Test
+    fun `a file with a real caption quotes the caption`() {
+        val quote = ReplyQuote.of("m1", original(content = "Please sign this", attachments = listOf(fileEntry())), "c")
+
+        assertEquals(ReplyQuote.Shown("m1", "Bob", ReplyExcerpt.Text("Please sign this")), quote)
+    }
+
+    @Test
+    fun `leading blank lines are skipped`() {
+        val quote = ReplyQuote.of("m1", original(content = "\n  \nSecond\nthird"), "c")
+
+        assertEquals(ReplyQuote.Shown("m1", "Bob", ReplyExcerpt.Text("Second")), quote)
+    }
+
+    @Test
+    fun `an activity card other than a sticker is unavailable`() {
+        val card = ActivityAnnouncement(ActivityKind.EXPENSE_ADDED, ActivityEntityType.EXPENSE, "e1", "Shoes")
+
+        assertEquals(ReplyQuote.Unavailable, ReplyQuote.of("m1", original(activity = card), "c"))
+    }
+
+    @Test
+    fun `a card with no readable payload is unavailable`() {
+        val unreadable = original().copy(messageType = MessageType.ACTIVITY, activity = null)
+
+        assertEquals(ReplyQuote.Unavailable, ReplyQuote.of("m1", unreadable, "c"))
+    }
+
+    @Test
+    fun `an original with nothing to quote is unavailable`() {
+        assertEquals(ReplyQuote.Unavailable, ReplyQuote.of("m1", original(content = "  \n "), "c"))
+    }
+
+    @Test
+    fun `plain at exactly max adds no ellipsis`() {
+        assertEquals("a".repeat(80), ReplyExcerpt.Text("a".repeat(80)).plain(80))
+    }
+
+    @Test
+    fun `plain does not split an emoji at the cut`() {
+        val plain = ReplyExcerpt.Text("a".repeat(79) + "\uD83D\uDE00 tail").plain(80)
+
+        assertEquals("a".repeat(79) + "…", plain)
+    }
 }

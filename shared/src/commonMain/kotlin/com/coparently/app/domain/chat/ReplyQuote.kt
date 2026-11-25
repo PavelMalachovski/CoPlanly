@@ -34,15 +34,18 @@ sealed interface ReplyQuote {
          * @param replyToId The reply's `replyToMessageId`.
          * @param original The message that id names, as far as this phone holds it, or null.
          * @param conversationId The thread the reply is in: an original of any other thread is
-         *   [Unavailable], so a forged id cannot quote another conversation.
+         *   [Unavailable], so a forged id cannot quote another conversation. So is an original the
+         *   thread does not draw (an activity card but a sticker) and one with nothing to quote.
          */
-        fun of(replyToId: String?, original: Message?, conversationId: String): ReplyQuote? {
-            if (replyToId == null) return null
-            if (original == null || original.conversationId != conversationId) return Unavailable
-            return Shown(original.id, original.senderName, excerptOf(original))
+        fun of(replyToId: String?, original: Message?, conversationId: String): ReplyQuote? = when {
+            replyToId == null -> null
+            original == null || original.conversationId != conversationId -> Unavailable
+            // A card the thread does not draw is not something a parent can have replied to.
+            !isShownInThread(original) -> Unavailable
+            else -> excerptOf(original)?.let { Shown(original.id, original.senderName, it) } ?: Unavailable
         }
 
-        private fun excerptOf(original: Message): ReplyExcerpt {
+        private fun excerptOf(original: Message): ReplyExcerpt? {
             val files = ChatAttachmentCodec.attachmentsOf(original.attachments)
             val firstLine = original.content.lineSequence().firstOrNull { it.isNotBlank() }?.trim().orEmpty()
             return when {
@@ -50,6 +53,7 @@ sealed interface ReplyQuote {
                 // A file is sent with its own name as the text, so that is no words of the parent's.
                 files.isNotEmpty() && (firstLine.isEmpty() || firstLine == files.first().fileName) ->
                     ReplyExcerpt.File(files.first().fileName)
+                firstLine.isEmpty() -> null
                 else -> ReplyExcerpt.Text(firstLine)
             }
         }
@@ -81,4 +85,9 @@ fun ReplyExcerpt.plain(max: Int): String = when (this) {
     ReplyExcerpt.Sticker -> ""
 }
 
-private fun String.cutAt(max: Int): String = if (length <= max) this else take(max) + "…"
+private fun String.cutAt(max: Int): String {
+    if (length <= max) return this
+    val kept = take(max)
+    // Never leave half of a surrogate pair (an emoji) at the cut.
+    return (if (kept.lastOrNull()?.isHighSurrogate() == true) kept.dropLast(1) else kept) + "…"
+}
