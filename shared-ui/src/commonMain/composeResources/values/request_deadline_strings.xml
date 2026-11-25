@@ -26,6 +26,7 @@
         <item quantity="other">Answer by %1$s\u00A0· up to %2$d\u00A0reminders</item>
     </plurals>
     <string name="answer_by_reminded_automatically">%1$s is reminded automatically until they answer. Tap to change the date.</string>
+    <string name="answer_by_reminded_automatically_fixed">%1$s is reminded automatically until they answer.</string>
     <string name="answer_by_outcome">No answer by then — you\u0027ll be told and can give 24 more hours. Nothing changes in the calendar without an answer.</string>
     <string name="answer_by_outcome_short">No answer by then — you\u0027ll be told and can give a little more time. Nothing changes in the calendar without an answer.</string>
     <string name="answer_by_fixed">Answer by %1$s</string>

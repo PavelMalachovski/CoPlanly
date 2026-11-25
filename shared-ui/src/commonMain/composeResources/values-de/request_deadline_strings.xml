@@ -18,6 +18,7 @@
         <item quantity="other">Antwort bis %1$s\u00A0· bis zu %2$d\u00A0Erinnerungen</item>
     </plurals>
     <string name="answer_by_reminded_automatically">%1$s wird automatisch erinnert, bis eine Antwort kommt. Tippe, um das Datum zu ändern.</string>
+    <string name="answer_by_reminded_automatically_fixed">%1$s wird automatisch erinnert, bis eine Antwort kommt.</string>
     <string name="answer_by_outcome">Ohne Antwort bis dahin wirst du benachrichtigt und kannst 24 Stunden mehr geben. Ohne Antwort ändert sich im Kalender nichts.</string>
     <string name="answer_by_outcome_short">Ohne Antwort bis dahin wirst du benachrichtigt und kannst noch etwas Zeit geben. Ohne Antwort ändert sich im Kalender nichts.</string>
     <string name="answer_by_fixed">Antwort bis %1$s</string>

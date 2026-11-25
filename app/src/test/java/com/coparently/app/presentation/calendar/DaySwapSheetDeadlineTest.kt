@@ -1,8 +1,11 @@
 package com.coparently.app.presentation.calendar
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -45,9 +48,26 @@ class DaySwapSheetDeadlineTest : PushedBarsHarness() {
     fun `a tap on the summary opens the choices`() {
         compose(withHost = false) { sheet(daysAhead = 20) }
         assertTrue(rule.onAllNodesWithText("Tomorrow").fetchSemanticsNodes().isEmpty())
-        rule.onNodeWithText("Bob is reminded automatically until they answer. Tap to change the date.").performClick()
+        val summary = rule.onNodeWithText(
+            "Bob is reminded automatically until they answer. Tap to change the date.",
+            useUnmergedTree = false
+        )
+        summary.assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+        summary.performClick()
         rule.waitForIdle()
         assertTrue(rule.onAllNodesWithText("Tomorrow").fetchSemanticsNodes().isNotEmpty())
+    }
+
+    @Test
+    fun `a fixed deadline is stated, is no button and promises no change`() {
+        // Two days ahead: the cap is 24 to 48 hours away, which is the fixed band at any hour.
+        compose(withHost = false) { sheet(daysAhead = 2) }
+        assertTrue(texts("Answer by", "up to", "reminder").isNotEmpty())
+        val reminded = rule.onNodeWithText("Bob is reminded automatically until they answer.")
+        reminded.assertExists()
+        reminded.assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Role))
+        assertTrue(rule.onAllNodesWithText("Tap to change", substring = true).fetchSemanticsNodes().isEmpty())
+        assertTrue(rule.onAllNodesWithText("Tomorrow").fetchSemanticsNodes().isEmpty())
     }
 
     @Test
