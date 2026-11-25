@@ -393,8 +393,7 @@ private fun ThreadColumn(
  * A message inserted at item 0 is placed below a reader who was looking at the previous newest:
  * the list keeps its first visible item by key. So when the newest message changes this brings
  * item 0 into view if the reader was at the newest (the previous newest is on screen), if the
- * message is one the reader sent from this phone ([NewestButton.followsOwnSend]: a send always shows
- * what was sent, while their own message from another phone moves nothing), or if the previous newest is
+ * message is the reader's own (a send always shows what was sent), or if the previous newest is
  * gone (another conversation is on screen). A reader in history otherwise stays where
  * they are, and nothing moves while a search result is being revealed.
  */
@@ -420,7 +419,7 @@ private fun FollowNewestMessage(
             // which may not have happened yet, and overrides the list's keeping of its first item.
             // Instant, too: a flight through another conversation is its own defect.
             replaced || wasReadingNewest -> listState.requestScrollToItem(0)
-            NewestButton.followsOwnSend(newest, currentUserId) -> listState.animateScrollToItem(0)
+            newest.senderId == currentUserId -> listState.animateScrollToItem(0)
         }
     }
 }
@@ -508,9 +507,7 @@ private fun BoxScope.NewestMessagesButton(
             }
             SmallFloatingActionButton(
                 onClick = { scope.launch { listState.animateScrollToItem(0) } },
-                modifier = Modifier
-                    .size(SMALL_FAB_SIZE)
-                    .semantics { count?.let { stateDescription = it } }
+                modifier = Modifier.semantics { count?.let { stateDescription = it } }
             ) {
                 AppIcon(
                     imageVector = Icons.Default.ExpandMore,
@@ -1015,8 +1012,8 @@ private const val REVEAL_TINT_ALPHA = 0.6f
 private const val REFRESH_SETTLE_MS = 500L
 
 /**
- * The newest-messages button's size: Material's small floating action button, whose size material3
- * does not make public. Set on the button too, so [REVEAL_CLEARANCE] cannot drift from it.
+ * The newest-messages button's drawn size: Material's small floating action button, whose size
+ * material3 does not make public. Not set on the button, which keeps Material's own touch target.
  */
 private val SMALL_FAB_SIZE = 40.dp
 

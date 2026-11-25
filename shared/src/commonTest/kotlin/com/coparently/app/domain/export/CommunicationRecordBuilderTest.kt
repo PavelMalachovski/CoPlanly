@@ -368,6 +368,16 @@ class CommunicationRecordBuilderTest {
     }
 
     @Test
+    fun `a blank reply id is no reply`() {
+        val record = CommunicationRecordBuilder.build(
+            sources(messages = listOf(MessageInput("b", BOB, MARCH_10_0900, "Yes", true, replyToMessageId = ""))),
+            scope()
+        )
+
+        assertNull(record.messages.single().replyTo)
+    }
+
+    @Test
     fun `a reply to a multi-line original quotes every line - not the first alone`() {
         val record = CommunicationRecordBuilder.build(
             sources(

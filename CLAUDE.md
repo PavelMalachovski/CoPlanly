@@ -397,9 +397,7 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
      the reader is up the list moves nothing: **`NewestButton`** ("↓", `domain/chat/NewestButton`)
      shows past `NEAR_NEWEST` items (a few messages) from the newest, with a badge counting the
      **co-parent's** messages since the reader left the bottom (their own, from another phone, never
-     count). Only a message sent **from this phone** (still SENDING or ERROR when it appears) brings
-     the newest into view; one's own message arriving from another phone leaves a reader in history
-     where they are. A
+     count). The reader's own new message brings the newest into view. A
      message revealed by a search or a quote tap lands clear of the button.
    - **A reply is `Message.replyToMessageId`, which was always in the model, Room and the document**
      (`ChatMappers`): no schema, wire or rule change, and an older build draws a reply as a plain

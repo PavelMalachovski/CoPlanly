@@ -295,7 +295,8 @@ object CommunicationRecordBuilder {
      * original is not among the messages the source handed over, else the original quoted.
      */
     private fun replyOf(message: MessageInput, byId: Map<String, MessageInput>, scope: RecordScope): RecordReplyTo? {
-        val originalId = message.replyToMessageId ?: return null
+        // A legacy row may hold an empty id for "no reply".
+        val originalId = message.replyToMessageId?.takeIf { it.isNotBlank() } ?: return null
         val original = byId[originalId] ?: return RecordReplyTo.NotInRecord
         val excerpt = ReplyExcerpt.forRecord(original.text, original.attachments, original.isSticker)
         return RecordReply(

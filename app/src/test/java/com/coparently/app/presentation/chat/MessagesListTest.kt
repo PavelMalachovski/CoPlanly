@@ -17,7 +17,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.model.Message
-import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.presentation.platform.ProvideAndroidPlatform
 import com.coparently.app.presentation.theme.CoPlanlyTheme
 import com.coparently.app.presentation.theme.ContrastLevel
@@ -114,27 +113,11 @@ class MessagesListTest {
         compose()
         scrollUp()
 
-        // Sent from this phone: Room holds it as SENDING before the server has it.
-        rule.runOnIdle { messages = messages + message(MESSAGES, from = ME).copy(status = MessageSendStatus.SENDING) }
+        rule.runOnIdle { messages = messages + message(MESSAGES, from = ME) }
         rule.waitForIdle()
 
         rule.onNodeWithText(textOf(MESSAGES)).assertIsDisplayed()
         rule.onNodeWithContentDescription(NEWEST).assertDoesNotExist()
-    }
-
-    @Test
-    fun `one's own message from another phone leaves a reader in history where they are`() {
-        compose()
-        scrollUp()
-        val reading = textOf(MESSAGES - 1 - FAR_UP)
-
-        // Sent from the reader's other phone: it arrives already sent.
-        rule.runOnIdle { messages = messages + message(MESSAGES, from = ME) }
-        rule.waitForIdle()
-
-        rule.onNodeWithText(reading).assertIsDisplayed()
-        rule.onNodeWithText(textOf(MESSAGES)).assertDoesNotExist()
-        rule.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.StateDescription)).assertDoesNotExist()
     }
 
     @Test

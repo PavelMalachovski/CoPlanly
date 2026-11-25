@@ -3117,8 +3117,8 @@ arrives, an older build, and the file a court reads.
       them. Dismiss the keyboard: the thread does not jump.
 - [ ] **"↓" and its count** (2P). Scroll up a few screens. Bob sends two messages: the list does not
       move, "↓" shows with 2. A third from Bob makes it 3. Send one from Alice's *other* phone or
-      send your own message: your own are not counted; a message sent from this phone brings the
-      newest into view, one sent from Alice's other phone does not move the list. Scroll up again: "↓" shows without a count. Tap it: the newest, the button gone.
+      send your own message: your own are not counted, and your own message brings the newest into
+      view. Scroll up again: "↓" shows without a count. Tap it: the newest, the button gone.
       Scroll to the newest by hand: the count resets. A message found by search sits clear of the
       button, not under it.
 - [ ] **Swipe to reply** (Android and iPhone). Drag Bob's message to the right: past a short
