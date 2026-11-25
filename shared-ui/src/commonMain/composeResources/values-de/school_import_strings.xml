@@ -9,7 +9,7 @@
     <string name="school_import_title">Schulimport</string>
     <string name="school_import_intro">Jede Verbindung bringt die Schulveranstaltungen eines Kindes, die Schulzeiten der nächsten vier Wochen und unterrichtsfreie Tage in den Familienkalender. Das Telefon spricht direkt mit der Schule und aktualisiert einmal am Tag.</string>
     <string name="school_import_empty_title">Keine Schule verbunden</string>
-    <string name="school_import_empty_description">Verbinde das Bakaláři-Konto deines Kindes, um Schulveranstaltungen und Schulzeiten im Kalender zu sehen.</string>
+    <string name="school_import_empty_description">Verbinde das Schulkonto deines Kindes, um Schulveranstaltungen und Schulzeiten im Kalender zu sehen.</string>
     <string name="school_import_connect">Schule verbinden</string>
     <string name="school_import_connect_another">Weiteres Kind verbinden</string>
     <string name="school_import_last_sync">Zuletzt aktualisiert: %1$s</string>

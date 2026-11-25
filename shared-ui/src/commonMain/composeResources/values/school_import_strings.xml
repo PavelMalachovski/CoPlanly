@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The school import (MON-8): Settings → Sync → Import from Bakaláři, and the connect flow. -->
+<!-- The school import (MON-8): Settings → Sync → Import from school, and the connect flow. -->
 <resources>
     <!-- Titles written into imported events, in the importing parent's language. -->
     <string name="school_import_hours_title">%1$s at school</string>
@@ -11,7 +11,7 @@
     <string name="school_import_title">School import</string>
     <string name="school_import_intro">Each connection brings one child’s school events, school hours for the next four weeks and days without lessons into the family calendar. The phone talks to the school directly and updates once a day.</string>
     <string name="school_import_empty_title">No school connected</string>
-    <string name="school_import_empty_description">Connect your child’s Bakaláři account to see school events and school hours in the calendar.</string>
+    <string name="school_import_empty_description">Connect your child’s school account to see school events and school hours in the calendar.</string>
     <string name="school_import_connect">Connect a school</string>
     <string name="school_import_connect_another">Connect another child</string>
     <string name="school_import_last_sync">Last updated %1$s</string>

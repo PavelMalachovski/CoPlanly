@@ -9,7 +9,7 @@
     <string name="school_import_title">Імпорт зі школи</string>
     <string name="school_import_intro">Кожне підключення переносить до сімейного календаря шкільні заходи однієї дитини, навчальні години на найближчі чотири тижні та дні без уроків. Телефон звертається до школи напряму й оновлює дані раз на день.</string>
     <string name="school_import_empty_title">Школу не підключено</string>
-    <string name="school_import_empty_description">Підключіть акаунт дитини в Bakaláři, щоб бачити шкільні заходи й навчальні години в календарі.</string>
+    <string name="school_import_empty_description">Підключіть шкільний акаунт дитини, щоб бачити шкільні заходи й навчальні години в календарі.</string>
     <string name="school_import_connect">Підключити школу</string>
     <string name="school_import_connect_another">Підключити ще одну дитину</string>
     <string name="school_import_last_sync">Оновлено %1$s</string>

@@ -9,7 +9,7 @@
     <string name="school_import_title">Import ze školy</string>
     <string name="school_import_intro">Každé připojení přenáší do rodinného kalendáře školní akce jednoho dítěte, vyučování na příští čtyři týdny a dny bez vyučování. Telefon komunikuje přímo se školou a aktualizuje jednou denně.</string>
     <string name="school_import_empty_title">Žádná škola není připojená</string>
-    <string name="school_import_empty_description">Připojte účet dítěte v Bakalářích a školní akce i vyučování uvidíte v kalendáři.</string>
+    <string name="school_import_empty_description">Připojte školní účet dítěte a školní akce i vyučování uvidíte v kalendáři.</string>
     <string name="school_import_connect">Připojit školu</string>
     <string name="school_import_connect_another">Připojit další dítě</string>
     <string name="school_import_last_sync">Naposledy aktualizováno %1$s</string>

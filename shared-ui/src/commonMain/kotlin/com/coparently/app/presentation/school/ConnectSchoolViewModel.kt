@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.family.FamilyOption
 import com.coparently.app.data.family.SelectedFamilySource
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.school.EdupageSignIn
 import com.coparently.app.data.school.SchoolAccounts
 import com.coparently.app.data.school.SchoolImporter
@@ -571,10 +572,22 @@ private suspend fun failureOf(block: suspend () -> Unit): UiText? = try {
 } catch (e: CancellationException) {
     throw e
 } catch (e: BakalariException) {
+    logger.w(TAG, "Connecting a Bakaláři account failed: ${e.reason()}")
     UiText.Res(messageFor(e))
 } catch (e: EdupageException) {
+    logger.w(TAG, "Connecting an EduPage account failed: ${e.reason()}")
     UiText.Res(edupageMessageFor(e))
 }
+
+/**
+ * What a failed connection logs: the failure's own message (fixed English per kind, which survives
+ * R8's renaming of the class) and its cause's, never the request (24 November 2026: an EduPage
+ * sign-in failed on a phone and the log held nothing). Neither exception's message carries a
+ * password or a cookie, and a network cause names a host at most.
+ */
+private fun Throwable.reason(): String = cause?.let { "$message (${it.message})" } ?: message.orEmpty()
+
+private const val TAG = "ConnectSchool"
 
 private fun messageFor(error: BakalariException): StringResource = when (error) {
     is BakalariException.InvalidGrant -> Res.string.school_connect_wrong_password

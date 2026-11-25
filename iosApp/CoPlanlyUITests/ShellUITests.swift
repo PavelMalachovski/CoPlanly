@@ -1821,7 +1821,7 @@ final class ShellUITests: XCTestCase {
         let settingsRows: [(String, String)] = [
             ("data_sources", dataSourcesTitle),
             ("calendar_feed", "Calendar feed for iPhone"),
-            ("school_import", "Import from Bakal"),
+            ("school_import", "Import from school"),
             ("my_profile", "My details"),
             ("sign_in_methods", signInMethodsTitle),
         ]
@@ -1833,7 +1833,7 @@ final class ShellUITests: XCTestCase {
         }
         tourVisit("school_connect?connectionId={connectionId}") {
             try self.tourSettings()
-            try self.tourOpen(containing: "Import from Bakal", from: "Settings")
+            try self.tourOpen(containing: "Import from school", from: "Settings")
             try self.tourOpen(containing: "Connect a school", from: nil)
         }
 
