@@ -55,8 +55,8 @@
     <string name="request_history_your_request">Deine Anfrage</string>
     <string name="request_history_their_request">Anfrage von %1$s</string>
     <string name="request_history_legend_you">du</string>
-    <string name="request_history_withdrawn_by_you">Du hast sie zurückgezogen</string>
-    <string name="request_history_withdrawn_by">%1$s hat sie zurückgezogen</string>
+    <string name="request_history_withdrawn_by_you">zurückgezogen</string>
+    <string name="request_history_withdrawn_by">zurückgezogen von %1$s</string>
     <string name="request_history_when">%1$s\u00A0· %2$s</string>
     <string name="request_history_propose_change">Änderung vorschlagen</string>
     <string name="request_history_propose_change_description">Änderung an diesem vereinbarten Tausch vorschlagen</string>

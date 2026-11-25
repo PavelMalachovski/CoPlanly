@@ -73,7 +73,7 @@
     <string name="school_connect_confirm_hours">Навчальні години кожного навчального дня в найближчі чотири тижні</string>
     <string name="school_connect_confirm_days_off">Дні без уроків, окрім канікул і свят, які календар уже показує</string>
     <string name="school_connect_confirm_shared">Вони стануть звичайними подіями цієї родини про дитину (%1$s), і другий із батьків їх теж побачить.</string>
-    <string name="school_connect_confirm_tasks">Контрольні й домашні завдання дитини за останні 120 днів і наперед</string>
+    <string name="school_connect_confirm_tasks">Контрольні й домашні завдання дитини на найближчі 90 днів</string>
     <string name="school_connect_confirm_not_imported">Оцінки, домашні завдання й окремі уроки не імпортуються.</string>
     <string name="school_connect_confirm_not_imported_edupage">Оцінки не імпортуються.</string>
     <string name="school_connect_save">Підключити й імпортувати</string>

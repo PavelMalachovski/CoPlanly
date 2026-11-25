@@ -76,7 +76,7 @@
     <string name="school_connect_confirm_hours">School hours of every school day in the next four weeks</string>
     <string name="school_connect_confirm_days_off">Days without lessons, except holidays the calendar already shows</string>
     <string name="school_connect_confirm_shared">They become ordinary events of this family about %1$s, and your co-parent sees them too.</string>
-    <string name="school_connect_confirm_tasks">Tests and homework of the child, for the last 120 days and ahead</string>
+    <string name="school_connect_confirm_tasks">Tests and homework of the child, for the next 90 days</string>
     <string name="school_connect_confirm_not_imported">Grades, homework and individual lessons are not imported.</string>
     <string name="school_connect_confirm_not_imported_edupage">Grades are not imported.</string>
     <string name="school_connect_save">Connect and import</string>

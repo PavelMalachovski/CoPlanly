@@ -830,7 +830,8 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
       `SwapOfferSentence`, `ChangeRequestViewModel.swapChildNames`). Names are never declined in
       cs, ru or uk; a blank or missing field words the push as before.
     - **An answer is one pair of buttons, or day by day on request**: the card and Home's dialog lead
-      with the push's own heading (`swapOfferHeading`), draw the two sides and the note as a quote,
+      with the children's sentence when the children are known, else with the push's own heading
+      (`swapOfferHeading`), draw the two sides and the note as a quote,
       "Accept swap"/"Accept", and "Answer day by day" (two waiting days or more) switches to
       `SwapDayAnswers` in their place. A part-answer leaves the rest waiting, and the card then shows
       and decides only those (`DaySwapGroup.waitingOn`).
@@ -4832,8 +4833,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       with it off, a record written before the option reads on, and the record carries
       `"importHours": false` only when off. Off, the planner creates no school-hours event and deletes
       those this connection made for today or later (the import's second deletion, its own `hours`
-      kind only), and drops them from the ledger so switching on imports them afresh; events, tests,
-      homework and days off come in either way. The switch is the import screen's "Lesson times" row.
+      kind only), and drops them from the ledger so switching on imports them afresh; events and days
+      off come in either way, and so do EduPage's tests and homework (a Bakaláři connection has none). The switch is the import screen's "Lesson times" row.
     - **Quiet writes, daily job.** The import writes through the event use cases with
       `announce = false` (no chat card per event; revisions are still recorded), skips a day off the
       holiday provider already draws, merges a run of days off into one event, and runs as unique

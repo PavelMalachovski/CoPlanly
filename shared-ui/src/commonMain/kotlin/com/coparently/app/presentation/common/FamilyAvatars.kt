@@ -212,7 +212,18 @@ private fun PictureAvatars(members: List<FamilyMember>, opensPhotos: Boolean) {
             }
         }
         if (overflow > 0) {
-            Box(modifier = Modifier.size(ITEM), contentAlignment = Alignment.Center) {
+            // Once the row stops being one described picture, the disc must still name the members
+            // it hides, or TalkBack reads "+2" and never who they are.
+            val hidden = stringResource(
+                Res.string.children_avatars_description,
+                members.drop(shown.size).joinToString(", ") { it.name }
+            )
+            Box(
+                modifier = Modifier
+                    .size(ITEM)
+                    .then(if (anyOpens) Modifier.clearAndSetSemantics { contentDescription = hidden } else Modifier),
+                contentAlignment = Alignment.Center
+            ) {
                 Ring(chosen = false) {
                     InitialDisc(stringResource(Res.string.children_avatars_more, overflow))
                 }

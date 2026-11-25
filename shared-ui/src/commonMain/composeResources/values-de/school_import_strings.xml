@@ -73,7 +73,7 @@
     <string name="school_connect_confirm_hours">Die Schulzeiten jedes Schultags der nächsten vier Wochen</string>
     <string name="school_connect_confirm_days_off">Unterrichtsfreie Tage, außer Ferien und Feiertagen, die der Kalender schon zeigt</string>
     <string name="school_connect_confirm_shared">Sie werden normale Termine dieser Familie zu %1$s, und der andere Elternteil sieht sie auch.</string>
-    <string name="school_connect_confirm_tasks">Tests und Hausaufgaben des Kindes, für die letzten 120 Tage und die kommende Zeit</string>
+    <string name="school_connect_confirm_tasks">Tests und Hausaufgaben des Kindes, für die nächsten 90 Tage</string>
     <string name="school_connect_confirm_not_imported">Noten, Hausaufgaben und einzelne Unterrichtsstunden werden nicht importiert.</string>
     <string name="school_connect_confirm_not_imported_edupage">Noten werden nicht importiert.</string>
     <string name="school_connect_save">Verbinden und importieren</string>

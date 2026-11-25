@@ -153,13 +153,7 @@ fun ParentColorPicker(
     val clash = coParent?.clashWith(colourFor(chosen, customHue))
     val theirs = coParent?.preset
     Column(modifier = modifier.selectableGroup()) {
-        if (clash != null) {
-            InlineBanner(
-                text = clash.text(),
-                tone = BannerTone.INFO,
-                modifier = Modifier.padding(bottom = Spacing.S)
-            )
-        }
+        if (clash != null) ColourClashNotice(clash)
         ParentColorChoice.GRID.chunked(GRID_COLUMNS).forEach { row ->
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.XS),
@@ -388,6 +382,19 @@ internal fun CoParentColour.clashWith(mine: ParentColor): ColourClash? {
     } else {
         ColourClash.Close(firstName)
     }
+}
+
+/**
+ * The notice that says this parent's choice would be drawn in another colour. The picker in
+ * Settings and the onboarding's colour step both draw it, so the words and the look are one.
+ */
+@Composable
+internal fun ColourClashNotice(clash: ColourClash, modifier: Modifier = Modifier) {
+    InlineBanner(
+        text = clash.text(),
+        tone = BannerTone.INFO,
+        modifier = modifier.padding(bottom = Spacing.S)
+    )
 }
 
 @Composable

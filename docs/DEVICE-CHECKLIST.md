@@ -2551,8 +2551,8 @@ for a phone is everything drawn, the stored connection and the co-parent's side.
 school) and a build with the row switched on: a debug build, or release with
 `-PCOPLANLY_EDUPAGE_IMPORT=true` (`BuildConfig.EDUPAGE_IMPORT`; the row is hidden in release otherwise).
 
-- [ ] Settings → Sync → Connect a school → EduPage. Leave the school's address empty (the sign-in goes
-      through `login1.edupage.org`) or type the school's `https://<school>.edupage.org`.
+- [ ] Settings → Sync → Connect a school → EduPage. Type the school's EduPage address (`<school>.edupage.org`,
+      or the full `https://` form). It is required, and an address that is not an EduPage one is refused.
 - [ ] A **wrong** password: a plain "wrong username or password", nothing stored. Then the right one:
       the screen names the school and each child with class.
 - [ ] Choose the child (and, with two families, the family). Confirm. Within a minute the calendar

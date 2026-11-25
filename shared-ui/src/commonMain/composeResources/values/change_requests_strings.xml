@@ -63,8 +63,8 @@
     <string name="request_history_your_request">Your request</string>
     <string name="request_history_their_request">%1$s’s request</string>
     <string name="request_history_legend_you">you</string>
-    <string name="request_history_withdrawn_by_you">You withdrew it</string>
-    <string name="request_history_withdrawn_by">%1$s withdrew it</string>
+    <string name="request_history_withdrawn_by_you">withdrawn</string>
+    <string name="request_history_withdrawn_by">withdrawn by %1$s</string>
     <string name="request_history_when">%1$s\u00A0· %2$s</string>
     <string name="request_history_propose_change">Propose a change</string>
     <string name="request_history_propose_change_description">Propose a change to this agreed swap</string>

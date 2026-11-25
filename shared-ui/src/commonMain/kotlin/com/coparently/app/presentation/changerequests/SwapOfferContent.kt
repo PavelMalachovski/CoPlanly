@@ -118,15 +118,20 @@ data class SwapOfferDetails(
  * The offer phrased by who has the children on which days (meeting of 25 November 2026, item 3):
  * "Lenička will be with you on Fri, Nov 13 and with Pavel on Fri, Nov 20", or the days alone when
  * the swap moves no child ("Fri, Nov 13 will be with you"). Names are never declined; the verb
- * follows how many children there are. Nothing while the children or the co-parent's slot are not
- * known ([children] null, [sides] null), and the card then reads as it did before.
+ * follows how many children there are. Nothing when the text is the heading's own, and nothing
+ * while the children or the co-parent's slot are not known ([children] null, [sides] null), and
+ * the card then reads as it did before.
  */
 @Composable
 fun SwapOfferSentence(sides: SwapSides?, offererName: String, children: List<String>?) {
     if (sides == null || children == null) return
     val sentence = SwapSentence.of(sides, children) ?: return
+    val text = swapSentenceText(sentence, offererName)
+    // In Czech, Russian and Ukrainian an offer that only asks reads the same as its heading; the
+    // line is then not drawn a second time.
+    if (text == swapOfferHeading(sides, offererName, children)) return
     Text(
-        text = swapSentenceText(sentence, offererName),
+        text = text,
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurface
     )

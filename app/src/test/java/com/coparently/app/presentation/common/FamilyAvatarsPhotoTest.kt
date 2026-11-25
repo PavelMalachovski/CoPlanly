@@ -133,4 +133,12 @@ class FamilyAvatarsPhotoTest {
         rule.onAllNodesWithContentDescription("Open Lenička’s photo").assertCountEquals(0)
         rule.onAllNodesWithContentDescription("Close").assertCountEquals(0)
     }
+
+    @Test
+    fun `the overflow disc names the hidden members once a photo splits the row`() {
+        // Three slots, the last one "+n": Lenička and Anna are drawn, Rex and Bára are not.
+        show(listOf(withPhoto, child("Anna", null), pet("Rex", null), child("Bára", null)))
+
+        rule.onNodeWithContentDescription("Children: Rex, Bára").assert(!hasClickAction())
+    }
 }
