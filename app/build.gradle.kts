@@ -194,8 +194,10 @@ android {
         // requests, calendar K1 and the steady headers, 1.6.1 the pet's own screen, "Month" as a
         // menu, the larger avatars, the CoPlanly wordmark, the EduPage import and the 30-minute
         // reminder (24 November 2026). 1.6.1's first bundle (115) was built without
-        // google-services.json and crashed at launch; 116 is the same code built with it.
-        versionName = "1.6.1"
+        // google-services.json and crashed at launch; 116 is the same code built with it. 1.6.2 (117)
+        // names the school import "Import from school" and logs why a school connection failed
+        // (25 November 2026).
+        versionName = "1.6.2"
 
         testInstrumentationRunner = "com.coparently.app.KoinTestRunner"
 
