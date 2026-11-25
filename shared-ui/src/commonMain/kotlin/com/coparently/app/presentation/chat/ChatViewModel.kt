@@ -655,9 +655,11 @@ class ChatViewModel(
             val quote = ReplyQuote.of(storedId, originalFromRoom(storedId), conversationId)
             // Chosen again meanwhile: the newer choice stands.
             if (replies.value.containsKey(conversationId)) return@launchGuarded
+            // Sent or cancelled meanwhile: the store no longer holds this reply, so it is not restored.
+            if (preferences.getChatReplyDraft(conversationId) != storedId) return@launchGuarded
             if (quote is ReplyQuote.Shown) {
                 replies.value += conversationId to quote
-            } else if (preferences.getChatReplyDraft(conversationId) == storedId) {
+            } else {
                 preferences.putChatReplyDraft(conversationId, "")
             }
         }
@@ -685,8 +687,11 @@ class ChatViewModel(
         preferences.putChatReplyDraft(conversationId, quote.messageId)
     }
 
+    /**
+     * Forgets the reply of [conversationId], in memory and in the store, even when only the store
+     * holds one (a restore still waiting on Room must not bring it back afterwards).
+     */
     private fun clearReply(conversationId: String) {
-        if (!replies.value.containsKey(conversationId)) return
         replies.value -= conversationId
         preferences.putChatReplyDraft(conversationId, "")
     }
@@ -802,8 +807,9 @@ class ChatViewModel(
 
         // The reply goes with the text, for the same reason: the composer lets both go at once,
         // and what a held message answers must survive until it is sent or undone.
-        val reply = replies.value[conversationId]
-        clearReply(conversationId)
+        // Only a text message is a reply: anything else (a change-request card) leaves it pending.
+        val reply = if (type == MessageType.TEXT) replies.value[conversationId] else null
+        if (type == MessageType.TEXT) clearReply(conversationId)
 
         // Built when it is actually sent, so a held message carries the time it left rather than
         // the time it was typed.

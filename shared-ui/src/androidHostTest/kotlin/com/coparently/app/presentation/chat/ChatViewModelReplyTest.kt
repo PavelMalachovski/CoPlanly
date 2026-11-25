@@ -25,6 +25,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -112,11 +113,51 @@ class ChatViewModelReplyTest {
 
     @Test
     fun `a reply to a message the thread does not draw is not started`() = runTest {
-        val viewModel = openedThread()
+        val preferences = replyStore()
+        val viewModel = openedThread(preferences)
 
         viewModel.startReply(message().copy(content = ""))
+        runCurrent()
 
         assertNull(viewModel.replyTarget.value)
+        assertEquals("", preferences.getChatReplyDraft(CONVERSATION))
+    }
+
+    @Test
+    fun `a send before the restore has read Room leaves no reply behind`() = runTest {
+        val preferences = replyStore()
+        preferences.putChatReplyDraft(CONVERSATION, "message-1")
+        val roomRead = CompletableDeferred<Unit>()
+        coEvery { messageRepository.getMessageById("message-1") } coAnswers {
+            roomRead.await()
+            message()
+        }
+        val viewModel = createViewModel(preferences)
+        advanceUntilIdle()
+
+        viewModel.onThreadOpened(CONVERSATION)
+        runCurrent()
+        viewModel.sendMessage(DRAFT)
+        runCurrent()
+        roomRead.complete(Unit)
+        advanceUntilIdle()
+
+        assertNull("the restore must not put the reply bar up after a send", viewModel.replyTarget.value)
+        assertEquals("", preferences.getChatReplyDraft(CONVERSATION))
+    }
+
+    @Test
+    fun `a message that is not text neither carries nor consumes the reply`() = runTest {
+        val preferences = replyStore()
+        val viewModel = openedThread(preferences)
+        viewModel.startReply(message())
+
+        viewModel.sendMessage("a card", type = MessageType.ACTIVITY)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { messageRepository.sendMessage(match { it.replyToMessageId == null }) }
+        assertEquals(shown(), viewModel.replyTarget.value)
+        assertEquals("message-1", preferences.getChatReplyDraft(CONVERSATION))
     }
 
     @Test
