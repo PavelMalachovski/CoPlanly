@@ -163,4 +163,14 @@
     <string name="settle_up_iban_copied">IBAN скопирован</string>
     <string name="settle_up_no_account">Счёта для платежей пока нет (%1$s).</string>
     <string name="settle_up_qr_description">QR-код для оплаты %1$s: %2$s</string>
+    <!-- Replies (chat: newest message in view, and replies, November 2026). A swipe or the
+         long-press menu starts a reply; a reply's bubble quotes the message it answers, and the
+         bar over the composer names whom the parent answers. %1$s = a name, or a file's name. -->
+    <string name="chat_reply">Ответить</string>
+    <string name="chat_copy_text">Копировать текст</string>
+    <string name="chat_reply_to">Ответ: %1$s</string>
+    <string name="chat_cancel_reply">Отменить ответ</string>
+    <string name="chat_quote_unavailable">Сообщение недоступно</string>
+    <string name="chat_quote_file">Файл: %1$s</string>
+    <string name="chat_quote_sticker">Стикер</string>
 </resources>

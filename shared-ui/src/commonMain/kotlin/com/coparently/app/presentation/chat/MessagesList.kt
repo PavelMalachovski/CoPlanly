@@ -40,6 +40,7 @@ import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -227,15 +228,13 @@ internal fun threadNewestFirst(messages: List<Message>): List<ThreadEntry> = bui
  *   drop the request
  * @param quotes The quote each reply's bubble shows, by the reply's message id (`ChatViewModel.quotes`)
  * @param onQuoteClick Called with the quoted message's id when a reply's quote is tapped
- * @param onReply Called with a message the parent chose to answer
+ * @param onReply Called with a message the parent chose to answer, by a swipe to the right or from
+ *   its long-press menu; null where the thread takes no reply, which then offers none
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-// LongParameterList: one callback per action the thread offers, as on the other thread
-// composables. UnusedParameter: [quotes], [onQuoteClick] and [onReply] are the replies' (spec
-// goals 3 and 5), drawn by the bubbles in the task that follows this one; the signature lands
-// first so the screen passes them already. @Suppress is not repeatable, so both share the one.
-@Suppress("LongParameterList", "UnusedParameter")
+// One callback per action the thread offers, as on the other thread composables.
+@Suppress("LongParameterList")
 fun MessagesList(
     messages: List<Message>,
     currentUserId: String,
@@ -250,7 +249,7 @@ fun MessagesList(
     onRevealed: () -> Unit = {},
     quotes: Map<String, ReplyQuote> = emptyMap(),
     onQuoteClick: (String) -> Unit = {},
-    onReply: (Message) -> Unit = {}
+    onReply: ((Message) -> Unit)? = null
 ) {
     // Not rememberSaveable, on purpose: a saved position is what brought a returning reader back to
     // the place they left instead of the newest message. A new state starts at item 0, the newest.
@@ -269,6 +268,7 @@ fun MessagesList(
     )
     FollowNewestMessage(listState, entries, currentUserId, revealing)
     NewestWhenShownAgain(listState, revealing)
+    val replies = remember(quotes, onQuoteClick, onReply) { BubbleReplies(quotes, onQuoteClick, onReply) }
 
     PullToRefreshBox(
         isRefreshing = isRefreshing,
@@ -295,16 +295,18 @@ fun MessagesList(
                 modifier = Modifier.fillMaxSize()
             )
         } else {
-            ThreadColumn(
-                listState = listState,
-                entries = entries,
-                loadEarlier = loadEarlier,
-                highlightedId = highlightedId,
-                currentUserId = currentUserId,
-                onEventLinkClick = onEventLinkClick,
-                onOpenInbox = onOpenInbox,
-                onRetryFailed = onRetryFailed
-            )
+            CompositionLocalProvider(LocalBubbleReplies provides replies) {
+                ThreadColumn(
+                    listState = listState,
+                    entries = entries,
+                    loadEarlier = loadEarlier,
+                    highlightedId = highlightedId,
+                    currentUserId = currentUserId,
+                    onEventLinkClick = onEventLinkClick,
+                    onOpenInbox = onOpenInbox,
+                    onRetryFailed = onRetryFailed
+                )
+            }
             NewestMessagesButton(listState, entries, currentUserId)
         }
     }
@@ -729,9 +731,9 @@ fun MessageItem(
         val openLabel = stringResource(
             if (target is ChatCardTarget.Event) Res.string.chat_open_event else Res.string.chat_open_change_request
         )
-        // A co-parent's own words can be reported with a long press (play-final audit F-10); a
-        // card the app composed cannot, and nothing changes while no support address is set.
-        ReportableBubble(message = message, isCurrentUser = isCurrentUser) {
+        // A swipe to the right starts a reply, and a long press opens the bubble's one menu: Reply,
+        // Copy text, and Report message for a co-parent's own words (play-final audit F-10).
+        MessageActions(message = message, isCurrentUser = isCurrentUser) {
             // From the large-font scale the time goes under the text: beside it, the trailer kept
             // its width while the text grew, and a message wrapped two words to a line.
             val metaBelow = stacksAtLargeFont()
@@ -769,6 +771,8 @@ fun MessageItem(
                     )
                     .padding(horizontal = Spacing.M, vertical = Spacing.S)
             ) {
+                // A reply quotes the message it answers over its own words.
+                if (!isCard) BubbleQuote(message = message, isCurrentUser = isCurrentUser)
                 Row(
                     // Bottom, not centre: the meta trailer sits beside the *last* line of a
                     // multi-line message, hugging the bubble's bottom-end corner.

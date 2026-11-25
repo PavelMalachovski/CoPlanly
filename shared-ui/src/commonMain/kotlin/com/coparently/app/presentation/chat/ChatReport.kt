@@ -1,12 +1,10 @@
 package com.coparently.app.presentation.chat
 
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
@@ -20,13 +18,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.semantics.CustomAccessibilityAction
-import androidx.compose.ui.semantics.customActions
-import androidx.compose.ui.semantics.semantics
 import com.coparently.app.domain.chat.MessageReport
 import com.coparently.app.domain.model.Message
 import com.coparently.app.presentation.common.AppIcon
@@ -34,7 +25,6 @@ import com.coparently.app.presentation.common.BarMenuItem
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
-import com.coparently.app.presentation.common.nativeControls
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.platform.LocalAppBuildValues
 import com.coparently.app.presentation.platform.LocalOpenUrl
@@ -42,7 +32,6 @@ import com.coparently.app.resources.Res
 import com.coparently.app.resources.chat_block
 import com.coparently.app.resources.chat_more_actions
 import com.coparently.app.resources.chat_report_body
-import com.coparently.app.resources.chat_report_message
 import com.coparently.app.resources.chat_report_no_email_app
 import com.coparently.app.resources.chat_report_subject
 import com.coparently.app.resources.nav_settings
@@ -103,83 +92,6 @@ fun ChatReportHost(content: @Composable () -> Unit) {
         send
     }
     CompositionLocalProvider(LocalChatMessageReport provides report, content = content)
-}
-
-/**
- * Wraps a message bubble so a long press (or TalkBack's actions menu) offers "Report message" —
- * only for a message [MessageReport.isReportable] accepts, and only inside a [ChatReportHost] that
- * has an address. Otherwise it draws [content] unchanged. Under the iPhone's native controls the
- * entry is the system's action sheet (`NativeControls.ActionSheet`) rather than a dropdown.
- *
- * @param message The message the bubble shows
- * @param isCurrentUser Whether the reader sent it
- * @param content The bubble
- */
-// The bubble's long press in its two anatomies (Material's menu, the iPhone's action sheet) and the
-// report's dialog it opens: one gesture, read together.
-@Suppress("LongMethod")
-@Composable
-internal fun ReportableBubble(message: Message, isCurrentUser: Boolean, content: @Composable () -> Unit) {
-    val report = LocalChatMessageReport.current
-    if (report == null || !MessageReport.isReportable(message, isCurrentUser)) {
-        content()
-        return
-    }
-    var menuOpen by remember { mutableStateOf(false) }
-    val haptic = LocalHapticFeedback.current
-    val label = stringResource(Res.string.chat_report_message)
-    Box(
-        modifier = Modifier
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onLongPress = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        menuOpen = true
-                    }
-                )
-            }
-            .semantics {
-                customActions = listOf(
-                    CustomAccessibilityAction(label) {
-                        menuOpen = true
-                        true
-                    }
-                )
-            }
-    ) {
-        content()
-        val native = nativeControls()
-        if (native != null) {
-            // The iPhone: the long press is the system's action sheet with the same entry.
-            if (menuOpen) {
-                native.ActionSheet(
-                    title = null,
-                    items = listOf(
-                        BarMenuItem(
-                            label = label,
-                            sfSymbol = "flag",
-                            onClick = {
-                                menuOpen = false
-                                report(message)
-                            }
-                        )
-                    ),
-                    onDismiss = { menuOpen = false }
-                )
-            }
-        } else {
-            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                DropdownMenuItem(
-                    text = { Text(label) },
-                    leadingIcon = { AppIcon(Icons.Outlined.Flag, contentDescription = null) },
-                    onClick = {
-                        menuOpen = false
-                        report(message)
-                    }
-                )
-            }
-        }
-    }
 }
 
 /**

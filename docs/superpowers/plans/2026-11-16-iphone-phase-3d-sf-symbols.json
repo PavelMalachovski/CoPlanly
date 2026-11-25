@@ -984,6 +984,14 @@
   "area": "Chat"
  },
  {
+  "material": "AutoMirrored.Filled.Reply",
+  "sfSymbol": "arrowshape.turn.up.left",
+  "minIos": "13.0",
+  "keepMaterial": false,
+  "reason": null,
+  "area": "Chat"
+ },
+ {
   "material": "AutoMirrored.Filled.Message",
   "sfSymbol": "text.bubble.fill",
   "minIos": "13.0",

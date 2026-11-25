@@ -167,4 +167,14 @@
     <string name="settle_up_iban_copied">IBAN zkopírován</string>
     <string name="settle_up_no_account">%1$s zatím nemá přidaný účet pro platby.</string>
     <string name="settle_up_qr_description">QR kód k zaplacení %1$s – %2$s</string>
+    <!-- Replies (chat: newest message in view, and replies, November 2026). A swipe or the
+         long-press menu starts a reply; a reply's bubble quotes the message it answers, and the
+         bar over the composer names whom the parent answers. %1$s = a name, or a file's name. -->
+    <string name="chat_reply">Odpovědět</string>
+    <string name="chat_copy_text">Kopírovat text</string>
+    <string name="chat_reply_to">Odpověď – %1$s</string>
+    <string name="chat_cancel_reply">Zrušit odpověď</string>
+    <string name="chat_quote_unavailable">Zpráva není k dispozici</string>
+    <string name="chat_quote_file">Soubor: %1$s</string>
+    <string name="chat_quote_sticker">Samolepka</string>
 </resources>

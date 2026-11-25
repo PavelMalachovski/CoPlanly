@@ -164,4 +164,14 @@
     <string name="settle_up_iban_copied">IBAN copied</string>
     <string name="settle_up_no_account">%1$s hasn\u0027t added a bank account for payments yet.</string>
     <string name="settle_up_qr_description">QR code for paying %1$s to %2$s</string>
+    <!-- Replies (chat: newest message in view, and replies, November 2026). A swipe or the
+         long-press menu starts a reply; a reply's bubble quotes the message it answers, and the
+         bar over the composer names whom the parent answers. %1$s = a name, or a file's name. -->
+    <string name="chat_reply">Reply</string>
+    <string name="chat_copy_text">Copy text</string>
+    <string name="chat_reply_to">Reply to %1$s</string>
+    <string name="chat_cancel_reply">Cancel reply</string>
+    <string name="chat_quote_unavailable">Message unavailable</string>
+    <string name="chat_quote_file">File: %1$s</string>
+    <string name="chat_quote_sticker">Sticker</string>
 </resources>

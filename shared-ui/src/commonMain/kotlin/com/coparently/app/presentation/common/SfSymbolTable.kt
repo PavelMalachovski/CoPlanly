@@ -7,8 +7,9 @@ package com.coparently.app.presentation.common
  * `Icons.AutoMirrored.Filled.X` is `"AutoMirrored.Filled.X"`.
  *
  * Data only, copied from the owner-approved table
- * `docs/superpowers/plans/2026-11-16-iphone-phase-3d-sf-symbols.json` (133 rows: 132 approved on
- * 16 November 2026, and the calendar header's "?" added with calendar K1, 22 November 2026). Don't
+ * `docs/superpowers/plans/2026-11-16-iphone-phase-3d-sf-symbols.json` (134 rows: 132 approved on
+ * 16 November 2026, the calendar header's "?" added with calendar K1, 22 November 2026, and the
+ * chat's reply arrow added with replies, 25 November 2026). Don't
  * change a choice here: change the approved table first. `SfSymbolTableTest` holds the two to each
  * other and fails when a shared screen uses an icon with no row.
  *
@@ -40,6 +41,7 @@ internal val SF_SYMBOLS: Map<String, String> = mapOf(
     "AutoMirrored.Filled.Message" to "text.bubble.fill",
     "AutoMirrored.Filled.OpenInNew" to "arrow.up.forward.square",
     "AutoMirrored.Filled.ReceiptLong" to "receipt",
+    "AutoMirrored.Filled.Reply" to "arrowshape.turn.up.left",
     "AutoMirrored.Filled.Send" to "paperplane.fill",
     "AutoMirrored.Filled.Undo" to "arrow.uturn.backward",
     "AutoMirrored.Outlined.Chat" to "bubble.left",

@@ -150,6 +150,7 @@ fun ChatScreen(
     val currentUserId by viewModel.currentUserId.collectAsState()
     val canLoadEarlier by viewModel.canLoadEarlier.collectAsState()
     val quotes by viewModel.quotes.collectAsState()
+    val replyTarget by viewModel.replyTarget.collectAsState()
     val conversations = viewModel.conversations.collectAsState().value.valueOrNull.orEmpty()
     val upcomingEvents by viewModel.upcomingEvents.collectAsState()
     val pendingSend by viewModel.pendingSend.collectAsState()
@@ -228,6 +229,30 @@ fun ChatScreen(
             viewModel.showAtLeast(jump.windowNeeded)
             revealTarget = jump.messageId
         }
+    }
+
+    // A reply chosen by a swipe or from a bubble's menu; the composer takes the focus, so the answer
+    // can be typed at once.
+    // Remembered, as is the quote's tap below, so the thread's bubbles are not handed new callbacks
+    // on every recomposition of the screen.
+    val startReply = remember(viewModel) {
+        fun(message: Message) {
+            viewModel.startReply(message)
+            composerSeeds++
+        }
+    }
+    val revealOriginal = remember {
+        fun(original: String) {
+            revealTarget = original
+        }
+    }
+
+    // A reply's quote asks for its original, which may be older than the window: grow it a
+    // screenful at a time until the original arrives or nothing older is left. A search result's
+    // window is sized before it is revealed, so this does nothing for one.
+    LaunchedEffect(revealTarget, messages, canLoadEarlier) {
+        val target = revealTarget ?: return@LaunchedEffect
+        if (canLoadEarlier && messages.none { it.id == target }) viewModel.loadEarlier()
     }
 
     // A reveal that has not landed within one highlight hold is given up — the message may have
@@ -324,7 +349,10 @@ fun ChatScreen(
                                     modifier = Modifier.weight(1f),
                                     revealMessageId = revealTarget,
                                     onRevealed = { revealTarget = null },
-                                    quotes = quotes
+                                    quotes = quotes,
+                                    onQuoteClick = revealOriginal,
+                                    // A thread the departed co-parent can no longer answer takes no reply.
+                                    onReply = startReply.takeIf { departed == null }
                                 )
                             }
                         }
@@ -353,6 +381,8 @@ fun ChatScreen(
             } else if (!searching) {
                 if (!nudge.isEmpty) ToneNudgeHint(nudge)
                 dictation.failure?.let { DictationFailureNotice(it) }
+                // The message being answered, over the composer until a text is sent or ✕.
+                replyTarget?.let { quote -> ReplyBar(quote = quote, onCancel = viewModel::cancelReply) }
 
                 // The `+` beside the field, not inside `MessageInput`: a file, a change request and
                 // a template each have their own flow, and the composer stays a text field and a

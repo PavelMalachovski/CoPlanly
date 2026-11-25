@@ -113,7 +113,7 @@ class SfSymbolTableTest {
     private companion object {
         const val SOURCE_ROOT = "src/commonMain/kotlin"
         const val APPROVED_TABLE = "docs/superpowers/plans/2026-11-16-iphone-phase-3d-sf-symbols.json"
-        const val APPROVED_ROWS = 133
+        const val APPROVED_ROWS = 134
 
         val BLOCK_COMMENT = Regex("""/\*.*?\*/""", RegexOption.DOT_MATCHES_ALL)
         val LINE_COMMENT = Regex("""//[^\n]*""")
