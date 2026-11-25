@@ -87,7 +87,15 @@ test('requests on Home, the answers feed and the inbox need the requests check',
 });
 
 test('chat changes need the cross-time-zone chat check', () => {
-  assert.deepEqual(sectionsFor([K + 'presentation/chat/ChatScreen.kt']), ['5.1']);
+  assert.ok(sectionsFor([K + 'presentation/chat/ChatScreen.kt']).includes('5.1'));
+  assert.ok(sectionsFor([K + 'presentation/chat/ChatDictation.kt']).includes('5.1'));
+});
+
+test('the thread, its replies and the export line need the replies check', () => {
+  assert.ok(sectionsFor([K + 'presentation/chat/ChatScreen.kt']).includes('3.47'));
+  assert.ok(sectionsFor([K + 'presentation/chat/MessagesList.kt']).includes('3.47'));
+  assert.ok(sectionsFor([K + 'domain/export/RecordReplyText.kt']).includes('3.47'));
+  assert.ok(!sectionsFor([K + 'presentation/chat/ChatDictation.kt']).includes('3.47'));
 });
 
 test('functions changes need the owner-ops deploys, the paired checks and account deletion', () => {

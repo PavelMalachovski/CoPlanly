@@ -383,6 +383,18 @@ const RULES = [
       'S/values*/calendar_strings.xml', 'S/values*/home_requests_strings.xml'],
   },
   {
+    sections: ['3.47'],
+    why: 'the chat thread\'s newest-first list, its replies (swipe, long-press menu, quote, reply bar, the draft kept beside the text) or the export line that names what a reply answers',
+    paths: ['K/presentation/chat/MessagesList.kt', 'K/presentation/chat/BubbleActions.kt',
+      'K/presentation/chat/ReplyViews.kt', 'K/presentation/chat/ChatScreen.kt',
+      'K/presentation/chat/ChatViewModel.kt', 'K/presentation/chat/ChatSearchViewModel.kt',
+      'K/presentation/chat/SendHold.kt', 'K/presentation/chat/ChatReport.kt',
+      'K/domain/chat/ReplyQuote.kt', 'K/domain/chat/NewestButton.kt',
+      'K/domain/export/RecordReplyText.kt', 'K/domain/export/CommunicationRecord*.kt',
+      'K/domain/export/RecordLayout.kt', 'K/data/export/CommunicationRecordSource.kt',
+      'S/values*/chat_strings.xml', 'S/values*/export_strings.xml'],
+  },
+  {
     sections: ['3.6', '4.2'],
     why: 'strings, locales, the language picker or the rule that picks the app\'s language',
     paths: ['S/values*/**', 'app/src/main/res/xml/locales_config.xml',
