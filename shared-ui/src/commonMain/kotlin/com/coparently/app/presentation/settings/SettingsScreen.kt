@@ -109,6 +109,7 @@ import com.coparently.app.presentation.common.nativeControls
 import com.coparently.app.presentation.common.regionLabelRes
 import com.coparently.app.presentation.common.regionName
 import com.coparently.app.presentation.common.regionSummaryRes
+import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.consent.HealthConsentSettingsRow
 import com.coparently.app.presentation.consent.HealthConsentViewModel
 import com.coparently.app.presentation.consent.HealthConsentWithdrawDialog
@@ -352,7 +353,8 @@ fun SettingsScreen(
                 settingsViewModel.setParentColor(colour)
                 showColorPicker = false
             },
-            onDismiss = { showColorPicker = false }
+            onDismiss = { showColorPicker = false },
+            coParent = coParentColour(parents, rememberParentNames(parents))
         )
     }
     val darkTheme by settingsViewModel.darkThemeFlow.collectAsState()

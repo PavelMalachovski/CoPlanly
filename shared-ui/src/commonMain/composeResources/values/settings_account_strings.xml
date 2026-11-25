@@ -11,6 +11,8 @@
     <string name="settings_gcal_auto_note">While sync is on, new and changed events arrive on their own: when you open the app and about every 15 minutes.</string>
     <string name="settings_parent_color">My colour</string>
     <string name="settings_parent_color_desc">How your events, custody days and expenses are marked. Your co-parent picks their own.</string>
+    <string name="parent_color_clash_named">%1$s also chose %2$s. So that your days look different, you are shown in %3$s in your family. Pick another colour to be shown in your own.</string>
+    <string name="parent_color_clash">%1$s chose a colour close to yours. So that your days look different, you are shown in another colour in your family. Pick another colour to be shown in your own.</string>
     <string name="parent_color_pink">Pink</string>
     <string name="parent_color_blue">Blue</string>
     <string name="parent_color_purple">Purple</string>

@@ -478,6 +478,22 @@ data class ParentPalette(
             }
         }
 
+        /**
+         * The colour this parent is *drawn* in when they hold [mySlot], chose [myCode] and the
+         * co-parent chose [otherCode] — [of] with the two codes in slot order, read at this
+         * parent's slot, so the picker states exactly what the calendar will do and never a second
+         * copy of the collision rule. It differs from the colour chosen only when the choice is
+         * too close to the co-parent's ([ParentColor.closeTo]) and this parent is the one moved.
+         *
+         * @param mySlot This parent's slot, `"mom"` or `"dad"`.
+         * @param myCode The colour this parent picked (or is about to pick), as stored.
+         * @param otherCode The co-parent's stored colour, or null when they have not chosen.
+         */
+        fun shownFor(mySlot: String, myCode: String?, otherCode: String?): ParentColor {
+            val palette = if (mySlot == "dad") of(otherCode, myCode) else of(myCode, otherCode)
+            return palette.of(mySlot)
+        }
+
         private fun firstPresetClearOf(colour: ParentColor): ParentColor =
             ParentColorChoice.entries.map { it.color }.firstOrNull { !it.closeTo(colour) }
                 ?: ParentColorChoice.BLUE.color
