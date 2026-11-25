@@ -124,6 +124,10 @@ interface MessageDao {
     )
     fun observeUnreadCount(conversationId: String, myUid: String, afterMillis: Long): Flow<Int>
 
+    /** One message by its id, whichever conversation it is in, or null (a reply's original). */
+    @Query("SELECT * FROM messages WHERE id = :id LIMIT 1")
+    suspend fun getMessageById(id: String): MessageEntity?
+
     /**
      * The text messages of one conversation whose content is `LIKE` [pattern], newest first —
      * the candidates chat search (MON-15) decides over.

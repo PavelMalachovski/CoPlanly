@@ -13,6 +13,7 @@ import com.coparently.app.domain.chat.ChatReadState
 import com.coparently.app.domain.chat.ChatWindow
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.chat.DepartedThread
+import com.coparently.app.domain.chat.ReplyQuote
 import com.coparently.app.domain.model.Conversation
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Message
@@ -45,6 +46,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.retry
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -104,7 +106,9 @@ sealed interface ChatEvent {
  * freshly paired device does not have yet, which left the "chat with my co-parent" action
  * permanently dead for that ViewModel instance.
  */
-@Suppress("LongParameterList") // the chat's sources: messages, session, events, partner, drafts, kept threads
+// The chat's sources (messages, session, events, partner, drafts, kept threads) are the parameters, and each thing
+// the composer and the thread do (send, undo, reply, widen the window, resend, ...) is one function.
+@Suppress("LongParameterList", "TooManyFunctions")
 class ChatViewModel(
     private val messageRepository: MessageRepository,
     private val userRepository: UserRepository,
@@ -143,6 +147,23 @@ class ChatViewModel(
 
     /** The pending debounced write, cancelled and rescheduled on each keystroke. */
     private var draftWriteJob: Job? = null
+
+    /**
+     * The message each conversation's composer is replying to, authoritative for the life of this
+     * ViewModel and keyed by conversation id, so a reply chosen in one thread can never reach
+     * another. Persisted beside the draft ([SecurePreferences.putChatReplyDraft]) the moment it is
+     * chosen, since it is not typed and has no debounce to wait for.
+     */
+    private val replies = MutableStateFlow<Map<String, ReplyQuote.Shown>>(emptyMap())
+
+    /**
+     * The message the open thread's composer is replying to, or null. The screen draws it as a
+     * quote above the field with a cancel; [sendMessage] stamps it on what is sent and clears it.
+     * Eagerly started: it is one in-memory map, and the composer reads it on its first frame.
+     */
+    val replyTarget: StateFlow<ReplyQuote.Shown?> = combine(_currentConversationId, replies) { id, all ->
+        id?.let { all[it] }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     /** The "Pause before sending" hold (MON-19). See [SendHold]. */
     private val sendHold = SendHold(viewModelScope)
@@ -442,6 +463,50 @@ class ChatViewModel(
         )
 
     /**
+     * The quote of every reply in the loaded window, keyed by the reply's message id.
+     *
+     * One collection for the whole thread, so a bubble reads a map rather than starting a lookup
+     * of its own. An original in the window is taken from it; one outside it is read from Room by
+     * id ([MessageRepository.getMessageById]). A reply whose original this phone does not hold,
+     * or that belongs to another thread, or that the thread does not draw, is
+     * [ReplyQuote.Unavailable]. A message that replies to nothing has no entry.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val quotes: StateFlow<Map<String, ReplyQuote>> = currentThreadMessages
+        .mapLatest { (conversationId, loaded) ->
+            if (conversationId == null) {
+                emptyMap()
+            } else {
+                val byId = loaded.associateBy { it.id }
+                buildMap {
+                    for (message in loaded) {
+                        val originalId = message.replyToMessageId ?: continue
+                        val original = byId[originalId] ?: originalFromRoom(originalId)
+                        ReplyQuote.of(originalId, original, conversationId)?.let { put(message.id, it) }
+                    }
+                }
+            }
+        }
+        .catch { e -> failSoft("observe reply quotes", e) { emit(emptyMap()) } }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(SUBSCRIPTION_TIMEOUT_MS),
+            initialValue = emptyMap()
+        )
+
+    /** The message [id] from Room, or null when this phone holds none or the read fails. */
+    private suspend fun originalFromRoom(id: String): Message? = try {
+        messageRepository.getMessageById(id)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (
+        @Suppress("TooGenericExceptionCaught") e: Exception
+    ) {
+        logger.w(TAG, "Reply original unreadable", e)
+        null
+    }
+
+    /**
      * Number of the co-parent's messages this account has not yet read.
      *
      * **A `COUNT(*)` out of Room, and nothing else (CQ-6/CQ-8).** This used to answer the number
@@ -573,6 +638,57 @@ class ChatViewModel(
         // outbox existed, a send that failed once stayed failed forever and the co-parent
         // simply never received it.
         launchGuarded("flush chat outbox") { messageRepository.flushOutbox() }
+        restoreReply(conversationId)
+    }
+
+    /**
+     * Brings back the reply [conversationId]'s composer was left with, once its original resolves
+     * to something that thread draws. One that no longer does (the message is gone from this
+     * phone, or the stored id names another thread's message) is dropped from the store, so a
+     * reply is never carried into a conversation it was not chosen in.
+     */
+    private fun restoreReply(conversationId: String) {
+        if (replies.value.containsKey(conversationId)) return
+        val storedId = preferences.getChatReplyDraft(conversationId)
+        if (storedId.isEmpty()) return
+        launchGuarded("restore reply") {
+            val quote = ReplyQuote.of(storedId, originalFromRoom(storedId), conversationId)
+            // Chosen again meanwhile: the newer choice stands.
+            if (replies.value.containsKey(conversationId)) return@launchGuarded
+            if (quote is ReplyQuote.Shown) {
+                replies.value += conversationId to quote
+            } else if (preferences.getChatReplyDraft(conversationId) == storedId) {
+                preferences.putChatReplyDraft(conversationId, "")
+            }
+        }
+    }
+
+    /**
+     * Starts a reply to [message] in the open thread: the composer shows its quote and the next
+     * message sent carries it. Does nothing when no thread is open, or when [message] is not one
+     * the thread draws and can quote (an empty message, a card it hides, another thread's).
+     */
+    fun startReply(message: Message) {
+        val conversationId = _currentConversationId.value ?: return
+        val quote = ReplyQuote.of(message.id, message, conversationId) as? ReplyQuote.Shown ?: return
+        setReply(conversationId, quote)
+    }
+
+    /** Drops the reply being composed in the open thread. */
+    fun cancelReply() {
+        val conversationId = _currentConversationId.value ?: return
+        clearReply(conversationId)
+    }
+
+    private fun setReply(conversationId: String, quote: ReplyQuote.Shown) {
+        replies.value += conversationId to quote
+        preferences.putChatReplyDraft(conversationId, quote.messageId)
+    }
+
+    private fun clearReply(conversationId: String) {
+        if (!replies.value.containsKey(conversationId)) return
+        replies.value -= conversationId
+        preferences.putChatReplyDraft(conversationId, "")
     }
 
     /**
@@ -645,6 +761,11 @@ class ChatViewModel(
         sendHold.undo()?.let { held ->
             drafts[held.conversationId] = SendHold.restore(held.text, drafts[held.conversationId].orEmpty())
             pendingDraft = held.conversationId
+            held.reply?.let { reply ->
+                if (preferences.getChatReplyDraft(held.conversationId).isEmpty()) {
+                    preferences.putChatReplyDraft(held.conversationId, reply.messageId)
+                }
+            }
         }
         flushDraft()
         super.onCleared()
@@ -679,6 +800,11 @@ class ChatViewModel(
         // is the record of what was sent; `flushOutbox` is what retries it.
         clearDraft(conversationId)
 
+        // The reply goes with the text, for the same reason: the composer lets both go at once,
+        // and what a held message answers must survive until it is sent or undone.
+        val reply = replies.value[conversationId]
+        clearReply(conversationId)
+
         // Built when it is actually sent, so a held message carries the time it left rather than
         // the time it was typed.
         val send = {
@@ -695,7 +821,8 @@ class ChatViewModel(
                     sentAtMillis = Clock.System.now().toEpochMilliseconds(),
                     messageType = type,
                     attachments = attachments,
-                    status = MessageSendStatus.SENDING
+                    status = MessageSendStatus.SENDING,
+                    replyToMessageId = reply?.messageId
                 )
                 messageRepository.sendMessage(message)
             }
@@ -706,7 +833,7 @@ class ChatViewModel(
         }
         launchGuarded("hold message") {
             if (preferencesRepository.getPauseBeforeSendingFlow().first()) {
-                sendHold.hold(conversationId, content, send)
+                sendHold.hold(conversationId, content, reply, send)
             } else {
                 send()
             }
@@ -724,6 +851,10 @@ class ChatViewModel(
         val held = sendHold.undo() ?: return null
         val restored = SendHold.restore(held.text, composerText)
         onDraftChanged(held.conversationId, restored)
+        // The reply comes back too, unless another was chosen since: that one is the newer intent.
+        held.reply?.let { reply ->
+            if (!replies.value.containsKey(held.conversationId)) setReply(held.conversationId, reply)
+        }
         return restored
     }
 

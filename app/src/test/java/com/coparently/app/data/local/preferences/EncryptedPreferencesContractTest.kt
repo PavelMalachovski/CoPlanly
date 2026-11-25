@@ -97,6 +97,28 @@ class EncryptedPreferencesContractTest {
     }
 
     @Test
+    fun `a reply draft round-trips and clears`() {
+        open().apply {
+            putChatReplyDraft("alice_bob", "message-1")
+            putChatReplyDraft("alice_carol", "message-2")
+            putChatReplyDraft("alice_carol", "")
+        }
+
+        val reopened = open()
+        assertEquals("message-1", reopened.getChatReplyDraft("alice_bob"))
+        assertEquals("", reopened.getChatReplyDraft("alice_carol"), "clearing keeps no row")
+        assertEquals("", reopened.getChatReplyDraft("alice_dave"), "a reply is never another thread's")
+        assertEquals(
+            setOf(PreferenceKeys.CHAT_REPLY_DRAFT_PREFIX + "alice_bob"),
+            reopened.keysWithPrefix(PreferenceKeys.CHAT_REPLY_DRAFT_PREFIX)
+        )
+        assertTrue(
+            reopened.keysWithPrefix(PreferenceKeys.CHAT_DRAFT_PREFIX).isEmpty(),
+            "a reply is not a draft of the composer's text"
+        )
+    }
+
+    @Test
     fun `an empty store answers with each getter's own default`() {
         val store = open()
         assertNull(store.getAccessToken())

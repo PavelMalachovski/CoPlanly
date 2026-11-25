@@ -155,6 +155,14 @@ object PreferenceKeys {
     const val CHAT_DRAFT_PREFIX = "chat_draft_"
 
     /**
+     * Prefix of the key under which the message a thread's composer is replying to is kept, per
+     * conversation id: the reply's original, by id, beside the unsent text under [CHAT_DRAFT_PREFIX].
+     * Persisted for the same reason as the draft (the Chat tab's ViewModel is cleared on a tab
+     * switch). It is a different prefix from the draft's, not an extension of it.
+     */
+    const val CHAT_REPLY_DRAFT_PREFIX = "chat_reply_draft_"
+
+    /**
      * The agreed split of a shared expense, as slot 1's share in basis points.
      *
      * Cached locally rather than read from Firestore on the save path: an expense must be

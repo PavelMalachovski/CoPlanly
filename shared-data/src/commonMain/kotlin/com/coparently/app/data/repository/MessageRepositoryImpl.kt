@@ -51,6 +51,7 @@ import kotlinx.coroutines.flow.transform
  * both listeners were denied about half a second before `ensureConversation` created the
  * conversation document, and that entire session ran on local data.
  */
+@Suppress("TooManyFunctions") // the interface's surface plus the mirror's helpers; one repository for one thread store
 class MessageRepositoryImpl(
     private val messageDao: MessageDao,
     private val signedInUser: SignedInUser,
@@ -352,6 +353,8 @@ class MessageRepositoryImpl(
             firestoreMessageDataSource.markDelivered(conversationId, myUid, atMillis)
         }
     }
+
+    override suspend fun getMessageById(id: String): Message? = messageDao.getMessageById(id)?.toDomain()
 
     override suspend fun deleteMessage(messageId: String) {
         messageDao.deleteMessage(messageId)
