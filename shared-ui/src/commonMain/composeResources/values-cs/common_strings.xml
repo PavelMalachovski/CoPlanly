@@ -58,4 +58,5 @@
     <string name="common_collapsed">Sbaleno</string>
     <string name="children_avatars_more">+%1$d</string>
     <string name="children_avatars_description">Děti: %1$s</string>
+    <string name="children_avatar_open_photo">Otevřít fotku: %1$s</string>
 </resources>
