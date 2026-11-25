@@ -23,6 +23,8 @@ import com.coparently.app.resources.school_connect_confirm_not_imported
 import com.coparently.app.resources.school_connect_confirm_not_imported_edupage
 import com.coparently.app.resources.school_connect_wrong_password
 import com.coparently.app.resources.school_edupage_second_factor
+import com.coparently.app.resources.school_import_lesson_times_off
+import com.coparently.app.resources.school_import_lesson_times_off_bakalari
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -285,5 +287,17 @@ class ConnectSchoolEdupageTest {
             state.confirmLines
         )
         assertEquals(Res.string.school_connect_confirm_not_imported, state.notImportedText)
+    }
+
+    @Test
+    fun `the lesson times off line names homework only for edupage`() {
+        assertEquals(
+            Res.string.school_import_lesson_times_off,
+            lessonTimesOffText(SchoolSystem.EDUPAGE)
+        )
+        assertEquals(
+            Res.string.school_import_lesson_times_off_bakalari,
+            lessonTimesOffText(SchoolSystem.BAKALARI)
+        )
     }
 }

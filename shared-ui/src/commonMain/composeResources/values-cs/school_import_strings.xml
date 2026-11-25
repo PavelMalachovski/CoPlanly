@@ -21,6 +21,7 @@
     <string name="school_import_lesson_times_title">Rozvrh hodin</string>
     <string name="school_import_lesson_times_on">Zapnuto: každý školní den dostane blok „%1$s ve škole“ od první hodiny do poslední.</string>
     <string name="school_import_lesson_times_off">Vypnuto: žádné bloky školního vyučování. Školní akce, testy, domácí úkoly a dny volna se importují dál.</string>
+    <string name="school_import_lesson_times_off_bakalari">Vypnuto: žádné bloky školního vyučování. Školní akce a dny volna se importují dál.</string>
     <string name="school_import_reconnect">Znovu přihlásit</string>
     <string name="school_import_disconnect">Odpojit</string>
     <string name="school_import_disconnect_title">Odpojit tuto školu?</string>

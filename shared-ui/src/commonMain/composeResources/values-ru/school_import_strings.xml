@@ -21,6 +21,7 @@
     <string name="school_import_lesson_times_title">Расписание уроков</string>
     <string name="school_import_lesson_times_on">Вкл.: каждый учебный день получает блок «%1$s в школе» с первого урока до последнего.</string>
     <string name="school_import_lesson_times_off">Выкл.: без блоков школьного времени. Школьные события, контрольные, домашние задания и выходные дни по-прежнему импортируются.</string>
+    <string name="school_import_lesson_times_off_bakalari">Выкл.: без блоков школьного времени. Школьные события и выходные дни по-прежнему импортируются.</string>
     <string name="school_import_reconnect">Войти снова</string>
     <string name="school_import_disconnect">Отключить</string>
     <string name="school_import_disconnect_title">Отключить эту школу?</string>

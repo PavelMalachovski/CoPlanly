@@ -56,6 +56,7 @@ import com.coparently.app.resources.school_import_empty_title
 import com.coparently.app.resources.school_import_intro
 import com.coparently.app.resources.school_import_last_sync
 import com.coparently.app.resources.school_import_lesson_times_off
+import com.coparently.app.resources.school_import_lesson_times_off_bakalari
 import com.coparently.app.resources.school_import_lesson_times_on
 import com.coparently.app.resources.school_import_lesson_times_title
 import com.coparently.app.resources.school_import_never_synced
@@ -71,6 +72,7 @@ import com.coparently.app.resources.school_system_edupage
 import com.coparently.app.utils.ReaderDateText
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.time.Instant
@@ -240,7 +242,12 @@ private fun ConnectionGroup(row: SchoolConnectionRow, updating: Boolean, actions
             )
         }
         Divider()
-        HoursRow(on = connection.importHours, childName = row.childName, onChange = { actions.onImportHours(id, it) })
+        HoursRow(
+            on = connection.importHours,
+            childName = row.childName,
+            system = connection.system,
+            onChange = { actions.onImportHours(id, it) }
+        )
         Divider()
         SectionRow(
             icon = Icons.Default.LinkOff,
@@ -257,11 +264,11 @@ private fun ConnectionGroup(row: SchoolConnectionRow, updating: Boolean, actions
  * said under the switch, the "on" one with the child's name as the block will carry it.
  */
 @Composable
-private fun HoursRow(on: Boolean, childName: String, onChange: (Boolean) -> Unit) {
+private fun HoursRow(on: Boolean, childName: String, system: SchoolSystem, onChange: (Boolean) -> Unit) {
     val title = stringResource(Res.string.school_import_lesson_times_title)
     val meaning = listOf(
         stringResource(Res.string.school_import_lesson_times_on, childName),
-        stringResource(Res.string.school_import_lesson_times_off)
+        stringResource(lessonTimesOffText(system))
     ).joinToString("\n")
     SectionRow(
         icon = Icons.Default.Schedule,
@@ -279,6 +286,17 @@ private fun HoursRow(on: Boolean, childName: String, onChange: (Boolean) -> Unit
         toggled = on
     )
 }
+
+/**
+ * What switching "Lesson times" off leaves coming in: EduPage also imports tests and homework,
+ * Bakaláři does not, so its line names neither.
+ */
+internal fun lessonTimesOffText(system: SchoolSystem): StringResource =
+    if (system == SchoolSystem.EDUPAGE) {
+        Res.string.school_import_lesson_times_off
+    } else {
+        Res.string.school_import_lesson_times_off_bakalari
+    }
 
 /** When the connection last updated, or what stops it. */
 @Composable

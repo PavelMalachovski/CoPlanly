@@ -23,6 +23,7 @@
     <string name="school_import_lesson_times_title">Lesson times</string>
     <string name="school_import_lesson_times_on">On: each school day gets a “%1$s at school” block from the first lesson to the last.</string>
     <string name="school_import_lesson_times_off">Off: no school-hours blocks. School events, tests, homework and days off still come in.</string>
+    <string name="school_import_lesson_times_off_bakalari">Off: no school-hours blocks. School events and days off still come in.</string>
     <string name="school_import_reconnect">Sign in again</string>
     <string name="school_import_disconnect">Disconnect</string>
     <string name="school_import_disconnect_title">Disconnect this school?</string>

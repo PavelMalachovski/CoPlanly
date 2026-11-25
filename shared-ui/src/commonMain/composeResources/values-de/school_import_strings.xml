@@ -21,6 +21,7 @@
     <string name="school_import_lesson_times_title">Unterrichtszeiten</string>
     <string name="school_import_lesson_times_on">An: Jeder Schultag bekommt einen Block „%1$s in der Schule“ von der ersten bis zur letzten Stunde.</string>
     <string name="school_import_lesson_times_off">Aus: keine Schulzeit-Blöcke. Schulveranstaltungen, Tests, Hausaufgaben und schulfreie Tage kommen weiterhin.</string>
+    <string name="school_import_lesson_times_off_bakalari">Aus: keine Schulzeit-Blöcke. Schulveranstaltungen und schulfreie Tage kommen weiterhin.</string>
     <string name="school_import_reconnect">Erneut anmelden</string>
     <string name="school_import_disconnect">Trennen</string>
     <string name="school_import_disconnect_title">Diese Schule trennen?</string>

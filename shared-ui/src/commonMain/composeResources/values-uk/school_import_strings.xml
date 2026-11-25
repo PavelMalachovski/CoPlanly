@@ -21,6 +21,7 @@
     <string name="school_import_lesson_times_title">Розклад уроків</string>
     <string name="school_import_lesson_times_on">Увімк.: кожен навчальний день отримує блок «%1$s у школі» від першого уроку до останнього.</string>
     <string name="school_import_lesson_times_off">Вимк.: без блоків шкільного часу. Шкільні події, контрольні, домашні завдання й вихідні дні, як і раніше, імпортуються.</string>
+    <string name="school_import_lesson_times_off_bakalari">Вимк.: без блоків шкільного часу. Шкільні події та вихідні дні, як і раніше, імпортуються.</string>
     <string name="school_import_reconnect">Увійти знову</string>
     <string name="school_import_disconnect">Відключити</string>
     <string name="school_import_disconnect_title">Відключити цю школу?</string>
