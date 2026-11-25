@@ -9,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.EditNote
@@ -33,6 +34,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import com.coparently.app.data.family.FamilyOption
@@ -61,8 +63,8 @@ import com.coparently.app.resources.school_connect_confirm_days_off
 import com.coparently.app.resources.school_connect_confirm_events
 import com.coparently.app.resources.school_connect_confirm_hours
 import com.coparently.app.resources.school_connect_confirm_label
-import com.coparently.app.resources.school_connect_confirm_not_imported
 import com.coparently.app.resources.school_connect_confirm_shared
+import com.coparently.app.resources.school_connect_confirm_tasks
 import com.coparently.app.resources.school_connect_continue
 import com.coparently.app.resources.school_connect_edupage_no_pupils
 import com.coparently.app.resources.school_connect_family_label
@@ -261,7 +263,7 @@ private fun stepAction(
     ConnectStep.EDUPAGE_CREDENTIALS, ConnectStep.CREDENTIALS -> StepAction(
         label = Res.string.school_connect_sign_in,
         onClick = onSignIn,
-        enabled = !state.isLoading && state.username.isNotBlank() && passwordEntered,
+        enabled = !state.isLoading && state.canSignIn && passwordEntered,
         busy = state.isBusy
     )
     ConnectStep.EDUPAGE_CHILD, ConnectStep.CHOOSE -> StepAction(
@@ -311,7 +313,7 @@ private fun SystemStep(viewModel: ConnectSchoolViewModel) {
     }
 }
 
-/** EduPage's sign-in: the optional school address, username and password, and where the password goes. */
+/** EduPage's sign-in: the school's address (required), username and password, and where the password goes. */
 @Composable
 private fun EdupageCredentialsFields(
     state: ConnectSchoolUiState,
@@ -595,36 +597,39 @@ private fun ChildChoices(state: ConnectSchoolUiState, viewModel: ConnectSchoolVi
 /** What will be imported, and what will not. */
 @Composable
 private fun ConfirmStep(state: ConnectSchoolUiState) {
-    val account = state.account ?: return
+    if (state.account == null) return
     val childName = state.children.firstOrNull { it.id == state.childId }?.name.orEmpty()
     Column {
         GroupLabel(stringResource(Res.string.school_connect_confirm_label))
         SectionGroup {
-            var first = true
-            if (account.canReadEvents) {
-                SectionRow(icon = Icons.Default.Event, title = stringResource(Res.string.school_connect_confirm_events))
-                first = false
-            }
-            if (account.canReadTimetable) {
-                if (!first) Divider()
-                SectionRow(
-                    icon = Icons.Default.CalendarMonth,
-                    title = stringResource(Res.string.school_connect_confirm_hours)
-                )
-                Divider()
-                SectionRow(
-                    icon = Icons.Default.EventBusy,
-                    title = stringResource(Res.string.school_connect_confirm_days_off)
-                )
+            state.confirmLines.forEachIndexed { index, line ->
+                if (index > 0) Divider()
+                SectionRow(icon = line.icon(), title = stringResource(line.title()))
             }
         }
     }
     InlineBanner(text = stringResource(Res.string.school_connect_confirm_shared, childName))
     Text(
-        text = stringResource(Res.string.school_connect_confirm_not_imported),
+        text = stringResource(state.notImportedText),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
+}
+
+/** The icon of a confirm line. */
+private fun ConfirmLine.icon(): ImageVector = when (this) {
+    ConfirmLine.EVENTS -> Icons.Default.Event
+    ConfirmLine.TASKS -> Icons.AutoMirrored.Filled.Assignment
+    ConfirmLine.HOURS -> Icons.Default.CalendarMonth
+    ConfirmLine.DAYS_OFF -> Icons.Default.EventBusy
+}
+
+/** The text of a confirm line. */
+private fun ConfirmLine.title(): StringResource = when (this) {
+    ConfirmLine.EVENTS -> Res.string.school_connect_confirm_events
+    ConfirmLine.TASKS -> Res.string.school_connect_confirm_tasks
+    ConfirmLine.HOURS -> Res.string.school_connect_confirm_hours
+    ConfirmLine.DAYS_OFF -> Res.string.school_connect_confirm_days_off
 }
 
 /** A family as the co-parent's name, or by its place in the list when the name is unknown. */

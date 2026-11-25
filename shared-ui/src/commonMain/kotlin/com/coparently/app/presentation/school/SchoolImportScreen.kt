@@ -55,7 +55,8 @@ import com.coparently.app.resources.school_import_empty_description
 import com.coparently.app.resources.school_import_empty_title
 import com.coparently.app.resources.school_import_intro
 import com.coparently.app.resources.school_import_last_sync
-import com.coparently.app.resources.school_import_lesson_times_description
+import com.coparently.app.resources.school_import_lesson_times_off
+import com.coparently.app.resources.school_import_lesson_times_on
 import com.coparently.app.resources.school_import_lesson_times_title
 import com.coparently.app.resources.school_import_never_synced
 import com.coparently.app.resources.school_import_reconnect
@@ -239,7 +240,7 @@ private fun ConnectionGroup(row: SchoolConnectionRow, updating: Boolean, actions
             )
         }
         Divider()
-        HoursRow(on = connection.importHours, onChange = { actions.onImportHours(id, it) })
+        HoursRow(on = connection.importHours, childName = row.childName, onChange = { actions.onImportHours(id, it) })
         Divider()
         SectionRow(
             icon = Icons.Default.LinkOff,
@@ -251,14 +252,21 @@ private fun ConnectionGroup(row: SchoolConnectionRow, updating: Boolean, actions
     }
 }
 
-/** Whether the connection imports the school hours; the events come in either way. */
+/**
+ * Whether the connection imports the school hours; the events come in either way. Both outcomes are
+ * said under the switch, the "on" one with the child's name as the block will carry it.
+ */
 @Composable
-private fun HoursRow(on: Boolean, onChange: (Boolean) -> Unit) {
+private fun HoursRow(on: Boolean, childName: String, onChange: (Boolean) -> Unit) {
     val title = stringResource(Res.string.school_import_lesson_times_title)
+    val meaning = listOf(
+        stringResource(Res.string.school_import_lesson_times_on, childName),
+        stringResource(Res.string.school_import_lesson_times_off)
+    ).joinToString("\n")
     SectionRow(
         icon = Icons.Default.Schedule,
         title = title,
-        supporting = stringResource(Res.string.school_import_lesson_times_description),
+        supporting = meaning,
         trailing = {
             AdaptiveSwitch(
                 checked = on,

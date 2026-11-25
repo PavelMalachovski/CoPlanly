@@ -4879,6 +4879,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       + key` hashed like Bakaláři's, because one login lists several children and each parent has
       their own login for the same child. Kinds are `event`, `hours`, `dayoff` and the new `task`
       (a test or homework, a dated all-day event "Subject: title", keyed on EduPage's item id).
+    - **The school's address is required** (owner, 25 November 2026): sign-in is not offered while the
+      EduPage address is blank (`ConnectSchoolUiState.canSignIn`), never a lookup from the login alone.
     - **A pupil's own timeline entry is matched by name or class** (`user_meno`, whitespace and case
       folded) or whole school; anything else is not the child's and is dropped.
     - **A second factor is not handled by the app**: `EdupageException.SecondFactor` says "approve

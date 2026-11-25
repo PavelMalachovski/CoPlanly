@@ -19,7 +19,8 @@
     <string name="school_import_update_now">Оновити зараз</string>
     <string name="school_import_updating">Оновлюється…</string>
     <string name="school_import_lesson_times_title">Розклад уроків</string>
-    <string name="school_import_lesson_times_description">Кожен навчальний день від першого уроку до останнього. Шкільні події імпортуються завжди.</string>
+    <string name="school_import_lesson_times_on">Увімк.: кожен навчальний день отримує блок «%1$s у школі» від першого уроку до останнього.</string>
+    <string name="school_import_lesson_times_off">Вимк.: без блоків шкільного часу. Шкільні події, контрольні, домашні завдання й вихідні дні, як і раніше, імпортуються.</string>
     <string name="school_import_reconnect">Увійти знову</string>
     <string name="school_import_disconnect">Відключити</string>
     <string name="school_import_disconnect_title">Відключити цю школу?</string>
@@ -71,13 +72,15 @@
     <string name="school_connect_confirm_hours">Навчальні години кожного навчального дня в найближчі чотири тижні</string>
     <string name="school_connect_confirm_days_off">Дні без уроків, окрім канікул і свят, які календар уже показує</string>
     <string name="school_connect_confirm_shared">Вони стануть звичайними подіями цієї родини про дитину (%1$s), і другий із батьків їх теж побачить.</string>
+    <string name="school_connect_confirm_tasks">Контрольні й домашні завдання дитини за останні 120 днів і наперед</string>
     <string name="school_connect_confirm_not_imported">Оцінки, домашні завдання й окремі уроки не імпортуються.</string>
+    <string name="school_connect_confirm_not_imported_edupage">Оцінки не імпортуються.</string>
     <string name="school_connect_save">Підключити й імпортувати</string>
     <string name="school_system_title">Яку систему використовує школа?</string>
     <string name="school_system_bakalari">Bakaláři</string>
     <string name="school_system_edupage">EduPage</string>
-    <string name="school_edupage_address_label">Адреса школи (необовʼязково)</string>
-    <string name="school_edupage_address_hint">Лише якщо вхід не знаходить вашу школу, наприклад zsx.edupage.org</string>
+    <string name="school_edupage_address_label">Адреса школи в EduPage</string>
+    <string name="school_edupage_address_hint">Обовʼязково: адреса, за якою ви відкриваєте EduPage, наприклад zsx.edupage.org</string>
     <string name="school_edupage_second_factor">Цей обліковий запис вимагає другого підтвердження. Підтвердьте вхід у застосунку EduPage або через e-mail і спробуйте ще раз.</string>
     <string name="school_edupage_password_kept">CoPlanly зберігає цей пароль на цьому телефоні в зашифрованому вигляді, щоб імпорт міг входити щодня. Він надсилається лише до EduPage.</string>
     <string name="school_edupage_captcha">EduPage просить ввести CAPTCHA. Один раз увійдіть на сайті EduPage і спробуйте ще раз.</string>

@@ -19,7 +19,8 @@
     <string name="school_import_update_now">Aktualizovat teď</string>
     <string name="school_import_updating">Aktualizuje se…</string>
     <string name="school_import_lesson_times_title">Rozvrh hodin</string>
-    <string name="school_import_lesson_times_description">Každý školní den od první hodiny do poslední. Školní akce se importují vždy.</string>
+    <string name="school_import_lesson_times_on">Zapnuto: každý školní den dostane blok „%1$s ve škole“ od první hodiny do poslední.</string>
+    <string name="school_import_lesson_times_off">Vypnuto: žádné bloky školního vyučování. Školní akce, testy, domácí úkoly a dny volna se importují dál.</string>
     <string name="school_import_reconnect">Znovu přihlásit</string>
     <string name="school_import_disconnect">Odpojit</string>
     <string name="school_import_disconnect_title">Odpojit tuto školu?</string>
@@ -71,13 +72,15 @@
     <string name="school_connect_confirm_hours">Vyučování každého školního dne v příštích čtyřech týdnech</string>
     <string name="school_connect_confirm_days_off">Dny bez vyučování kromě prázdnin a svátků, které kalendář už ukazuje</string>
     <string name="school_connect_confirm_shared">Stanou se běžnými událostmi této rodiny týkajícími se dítěte %1$s a uvidí je i druhý rodič.</string>
+    <string name="school_connect_confirm_tasks">Testy a domácí úkoly dítěte za posledních 120 dní a dopředu</string>
     <string name="school_connect_confirm_not_imported">Známky, domácí úkoly a jednotlivé hodiny se neimportují.</string>
+    <string name="school_connect_confirm_not_imported_edupage">Známky se neimportují.</string>
     <string name="school_connect_save">Připojit a importovat</string>
     <string name="school_system_title">Jaký systém škola používá?</string>
     <string name="school_system_bakalari">Bakaláři</string>
     <string name="school_system_edupage">EduPage</string>
-    <string name="school_edupage_address_label">Adresa školy (nepovinné)</string>
-    <string name="school_edupage_address_hint">Jen když přihlášení vaši školu nenajde, např. zsx.edupage.org</string>
+    <string name="school_edupage_address_label">Adresa školy v EduPage</string>
+    <string name="school_edupage_address_hint">Povinné: adresa, na které EduPage otevíráte, např. zsx.edupage.org</string>
     <string name="school_edupage_second_factor">Tento účet žádá druhé potvrzení. Potvrďte přihlášení v aplikaci EduPage nebo v e-mailu a zkuste to znovu.</string>
     <string name="school_edupage_password_kept">CoPlanly si toto heslo uchovává v tomto telefonu, zašifrované, aby se import mohl každý den přihlásit. Odesílá se jen do EduPage.</string>
     <string name="school_edupage_captcha">EduPage žádá CAPTCHA. Přihlaste se jednou na webu EduPage a zkuste to znovu.</string>

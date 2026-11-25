@@ -24,6 +24,8 @@ import com.coparently.app.domain.school.SchoolSystem
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.platform.AppBuildValues
 import com.coparently.app.resources.Res
+import com.coparently.app.resources.school_connect_confirm_not_imported
+import com.coparently.app.resources.school_connect_confirm_not_imported_edupage
 import com.coparently.app.resources.school_connect_network_error
 import com.coparently.app.resources.school_connect_schools_failed
 import com.coparently.app.resources.school_connect_server_error
@@ -98,12 +100,28 @@ data class SignedInAccount(
     val canImport: Boolean get() = canReadTimetable || canReadEvents
 }
 
+/** A line of the confirm step's list of what will be imported. */
+enum class ConfirmLine {
+    /** School events for the child's class, the child and the whole school. */
+    EVENTS,
+
+    /** EduPage's tests and homework of the child. */
+    TASKS,
+
+    /** The school hours of every school day (Bakaláři; EduPage's are the "Lesson times" option). */
+    HOURS,
+
+    /** Days without lessons. */
+    DAYS_OFF
+}
+
 /**
  * The connect screen's state (MON-8).
  *
  * @property step The step on screen.
  * @property system The school system being connected.
- * @property edupageAddress The school's EduPage address as typed, blank to let EduPage find it.
+ * @property edupageAddress The school's EduPage address as typed. EduPage's sign-in needs it
+ *   (owner, 25 November 2026), so a new EduPage connection is not offered while it is blank.
  * @property edupageChildren The pupils the EduPage account reads.
  * @property edupageChild The EduPage pupil chosen, or the only one.
  * @property reconnecting Whether this is "Sign in again" for a stored connection, which asks
@@ -160,6 +178,41 @@ data class ConnectSchoolUiState(
 
     /** Whether the parent chooses the family: only when there are two or more. */
     val choosesFamily: Boolean get() = families.size > 1
+
+    /**
+     * Whether the sign-in can be attempted for what is typed so far (the password is the screen's):
+     * a username, and for a new EduPage connection the school's address too. Signing a stored
+     * connection in again asks for the password alone.
+     */
+    val canSignIn: Boolean
+        get() = username.isNotBlank() &&
+            (system != SchoolSystem.EDUPAGE || reconnecting || edupageAddress.isNotBlank())
+
+    /**
+     * The lines the confirm step lists, by the school's system. Bakaláři's are unchanged. EduPage
+     * imports tests and homework, and its school hours only through the connection's "Lesson times"
+     * option, which a new connection starts with off, so that list has no hours line.
+     */
+    val confirmLines: List<ConfirmLine>
+        get() {
+            val account = account ?: return emptyList()
+            return buildList {
+                if (account.canReadEvents) add(ConfirmLine.EVENTS)
+                if (system == SchoolSystem.EDUPAGE) add(ConfirmLine.TASKS)
+                if (account.canReadTimetable) {
+                    if (system != SchoolSystem.EDUPAGE) add(ConfirmLine.HOURS)
+                    add(ConfirmLine.DAYS_OFF)
+                }
+            }
+        }
+
+    /** What the confirm step says is not imported: EduPage names only grades. */
+    val notImportedText: StringResource
+        get() = if (system == SchoolSystem.EDUPAGE) {
+            Res.string.school_connect_confirm_not_imported_edupage
+        } else {
+            Res.string.school_connect_confirm_not_imported
+        }
 
     /** Whether the choices on [ConnectStep.CHOOSE] are complete. */
     val canContinue: Boolean
@@ -318,7 +371,7 @@ class ConnectSchoolViewModel(
      */
     fun signIn(password: String) {
         val current = _state.value
-        if (current.isBusy || current.username.isBlank() || password.isEmpty()) return
+        if (current.isBusy || !current.canSignIn || password.isEmpty()) return
         val baseUrl = current.baseUrl
         _state.update { it.copy(isBusy = true, error = null) }
         viewModelScope.launch {
