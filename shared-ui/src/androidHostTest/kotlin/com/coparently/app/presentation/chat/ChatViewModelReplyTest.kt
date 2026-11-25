@@ -30,6 +30,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -324,6 +325,49 @@ class ChatViewModelReplyTest {
             assertNull("a message that replies to nothing has no quote", quotes["plain"])
             assertNull(quotes["message-1"])
         }
+    }
+
+    @Test
+    fun `the open thread is observed once while its messages - length and quotes are all collected`() = runTest {
+        var observations = 0
+        every { messageRepository.observeMessages(CONVERSATION, any()) } answers {
+            observations++
+            MutableStateFlow(listOf(message()))
+        }
+        val viewModel = createViewModel(replyStore())
+        advanceUntilIdle()
+        viewModel.onThreadOpened(CONVERSATION)
+        advanceUntilIdle()
+        // The read/delivered marks have a collector of their own, keyed apart on purpose.
+        val forTheMarks = observations
+
+        backgroundScope.launch { viewModel.messages.collect {} }
+        backgroundScope.launch { viewModel.canLoadEarlier.collect {} }
+        backgroundScope.launch { viewModel.quotes.collect {} }
+        // runCurrent, not advanceUntilIdle: work in backgroundScope alone does not keep the
+        // scheduler from being idle.
+        runCurrent()
+
+        assertEquals(listOf(message()), viewModel.messages.value)
+        assertEquals(1, observations - forTheMarks)
+    }
+
+    @Test
+    fun `switching the open thread observes the new one`() = runTest {
+        every { messageRepository.observeMessages(CONVERSATION, any()) } returns MutableStateFlow(listOf(message()))
+        every { messageRepository.observeMessages(OTHER_CONVERSATION, any()) } returns MutableStateFlow(emptyList())
+        val viewModel = createViewModel(replyStore())
+        advanceUntilIdle()
+        backgroundScope.launch { viewModel.messages.collect {} }
+        backgroundScope.launch { viewModel.quotes.collect {} }
+
+        viewModel.onThreadOpened(CONVERSATION)
+        advanceUntilIdle()
+        assertEquals(1, viewModel.messages.value.size)
+
+        viewModel.onThreadOpened(OTHER_CONVERSATION)
+        advanceUntilIdle()
+        assertEquals(0, viewModel.messages.value.size)
     }
 
     /** What the quote of [message] shows, for the reply tests. */

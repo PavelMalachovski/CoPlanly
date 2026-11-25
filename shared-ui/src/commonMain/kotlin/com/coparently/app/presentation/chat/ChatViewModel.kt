@@ -48,6 +48,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.retry
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -392,8 +393,14 @@ class ChatViewModel(
      * definition, so a `combine` version would subscribe to `observeMessages("")` once and
      * a thread's messages could never appear at all.
      */
+    // Shared, because [messages], [canLoadEarlier] and [quotes] all read it and each collection of
+    // the repository's flow attaches a Firestore listener and mirrors every snapshot into Room: one
+    // open thread must cost one of each. The replay is dropped when the last reader leaves, so a
+    // later subscriber never sees the previous thread's list first. A failure ends that thread's
+    // stream with an empty list here, because an exception escaping a shared flow would end the
+    // ViewModel's scope rather than one reader; opening another thread subscribes afresh.
     @OptIn(ExperimentalCoroutinesApi::class)
-    private val currentThreadMessages: Flow<Pair<String?, List<Message>>> =
+    private val currentThreadMessages: SharedFlow<Pair<String?, List<Message>>> =
         combine(_currentConversationId, _messageWindow) { id, window -> id to window }
             .flatMapLatest { (conversationId, window) ->
                 val raw = if (conversationId == null) {
@@ -402,7 +409,16 @@ class ChatViewModel(
                     messageRepository.observeMessages(conversationId, window)
                 }
                 raw.map { conversationId to it }
+                    .catch { e -> failSoft("observe thread", e) { emit(conversationId to emptyList()) } }
             }
+            .shareIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(
+                    stopTimeoutMillis = SUBSCRIPTION_TIMEOUT_MS,
+                    replayExpirationMillis = 0
+                ),
+                replay = 1
+            )
 
     /**
      * Whether there may be older messages than the ones on screen.
