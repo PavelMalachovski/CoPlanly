@@ -97,7 +97,10 @@ class SwapSentenceTest {
     }
 
     @Test
-    fun `a single name longer than the bound is cut to it`() {
-        assertEquals("z".repeat(SWAP_CHILD_NAMES_MAX_LENGTH), swapChildNamesField(listOf("z".repeat(250))))
+    fun `a name longer than the bound on its own is left out and never cut`() {
+        assertNull(swapChildNamesField(listOf("z".repeat(250))))
+        assertEquals("Ema", swapChildNamesField(listOf("z".repeat(250), "Ema")))
+        val emoji = "\uD83D\uDE00"
+        assertNull(swapChildNamesField(listOf("a".repeat(199) + emoji)))
     }
 }

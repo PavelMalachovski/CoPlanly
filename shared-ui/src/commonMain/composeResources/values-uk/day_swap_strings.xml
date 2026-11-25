@@ -166,9 +166,10 @@
     <string name="day_swap_sentence_days_gives">У вас: %1$s</string>
     <string name="day_swap_sentence_days_asks">%1$s — %2$s</string>
     <!-- The offer's heading when it names the children: %1$s = their names, %2$s = the days to
-         you; asks: %2$s = the sender, %3$s = their days. -->
-    <string name="day_swap_heading_child">%1$s у вас: %2$s?</string>
-    <string name="day_swap_heading_child_asks">%1$s: %2$s — %3$s?</string>
+         you; asks: %2$s = the sender, %3$s = their days. No question mark: the dates end the line,
+         and a date ends in an abbreviation's dot (".?" read badly). -->
+    <string name="day_swap_heading_child">%1$s у вас: %2$s</string>
+    <string name="day_swap_heading_child_asks">%1$s: %2$s — %3$s</string>
     <!-- Under the sentence: %1$s = the sender, %2$s = when the answer is due. -->
     <string name="day_swap_proposed_by">%1$s пропонує цей обмін</string>
     <string name="day_swap_proposed_by_answer_by">%1$s пропонує цей обмін\u00A0· відповісти до %2$s</string>

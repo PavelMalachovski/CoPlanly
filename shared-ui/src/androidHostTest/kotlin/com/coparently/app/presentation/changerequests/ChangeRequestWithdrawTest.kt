@@ -31,7 +31,6 @@ import com.coparently.app.domain.usecase.DeleteEventUseCase
 import com.coparently.app.domain.usecase.EventUseCases
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
-import com.coparently.app.presentation.common.testFamilyMembersSource
 import com.coparently.app.presentation.common.testParentsSource
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.change_request_error_family_changed
@@ -167,7 +166,7 @@ class ChangeRequestWithdrawTest {
         ),
         familySettingsRepository = familySettingsRepository,
         agreementWithdrawals = agreementWithdrawals,
-        familyMembersSource = testFamilyMembersSource()
+        swapChildrenSource = testSwapChildrenSource()
     )
 
     /** A view model whose inbox has drawn the family Olya shares with Pavel. */

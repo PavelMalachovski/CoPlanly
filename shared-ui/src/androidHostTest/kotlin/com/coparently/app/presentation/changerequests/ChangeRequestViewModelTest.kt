@@ -1,5 +1,7 @@
 package com.coparently.app.presentation.changerequests
 
+import com.coparently.app.data.family.familyRow
+import com.coparently.app.data.family.testFamilyViewSource
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.requests.FamilyAgreementsSource
@@ -21,6 +23,7 @@ import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
+import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.PairingState
@@ -33,10 +36,10 @@ import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.usecase.EventUseCases
 import com.coparently.app.domain.usecase.UpdateEventUseCase
-import com.coparently.app.presentation.common.FamilyMembersSource
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.testFamilyMembersSource
+import com.coparently.app.presentation.common.testFamilyMembersSourceOf
 import com.coparently.app.presentation.common.testParentsSource
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
 import com.coparently.app.resources.Res
@@ -168,7 +171,7 @@ class ChangeRequestViewModelTest {
 
     private fun viewModel(
         parents: ParentsSource = testParentsSource(),
-        members: FamilyMembersSource = testFamilyMembersSource()
+        swapChildren: SwapChildrenSource = testSwapChildrenSource()
     ) = ChangeRequestViewModel(
         changeRequestRepository = changeRequestRepository,
         eventRepository = eventRepository,
@@ -195,7 +198,7 @@ class ChangeRequestViewModelTest {
         ),
         familySettingsRepository = familySettingsRepository,
         agreementWithdrawals = mockk(relaxed = true),
-        familyMembersSource = members
+        swapChildrenSource = swapChildren
     )
 
     /** The split document of the family Olya shares with Pavel, agreed half each, with [by]'s 35/65 proposal. */
@@ -414,7 +417,11 @@ class ChangeRequestViewModelTest {
         )
         every { custodyModelRepository.observeSharedOf("u1__u2") } returns
             flowOf(SharedCustody(model = model, lastModifiedBy = "u2", lastModifiedAtMillis = 1L, createdAt = ""))
-        val vm = viewModel(members = testFamilyMembersSource(childNames = listOf("Lenička Nováková", "Sasha", "Ema")))
+        val vm = viewModel(
+            swapChildren = testSwapChildrenSource(
+                testFamilyMembersSource(childNames = listOf("Lenička Nováková", "Sasha", "Ema"))
+            )
+        )
         backgroundScope.launch { vm.swapChildNames.collect {} }
         advanceUntilIdle()
         assertNull(vm.swapChildNames.value)
@@ -423,6 +430,36 @@ class ChangeRequestViewModelTest {
         advanceUntilIdle()
 
         assertEquals(listOf("Lenička", "Ema"), vm.swapChildNames.value)
+    }
+
+    @Test
+    fun `a swap read by a parent of two families never names a child placed only me`() = runTest(dispatcher) {
+        val at = kotlinx.datetime.LocalDateTime(2026, 1, 1, 9, 0)
+        fun child(id: String, name: String, familyId: String?) = ChildInfo(
+            id = id,
+            childName = name,
+            dateOfBirth = null,
+            createdAt = at,
+            updatedAt = at,
+            createdByFirebaseUid = "u1",
+            familyId = familyId
+        )
+        val children = listOf(child("a", "Lenička", "u1__u2"), child("b", "Sasha", null))
+        val vm = viewModel(
+            swapChildren = testSwapChildrenSource(
+                members = testFamilyMembersSourceOf(children),
+                views = testFamilyViewSource(
+                    "u1",
+                    MutableStateFlow(familyRow("u1", onScreen = "u2", partners = listOf("u2", "u3")))
+                )
+            )
+        )
+        backgroundScope.launch { vm.swapChildNames.collect {} }
+        advanceUntilIdle()
+        requests.emit(emptyList())
+        advanceUntilIdle()
+
+        assertEquals(listOf("Lenička"), vm.swapChildNames.value)
     }
 
     private fun sharedWithProposal(by: String, citation: String?): SharedCustody {

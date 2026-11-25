@@ -45,14 +45,14 @@ internal data class SwapOffer(val sides: SwapSides, val name: String, val childN
  * [PushPayload.DATES_TO_SENDER] for theirs that would go to the offerer, each only when it holds a
  * day. Fields, not types, so an older build ignores them and words the sentence it always did.
  *
- * @param sides Which way each offered day goes, from the offerer's side; null when the caller does
- *   not know (an answer, or an older call site), and then no dates are added.
  * An offer with its days also names the children it moves ([PushPayload.CHILD_NAMES], meeting of
  * 25 November 2026), so the other phone says who has the child on which days; an answer never does.
  *
+ * @param sides Which way each offered day goes, from the offerer's side; null when the caller does
+ *   not know (an answer, or an older call site), and then no dates are added.
  * @param actorName Who performed the write, cut to the rule's bound; blank adds nothing.
  * @param childNames The children the offer moves, by first name; cut to the rule's bound on a name
- *   boundary ([swapChildNamesField]), and nothing added when none is left.
+ *   boundary only ([swapChildNamesField]), and nothing added when none is left.
  */
 // A push's fields, each optional and each named by its caller; a holder type for the last three
 // would only move the list.

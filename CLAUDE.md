@@ -822,7 +822,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
       `swapPushWording`, and an older sender's push keeps its old sentence. **Since 25 November 2026
       an offer also carries `childNames`** (the children it moves by first name, one a line, ≤ 200
       characters cut on a name boundary, bounded in `firestore.rules`; a child with a schedule of
-      their own is left out, item 33 of "Things that are easy to get wrong"): the receiving phone
+      their own is left out, item 33 of "Things that are easy to get wrong", and so is one placed
+      "Only me", item 46: `SwapChildrenSource` keeps the children `FamilyView.counts`, on the sending
+      and the reading phone alike): the receiving phone
       then words "Lenička with you on …, with Pavel on …" under "{name} proposes a day swap", and
       Home's pop-up and the inbox card lead with the same sentence (`domain/custody/SwapSentence`,
       `SwapOfferSentence`, `ChangeRequestViewModel.swapChildNames`). Names are never declined in

@@ -1661,9 +1661,11 @@ words, English and German). What is left is the gesture on glass and a real push
 - [ ] **The push names the children** (2P, meeting of 25 November 2026). In a family with children,
       the offer's push reads "{name} proposes a day swap" over "Lenička with you on …, with {name}
       on …" (CS "Lenička u vás: …; {name} má …", names never declined), a child with a schedule of
-      their own left out; Home's pop-up and the inbox card lead with "Lenička with you on …?" and the
-      same sentence, then "{name} proposes this swap · answer by …". An offer from an older build
-      still reads as above.
+      their own left out, and so is a child of yours placed "Only me" (with two families: a child not
+      yet given a family). Home's pop-up, its Requests card and the inbox card lead with "Lenička
+      with you on …?" (CS/RU/UK without the question mark) and the same sentence, then "{name}
+      proposes this swap" — on Home's pop-up followed by "· answer by …"; the two cards say the
+      deadline in their own clock or status row. An offer from an older build still reads as above.
 - [ ] **Answering** (2P). The card and Home's pop-up say who offers which way, quote the note, and
       answer with **Decline** / **Accept swap**; **Answer day by day** shows Yes/No per day; send one
       day only: the card then shows only the days still waiting.

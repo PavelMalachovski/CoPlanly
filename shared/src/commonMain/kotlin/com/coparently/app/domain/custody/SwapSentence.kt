@@ -89,19 +89,17 @@ const val SWAP_CHILD_NAMES_MAX_LENGTH = 200
 /**
  * The children's first names as a swap offer's push carries them (`childNames`): each trimmed,
  * blank ones dropped, joined by a line break, and cut to [SWAP_CHILD_NAMES_MAX_LENGTH] characters
- * on a name boundary — a name that would cross the bound is left out with every name after it. A
- * single first name longer than the bound is cut to it, as the push's actor name is. Null when no
- * name is left, and the push then carries no field and is worded as it always was.
+ * on a name boundary only — never inside a name, so never inside a surrogate pair: a name that would
+ * cross the bound is left out with every name after it, and a name longer than the bound on its own
+ * is left out. Null when no name is left, and the push then carries no field and is worded as it
+ * always was.
  */
 fun swapChildNamesField(names: List<String>): String? {
     val kept = mutableListOf<String>()
     var length = 0
-    for (name in names.map { it.trim() }.filter { it.isNotEmpty() }) {
+    for (name in names.map { it.trim() }.filter { it.isNotEmpty() && it.length <= SWAP_CHILD_NAMES_MAX_LENGTH }) {
         val added = if (kept.isEmpty()) name.length else length + 1 + name.length
-        if (added > SWAP_CHILD_NAMES_MAX_LENGTH) {
-            if (kept.isEmpty()) kept += name.take(SWAP_CHILD_NAMES_MAX_LENGTH)
-            break
-        }
+        if (added > SWAP_CHILD_NAMES_MAX_LENGTH) break
         kept += name
         length = added
     }
