@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -52,6 +53,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
@@ -303,7 +305,7 @@ fun MessagesList(
                 onOpenInbox = onOpenInbox,
                 onRetryFailed = onRetryFailed
             )
-            NewestMessagesButton(listState, entries)
+            NewestMessagesButton(listState, entries, currentUserId)
         }
     }
 }
@@ -435,24 +437,29 @@ private fun NewestWhenShownAgain(listState: LazyListState, revealing: Boolean) {
 }
 
 /**
- * How many messages arrived since the reader left the newest one ([NewestButton.unseen]).
+ * How many of the co-parent's messages arrived since the reader left the newest one
+ * ([NewestButton.unseen]).
  *
  * The reader leaves the newest when item 0 leaves the screen; the newest message's id at that
  * moment is kept, and forgotten again when item 0 is back on screen.
  */
 @Composable
-private fun rememberUnseenCount(listState: LazyListState, entries: List<ThreadEntry>): Int {
-    val newestFirstIds = remember(entries) {
-        entries.mapNotNull { (it as? ThreadEntry.Bubble)?.message?.id }
+private fun rememberUnseenCount(
+    listState: LazyListState,
+    entries: List<ThreadEntry>,
+    currentUserId: String
+): Int {
+    val newestFirst = remember(entries) {
+        entries.mapNotNull { (it as? ThreadEntry.Bubble)?.message }
     }
     var newestWhenLeft by remember { mutableStateOf<String?>(null) }
-    val ids by rememberUpdatedState(newestFirstIds)
+    val newest by rememberUpdatedState(newestFirst.firstOrNull()?.id)
     LaunchedEffect(listState) {
         snapshotFlow { listState.firstVisibleItemIndex == 0 }.collect { atNewest ->
-            newestWhenLeft = if (atNewest) null else newestWhenLeft ?: ids.firstOrNull()
+            newestWhenLeft = if (atNewest) null else newestWhenLeft ?: newest
         }
     }
-    return NewestButton.unseen(newestWhenLeft, newestFirstIds)
+    return NewestButton.unseen(newestWhenLeft, newestFirst, currentUserId)
 }
 
 /**
@@ -462,9 +469,13 @@ private fun rememberUnseenCount(listState: LazyListState, entries: List<ThreadEn
  * TalkBack and VoiceOver read the button's name and, as its state, the count ("2 new messages").
  */
 @Composable
-private fun BoxScope.NewestMessagesButton(listState: LazyListState, entries: List<ThreadEntry>) {
+private fun BoxScope.NewestMessagesButton(
+    listState: LazyListState,
+    entries: List<ThreadEntry>,
+    currentUserId: String
+) {
     val scope = rememberCoroutineScope()
-    val unseen = rememberUnseenCount(listState, entries)
+    val unseen = rememberUnseenCount(listState, entries, currentUserId)
     val far by remember(listState) {
         derivedStateOf { NewestButton.shows(listState.firstVisibleItemIndex) }
     }
@@ -517,7 +528,9 @@ private fun BoxScope.NewestMessagesButton(listState: LazyListState, entries: Lis
  * cleared again after [Motion.HIGHLIGHT_HOLD_MS].
  *
  * The list draws [entries] as they are, from item 0 (the "load earlier" button is the last item),
- * so an entry's index is the item's.
+ * so an entry's index is the item's. A reversed list's `scrollToItem` puts the item on its bottom
+ * edge, under where the newest-messages button floats as soon as the reader is that far up, so the
+ * item is lifted to the middle of the screen, and at least clear of the button.
  *
  * Two effects, not one: [onRevealed] clears the request, which would cancel an effect keyed on it
  * halfway through the hold and leave the highlight on for good.
@@ -530,12 +543,14 @@ private fun rememberRevealedMessage(
     onRevealed: () -> Unit
 ): String? {
     var highlighted by remember { mutableStateOf<String?>(null) }
+    val clearancePx = with(LocalDensity.current) { REVEAL_CLEARANCE.roundToPx() }
     LaunchedEffect(revealMessageId, entries) {
         val target = revealMessageId ?: return@LaunchedEffect
         val index = entries.indexOfFirst { it is ThreadEntry.Bubble && it.message.id == target }
         // Not loaded yet: the window is still growing towards it, and this runs again when it has.
         if (index < 0) return@LaunchedEffect
         listState.scrollToItem(index)
+        liftClearOfTheBottom(listState, index, clearancePx)
         highlighted = target
         onRevealed()
     }
@@ -546,6 +561,20 @@ private fun rememberRevealedMessage(
         }
     }
     return highlighted
+}
+
+/**
+ * Lifts item [index], just placed on the reversed list's bottom edge by `scrollToItem`, to the
+ * middle of the viewport, and at least [minimumPx] above that edge: clear of the newest-messages
+ * button. Scrolling backward moves the content up; the list stops it where the newest message
+ * reaches the bottom, which leaves the item where it can be.
+ */
+private suspend fun liftClearOfTheBottom(listState: LazyListState, index: Int, minimumPx: Int) {
+    val info = listState.layoutInfo
+    val item = info.visibleItemsInfo.firstOrNull { it.index == index } ?: return
+    val viewport = info.viewportEndOffset - info.viewportStartOffset
+    val lift = maxOf(minimumPx, (viewport - item.size) / 2)
+    listState.scrollBy(-lift.toFloat())
 }
 
 /** A bubble's row, tinted while it is the message a search result pointed at. */
@@ -967,6 +996,12 @@ private const val REVEAL_TINT_ALPHA = 0.6f
 
 /** Brief pause after a manual refresh so the spinner does not flash out instantly. */
 private const val REFRESH_SETTLE_MS = 500L
+
+/**
+ * How far above the thread's bottom edge a revealed message is kept at the least: the button's
+ * own padding, the small button and the same padding again.
+ */
+private val REVEAL_CLEARANCE = 16.dp + 40.dp + 16.dp
 
 /** Above this, the newest-messages badge reads "99+". */
 private const val MAX_BADGE_COUNT = 99

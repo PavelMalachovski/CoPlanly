@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -20,6 +21,7 @@ import com.coparently.app.presentation.platform.ProvideAndroidPlatform
 import com.coparently.app.presentation.theme.CoPlanlyTheme
 import com.coparently.app.presentation.theme.ContrastLevel
 import com.coparently.app.testing.RobolectricTestApplication
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -39,6 +41,7 @@ class MessagesListTest {
     val rule = createComposeRule()
 
     private var messages by mutableStateOf(thread(MESSAGES))
+    private var reveal by mutableStateOf<String?>(null)
 
     private fun compose() {
         rule.setContent {
@@ -50,7 +53,9 @@ class MessagesListTest {
                         canLoadEarlier = true,
                         onLoadEarlier = {},
                         // The composer's height taken off the window, as the chat screen does.
-                        modifier = Modifier.height(LIST_HEIGHT.dp)
+                        modifier = Modifier.height(LIST_HEIGHT.dp),
+                        revealMessageId = reveal,
+                        onRevealed = { reveal = null }
                     )
                 }
             }
@@ -115,6 +120,53 @@ class MessagesListTest {
         rule.onNodeWithContentDescription(NEWEST).assertDoesNotExist()
     }
 
+    @Test
+    fun `a revealed message far up is shown clear of the newest button`() {
+        compose()
+
+        rule.runOnIdle { reveal = REVEALED }
+        rule.waitForIdle()
+
+        val target = rule.onNodeWithText(REVEALED_TEXT).assertIsDisplayed().getUnclippedBoundsInRoot()
+        val button = rule.onNodeWithContentDescription(NEWEST).assertIsDisplayed().getUnclippedBoundsInRoot()
+        // Vertically: the bubble reaches the end padding, where the button floats, while the text
+        // node alone can end short of it.
+        assertTrue(
+            "The revealed message $target lies under the newest button $button",
+            target.bottom <= button.top
+        )
+    }
+
+    @Test
+    fun `the reader's own message from another phone is not counted`() {
+        compose()
+        scrollUp()
+
+        // The newest is the co-parent's, so nothing scrolls; the reader's own message beside it
+        // (sent from another phone) is not news to them.
+        rule.runOnIdle { messages = messages + message(MESSAGES, from = ME) + message(MESSAGES + 1, from = THEM) }
+        rule.waitForIdle()
+
+        rule.onNode(hasNewCount("1 new message")).assertIsDisplayed()
+    }
+
+    @Test
+    fun `the count resets once the reader is back at the newest`() {
+        compose()
+        scrollUp()
+        rule.runOnIdle { messages = messages + message(MESSAGES, from = THEM) + message(MESSAGES + 1, from = THEM) }
+        rule.waitForIdle()
+        rule.onNode(hasNewCount("2 new messages")).assertIsDisplayed()
+
+        rule.onNodeWithContentDescription(NEWEST).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithText(textOf(MESSAGES + 1)).assertIsDisplayed()
+
+        scrollUp()
+        rule.onNodeWithContentDescription(NEWEST).assertIsDisplayed()
+        rule.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.StateDescription)).assertDoesNotExist()
+    }
+
     private fun scrollUp() {
         rule.onNode(hasScrollToIndexAction()).performScrollToIndex(FAR_UP)
         rule.waitForIdle()
@@ -130,6 +182,10 @@ class MessagesListTest {
         const val FAR_UP = 30
         const val LIST_HEIGHT = 400
         const val NEWEST = "Newest messages"
+
+        /** An own message far up, so its bubble sits at the end side, where the button is. */
+        const val REVEALED = "m11"
+        const val REVEALED_TEXT = "Message number 11"
 
         /** 12:00 UTC on 2 November 2026, a minute apart, alternating senders so nothing groups. */
         const val NOON = 1_793_620_800_000L

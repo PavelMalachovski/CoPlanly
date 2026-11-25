@@ -1,5 +1,7 @@
 package com.coparently.app.domain.chat
 
+import com.coparently.app.domain.model.Message
+
 /**
  * When the thread's "newest messages" button shows, and the count it carries (chat: newest message
  * always in view, November 2026).
@@ -21,16 +23,20 @@ object NewestButton {
     fun shows(firstVisibleIndex: Int): Boolean = firstVisibleIndex > NEAR_NEWEST
 
     /**
-     * How many messages arrived since the reader left the newest: those before [newestIdWhenLeft]
-     * in [messagesNewestFirst]. Zero while the reader is at the newest ([newestIdWhenLeft] null),
-     * when nothing arrived since, and when that message is no longer in the window (another
-     * conversation on screen), where no count could be honest.
+     * How many of the co-parent's messages arrived since the reader left the newest: those before
+     * [newestIdWhenLeft] in [messagesNewestFirst] that [currentUserId] did not send. The reader's own
+     * messages are never news to them (one sent from another phone included). Zero while the reader
+     * is at the newest ([newestIdWhenLeft] null), when nothing arrived since, and when that message
+     * is no longer in the window (another conversation on screen), where no count could be honest.
      *
      * @param newestIdWhenLeft The id of the newest message when the reader left it, or null.
-     * @param messagesNewestFirst The ids of the messages the thread draws, newest first.
+     * @param messagesNewestFirst The messages the thread draws, newest first.
+     * @param currentUserId The reader's uid.
      */
-    fun unseen(newestIdWhenLeft: String?, messagesNewestFirst: List<String>): Int {
+    fun unseen(newestIdWhenLeft: String?, messagesNewestFirst: List<Message>, currentUserId: String): Int {
         if (newestIdWhenLeft == null) return 0
-        return messagesNewestFirst.indexOf(newestIdWhenLeft).coerceAtLeast(0)
+        val left = messagesNewestFirst.indexOfFirst { it.id == newestIdWhenLeft }
+        if (left <= 0) return 0
+        return messagesNewestFirst.subList(0, left).count { it.senderId != currentUserId }
     }
 }

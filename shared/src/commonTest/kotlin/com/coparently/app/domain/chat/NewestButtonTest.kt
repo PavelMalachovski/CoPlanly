@@ -1,5 +1,6 @@
 package com.coparently.app.domain.chat
 
+import com.coparently.app.domain.model.Message
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -22,22 +23,40 @@ class NewestButtonTest {
 
     @Test
     fun `counts messages after the one left at`() {
-        val newestFirst = listOf("m5", "m4", "m3", "m2", "m1")
+        val newestFirst = theirs("m5", "m4", "m3", "m2", "m1")
 
-        assertEquals(2, NewestButton.unseen(newestIdWhenLeft = "m3", messagesNewestFirst = newestFirst))
-        assertEquals(4, NewestButton.unseen(newestIdWhenLeft = "m1", messagesNewestFirst = newestFirst))
+        assertEquals(2, NewestButton.unseen("m3", newestFirst, ME))
+        assertEquals(4, NewestButton.unseen("m1", newestFirst, ME))
     }
 
     @Test
     fun `zero when the reader left at the newest`() {
-        val newestFirst = listOf("m3", "m2", "m1")
+        val newestFirst = theirs("m3", "m2", "m1")
 
-        assertEquals(0, NewestButton.unseen(newestIdWhenLeft = "m3", messagesNewestFirst = newestFirst))
-        assertEquals(0, NewestButton.unseen(newestIdWhenLeft = null, messagesNewestFirst = newestFirst))
+        assertEquals(0, NewestButton.unseen("m3", newestFirst, ME))
+        assertEquals(0, NewestButton.unseen(null, newestFirst, ME))
     }
 
     @Test
     fun `zero when the message left at is no longer in the window`() {
-        assertEquals(0, NewestButton.unseen(newestIdWhenLeft = "gone", messagesNewestFirst = listOf("m2", "m1")))
+        assertEquals(0, NewestButton.unseen("gone", theirs("m2", "m1"), ME))
+    }
+
+    @Test
+    fun `the reader's own messages are not counted`() {
+        val newestFirst = listOf(message("m4", THEM), message("m3", ME), message("m2", THEM), message("m1", THEM))
+
+        assertEquals(2, NewestButton.unseen("m1", newestFirst, ME))
+        assertEquals(0, NewestButton.unseen("m4", listOf(message("m5", ME)) + newestFirst, ME))
+    }
+
+    private fun theirs(vararg ids: String) = ids.map { message(it, THEM) }
+
+    private fun message(id: String, from: String) =
+        Message(id = id, conversationId = "c1", senderId = from, senderName = from, content = id, sentAtMillis = 0L)
+
+    private companion object {
+        const val ME = "alice"
+        const val THEM = "bob"
     }
 }
