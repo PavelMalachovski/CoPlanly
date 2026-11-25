@@ -86,16 +86,19 @@ test('requests on Home, the answers feed and the inbox need the requests check',
   assert.ok(!sectionsFor([K + 'presentation/home/HomeScreen.kt']).includes('5.8'));
 });
 
+/** @param {string} file a changed path under K @return {string[]} its sections, sorted */
+function sortedSectionsFor(file) {
+  return sectionsFor([K + file]).sort();
+}
+
 test('chat changes need the cross-time-zone chat check', () => {
-  assert.ok(sectionsFor([K + 'presentation/chat/ChatScreen.kt']).includes('5.1'));
-  assert.ok(sectionsFor([K + 'presentation/chat/ChatDictation.kt']).includes('5.1'));
+  assert.deepEqual(sortedSectionsFor('presentation/chat/ChatScreen.kt'), ['3.47', '5.1']);
+  assert.deepEqual(sortedSectionsFor('presentation/chat/ChatDictation.kt'), ['3.21', '5.1']);
 });
 
 test('the thread, its replies and the export line need the replies check', () => {
-  assert.ok(sectionsFor([K + 'presentation/chat/ChatScreen.kt']).includes('3.47'));
-  assert.ok(sectionsFor([K + 'presentation/chat/MessagesList.kt']).includes('3.47'));
-  assert.ok(sectionsFor([K + 'domain/export/RecordReplyText.kt']).includes('3.47'));
-  assert.ok(!sectionsFor([K + 'presentation/chat/ChatDictation.kt']).includes('3.47'));
+  assert.deepEqual(sortedSectionsFor('presentation/chat/MessagesList.kt'), ['3.29', '3.46', '3.47', '5.1']);
+  assert.deepEqual(sortedSectionsFor('domain/export/RecordReplyText.kt'), ['3.47', '6']);
 });
 
 test('functions changes need the owner-ops deploys, the paired checks and account deletion', () => {

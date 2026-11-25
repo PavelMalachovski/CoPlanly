@@ -3117,8 +3117,8 @@ arrives, an older build, and the file a court reads.
       them. Dismiss the keyboard: the thread does not jump.
 - [ ] **"↓" and its count** (2P). Scroll up a few screens. Bob sends two messages: the list does not
       move, "↓" shows with 2. A third from Bob makes it 3. Send one from Alice's *other* phone or
-      send your own message: your own are not counted, and your own send brings the newest into
-      view. Scroll up again: "↓" shows without a count. Tap it: the newest, the button gone.
+      send your own message: your own are not counted; a message sent from this phone brings the
+      newest into view, one sent from Alice's other phone does not move the list. Scroll up again: "↓" shows without a count. Tap it: the newest, the button gone.
       Scroll to the newest by hand: the count resets. A message found by search sits clear of the
       button, not under it.
 - [ ] **Swipe to reply** (Android and iPhone). Drag Bob's message to the right: past a short
@@ -3143,15 +3143,17 @@ arrives, an older build, and the file a court reads.
       quote over its text, "Alice" and "ok, 3" — and on Alice's own phone the quote reads "You" when
       she quoted herself. Bob taps the quote: the thread scrolls to the original and washes it for a
       moment, also when the original is old enough to need "Load earlier". Reply to a photo (the
-      quote names the file) and to a sticker (the sticker's phrase). Only the reply's own push
-      arrives, an ordinary message's.
+      quote names the file) and to a sticker (the sticker's phrase). Bob gets one push for the
+      reply, worded like any message.
 - [ ] **The reply survives leaving** (1P). Start a reply and type half a sentence, switch to Home and
       back, then force-stop the app and reopen: the reply bar and the draft are both there. Send:
       the bar is gone and the next message is not a reply. With the pause before sending on, send a
       reply and tap Undo: the reply bar returns with the text.
 - [ ] **An original that is not on the phone** (2P). On a freshly installed Alice, with only the
-      newest page loaded, a reply to a very old message shows "Message unavailable" until the
-      original is loaded, and a tap on it loads it in one step rather than paging.
+      newest page loaded, a reply to a very old message she never downloaded shows "Message
+      unavailable", and a tap on that quote does nothing. A reply whose quote is shown but whose
+      original is older than the loaded messages opens that original in one step on a tap, washed
+      for a moment, rather than by paging "Load earlier".
 - [ ] **An older build draws a reply plainly** (2P, Bob on the build before this one). Alice's reply
       reaches Bob as an ordinary message with no quote and nothing broken; Bob's messages show on
       Alice as before. A reply Bob's older build sends has no quote on Alice.
@@ -3159,8 +3161,11 @@ arrives, an older build, and the file a court reads.
       sender line, "In reply to Bob's message of <date and time>: “ok, 3”" in the record's language;
       the CSV's last column, "In reply to", holds the same text and is empty on every other row. A
       reply to a sticker reads "a sticker" and the sticker is not listed as a message; a reply
-      whose original is older than the exported period still names it. Open the CSV in a
-      spreadsheet: no column shifted.
+      whose original is older than the exported period still names it. On the freshly installed
+      Alice of the check above, export the period holding the reply to the old message: the PDF
+      and the CSV column read "In reply to an earlier message not in this record", never an
+      ordinary message. A reply to a multi-line message quotes its lines joined by spaces, cut at
+      80 characters with "…". Open the CSV in a spreadsheet: no column shifted.
 - **If it fails:** `presentation/chat/MessagesList.kt` (the reversed list, `NewestButton`),
   `BubbleActions.kt` (swipe, long press, menu), `ReplyViews.kt` (quote, reply bar), `ChatScreen.kt`,
   `ChatViewModel.kt` (`replyTarget`, `quotes`), `ChatSearchViewModel.kt` (`jumpTo`), `SendHold.kt`;

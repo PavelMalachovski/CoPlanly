@@ -393,10 +393,13 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
      "Load earlier" the last item). Opening, a keyboard, a reply bar and a composer that grows all
      keep the newest above the composer with no scroll code; `ChatScrollPolicy` and
      `FollowNewestWhileKeyboardOpens` are gone, and a scroll fix put back beside the reversal fights
-     it. A message the reader sends brings the newest into view. A new one from the co-parent while
+     it. A new one from the co-parent while
      the reader is up the list moves nothing: **`NewestButton`** ("↓", `domain/chat/NewestButton`)
-     shows past `NEAR_NEWEST` items from the newest, with a badge counting the **co-parent's**
-     messages since the reader left the bottom (their own, from another phone, never count). A
+     shows past `NEAR_NEWEST` items (a few messages) from the newest, with a badge counting the
+     **co-parent's** messages since the reader left the bottom (their own, from another phone, never
+     count). Only a message sent **from this phone** (still SENDING or ERROR when it appears) brings
+     the newest into view; one's own message arriving from another phone leaves a reader in history
+     where they are. A
      message revealed by a search or a quote tap lands clear of the button.
    - **A reply is `Message.replyToMessageId`, which was always in the model, Room and the document**
      (`ChatMappers`): no schema, wire or rule change, and an older build draws a reply as a plain
@@ -4460,10 +4463,13 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     hands stickers over flagged** (`MessageInput.isSticker`) and `CommunicationRecordBuilder` still
     drops them from the printed messages, so the record gains no sticker entries but a reply to one
     prints "a sticker" rather than nothing (item 47). **A reply whose original is not in this
-    phone's data prints as an ordinary message**, never "unavailable" in a court's file: the thread
-    says "Message unavailable", the record says only what it holds. And **the excerpt is the
-    thread's** (`ReplyExcerpt`, 80 characters, a file's name), so the two cannot tell different
-    stories; the CSV column joins the last position, so every existing column keeps its place.
+    phone's data prints a fixed line**, "In reply to an earlier message not in this record"
+    (`RecordReplyTo.NotInRecord`, `export_reply_not_in_record`), in the PDF and the CSV column alike,
+    so the same reply carries a reference on both parents' exports even when only one can quote it;
+    never "unavailable", and never a server read for it. And **the excerpt is the whole original**
+    (`ReplyExcerpt.forRecord`: its lines joined by spaces, cut at 80 characters with an ellipsis, or a
+    file's name), not the thread's first line, so a record never reads as if the original said less
+    than it did; the CSV column joins the last position, so every existing column keeps its place.
     **A registered export carries a record ID the server holds its SHA-256 under** (MON-16,
     `docs/DESIGN-court-record.md` §10; `functions/export-receipts.js`, `web/verify/`). Six more
     things not to undo. **The ID is reserved before the file is rendered, and the hash is of the

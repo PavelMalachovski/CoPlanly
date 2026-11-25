@@ -67,12 +67,12 @@ Parents read the thread to answer it. Two things go wrong today:
   - A text message: its first line, cut to one line with an ellipsis.
   - A file: its name.
   - A sticker: the sticker's phrase.
-- **When the "↓" button shows.** The list is more than about one screen (`NEAR_NEWEST` items) away from the newest. The count is the messages that arrived since the reader left the bottom, and it resets when they reach it.
+- **When the "↓" button shows.** The list is more than a few messages (`NEAR_NEWEST` items) away from the newest. The count is the messages that arrived since the reader left the bottom, and it resets when they reach it.
 - **The long-press menu.** It is the only long-press action on a bubble. "Copy text" goes through the platform clipboard (`SensitiveClipboard`, so the copy is not offered to other devices). It is absent for a file or a sticker.
 - **The swipe threshold.** 56 dp, with the haptic at the threshold. The swipe is horizontal only and never moves the list.
 - **The chosen reply is stored beside the draft.** It uses `SecurePreferences`, keyed per conversation, and is cleared on send or ✕.
 - **Mark-read.** Unchanged: a message is marked read only while the screen is visible (`LocalScreenVisible`).
-- **The export excerpt.** The first 80 characters of the original's text (or the file name), and the original's time in the record's zone.
+- **The export excerpt.** The first 80 characters of the original's text, its line breaks collapsed to spaces (or the file name), and the original's time in the record's zone. A reply whose original is not in the exporting phone's data prints "In reply to an earlier message not in this record".
 
 ## What is left to the builder
 
