@@ -174,7 +174,7 @@ class CommunicationRecordCsvTest {
         val a = fields(rows.first { it.startsWith("Message,a,") })
         val b = fields(rows.first { it.startsWith("Message,b,") })
         assertEquals("", a.last())
-        assertEquals("In reply to Alice's message of 2026-03-10 09:00:00 +01:00: “Pickup at six”", b.last())
+        assertEquals("In reply to Alice’s message of 2026-03-10 09:00:00 +01:00: “Pickup at six”", b.last())
         assertEquals("", fields(rows.first { it.startsWith("Expense,") }).last())
     }
 

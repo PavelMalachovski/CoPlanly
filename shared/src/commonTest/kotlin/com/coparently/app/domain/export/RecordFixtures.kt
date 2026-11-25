@@ -25,7 +25,7 @@ internal object RecordFixtures {
     const val MARCH_10_0900 = 1_773_129_600_000L
 
     /** The in-reply-to template, as the five locales write it: author, time, then the quoted words. */
-    const val IN_REPLY_TO = "In reply to %1\$s's message of %2\$s: “%3\$s”"
+    const val IN_REPLY_TO = "In reply to %1\$s’s message of %2\$s: “%3\$s”"
 
     fun labels() = RecordLabels(
         title = "TITLE",

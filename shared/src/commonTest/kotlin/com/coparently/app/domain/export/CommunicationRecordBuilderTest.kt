@@ -321,7 +321,7 @@ class CommunicationRecordBuilderTest {
     }
 
     @Test
-    fun `a reply names its original's author, time and excerpt`() {
+    fun `a reply names its original's author - time and excerpt`() {
         val long = "x".repeat(100)
         val record = CommunicationRecordBuilder.build(
             sources(

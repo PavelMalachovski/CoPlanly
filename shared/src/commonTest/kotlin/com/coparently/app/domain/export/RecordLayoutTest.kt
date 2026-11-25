@@ -76,7 +76,7 @@ class RecordLayoutTest {
 
         val text = blocks.indexOfFirst { it.text == "Fine" }
         val quote = blocks[text - 1]
-        assertEquals("In reply to Alice's message of 2026-03-10 09:00:00 +01:00: “Pickup at six”", quote.text)
+        assertEquals("In reply to Alice’s message of 2026-03-10 09:00:00 +01:00: “Pickup at six”", quote.text)
         assertEquals(LineStyle.SMALL, quote.style)
         assertTrue(blocks[text - 2].text.contains("Bob"))
         assertEquals(1, blocks.count { it.text.startsWith("In reply to") })
