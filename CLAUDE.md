@@ -819,7 +819,14 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     - **The push names the sender and the dates**: `datesToYou`/`datesToSender` (ISO dates, from the
       addressee's side, bounded at 160 in `firestore.rules`) and `actorName` ride the existing swap
       types (`swapPush`, `SwapOfferer`); the receiving phone words "Lana offers you 2 days" through
-      `swapPushWording`, and an older sender's push keeps its old sentence.
+      `swapPushWording`, and an older sender's push keeps its old sentence. **Since 25 November 2026
+      an offer also carries `childNames`** (the children it moves by first name, one a line, ≤ 200
+      characters cut on a name boundary, bounded in `firestore.rules`; a child with a schedule of
+      their own is left out, item 33 of "Things that are easy to get wrong"): the receiving phone
+      then words "Lenička with you on …, with Pavel on …" under "{name} proposes a day swap", and
+      Home's pop-up and the inbox card lead with the same sentence (`domain/custody/SwapSentence`,
+      `SwapOfferSentence`, `ChangeRequestViewModel.swapChildNames`). Names are never declined in
+      cs, ru or uk; a blank or missing field words the push as before.
     - **An answer is one pair of buttons, or day by day on request**: the card and Home's dialog lead
       with the push's own heading (`swapOfferHeading`), draw the two sides and the note as a quote,
       "Accept swap"/"Accept", and "Answer day by day" (two waiting days or more) switches to

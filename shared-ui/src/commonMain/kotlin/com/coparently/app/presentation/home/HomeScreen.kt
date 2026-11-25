@@ -200,7 +200,9 @@ fun HomeScreen(
                         )
                     },
                     split = pendingSplit?.let { SplitAsk(it, agreedSplit) },
-                    swapMonths = swapMonths
+                    swapMonths = swapMonths,
+                    swapChildren = requests.ctx?.swapChildren,
+                    swapAnswerBy = requests.swapDeadlinesMillis()
                 )
                 // Opening the inbox from the Requests row deals with the requests as the pop-up's
                 // Review does: they count as seen, and only a new one asks again (new-user review).

@@ -7,6 +7,7 @@ import kotlinx.datetime.LocalDate
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * The push about a day swap (day swap design, 28 October 2026): an offer names its days each way,
@@ -33,6 +34,49 @@ class SwapPushTest {
         assertEquals("2026-11-06,2026-11-07", push[PushPayload.DATES_TO_YOU])
         assertEquals("2026-11-14", push[PushPayload.DATES_TO_SENDER])
         assertEquals("Lana", push[PushPayload.ACTOR])
+    }
+
+    @Test
+    fun `an offer names the children it moves one a line`() {
+        val push = swapPush(
+            "2026-11-13",
+            DayOverrideStatus.PENDING,
+            2,
+            sides = SwapSides(toOther = listOf(nov6), toOfferer = listOf(nov14)),
+            actorName = "Pavel",
+            childNames = listOf("Lenička", " Sašík ")
+        )!!
+        assertEquals("Lenička\nSašík", push[PushPayload.CHILD_NAMES])
+    }
+
+    @Test
+    fun `no child name adds no field and an answer never carries one`() {
+        val sides = SwapSides(toOther = listOf(nov6), toOfferer = emptyList())
+        val offer = swapPush("2026-11-06", DayOverrideStatus.PENDING, 1, sides = sides, childNames = listOf(" "))!!
+        assertFalse(PushPayload.CHILD_NAMES in offer)
+        val answer = swapPush(
+            "2026-11-06",
+            DayOverrideStatus.ACCEPTED,
+            1,
+            sides = sides,
+            childNames = listOf("Lenička")
+        )!!
+        assertFalse(PushPayload.CHILD_NAMES in answer)
+    }
+
+    @Test
+    fun `the children are cut to the rule's bound on a name boundary`() {
+        val names = List(30) { "Name$it" }
+        val push = swapPush(
+            "2026-11-06",
+            DayOverrideStatus.PENDING,
+            1,
+            sides = SwapSides(toOther = listOf(nov6), toOfferer = emptyList()),
+            childNames = names
+        )!!
+        val field = push.getValue(PushPayload.CHILD_NAMES)
+        assertTrue(field.length <= 200)
+        assertTrue(field.split('\n').all { it in names })
     }
 
     @Test

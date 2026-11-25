@@ -83,6 +83,16 @@ object PushPayload {
     const val DATES_TO_SENDER = "datesToSender"
 
     /**
+     * The children a day-swap offer moves, by first name, one a line (meeting of 25 November 2026,
+     * item 3): the family's children but one with a schedule of their own, in display order. Written
+     * by the offering phone on [DAY_SWAP_OFFERED] and [DAY_SWAP_GROUP_OFFERED] beside the dates, so
+     * the receiving phone words "Lenička with you on Fri, Nov 13"; absent when the family has no
+     * such child. A field, not a type, so an older build ignores it; `firestore.rules` bounds it at
+     * 200 characters, and the offering phone cuts it there on a name boundary.
+     */
+    const val CHILD_NAMES = "childNames"
+
+    /**
      * A request's deadline, as an instant: epoch millis in decimal text (phase 3a).
      *
      * Two uses. On the first push of a request that waits for an answer ([DAY_SWAP_OFFERED],

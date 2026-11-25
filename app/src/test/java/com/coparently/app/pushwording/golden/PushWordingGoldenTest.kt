@@ -8,6 +8,7 @@ import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.stickers.StickerKind
+import com.coparently.app.pushwording.PushText
 import com.coparently.app.pushwording.PushWording
 import com.coparently.app.testing.RobolectricTestApplication
 import com.coparently.app.utils.pushWording
@@ -146,6 +147,81 @@ class PushWordingGoldenTest {
             val unreadable = mapOf(PushPayload.ACTOR to "Lana", PushPayload.ANSWER_BY to "soon")
             assertEquals(null, push.compose(PushPayload.REQUEST_REMINDER, unreadable), "$label: unreadable deadline")
         }
+    }
+
+    @Test
+    fun aSwapOfferWithoutChildNamesIsWordedAsBefore() {
+        // `childNames` came after the move (meeting of 25 November 2026, item 3): an offer without
+        // the field — an older sender's, or one whose field holds no name — keeps the legacy text.
+        forEveryReader { context, label ->
+            val now = context.pushWording()
+            val before = LegacyPushText.PushNotifier(context)
+            for ((name, data) in pushCorpus().filter { it.second[PushPayload.TYPE] in OFFER_TYPES }) {
+                for (blank in listOf("", " ", "\n \n")) {
+                    val type = data[PushPayload.TYPE]
+                    assertEquals(
+                        before.compose(type, data),
+                        now.compose(type, data + (PushPayload.CHILD_NAMES to blank)),
+                        "$label: $name, childNames \"$blank\""
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
+    fun aSwapOfferWithChildNamesSaysWhoHasThemOnWhichDays() {
+        val offer = mapOf(
+            PushPayload.TYPE to PushPayload.DAY_SWAP_GROUP_OFFERED,
+            PushPayload.ACTOR to "Pavel",
+            PushPayload.DATE to "2026-11-13",
+            PushPayload.DAY_COUNT to "3",
+            PushPayload.DATES_TO_YOU to "2026-11-13,2026-11-14",
+            PushPayload.DATES_TO_SENDER to "2026-11-20",
+            PushPayload.CHILD_NAMES to "Lenička\nSašík"
+        )
+        val expected = mapOf(
+            "en" to PushText(
+                "Pavel proposes a day swap",
+                "Lenička and Sašík with you on Fri,\u00A0Nov\u00A013, Sat,\u00A0Nov\u00A014, " +
+                    "with Pavel on Fri,\u00A0Nov\u00A020."
+            ),
+            "cs" to PushText(
+                "Pavel navrhuje výměnu dnů",
+                "Lenička a Sašík u vás: pá\u00A013.\u00A011., so\u00A014.\u00A011.; Pavel má pá\u00A020.\u00A011."
+            ),
+            "de" to PushText(
+                "Pavel schlägt einen Tagetausch vor",
+                "Lenička und Sašík am Fr.,\u00A013.\u00A0Nov., Sa.,\u00A014.\u00A0Nov. bei dir, " +
+                    "am Fr.,\u00A020.\u00A0Nov. bei Pavel"
+            ),
+            "ru" to PushText(
+                "Pavel предлагает обмен днями",
+                "Lenička и Sašík у вас: пт,\u00A013\u00A0нояб., сб,\u00A014\u00A0нояб.; Pavel — пт,\u00A020\u00A0нояб."
+            ),
+            "uk" to PushText(
+                "Pavel пропонує обмін днями",
+                "Lenička і Sašík у вас: пт,\u00A013\u00A0лист., сб,\u00A014\u00A0лист.; Pavel — пт,\u00A020\u00A0лист."
+            )
+        )
+        // The days are the reader's own list, each held together by no-break spaces as on screen.
+        Settings.System.putString(app.contentResolver, Settings.System.TIME_12_24, "24")
+        for ((tag, text) in expected) {
+            assertEquals(text, inLanguage(tag).pushWording().compose(offer[PushPayload.TYPE], offer), tag)
+        }
+        val gives = offer - PushPayload.DATES_TO_SENDER + (PushPayload.CHILD_NAMES to "Lenička")
+        assertEquals(
+            PushText("Pavel proposes a day swap", "Lenička with you on Fri,\u00A0Nov\u00A013, Sat,\u00A0Nov\u00A014."),
+            inLanguage("en").pushWording().compose(PushPayload.DAY_SWAP_GROUP_OFFERED, gives)
+        )
+        val asks = offer - PushPayload.DATES_TO_YOU + (PushPayload.ANSWER_BY to DEADLINES.first().toString())
+        assertEquals(
+            PushText(
+                "Pavel proposes a day swap",
+                "Lenička and Sašík with Pavel on Fri,\u00A0Nov\u00A020. Answer by Tue,\u00A0Oct\u00A013,\u00A010:00."
+            ),
+            inLanguage("en").pushWording().compose(PushPayload.DAY_SWAP_GROUP_OFFERED, asks)
+        )
     }
 
     @Test
@@ -369,6 +445,9 @@ class PushWordingGoldenTest {
 
     private companion object {
         val LANGUAGES = listOf("en", "cs", "de", "ru", "uk")
+
+        /** The two pushes that open a day swap, which may name the children (`childNames`). */
+        val OFFER_TYPES = setOf(PushPayload.DAY_SWAP_OFFERED, PushPayload.DAY_SWAP_GROUP_OFFERED)
 
         /** The three pushes that count a run of swapped days. */
         val GROUP_TYPES = listOf(

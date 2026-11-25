@@ -56,6 +56,17 @@ internal class HomeRequests(
         val proposal = items.forMe.firstOrNull { it is InboxItem.Proposal } ?: return null
         return context.clockFor(proposal)?.let(::responderDeadlineMillis)
     }
+
+    /**
+     * By when each of the co-parent's day-swap offers waits for this parent's answer, by group key,
+     * for its pop-up; an offer with no clock, or no longer answered, is absent.
+     */
+    fun swapDeadlinesMillis(): Map<String, Long> {
+        val context = ctx ?: return emptyMap()
+        return items.forMe.filterIsInstance<InboxItem.Swap>().mapNotNull { swap ->
+            context.clockFor(swap)?.let(::responderDeadlineMillis)?.let { swap.group.key to it }
+        }.toMap()
+    }
 }
 
 /**
@@ -77,6 +88,7 @@ internal fun rememberHomeRequests(
     val state by viewModel.requests.collectAsState()
     val miniMonths by viewModel.miniMonths.collectAsState()
     val swapMonths by viewModel.swapMonths.collectAsState()
+    val swapChildren by viewModel.swapChildNames.collectAsState()
     val proposalDiff by viewModel.pendingProposalDiff.collectAsState()
     val proposalCitation by viewModel.pendingProposalCitation.collectAsState()
     val lastChanceInFlight by viewModel.lastChanceInFlight.collectAsState()
@@ -103,7 +115,8 @@ internal fun rememberHomeRequests(
             answers = answers,
             onDetails = { item -> detailsKey.value = item.key },
             onOpenAgreement = onOpenAgreement,
-            onWithdrawProfessional = { grantId -> confirmingGrantId.value = grantId }
+            onWithdrawProfessional = { grantId -> confirmingGrantId.value = grantId },
+            swapChildren = swapChildren
         )
     }
     return HomeRequests(items, ctx, detailsKey, confirmingGrantId, ready?.agreements?.professionals.orEmpty())
@@ -169,6 +182,8 @@ internal class HomeRequestsSection(
  * @property onDetails Opens the Details sheet over Home for an item.
  * @property onOpenAgreement Opens the screen a child support, professional or plan row names.
  * @property onWithdrawProfessional Asks before ending a professional's waiting access, as the inbox does.
+ * @property swapChildren The children a day swap moves, by first name, for an offer phrased by who
+ *   has them (meeting of 25 November 2026, item 3); null while not known.
  *
  * Public, not internal, so the app's screenshot tests can draw Home's cards with their own.
  */
@@ -187,7 +202,8 @@ class HomeRequestsContext(
     val answers: InboxAnswers,
     val onDetails: (InboxItem) -> Unit,
     val onOpenAgreement: (AgreementScreen) -> Unit,
-    val onWithdrawProfessional: (String) -> Unit
+    val onWithdrawProfessional: (String) -> Unit,
+    val swapChildren: List<String>? = null
 ) {
     /** The co-parent of the family on screen, by name. */
     val coParentName: String get() = parentNames.labelForUid(scope.coParentUid)

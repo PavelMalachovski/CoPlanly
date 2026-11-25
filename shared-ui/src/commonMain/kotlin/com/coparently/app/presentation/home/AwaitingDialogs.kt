@@ -20,6 +20,7 @@ import com.coparently.app.domain.custody.CustodyPatternDiff
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DaySwapGroup
+import com.coparently.app.domain.custody.SwapSides
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.CustodyModel
@@ -29,10 +30,14 @@ import com.coparently.app.presentation.changerequests.SchedulePreviewWithChanges
 import com.coparently.app.presentation.changerequests.SwapDayAnswers
 import com.coparently.app.presentation.changerequests.SwapMonths
 import com.coparently.app.presentation.changerequests.SwapNoteQuote
+import com.coparently.app.presentation.changerequests.SwapOfferDetails
+import com.coparently.app.presentation.changerequests.SwapOfferSentence
 import com.coparently.app.presentation.changerequests.SwapOfferSides
+import com.coparently.app.presentation.changerequests.SwapProposedByLine
 import com.coparently.app.presentation.changerequests.sidesAsked
 import com.coparently.app.presentation.changerequests.splitSharesText
 import com.coparently.app.presentation.changerequests.swapAcceptLabel
+import com.coparently.app.presentation.changerequests.swapHeadingNamesChildren
 import com.coparently.app.presentation.changerequests.swapOfferHeading
 import com.coparently.app.presentation.common.AnswerButtons
 import com.coparently.app.presentation.common.ParentNames
@@ -110,11 +115,17 @@ data class SplitAsk(
  * @property split The co-parent's proposed expense split, or null.
  * @property swapMonths Each waiting swap's months, by group key (21 October 2026); a swap with none
  *   yet is asked about without them.
+ * @property swapChildren The children a day swap moves, by first name, for an offer phrased by who
+ *   has them (meeting of 25 November 2026, item 3); null while not known.
+ * @property swapAnswerBy By when each waiting swap's answer is due, by group key; a swap with no
+ *   clock is absent.
  */
 data class HomeAsks(
     val proposal: ProposalAsk? = null,
     val split: SplitAsk? = null,
-    val swapMonths: Map<String, List<MiniMonthModel>> = emptyMap()
+    val swapMonths: Map<String, List<MiniMonthModel>> = emptyMap(),
+    val swapChildren: List<String>? = null,
+    val swapAnswerBy: Map<String, Long> = emptyMap()
 )
 
 /**
@@ -203,7 +214,11 @@ internal fun AwaitingDialogs(
         is HomeAsk.Swap ->
             SwapDialog(
                 ask.group,
-                asks.swapMonths[ask.group.key].orEmpty(),
+                SwapOfferDetails(
+                    months = asks.swapMonths[ask.group.key].orEmpty(),
+                    children = asks.swapChildren,
+                    answerByMillis = asks.swapAnswerBy[ask.group.key]
+                ),
                 parentNames,
                 onDismiss = { dismiss(ask.keys) },
                 actions = actions
@@ -358,12 +373,13 @@ private fun SplitDialog(
 
 /**
  * One day-swap offer, answered in place: whole, or day by day (21 October 2026), with the months
- * its days fall in, each day in the colour of whom it would go to.
+ * its days fall in, each day in the colour of whom it would go to. It leads with who has the
+ * children on which days (meeting of 25 November 2026, item 3), then who proposed it and by when.
  */
 @Composable
 private fun SwapDialog(
     swapGroup: DaySwapGroup,
-    months: List<MiniMonthModel>,
+    details: SwapOfferDetails,
     parentNames: ParentNames,
     onDismiss: () -> Unit,
     actions: AwaitingActions
@@ -385,9 +401,9 @@ private fun SwapDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(Spacing.M)
             ) {
-                Text(swapOfferHeading(sides, offerer), style = MaterialTheme.typography.bodyLargeEmphasized)
+                SwapAskLead(sides, offerer, details)
                 sides?.let { SwapOfferSides(it, offerer, parentNames) }
-                SwapMonths(months, parentNames)
+                SwapMonths(details.months, parentNames)
                 SwapNoteQuote(swapGroup.swaps.first().override.note, offerer)
                 if (byDay && myUid != null) {
                     SwapDayAnswers(
@@ -425,6 +441,20 @@ private fun SwapDialog(
             }
         }
     )
+}
+
+/**
+ * The top of a day-swap pop-up: who has the children on which days as its heading and sentence
+ * (meeting of 25 November 2026, item 3), then who proposed it and by when — or the push's own
+ * heading while the children are not known.
+ */
+@Composable
+private fun SwapAskLead(sides: SwapSides?, offerer: String, details: SwapOfferDetails) {
+    Text(swapOfferHeading(sides, offerer, details.children), style = MaterialTheme.typography.bodyLargeEmphasized)
+    SwapOfferSentence(sides, offerer, details.children)
+    if (swapHeadingNamesChildren(sides, details.children) || details.answerByMillis != null) {
+        SwapProposedByLine(offerer, details.answerByMillis)
+    }
 }
 
 /**

@@ -76,6 +76,9 @@ push_day_swap_asks_body
 push_day_swap_asks_title
 push_day_swap_both_body
 push_day_swap_both_title
+push_day_swap_child_asks
+push_day_swap_child_both
+push_day_swap_child_gives
 push_day_swap_declined_body
 push_day_swap_declined_title
 push_day_swap_gives_body
@@ -96,6 +99,7 @@ push_event_updated_title
 push_expense_added_body
 push_expense_added_body_share
 push_expense_added_title
+push_names_and
 push_pairing_accepted_body
 push_pairing_accepted_title
 push_pairing_removed_body

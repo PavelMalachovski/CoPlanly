@@ -85,6 +85,65 @@ class PushWordingTest {
     }
 
     @Test
+    fun aSwapOfferWithChildNamesSaysWhoHasTheChildOnWhichDays() {
+        val both = mapOf(
+            "actorName" to "Pavel",
+            "datesToYou" to "2026-11-14,2026-11-13",
+            "datesToSender" to "2026-11-20",
+            "childNames" to "Lenička\nSašík",
+            "answerBy" to "42"
+        )
+        assertEquals(
+            PushText(
+                "push_day_swap_both_title(Pavel)",
+                "push_day_swap_child_both(Lenička push_names_and Sašík|days:2026-11-13+2026-11-14|Pavel|" +
+                    "days:2026-11-20). push_answer_by(by:42)"
+            ),
+            wording.compose("day_swap_group_offered", both)
+        )
+        assertEquals(
+            PushText("push_day_swap_both_title(Pavel)", "push_day_swap_child_gives(Lenička|days:2026-11-13)"),
+            wording.compose(
+                "day_swap_offered",
+                mapOf("actorName" to "Pavel", "datesToYou" to "2026-11-13", "childNames" to " Lenička ")
+            )
+        )
+        assertEquals(
+            PushText("push_day_swap_both_title(Pavel)", "push_day_swap_child_asks(Lenička|Pavel|days:2026-11-20)"),
+            wording.compose(
+                "day_swap_offered",
+                mapOf("actorName" to "Pavel", "datesToSender" to "2026-11-20", "childNames" to "Lenička")
+            )
+        )
+    }
+
+    @Test
+    fun threeChildNamesAreJoinedAsOneList() {
+        val text = wording.compose(
+            "day_swap_offered",
+            mapOf("actorName" to "Pavel", "datesToYou" to "2026-11-13", "childNames" to "Ema\nLeo\nMax")
+        )
+        assertEquals("push_day_swap_child_gives(Ema, Leo push_names_and Max|days:2026-11-13)", text?.body)
+    }
+
+    @Test
+    fun aBlankChildNamesFieldIsNoField() {
+        val withoutField = mapOf("actorName" to "Lana", "datesToYou" to "2026-11-06")
+        val expected = wording.compose("day_swap_offered", withoutField)
+        assertEquals(expected, wording.compose("day_swap_offered", withoutField + ("childNames" to " \n ")))
+        assertEquals(expected, wording.compose("day_swap_offered", withoutField + ("childNames" to "")))
+    }
+
+    @Test
+    fun childNamesOnAnotherTypeChangeNothing() {
+        val accepted = mapOf("date" to "2026-11-06")
+        assertEquals(
+            wording.compose("day_swap_accepted", accepted),
+            wording.compose("day_swap_accepted", accepted + ("childNames" to "Lenička"))
+        )
+    }
+
+    @Test
     fun anExpenseWithoutAReadableAmountOrCurrencyComposesNothing() {
         val expense = mapOf("actorName" to "Lana", "subject" to "Shoes", "amount" to "12.5", "currency" to "EUR")
         assertEquals("push_expense_added_body(Lana|Shoes|12.5 EUR)", wording.compose("expense_added", expense)?.body)

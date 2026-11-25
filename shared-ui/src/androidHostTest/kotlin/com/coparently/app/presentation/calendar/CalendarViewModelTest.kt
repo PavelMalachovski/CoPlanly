@@ -9,7 +9,9 @@ import com.coparently.app.domain.changerequests.AnswerByPreset
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.model.User
+import com.coparently.app.presentation.common.FamilyMembersSource
 import com.coparently.app.presentation.common.ParentsSource
+import com.coparently.app.presentation.common.testFamilyMembersSource
 import com.coparently.app.presentation.common.testParentsSource
 import io.mockk.Runs
 import io.mockk.clearAllMocks
@@ -81,6 +83,7 @@ class CalendarViewModelTest {
             every { getActiveModel() } returns flowOf(null)
             every { observeShared() } returns flowOf(null)
             every { observeDayOverrides() } returns flowOf(emptyMap())
+            coEvery { getActiveModelSync() } returns null
         }
         encryptedPreferences = mockk {
             every { getString(any(), any()) } returns null
@@ -92,13 +95,17 @@ class CalendarViewModelTest {
         viewModel = calendarViewModel(testParentsSource())
     }
 
-    private fun calendarViewModel(parentsSource: ParentsSource) = CalendarViewModel(
+    private fun calendarViewModel(
+        parentsSource: ParentsSource,
+        familyMembersSource: FamilyMembersSource = testFamilyMembersSource()
+    ) = CalendarViewModel(
         custodyScheduleDao = custodyScheduleDao,
         custodyModelRepository = custodyModelRepository,
         encryptedPreferences = encryptedPreferences,
         friendRepository = noCalendarFriends(),
         parentsSource = parentsSource,
-        userRepository = noSignedInUser()
+        userRepository = noSignedInUser(),
+        familyMembersSource = familyMembersSource
     )
 
     @After
@@ -184,6 +191,24 @@ class CalendarViewModelTest {
         assertNotNull(signedIn.swapSent.value?.groupId)
         signedIn.clearSwapSent()
         assertNull(signedIn.swapSent.value)
+    }
+
+    @Test
+    fun `an offer names the family's children by first name for the push`() = runTest {
+        val offerer = slot<SwapOfferer>()
+        coEvery { custodyModelRepository.applyDayOverrides(any(), any(), any(), capture(offerer)) } returns
+            Result.success(emptyMap())
+        val signedIn = calendarViewModel(
+            testParentsSource(me = alice),
+            testFamilyMembersSource(childNames = listOf("Lenička Nováková", "Sašík"), petNames = listOf("Rex"))
+        )
+        backgroundScope.launch { signedIn.parents.collect {} }
+        signedIn.parents.first { it.me != null }
+
+        signedIn.offerDaySwap(swapDay(20), toParent = "dad")
+        advanceUntilIdle()
+
+        assertEquals(listOf("Lenička", "Sašík"), offerer.captured.childNames)
     }
 
     @Test

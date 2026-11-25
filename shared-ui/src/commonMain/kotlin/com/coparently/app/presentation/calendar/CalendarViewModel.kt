@@ -18,6 +18,7 @@ import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideTransition
 import com.coparently.app.domain.custody.SharedCustody
+import com.coparently.app.domain.custody.swapChildren
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.friends.CalendarFriendGrant
 import com.coparently.app.domain.holidays.HolidayLocation
@@ -26,6 +27,7 @@ import com.coparently.app.domain.repository.FriendRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.time.IsoText
 import com.coparently.app.domain.time.wallClockNow
+import com.coparently.app.presentation.common.FamilyMembersSource
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -96,6 +98,15 @@ sealed interface SwapError {
 private fun today(): LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefault())
 
 /**
+ * The children an offer moves, by first name, for its push (meeting of 25 November 2026, item 3):
+ * the family on screen's children but one with a schedule of their own ([swapChildren]). One Room
+ * read at the moment of the offer, never a shared stream's `.value` (CLAUDE.md item 17). With none,
+ * the push is worded as it always was.
+ */
+private suspend fun swapChildNames(members: FamilyMembersSource, custody: CustodyModelRepository): List<String> =
+    swapChildren(members.observeChildren().first(), custody.getActiveModelSync()?.childOverrides.orEmpty())
+
+/**
  * ViewModel for calendar screen.
  * Handles custody schedule data, custody model, view mode,
  * parent filtering (You / Both / Co-parent) and event type filters.
@@ -106,13 +117,17 @@ private fun today(): LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefa
  * preference store ([SecurePreferences], which on Android is the app's `EncryptedPreferences`),
  * under the same keys.
  */
+// The calendar's own sources, and the children a swap offer names in its push (meeting of 25
+// November 2026); a second ViewModel for one Room read would split the swap's offer in two.
+@Suppress("LongParameterList")
 class CalendarViewModel(
     private val custodyScheduleDao: CustodyScheduleDao,
     private val custodyModelRepository: CustodyModelRepository,
     private val encryptedPreferences: SecurePreferences,
     friendRepository: FriendRepository,
     parentsSource: ParentsSource,
-    userRepository: UserRepository
+    userRepository: UserRepository,
+    private val familyMembersSource: FamilyMembersSource
 ) : ViewModel() {
 
     /**
@@ -394,7 +409,7 @@ class CalendarViewModel(
                     )
                 },
                 answerBy = answerBy,
-                offerer = SwapOfferer(me.slot, me.name)
+                offerer = SwapOfferer(me.slot, me.name, swapChildNames(familyMembersSource, custodyModelRepository))
             ).onSuccess { _swapSent.value = SwapSent(groupId, 1) }.onFailure { _swapError.value = SwapError.Refused }
         }
     }
@@ -452,7 +467,7 @@ class CalendarViewModel(
                     )
                 },
                 answerBy = answerBy,
-                offerer = SwapOfferer(me.slot, me.name)
+                offerer = SwapOfferer(me.slot, me.name, swapChildNames(familyMembersSource, custodyModelRepository))
             ).onSuccess { _swapSent.value = SwapSent(groupId, targets.size) }.onFailure { cause ->
                 _swapError.value = if (cause is PartialSwapRun) {
                     SwapError.Partial(cause.written, cause.total)

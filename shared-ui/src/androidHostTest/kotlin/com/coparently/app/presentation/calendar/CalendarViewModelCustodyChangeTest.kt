@@ -13,6 +13,7 @@ import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.NamedParent
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
+import com.coparently.app.presentation.common.testFamilyMembersSource
 import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.every
@@ -115,7 +116,8 @@ class CalendarViewModelCustodyChangeTest {
             encryptedPreferences = encryptedPreferences,
             friendRepository = noCalendarFriends(),
             parentsSource = parentsSource,
-            userRepository = userRepository
+            userRepository = userRepository,
+            familyMembersSource = testFamilyMembersSource()
         )
         backgroundScope.launch { viewModel.custodyChangeAnnouncement.collect {} }
         return viewModel
@@ -142,7 +144,8 @@ class CalendarViewModelCustodyChangeTest {
             encryptedPreferences = encryptedPreferences,
             friendRepository = noCalendarFriends(),
             parentsSource = parentsSource,
-            userRepository = noSignedInUser()
+            userRepository = noSignedInUser(),
+            familyMembersSource = testFamilyMembersSource()
         )
         backgroundScope.launch { viewModel.custodyChangeAnnouncement.collect {} }
         return viewModel

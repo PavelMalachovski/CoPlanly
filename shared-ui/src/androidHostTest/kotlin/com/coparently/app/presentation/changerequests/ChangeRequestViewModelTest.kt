@@ -10,6 +10,7 @@ import com.coparently.app.domain.changerequests.FamilyAgreements
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.changerequests.RequestKind
+import com.coparently.app.domain.custody.ChildScheduleOverride
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideStatus
@@ -32,8 +33,10 @@ import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.usecase.EventUseCases
 import com.coparently.app.domain.usecase.UpdateEventUseCase
+import com.coparently.app.presentation.common.FamilyMembersSource
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.presentation.common.testFamilyMembersSource
 import com.coparently.app.presentation.common.testParentsSource
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
 import com.coparently.app.resources.Res
@@ -163,7 +166,10 @@ class ChangeRequestViewModelTest {
         createdAt = LocalDateTime.of(2026, 9, 2, 9, 0).toKotlinLocalDateTime()
     )
 
-    private fun viewModel(parents: ParentsSource = testParentsSource()) = ChangeRequestViewModel(
+    private fun viewModel(
+        parents: ParentsSource = testParentsSource(),
+        members: FamilyMembersSource = testFamilyMembersSource()
+    ) = ChangeRequestViewModel(
         changeRequestRepository = changeRequestRepository,
         eventRepository = eventRepository,
         eventUseCases = EventUseCases(
@@ -188,7 +194,8 @@ class ChangeRequestViewModelTest {
             familyAgreementsSource = agreementsSource
         ),
         familySettingsRepository = familySettingsRepository,
-        agreementWithdrawals = mockk(relaxed = true)
+        agreementWithdrawals = mockk(relaxed = true),
+        familyMembersSource = members
     )
 
     /** The split document of the family Olya shares with Pavel, agreed half each, with [by]'s 35/65 proposal. */
@@ -391,6 +398,31 @@ class ChangeRequestViewModelTest {
 
         // Every day of October 2026's grid, Monday 28 September to Sunday 1 November.
         assertEquals(35, months.getValue("e-waiting").custody.size)
+    }
+
+    @Test
+    fun `a swap names the family's children but one with a schedule of their own`() = runTest(dispatcher) {
+        val model = CustodyModel.weekOnWeekOff(id = "m1", startDate = LocalDate(2026, 9, 7)).copy(
+            childOverrides = listOf(
+                ChildScheduleOverride(
+                    childId = "c-Sasha",
+                    patternDays = 7,
+                    momDayIndices = setOf(0),
+                    startDate = LocalDate(2026, 9, 7)
+                )
+            )
+        )
+        every { custodyModelRepository.observeSharedOf("u1__u2") } returns
+            flowOf(SharedCustody(model = model, lastModifiedBy = "u2", lastModifiedAtMillis = 1L, createdAt = ""))
+        val vm = viewModel(members = testFamilyMembersSource(childNames = listOf("Lenička Nováková", "Sasha", "Ema")))
+        backgroundScope.launch { vm.swapChildNames.collect {} }
+        advanceUntilIdle()
+        assertNull(vm.swapChildNames.value)
+
+        requests.emit(emptyList())
+        advanceUntilIdle()
+
+        assertEquals(listOf("Lenička", "Ema"), vm.swapChildNames.value)
     }
 
     private fun sharedWithProposal(by: String, citation: String?): SharedCustody {

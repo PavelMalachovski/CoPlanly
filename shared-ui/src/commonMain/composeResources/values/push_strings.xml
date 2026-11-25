@@ -117,6 +117,15 @@
     <string name="push_day_swap_asks_body">To %2$s: %1$s.</string>
     <string name="push_day_swap_both_title">%1$s proposes a day swap</string>
     <string name="push_day_swap_both_body">You: %1$s. %2$s: %3$s.</string>
+    <!-- A swap offer that names the children (meeting of 25 November 2026, item 3): %1$s = the
+         children's first names, never declined; the days are the reader's own list. The title is
+         push_day_swap_both_title for every shape. Both: %2$s = days to you, %3$s = the sender,
+         %4$s = days to the sender; asks: %2$s = the sender, %3$s = their days. -->
+    <string name="push_day_swap_child_both">%1$s with you on %2$s, with %3$s on %4$s.</string>
+    <string name="push_day_swap_child_gives">%1$s with you on %2$s.</string>
+    <string name="push_day_swap_child_asks">%1$s with %2$s on %3$s.</string>
+    <!-- The word between the last two children's names in a push ("Ema, Leo and Max"). -->
+    <string name="push_names_and">and</string>
     <!-- The server's request clock (MON-25), to the proposer: %1$s = the parent who did not answer. -->
     <string name="push_request_deadline_passed_title">%1$s didn\u0027t answer by the deadline</string>
     <string name="push_request_deadline_passed_body">Nothing has changed in the calendar. You can give more time.</string>

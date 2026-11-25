@@ -1658,6 +1658,12 @@ words, English and German). What is left is the gesture on glass and a real push
       "{name} offers you 2 days" with the dates; asking for one reads "{name} asks for 1 of your days";
       both ways reads "{name} proposes a day swap — You: … {name}: …". A co-parent on an older build
       still gets "Your co-parent proposes swapping …".
+- [ ] **The push names the children** (2P, meeting of 25 November 2026). In a family with children,
+      the offer's push reads "{name} proposes a day swap" over "Lenička with you on …, with {name}
+      on …" (CS "Lenička u vás: …; {name} má …", names never declined), a child with a schedule of
+      their own left out; Home's pop-up and the inbox card lead with "Lenička with you on …?" and the
+      same sentence, then "{name} proposes this swap · answer by …". An offer from an older build
+      still reads as above.
 - [ ] **Answering** (2P). The card and Home's pop-up say who offers which way, quote the note, and
       answer with **Decline** / **Accept swap**; **Answer day by day** shows Yes/No per day; send one
       day only: the card then shows only the days still waiting.
@@ -1667,7 +1673,8 @@ words, English and German). What is left is the gesture on glass and a real push
   `SwapSelectionChrome.kt`, `components/DaySwapSelectionBar.kt`, `components/DaySwapSheet.kt`,
   `components/SwapDayChips.kt`, `changerequests/DaySwapCard.kt`, `changerequests/SwapOfferContent.kt`,
   `changerequests/SwapDayAnswers.kt`, `home/AwaitingDialogs.kt`, `data/repository/SwapPush.kt`,
-  `:push-wording`'s `SwapPushWording.kt`, `firestore.rules` (`datesToYou`, `datesToSender`).
+  `:push-wording`'s `SwapPushWording.kt` and `PushWording.kt` (`childNames`), `shared`'s
+  `domain/custody/SwapSentence.kt`, `firestore.rules` (`datesToYou`, `datesToSender`, `childNames`).
 
 ---
 

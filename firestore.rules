@@ -2438,6 +2438,11 @@ service cloud.firestore {
                       // words in its own language. Bounded like every key a client writes.
                       isValidLength(request.resource.data.get('data', {}).get('datesToYou', ''), 0, 160) &&
                       isValidLength(request.resource.data.get('data', {}).get('datesToSender', ''), 0, 160) &&
+                      // The children a swap offer moves, by first name, one a line (meeting of 25
+                      // November 2026), which the receiving phone words as who has them on which
+                      // days. The offering phone cuts it at 200 on a name boundary. Bounded like
+                      // every key a client writes.
+                      isValidLength(request.resource.data.get('data', {}).get('childNames', ''), 0, 200) &&
                       // A request's deadline, as epoch millis in decimal text (13 characters
                       // today) - the day-swap, change-request, custody-proposal and split-proposal
                       // pushes carry it so their first notification can say when to answer by, and

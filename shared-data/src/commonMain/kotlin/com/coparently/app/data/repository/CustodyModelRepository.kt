@@ -1338,11 +1338,15 @@ constructor(
             announcement = swapAnnouncement(dates.first(), entry.status),
             partnerUid = pair.partnerUid()
         )
-        notifyPartnerOfSwap(
-            pair,
-            swapPush(dates.first(), entry.status, dates.size, offer?.sides, offer?.name),
-            answerByMillis
+        val push = swapPush(
+            date = dates.first(),
+            status = entry.status,
+            dayCount = dates.size,
+            sides = offer?.sides,
+            actorName = offer?.name,
+            childNames = offer?.childNames.orEmpty()
         )
+        notifyPartnerOfSwap(pair, push, answerByMillis)
     }
 
     /**

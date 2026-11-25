@@ -19,6 +19,7 @@ import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideTransition
 import com.coparently.app.domain.custody.DaySwapGroup
+import com.coparently.app.domain.custody.swapChildren
 import com.coparently.app.domain.events.EventAcceptanceTransition
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.SplitRatioProposal
@@ -34,6 +35,7 @@ import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.domain.usecase.EventUseCases
 import com.coparently.app.presentation.calendar.MiniMonthModel
 import com.coparently.app.presentation.calendar.swapMiniMonths
+import com.coparently.app.presentation.common.FamilyMembersSource
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
@@ -115,7 +117,8 @@ class ChangeRequestViewModel(
     private val requestClockActions: RequestClockActions,
     private val requestsSource: RequestsSource,
     private val familySettingsRepository: FamilySettingsRepository,
-    private val agreementWithdrawals: AgreementWithdrawals
+    private val agreementWithdrawals: AgreementWithdrawals,
+    private val familyMembersSource: FamilyMembersSource
 ) : ViewModel() {
 
     /**
@@ -201,6 +204,24 @@ class ChangeRequestViewModel(
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
+    /**
+     * The children a day swap of the family on screen moves, by first name and in display order
+     * (meeting of 25 November 2026, item 3): its children but one with a schedule of their own,
+     * which a swap does not move ([swapChildren], CLAUDE.md item 33). What Home's swap pop-up, its
+     * Requests block and the inbox's swap card name in "Lenička with you on Fri 13?".
+     *
+     * Null until the family's requests have loaded, so a screen never words a sentence from a
+     * custody document it has not read: it says what it said before until this answers. The
+     * children are Room's ([FamilyMembersSource]), the overrides the family's own custody document
+     * the inbox already reads ([RequestsState.Ready.custody]) — no listener of its own.
+     */
+    val swapChildNames: StateFlow<List<String>?> =
+        combine(familyMembersSource.observeChildren(), requests) { kids, state ->
+            (state as? RequestsState.Ready)?.let { swapChildren(kids, it.custody?.model?.childOverrides.orEmpty()) }
+        }
+            .distinctUntilChanged()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     init {
         viewModelScope.launch {
@@ -425,7 +446,14 @@ class ChangeRequestViewModel(
             }
             // Who is asking, so the push names them and each day's way (day swap design). The name
             // only words a sentence the other phone falls back on, so the rendered stream will do.
-            val offerer = parentsSource.signedInSlot()?.let { SwapOfferer(it, parents.value.me?.name.orEmpty()) }
+            val offerer = parentsSource.signedInSlot()?.let { slot ->
+                // The children it moves, read once from Room for the push (meeting of 25 November 2026).
+                val children = swapChildren(
+                    familyMembersSource.observeChildren().first(),
+                    custodyModelRepository.getActiveModelSync()?.childOverrides.orEmpty()
+                )
+                SwapOfferer(slot, parents.value.me?.name.orEmpty(), children)
+            }
             val result = if (days.size == 1) {
                 // One day keeps the single write and single card an older co-parent build reads,
                 // as the calendar's sheet does.

@@ -6,6 +6,7 @@ import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.custody.DaySwap
 import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.custody.SwapSides
+import com.coparently.app.domain.custody.swapChildNamesField
 import com.coparently.app.domain.time.IsoText
 
 /**
@@ -14,8 +15,11 @@ import com.coparently.app.domain.time.IsoText
  *
  * @property slot Their own parent slot, which decides which way each day goes.
  * @property name Their display name, for the push's sentence on the other phone.
+ * @property childNames The children the swap moves, by first name, in display order
+ *   (`swapChildren`; meeting of 25 November 2026, item 3), for the push's sentence on the other
+ *   phone; empty adds nothing.
  */
-data class SwapOfferer(val slot: String, val name: String) {
+data class SwapOfferer(val slot: String, val name: String, val childNames: List<String> = emptyList()) {
     /** The days of [map] named by [dates], split by which way each goes. */
     internal fun sidesOf(map: Map<String, DayOverride>?, dates: List<String>): SwapOffer {
         val swaps = dates.mapNotNull { iso ->
@@ -23,12 +27,12 @@ data class SwapOfferer(val slot: String, val name: String) {
             val entry = map?.get(iso)
             if (day != null && entry != null) DaySwap(day, entry) else null
         }
-        return SwapOffer(SwapSides.ofOffer(DaySwapGroup(swaps), slot), name)
+        return SwapOffer(SwapSides.ofOffer(DaySwapGroup(swaps), slot), name, childNames)
     }
 }
 
-/** An offer's days each way and its sender's name, for [swapPush]. */
-internal data class SwapOffer(val sides: SwapSides, val name: String)
+/** An offer's days each way, its sender's name and the children it moves, for [swapPush]. */
+internal data class SwapOffer(val sides: SwapSides, val name: String, val childNames: List<String> = emptyList())
 
 /**
  * The push about a swap of [date]: its type and its date, and for a run of [dayCount] days the
@@ -43,14 +47,23 @@ internal data class SwapOffer(val sides: SwapSides, val name: String)
  *
  * @param sides Which way each offered day goes, from the offerer's side; null when the caller does
  *   not know (an answer, or an older call site), and then no dates are added.
+ * An offer with its days also names the children it moves ([PushPayload.CHILD_NAMES], meeting of
+ * 25 November 2026), so the other phone says who has the child on which days; an answer never does.
+ *
  * @param actorName Who performed the write, cut to the rule's bound; blank adds nothing.
+ * @param childNames The children the offer moves, by first name; cut to the rule's bound on a name
+ *   boundary ([swapChildNamesField]), and nothing added when none is left.
  */
+// A push's fields, each optional and each named by its caller; a holder type for the last three
+// would only move the list.
+@Suppress("LongParameterList")
 internal fun swapPush(
     date: String,
     status: DayOverrideStatus,
     dayCount: Int,
     sides: SwapSides? = null,
-    actorName: String? = null
+    actorName: String? = null,
+    childNames: List<String> = emptyList()
 ): Map<String, String>? {
     val action = when (status) {
         DayOverrideStatus.PENDING -> "offered"
@@ -81,6 +94,7 @@ internal fun swapPush(
         if (sides.toOfferer.isNotEmpty()) {
             push[PushPayload.DATES_TO_SENDER] = sides.toOfferer.joinToString(",", transform = IsoText::date)
         }
+        swapChildNamesField(childNames)?.let { push[PushPayload.CHILD_NAMES] = it }
     }
     actorName?.takeIf { it.isNotBlank() }?.let { push[PushPayload.ACTOR] = it.take(ACTOR_MAX_LENGTH) }
     return push

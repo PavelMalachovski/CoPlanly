@@ -115,4 +115,32 @@
         <item quantity="other">Swap %1$d days with %2$s</item>
     </plurals>
     <string name="day_swap_add_note">Add a note</string>
+    <!-- A swap offer phrased by who has the children on which days (meeting of 25 November 2026,
+         item 3). Names are never declined: every name stays as written. The sentences are keyed on
+         the number of children, %1$s = their first names joined. Both: %2$s = days to you,
+         %3$s = the sender, %4$s = days to the sender. Gives: %2$s = days to you. Asks: %2$s = the
+         sender, %3$s = their days. With no children: both %1$s = days to you, %2$s = the sender,
+         %3$s = days to the sender; gives %1$s = days to you; asks %1$s = the sender, %2$s = days. -->
+    <plurals name="day_swap_sentence_both">
+        <item quantity="one">%1$s will be with you on %2$s and with %3$s on %4$s</item>
+        <item quantity="other">%1$s will be with you on %2$s and with %3$s on %4$s</item>
+    </plurals>
+    <plurals name="day_swap_sentence_gives">
+        <item quantity="one">%1$s will be with you on %2$s</item>
+        <item quantity="other">%1$s will be with you on %2$s</item>
+    </plurals>
+    <plurals name="day_swap_sentence_asks">
+        <item quantity="one">%1$s will be with %2$s on %3$s</item>
+        <item quantity="other">%1$s will be with %2$s on %3$s</item>
+    </plurals>
+    <string name="day_swap_sentence_days_both">%1$s will be with you and %3$s with %2$s</string>
+    <string name="day_swap_sentence_days_gives">%1$s will be with you</string>
+    <string name="day_swap_sentence_days_asks">%2$s will be with %1$s</string>
+    <!-- The offer's heading when it names the children: %1$s = their names, %2$s = the days to
+         you; asks: %2$s = the sender, %3$s = their days. -->
+    <string name="day_swap_heading_child">%1$s with you on %2$s?</string>
+    <string name="day_swap_heading_child_asks">%1$s with %2$s on %3$s?</string>
+    <!-- Under the sentence: %1$s = the sender, %2$s = when the answer is due. -->
+    <string name="day_swap_proposed_by">%1$s proposes this swap</string>
+    <string name="day_swap_proposed_by_answer_by">%1$s proposes this swap\u00A0· answer by %2$s</string>
 </resources>
