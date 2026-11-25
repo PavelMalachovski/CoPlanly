@@ -1,5 +1,7 @@
 package com.coparently.app.presentation.calendar
 
+import com.coparently.app.data.family.familyRow
+import com.coparently.app.data.family.testFamilyViewSource
 import com.coparently.app.data.local.dao.CustodyScheduleDao
 import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.repository.CustodyModelRepository
@@ -8,8 +10,14 @@ import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.AnswerByPreset
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideStatus
+import com.coparently.app.domain.family.FamilyKey
+import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.User
+import com.coparently.app.presentation.changerequests.SwapChildrenSource
+import com.coparently.app.presentation.changerequests.testSwapChildrenSource
 import com.coparently.app.presentation.common.ParentsSource
+import com.coparently.app.presentation.common.testFamilyMembersSource
+import com.coparently.app.presentation.common.testFamilyMembersSourceOf
 import com.coparently.app.presentation.common.testParentsSource
 import io.mockk.Runs
 import io.mockk.clearAllMocks
@@ -21,6 +29,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -81,6 +90,7 @@ class CalendarViewModelTest {
             every { getActiveModel() } returns flowOf(null)
             every { observeShared() } returns flowOf(null)
             every { observeDayOverrides() } returns flowOf(emptyMap())
+            coEvery { getActiveModelSync() } returns null
         }
         encryptedPreferences = mockk {
             every { getString(any(), any()) } returns null
@@ -92,13 +102,17 @@ class CalendarViewModelTest {
         viewModel = calendarViewModel(testParentsSource())
     }
 
-    private fun calendarViewModel(parentsSource: ParentsSource) = CalendarViewModel(
+    private fun calendarViewModel(
+        parentsSource: ParentsSource,
+        swapChildren: SwapChildrenSource = testSwapChildrenSource()
+    ) = CalendarViewModel(
         custodyScheduleDao = custodyScheduleDao,
         custodyModelRepository = custodyModelRepository,
         encryptedPreferences = encryptedPreferences,
         friendRepository = noCalendarFriends(),
         parentsSource = parentsSource,
-        userRepository = noSignedInUser()
+        userRepository = noSignedInUser(),
+        swapChildrenSource = swapChildren
     )
 
     @After
@@ -184,6 +198,66 @@ class CalendarViewModelTest {
         assertNotNull(signedIn.swapSent.value?.groupId)
         signedIn.clearSwapSent()
         assertNull(signedIn.swapSent.value)
+    }
+
+    @Test
+    fun `an offer names the family's children by first name for the push`() = runTest {
+        val offerer = slot<SwapOfferer>()
+        coEvery { custodyModelRepository.applyDayOverrides(any(), any(), any(), capture(offerer)) } returns
+            Result.success(emptyMap())
+        val signedIn = calendarViewModel(
+            testParentsSource(me = alice),
+            testSwapChildrenSource(
+                testFamilyMembersSource(childNames = listOf("Lenička Nováková", "Sašík"), petNames = listOf("Rex"))
+            )
+        )
+        backgroundScope.launch { signedIn.parents.collect {} }
+        signedIn.parents.first { it.me != null }
+
+        signedIn.offerDaySwap(swapDay(20), toParent = "dad")
+        advanceUntilIdle()
+
+        assertEquals(listOf("Lenička", "Sašík"), offerer.captured.childNames)
+    }
+
+    @Test
+    fun `an offer from a parent of two families never names a child placed only me`() = runTest {
+        val offerer = slot<SwapOfferer>()
+        coEvery { custodyModelRepository.applyDayOverrides(any(), any(), any(), capture(offerer)) } returns
+            Result.success(emptyMap())
+        val withBob = FamilyKey.of("alice", "bob")
+        val at = kotlinx.datetime.LocalDateTime(2026, 1, 1, 9, 0)
+        fun child(id: String, name: String, familyId: String?) = ChildInfo(
+            id = id,
+            childName = name,
+            dateOfBirth = null,
+            createdAt = at,
+            updatedAt = at,
+            createdByFirebaseUid = "alice",
+            familyId = familyId
+        )
+        val children = listOf(
+            child("a", "Lenička", withBob),
+            child("b", "Sasha", null),
+            child("c", "Ema", FamilyKey.of("alice", "carol"))
+        )
+        val signedIn = calendarViewModel(
+            testParentsSource(me = alice),
+            testSwapChildrenSource(
+                members = testFamilyMembersSourceOf(children),
+                views = testFamilyViewSource(
+                    "alice",
+                    MutableStateFlow(familyRow("alice", onScreen = "bob", partners = listOf("bob", "carol")))
+                )
+            )
+        )
+        backgroundScope.launch { signedIn.parents.collect {} }
+        signedIn.parents.first { it.me != null }
+
+        signedIn.offerDaySwap(swapDay(20), toParent = "dad")
+        advanceUntilIdle()
+
+        assertEquals(listOf("Lenička"), offerer.captured.childNames)
     }
 
     @Test

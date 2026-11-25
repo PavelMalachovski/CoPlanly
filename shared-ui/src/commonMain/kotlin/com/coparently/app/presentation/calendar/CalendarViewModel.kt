@@ -26,6 +26,7 @@ import com.coparently.app.domain.repository.FriendRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.time.IsoText
 import com.coparently.app.domain.time.wallClockNow
+import com.coparently.app.presentation.changerequests.SwapChildrenSource
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -106,13 +107,17 @@ private fun today(): LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefa
  * preference store ([SecurePreferences], which on Android is the app's `EncryptedPreferences`),
  * under the same keys.
  */
+// The calendar's own sources, and the children a swap offer names in its push (meeting of 25
+// November 2026); a second ViewModel for one Room read would split the swap's offer in two.
+@Suppress("LongParameterList")
 class CalendarViewModel(
     private val custodyScheduleDao: CustodyScheduleDao,
     private val custodyModelRepository: CustodyModelRepository,
     private val encryptedPreferences: SecurePreferences,
     friendRepository: FriendRepository,
     parentsSource: ParentsSource,
-    userRepository: UserRepository
+    userRepository: UserRepository,
+    private val swapChildrenSource: SwapChildrenSource
 ) : ViewModel() {
 
     /**
@@ -394,7 +399,7 @@ class CalendarViewModel(
                     )
                 },
                 answerBy = answerBy,
-                offerer = SwapOfferer(me.slot, me.name)
+                offerer = SwapOfferer(me.slot, me.name, swapChildrenSource.now())
             ).onSuccess { _swapSent.value = SwapSent(groupId, 1) }.onFailure { _swapError.value = SwapError.Refused }
         }
     }
@@ -452,7 +457,7 @@ class CalendarViewModel(
                     )
                 },
                 answerBy = answerBy,
-                offerer = SwapOfferer(me.slot, me.name)
+                offerer = SwapOfferer(me.slot, me.name, swapChildrenSource.now())
             ).onSuccess { _swapSent.value = SwapSent(groupId, targets.size) }.onFailure { cause ->
                 _swapError.value = if (cause is PartialSwapRun) {
                     SwapError.Partial(cause.written, cause.total)

@@ -51,10 +51,13 @@
     <string name="request_history_custody">Новий графік проживання</string>
     <string name="request_history_split">Поділ витрат</string>
     <!-- Noun phrases and "ви", not "X відповів(ла)": a name cannot agree with a gendered verb. -->
-    <string name="request_history_yours_answered">Ваш запит\u00A0· відповідь: %1$s</string>
-    <string name="request_history_theirs_answered">Запит: %1$s\u00A0· ви відповіли</string>
-    <string name="request_history_withdrawn_by_you">Ви відкликали запит</string>
-    <string name="request_history_withdrawn_by">%1$s: запит відкликано</string>
+    <string name="request_history_yours_answered">відповідь: %1$s</string>
+    <string name="request_history_theirs_answered">ви відповіли</string>
+    <string name="request_history_your_request">Ваш запит</string>
+    <string name="request_history_their_request">Запит: %1$s</string>
+    <string name="request_history_legend_you">ви</string>
+    <string name="request_history_withdrawn_by_you">відкликано</string>
+    <string name="request_history_withdrawn_by">відкликано: %1$s</string>
     <string name="request_history_when">%1$s\u00A0· %2$s</string>
     <string name="request_history_propose_change">Запропонувати зміну</string>
     <string name="request_history_propose_change_description">Запропонувати зміну цього погодженого обміну</string>

@@ -386,9 +386,10 @@ stays there.</p>
 <ul>
 <li><strong>A push notification token</strong>, so we can notify you about changes your co-parent makes. A
 notification names who made the change and what it is about (an event&#39;s title, say); one about
-a new shared expense also carries its amount and your share of it, and one about a new chat
-message carries the first 120 characters of that message, which Google&#39;s Firebase Cloud
-Messaging delivers to the phone. We keep one token per account: the phone you used last receives
+a new shared expense also carries its amount and your share of it, one offering a day swap also
+carries the first names of the children the swap moves, so your phone can say who would be with
+whom on which days, and one about a new chat message carries the first 120 characters of that
+message, which Google&#39;s Firebase Cloud Messaging delivers to the phone. We keep one token per account: the phone you used last receives
 your notifications. The token is deleted when you switch notifications off, sign out or delete
 your account. <strong>On an iPhone</strong>, Firebase Cloud Messaging hands each notification to <strong>Apple&#39;s
 push notification service</strong>, which delivers it, and it travels with a fixed text of ours, &quot;You
@@ -639,7 +640,7 @@ the phone erases them.</p>
 </tr>
 <tr>
 <td>Apple (Apple Push Notification service), <strong>our processor</strong>, if you use an iPhone</td>
-<td>Your iPhone&#39;s push token and each notification sent to it, with the facts it carries (who, what, a title, an amount, the start of a message)</td>
+<td>Your iPhone&#39;s push token and each notification sent to it, with the facts it carries (who, what, a title, an amount, a child&#39;s first name, the start of a message)</td>
 <td>Delivering notifications to an iPhone, which only Apple&#39;s service can do</td>
 </tr>
 </tbody></table></div>

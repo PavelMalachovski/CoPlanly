@@ -54,6 +54,8 @@ import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.AppTopBar
 import com.coparently.app.presentation.common.CountryPicker
+import com.coparently.app.presentation.common.Parents
+import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.STACK_CONTROLS_FONT_SCALE
 import com.coparently.app.presentation.common.ScreenBackStep
 import com.coparently.app.presentation.common.ScreenBar
@@ -76,7 +78,11 @@ import com.coparently.app.presentation.custody.custodyPreviewText
 import com.coparently.app.presentation.custody.labelRes
 import com.coparently.app.presentation.platform.LocalPermissionRequester
 import com.coparently.app.presentation.platform.PlatformPermission
+import com.coparently.app.presentation.settings.CoParentColour
+import com.coparently.app.presentation.settings.ColourClashNotice
 import com.coparently.app.presentation.settings.GridSwatch
+import com.coparently.app.presentation.settings.clashWith
+import com.coparently.app.presentation.settings.coParentColour
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.presentation.theme.ParentColors
@@ -124,6 +130,7 @@ import com.coparently.app.resources.profile_name_label
 import com.coparently.app.resources.settings_parent_color
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -518,34 +525,44 @@ private fun FoundRecords(name: String, found: CoParentData) {
  * Each swatch carries its colour's name as a content description — a circle of colour is
  * unusable to anyone who cannot tell two of them apart, and a screen reader has nothing else to
  * announce.
+ *
+ * @param coParent The linked co-parent's colour; while the calendar would draw the chosen colour
+ *   in another one because it is too close to theirs, a notice above the swatches says so.
  */
 @Composable
-private fun ParentColorSwatches(
+fun ParentColorSwatches(
     selected: ParentColorChoice?,
-    onSelect: (ParentColorChoice) -> Unit
+    onSelect: (ParentColorChoice) -> Unit,
+    coParent: CoParentColour? = null
 ) {
-    // The grid's own swatch (UX audit M11): ringed with a check when chosen, so the choice does not
-    // rest on colour, and named under it, so a parent who cannot tell two hues apart can still pick.
-    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.M)) {
-        ParentColorChoice.ORIGINAL.forEach { choice ->
-            val label = stringResource(choice.label)
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(Spacing.XS)
-            ) {
-                GridSwatch(
-                    label = label,
-                    swatch = ParentColors.choiceFill(choice),
-                    selected = selected == choice,
-                    onClick = { onSelect(choice) }
-                )
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    // The swatch already says it to TalkBack.
-                    modifier = Modifier.clearAndSetSemantics { }
-                )
+    // Onboarding links the co-parent first, so their colour is often known here: a pick the
+    // calendar would draw another way says so, in Settings' own words (design item 12).
+    val clash = selected?.let { coParent?.clashWith(it.color) }
+    Column {
+        if (clash != null) ColourClashNotice(clash)
+        // The grid's own swatch (UX audit M11): ringed with a check when chosen, so the choice does not
+        // rest on colour, and named under it, so a parent who cannot tell two hues apart can still pick.
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.M)) {
+            ParentColorChoice.ORIGINAL.forEach { choice ->
+                val label = stringResource(choice.label)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(Spacing.XS)
+                ) {
+                    GridSwatch(
+                        label = label,
+                        swatch = ParentColors.choiceFill(choice),
+                        selected = selected == choice,
+                        onClick = { onSelect(choice) }
+                    )
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        // The swatch already says it to TalkBack.
+                        modifier = Modifier.clearAndSetSemantics { }
+                    )
+                }
             }
         }
     }
@@ -574,9 +591,13 @@ private fun ProfileStep(state: OnboardingUiState, viewModel: OnboardingViewModel
     // Beside the name rather than on a step of its own: this is "who you are" — what you are
     // called and how you are marked.
     SectionHeading(title = Res.string.settings_parent_color)
+    val parentsSource: ParentsSource = koinInject()
+    val parentsFlow = remember(parentsSource) { parentsSource.observe() }
+    val parents by parentsFlow.collectAsState(Parents())
     ParentColorSwatches(
         selected = state.parentColor,
-        onSelect = viewModel::updateParentColor
+        onSelect = viewModel::updateParentColor,
+        coParent = coParentColour(parents, rememberParentNames(parents))
     )
 
     // The calendar draws holidays from the very first launch, so the country is asked here; it

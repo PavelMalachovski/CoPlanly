@@ -47,7 +47,9 @@ import com.coparently.app.presentation.changerequests.PlanRequestRow
 import com.coparently.app.presentation.changerequests.ProfessionalRequestRow
 import com.coparently.app.presentation.changerequests.SupportRequestRow
 import com.coparently.app.presentation.changerequests.SwapNoteQuote
+import com.coparently.app.presentation.changerequests.SwapOfferSentence
 import com.coparently.app.presentation.changerequests.SwapOfferSides
+import com.coparently.app.presentation.changerequests.SwapProposedByLine
 import com.coparently.app.presentation.changerequests.daySwapSentence
 import com.coparently.app.presentation.changerequests.eventWhenText
 import com.coparently.app.presentation.changerequests.isMadeBy
@@ -55,6 +57,7 @@ import com.coparently.app.presentation.changerequests.ownSwapTitle
 import com.coparently.app.presentation.changerequests.sidesAsked
 import com.coparently.app.presentation.changerequests.splitSharesText
 import com.coparently.app.presentation.changerequests.swapAcceptLabel
+import com.coparently.app.presentation.changerequests.swapHeadingNamesChildren
 import com.coparently.app.presentation.changerequests.swapOfferHeading
 import com.coparently.app.presentation.common.AnswerButtons
 import com.coparently.app.presentation.common.AppIcon
@@ -415,7 +418,11 @@ internal fun requestTitle(item: InboxItem, ctx: HomeRequestsContext): String {
             ownSwapTitle(item.group)
         } else {
             val shown = item.group.waitingOn(ctx.scope.myUid) ?: item.group
-            swapOfferHeading(shown.sidesAsked(names), names.labelForUid(item.group.swaps.first().override.requestedBy))
+            swapOfferHeading(
+                shown.sidesAsked(names),
+                names.labelForUid(item.group.swaps.first().override.requestedBy),
+                ctx.swapChildren
+            )
         }
         is InboxItem.Request -> if (mine) {
             dashKeptWithItsWord(item.request.eventTitle)
@@ -452,7 +459,11 @@ internal fun RequestSummary(item: InboxItem, ctx: HomeRequestsContext) {
         } else {
             val shown = item.group.waitingOn(ctx.scope.myUid) ?: item.group
             val offerer = names.labelForUid(item.group.swaps.first().override.requestedBy)
-            shown.sidesAsked(names)?.let { SwapOfferSides(it, offerer, names) }
+            val sides = shown.sidesAsked(names)
+            SwapOfferSentence(sides, offerer, ctx.swapChildren)
+            // The deadline is the status row's, so the line names the sender alone.
+            if (swapHeadingNamesChildren(sides, ctx.swapChildren)) SwapProposedByLine(offerer, answerByMillis = null)
+            sides?.let { SwapOfferSides(it, offerer, names) }
         }
         is InboxItem.Request -> NewTimeLine(item.request)
         is InboxItem.AwaitingEvent -> {

@@ -204,10 +204,18 @@ private fun chipLabel(chip: AnswerByChip, zone: TimeZone): String {
     }
 }
 
+/**
+ * How many reminders the co-parent gets for a deadline at [selectedMillis], offered at
+ * `offer.nowMillis`: the count [AnswerByField]'s consequences line states, and the one a summary of
+ * the pick must state too (never a second computation of [ReminderPlan]).
+ */
+internal fun plannedReminderCount(offer: AnswerByOffer, selectedMillis: Long): Int =
+    ReminderPlan.countFor(selectedMillis - offer.nowMillis)
+
 /** The two lines under the choice: the reminders the co-parent gets, and what no answer leads to. */
 @Composable
 private fun Consequences(offer: AnswerByOffer, selectedMillis: Long, coParentName: String, outcome: StringResource) {
-    val reminders = ReminderPlan.countFor(selectedMillis - offer.nowMillis)
+    val reminders = plannedReminderCount(offer, selectedMillis)
     HelperLine(
         pluralStringResource(
             Res.plurals.answer_by_reminders,

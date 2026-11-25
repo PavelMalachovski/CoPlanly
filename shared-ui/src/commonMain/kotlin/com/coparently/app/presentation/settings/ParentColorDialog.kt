@@ -41,16 +41,25 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.common.AppIcon
+import com.coparently.app.presentation.common.BannerTone
+import com.coparently.app.presentation.common.InlineBanner
+import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.CustomHueRange
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColor
 import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.ParentPalette
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
+import com.coparently.app.resources.parent_color_clash
+import com.coparently.app.resources.parent_color_clash_named
 import com.coparently.app.resources.parent_color_custom
 import com.coparently.app.resources.parent_color_custom_hue
 import com.coparently.app.resources.settings_family_kind_cancel
@@ -73,13 +82,16 @@ import kotlin.math.roundToInt
  * @param fallback What they are drawn in until they choose: their slot's default.
  * @param onConfirm Called with the colour to save.
  * @param onDismiss Called when the dialog is closed without saving.
+ * @param coParent The co-parent's colour, so the picker can say when it would draw this parent's
+ *   choice in another colour; null where there is nothing to compare with.
  */
 @Composable
 internal fun ParentColorDialog(
     selected: ParentColor?,
     fallback: ParentColor,
     onConfirm: (ParentColor) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    coParent: CoParentColour? = null
 ) {
     val start = selected ?: fallback
     var chosen by rememberSaveable(start.storedCode) { mutableStateOf(start.preset?.name ?: CUSTOM_COLOUR) }
@@ -98,7 +110,8 @@ internal fun ParentColorDialog(
                 customHue = customHue,
                 onChoose = { chosen = it },
                 onCustomHue = { customHue = it },
-                modifier = Modifier.verticalScroll(rememberScrollState())
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                coParent = coParent
             )
         },
         confirmButton = {
@@ -123,16 +136,24 @@ internal fun ParentColorDialog(
  *
  * @param chosen A preset's [ParentColorChoice.name], or [CUSTOM_COLOUR].
  * @param customHue The hue "Custom" stands for, in degrees.
+ * @param coParent The co-parent's colour. While the calendar would draw this parent's choice in
+ *   another colour because it is too close to theirs, a notice above the grid says so, and the
+ *   co-parent's first name sits under the swatch of their own preset. Null changes nothing.
  */
 @Composable
+@Suppress("LongParameterList") // the grid's state and callbacks, a modifier, and the optional co-parent
 fun ParentColorPicker(
     chosen: String,
     customHue: Int,
     onChoose: (String) -> Unit,
     onCustomHue: (Int) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    coParent: CoParentColour? = null
 ) {
+    val clash = coParent?.clashWith(colourFor(chosen, customHue))
+    val theirs = coParent?.preset
     Column(modifier = modifier.selectableGroup()) {
+        if (clash != null) ColourClashNotice(clash)
         ParentColorChoice.GRID.chunked(GRID_COLUMNS).forEach { row ->
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.XS),
@@ -143,7 +164,8 @@ fun ParentColorPicker(
                         label = stringResource(choice.label),
                         swatch = ParentColors.choiceFill(choice),
                         selected = chosen == choice.name,
-                        onClick = { onChoose(choice.name) }
+                        onClick = { onChoose(choice.name) },
+                        caption = coParent?.firstName?.takeIf { choice == theirs }
                     )
                 }
                 // A short last row keeps the columns of the rows above it.
@@ -192,28 +214,50 @@ private fun ColourOption(label: String, swatch: Color, selected: Boolean, onClic
  * One colour of the grid: the swatch as it will be drawn in this theme, named for TalkBack — a
  * swatch alone is unusable to anyone who cannot tell two of them apart — and ringed with a check
  * when it is the choice, so the selection does not rest on colour either.
+ *
+ * @param caption A short line under the swatch (the co-parent's first name on the colour they
+ *   chose), or null for none.
  */
 @Composable
-internal fun GridSwatch(label: String, swatch: Color, selected: Boolean, onClick: () -> Unit) {
+internal fun GridSwatch(
+    label: String,
+    swatch: Color,
+    selected: Boolean,
+    onClick: () -> Unit,
+    caption: String? = null
+) {
     val ring = if (selected) MaterialTheme.colorScheme.onSurface else Color.Transparent
-    Box(
-        modifier = Modifier
-            .size(SWATCH_CELL_SIZE)
-            .clip(CircleShape)
-            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
-            .semantics { contentDescription = label }
-            .border(SELECTED_RING_WIDTH, ring, CircleShape)
-            .padding(SELECTED_RING_WIDTH + SELECTED_RING_GAP)
-            .clip(CircleShape)
-            .background(swatch),
-        contentAlignment = Alignment.Center
-    ) {
-        if (selected) {
-            AppIcon(
-                imageVector = Icons.Default.Check,
-                contentDescription = null,
-                tint = ParentColors.onFill(swatch),
-                modifier = Modifier.size(IconSizes.Small)
+    Column(modifier = Modifier.width(SWATCH_CELL_SIZE), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(SWATCH_CELL_SIZE)
+                .clip(CircleShape)
+                .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+                .semantics { contentDescription = label }
+                .border(SELECTED_RING_WIDTH, ring, CircleShape)
+                .padding(SELECTED_RING_WIDTH + SELECTED_RING_GAP)
+                .clip(CircleShape)
+                .background(swatch),
+            contentAlignment = Alignment.Center
+        ) {
+            if (selected) {
+                AppIcon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    tint = ParentColors.onFill(swatch),
+                    modifier = Modifier.size(IconSizes.Small)
+                )
+            }
+        }
+        if (caption != null) {
+            // A person's name, not money: it may end in an ellipsis in a cell this narrow.
+            Text(
+                text = caption,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
@@ -270,6 +314,99 @@ private fun HueSlider(hue: Int, onHue: (Int) -> Unit) {
 /** What Save writes for [chosen]: the preset of that name, or the custom [hue]. */
 private fun colourFor(chosen: String, hue: Int): ParentColor =
     ParentColorChoice.entries.firstOrNull { it.name == chosen }?.color ?: ParentColor.custom(hue)
+
+/**
+ * What the picker needs to know of the co-parent to say that a choice would move.
+ *
+ * @property name The co-parent's name; only its first word is shown.
+ * @property slot The co-parent's slot, `"mom"` or `"dad"`.
+ * @property colorCode The co-parent's stored colour, or null when they have not chosen.
+ * @property mySlot This parent's slot, which decides who yields when the two are too close.
+ */
+data class CoParentColour(
+    val name: String,
+    val slot: String,
+    val colorCode: String?,
+    val mySlot: String
+) {
+    /** The first word of [name]: a name is never declined, and a surname adds nothing here. */
+    val firstName: String get() = name.trim().substringBefore(' ')
+
+    /** The preset the co-parent chose, or null when they chose none or a colour of their own. */
+    internal val preset: ParentColorChoice? get() = ParentColor.fromStored(colorCode)?.preset
+}
+
+/**
+ * The co-parent as the picker needs them, or null when there is nobody to compare with: either
+ * parent unknown or not yet in a slot. A co-parent with no name takes the family's own fallback
+ * label.
+ */
+internal fun coParentColour(parents: Parents, names: ParentNames): CoParentColour? {
+    val me = parents.me ?: return null
+    val other = parents.coParent ?: return null
+    return CoParentColour(
+        name = other.name.ifBlank { names.labelForUid(other.uid) },
+        slot = other.slot,
+        colorCode = other.colorCode,
+        mySlot = me.slot
+    )
+}
+
+/** Why this parent's choice would be drawn in another colour, in the words the picker uses. */
+internal sealed interface ColourClash {
+    val firstName: String
+
+    /** Both chose the same preset: the sentence names it and the colour this parent gets. */
+    data class Same(
+        override val firstName: String,
+        val theirs: ParentColorChoice,
+        val shown: ParentColorChoice
+    ) : ColourClash
+
+    /** Close without being the same preset, or a colour from the wheel: no colour is named. */
+    data class Close(override val firstName: String) : ColourClash
+}
+
+/**
+ * The clash between [mine] and the co-parent's colour, or null while the calendar draws [mine] as
+ * chosen. Whether it moves is [ParentPalette.shownFor]'s answer, the one rule the calendar uses.
+ */
+internal fun CoParentColour.clashWith(mine: ParentColor): ColourClash? {
+    if (firstName.isBlank()) return null
+    val shown = ParentPalette.shownFor(mySlot, mine.storedCode, colorCode)
+    if (shown == mine) return null
+    val theirs = preset
+    val shownPreset = shown.preset
+    return if (theirs != null && theirs == mine.preset && shownPreset != null) {
+        ColourClash.Same(firstName, theirs, shownPreset)
+    } else {
+        ColourClash.Close(firstName)
+    }
+}
+
+/**
+ * The notice that says this parent's choice would be drawn in another colour. The picker in
+ * Settings and the onboarding's colour step both draw it, so the words and the look are one.
+ */
+@Composable
+internal fun ColourClashNotice(clash: ColourClash, modifier: Modifier = Modifier) {
+    InlineBanner(
+        text = clash.text(),
+        tone = BannerTone.INFO,
+        modifier = modifier.padding(bottom = Spacing.S)
+    )
+}
+
+@Composable
+private fun ColourClash.text(): String = when (this) {
+    is ColourClash.Same -> stringResource(
+        Res.string.parent_color_clash_named,
+        firstName,
+        stringResource(theirs.label),
+        stringResource(shown.label)
+    )
+    is ColourClash.Close -> stringResource(Res.string.parent_color_clash, firstName)
+}
 
 /** The picker's key for "Custom"; a preset is keyed by its own name. */
 const val CUSTOM_COLOUR = "CUSTOM"

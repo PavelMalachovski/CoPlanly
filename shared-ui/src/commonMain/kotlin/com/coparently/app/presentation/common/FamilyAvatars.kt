@@ -2,6 +2,7 @@ package com.coparently.app.presentation.common
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +22,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,10 +37,13 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.family.names
+import com.coparently.app.domain.files.RecordPhotoKind
+import com.coparently.app.domain.files.ViewablePhoto
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.calendar_filter_member_toggle
 import com.coparently.app.resources.calendar_settings
+import com.coparently.app.resources.children_avatar_open_photo
 import com.coparently.app.resources.children_avatars_description
 import com.coparently.app.resources.children_avatars_more
 import org.jetbrains.compose.resources.stringResource
@@ -88,7 +96,9 @@ val APP_HEADER_HEIGHT = 56.dp
  * filter, ringed in `primary` while chosen, and more than [MAX_VISIBLE] scroll within the room three
  * take. Otherwise (Home, or a family of one member: FAM-1, a picker for a set of one is design item
  * 8 in miniature) they are a picture of the family, at most [MAX_VISIBLE] slots with a "+n" disc in
- * the last for the rest. Either way the block is as wide on both screens.
+ * the last for the rest. Either way the block is as wide on both screens. On Home (no [filter]) a
+ * tap on the avatar of a member with a photo this viewer may see opens it full screen; on the
+ * Calendar a picture stays a picture, even for a family of one.
  *
  * @param members The children, then the pets, in display order
  * @param onSettings Opens Settings, or null to draw no gear
@@ -101,7 +111,11 @@ fun FamilyAvatarsAndGear(
     filter: MemberFilter? = null
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        if (filter != null && members.size >= 2) FilterAvatars(members, filter) else PictureAvatars(members)
+        if (filter != null && members.size >= 2) {
+            FilterAvatars(members, filter)
+        } else {
+            PictureAvatars(members, opensPhotos = filter == null)
+        }
         onSettings?.let { onClick -> SettingsDisc(onClick) }
     }
 }
@@ -168,26 +182,83 @@ private fun FilterAvatars(members: List<FamilyMember>, filter: MemberFilter) {
 }
 
 @Composable
-private fun PictureAvatars(members: List<FamilyMember>) {
+private fun PictureAvatars(members: List<FamilyMember>, opensPhotos: Boolean) {
     if (members.isEmpty()) return
     val shown = if (members.size > MAX_VISIBLE) members.take(MAX_VISIBLE - 1) else members
     val overflow = members.size - shown.size
+    val photos = shown.map { memberPhoto(it).takeIf { opensPhotos } }
+    val anyOpens = photos.any { it != null }
     val description = stringResource(Res.string.children_avatars_description, members.joinToString(", ") { it.name })
+    // With no photo to open the row is one described picture, as it always was; with one, each
+    // avatar speaks for itself so a photo's avatar can be a button of its own.
     Row(
-        modifier = Modifier.clearAndSetSemantics { contentDescription = description },
+        modifier = if (anyOpens) Modifier else Modifier.clearAndSetSemantics { contentDescription = description },
         horizontalArrangement = Arrangement.spacedBy(-OVERLAP),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        shown.forEach { member ->
-            Box(modifier = Modifier.size(ITEM), contentAlignment = Alignment.Center) { RingedAvatar(member, false) }
+        shown.forEachIndexed { index, member ->
+            val photo = photos[index]
+            when {
+                photo != null -> PhotoAvatar(member, photo)
+                anyOpens -> Box(
+                    modifier = Modifier
+                        .size(ITEM)
+                        .clearAndSetSemantics { contentDescription = member.name },
+                    contentAlignment = Alignment.Center
+                ) { RingedAvatar(member, false) }
+                else -> Box(modifier = Modifier.size(ITEM), contentAlignment = Alignment.Center) {
+                    RingedAvatar(member, false)
+                }
+            }
         }
         if (overflow > 0) {
-            Box(modifier = Modifier.size(ITEM), contentAlignment = Alignment.Center) {
+            // Once the row stops being one described picture, the disc must still name the members
+            // it hides, or TalkBack reads "+2" and never who they are.
+            val hidden = stringResource(
+                Res.string.children_avatars_description,
+                members.drop(shown.size).joinToString(", ") { it.name }
+            )
+            Box(
+                modifier = Modifier
+                    .size(ITEM)
+                    .then(if (anyOpens) Modifier.clearAndSetSemantics { contentDescription = hidden } else Modifier),
+                contentAlignment = Alignment.Center
+            ) {
                 Ring(chosen = false) {
                     InitialDisc(stringResource(Res.string.children_avatars_more, overflow))
                 }
             }
         }
+    }
+}
+
+/** [member]'s avatar as a button that opens [photo] full screen. */
+@Composable
+private fun PhotoAvatar(member: FamilyMember, photo: ViewablePhoto) {
+    var open by remember { mutableStateOf(false) }
+    val description = stringResource(Res.string.children_avatar_open_photo, member.name)
+    Box(
+        modifier = Modifier
+            .size(ITEM)
+            .clip(CircleShape)
+            .clickable(role = Role.Button, onClick = { open = true })
+            .semantics { contentDescription = description },
+        contentAlignment = Alignment.Center
+    ) { RingedAvatar(member, false) }
+    if (open) {
+        FullScreenImageDialog(model = photo, contentDescription = member.name, onDismiss = { open = false })
+    }
+}
+
+/** The photo [member] has that this viewer may see: a child's portrait or a pet's first photo. */
+@Composable
+private fun memberPhoto(member: FamilyMember): ViewablePhoto? {
+    val child = member.child
+    val pet = member.pet
+    return when {
+        child != null -> rememberRecordPhoto(child.photo, RecordPhotoKind.CHILD, child.id, child.familyId)
+        pet != null -> rememberRecordPhoto(pet.photos.firstOrNull(), RecordPhotoKind.PET, pet.id, pet.familyId)
+        else -> null
     }
 }
 

@@ -19,8 +19,12 @@ import com.coparently.app.domain.school.SchoolSystem
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.platform.AppBuildValues
 import com.coparently.app.resources.Res
+import com.coparently.app.resources.school_connect_confirm_not_imported
+import com.coparently.app.resources.school_connect_confirm_not_imported_edupage
 import com.coparently.app.resources.school_connect_wrong_password
 import com.coparently.app.resources.school_edupage_second_factor
+import com.coparently.app.resources.school_import_lesson_times_off
+import com.coparently.app.resources.school_import_lesson_times_off_bakalari
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -39,6 +43,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -107,6 +112,7 @@ class ConnectSchoolEdupageTest {
 
     private fun signInToEdupage(vm: ConnectSchoolViewModel) {
         vm.chooseSystem(SchoolSystem.EDUPAGE)
+        vm.onEdupageAddress("zsx.edupage.org")
         vm.onUsername("novak")
         vm.signIn("pw")
     }
@@ -181,7 +187,7 @@ class ConnectSchoolEdupageTest {
 
     @Test
     fun `an edupage sign-in with two children asks which child`() = runTest(dispatcher) {
-        coEvery { accounts.signInEdupage("", "novak", "pw") } returns signIn(anna, petr)
+        coEvery { accounts.signInEdupage("zsx.edupage.org", "novak", "pw") } returns signIn(anna, petr)
         val vm = viewModel(edupage = true)
 
         signInToEdupage(vm)
@@ -196,7 +202,7 @@ class ConnectSchoolEdupageTest {
 
     @Test
     fun `an edupage sign-in with one child preselects it`() = runTest(dispatcher) {
-        coEvery { accounts.signInEdupage("", "novak", "pw") } returns signIn(anna)
+        coEvery { accounts.signInEdupage("zsx.edupage.org", "novak", "pw") } returns signIn(anna)
         val vm = viewModel(edupage = true)
 
         signInToEdupage(vm)
@@ -229,5 +235,69 @@ class ConnectSchoolEdupageTest {
         advanceUntilIdle()
 
         assertEquals(UiText.Res(Res.string.school_edupage_second_factor), vm.state.value.error)
+    }
+
+    @Test
+    fun `an edupage sign-in with a blank address is refused before any network call`() = runTest(dispatcher) {
+        val vm = viewModel(edupage = true)
+        vm.chooseSystem(SchoolSystem.EDUPAGE)
+        vm.onUsername("novak")
+        vm.onEdupageAddress("   ")
+
+        assertFalse(vm.state.value.canSignIn)
+        vm.signIn("pw")
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { accounts.signInEdupage(any(), any(), any()) }
+        assertEquals(ConnectStep.EDUPAGE_CREDENTIALS, vm.state.value.step)
+        assertFalse(vm.state.value.isBusy)
+    }
+
+    @Test
+    fun `an edupage sign-in is offered once the address and the username are typed`() = runTest(dispatcher) {
+        val vm = viewModel(edupage = true)
+        vm.chooseSystem(SchoolSystem.EDUPAGE)
+
+        assertFalse(vm.state.value.canSignIn)
+        vm.onUsername("novak")
+        assertFalse(vm.state.value.canSignIn)
+        vm.onEdupageAddress(" zsx.edupage.org ")
+        assertTrue(vm.state.value.canSignIn)
+    }
+
+    @Test
+    fun `the confirm lines for edupage name tests and homework and say grades are not imported`() {
+        val account = SignedInAccount("Novák Petr", canReadTimetable = true, canReadEvents = true)
+        val state = ConnectSchoolUiState(system = SchoolSystem.EDUPAGE, account = account)
+
+        assertEquals(
+            listOf(ConfirmLine.EVENTS, ConfirmLine.TASKS, ConfirmLine.DAYS_OFF),
+            state.confirmLines
+        )
+        assertEquals(Res.string.school_connect_confirm_not_imported_edupage, state.notImportedText)
+    }
+
+    @Test
+    fun `the confirm lines for bakalari are as they were`() {
+        val account = SignedInAccount("Nováková Anna", canReadTimetable = true, canReadEvents = true)
+        val state = ConnectSchoolUiState(system = SchoolSystem.BAKALARI, account = account)
+
+        assertEquals(
+            listOf(ConfirmLine.EVENTS, ConfirmLine.HOURS, ConfirmLine.DAYS_OFF),
+            state.confirmLines
+        )
+        assertEquals(Res.string.school_connect_confirm_not_imported, state.notImportedText)
+    }
+
+    @Test
+    fun `the lesson times off line names homework only for edupage`() {
+        assertEquals(
+            Res.string.school_import_lesson_times_off,
+            lessonTimesOffText(SchoolSystem.EDUPAGE)
+        )
+        assertEquals(
+            Res.string.school_import_lesson_times_off_bakalari,
+            lessonTimesOffText(SchoolSystem.BAKALARI)
+        )
     }
 }

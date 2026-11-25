@@ -1,6 +1,7 @@
 package com.coparently.app.presentation.calendar.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,10 +39,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.changerequests.AnswerBy
+import com.coparently.app.domain.changerequests.AnswerByBand
+import com.coparently.app.domain.changerequests.AnswerByOffer
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.RequestCap
 import com.coparently.app.domain.custody.SwapSides
@@ -56,6 +61,7 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SheetHeight
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.nativeControls
+import com.coparently.app.presentation.common.plannedReminderCount
 import com.coparently.app.presentation.common.rememberAnswerByOffer
 import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.IconSizes
@@ -64,8 +70,10 @@ import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.labelLargeEmphasized
 import com.coparently.app.presentation.theme.titleLargeEmphasized
 import com.coparently.app.resources.Res
-import com.coparently.app.resources.answer_by_compressed
-import com.coparently.app.resources.answer_by_title
+import com.coparently.app.resources.answer_by_reminded_automatically
+import com.coparently.app.resources.answer_by_reminded_automatically_fixed
+import com.coparently.app.resources.answer_by_summary_reminders
+import com.coparently.app.resources.answer_by_too_soon
 import com.coparently.app.resources.day_swap_add_note
 import com.coparently.app.resources.day_swap_cancel
 import com.coparently.app.resources.day_swap_change_days
@@ -121,8 +129,9 @@ class SwapSheetActions(
  * 28 October 2026, board SW-3).
  *
  * A title counting the days, one row per way ("Fri 13, Sat 14 Nov → Lana", "Sat 21 Nov → you"), an
- * optional note and deadline behind two chips, and "Send to Lana". The grid stays in view above it
- * (it opens partly expanded), where it used to carry mini months of its own.
+ * optional note behind a chip, the deadline and its reminders always shown, and "Send to Lana". The
+ * grid stays in view above it (it opens partly expanded), where it used to carry mini months of its
+ * own.
  *
  * **This sheet never applies anything by itself.** It offers; the co-parent answers in the inbox.
  * A swap that applied itself would just be an edit, which the custody editor already does, and
@@ -167,8 +176,9 @@ fun DaySwapSheet(offer: SwapSheetOffer, parentNames: ParentNames, actions: SwapS
  * opens its own window, which a node capture does not see).
  *
  * **It is compact on purpose, so the grid stays in view** (Zuzana's redesign, November 2026): a
- * title that counts the days, one row per way ("Fri 13, Sat 14 Nov → Bob"), and two chips — "Add a
- * note" and "Answer by …" — each opening its field in place, with "Send to Bob" pinned under them.
+ * title that counts the days, one row per way ("Fri 13, Sat 14 Nov → Bob"), an "Add a
+ * note" chip opening its field in place, the deadline summary ("Answer by …", which opens its choices
+ * where there are any), with "Send to Bob" pinned under them.
  * The mini months the sheet used to draw are the inbox card's and Home's pop-up's now.
  *
  * **The send button is pinned under a part that scrolls.** A sheet does not scroll its content by
@@ -317,8 +327,11 @@ private fun SwapSheetRowLine(row: SwapSheetRow, parentNames: ParentNames) {
 }
 
 /**
- * "Add a note" and "Answer by …": two chips, each opening its field in place. A note already typed
- * keeps its field open, and so does a rotation (both flags are saveable).
+ * The note chip and the deadline. "Add a note" is a chip that opens its field in place (a note
+ * already typed keeps it open, and so does a rotation: both flags are saveable). The deadline is
+ * never hidden behind a chip (meeting of 25 November 2026): [AnswerByDeadlineSummary] always says
+ * when the co-parent should answer and how many reminders they get, and a tap on it opens the
+ * choices under it.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -338,11 +351,8 @@ private fun SwapOptions(
     val cap = remember(offerable) { RequestCap.forSwap(offerable, zone) }
     val offer = rememberAnswerByOffer(cap)
     val answerByMillis = AnswerBy.resolve(answerBy, offer, zone)
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(Spacing.S),
-        verticalArrangement = Arrangement.spacedBy(Spacing.S)
-    ) {
-        if (!noteOpen && note.isEmpty()) {
+    if (!noteOpen && note.isEmpty()) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
             AssistChip(
                 onClick = {
                     noteOpen = true
@@ -352,22 +362,6 @@ private fun SwapOptions(
                 leadingIcon = { AppIcon(Icons.Default.EditNote, null, Modifier.size(IconSizes.Small)) }
             )
         }
-        AssistChip(
-            onClick = {
-                answerByOpen = !answerByOpen
-                if (answerByOpen) onNeedRoom()
-            },
-            label = {
-                Text(
-                    if (answerByMillis == null) {
-                        stringResource(Res.string.answer_by_title)
-                    } else {
-                        stringResource(Res.string.answer_by_compressed, ReaderDateText.answerBy(answerByMillis, zone))
-                    }
-                )
-            },
-            leadingIcon = { AppIcon(Icons.Default.Schedule, null, Modifier.size(IconSizes.Small)) }
-        )
     }
     if (noteOpen || note.isNotEmpty()) {
         OutlinedTextField(
@@ -377,8 +371,78 @@ private fun SwapOptions(
             modifier = Modifier.fillMaxWidth()
         )
     }
-    if (answerByOpen) {
+    AnswerByDeadlineSummary(
+        offer = offer,
+        answerByMillis = answerByMillis,
+        coParentName = coParentName,
+        onClick = if (offer.band == AnswerByBand.CHOICES) {
+            {
+                answerByOpen = !answerByOpen
+                if (answerByOpen) onNeedRoom()
+            }
+        } else {
+            null
+        }
+    )
+    if (answerByOpen && answerByMillis != null && offer.band == AnswerByBand.CHOICES) {
         AnswerByField(offer, answerBy, onAnswerByChange, coParentName)
+    }
+}
+
+/**
+ * "Answer by Fri 28 Nov · up to 3 reminders" over "Zuzana is reminded automatically until they
+ * answer. Tap to change the date.": the resolved deadline and the reminder count
+ * ([plannedReminderCount], the number [AnswerByField] states for the same pick), as one button that
+ * opens the choices. It is a button only where there are choices to open ([AnswerByBand.CHOICES]):
+ * a fixed deadline (the cap is 2 to 48 hours away) is stated, with no promise of a change, and with
+ * no deadline (too soon for one) it is the plain sentence.
+ */
+@Composable
+private fun AnswerByDeadlineSummary(
+    offer: AnswerByOffer,
+    answerByMillis: Long?,
+    coParentName: String,
+    onClick: (() -> Unit)?
+) {
+    val line = MaterialTheme.typography.bodySmall
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    if (answerByMillis == null) {
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S), verticalAlignment = Alignment.Top) {
+            AppIcon(Icons.Default.Schedule, null, Modifier.size(IconSizes.Small), tint = muted)
+            Text(stringResource(Res.string.answer_by_too_soon), style = line, color = muted)
+        }
+        return
+    }
+    val reminders = plannedReminderCount(offer, answerByMillis)
+    val date = ReaderDateText.answerBy(answerByMillis, TimeZone.currentSystemDefault())
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.small)
+            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
+            .padding(vertical = Spacing.XS),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+        verticalAlignment = Alignment.Top
+    ) {
+        AppIcon(Icons.Default.Schedule, null, Modifier.size(IconSizes.Small), tint = MaterialTheme.colorScheme.primary)
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.XXS)) {
+            Text(
+                text = pluralStringResource(Res.plurals.answer_by_summary_reminders, reminders, date, reminders),
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = stringResource(
+                    if (onClick != null) {
+                        Res.string.answer_by_reminded_automatically
+                    } else {
+                        Res.string.answer_by_reminded_automatically_fixed
+                    },
+                    coParentName
+                ),
+                style = line,
+                color = muted
+            )
+        }
     }
 }
 

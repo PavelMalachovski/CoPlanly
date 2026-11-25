@@ -15,6 +15,14 @@
         <item quantity="many">До %1$s. %2$s получит до %3$d\u00A0напоминаний, ночью — без напоминаний.</item>
         <item quantity="other">До %1$s. %2$s получит до %3$d\u00A0напоминания, ночью — без напоминаний.</item>
     </plurals>
+    <plurals name="answer_by_summary_reminders">
+        <item quantity="one">Ответить до %1$s\u00A0· до %2$d\u00A0напоминания</item>
+        <item quantity="few">Ответить до %1$s\u00A0· до %2$d\u00A0напоминаний</item>
+        <item quantity="many">Ответить до %1$s\u00A0· до %2$d\u00A0напоминаний</item>
+        <item quantity="other">Ответить до %1$s\u00A0· до %2$d\u00A0напоминания</item>
+    </plurals>
+    <string name="answer_by_reminded_automatically">%1$s получает автоматические напоминания, пока не будет ответа. Нажмите, чтобы изменить дату.</string>
+    <string name="answer_by_reminded_automatically_fixed">%1$s получает автоматические напоминания, пока не будет ответа.</string>
     <string name="answer_by_outcome">Если к этому сроку ответа не будет, вы получите уведомление и сможете дать ещё 24 часа. Без ответа в календаре ничего не изменится.</string>
     <string name="answer_by_outcome_short">Если к этому сроку ответа не будет, вы получите уведомление и сможете дать ещё немного времени. Без ответа в календаре ничего не изменится.</string>
     <string name="answer_by_fixed">Ответить до %1$s</string>

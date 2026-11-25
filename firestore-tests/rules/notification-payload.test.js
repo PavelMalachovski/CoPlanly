@@ -173,6 +173,20 @@ describe('SEC-3: notification payloads', () => {
         type: 'day_swap_offered', datesToSender: 'x'.repeat(160),
       })));
     });
+
+    it('bounds the children\'s names a swap offer carries at 200 characters', async () => {
+      const db = env.authenticatedContext(ALICE).firestore();
+      await assertSucceeds(db.collection('notification_queue').add(queued({
+        type: 'day_swap_group_offered', actorName: 'Alice', date: '2026-11-13',
+        dayCount: '2', datesToYou: '2026-11-13,2026-11-14', childNames: 'Lenička\nSašík',
+      })));
+      await assertSucceeds(db.collection('notification_queue').add(queued({
+        type: 'day_swap_offered', childNames: 'x'.repeat(200),
+      })));
+      await assertFails(db.collection('notification_queue').add(queued({
+        type: 'day_swap_offered', childNames: 'x'.repeat(201),
+      })));
+    });
   });
 
   describe('a new expense\'s figures (21 October 2026)', () => {

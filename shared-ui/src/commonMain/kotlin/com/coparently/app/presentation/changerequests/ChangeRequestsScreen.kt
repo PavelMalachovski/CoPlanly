@@ -150,6 +150,7 @@ fun ChangeRequestsScreen(
     val state by viewModel.requests.collectAsState()
     val miniMonths by viewModel.miniMonths.collectAsState()
     val swapMonths by viewModel.swapMonths.collectAsState()
+    val swapChildren by viewModel.swapChildNames.collectAsState()
     val proposalDiff by viewModel.pendingProposalDiff.collectAsState()
     val proposalCitation by viewModel.pendingProposalCitation.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
@@ -232,7 +233,8 @@ fun ChangeRequestsScreen(
                     proposalCitation = proposalCitation,
                     agreedSplit = ready.settings?.ratio,
                     highlightedRequestId = highlighted?.id,
-                    lastChanceInFlight = viewModel.lastChanceInFlight.collectAsState().value
+                    lastChanceInFlight = viewModel.lastChanceInFlight.collectAsState().value,
+                    swapChildren = swapChildren
                 ),
                 answers = answers,
                 listState = listState,
@@ -335,6 +337,7 @@ private fun InboxList(
  *   or null while its document has not arrived.
  * @property highlightedRequestId The request a chat card arrived for, or null.
  * @property lastChanceInFlight The clocks whose last chance is being given right now, by id.
+ * @property swapChildren The children a day swap moves, by first name, or null while not known.
  */
 private data class InboxCards(
     val scope: RequestScope,
@@ -345,7 +348,8 @@ private data class InboxCards(
     val proposalCitation: CitationStatus,
     val agreedSplit: SplitRatio?,
     val highlightedRequestId: String?,
-    val lastChanceInFlight: Set<String> = emptySet()
+    val lastChanceInFlight: Set<String> = emptySet(),
+    val swapChildren: List<String>? = null
 ) {
 
     /**
@@ -529,7 +533,7 @@ private fun InboxCardContent(item: InboxItem, cards: InboxCards, answers: InboxA
             group = item.group,
             currentUserId = cards.scope.myUid,
             parentNames = cards.parentNames,
-            months = cards.swapMonths[item.group.key].orEmpty(),
+            details = SwapOfferDetails(cards.swapMonths[item.group.key].orEmpty(), cards.swapChildren),
             answers = answers
         )
         is InboxItem.Request -> ChangeRequestCard(

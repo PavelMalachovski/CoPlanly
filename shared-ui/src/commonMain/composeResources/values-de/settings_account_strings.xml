@@ -10,6 +10,8 @@
     <string name="settings_gcal_auto_note">Solange die Synchronisierung an ist, kommen neue und geänderte Termine von selbst: beim Öffnen der App und etwa alle 15 Minuten.</string>
     <string name="settings_parent_color">Meine Farbe</string>
     <string name="settings_parent_color_desc">Wie deine Termine, Betreuungstage und Ausgaben markiert werden. Der andere Elternteil wählt seine eigene.</string>
+    <string name="parent_color_clash_named">%1$s hat auch die Farbe %2$s gewählt. Damit sich eure Tage unterscheiden, wirst du in deiner Familie in der Farbe %3$s angezeigt. Wähle eine andere Farbe, um in deiner eigenen angezeigt zu werden.</string>
+    <string name="parent_color_clash">%1$s hat eine Farbe gewählt, die deiner sehr ähnlich ist. Damit sich eure Tage unterscheiden, wirst du in deiner Familie in einer anderen Farbe angezeigt. Wähle eine andere Farbe, um in deiner eigenen angezeigt zu werden.</string>
     <string name="parent_color_pink">Rosa</string>
     <string name="parent_color_blue">Blau</string>
     <string name="parent_color_purple">Lila</string>

@@ -311,9 +311,10 @@ stays there.
 
 - **A push notification token**, so we can notify you about changes your co-parent makes. A
   notification names who made the change and what it is about (an event's title, say); one about
-  a new shared expense also carries its amount and your share of it, and one about a new chat
-  message carries the first 120 characters of that message, which Google's Firebase Cloud
-  Messaging delivers to the phone. We keep one token per account: the phone you used last receives
+  a new shared expense also carries its amount and your share of it, one offering a day swap also
+  carries the first names of the children the swap moves, so your phone can say who would be with
+  whom on which days, and one about a new chat message carries the first 120 characters of that
+  message, which Google's Firebase Cloud Messaging delivers to the phone. We keep one token per account: the phone you used last receives
   your notifications. The token is deleted when you switch notifications off, sign out or delete
   your account. **On an iPhone**, Firebase Cloud Messaging hands each notification to **Apple's
   push notification service**, which delivers it, and it travels with a fixed text of ours, "You
@@ -525,7 +526,7 @@ We do not sell personal data, and we do not use it for advertising.
 | Google (Vertex AI), **our processor**, running Anthropic's Claude model | Only if you use writing help: the last 20 messages of the thread and your note (reply suggestion), or the month's figures (summary) | To draft the text you asked for — see "Writing help (AI)" |
 | Google (Calendar API) | Only your calendar, only if you connect it | The integration you enabled — for your Google Calendar, Google is responsible under its own privacy policy |
 | Apple, if you sign in with Apple | The authorisation code to exchange and, when you remove Apple or delete your account, the token to revoke | Sign in with Apple, which you chose — for your Apple ID, Apple is responsible under its own privacy policy |
-| Apple (Apple Push Notification service), **our processor**, if you use an iPhone | Your iPhone's push token and each notification sent to it, with the facts it carries (who, what, a title, an amount, the start of a message) | Delivering notifications to an iPhone, which only Apple's service can do |
+| Apple (Apple Push Notification service), **our processor**, if you use an iPhone | Your iPhone's push token and each notification sent to it, with the facts it carries (who, what, a title, an amount, a child's first name, the start of a message) | Delivering notifications to an iPhone, which only Apple's service can do |
 
 **Where your data is processed.** Our database and file storage are located in
 {{FIRESTORE_REGION}}. Our server functions — which link co-parents, send notifications, renew

@@ -115,6 +115,15 @@
     <string name="push_day_swap_asks_body">Отримає %2$s: %1$s.</string>
     <string name="push_day_swap_both_title">%1$s пропонує обмін днями</string>
     <string name="push_day_swap_both_body">Вам: %1$s. %2$s: %3$s.</string>
+    <!-- A swap offer that names the children (meeting of 25 November 2026, item 3): %1$s = the
+         children's first names, never declined; the days are the reader's own list. The title is
+         push_day_swap_both_title for every shape. Both: %2$s = days to you, %3$s = the sender,
+         %4$s = days to the sender; asks: %2$s = the sender, %3$s = their days. -->
+    <string name="push_day_swap_child_both">%1$s у вас: %2$s; %3$s — %4$s</string>
+    <string name="push_day_swap_child_gives">%1$s у вас: %2$s</string>
+    <string name="push_day_swap_child_asks">%1$s: %2$s — %3$s</string>
+    <!-- The word between the last two children's names in a push ("Ema, Leo and Max"). -->
+    <string name="push_names_and">і</string>
     <!-- The server's request clock (MON-25), to the proposer: %1$s = the parent who did not answer. -->
     <string name="push_request_deadline_passed_title">%1$s: немає відповіді до терміну</string>
     <string name="push_request_deadline_passed_body">У календарі нічого не змінилося. Можна дати більше часу.</string>

@@ -1658,6 +1658,14 @@ words, English and German). What is left is the gesture on glass and a real push
       "{name} offers you 2 days" with the dates; asking for one reads "{name} asks for 1 of your days";
       both ways reads "{name} proposes a day swap — You: … {name}: …". A co-parent on an older build
       still gets "Your co-parent proposes swapping …".
+- [ ] **The push names the children** (2P, meeting of 25 November 2026). In a family with children,
+      the offer's push reads "{name} proposes a day swap" over "Lenička with you on …, with {name}
+      on …" (CS "Lenička u vás: …; {name} má …", names never declined), a child with a schedule of
+      their own left out, and so is a child of yours placed "Only me" (with two families: a child not
+      yet given a family). Home's pop-up, its Requests card and the inbox card lead with "Lenička
+      with you on …?" (CS/RU/UK without the question mark) and the same sentence, then "{name}
+      proposes this swap" — on Home's pop-up followed by "· answer by …"; the two cards say the
+      deadline in their own clock or status row. An offer from an older build still reads as above.
 - [ ] **Answering** (2P). The card and Home's pop-up say who offers which way, quote the note, and
       answer with **Decline** / **Accept swap**; **Answer day by day** shows Yes/No per day; send one
       day only: the card then shows only the days still waiting.
@@ -1667,7 +1675,8 @@ words, English and German). What is left is the gesture on glass and a real push
   `SwapSelectionChrome.kt`, `components/DaySwapSelectionBar.kt`, `components/DaySwapSheet.kt`,
   `components/SwapDayChips.kt`, `changerequests/DaySwapCard.kt`, `changerequests/SwapOfferContent.kt`,
   `changerequests/SwapDayAnswers.kt`, `home/AwaitingDialogs.kt`, `data/repository/SwapPush.kt`,
-  `:push-wording`'s `SwapPushWording.kt`, `firestore.rules` (`datesToYou`, `datesToSender`).
+  `:push-wording`'s `SwapPushWording.kt` and `PushWording.kt` (`childNames`), `shared`'s
+  `domain/custody/SwapSentence.kt`, `firestore.rules` (`datesToYou`, `datesToSender`, `childNames`).
 
 ---
 
@@ -2542,8 +2551,8 @@ for a phone is everything drawn, the stored connection and the co-parent's side.
 school) and a build with the row switched on: a debug build, or release with
 `-PCOPLANLY_EDUPAGE_IMPORT=true` (`BuildConfig.EDUPAGE_IMPORT`; the row is hidden in release otherwise).
 
-- [ ] Settings → Sync → Connect a school → EduPage. Leave the school's address empty (the sign-in goes
-      through `login1.edupage.org`) or type the school's `https://<school>.edupage.org`.
+- [ ] Settings → Sync → Connect a school → EduPage. Type the school's EduPage address (`<school>.edupage.org`,
+      or the full `https://` form). It is required, and an address that is not an EduPage one is refused.
 - [ ] A **wrong** password: a plain "wrong username or password", nothing stored. Then the right one:
       the screen names the school and each child with class.
 - [ ] Choose the child (and, with two families, the family). Confirm. Within a minute the calendar

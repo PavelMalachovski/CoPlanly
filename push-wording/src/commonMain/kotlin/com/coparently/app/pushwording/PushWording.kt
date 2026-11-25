@@ -74,6 +74,12 @@ class PushWording(private val strings: WordingStrings, private val clock: Reader
      */
     private fun swapOfferText(wording: SwapPushWording, type: String, data: Map<String, String>): PushText {
         val actor = actorOf(data)
+        childNamesOf(data)?.let { children ->
+            return PushText(
+                strings.string("push_day_swap_both_title", actor),
+                withDeadline(type, childSwapBody(wording, children, actor), data)
+            )
+        }
         val (title, body) = when (wording) {
             is SwapPushWording.Gives -> strings.plural(
                 "push_day_swap_gives_title",
@@ -96,6 +102,38 @@ class PushWording(private val strings: WordingStrings, private val clock: Reader
                 )
         }
         return PushText(title, withDeadline(type, body, data))
+    }
+
+    /**
+     * A swap offer's body phrased by who has the children on which days (meeting of 25 November
+     * 2026, item 3): "Lenička with you on Fri, Nov 13, with Pavel on Fri, Nov 20." The names stay as
+     * the sender wrote them, never declined, so each language's frame keeps them in the nominative.
+     */
+    private fun childSwapBody(wording: SwapPushWording, children: String, actor: String): String = when (wording) {
+        is SwapPushWording.Gives -> strings.string("push_day_swap_child_gives", children, clock.swapDays(wording.toYou))
+        is SwapPushWording.Asks ->
+            strings.string("push_day_swap_child_asks", children, actor, clock.swapDays(wording.toSender))
+        is SwapPushWording.Both -> strings.string(
+            "push_day_swap_child_both",
+            children,
+            clock.swapDays(wording.toYou),
+            actor,
+            clock.swapDays(wording.toSender)
+        )
+    }
+
+    /**
+     * The children a swap offer's push names ([PushFields.CHILD_NAMES], one first name a line), as
+     * one list in the reader's language — "Ema, Leo and Max" — or null when the field is absent or
+     * holds no name, and the push is then worded as it always was.
+     */
+    private fun childNamesOf(data: Map<String, String>): String? {
+        val names = data[PushFields.CHILD_NAMES].orEmpty().split('\n').map(String::trim).filter(String::isNotEmpty)
+        return when (names.size) {
+            0 -> null
+            1 -> names.single()
+            else -> names.dropLast(1).joinToString(", ") + " " + strings.string(NAMES_AND) + " " + names.last()
+        }
     }
 
     /**
@@ -231,6 +269,7 @@ class PushWording(private val strings: WordingStrings, private val clock: Reader
         private const val TYPE_CHAT_MESSAGE = PushFields.CHAT_MESSAGE
         private const val APP_NAME = "app_name"
         private const val ACTOR_FALLBACK = "push_actor_fallback"
+        private const val NAMES_AND = "push_names_and"
 
         /**
          * Every framed notification this build knows how to word, by type.

@@ -40,3 +40,13 @@ fun testFamilyMembersSource(
     }
     return FamilyMembersSource(childInfoRepository, petRepository)
 }
+
+/**
+ * A real [FamilyMembersSource] over [children] as given (their families and authors included) and
+ * no pets, for a test about where each child stands for the family on screen.
+ */
+fun testFamilyMembersSourceOf(children: List<ChildInfo>): FamilyMembersSource {
+    val childInfoRepository = mockk<ChildInfoRepository> { every { getAllChildInfo() } returns flowOf(children) }
+    val petRepository = mockk<PetRepository> { every { getAllPets() } returns flowOf(emptyList()) }
+    return FamilyMembersSource(childInfoRepository, petRepository)
+}

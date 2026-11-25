@@ -50,10 +50,13 @@
     <string name="request_history_day_swap">Výměna dnů: %1$s</string>
     <string name="request_history_custody">Nový rozvrh péče</string>
     <string name="request_history_split">Rozdělení výdajů</string>
-    <string name="request_history_yours_answered">Vaše žádost\u00A0· odpověď: %1$s</string>
-    <string name="request_history_theirs_answered">Žádost: %1$s\u00A0· odpověděli jste</string>
-    <string name="request_history_withdrawn_by_you">Žádost jste stáhli</string>
-    <string name="request_history_withdrawn_by">%1$s: žádost stažena</string>
+    <string name="request_history_yours_answered">odpověď: %1$s</string>
+    <string name="request_history_theirs_answered">odpověděli jste</string>
+    <string name="request_history_your_request">Vaše žádost</string>
+    <string name="request_history_their_request">Žádost: %1$s</string>
+    <string name="request_history_legend_you">vy</string>
+    <string name="request_history_withdrawn_by_you">stažena</string>
+    <string name="request_history_withdrawn_by">stažena: %1$s</string>
     <string name="request_history_when">%1$s\u00A0· %2$s</string>
     <string name="request_history_propose_change">Navrhnout změnu</string>
     <string name="request_history_propose_change_description">Navrhnout změnu této dohodnuté výměny</string>

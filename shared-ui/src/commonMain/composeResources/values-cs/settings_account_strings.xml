@@ -10,6 +10,8 @@
     <string name="settings_gcal_auto_note">Když je synchronizace zapnutá, nové a změněné události se načtou samy: při otevření aplikace a zhruba každých 15 minut.</string>
     <string name="settings_parent_color">Moje barva</string>
     <string name="settings_parent_color_desc">Jak se označují vaše události, dny v péči a výdaje. Druhý rodič si vybírá svou.</string>
+    <string name="parent_color_clash_named">Druhý rodič, %1$s, si také vybral barvu: %2$s. Abyste se v kalendáři odlišili, ukazujeme vás v rodině barvou: %3$s. Vyberte jinou barvu, chcete-li být vidět ve své vlastní.</string>
+    <string name="parent_color_clash">Druhý rodič, %1$s, si vybral barvu blízkou té vaší. Abyste se v kalendáři odlišili, ukazujeme vás v rodině jinou barvou. Vyberte jinou barvu, chcete-li být vidět ve své vlastní.</string>
     <string name="parent_color_pink">Růžová</string>
     <string name="parent_color_blue">Modrá</string>
     <string name="parent_color_purple">Fialová</string>

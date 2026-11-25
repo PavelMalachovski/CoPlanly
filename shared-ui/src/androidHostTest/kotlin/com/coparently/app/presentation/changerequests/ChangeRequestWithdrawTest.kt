@@ -165,7 +165,8 @@ class ChangeRequestWithdrawTest {
             familyAgreementsSource = agreementsSource
         ),
         familySettingsRepository = familySettingsRepository,
-        agreementWithdrawals = agreementWithdrawals
+        agreementWithdrawals = agreementWithdrawals,
+        swapChildrenSource = testSwapChildrenSource()
     )
 
     /** A view model whose inbox has drawn the family Olya shares with Pavel. */

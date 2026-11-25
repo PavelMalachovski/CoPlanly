@@ -10,6 +10,7 @@ import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.presentation.changerequests.testSwapChildrenSource
 import com.coparently.app.presentation.common.NamedParent
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
@@ -115,7 +116,8 @@ class CalendarViewModelCustodyChangeTest {
             encryptedPreferences = encryptedPreferences,
             friendRepository = noCalendarFriends(),
             parentsSource = parentsSource,
-            userRepository = userRepository
+            userRepository = userRepository,
+            swapChildrenSource = testSwapChildrenSource()
         )
         backgroundScope.launch { viewModel.custodyChangeAnnouncement.collect {} }
         return viewModel
@@ -142,7 +144,8 @@ class CalendarViewModelCustodyChangeTest {
             encryptedPreferences = encryptedPreferences,
             friendRepository = noCalendarFriends(),
             parentsSource = parentsSource,
-            userRepository = noSignedInUser()
+            userRepository = noSignedInUser(),
+            swapChildrenSource = testSwapChildrenSource()
         )
         backgroundScope.launch { viewModel.custodyChangeAnnouncement.collect {} }
         return viewModel

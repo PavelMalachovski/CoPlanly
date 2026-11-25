@@ -40,7 +40,9 @@ import com.coparently.app.presentation.pairing.InvitationView
 import com.coparently.app.presentation.payments.SettleUpPanelActions
 import com.coparently.app.presentation.payments.SettleUpPanelState
 import com.coparently.app.presentation.settings.CUSTOM_COLOUR
+import com.coparently.app.presentation.settings.CoParentColour
 import com.coparently.app.presentation.settings.ParentColorPicker
+import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.testing.RobolectricTestApplication
 import io.mockk.every
 import io.mockk.mockk
@@ -212,6 +214,26 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
     @Test
     fun parentColorPicker() = snap("settings_parent_color_picker") {
         ParentColorPicker(chosen = CUSTOM_COLOUR, customHue = CUSTOM_HUE, onChoose = {}, onCustomHue = {})
+    }
+
+    /**
+     * "My colour" when the co-parent chose the same blue: the notice above the grid says what the
+     * calendar will do, and the co-parent's first name sits under their swatch.
+     */
+    @Test
+    fun parentColorPickerClash() = snap("settings_parent_color_picker_clash") {
+        ParentColorPicker(
+            chosen = ParentColorChoice.BLUE.name,
+            customHue = CUSTOM_HUE,
+            onChoose = {},
+            onCustomHue = {},
+            coParent = CoParentColour(
+                name = "Zuzana",
+                slot = "mom",
+                colorCode = ParentColorChoice.BLUE.storedCode,
+                mySlot = "dad"
+            )
+        )
     }
 
     /**

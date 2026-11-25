@@ -8,6 +8,7 @@ import com.coparently.app.presentation.changerequests.ChangeRequestViewModel
 import com.coparently.app.presentation.changerequests.RequestChangeViewModel
 import com.coparently.app.presentation.changerequests.RequestsBadgeViewModel
 import com.coparently.app.presentation.changerequests.RequestsSource
+import com.coparently.app.presentation.changerequests.SwapChildrenSource
 import com.coparently.app.presentation.chat.ChatAttachmentViewModel
 import com.coparently.app.presentation.chat.ChatEventCardViewModel
 import com.coparently.app.presentation.chat.ChatSearchViewModel
@@ -160,6 +161,8 @@ val custodyUiModule: Module = module {
  */
 val requestsUiModule: Module = module {
     factoryOf(::RequestsSource)
+    // The children a day swap names, for the calendar's offer and the requests' screens alike.
+    factoryOf(::SwapChildrenSource)
     viewModelOf(::ChangeRequestViewModel)
     viewModelOf(::RequestChangeViewModel)
     viewModelOf(::RequestsBadgeViewModel)

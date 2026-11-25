@@ -810,15 +810,28 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     - **The sheet shows both sides, compactly, and the result** (`DaySwapSheet` over
       `DaySwapSheetContent`, opening partly expanded so the grid stays in view): a title that counts
       the days, one row per way from `swapSheetRows` ("Fri 13, Sat 14 Nov → Lana", "→ you"; the given
-      days first), "Add a note" and "Answer by …" chips that open their fields in place, and a pinned
-      "Send to Lana" — no mini months (the inbox card and Home's pop-up keep them); after sending, a snackbar says it
+      days first), an "Add a note" chip that opens its field in place, the deadline always shown
+      ("Answer by Fri 28 Nov · up to 3 reminders" over "Lana is reminded automatically until they
+      answer. Tap to change the date.", one button that opens `AnswerByField` under it; the count is
+      `plannedReminderCount`, the number that field's own consequences line states; too soon for a
+      deadline it is the plain sentence, no button), and a pinned "Send to Lana" — no mini months (the inbox card and Home's pop-up keep them); after sending, a snackbar says it
       went and offers Withdraw for exactly that group (`CalendarViewModel.swapSent`).
     - **The push names the sender and the dates**: `datesToYou`/`datesToSender` (ISO dates, from the
       addressee's side, bounded at 160 in `firestore.rules`) and `actorName` ride the existing swap
       types (`swapPush`, `SwapOfferer`); the receiving phone words "Lana offers you 2 days" through
-      `swapPushWording`, and an older sender's push keeps its old sentence.
+      `swapPushWording`, and an older sender's push keeps its old sentence. **Since 25 November 2026
+      an offer also carries `childNames`** (the children it moves by first name, one a line, ≤ 200
+      characters cut on a name boundary, bounded in `firestore.rules`; a child with a schedule of
+      their own is left out, item 33 of "Things that are easy to get wrong", and so is one placed
+      "Only me", item 46: `SwapChildrenSource` keeps the children `FamilyView.counts`, on the sending
+      and the reading phone alike): the receiving phone
+      then words "Lenička with you on …, with Pavel on …" under "{name} proposes a day swap", and
+      Home's pop-up and the inbox card lead with the same sentence (`domain/custody/SwapSentence`,
+      `SwapOfferSentence`, `ChangeRequestViewModel.swapChildNames`). Names are never declined in
+      cs, ru or uk; a blank or missing field words the push as before.
     - **An answer is one pair of buttons, or day by day on request**: the card and Home's dialog lead
-      with the push's own heading (`swapOfferHeading`), draw the two sides and the note as a quote,
+      with the children's sentence when the children are known, else with the push's own heading
+      (`swapOfferHeading`), draw the two sides and the note as a quote,
       "Accept swap"/"Accept", and "Answer day by day" (two waiting days or more) switches to
       `SwapDayAnswers` in their place. A part-answer leaves the rest waiting, and the card then shows
       and decides only those (`DaySwapGroup.waitingOn`).
@@ -4820,8 +4833,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       with it off, a record written before the option reads on, and the record carries
       `"importHours": false` only when off. Off, the planner creates no school-hours event and deletes
       those this connection made for today or later (the import's second deletion, its own `hours`
-      kind only), and drops them from the ledger so switching on imports them afresh; events, tests,
-      homework and days off come in either way. The switch is the import screen's "Lesson times" row.
+      kind only), and drops them from the ledger so switching on imports them afresh; events and days
+      off come in either way, and so do EduPage's tests and homework (a Bakaláři connection has none). The switch is the import screen's "Lesson times" row.
     - **Quiet writes, daily job.** The import writes through the event use cases with
       `announce = false` (no chat card per event; revisions are still recorded), skips a day off the
       holiday provider already draws, merges a run of days off into one event, and runs as unique
@@ -4879,6 +4892,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       + key` hashed like Bakaláři's, because one login lists several children and each parent has
       their own login for the same child. Kinds are `event`, `hours`, `dayoff` and the new `task`
       (a test or homework, a dated all-day event "Subject: title", keyed on EduPage's item id).
+    - **The school's address is required** (owner, 25 November 2026): sign-in is not offered while the
+      EduPage address is blank (`ConnectSchoolUiState.canSignIn`), never a lookup from the login alone.
     - **A pupil's own timeline entry is matched by name or class** (`user_meno`, whitespace and case
       folded) or whole school; anything else is not the child's and is dropped.
     - **A second factor is not handled by the app**: `EdupageException.SecondFactor` says "approve

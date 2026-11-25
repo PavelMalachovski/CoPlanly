@@ -17,7 +17,6 @@ import androidx.compose.ui.Modifier
 import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.custody.SwapDirection
-import com.coparently.app.presentation.calendar.MiniMonthModel
 import com.coparently.app.presentation.calendar.components.isConsecutive
 import com.coparently.app.presentation.common.AnswerButtons
 import com.coparently.app.presentation.common.ParentNames
@@ -50,8 +49,10 @@ import org.jetbrains.compose.resources.stringResource
  * @param group The offer and where each of its days stands.
  * @param currentUserId This device's own uid, for telling "offered to you" from "offered by you".
  * @param parentNames Resolves a uid or a slot to that person's name — never "Mom" or "Dad".
- * @param months The months its days fall in, each day in the colour of whom it goes to (21 October
- *   2026), or empty while they are computed.
+ * @param details The months its days fall in, each day in the colour of whom it goes to (21 October
+ *   2026; empty while they are computed), and the children a swap of this family moves, for the
+ *   co-parent's offer phrased by who has them (meeting of 25 November 2026, item 3; null while not
+ *   known, and the card then reads as before).
  * @param answers Its Accept and Decline, or its Withdraw.
  */
 @Composable
@@ -59,9 +60,10 @@ internal fun DaySwapCard(
     group: DaySwapGroup,
     currentUserId: String,
     parentNames: ParentNames,
-    months: List<MiniMonthModel>,
+    details: SwapOfferDetails,
     answers: InboxAnswers
 ) {
+    val children = details.children
     val first = group.swaps.first()
     val offeredByMe = first.override.requestedBy == currentUserId
 
@@ -79,7 +81,10 @@ internal fun DaySwapCard(
                 val shown = group.waitingOn(currentUserId) ?: group
                 val offerer = parentNames.labelForUid(first.override.requestedBy)
                 val sides = shown.sidesAsked(parentNames)
-                TitleWithClockChip(swapOfferHeading(sides, offerer))
+                TitleWithClockChip(swapOfferHeading(sides, offerer, children))
+                SwapOfferSentence(sides, offerer, children)
+                // The deadline is the card's clock rows' (CardClockDetails), so the line names the sender alone.
+                if (swapHeadingNamesChildren(sides, children)) SwapProposedByLine(offerer, answerByMillis = null)
                 sides?.let { SwapOfferSides(it, offerer, parentNames) }
                 SwapNoteQuote(first.override.note, offerer)
             }
@@ -93,7 +98,7 @@ internal fun DaySwapCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             if (waiting) AnsweredDays(group)
-            SwapMonths(months, parentNames)
+            SwapMonths(details.months, parentNames)
             CardClockDetails()
             SwapAnswerArea(group, currentUserId, parentNames, answers)
         }

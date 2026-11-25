@@ -19,6 +19,7 @@ internal object PushFields {
     const val DAY_COUNT = "dayCount"
     const val DATES_TO_YOU = "datesToYou"
     const val DATES_TO_SENDER = "datesToSender"
+    const val CHILD_NAMES = "childNames"
     const val ANSWER_BY = "answerBy"
     const val AMOUNT = "amount"
     const val SHARE = "share"
