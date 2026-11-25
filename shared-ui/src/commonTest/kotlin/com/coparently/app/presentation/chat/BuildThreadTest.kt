@@ -76,6 +76,37 @@ class BuildThreadTest {
         assertTrue(entries.isEmpty())
     }
 
+    @Test
+    fun `newest first puts each day header above its oldest message`() {
+        val entries = threadNewestFirst(
+            listOf(
+                message("d1a", NOON),
+                message("d1b", NOON + MINUTE),
+                message("d2a", NOON + THREE_DAYS),
+                message("d2b", NOON + THREE_DAYS + MINUTE)
+            )
+        )
+
+        // Item 0 is drawn at the bottom of a reversed list, so a header *after* its day's messages
+        // sits above them on screen, directly over the day's oldest one.
+        assertEquals(
+            listOf("d2b", "d2a", "day", "d1b", "d1a", "day"),
+            entries.map { if (it is ThreadEntry.Bubble) it.message.id else "day" }
+        )
+        val headers = entries.filterIsInstance<ThreadEntry.DayHeader>()
+        assertTrue(headers[0].date > headers[1].date)
+    }
+
+    @Test
+    fun `newest first keeps each bubble's place in its group`() {
+        val entries = threadNewestFirst(listOf(message("m1", NOON), message("m2", NOON + MINUTE)))
+        val (newest, oldest) = entries.filterIsInstance<ThreadEntry.Bubble>()
+
+        assertEquals("m2", newest.message.id)
+        assertTrue(!newest.startsGroup && newest.endsGroup)
+        assertTrue(oldest.startsGroup && !oldest.endsGroup)
+    }
+
     private companion object {
         const val MINUTE = 60_000L
         const val THREE_DAYS = 3 * 24 * 60 * MINUTE

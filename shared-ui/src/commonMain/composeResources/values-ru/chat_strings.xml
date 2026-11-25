@@ -98,6 +98,15 @@
     <string name="chat_template_confirm_agreement_content">Чтобы не было разночтений, вот о чём мы договорились: [договорённость]. Если ты понимаешь это иначе, напиши, пожалуйста.</string>
     <string name="chat_failed_to_send_retry">Не отправлено — нажмите, чтобы повторить</string>
     <string name="chat_load_earlier">Загрузить более ранние сообщения</string>
+    <!-- The button over the thread that brings its newest message into view, and how many
+         messages arrived while the reader was in history. -->
+    <string name="chat_scroll_to_newest">Последние сообщения</string>
+    <plurals name="chat_new_messages">
+        <item quantity="one">%1$d новое сообщение</item>
+        <item quantity="few">%1$d новых сообщения</item>
+        <item quantity="many">%1$d новых сообщений</item>
+        <item quantity="other">%1$d нового сообщения</item>
+    </plurals>
 
     <!-- MON-15: search inside the open conversation. Local to this phone; never a server. -->
     <string name="chat_search">Искать в переписке</string>

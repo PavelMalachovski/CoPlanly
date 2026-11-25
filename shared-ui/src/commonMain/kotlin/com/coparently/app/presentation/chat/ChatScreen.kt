@@ -149,6 +149,7 @@ fun ChatScreen(
     val messages by viewModel.messages.collectAsState()
     val currentUserId by viewModel.currentUserId.collectAsState()
     val canLoadEarlier by viewModel.canLoadEarlier.collectAsState()
+    val quotes by viewModel.quotes.collectAsState()
     val conversations = viewModel.conversations.collectAsState().value.valueOrNull.orEmpty()
     val upcomingEvents by viewModel.upcomingEvents.collectAsState()
     val pendingSend by viewModel.pendingSend.collectAsState()
@@ -322,7 +323,8 @@ fun ChatScreen(
                                     onRetryFailed = { viewModel.resendFailedMessages() },
                                     modifier = Modifier.weight(1f),
                                     revealMessageId = revealTarget,
-                                    onRevealed = { revealTarget = null }
+                                    onRevealed = { revealTarget = null },
+                                    quotes = quotes
                                 )
                             }
                         }

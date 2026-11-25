@@ -1,31 +1,38 @@
 package com.coparently.app.presentation.chat
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.Badge
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -33,11 +40,12 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -45,15 +53,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.chat.ChatAttachmentCodec
-import com.coparently.app.domain.chat.ChatScrollPolicy
+import com.coparently.app.domain.chat.NewestButton
+import com.coparently.app.domain.chat.ReplyQuote
 import com.coparently.app.domain.chat.isShownInThread
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.presentation.common.AppIcon
 import com.coparently.app.presentation.common.EmptyState
+import com.coparently.app.presentation.common.LocalScreenVisible
 import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.Spacing
@@ -66,24 +79,30 @@ import com.coparently.app.resources.chat_failed_to_send_retry
 import com.coparently.app.resources.chat_load_earlier
 import com.coparently.app.resources.chat_messages_empty_description
 import com.coparently.app.resources.chat_messages_empty_title
+import com.coparently.app.resources.chat_new_messages
 import com.coparently.app.resources.chat_open_change_request
 import com.coparently.app.resources.chat_open_event
+import com.coparently.app.resources.chat_scroll_to_newest
 import com.coparently.app.resources.chat_status_delivered
 import com.coparently.app.resources.chat_status_error
 import com.coparently.app.resources.chat_status_read
 import com.coparently.app.resources.chat_status_sending
 import com.coparently.app.resources.chat_status_sent
+import com.coparently.app.resources.chat_unread_count_overflow
 import com.coparently.app.resources.parent_label_you
 import com.coparently.app.utils.DAY_WITH_WEEKDAY
 import com.coparently.app.utils.ReaderDateText
 import com.coparently.app.utils.readerMediumDate
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.todayIn
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Clock
 
@@ -168,7 +187,28 @@ internal fun buildThread(all: List<Message>): List<ThreadEntry> {
 }
 
 /**
+ * [buildThread] in the order the reversed list draws it: the newest message first.
+ *
+ * The thread is a `LazyColumn` with `reverseLayout = true`, so item 0 is drawn at the bottom, just
+ * above the composer, and a day header that follows its day's messages here sits above them on
+ * screen, directly over the day's oldest one.
+ *
+ * @param messages Messages in ascending time order
+ * @return Renderable entries, newest first
+ */
+internal fun threadNewestFirst(messages: List<Message>): List<ThreadEntry> = buildThread(messages).reversed()
+
+/**
  * The message thread, with day separators, grouped bubbles and delivery state.
+ *
+ * A reversed list whose item 0 is the newest message (chat: newest message always in view,
+ * November 2026). Its position is not saved: a thread opened again — the Chat tab entered, a push
+ * tapped, a return from another screen, a rotation — starts at item 0, the newest message, just
+ * above the composer. Because the list is anchored at its bottom, the keyboard opening, the
+ * composer growing over several lines and a reply bar all keep the newest message in view with no
+ * scroll code: the insets are the NavHost's alone (design item 14). A message that arrives while
+ * the reader is in history leaves the list where it is, and the "newest messages" button counts it
+ * ([NewestButton]); one's own message always brings the newest into view.
  *
  * @param messages Messages in ascending time order, with [Message.status] already promoted to
  *   DELIVERED/READ by `ChatViewModel` via `ChatReadState.statusFor`
@@ -183,15 +223,17 @@ internal fun buildThread(all: List<Message>): List<ThreadEntry> {
  *   happens once the message arrives.
  * @param onRevealed Called once the list has scrolled to [revealMessageId], so the caller can
  *   drop the request
+ * @param quotes The quote each reply's bubble shows, by the reply's message id (`ChatViewModel.quotes`)
+ * @param onQuoteClick Called with the quoted message's id when a reply's quote is tapped
+ * @param onReply Called with a message the parent chose to answer
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-// Already over detekt's LongMethod threshold before the Aug 2026 grouping/scroll work landed
-// (the codebase's own baseline records that); explicit like the other screen composables that
-// carry the same suppression rather than relying on a baseline entry keyed to an exact signature.
-// LongParameterList for the same reason it is suppressed on the other thread composables: one
-// callback per action the thread offers, and @Suppress is not repeatable so both share the one.
-@Suppress("LongMethod", "LongParameterList")
+// LongParameterList: one callback per action the thread offers, as on the other thread
+// composables. UnusedParameter: [quotes], [onQuoteClick] and [onReply] are the replies' (spec
+// goals 3 and 5), drawn by the bubbles in the task that follows this one; the signature lands
+// first so the screen passes them already. @Suppress is not repeatable, so both share the one.
+@Suppress("LongParameterList", "UnusedParameter")
 fun MessagesList(
     messages: List<Message>,
     currentUserId: String,
@@ -203,49 +245,28 @@ fun MessagesList(
     onRetryFailed: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     revealMessageId: String? = null,
-    onRevealed: () -> Unit = {}
+    onRevealed: () -> Unit = {},
+    quotes: Map<String, ReplyQuote> = emptyMap(),
+    onQuoteClick: (String) -> Unit = {},
+    onReply: (Message) -> Unit = {}
 ) {
-    val listState = rememberLazyListState()
-    FollowNewestWhileKeyboardOpens(listState)
+    // Not rememberSaveable, on purpose: a saved position is what brought a returning reader back to
+    // the place they left instead of the newest message. A new state starts at item 0, the newest.
+    val listState = remember { LazyListState() }
     val pullToRefreshState = rememberPullToRefreshState()
     val scope = rememberCoroutineScope()
     var isRefreshing by remember { mutableStateOf(false) }
-    val entries = remember(messages) { buildThread(messages) }
+    val entries = remember(messages) { threadNewestFirst(messages) }
     val loadEarlier = onLoadEarlier.takeIf { canLoadEarlier }
+    val revealing = revealMessageId != null
     val highlightedId = rememberRevealedMessage(
         listState = listState,
         entries = entries,
         revealMessageId = revealMessageId,
-        leadingItems = if (loadEarlier != null) 1 else 0,
         onRevealed = onRevealed
     )
-
-    // Survives a configuration change: the jump is about *opening* the thread, and a rotation
-    // is not a re-open. The scroll position itself is restored by rememberLazyListState.
-    var initialJumpDone by rememberSaveable { mutableStateOf(false) }
-
-    LaunchedEffect(entries.size) {
-        // Not while a search result is being revealed: following the newest message would undo the
-        // jump, and the window growing to reach that result is exactly the change this reacts to.
-        val target = ChatScrollPolicy.targetIndex(
-            entryCount = entries.size,
-            firstVisibleIndex = listState.firstVisibleItemIndex,
-            lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0,
-            initialJumpDone = initialJumpDone
-        ).takeIf { revealMessageId == null }
-        if (target != null) {
-            // Instant on open — animating a flight past forty bubbles is its own defect —
-            // and animated afterwards, when it is one new message sliding into view.
-            if (initialJumpDone) {
-                listState.animateScrollToItem(target)
-            } else {
-                listState.scrollToItem(target)
-                initialJumpDone = true
-            }
-        } else if (entries.isNotEmpty()) {
-            initialJumpDone = true
-        }
-    }
+    FollowNewestMessage(listState, entries, currentUserId, revealing)
+    NewestWhenShownAgain(listState, revealing)
 
     PullToRefreshBox(
         isRefreshing = isRefreshing,
@@ -272,49 +293,80 @@ fun MessagesList(
                 modifier = Modifier.fillMaxSize()
             )
         } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(Spacing.L),
-                verticalArrangement = Arrangement.spacedBy(Spacing.XXS)
-            ) {
-                // At index 0, above the oldest loaded message, and deliberately inside the list
-                // rather than pinned above it (CQ-6). The reader has to be at the top to see it,
-                // so after it grows the window they are still at the top and the newly loaded
-                // messages appear directly below — no scroll anchor to restore.
-                if (loadEarlier != null) {
-                    item(key = "load_earlier") {
-                        TextButton(
-                            onClick = loadEarlier,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(stringResource(Res.string.chat_load_earlier))
-                        }
-                    }
+            ThreadColumn(
+                listState = listState,
+                entries = entries,
+                loadEarlier = loadEarlier,
+                highlightedId = highlightedId,
+                currentUserId = currentUserId,
+                onEventLinkClick = onEventLinkClick,
+                onOpenInbox = onOpenInbox,
+                onRetryFailed = onRetryFailed
+            )
+            NewestMessagesButton(listState, entries)
+        }
+    }
+}
+
+/**
+ * The reversed list itself: [entries] newest first from item 0, at the bottom, and the "load
+ * earlier" button as the last item, so it is drawn on top, above the oldest loaded message.
+ */
+@Composable
+// LongParameterList: the thread's callbacks, passed through to each bubble.
+@Suppress("LongParameterList")
+private fun ThreadColumn(
+    listState: LazyListState,
+    entries: List<ThreadEntry>,
+    loadEarlier: (() -> Unit)?,
+    highlightedId: String?,
+    currentUserId: String,
+    onEventLinkClick: ((String) -> Unit)?,
+    onOpenInbox: (() -> Unit)?,
+    onRetryFailed: (() -> Unit)?
+) {
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        reverseLayout = true,
+        contentPadding = PaddingValues(Spacing.L),
+        // Bottom: a thread shorter than the screen sits on the composer, not under the header.
+        verticalArrangement = Arrangement.spacedBy(Spacing.XXS, Alignment.Bottom)
+    ) {
+        items(
+            count = entries.size,
+            key = { index ->
+                when (val entry = entries[index]) {
+                    is ThreadEntry.DayHeader -> "day_${entry.date}"
+                    is ThreadEntry.Bubble -> entry.message.id
                 }
-                items(
-                    count = entries.size,
-                    key = { index ->
-                        when (val entry = entries[index]) {
-                            is ThreadEntry.DayHeader -> "day_${entry.date}"
-                            is ThreadEntry.Bubble -> entry.message.id
-                        }
-                    }
-                ) { index ->
-                    when (val entry = entries[index]) {
-                        is ThreadEntry.DayHeader -> DaySeparator(entry.date)
-                        is ThreadEntry.Bubble -> RevealHighlight(entry.message.id == highlightedId) {
-                            MessageItem(
-                                message = entry.message,
-                                isCurrentUser = entry.message.senderId == currentUserId,
-                                startsGroup = entry.startsGroup,
-                                endsGroup = entry.endsGroup,
-                                onEventLinkClick = onEventLinkClick,
-                                onOpenInbox = onOpenInbox,
-                                onRetryFailed = onRetryFailed
-                            )
-                        }
-                    }
+            }
+        ) { index ->
+            when (val entry = entries[index]) {
+                is ThreadEntry.DayHeader -> DaySeparator(entry.date)
+                is ThreadEntry.Bubble -> RevealHighlight(entry.message.id == highlightedId) {
+                    MessageItem(
+                        message = entry.message,
+                        isCurrentUser = entry.message.senderId == currentUserId,
+                        startsGroup = entry.startsGroup,
+                        endsGroup = entry.endsGroup,
+                        onEventLinkClick = onEventLinkClick,
+                        onOpenInbox = onOpenInbox,
+                        onRetryFailed = onRetryFailed
+                    )
+                }
+            }
+        }
+        // The last item, so drawn on top, above the oldest loaded message, and deliberately inside
+        // the list rather than pinned above it (CQ-6). The reader has to be at the top to see it,
+        // and the older messages it loads are appended after the ones on screen, so nothing moves.
+        if (loadEarlier != null) {
+            item(key = "load_earlier") {
+                TextButton(
+                    onClick = loadEarlier,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(Res.string.chat_load_earlier))
                 }
             }
         }
@@ -322,67 +374,159 @@ fun MessagesList(
 }
 
 /**
- * Keeps the newest message in view while the keyboard opens.
+ * Brings a new newest message into view when it should come into view.
  *
- * The window resizes above the keyboard (adjustResize, `docs/AUDIT-2026-10-design.md` D-9), and
- * a LazyColumn that gets shorter keeps its first visible item — so the newest messages would
- * slide out of view under the composer and its chips at the moment the parent starts a reply.
- * The window used to pan instead, which kept them in view but scrolled the thread header away.
- *
- * It reacts to the list's own viewport getting shorter, not to the keyboard inset. The inset
- * changes before the list is measured at its new height, and a scroll made then is measured
- * against the old, taller viewport — so the newest message still slid out afterwards, and with
- * one inset step (animations off) it never came back (UI tour, `20_chat_composer_keyboard`).
- * Reading the viewport scrolls after the shrink has been laid out. It covers the other things
- * that shorten the thread for the same reason: the tone hint and the held-message notice.
- *
- * Two limits keep this from fighting the reader. It follows only when the newest entry was on
- * screen before the list got shorter, so a parent reading history keeps their place. And only a
- * shrink moves the list: a scroll made while the keyboard is up, or the keyboard closing (the
- * list then only gets taller), leaves the position alone.
+ * A message inserted at item 0 is placed below a reader who was looking at the previous newest:
+ * the list keeps its first visible item by key. So when the newest message changes this brings
+ * item 0 into view if the reader was at the newest (the previous newest is on screen), if the
+ * message is the reader's own (a send always shows what was sent), or if the previous newest is
+ * gone (another conversation is on screen). A reader in history otherwise stays where
+ * they are, and nothing moves while a search result is being revealed.
  */
 @Composable
-private fun FollowNewestWhileKeyboardOpens(listState: LazyListState) {
-    LaunchedEffect(listState) {
-        var newestWasVisible = true
-        var lastViewportHeight = 0
-        snapshotFlow { listState.layoutInfo.viewportSize.height to listState.isNewestVisible() }
-            .collect { (viewportHeight, newestVisible) ->
-                val shrank = viewportHeight < lastViewportHeight
-                lastViewportHeight = viewportHeight
-                val lastIndex = listState.layoutInfo.totalItemsCount - 1
-                val follow = shrank && newestWasVisible && !listState.isScrollInProgress
-                if (follow && lastIndex >= 0) {
-                    listState.scrollToItem(lastIndex)
-                } else {
-                    newestWasVisible = newestVisible
-                }
-            }
+private fun FollowNewestMessage(
+    listState: LazyListState,
+    entries: List<ThreadEntry>,
+    currentUserId: String,
+    revealing: Boolean
+) {
+    val newest = (entries.firstOrNull() as? ThreadEntry.Bubble)?.message
+    val seen = remember { NewestSeen() }
+    LaunchedEffect(newest?.id) {
+        val previous = seen.id
+        seen.id = newest?.id
+        if (newest == null || previous == null || revealing) return@LaunchedEffect
+        // The previous newest on screen, wherever the remeasure that places the new one has got to.
+        val wasReadingNewest = listState.firstVisibleItemIndex == 0 ||
+            listState.layoutInfo.visibleItemsInfo.any { it.key == previous }
+        val replaced = entries.none { it is ThreadEntry.Bubble && it.message.id == previous }
+        when {
+            // A request, not a scroll: it holds for the remeasure that places the new message,
+            // which may not have happened yet, and overrides the list's keeping of its first item.
+            // Instant, too: a flight through another conversation is its own defect.
+            replaced || wasReadingNewest -> listState.requestScrollToItem(0)
+            newest.senderId == currentUserId -> listState.animateScrollToItem(0)
+        }
     }
 }
 
-/** Whether the list's last item is at least partly on screen; true before the first layout. */
-private fun LazyListState.isNewestVisible(): Boolean {
-    val info = layoutInfo
-    val lastVisible = info.visibleItemsInfo.lastOrNull() ?: return true
-    return lastVisible.index >= info.totalItemsCount - 1
+/** The newest message's id as [FollowNewestMessage] last saw it; not state, nothing draws it. */
+private class NewestSeen {
+    var id: String? = null
+}
+
+/**
+ * Starts the thread at its newest message again each time its screen is shown again — on the
+ * iPhone, whose shell keeps a hidden tab's screens composed ([LocalScreenVisible]), so the Chat tab
+ * entered again, a return from a screen pushed over the thread, or the app brought back. Android
+ * provides no visibility: there a screen that is not shown has left composition, and the list's
+ * unsaved position starts at the newest anyway.
+ */
+@Composable
+private fun NewestWhenShownAgain(listState: LazyListState, revealing: Boolean) {
+    val visibility = LocalScreenVisible.current ?: return
+    val revealingNow by rememberUpdatedState(revealing)
+    LaunchedEffect(listState, visibility) {
+        snapshotFlow { visibility.value }
+            .drop(1)
+            .filter { it }
+            .collect { if (!revealingNow) listState.scrollToItem(0) }
+    }
+}
+
+/**
+ * How many messages arrived since the reader left the newest one ([NewestButton.unseen]).
+ *
+ * The reader leaves the newest when item 0 leaves the screen; the newest message's id at that
+ * moment is kept, and forgotten again when item 0 is back on screen.
+ */
+@Composable
+private fun rememberUnseenCount(listState: LazyListState, entries: List<ThreadEntry>): Int {
+    val newestFirstIds = remember(entries) {
+        entries.mapNotNull { (it as? ThreadEntry.Bubble)?.message?.id }
+    }
+    var newestWhenLeft by remember { mutableStateOf<String?>(null) }
+    val ids by rememberUpdatedState(newestFirstIds)
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.firstVisibleItemIndex == 0 }.collect { atNewest ->
+            newestWhenLeft = if (atNewest) null else newestWhenLeft ?: ids.firstOrNull()
+        }
+    }
+    return NewestButton.unseen(newestWhenLeft, newestFirstIds)
+}
+
+/**
+ * The "↓" button over the thread's bottom end: it brings the newest message into view, and a
+ * badge counts the messages that arrived while the reader was in history. It shows while the
+ * reader is far from the newest ([NewestButton.shows]), and whenever something arrived unseen.
+ * TalkBack and VoiceOver read the button's name and, as its state, the count ("2 new messages").
+ */
+@Composable
+private fun BoxScope.NewestMessagesButton(listState: LazyListState, entries: List<ThreadEntry>) {
+    val scope = rememberCoroutineScope()
+    val unseen = rememberUnseenCount(listState, entries)
+    val far by remember(listState) {
+        derivedStateOf { NewestButton.shows(listState.firstVisibleItemIndex) }
+    }
+    AnimatedVisibility(
+        visible = far || unseen > 0,
+        modifier = Modifier
+            .align(Alignment.BottomEnd)
+            .padding(Spacing.L),
+        enter = fadeIn(tween(Motion.SHORT_MS)),
+        exit = fadeOut(tween(Motion.SHORT_MS))
+    ) {
+        Box {
+            val count = if (unseen > 0) {
+                pluralStringResource(Res.plurals.chat_new_messages, unseen, unseen)
+            } else {
+                null
+            }
+            SmallFloatingActionButton(
+                onClick = { scope.launch { listState.animateScrollToItem(0) } },
+                modifier = Modifier.semantics { count?.let { stateDescription = it } }
+            ) {
+                AppIcon(
+                    imageVector = Icons.Default.ExpandMore,
+                    contentDescription = stringResource(Res.string.chat_scroll_to_newest)
+                )
+            }
+            if (unseen > 0) {
+                Badge(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = Spacing.XS, y = -Spacing.XS)
+                        // The button says the count as its state; the badge only draws it.
+                        .clearAndSetSemantics {}
+                ) {
+                    Text(
+                        if (unseen > MAX_BADGE_COUNT) {
+                            stringResource(Res.string.chat_unread_count_overflow, MAX_BADGE_COUNT)
+                        } else {
+                            unseen.toString()
+                        }
+                    )
+                }
+            }
+        }
+    }
 }
 
 /**
  * Scrolls to [revealMessageId] once it is among [entries], and returns the id to highlight —
  * cleared again after [Motion.HIGHLIGHT_HOLD_MS].
  *
+ * The list draws [entries] as they are, from item 0 (the "load earlier" button is the last item),
+ * so an entry's index is the item's.
+ *
  * Two effects, not one: [onRevealed] clears the request, which would cancel an effect keyed on it
  * halfway through the hold and leave the highlight on for good.
- *
- * @param leadingItems Rows the list draws above the first entry (the "load earlier" button).
  */
 @Composable
 private fun rememberRevealedMessage(
     listState: LazyListState,
     entries: List<ThreadEntry>,
     revealMessageId: String?,
-    leadingItems: Int,
     onRevealed: () -> Unit
 ): String? {
     var highlighted by remember { mutableStateOf<String?>(null) }
@@ -391,7 +535,7 @@ private fun rememberRevealedMessage(
         val index = entries.indexOfFirst { it is ThreadEntry.Bubble && it.message.id == target }
         // Not loaded yet: the window is still growing towards it, and this runs again when it has.
         if (index < 0) return@LaunchedEffect
-        listState.scrollToItem(index + leadingItems)
+        listState.scrollToItem(index)
         highlighted = target
         onRevealed()
     }
@@ -823,3 +967,6 @@ private const val REVEAL_TINT_ALPHA = 0.6f
 
 /** Brief pause after a manual refresh so the spinner does not flash out instantly. */
 private const val REFRESH_SETTLE_MS = 500L
+
+/** Above this, the newest-messages badge reads "99+". */
+private const val MAX_BADGE_COUNT = 99

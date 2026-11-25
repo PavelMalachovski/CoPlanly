@@ -98,6 +98,15 @@
     <string name="chat_template_confirm_agreement_content">Щоб ми однаково розуміли, ось про що ми домовилися: [домовленість]. Якщо ти розумієш це інакше, напиши, будь ласка.</string>
     <string name="chat_failed_to_send_retry">Не надіслано — натисніть, щоб повторити</string>
     <string name="chat_load_earlier">Завантажити давніші повідомлення</string>
+    <!-- The button over the thread that brings its newest message into view, and how many
+         messages arrived while the reader was in history. -->
+    <string name="chat_scroll_to_newest">Останні повідомлення</string>
+    <plurals name="chat_new_messages">
+        <item quantity="one">%1$d нове повідомлення</item>
+        <item quantity="few">%1$d нові повідомлення</item>
+        <item quantity="many">%1$d нових повідомлень</item>
+        <item quantity="other">%1$d нового повідомлення</item>
+    </plurals>
 
     <!-- MON-15: search inside the open conversation. Local to this phone; never a server. -->
     <string name="chat_search">Шукати в листуванні</string>

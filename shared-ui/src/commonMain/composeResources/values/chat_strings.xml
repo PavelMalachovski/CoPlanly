@@ -98,6 +98,13 @@
     <string name="chat_template_confirm_agreement_content">To make sure we\u0027re on the same page, here\u0027s what we agreed: [agreement]. If you see it differently, please let me know.</string>
     <string name="chat_failed_to_send_retry">Not sent — tap to retry</string>
     <string name="chat_load_earlier">Load earlier messages</string>
+    <!-- The button over the thread that brings its newest message into view, and how many
+         messages arrived while the reader was in history. -->
+    <string name="chat_scroll_to_newest">Newest messages</string>
+    <plurals name="chat_new_messages">
+        <item quantity="one">%1$d new message</item>
+        <item quantity="other">%1$d new messages</item>
+    </plurals>
 
     <!-- MON-15: search inside the open conversation. Local to this phone; never a server. -->
     <string name="chat_search">Search this conversation</string>

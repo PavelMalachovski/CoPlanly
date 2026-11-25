@@ -102,6 +102,15 @@
     <string name="chat_template_confirm_agreement_content">Pro jistotu shrnuji naši dohodu: [dohoda]. Pokud to vidíš jinak, dej mi prosím vědět.</string>
     <string name="chat_failed_to_send_retry">Neodesláno – klepnutím zkusíte znovu</string>
     <string name="chat_load_earlier">Načíst starší zprávy</string>
+    <!-- The button over the thread that brings its newest message into view, and how many
+         messages arrived while the reader was in history. -->
+    <string name="chat_scroll_to_newest">Nejnovější zprávy</string>
+    <plurals name="chat_new_messages">
+        <item quantity="one">%1$d nová zpráva</item>
+        <item quantity="few">%1$d nové zprávy</item>
+        <item quantity="many">%1$d nové zprávy</item>
+        <item quantity="other">%1$d nových zpráv</item>
+    </plurals>
 
     <!-- MON-15: search inside the open conversation. Local to this phone; never a server. -->
     <string name="chat_search">Hledat v konverzaci</string>

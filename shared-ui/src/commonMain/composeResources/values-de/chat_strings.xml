@@ -96,6 +96,13 @@
     <string name="chat_template_confirm_agreement_content">Damit wir vom Gleichen ausgehen, hier unsere Absprache: [Absprache]. Falls du es anders verstanden hast, sag mir bitte Bescheid.</string>
     <string name="chat_failed_to_send_retry">Nicht gesendet – zum Wiederholen tippen</string>
     <string name="chat_load_earlier">Ältere Nachrichten laden</string>
+    <!-- The button over the thread that brings its newest message into view, and how many
+         messages arrived while the reader was in history. -->
+    <string name="chat_scroll_to_newest">Neueste Nachrichten</string>
+    <plurals name="chat_new_messages">
+        <item quantity="one">%1$d neue Nachricht</item>
+        <item quantity="other">%1$d neue Nachrichten</item>
+    </plurals>
 
     <!-- MON-15: search inside the open conversation. Local to this phone; never a server. -->
     <string name="chat_search">In dieser Unterhaltung suchen</string>
