@@ -75,6 +75,7 @@ import com.coparently.app.resources.export_col_by
 import com.coparently.app.resources.export_col_currency
 import com.coparently.app.resources.export_col_device_time
 import com.coparently.app.resources.export_col_ends
+import com.coparently.app.resources.export_col_in_reply_to
 import com.coparently.app.resources.export_col_item
 import com.coparently.app.resources.export_col_notes
 import com.coparently.app.resources.export_col_parent
@@ -83,7 +84,6 @@ import com.coparently.app.resources.export_col_section
 import com.coparently.app.resources.export_col_server_time
 import com.coparently.app.resources.export_col_starts
 import com.coparently.app.resources.export_col_text
-import com.coparently.app.resources.export_column_in_reply_to
 import com.coparently.app.resources.export_csv
 import com.coparently.app.resources.export_csv_supporting
 import com.coparently.app.resources.export_from
@@ -126,6 +126,7 @@ import com.coparently.app.resources.export_record_section_expenses
 import com.coparently.app.resources.export_record_section_messages
 import com.coparently.app.resources.export_record_time_zone
 import com.coparently.app.resources.export_record_title
+import com.coparently.app.resources.export_reply_not_in_record
 import com.coparently.app.resources.export_reply_sticker
 import com.coparently.app.resources.export_share_title
 import com.coparently.app.resources.export_statement_limits
@@ -497,6 +498,7 @@ private fun rememberRecordLabels(): RecordLabels = RecordLabels(
     nothingInPeriod = stringResource(Res.string.export_record_nothing),
     inReplyTo = stringResource(Res.string.export_in_reply_to),
     replySticker = stringResource(Res.string.export_reply_sticker),
+    replyNotInRecord = stringResource(Res.string.export_reply_not_in_record),
     columns = rememberRecordColumns(),
     actions = RecordActions(
         created = stringResource(Res.string.export_action_created),
@@ -541,7 +543,7 @@ private fun rememberRecordColumns(): RecordColumns = RecordColumns(
     notes = stringResource(Res.string.export_col_notes),
     amount = stringResource(Res.string.export_col_amount),
     currency = stringResource(Res.string.export_col_currency),
-    inReplyTo = stringResource(Res.string.export_column_in_reply_to)
+    inReplyTo = stringResource(Res.string.export_col_in_reply_to)
 )
 
 /** The private-journal section's words (MON-22). */

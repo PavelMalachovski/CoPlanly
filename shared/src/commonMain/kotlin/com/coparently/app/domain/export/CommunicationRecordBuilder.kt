@@ -290,14 +290,18 @@ object CommunicationRecordBuilder {
             }
     }
 
-    /** What [message] answers, or null when it answers nothing or the original is not known. */
-    private fun replyOf(message: MessageInput, byId: Map<String, MessageInput>, scope: RecordScope): RecordReply? {
-        val original = message.replyToMessageId?.let(byId::get) ?: return null
-        val excerpt = ReplyExcerpt.of(original.text, original.attachments, original.isSticker) ?: return null
+    /**
+     * What [message] answers: null when it answers nothing, [RecordReplyTo.NotInRecord] when the
+     * original is not among the messages the source handed over, else the original quoted.
+     */
+    private fun replyOf(message: MessageInput, byId: Map<String, MessageInput>, scope: RecordScope): RecordReplyTo? {
+        val originalId = message.replyToMessageId ?: return null
+        val original = byId[originalId] ?: return RecordReplyTo.NotInRecord
+        val excerpt = ReplyExcerpt.forRecord(original.text, original.attachments, original.isSticker)
         return RecordReply(
             authorName = scope.nameForUid(original.senderUid),
             sentAtMillis = original.sentAtMillis,
-            excerpt = excerpt.plain(ReplyQuote.EXCERPT_MAX),
+            excerpt = excerpt?.plain(ReplyQuote.EXCERPT_MAX).orEmpty(),
             sticker = excerpt == ReplyExcerpt.Sticker
         )
     }

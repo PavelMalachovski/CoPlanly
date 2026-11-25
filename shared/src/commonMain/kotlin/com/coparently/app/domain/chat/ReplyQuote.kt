@@ -98,6 +98,19 @@ sealed interface ReplyExcerpt {
                 else -> Text(firstLine)
             }
         }
+
+        /**
+         * What the record quotes of a message: as [of], but a message's words are its whole text
+         * with the line breaks collapsed to spaces, so a quote cut at [ReplyQuote.EXCERPT_MAX] never
+         * hides the lines after the first without an ellipsis. The thread quotes the first line only;
+         * a record read in court must not look as if the original said less than it did.
+         */
+        fun forRecord(content: String, files: List<ChatAttachment>, isSticker: Boolean): ReplyExcerpt? =
+            of(
+                content = content.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.joinToString(" "),
+                files = files,
+                isSticker = isSticker
+            )
     }
 }
 

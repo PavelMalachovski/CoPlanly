@@ -14,6 +14,8 @@ package com.coparently.app.domain.export
  *   original's author, `%2$s` its time and `%3$s` its quoted words. A template, unlike the rest, because
  *   word order differs between the five languages; [RecordReplyText] fills it.
  * @property replySticker What a reply to a sticker quotes, in place of words ("a sticker").
+ * @property replyNotInRecord The line a reply prints when its original is not in the record
+ *   ("In reply to an earlier message not in this record").
  * @property plan The words of the parenting-plan section, printed only when the record carries one.
  * @property journal The words of the private-journal section, printed only when the record carries one.
  */
@@ -31,6 +33,7 @@ data class RecordLabels(
     val nothingInPeriod: String,
     val inReplyTo: String,
     val replySticker: String,
+    val replyNotInRecord: String,
     val columns: RecordColumns,
     val actions: RecordActions,
     val notYetOnServer: String,

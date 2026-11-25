@@ -12,11 +12,13 @@ object RecordReplyText {
     private val placeholder = Regex("%([123])\\\$s")
 
     /**
-     * The line a reply prints: "In reply to Alice's message of 2026-03-10 09:00:00 +01:00: “…”".
-     * The template ([RecordLabels.inReplyTo]) is filled in one pass, so a name that itself reads
-     * `%2$s` is printed as written.
+     * The line a reply prints: "In reply to Alice's message of 2026-03-10 09:00:00 +01:00: “…”",
+     * or [RecordLabels.replyNotInRecord] when the original is not in the record. The template
+     * ([RecordLabels.inReplyTo]) is filled in one pass, so a name that itself reads `%2$s` is
+     * printed as written.
      */
-    fun line(reply: RecordReply, zone: TimeZone, labels: RecordLabels): String {
+    fun line(reply: RecordReplyTo, zone: TimeZone, labels: RecordLabels): String {
+        if (reply !is RecordReply) return labels.replyNotInRecord
         val values = listOf(
             reply.authorName,
             RecordFormat.instant(reply.sentAtMillis, zone),

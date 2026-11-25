@@ -358,13 +358,48 @@ class CommunicationRecordBuilderTest {
     }
 
     @Test
-    fun `a reply to an unknown message has no reference`() {
+    fun `a reply to a message not in the record says so rather than printing as an ordinary message`() {
         val record = CommunicationRecordBuilder.build(
             sources(messages = listOf(MessageInput("b", BOB, MARCH_10_0900, "Yes", true, replyToMessageId = "gone"))),
             scope()
         )
 
-        assertNull(record.messages.single().replyTo)
+        assertEquals(RecordReplyTo.NotInRecord, record.messages.single().replyTo)
+    }
+
+    @Test
+    fun `a reply to a multi-line original quotes every line - not the first alone`() {
+        val record = CommunicationRecordBuilder.build(
+            sources(
+                messages = listOf(
+                    MessageInput("a", ALICE, MARCH_10_0900, "Yes.\n\n  But only if you pay the deposit.  ", true),
+                    MessageInput("b", BOB, MARCH_10_0900 + 1, "Fine", true, replyToMessageId = "a")
+                )
+            ),
+            scope()
+        )
+
+        assertEquals(
+            RecordReply("Alice", MARCH_10_0900, "Yes. But only if you pay the deposit."),
+            record.messages.first { it.messageId == "b" }.replyTo
+        )
+    }
+
+    @Test
+    fun `a multi-line original is cut at 80 characters across its lines`() {
+        val text = "First line.\n" + "y".repeat(100)
+        val record = CommunicationRecordBuilder.build(
+            sources(
+                messages = listOf(
+                    MessageInput("a", ALICE, MARCH_10_0900, text, true),
+                    MessageInput("b", BOB, MARCH_10_0900 + 1, "Fine", true, replyToMessageId = "a")
+                )
+            ),
+            scope()
+        )
+
+        val excerpt = (record.messages.first { it.messageId == "b" }.replyTo as RecordReply).excerpt
+        assertEquals(("First line. " + "y".repeat(100)).take(80) + "…", excerpt)
     }
 
     @Test
@@ -396,7 +431,7 @@ class CommunicationRecordBuilderTest {
             scope()
         )
 
-        assertEquals("plan.pdf", record.messages.first { it.messageId == "b" }.replyTo?.excerpt)
+        assertEquals("plan.pdf", (record.messages.first { it.messageId == "b" }.replyTo as RecordReply).excerpt)
     }
 
     @Test

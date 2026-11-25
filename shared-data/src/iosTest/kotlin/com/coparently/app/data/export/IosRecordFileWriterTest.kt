@@ -180,6 +180,7 @@ class IosRecordFileWriterTest {
             nothingInPeriod = "Nothing",
             inReplyTo = "In reply to %1\$s's message of %2\$s: \"%3\$s\"",
             replySticker = "a sticker",
+            replyNotInRecord = "In reply to an earlier message not in this record",
             columns = RecordColumns(
                 section = "Section",
                 item = "Item",

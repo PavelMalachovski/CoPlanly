@@ -54,9 +54,10 @@
     <string name="export_col_notes">Заметки</string>
     <string name="export_col_amount">Сумма</string>
     <string name="export_col_currency">Валюта</string>
-    <string name="export_column_in_reply_to">В ответ на</string>
+    <string name="export_col_in_reply_to">В ответ на</string>
     <string name="export_in_reply_to">В ответ на сообщение от %1$s, %2$s: «%3$s»</string>
     <string name="export_reply_sticker">стикер</string>
+    <string name="export_reply_not_in_record">В ответ на более раннее сообщение, которого нет в этом журнале</string>
 
     <string name="export_action_created">Создано</string>
     <string name="export_action_updated">Изменено</string>

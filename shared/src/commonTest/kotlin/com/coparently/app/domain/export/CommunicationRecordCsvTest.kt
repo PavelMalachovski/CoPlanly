@@ -198,6 +198,22 @@ class CommunicationRecordCsvTest {
     }
 
     @Test
+    fun `a reply whose original is not in the record says so in the in-reply-to column`() {
+        val csv = CommunicationRecordCsv.render(
+            CommunicationRecordBuilder.build(
+                sources(
+                    messages = listOf(MessageInput("b", BOB, MARCH_10_0900, "Yes", true, replyToMessageId = "gone"))
+                ),
+                scope()
+            ),
+            labels()
+        )
+
+        val b = fields(records(csv).first { it.startsWith("Message,b,") })
+        assertEquals(RecordFixtures.NOT_IN_RECORD, b.last())
+    }
+
+    @Test
     fun `an amount has two decimals and a point in every locale`() {
         val row = fields(records(render()).first { it.startsWith("Expense,") })
         val columns = labels().columns.all()

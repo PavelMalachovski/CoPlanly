@@ -30,6 +30,9 @@ internal object RecordFixtures {
      */
     const val IN_REPLY_TO = "In reply to %1\$s’s message of %2\$s: “%3\$s”"
 
+    /** The line a reply prints when its original is not in the record, in its English form. */
+    const val NOT_IN_RECORD = "In reply to an earlier message not in this record"
+
     fun labels() = RecordLabels(
         title = "TITLE",
         statement = listOf("NOT A TRUTH RECORD", "MESSAGES ARE FIXED"),
@@ -44,6 +47,7 @@ internal object RecordFixtures {
         nothingInPeriod = "Nothing",
         inReplyTo = IN_REPLY_TO,
         replySticker = "a sticker",
+        replyNotInRecord = NOT_IN_RECORD,
         columns = RecordColumns(
             section = "Section",
             item = "Item",

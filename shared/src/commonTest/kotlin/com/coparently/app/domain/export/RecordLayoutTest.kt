@@ -83,6 +83,31 @@ class RecordLayoutTest {
     }
 
     @Test
+    fun `a reply whose original is not in the record prints the fixed line before its text`() {
+        val record = CommunicationRecordBuilder.build(
+            sources(
+                messages = listOf(
+                    MessageInput(
+                        messageId = "b",
+                        senderUid = RecordFixtures.BOB,
+                        sentAtMillis = RecordFixtures.MARCH_10_0900,
+                        text = "Fine",
+                        delivered = true,
+                        replyToMessageId = "gone"
+                    )
+                )
+            ),
+            scope()
+        )
+
+        val blocks = RecordLayout.blocks(record, labels())
+
+        val text = blocks.indexOfFirst { it.text == "Fine" }
+        assertEquals(RecordFixtures.NOT_IN_RECORD, blocks[text - 1].text)
+        assertEquals(LineStyle.SMALL, blocks[text - 1].style)
+    }
+
+    @Test
     fun `an incomplete record says so on the first page`() {
         val record = CommunicationRecordBuilder.build(sources(serverReached = false), scope())
 

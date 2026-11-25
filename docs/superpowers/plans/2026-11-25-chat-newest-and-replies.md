@@ -94,7 +94,7 @@
   - `RecordMessage.replyTo: RecordReply? = null`
   - `data class RecordReply(val authorName: String, val sentAtMillis: Long, val excerpt: String)`, where `excerpt` holds at most 80 characters and an ellipsis.
   - A new label `inReplyTo`: the localised template "In reply to %1$s’s message of %2$s: “%3$s”" (key `export_in_reply_to`, five locales). The sticker word is key `export_reply_sticker`, "a sticker".
-  - A CSV column label with key `export_column_in_reply_to`, "In reply to", appended as the **last** column.
+  - A CSV column label with key `export_col_in_reply_to`, "In reply to", appended as the **last** column.
 
 - [ ] **Step 1: Write the failing tests**
   - Builder, `a reply names its original's author, time and excerpt`: two inputs, B replying to A. Expect `RecordReply(authorName = A's name, sentAtMillis = A.sentAtMillis, excerpt = A's first 80 characters plus "…")`.
