@@ -1,6 +1,9 @@
 package com.coparently.app.domain.export
 
 import com.coparently.app.domain.chat.ChatAttachment
+import com.coparently.app.domain.chat.ReplyExcerpt
+import com.coparently.app.domain.chat.ReplyQuote
+import com.coparently.app.domain.chat.plain
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.journal.JournalEntry
 import com.coparently.app.domain.model.Expense
@@ -62,6 +65,9 @@ data class CurrentEventInput(
  *
  * @property attachments The files it carried (MON-23) — listed in the record by name and SHA-256,
  *   never by their bytes.
+ * @property replyToMessageId The message this one answers, or null.
+ * @property isSticker Whether it is a sticker: not an entry of the record, but a reply to it is
+ *   still quoted.
  * @property planCitation The `PlanCitationCodec` string a schedule-proposal card carried (MON-21),
  *   or null — every other message, and every proposal from an older build or not built from the plan.
  */
@@ -72,7 +78,9 @@ data class MessageInput(
     val text: String,
     val delivered: Boolean,
     val attachments: List<ChatAttachment> = emptyList(),
-    val planCitation: String? = null
+    val planCitation: String? = null,
+    val replyToMessageId: String? = null,
+    val isSticker: Boolean = false
 )
 
 /**
@@ -262,8 +270,11 @@ object CommunicationRecordBuilder {
     private fun messages(messages: List<MessageInput>, scope: RecordScope): List<RecordMessage> {
         val start = RecordWindow.startMillis(scope.from, scope.zone)
         val end = RecordWindow.endMillis(scope.to, scope.zone)
+        // A reply's original may be outside the period, or a sticker: it is looked up in everything
+        // the source handed over, before the window and the sticker filter.
+        val byId = messages.distinctBy { it.messageId }.associateBy { it.messageId }
         return messages
-            .filter { it.sentAtMillis in start until end }
+            .filter { it.sentAtMillis in start until end && !it.isSticker }
             .distinctBy { it.messageId }
             .sortedWith(compareBy<MessageInput> { it.sentAtMillis }.thenBy { it.messageId })
             .map {
@@ -273,9 +284,22 @@ object CommunicationRecordBuilder {
                     sentAtMillis = it.sentAtMillis,
                     text = RecordFormat.messageText(it.text, it.attachments),
                     delivered = it.delivered,
-                    citedPlanQuestionId = PlanCitationCodec.questionIdOf(it.planCitation)
+                    citedPlanQuestionId = PlanCitationCodec.questionIdOf(it.planCitation),
+                    replyTo = replyOf(it, byId, scope)
                 )
             }
+    }
+
+    /** What [message] answers, or null when it answers nothing or the original is not known. */
+    private fun replyOf(message: MessageInput, byId: Map<String, MessageInput>, scope: RecordScope): RecordReply? {
+        val original = message.replyToMessageId?.let(byId::get) ?: return null
+        val excerpt = ReplyExcerpt.of(original.text, original.attachments, original.isSticker) ?: return null
+        return RecordReply(
+            authorName = scope.nameForUid(original.senderUid),
+            sentAtMillis = original.sentAtMillis,
+            excerpt = excerpt.plain(ReplyQuote.EXCERPT_MAX),
+            sticker = excerpt == ReplyExcerpt.Sticker
+        )
     }
 
     private fun expenses(expenses: List<Expense>, scope: RecordScope): List<RecordExpense> = expenses

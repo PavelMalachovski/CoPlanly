@@ -54,6 +54,35 @@ class RecordLayoutTest {
     }
 
     @Test
+    fun `a reply's block prints the in-reply-to line before the message text`() {
+        val record = CommunicationRecordBuilder.build(
+            sources(
+                messages = listOf(
+                    MessageInput("a", RecordFixtures.ALICE, RecordFixtures.MARCH_10_0900, "Pickup at six", true),
+                    MessageInput(
+                        messageId = "b",
+                        senderUid = RecordFixtures.BOB,
+                        sentAtMillis = RecordFixtures.MARCH_10_0900 + 60_000,
+                        text = "Fine",
+                        delivered = true,
+                        replyToMessageId = "a"
+                    )
+                )
+            ),
+            scope()
+        )
+
+        val blocks = RecordLayout.blocks(record, labels())
+
+        val text = blocks.indexOfFirst { it.text == "Fine" }
+        val quote = blocks[text - 1]
+        assertEquals("In reply to Alice's message of 2026-03-10 09:00:00 +01:00: “Pickup at six”", quote.text)
+        assertEquals(LineStyle.SMALL, quote.style)
+        assertTrue(blocks[text - 2].text.contains("Bob"))
+        assertEquals(1, blocks.count { it.text.startsWith("In reply to") })
+    }
+
+    @Test
     fun `an incomplete record says so on the first page`() {
         val record = CommunicationRecordBuilder.build(sources(serverReached = false), scope())
 

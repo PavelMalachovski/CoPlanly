@@ -45,18 +45,11 @@ sealed interface ReplyQuote {
             else -> excerptOf(original)?.let { Shown(original.id, original.senderName, it) } ?: Unavailable
         }
 
-        private fun excerptOf(original: Message): ReplyExcerpt? {
-            val files = ChatAttachmentCodec.attachmentsOf(original.attachments)
-            val firstLine = original.content.lineSequence().firstOrNull { it.isNotBlank() }?.trim().orEmpty()
-            return when {
-                original.activity?.kind == ActivityKind.STICKER_SENT -> ReplyExcerpt.Sticker
-                // A file is sent with its own name as the text, so that is no words of the parent's.
-                files.isNotEmpty() && (firstLine.isEmpty() || firstLine == files.first().fileName) ->
-                    ReplyExcerpt.File(files.first().fileName)
-                firstLine.isEmpty() -> null
-                else -> ReplyExcerpt.Text(firstLine)
-            }
-        }
+        private fun excerptOf(original: Message): ReplyExcerpt? = ReplyExcerpt.of(
+            content = original.content,
+            files = ChatAttachmentCodec.attachmentsOf(original.attachments),
+            isSticker = original.activity?.kind == ActivityKind.STICKER_SENT
+        )
     }
 }
 
@@ -71,6 +64,29 @@ sealed interface ReplyExcerpt {
 
     /** A sticker, which the screen words and draws itself. */
     data object Sticker : ReplyExcerpt
+
+    companion object {
+        /**
+         * What of a message is quoted, from its facts rather than from a [Message], so the export,
+         * which reads its own input type, quotes exactly what the thread does. Null when there is
+         * nothing to quote (no words and no file).
+         *
+         * @param content The message's text.
+         * @param files The files it carried.
+         * @param isSticker Whether it is a sticker.
+         */
+        fun of(content: String, files: List<ChatAttachment>, isSticker: Boolean): ReplyExcerpt? {
+            val firstLine = content.lineSequence().firstOrNull { it.isNotBlank() }?.trim().orEmpty()
+            return when {
+                isSticker -> Sticker
+                // A file is sent with its own name as the text, so that is no words of the parent's.
+                files.isNotEmpty() && (firstLine.isEmpty() || firstLine == files.first().fileName) ->
+                    File(files.first().fileName)
+                firstLine.isEmpty() -> null
+                else -> Text(firstLine)
+            }
+        }
+    }
 }
 
 /**

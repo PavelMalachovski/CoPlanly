@@ -24,6 +24,9 @@ internal object RecordFixtures {
     /** 2026-03-10 09:00 in Prague (UTC+1). */
     const val MARCH_10_0900 = 1_773_129_600_000L
 
+    /** The in-reply-to template, as the five locales write it: author, time, then the quoted words. */
+    const val IN_REPLY_TO = "In reply to %1\$s's message of %2\$s: “%3\$s”"
+
     fun labels() = RecordLabels(
         title = "TITLE",
         statement = listOf("NOT A TRUTH RECORD", "MESSAGES ARE FIXED"),
@@ -36,6 +39,8 @@ internal object RecordFixtures {
         sectionMessages = "Message",
         sectionExpenses = "Expense",
         nothingInPeriod = "Nothing",
+        inReplyTo = IN_REPLY_TO,
+        replySticker = "a sticker",
         columns = RecordColumns(
             section = "Section",
             item = "Item",
@@ -50,7 +55,8 @@ internal object RecordFixtures {
             parent = "Parent",
             notes = "Notes",
             amount = "Amount",
-            currency = "Currency"
+            currency = "Currency",
+            inReplyTo = "In reply to"
         ),
         actions = actionLabels(),
         notYetOnServer = "Not yet on server",

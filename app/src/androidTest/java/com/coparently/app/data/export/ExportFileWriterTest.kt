@@ -316,6 +316,8 @@ class ExportFileWriterTest {
             sectionMessages = context.getString(R.string.export_record_section_messages),
             sectionExpenses = context.getString(R.string.export_record_section_expenses),
             nothingInPeriod = context.getString(R.string.export_record_nothing),
+            inReplyTo = context.getString(R.string.export_in_reply_to),
+            replySticker = context.getString(R.string.export_reply_sticker),
             columns = RecordColumns(
                 section = context.getString(R.string.export_col_section),
                 item = context.getString(R.string.export_col_item),
@@ -330,7 +332,8 @@ class ExportFileWriterTest {
                 parent = context.getString(R.string.export_col_parent),
                 notes = context.getString(R.string.export_col_notes),
                 amount = context.getString(R.string.export_col_amount),
-                currency = context.getString(R.string.export_col_currency)
+                currency = context.getString(R.string.export_col_currency),
+                inReplyTo = context.getString(R.string.export_column_in_reply_to)
             ),
             actions = RecordActions(
                 created = context.getString(R.string.export_action_created),

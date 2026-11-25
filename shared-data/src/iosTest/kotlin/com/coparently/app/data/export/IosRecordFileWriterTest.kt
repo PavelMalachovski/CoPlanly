@@ -178,6 +178,8 @@ class IosRecordFileWriterTest {
             sectionMessages = "Messages",
             sectionExpenses = "Expenses",
             nothingInPeriod = "Nothing",
+            inReplyTo = "In reply to %1\$s's message of %2\$s: \"%3\$s\"",
+            replySticker = "a sticker",
             columns = RecordColumns(
                 section = "Section",
                 item = "Item",
@@ -192,7 +194,8 @@ class IosRecordFileWriterTest {
                 parent = "Parent",
                 notes = "Notes",
                 amount = "Amount",
-                currency = "Currency"
+                currency = "Currency",
+                inReplyTo = "In reply to"
             ),
             actions = RecordActions(
                 created = "Created",
