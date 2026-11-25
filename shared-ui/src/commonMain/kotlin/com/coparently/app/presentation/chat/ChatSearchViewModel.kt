@@ -155,20 +155,33 @@ class ChatSearchViewModel(
      */
     fun select(hit: ChatSearchHit) {
         val thread = conversationId ?: return
+        jump(thread, hit.message.id, hit.message.sentAtMillis)
+        close()
+    }
+
+    /**
+     * Asks [conversationId]'s thread to scroll to a reply's original ([messageId], sent at
+     * [sentAtMillis]), sizing the window to reach it in one step, as [select] does for a result: a
+     * quote may name a message many screens older than the loaded ones. Search is left as it is.
+     */
+    fun jumpTo(conversationId: String, messageId: String, sentAtMillis: Long) {
+        jump(conversationId, messageId, sentAtMillis)
+    }
+
+    private fun jump(thread: String, messageId: String, sentAtMillis: Long) {
         viewModelScope.launch {
             val needed = try {
-                chatSearchRepository.countMessagesSince(thread, hit.message.sentAtMillis)
+                chatSearchRepository.countMessagesSince(thread, sentAtMillis)
             } catch (e: CancellationException) {
                 throw e
             } catch (
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
-                logger.w(TAG, "Could not size the window for a search result", e)
+                logger.w(TAG, "Could not size the window for a message to show", e)
                 0
             }
-            _jumps.emit(ChatSearchJump(hit.message.id, needed))
+            _jumps.emit(ChatSearchJump(messageId, needed))
         }
-        close()
     }
 
     companion object {

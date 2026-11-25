@@ -3,12 +3,20 @@ package com.coparently.app.presentation.chat
 import android.content.ClipboardManager
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasAnyDescendant
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -61,7 +69,7 @@ class ChatReplyTest {
                     currentUserId = ME,
                     modifier = Modifier.height(LIST_HEIGHT.dp),
                     quotes = quotes,
-                    onQuoteClick = { quoteTaps += it },
+                    onQuoteClick = { quoteTaps += it.messageId },
                     onReply = { replied += it.id }
                 )
             }
@@ -130,7 +138,7 @@ class ChatReplyTest {
     fun `tapping a quote asks for its original`() {
         compose(
             messages = listOf(message("a", "Pick-up at five?", from = THEM), message("b", "Yes", replyTo = "a")),
-            quotes = mapOf("b" to ReplyQuote.Shown("a", "Bob", ReplyExcerpt.Text("Pick-up at five, then?")))
+            quotes = mapOf("b" to shown("a", ReplyExcerpt.Text("Pick-up at five, then?")))
         )
 
         rule.onNodeWithText("Pick-up at five, then?").assertIsDisplayed().performClick()
@@ -154,13 +162,15 @@ class ChatReplyTest {
             Themed {
                 androidx.compose.foundation.layout.Column {
                     ReplyQuoteBlock(
-                        quote = ReplyQuote.Shown("f", "Bob", ReplyExcerpt.File("report.pdf")),
+                        quote = shown("f", ReplyExcerpt.File("report.pdf")),
                         onOwnBubble = false,
+                        readerId = ME,
                         onClick = {}
                     )
                     ReplyQuoteBlock(
-                        quote = ReplyQuote.Shown("s", "Bob", ReplyExcerpt.Sticker),
+                        quote = shown("s", ReplyExcerpt.Sticker),
                         onOwnBubble = true,
+                        readerId = ME,
                         onClick = {}
                     )
                 }
@@ -177,7 +187,8 @@ class ChatReplyTest {
         rule.setContent {
             Themed {
                 ReplyBar(
-                    quote = ReplyQuote.Shown("a", "Bob", ReplyExcerpt.Text("Pick-up at five?")),
+                    quote = shown("a", ReplyExcerpt.Text("Pick-up at five?")),
+                    readerId = ME,
                     onCancel = { cancelled++ }
                 )
             }
@@ -189,6 +200,107 @@ class ChatReplyTest {
 
         assertEquals(1, cancelled)
     }
+
+    @Test
+    fun `the reader's own message is quoted as you, never by their name`() {
+        rule.setContent {
+            Themed {
+                androidx.compose.foundation.layout.Column {
+                    ReplyQuoteBlock(
+                        quote = shown("a", ReplyExcerpt.Text("On my way"), from = ME),
+                        onOwnBubble = false,
+                        readerId = ME,
+                        onClick = {}
+                    )
+                    ReplyBar(
+                        quote = shown("a", ReplyExcerpt.Text("On my way"), from = ME),
+                        readerId = ME,
+                        onCancel = {}
+                    )
+                }
+            }
+        }
+
+        rule.onNodeWithText("You").assertIsDisplayed()
+        rule.onNodeWithText("Reply to your message").assertIsDisplayed()
+        rule.onNodeWithText("Alice", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `long press highlights the pressed bubble and dims the others until the menu closes`() {
+        compose(listOf(message("a", "Pick-up at five?"), message("b", "See you", from = THEM)))
+        rule.onNode(SemanticsMatcher.keyIsDefined(BubbleEmphasisKey)).assertDoesNotExist()
+
+        rule.onNodeWithText("Pick-up at five?").performTouchInput { longClick() }
+        rule.waitForIdle()
+
+        rule.onNode(emphasis(BubbleEmphasis.PRESSED) and hasAnyDescendant(hasText("Pick-up at five?")))
+            .assertExists()
+        rule.onNode(emphasis(BubbleEmphasis.DIMMED) and hasAnyDescendant(hasText("See you"))).assertExists()
+
+        rule.onNodeWithText(REPLY).performClick()
+        rule.waitForIdle()
+        rule.onAllNodes(SemanticsMatcher.keyIsDefined(BubbleEmphasisKey)).assertCountEquals(0)
+    }
+
+    @Test
+    fun `a drag that starts leftward leaves the bubble where it is`() {
+        compose(listOf(message("a", "Pick-up at five?", from = THEM)))
+        val text = rule.onNodeWithText("Pick-up at five?", useUnmergedTree = true)
+        val resting = text.getUnclippedBoundsInRoot().left
+
+        text.performTouchInput {
+            down(center)
+            moveBy(Offset(-DRAG_SLOPS * viewConfiguration.touchSlop, 0f))
+        }
+        rule.waitForIdle()
+        assertEquals(resting, text.getUnclippedBoundsInRoot().left)
+        text.performTouchInput { up() }
+
+        // The same drag to the right does move it, so the check above can see a move.
+        text.performTouchInput {
+            down(center)
+            moveBy(Offset(DRAG_SLOPS * viewConfiguration.touchSlop, 0f))
+        }
+        rule.waitForIdle()
+        assertTrue(text.getUnclippedBoundsInRoot().left > resting)
+        text.performTouchInput { up() }
+    }
+
+    @Test
+    fun `a quote's original pages older than the window is revealed once the window reaches it`() {
+        val recent = (OLDER until OLDER + WINDOW).map { message("m$it", "Message $it", at = it) }
+        val older = (0 until OLDER).map { message("m$it", "Message $it", at = it) }
+        val reply = message("r", "Yes", replyTo = "m3", at = OLDER + WINDOW)
+        var messages by mutableStateOf(recent + reply)
+        var reveal by mutableStateOf<String?>(null)
+        rule.setContent {
+            Themed {
+                MessagesList(
+                    messages = messages,
+                    currentUserId = ME,
+                    modifier = Modifier.height(LIST_HEIGHT.dp),
+                    revealMessageId = reveal,
+                    onRevealed = { reveal = null },
+                    quotes = mapOf("r" to shown("m3", ReplyExcerpt.Text("Message 3"))),
+                    // What the chat screen does with the jump: the window is sized to reach the
+                    // original in one step, then it is revealed.
+                    onQuoteClick = { original ->
+                        reveal = original.messageId
+                        messages = older + recent + reply
+                    }
+                )
+            }
+        }
+
+        rule.onNodeWithText("Message 3").performClick()
+        rule.waitForIdle()
+
+        rule.onNodeWithText("Message 3", useUnmergedTree = true).assertIsDisplayed()
+        rule.onNodeWithText("Yes").assertDoesNotExist()
+    }
+
+    private fun emphasis(value: BubbleEmphasis) = SemanticsMatcher.expectValue(BubbleEmphasisKey, value)
 
     @Composable
     private fun Themed(content: @Composable () -> Unit) {
@@ -212,14 +324,35 @@ class ChatReplyTest {
         /** 12:00 UTC on 2 November 2026. */
         const val NOON = 1_793_620_800_000L
 
-        fun message(id: String, text: String, from: String = ME, replyTo: String? = null) = Message(
+        /** A thread of [OLDER] messages before the loaded [WINDOW], a minute apart. */
+        const val OLDER = 150
+        const val WINDOW = 50
+
+        /** One move just past the touch slop, so it is the first move a drag reports. */
+        const val DRAG_SLOPS = 1.5f
+
+        fun message(
+            id: String,
+            text: String,
+            from: String = ME,
+            replyTo: String? = null,
+            at: Int = id.hashCode().mod(60)
+        ) = Message(
             id = id,
             conversationId = "alice_bob",
             senderId = from,
             senderName = if (from == ME) "Alice" else "Bob",
             content = text,
-            sentAtMillis = NOON + id.hashCode().toLong().mod(60) * 60_000L,
+            sentAtMillis = NOON + at * 60_000L,
             replyToMessageId = replyTo
+        )
+
+        fun shown(id: String, excerpt: ReplyExcerpt, from: String = THEM) = ReplyQuote.Shown(
+            messageId = id,
+            authorName = if (from == ME) "Alice" else "Bob",
+            excerpt = excerpt,
+            authorId = from,
+            sentAtMillis = NOON
         )
 
         fun fileMessage(id: String, name: String) = message(id, name, from = THEM).copy(

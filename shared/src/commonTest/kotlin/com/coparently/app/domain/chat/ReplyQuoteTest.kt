@@ -47,7 +47,7 @@ class ReplyQuoteTest {
     fun `a text original quotes its first line`() {
         val quote = ReplyQuote.of("m1", original(content = "Can you take her\non Friday?"), "c")
 
-        assertEquals(ReplyQuote.Shown("m1", "Bob", ReplyExcerpt.Text("Can you take her")), quote)
+        assertEquals(shown(ReplyExcerpt.Text("Can you take her")), quote)
     }
 
     @Test
@@ -64,7 +64,7 @@ class ReplyQuoteTest {
 
         val quote = ReplyQuote.of("m1", original(content = " ", attachments = listOf(entry)), "c")
 
-        assertEquals(ReplyQuote.Shown("m1", "Bob", ReplyExcerpt.File("Trip-consent-form.pdf")), quote)
+        assertEquals(shown(ReplyExcerpt.File("Trip-consent-form.pdf")), quote)
     }
 
     @Test
@@ -73,7 +73,7 @@ class ReplyQuoteTest {
 
         val quote = ReplyQuote.of("m1", original(activity = sticker), "c")
 
-        assertEquals(ReplyQuote.Shown("m1", "Bob", ReplyExcerpt.Sticker), quote)
+        assertEquals(shown(ReplyExcerpt.Sticker), quote)
     }
 
     @Test
@@ -105,14 +105,14 @@ class ReplyQuoteTest {
     fun `a file with a real caption quotes the caption`() {
         val quote = ReplyQuote.of("m1", original(content = "Please sign this", attachments = listOf(fileEntry())), "c")
 
-        assertEquals(ReplyQuote.Shown("m1", "Bob", ReplyExcerpt.Text("Please sign this")), quote)
+        assertEquals(shown(ReplyExcerpt.Text("Please sign this")), quote)
     }
 
     @Test
     fun `leading blank lines are skipped`() {
         val quote = ReplyQuote.of("m1", original(content = "\n  \nSecond\nthird"), "c")
 
-        assertEquals(ReplyQuote.Shown("m1", "Bob", ReplyExcerpt.Text("Second")), quote)
+        assertEquals(shown(ReplyExcerpt.Text("Second")), quote)
     }
 
     @Test
@@ -144,5 +144,17 @@ class ReplyQuoteTest {
         val plain = ReplyExcerpt.Text("a".repeat(79) + "\uD83D\uDE00 tail").plain(80)
 
         assertEquals("a".repeat(79) + "…", plain)
+    }
+
+    /** The quote of [original]'s message, as [ReplyQuote.of] builds it. */
+    private fun shown(excerpt: ReplyExcerpt) =
+        ReplyQuote.Shown("m1", "Bob", excerpt, authorId = "them", sentAtMillis = 1L)
+
+    @Test
+    fun `a quote names its original's author and time`() {
+        val quote = ReplyQuote.of("m1", original(), "c") as ReplyQuote.Shown
+
+        assertEquals("them", quote.authorId)
+        assertEquals(1L, quote.sentAtMillis)
     }
 }

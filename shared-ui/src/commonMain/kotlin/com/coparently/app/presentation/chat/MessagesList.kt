@@ -227,7 +227,7 @@ internal fun threadNewestFirst(messages: List<Message>): List<ThreadEntry> = bui
  * @param onRevealed Called once the list has scrolled to [revealMessageId], so the caller can
  *   drop the request
  * @param quotes The quote each reply's bubble shows, by the reply's message id (`ChatViewModel.quotes`)
- * @param onQuoteClick Called with the quoted message's id when a reply's quote is tapped
+ * @param onQuoteClick Called with the quoted original when a reply's quote is tapped
  * @param onReply Called with a message the parent chose to answer, by a swipe to the right or from
  *   its long-press menu; null where the thread takes no reply, which then offers none
  */
@@ -248,7 +248,7 @@ fun MessagesList(
     revealMessageId: String? = null,
     onRevealed: () -> Unit = {},
     quotes: Map<String, ReplyQuote> = emptyMap(),
-    onQuoteClick: (String) -> Unit = {},
+    onQuoteClick: (ReplyQuote.Shown) -> Unit = {},
     onReply: ((Message) -> Unit)? = null
 ) {
     // Not rememberSaveable, on purpose: a saved position is what brought a returning reader back to
@@ -268,7 +268,11 @@ fun MessagesList(
     )
     FollowNewestMessage(listState, entries, currentUserId, revealing)
     NewestWhenShownAgain(listState, revealing)
-    val replies = remember(quotes, onQuoteClick, onReply) { BubbleReplies(quotes, onQuoteClick, onReply) }
+    // The message whose long-press menu is open: it is highlighted and the others dimmed.
+    val pressed = remember { mutableStateOf<String?>(null) }
+    val replies = remember(quotes, currentUserId, onQuoteClick, onReply) {
+        BubbleReplies(quotes, currentUserId, onQuoteClick, onReply, pressed)
+    }
 
     PullToRefreshBox(
         isRefreshing = isRefreshing,
@@ -349,15 +353,17 @@ private fun ThreadColumn(
             when (val entry = entries[index]) {
                 is ThreadEntry.DayHeader -> DaySeparator(entry.date)
                 is ThreadEntry.Bubble -> RevealHighlight(entry.message.id == highlightedId) {
-                    MessageItem(
-                        message = entry.message,
-                        isCurrentUser = entry.message.senderId == currentUserId,
-                        startsGroup = entry.startsGroup,
-                        endsGroup = entry.endsGroup,
-                        onEventLinkClick = onEventLinkClick,
-                        onOpenInbox = onOpenInbox,
-                        onRetryFailed = onRetryFailed
-                    )
+                    PressFocus(entry.message.id) {
+                        MessageItem(
+                            message = entry.message,
+                            isCurrentUser = entry.message.senderId == currentUserId,
+                            startsGroup = entry.startsGroup,
+                            endsGroup = entry.endsGroup,
+                            onEventLinkClick = onEventLinkClick,
+                            onOpenInbox = onOpenInbox,
+                            onRetryFailed = onRetryFailed
+                        )
+                    }
                 }
             }
         }

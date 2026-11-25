@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.coparently.app.domain.chat.ReplyQuote
 import com.coparently.app.domain.chat.ToneCheck
 import com.coparently.app.domain.chat.ToneNudge
 import com.coparently.app.domain.chat.isShownInThread
@@ -241,18 +242,12 @@ fun ChatScreen(
             composerSeeds++
         }
     }
-    val revealOriginal = remember {
-        fun(original: String) {
-            revealTarget = original
+    // A quote's original may be many screens older than the loaded window: it is sized in one step,
+    // as a search result's is, and revealed through the same jump.
+    val revealOriginal = remember(searchViewModel, conversationId) {
+        fun(original: ReplyQuote.Shown) {
+            searchViewModel.jumpTo(conversationId, original.messageId, original.sentAtMillis)
         }
-    }
-
-    // A reply's quote asks for its original, which may be older than the window: grow it a
-    // screenful at a time until the original arrives or nothing older is left. A search result's
-    // window is sized before it is revealed, so this does nothing for one.
-    LaunchedEffect(revealTarget, messages, canLoadEarlier) {
-        val target = revealTarget ?: return@LaunchedEffect
-        if (canLoadEarlier && messages.none { it.id == target }) viewModel.loadEarlier()
     }
 
     // A reveal that has not landed within one highlight hold is given up — the message may have
@@ -382,7 +377,9 @@ fun ChatScreen(
                 if (!nudge.isEmpty) ToneNudgeHint(nudge)
                 dictation.failure?.let { DictationFailureNotice(it) }
                 // The message being answered, over the composer until a text is sent or ✕.
-                replyTarget?.let { quote -> ReplyBar(quote = quote, onCancel = viewModel::cancelReply) }
+                replyTarget?.let { quote ->
+                    ReplyBar(quote = quote, readerId = currentUserId, onCancel = viewModel::cancelReply)
+                }
 
                 // The `+` beside the field, not inside `MessageInput`: a file, a change request and
                 // a template each have their own flow, and the composer stays a text field and a

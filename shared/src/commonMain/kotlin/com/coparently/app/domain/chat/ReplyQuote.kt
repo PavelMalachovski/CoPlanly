@@ -18,8 +18,18 @@ sealed interface ReplyQuote {
      * @property messageId The original's id, which a tap on the quote scrolls to.
      * @property authorName The original's sender, as the thread names them.
      * @property excerpt What of the original is shown.
+     * @property authorId The original's sender's uid, so the screen calls the reader "you" rather
+     *   than naming them to themselves (design item 22, H4).
+     * @property sentAtMillis When the original was sent, so a tap can size the thread's window to
+     *   reach it in one step, as a search result does.
      */
-    data class Shown(val messageId: String, val authorName: String, val excerpt: ReplyExcerpt) : ReplyQuote
+    data class Shown(
+        val messageId: String,
+        val authorName: String,
+        val excerpt: ReplyExcerpt,
+        val authorId: String,
+        val sentAtMillis: Long
+    ) : ReplyQuote
 
     /** The original is not on this phone, or belongs to another thread, so nothing of it is shown. */
     data object Unavailable : ReplyQuote
@@ -42,7 +52,9 @@ sealed interface ReplyQuote {
             original == null || original.conversationId != conversationId -> Unavailable
             // A card the thread does not draw is not something a parent can have replied to.
             !isShownInThread(original) -> Unavailable
-            else -> excerptOf(original)?.let { Shown(original.id, original.senderName, it) } ?: Unavailable
+            else -> excerptOf(original)?.let {
+                Shown(original.id, original.senderName, it, original.senderId, original.sentAtMillis)
+            } ?: Unavailable
         }
 
         private fun excerptOf(original: Message): ReplyExcerpt? = ReplyExcerpt.of(

@@ -165,6 +165,8 @@
     <string name="chat_reply">Antworten</string>
     <string name="chat_copy_text">Text kopieren</string>
     <string name="chat_reply_to">Antwort an %1$s</string>
+    <!-- The reply bar while the parent answers their own message: never their own name (H4). -->
+    <string name="chat_reply_to_own">Antwort auf deine Nachricht</string>
     <string name="chat_cancel_reply">Antwort abbrechen</string>
     <string name="chat_quote_unavailable">Nachricht nicht verfügbar</string>
     <string name="chat_quote_file">Datei: %1$s</string>

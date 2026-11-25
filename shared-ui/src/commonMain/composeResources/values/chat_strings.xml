@@ -170,6 +170,8 @@
     <string name="chat_reply">Reply</string>
     <string name="chat_copy_text">Copy text</string>
     <string name="chat_reply_to">Reply to %1$s</string>
+    <!-- The reply bar while the parent answers their own message: never their own name (H4). -->
+    <string name="chat_reply_to_own">Reply to your message</string>
     <string name="chat_cancel_reply">Cancel reply</string>
     <string name="chat_quote_unavailable">Message unavailable</string>
     <string name="chat_quote_file">File: %1$s</string>

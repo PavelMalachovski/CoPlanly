@@ -311,7 +311,13 @@ class ChatViewModelReplyTest {
             val quotes = expectMostRecentItem()
             assertEquals(shown(), quotes["reply-1"])
             assertEquals(
-                ReplyQuote.Shown("message-0", "Bob Novak", ReplyExcerpt.Text("Earlier")),
+                ReplyQuote.Shown(
+                    "message-0",
+                    "Bob Novak",
+                    ReplyExcerpt.Text("Earlier"),
+                    authorId = PARTNER,
+                    sentAtMillis = SENT_AT_MILLIS
+                ),
                 quotes["reply-2"]
             )
             assertEquals(ReplyQuote.Unavailable, quotes["reply-3"])
@@ -321,7 +327,13 @@ class ChatViewModelReplyTest {
     }
 
     /** What the quote of [message] shows, for the reply tests. */
-    private fun shown() = ReplyQuote.Shown("message-1", "Bob Novak", ReplyExcerpt.Text("Can we swap Friday?"))
+    private fun shown() = ReplyQuote.Shown(
+        "message-1",
+        "Bob Novak",
+        ReplyExcerpt.Text("Can we swap Friday?"),
+        authorId = PARTNER,
+        sentAtMillis = SENT_AT_MILLIS
+    )
 
     /** An in-memory reply store over the mocked draft store: what a device that kept it would hold. */
     private fun replyStore(): SecurePreferences {

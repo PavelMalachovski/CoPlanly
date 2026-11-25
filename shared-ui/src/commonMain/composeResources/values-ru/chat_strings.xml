@@ -169,6 +169,8 @@
     <string name="chat_reply">Ответить</string>
     <string name="chat_copy_text">Копировать текст</string>
     <string name="chat_reply_to">Ответ: %1$s</string>
+    <!-- The reply bar while the parent answers their own message: never their own name (H4). -->
+    <string name="chat_reply_to_own">Ответ на ваше сообщение</string>
     <string name="chat_cancel_reply">Отменить ответ</string>
     <string name="chat_quote_unavailable">Сообщение недоступно</string>
     <string name="chat_quote_file">Файл: %1$s</string>

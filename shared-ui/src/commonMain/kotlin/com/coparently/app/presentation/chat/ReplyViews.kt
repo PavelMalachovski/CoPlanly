@@ -6,7 +6,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -23,21 +22,16 @@ import androidx.compose.foundation.shape.ZeroCornerSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.outlined.Flag
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,23 +41,17 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.customActions
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.chat.ChatAttachmentCodec
-import com.coparently.app.domain.chat.MessageReport
 import com.coparently.app.domain.chat.ReplyExcerpt
 import com.coparently.app.domain.chat.ReplyQuote
 import com.coparently.app.domain.model.Message
 import com.coparently.app.presentation.common.AppIcon
-import com.coparently.app.presentation.common.BarMenuItem
-import com.coparently.app.presentation.common.nativeControls
-import com.coparently.app.presentation.platform.LocalSensitiveClipboard
 import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Motion
@@ -71,17 +59,15 @@ import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.labelMediumEmphasized
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.chat_cancel_reply
-import com.coparently.app.resources.chat_copy_text
 import com.coparently.app.resources.chat_quote_file
 import com.coparently.app.resources.chat_quote_sticker
 import com.coparently.app.resources.chat_quote_unavailable
-import com.coparently.app.resources.chat_reply
 import com.coparently.app.resources.chat_reply_to
-import com.coparently.app.resources.chat_report_message
+import com.coparently.app.resources.chat_reply_to_own
+import com.coparently.app.resources.parent_label_you
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
-import kotlin.math.roundToInt
 
 /**
  * What the thread's bubbles offer for replies (chat: replies, November 2026), provided once by
@@ -89,15 +75,38 @@ import kotlin.math.roundToInt
  * `MessageItem`, whose signature the detekt baseline keys its entries on (as [LocalChatAttachments]).
  *
  * @property quotes The quote each reply's bubble shows, by the reply's message id
- * @property onQuoteClick Called with the quoted message's id when a quote is tapped
+ * @property readerId The signed-in parent's uid: a quote of their own message is headed "You"
+ * @property onQuoteClick Called with the quoted original when a quote is tapped
  * @property onReply Starts a reply to a message, or null where the thread takes no reply (a thread
  *   the departed co-parent can no longer answer)
+ * @property pressed The message whose long-press menu is open, or null: the thread highlights it and
+ *   dims the others while the menu is open (see `PressFocus`)
  */
 internal class BubbleReplies(
     val quotes: Map<String, ReplyQuote>,
-    val onQuoteClick: (String) -> Unit,
-    val onReply: ((Message) -> Unit)?
+    val readerId: String,
+    val onQuoteClick: (ReplyQuote.Shown) -> Unit,
+    val onReply: ((Message) -> Unit)?,
+    val pressed: MutableState<String?>
 )
+
+/**
+ * Where a bubble stands while some bubble's long-press menu is open: the one pressed, or one of the
+ * others, dimmed behind it. It is the value [PressFocus] draws from, set as semantics so a test can
+ * read what is drawn without a pixel comparison; TalkBack does not announce it.
+ */
+enum class BubbleEmphasis {
+    /** The bubble whose menu is open: highlighted. */
+    PRESSED,
+
+    /** Every other bubble while a menu is open: dimmed. */
+    DIMMED
+}
+
+/** The semantics key of [BubbleEmphasis]; absent while no menu is open. */
+val BubbleEmphasisKey = SemanticsPropertyKey<BubbleEmphasis>("BubbleEmphasis")
+
+internal var SemanticsPropertyReceiver.bubbleEmphasis by BubbleEmphasisKey
 
 /** The thread's [BubbleReplies], or null outside a thread (a bubble then draws no quote or reply). */
 internal val LocalBubbleReplies = compositionLocalOf<BubbleReplies?> { null }
@@ -107,7 +116,7 @@ internal val LocalBubbleReplies = compositionLocalOf<BubbleReplies?> { null }
  * `ReplyQuote.of` makes, so the thread never offers a reply `ChatViewModel.startReply` refuses
  * (design item 8).
  */
-private fun excerptOf(message: Message): ReplyExcerpt? = ReplyExcerpt.of(
+internal fun excerptOf(message: Message): ReplyExcerpt? = ReplyExcerpt.of(
     content = message.content,
     files = ChatAttachmentCodec.attachmentsOf(message.attachments),
     isSticker = message.activity?.kind == ActivityKind.STICKER_SENT
@@ -132,6 +141,7 @@ internal fun BubbleQuote(message: Message, isCurrentUser: Boolean) {
     ReplyQuoteBlock(
         quote = quote,
         onOwnBubble = isCurrentUser,
+        readerId = replies.readerId,
         onClick = replies.onQuoteClick,
         modifier = Modifier.padding(bottom = Spacing.XS)
     )
@@ -140,19 +150,22 @@ internal fun BubbleQuote(message: Message, isCurrentUser: Boolean) {
 /**
  * A quote inside a reply's bubble: a bar in the role colour of the bubble it sits on (`primary` on
  * the co-parent's, `onPrimary` on one's own; never a parent's hue, which is a person), the original
- * author's name and one line of the original. A tap asks for the original ([onClick] with its id).
- * [ReplyQuote.Unavailable] says so, alone, and takes no tap. Public for the app's `ChatReplyTest`.
+ * author's name ("You" for the reader's own, design item 22) and one line of the original. A tap
+ * asks for the original ([onClick]). [ReplyQuote.Unavailable] says so, alone, and takes no tap.
+ * Public for the app's `ChatReplyTest`.
  *
  * @param quote What the reply quotes
  * @param onOwnBubble Whether the quote sits on the reader's own (primary) bubble
- * @param onClick Called with the original's id when the quote is tapped
+ * @param readerId The signed-in parent's uid
+ * @param onClick Called with the original when the quote is tapped
  * @param modifier Modifier for the quote
  */
 @Composable
 fun ReplyQuoteBlock(
     quote: ReplyQuote,
     onOwnBubble: Boolean,
-    onClick: (String) -> Unit,
+    readerId: String,
+    onClick: (ReplyQuote.Shown) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.colorScheme
@@ -166,7 +179,7 @@ fun ReplyQuoteBlock(
             .background(accent.copy(alpha = QUOTE_WASH_ALPHA))
             .then(
                 if (shown != null) {
-                    Modifier.clickable(role = Role.Button) { onClick(shown.messageId) }
+                    Modifier.clickable(role = Role.Button) { onClick(shown) }
                 } else {
                     Modifier
                 }
@@ -183,7 +196,11 @@ fun ReplyQuoteBlock(
         Column(modifier = Modifier.padding(start = Spacing.S, top = Spacing.XS, bottom = Spacing.XS)) {
             if (shown != null) {
                 Text(
-                    text = shown.authorName,
+                    text = if (shown.authorId == readerId) {
+                        stringResource(Res.string.parent_label_you)
+                    } else {
+                        shown.authorName
+                    },
                     style = MaterialTheme.typography.labelMediumEmphasized,
                     color = accent,
                     maxLines = 1,
@@ -202,15 +219,17 @@ fun ReplyQuoteBlock(
 }
 
 /**
- * The bar over the composer while a reply is chosen: the reply icon, "Reply to {name}", one line of
- * the message answered, and ✕ to drop the reply. Public for the app's `ChatReplyTest`.
+ * The bar over the composer while a reply is chosen: the reply icon, "Reply to {name}" ("Reply to
+ * your message" for the reader's own, design item 22), one line of the message answered, and ✕ to
+ * drop the reply. Public for the app's `ChatReplyTest`.
  *
  * @param quote The message being answered
+ * @param readerId The signed-in parent's uid
  * @param onCancel Drops the reply
  * @param modifier Modifier for the bar
  */
 @Composable
-fun ReplyBar(quote: ReplyQuote.Shown, onCancel: () -> Unit, modifier: Modifier = Modifier) {
+fun ReplyBar(quote: ReplyQuote.Shown, readerId: String, onCancel: () -> Unit, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -228,7 +247,11 @@ fun ReplyBar(quote: ReplyQuote.Shown, onCancel: () -> Unit, modifier: Modifier =
         Spacer(Modifier.width(Spacing.M))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = stringResource(Res.string.chat_reply_to, quote.authorName),
+                text = if (quote.authorId == readerId) {
+                    stringResource(Res.string.chat_reply_to_own)
+                } else {
+                    stringResource(Res.string.chat_reply_to, quote.authorName)
+                },
                 style = MaterialTheme.typography.labelMediumEmphasized,
                 color = MaterialTheme.colorScheme.primary,
                 maxLines = 1,
@@ -251,129 +274,6 @@ fun ReplyBar(quote: ReplyQuote.Shown, onCancel: () -> Unit, modifier: Modifier =
     }
 }
 
-/** One entry of a bubble's long-press menu, in both anatomies. */
-private class BubbleAction(val label: String, val sfSymbol: String, val run: () -> Unit)
-
-/**
- * Wraps a message bubble with what can be done to it: a swipe to the right starts a reply
- * ([swipeToReply]), and a long press opens the bubble's one menu — Reply, Copy text (a text message
- * only, where the phone has a clipboard) and Report message (the co-parent's words, inside a
- * [ChatReportHost] with an address). Under the iPhone's native controls the menu is the system's
- * action sheet, and on Android Material's menu anchored on the bubble. TalkBack and VoiceOver get
- * the same entries as custom actions, Reply on every message a reply can quote. With none of them
- * [content] is drawn unchanged.
- *
- * @param message The message the bubble shows
- * @param isCurrentUser Whether the reader sent it
- * @param content The bubble
- */
-@Composable
-internal fun MessageActions(message: Message, isCurrentUser: Boolean, content: @Composable () -> Unit) {
-    val actions = rememberBubbleActions(message, isCurrentUser)
-    val reply = LocalBubbleReplies.current?.onReply?.takeIf { excerptOf(message) != null }
-    if (actions.isEmpty()) {
-        content()
-        return
-    }
-    var menuOpen by remember { mutableStateOf(false) }
-    val haptic = LocalHapticFeedback.current
-    val swipe = rememberSwipeToReply(onReply = reply?.let { start -> { start(message) } })
-    Box(
-        modifier = Modifier
-            .then(if (swipe != null) Modifier.swipeToReply(swipe) else Modifier)
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onLongPress = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        menuOpen = true
-                    }
-                )
-            }
-            // One node for the message, so TalkBack reads it whole and offers its actions on it.
-            .semantics(mergeDescendants = true) {
-                customActions = actions.map { action ->
-                    CustomAccessibilityAction(action.label) {
-                        action.run()
-                        true
-                    }
-                }
-            }
-    ) {
-        if (swipe != null) SwipeReplyArrow(swipe, Modifier.align(Alignment.CenterStart))
-        Box(modifier = Modifier.offset { IntOffset(swipe?.offset?.value?.roundToInt() ?: 0, 0) }) {
-            content()
-        }
-        BubbleMenu(actions = actions, open = menuOpen, onClose = { menuOpen = false })
-    }
-}
-
-/** The bubble's entries, in their order: Reply, Copy text, Report message. */
-@Composable
-private fun rememberBubbleActions(message: Message, isCurrentUser: Boolean): List<BubbleAction> {
-    val excerpt = excerptOf(message)
-    val reply = LocalBubbleReplies.current?.onReply?.takeIf { excerpt != null }
-    val clipboard = LocalSensitiveClipboard.current.takeIf { it.available && excerpt is ReplyExcerpt.Text }
-    val report = LocalChatMessageReport.current?.takeIf { MessageReport.isReportable(message, isCurrentUser) }
-    val replyLabel = stringResource(Res.string.chat_reply)
-    val copyLabel = stringResource(Res.string.chat_copy_text)
-    val reportLabel = stringResource(Res.string.chat_report_message)
-    val currentReply by rememberUpdatedState(reply)
-    val currentReport by rememberUpdatedState(report)
-    return remember(message, reply != null, clipboard, report != null, replyLabel, copyLabel, reportLabel) {
-        listOfNotNull(
-            reply?.let { BubbleAction(replyLabel, "arrowshape.turn.up.left") { currentReply?.invoke(message) } },
-            clipboard?.let { board ->
-                BubbleAction(copyLabel, "doc.on.doc") { board.copySensitive(copyLabel, message.content) }
-            },
-            report?.let { BubbleAction(reportLabel, "flag") { currentReport?.invoke(message) } }
-        )
-    }
-}
-
-/** The long-press menu: the system's action sheet under native controls, else Material's menu. */
-@Composable
-private fun BubbleMenu(actions: List<BubbleAction>, open: Boolean, onClose: () -> Unit) {
-    val native = nativeControls()
-    if (native != null) {
-        if (open) {
-            native.ActionSheet(
-                title = null,
-                items = actions.map { action ->
-                    BarMenuItem(
-                        label = action.label,
-                        sfSymbol = action.sfSymbol,
-                        onClick = {
-                            onClose()
-                            action.run()
-                        }
-                    )
-                },
-                onDismiss = onClose
-            )
-        }
-    } else {
-        DropdownMenu(expanded = open, onDismissRequest = onClose) {
-            actions.forEach { action ->
-                DropdownMenuItem(
-                    text = { Text(action.label) },
-                    leadingIcon = { AppIcon(menuIconOf(action.sfSymbol), contentDescription = null) },
-                    onClick = {
-                        onClose()
-                        action.run()
-                    }
-                )
-            }
-        }
-    }
-}
-
-/** Material's icon for a menu entry, by the SF Symbol the iPhone draws for it. */
-private fun menuIconOf(sfSymbol: String) = when (sfSymbol) {
-    "doc.on.doc" -> Icons.Default.ContentCopy
-    "flag" -> Icons.Outlined.Flag
-    else -> Icons.AutoMirrored.Filled.Reply
-}
-
 /**
  * A bubble's swipe to reply: how far it is drawn to the right ([offset], in pixels), and what a
  * swipe past [thresholdPx] does.
@@ -389,7 +289,7 @@ internal class SwipeToReplyState(
 
 /** The swipe's state for a bubble, or null when the bubble takes no reply. */
 @Composable
-private fun rememberSwipeToReply(onReply: (() -> Unit)?): SwipeToReplyState? {
+internal fun rememberSwipeToReply(onReply: (() -> Unit)?): SwipeToReplyState? {
     val current by rememberUpdatedState(onReply)
     val offset = remember { Animatable(0f) }
     val haptic = LocalHapticFeedback.current
@@ -423,20 +323,31 @@ internal fun Modifier.swipeToReply(state: SwipeToReplyState): Modifier = pointer
         crossed = false
         state.scope.launch { state.offset.animateTo(0f, tween(Motion.SHORT_MS)) }
     }
+    var leftward = false
+    var started = false
     detectHorizontalDragGestures(
         onDragStart = {
-            // The finger has already travelled the touch slop: counted, so the threshold is the
-            // distance the parent swiped, and the bubble keeps up with the finger from here.
-            dragged = viewConfiguration.touchSlop
+            dragged = 0f
             crossed = false
+            started = false
+            leftward = false
         },
         onDragEnd = {
-            val past = dragged >= state.thresholdPx
+            val past = !leftward && dragged >= state.thresholdPx
             settle()
             if (past) state.onReply()
         },
         onDragCancel = { settle() },
         onHorizontalDrag = { change, amount ->
+            if (!started) {
+                // The direction is known only with the first amount: a drag that starts leftward
+                // never moves the bubble. A rightward one has already travelled the touch slop,
+                // counted, so the threshold is the distance swiped from where the finger went down.
+                started = true
+                leftward = amount < 0f
+                if (!leftward) dragged = viewConfiguration.touchSlop
+            }
+            if (leftward) return@detectHorizontalDragGestures
             change.consume()
             dragged = (dragged + amount).coerceIn(0f, state.maxPx)
             state.scope.launch { state.offset.snapTo(dragged) }
@@ -452,7 +363,7 @@ internal fun Modifier.swipeToReply(state: SwipeToReplyState): Modifier = pointer
 
 /** The reply arrow the swipe uncovers at the bubble's start, fully drawn at the threshold. */
 @Composable
-private fun SwipeReplyArrow(state: SwipeToReplyState, modifier: Modifier) {
+internal fun SwipeReplyArrow(state: SwipeToReplyState, modifier: Modifier) {
     AppIcon(
         imageVector = Icons.AutoMirrored.Filled.Reply,
         contentDescription = null,

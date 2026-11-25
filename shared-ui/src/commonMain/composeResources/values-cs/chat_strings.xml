@@ -173,6 +173,8 @@
     <string name="chat_reply">Odpovědět</string>
     <string name="chat_copy_text">Kopírovat text</string>
     <string name="chat_reply_to">Odpověď – %1$s</string>
+    <!-- The reply bar while the parent answers their own message: never their own name (H4). -->
+    <string name="chat_reply_to_own">Odpověď na vaši zprávu</string>
     <string name="chat_cancel_reply">Zrušit odpověď</string>
     <string name="chat_quote_unavailable">Zpráva není k dispozici</string>
     <string name="chat_quote_file">Soubor: %1$s</string>
