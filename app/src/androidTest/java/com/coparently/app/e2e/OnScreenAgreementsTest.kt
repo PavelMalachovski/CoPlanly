@@ -178,7 +178,7 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
         openRequestsFromHome()
         waitFor(
             "Bob's split in History, answered by Alice",
-            hasText(string(R.string.request_history_theirs_answered, bob.name), substring = true)
+            hasText(string(R.string.request_history_their_request, bob.name), substring = true)
         )
     }
 

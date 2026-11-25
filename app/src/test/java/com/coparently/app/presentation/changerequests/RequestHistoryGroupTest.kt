@@ -3,8 +3,10 @@ package com.coparently.app.presentation.changerequests
 import android.content.Context
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpRect
@@ -98,6 +100,53 @@ class RequestHistoryGroupTest {
             substring = true,
             useUnmergedTree = true
         ).assertExists()
+    }
+
+    @Test
+    fun `a row says whose request it was in the author's name`() {
+        render(fontScale = 1f, entry = accepted)
+        rule.onNodeWithText("Pavel\u2019s request", substring = true, useUnmergedTree = true).assertExists()
+        rule.onNodeWithText("Your request", substring = true, useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `a row of this parent's own request says your request once, also when withdrawn`() {
+        val withdrawn = unanswered.copy(outcome = RequestOutcome.WITHDRAWN, decidedBy = MY_UID)
+        render(fontScale = 1f, entry = withdrawn)
+        rule.onAllNodesWithText("Your request", substring = true, useUnmergedTree = true)
+            .assertCountEquals(1)
+        rule.onNodeWithText(
+            context.getString(R.string.request_history_withdrawn_by_you),
+            substring = true,
+            useUnmergedTree = true
+        ).assertExists()
+    }
+
+    @Test
+    fun `a request nobody answered still says whose it was`() {
+        render(fontScale = 1f, entry = unanswered)
+        rule.onNodeWithText("Your request", substring = true, useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `a legend names both parents`() {
+        render(fontScale = 1f, entry = accepted)
+        rule.onNodeWithText("you", useUnmergedTree = true).assertExists()
+        rule.onNodeWithText("Pavel", useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `the legend is left out while a parent is unknown`() {
+        rule.setContent {
+            CoPlanlyTheme {
+                RequestHistoryGroup(
+                    entries = listOf(accepted),
+                    parentNames = names.copy(parents = names.parents.copy(coParent = null)),
+                    myUid = MY_UID
+                )
+            }
+        }
+        rule.onNodeWithText("you", useUnmergedTree = true).assertDoesNotExist()
     }
 
     private fun render(fontScale: Float, entry: HistoryEntry = accepted) {

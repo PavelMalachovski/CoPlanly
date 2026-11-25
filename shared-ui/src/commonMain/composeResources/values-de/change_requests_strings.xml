@@ -50,8 +50,11 @@
     <string name="request_history_day_swap">Tagestausch: %1$s</string>
     <string name="request_history_custody">Neuer Betreuungsplan</string>
     <string name="request_history_split">Kostenaufteilung</string>
-    <string name="request_history_yours_answered">Deine Anfrage\u00A0· %1$s hat geantwortet</string>
-    <string name="request_history_theirs_answered">Anfrage von %1$s\u00A0· du hast geantwortet</string>
+    <string name="request_history_yours_answered">%1$s hat geantwortet</string>
+    <string name="request_history_theirs_answered">du hast geantwortet</string>
+    <string name="request_history_your_request">Deine Anfrage</string>
+    <string name="request_history_their_request">Anfrage von %1$s</string>
+    <string name="request_history_legend_you">du</string>
     <string name="request_history_withdrawn_by_you">Du hast sie zurückgezogen</string>
     <string name="request_history_withdrawn_by">%1$s hat sie zurückgezogen</string>
     <string name="request_history_when">%1$s\u00A0· %2$s</string>
