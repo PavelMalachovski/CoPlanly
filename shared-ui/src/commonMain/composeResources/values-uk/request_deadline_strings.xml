@@ -15,6 +15,13 @@
         <item quantity="many">До %1$s. %2$s отримає до %3$d\u00A0нагадувань, вночі — без нагадувань.</item>
         <item quantity="other">До %1$s. %2$s отримає до %3$d\u00A0нагадування, вночі — без нагадувань.</item>
     </plurals>
+    <plurals name="answer_by_summary_reminders">
+        <item quantity="one">Відповісти до %1$s\u00A0· до %2$d\u00A0нагадування</item>
+        <item quantity="few">Відповісти до %1$s\u00A0· до %2$d\u00A0нагадувань</item>
+        <item quantity="many">Відповісти до %1$s\u00A0· до %2$d\u00A0нагадувань</item>
+        <item quantity="other">Відповісти до %1$s\u00A0· до %2$d\u00A0нагадування</item>
+    </plurals>
+    <string name="answer_by_reminded_automatically">%1$s автоматично отримує нагадування, доки не буде відповіді. Торкніться, щоб змінити дату.</string>
     <string name="answer_by_outcome">Якщо до цього часу відповіді не буде, ви отримаєте сповіщення й зможете дати ще 24 години. Без відповіді в календарі нічого не зміниться.</string>
     <string name="answer_by_outcome_short">Якщо до цього часу відповіді не буде, ви отримаєте сповіщення й зможете дати ще трохи часу. Без відповіді в календарі нічого не зміниться.</string>
     <string name="answer_by_fixed">Відповісти до %1$s</string>

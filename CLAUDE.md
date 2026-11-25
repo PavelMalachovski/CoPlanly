@@ -810,8 +810,11 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     - **The sheet shows both sides, compactly, and the result** (`DaySwapSheet` over
       `DaySwapSheetContent`, opening partly expanded so the grid stays in view): a title that counts
       the days, one row per way from `swapSheetRows` ("Fri 13, Sat 14 Nov → Lana", "→ you"; the given
-      days first), "Add a note" and "Answer by …" chips that open their fields in place, and a pinned
-      "Send to Lana" — no mini months (the inbox card and Home's pop-up keep them); after sending, a snackbar says it
+      days first), an "Add a note" chip that opens its field in place, the deadline always shown
+      ("Answer by Fri 28 Nov · up to 3 reminders" over "Lana is reminded automatically until they
+      answer. Tap to change the date.", one button that opens `AnswerByField` under it; the count is
+      `plannedReminderCount`, the number that field's own consequences line states; too soon for a
+      deadline it is the plain sentence, no button), and a pinned "Send to Lana" — no mini months (the inbox card and Home's pop-up keep them); after sending, a snackbar says it
       went and offers Withdraw for exactly that group (`CalendarViewModel.swapSent`).
     - **The push names the sender and the dates**: `datesToYou`/`datesToSender` (ISO dates, from the
       addressee's side, bounded at 160 in `firestore.rules`) and `actorName` ride the existing swap

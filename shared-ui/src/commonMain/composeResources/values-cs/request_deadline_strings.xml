@@ -15,6 +15,13 @@
         <item quantity="many">Do %1$s. %2$s dostane nejvýše %3$d\u00A0připomenutí, v noci žádné.</item>
         <item quantity="other">Do %1$s. %2$s dostane nejvýše %3$d\u00A0připomenutí, v noci žádné.</item>
     </plurals>
+    <plurals name="answer_by_summary_reminders">
+        <item quantity="one">Odpovědět do %1$s\u00A0· nejvýše %2$d\u00A0připomenutí</item>
+        <item quantity="few">Odpovědět do %1$s\u00A0· nejvýše %2$d\u00A0připomenutí</item>
+        <item quantity="many">Odpovědět do %1$s\u00A0· nejvýše %2$d\u00A0připomenutí</item>
+        <item quantity="other">Odpovědět do %1$s\u00A0· nejvýše %2$d\u00A0připomenutí</item>
+    </plurals>
+    <string name="answer_by_reminded_automatically">%1$s dostane automatická připomenutí, dokud neodpoví. Klepnutím změníte datum.</string>
     <string name="answer_by_outcome">Pokud do té doby nikdo neodpoví, dostanete zprávu a můžete dát dalších 24 hodin. Bez odpovědi se v kalendáři nic nezmění.</string>
     <string name="answer_by_outcome_short">Pokud do té doby nikdo neodpoví, dostanete zprávu a můžete dát ještě trochu času. Bez odpovědi se v kalendáři nic nezmění.</string>
     <string name="answer_by_fixed">Odpovědět do %1$s</string>
