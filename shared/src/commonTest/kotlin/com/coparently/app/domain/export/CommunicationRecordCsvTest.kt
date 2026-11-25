@@ -149,6 +149,71 @@ class CommunicationRecordCsvTest {
     }
 
     @Test
+    fun `the in-reply-to column is last and filled only for a reply`() {
+        val csv = CommunicationRecordCsv.render(
+            CommunicationRecordBuilder.build(
+                sources(
+                    messages = listOf(
+                        MessageInput("a", ALICE, MARCH_10_0900, "Pickup at six", true),
+                        MessageInput("b", BOB, MARCH_10_0900 + 60_000, "Fine", true, replyToMessageId = "a")
+                    ),
+                    expenses = listOf(expense("x1", LocalDate(2026, 3, 3)))
+                ),
+                scope()
+            ),
+            labels()
+        )
+
+        val columns = labels().columns.all()
+        assertEquals("In reply to", columns.last())
+        val width = columns.size
+        val rows = records(csv)
+        rows.forEach { assertEquals(width, fields(it).size, "record: $it") }
+        val header = fields(rows.first { it.startsWith("Section,") })
+        assertEquals("In reply to", header.last())
+        val a = fields(rows.first { it.startsWith("Message,a,") })
+        val b = fields(rows.first { it.startsWith("Message,b,") })
+        assertEquals("", a.last())
+        assertEquals("In reply to Alice’s message of 2026-03-10 09:00:00 +01:00: “Pickup at six”", b.last())
+        assertEquals("", fields(rows.first { it.startsWith("Expense,") }).last())
+    }
+
+    @Test
+    fun `a reply to a sticker prints the sticker word`() {
+        val csv = CommunicationRecordCsv.render(
+            CommunicationRecordBuilder.build(
+                sources(
+                    messages = listOf(
+                        MessageInput("s", ALICE, MARCH_10_0900, "", true, isSticker = true),
+                        MessageInput("b", BOB, MARCH_10_0900 + 1, "Thanks", true, replyToMessageId = "s")
+                    )
+                ),
+                scope()
+            ),
+            labels()
+        )
+
+        val b = fields(records(csv).first { it.startsWith("Message,b,") })
+        assertTrue(b.last().endsWith("“a sticker”"), b.last())
+    }
+
+    @Test
+    fun `a reply whose original is not in the record says so in the in-reply-to column`() {
+        val csv = CommunicationRecordCsv.render(
+            CommunicationRecordBuilder.build(
+                sources(
+                    messages = listOf(MessageInput("b", BOB, MARCH_10_0900, "Yes", true, replyToMessageId = "gone"))
+                ),
+                scope()
+            ),
+            labels()
+        )
+
+        val b = fields(records(csv).first { it.startsWith("Message,b,") })
+        assertEquals(RecordFixtures.NOT_IN_RECORD, b.last())
+    }
+
+    @Test
     fun `an amount has two decimals and a point in every locale`() {
         val row = fields(records(render()).first { it.startsWith("Expense,") })
         val columns = labels().columns.all()

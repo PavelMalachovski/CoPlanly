@@ -112,7 +112,6 @@ class CommunicationRecordSource(
         val end = RecordWindow.endMillis(to, zone)
         val remote = fromServer("messages") { messages.fetchBetween(conversationId, start, end) }
             ?.mapNotNull { it.toMessageOrNull() }
-            ?.filterNot { it.isSticker() }
             ?.map {
                 MessageInput(
                     it.id,
@@ -121,13 +120,15 @@ class CommunicationRecordSource(
                     it.content,
                     delivered = true,
                     attachments = ChatAttachmentCodec.attachmentsOf(it.attachments),
-                    planCitation = it.activity?.planCitation
+                    planCitation = it.activity?.planCitation,
+                    replyToMessageId = it.replyToMessageId,
+                    isSticker = it.isSticker()
                 )
             }
         val remoteIds = remote.orEmpty().map { it.messageId }.toSet()
         val local = messageDao.getMessagesOnce(conversationId)
             .map { it.toDomain() }
-            .filter { it.id !in remoteIds && !it.isSticker() }
+            .filter { it.id !in remoteIds }
             .map {
                 MessageInput(
                     messageId = it.id,
@@ -136,7 +137,9 @@ class CommunicationRecordSource(
                     text = it.content,
                     delivered = it.syncedToFirestore && it.status != MessageSendStatus.ERROR,
                     attachments = ChatAttachmentCodec.attachmentsOf(it.attachments),
-                    planCitation = it.activity?.planCitation
+                    planCitation = it.activity?.planCitation,
+                    replyToMessageId = it.replyToMessageId,
+                    isSticker = it.isSticker()
                 )
             }
         return (remote.orEmpty() + local) to (remote != null)
@@ -144,7 +147,9 @@ class CommunicationRecordSource(
 
     /**
      * A sticker's card (25 October 2026): the parents' courtesies, not their communication
-     * record, so the export leaves it out — on the record's face nothing claims otherwise.
+     * record, so the export leaves it out — on the record's face nothing claims otherwise. It is
+     * still handed over, flagged, so a reply to it can say what it answers; the builder drops it
+     * from the messages it prints.
      */
     private fun Message.isSticker(): Boolean = activity?.kind == ActivityKind.STICKER_SENT
 

@@ -24,6 +24,15 @@ internal object RecordFixtures {
     /** 2026-03-10 09:00 in Prague (UTC+1). */
     const val MARCH_10_0900 = 1_773_129_600_000L
 
+    /**
+     * The in-reply-to template in its English form (each locale words it its own way with the same three
+     * arguments): author, time, then the quoted words.
+     */
+    const val IN_REPLY_TO = "In reply to %1\$s’s message of %2\$s: “%3\$s”"
+
+    /** The line a reply prints when its original is not in the record, in its English form. */
+    const val NOT_IN_RECORD = "In reply to an earlier message not in this record"
+
     fun labels() = RecordLabels(
         title = "TITLE",
         statement = listOf("NOT A TRUTH RECORD", "MESSAGES ARE FIXED"),
@@ -36,6 +45,9 @@ internal object RecordFixtures {
         sectionMessages = "Message",
         sectionExpenses = "Expense",
         nothingInPeriod = "Nothing",
+        inReplyTo = IN_REPLY_TO,
+        replySticker = "a sticker",
+        replyNotInRecord = NOT_IN_RECORD,
         columns = RecordColumns(
             section = "Section",
             item = "Item",
@@ -50,7 +62,8 @@ internal object RecordFixtures {
             parent = "Parent",
             notes = "Notes",
             amount = "Amount",
-            currency = "Currency"
+            currency = "Currency",
+            inReplyTo = "In reply to"
         ),
         actions = actionLabels(),
         notYetOnServer = "Not yet on server",

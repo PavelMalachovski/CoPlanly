@@ -60,6 +60,10 @@
     <string name="export_col_notes">Notes</string>
     <string name="export_col_amount">Amount</string>
     <string name="export_col_currency">Currency</string>
+    <string name="export_col_in_reply_to">In reply to</string>
+    <string name="export_in_reply_to">In reply to %1$s’s message of %2$s: “%3$s”</string>
+    <string name="export_reply_sticker">a sticker</string>
+    <string name="export_reply_not_in_record">In reply to an earlier message not in this record</string>
 
     <string name="export_action_created">Created</string>
     <string name="export_action_updated">Changed</string>

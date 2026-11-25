@@ -109,6 +109,18 @@ interface MessageRepository {
     suspend fun markDelivered(conversationId: String, myUid: String)
 
     /**
+     * One message by its id, as far as this phone holds it, or null.
+     *
+     * Room only, like every read here: a reply's original that the mirror has not brought in
+     * yet is null, and a caller treats that as "unavailable", never as an error. The caller
+     * decides whether the message belongs to the thread it is asking for; this answers any
+     * conversation's.
+     *
+     * @param id The message id.
+     */
+    suspend fun getMessageById(id: String): Message?
+
+    /**
      * Deletes a message locally.
      *
      * @param messageId The message id.

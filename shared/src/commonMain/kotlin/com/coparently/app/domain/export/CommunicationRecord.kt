@@ -136,6 +136,9 @@ data class EventFacts(
  *   (MON-21), the id of the plan question whose agreed answer the proposal cited **when it was
  *   made**; null otherwise. A fact about the proposal, not about the plan today: the record does
  *   not claim the answer still reads the same.
+ * @property replyTo The message this one answers, as the record quotes it
+ *   ([RecordReplyTo.NotInRecord] when the export cannot find it), or null for a message that answers
+ *   nothing.
  */
 data class RecordMessage(
     val messageId: String,
@@ -143,8 +146,45 @@ data class RecordMessage(
     val sentAtMillis: Long,
     val text: String,
     val delivered: Boolean,
-    val citedPlanQuestionId: String? = null
+    val citedPlanQuestionId: String? = null,
+    val replyTo: RecordReplyTo? = null
 )
+
+/**
+ * What a reply answers, as the record prints it: the original quoted ([RecordReply]), or the plain
+ * fact that the original is not among the messages this export read ([NotInRecord]).
+ */
+sealed interface RecordReplyTo {
+
+    /**
+     * A reply whose original this export does not hold (sent before the phone's download window,
+     * or never reached it). Printed as a fixed line, so the same reply carries a reference on both
+     * parents' exports even when only one of them can quote it.
+     */
+    data object NotInRecord : RecordReplyTo
+}
+
+/**
+ * The message a reply answers, quoted in the record.
+ *
+ * Resolved at export time from the original, which a parent cannot edit, so the quote is what the
+ * original said. The original may be dated before the record's period: a reply is still printed
+ * with what it answers.
+ *
+ * @property authorName Who wrote the original, by name.
+ * @property sentAtMillis The original's device time, as its own entry in the record prints it.
+ * @property excerpt The original's words with their line breaks collapsed to spaces, or its file's
+ *   name, cut at `ReplyQuote.EXCERPT_MAX` characters with an ellipsis. Empty for a [sticker] and for
+ *   an original with nothing to quote.
+ * @property sticker True when the original is a sticker, which the renderer words itself; stickers
+ *   are not entries of the record, so this is the only place one appears.
+ */
+data class RecordReply(
+    val authorName: String,
+    val sentAtMillis: Long,
+    val excerpt: String,
+    val sticker: Boolean = false
+) : RecordReplyTo
 
 /**
  * One expense, as it stands today — expenses are not versioned (design §4), and the statement

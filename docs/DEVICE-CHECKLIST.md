@@ -1806,9 +1806,10 @@ Preconditions: A and B are paired, and each phone has its own account signed in.
       force-stop. The times shift by 3 hours and the order is unchanged. This checks display
       only, not the read or unread logic.
 - [ ] **Report and block (play-final audit F-10)**, on a build with `COPLANLY_SUPPORT_EMAIL` set
-      (without it neither long-press menu nor report exists — check that too, once):
-  - Long-press one of **B's** messages: a menu offers *Report message*. Your own messages and
-    the app's cards (an event, a change request) offer nothing. With TalkBack on, the bubble's
+      (without it the menu has no *Report message* entry — check that too, once):
+  - Long-press one of **B's** messages: the bubble's menu offers *Reply*, *Copy text* and *Report
+    message* (§3.47). Your own messages offer *Reply* and *Copy text* but not *Report message*, and
+    the app's cards (an event, a change request) are not drawn. With TalkBack on, the bubble's
     actions include *Report message*.
   - Choose it: the email app opens to the support address, with the subject and a body naming
     the message ID, conversation ID and time in UTC — **not** the message's text — in the app's
@@ -2705,8 +2706,8 @@ and no real receipt. What is left:
 - [ ] **Questions** (an event's Delete; a document's Delete; unlinking; a dirty form swiped down):
       a destructive action asks in the action sheet from the bottom, red over a separate Cancel;
       "Discard changes?" is an alert. Cancel does nothing; a tap outside the action sheet is a
-      cancel; the question opens again. Long-press a chat message: "Report message" in an action
-      sheet.
+      cancel; the question opens again. Long-press a chat message: "Reply", "Copy text" and, on the
+      co-parent's, "Report message" in an action sheet (§3.47).
 - [ ] **In-screen sheets** (an event's preview from the grid; Filters; the day swap's review; a
       guest or friend invitation; the message templates): the system's sheet with the grabber.
       Under the event's preview and the day swap the grid stays usable; under the others it is
@@ -3095,6 +3096,83 @@ system's controls and hyphenation on a phone, VoiceOver and the push that arrive
   `CellPills.kt` (`pillLines`); `domain/chat/ThreadMessages.kt` (`isShownInThread`),
   `presentation/chat/MessagesList.kt` (`buildThread`), `MessageDao.observeUnreadCount`;
   `PushDestination.forChatCard`, `PushNotifier` (Android), `LaunchLinks.forPush` (iPhone).
+
+### 3.47 The newest message in view, and replies · 2P, 1P for the thread, Android and an iPhone, an older build for the plain-message check
+
+The 25 November 2026 chat work (spec `docs/superpowers/specs/2026-11-25-chat-newest-and-replies-design.md`;
+CLAUDE.md design items 8 and 14, "Things that are easy to get wrong" 26 and 47). What is decided is
+pinned in `commonTest` and the JVM tests (`ReplyQuoteTest`, `NewestButtonTest`, `ChatViewModelReplyTest`,
+`ChatSearchViewModelTest`, `CommunicationRecordBuilderTest`, `CommunicationRecordCsvTest`,
+`RecordLayoutTest`, `SecurePreferencesContractTest`, `SfSymbolTableTest`) and the thread in the
+screenshot matrix. What is left is the gestures and the keyboard on a real screen, the push that
+arrives, an older build, and the file a court reads.
+
+- [ ] **The thread opens on its newest message** (Android and iPhone). With 60 or more messages, open
+      the Chat tab: the newest sits just above the composer, with "Load earlier" at the very top. Go
+      to another tab and back, rotate, open the thread from a message push, come back from
+      Settings: the newest is in view each time.
+- [ ] **The keyboard and the reply bar** (Android and iPhone). Tap the composer: the newest message
+      stays above the keyboard, not under it. Type four lines, then start a reply: the composer
+      grows and the reply bar appears and the newest message is still fully in view, never behind
+      them. Dismiss the keyboard: the thread does not jump.
+- [ ] **"↓" and its count** (2P). Scroll up a few screens. Bob sends two messages: the list does not
+      move, "↓" shows with 2. A third from Bob makes it 3. Send one from Alice's *other* phone or
+      send your own message: your own are not counted, and your own message brings the newest into
+      view. Scroll up again: "↓" shows without a count. Tap it: the newest, the button gone.
+      Scroll to the newest by hand: the count resets. A message found by search sits clear of the
+      button, not under it.
+- [ ] **Swipe to reply** (Android and iPhone). Drag Bob's message to the right: past a short
+      distance (about 56 dp) an arrow shows and the phone gives a light tick; letting go there
+      starts the reply (the reply bar names Bob and shows the message's first line); letting go
+      before it starts nothing. The drag is horizontal only: the list does not scroll sideways,
+      and a vertical scroll that starts on a bubble still scrolls. Your own message works too
+      ("Reply to your message"). **On the iPhone a rightward swipe on Bob's bubble, which sits at
+      the left edge, in a thread pushed over the conversation list, must not also trigger the
+      system's back gesture**: note what happens from the very edge and from 30 pt in:
+      ______.
+- [ ] **Long press** (Android and iPhone). Long-press Bob's text message: a light tick, the pressed
+      bubble is washed and every other bubble is dimmed, and one menu offers **Reply**, **Copy
+      text** and **Report message** (the last only on a build with a support address); Android draws
+      a menu on the bubble, the iPhone an action sheet. Your own message: Reply and Copy text. A
+      photo or a sticker: Reply, no Copy text. Close the menu: the thread returns to normal. Copy
+      text, then paste in another app: the text arrived, and on an iPhone with a Mac nearby it is not
+      offered to the Mac. TalkBack and VoiceOver: each message has Reply (and Copy text, Report
+      message) among its custom actions.
+- [ ] **A reply between two phones** (2P). Alice replies to Bob's "ok, 3": the reply bar over the
+      composer, its ✕ cancels (the draft stays), then send. Bob's phone shows the bubble with a
+      quote over its text, "Alice" and "ok, 3" — and on Alice's own phone the quote reads "You" when
+      she quoted herself. Bob taps the quote: the thread scrolls to the original and washes it for a
+      moment, also when the original is old enough to need "Load earlier". Reply to a photo (the
+      quote names the file) and to a sticker (the sticker's phrase). Bob gets one push for the
+      reply, worded like any message.
+- [ ] **The reply survives leaving** (1P). Start a reply and type half a sentence, switch to Home and
+      back, then force-stop the app and reopen: the reply bar and the draft are both there. Send:
+      the bar is gone and the next message is not a reply. With the pause before sending on, send a
+      reply and tap Undo: the reply bar returns with the text.
+- [ ] **An original that is not on the phone** (2P). On a freshly installed Alice, with only the
+      newest page loaded, a reply to a very old message she never downloaded shows "Message
+      unavailable", and a tap on that quote does nothing. A reply whose quote is shown but whose
+      original is older than the loaded messages opens that original in one step on a tap, washed
+      for a moment, rather than by paging "Load earlier".
+- [ ] **An older build draws a reply plainly** (2P, Bob on the build before this one). Alice's reply
+      reaches Bob as an ordinary message with no quote and nothing broken; Bob's messages show on
+      Alice as before. A reply Bob's older build sends has no quote on Alice.
+- [ ] **The export names the original** (2P, §6). Export the week as PDF and CSV: under the reply's
+      sender line, "In reply to Bob's message of <date and time>: “ok, 3”" in the record's language;
+      the CSV's last column, "In reply to", holds the same text and is empty on every other row. A
+      reply to a sticker reads "a sticker" and the sticker is not listed as a message; a reply
+      whose original is older than the exported period still names it. On the freshly installed
+      Alice of the check above, export the period holding the reply to the old message: the PDF
+      and the CSV column read "In reply to an earlier message not in this record", never an
+      ordinary message. A reply to a multi-line message quotes its lines joined by spaces, cut at
+      80 characters with "…". Open the CSV in a spreadsheet: no column shifted.
+- **If it fails:** `presentation/chat/MessagesList.kt` (the reversed list, `NewestButton`),
+  `BubbleActions.kt` (swipe, long press, menu), `ReplyViews.kt` (quote, reply bar), `ChatScreen.kt`,
+  `ChatViewModel.kt` (`replyTarget`, `quotes`), `ChatSearchViewModel.kt` (`jumpTo`), `SendHold.kt`;
+  `domain/chat/ReplyQuote.kt`, `NewestButton.kt`; the draft in `SecurePreferences`
+  (`chat_reply_draft_<conversationId>`); `domain/export/RecordReplyText.kt`,
+  `CommunicationRecordBuilder.kt` (`replyOf`), `data/export/CommunicationRecordSource.kt`;
+  on the iPhone `ios/controls/IosNativeControls.kt` (the action sheet) and the shell's back swipe.
 
 ---
 

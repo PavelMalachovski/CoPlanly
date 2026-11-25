@@ -133,6 +133,14 @@ class SealedSecurePreferences(private val storage: SealedTextStore) : SecurePref
     override fun getChatDraft(conversationId: String): String =
         getString(PreferenceKeys.CHAT_DRAFT_PREFIX + conversationId).orEmpty()
 
+    override fun putChatReplyDraft(conversationId: String, messageId: String) {
+        val key = PreferenceKeys.CHAT_REPLY_DRAFT_PREFIX + conversationId
+        if (messageId.isEmpty()) remove(key) else putString(key, messageId)
+    }
+
+    override fun getChatReplyDraft(conversationId: String): String =
+        getString(PreferenceKeys.CHAT_REPLY_DRAFT_PREFIX + conversationId).orEmpty()
+
     override fun putSplitRatioBasisPoints(basisPoints: Int) =
         edit { it[PreferenceKeys.SPLIT_RATIO_BASIS_POINTS] = basisPoints }
 

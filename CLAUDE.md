@@ -187,8 +187,8 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    Onest Bold on both. **Every icon is drawn through `AppIcon`** (`common/AppIcon.kt`, an `expect`
    with material3 `Icon`'s parameters; on Android exactly that `Icon` call): `AppIconGuardTest`
    refuses Material's `Icon` called or imported in `commonMain`. On the iPhone `AppIcon` looks the
-   vector's `ImageVector.name` up in `SF_SYMBOLS` (`common/SfSymbolTable.kt`: 118 symbols, 121
-   mapped rows of the 133 in the owner-approved
+   vector's `ImageVector.name` up in `SF_SYMBOLS` (`common/SfSymbolTable.kt`: 119 symbols, 122
+   mapped rows of the 134 in the owner-approved
    `docs/superpowers/plans/2026-11-16-iphone-phase-3d-sf-symbols.json`, where `Default` and `Filled`
    share a key; 12 keep Material) and draws that SF Symbol rasterised inside Compose, in the call site's tint, size and semantics, never a
    native view; an icon with no row, or whose symbol the running iOS cannot load, draws its
@@ -386,6 +386,51 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
      card is silent).
    - **Settle up is not in the thread** (item 45): its cards are written for the record, and the
      payment code and the two buttons are Home's and Expenses' `SettleUpPanel`.
+
+   **The thread is newest-first, and a message can be answered** (owner, 25 November 2026; spec
+   `docs/superpowers/specs/2026-11-25-chat-newest-and-replies-design.md`). Seven things not to undo.
+   - **The list is reversed** (`MessagesList`: `LazyColumn(reverseLayout = true)`, item 0 the newest,
+     "Load earlier" the last item). Opening, a keyboard, a reply bar and a composer that grows all
+     keep the newest above the composer with no scroll code; `ChatScrollPolicy` and
+     `FollowNewestWhileKeyboardOpens` are gone, and a scroll fix put back beside the reversal fights
+     it. A new one from the co-parent while
+     the reader is up the list moves nothing: **`NewestButton`** ("↓", `domain/chat/NewestButton`)
+     shows past `NEAR_NEWEST` items (a few messages) from the newest, with a badge counting the
+     **co-parent's** messages since the reader left the bottom (their own, from another phone, never
+     count). The reader's own new message brings the newest into view. A
+     message revealed by a search or a quote tap lands clear of the button.
+   - **A reply is `Message.replyToMessageId`, which was always in the model, Room and the document**
+     (`ChatMappers`): no schema, wire or rule change, and an older build draws a reply as a plain
+     message (device check §3.47). Only a text send carries one (a file or a sticker never does), and
+     it may name only a message this thread drew; the reader's `quotes` come from `ReplyQuote`
+     (`domain/chat/`), which answers **Unavailable** for an original in another conversation, an
+     unknown id, a hidden card or an empty message, and shows the author as "You" for the reader's
+     own (`Shown.authorId`). The excerpt is the first line, at most `ReplyExcerpt.EXCERPT_MAX` (80)
+     characters; a file quotes its name, a sticker its phrase.
+   - **The chosen reply is stored beside the draft** (`SecurePreferences.putChatReplyDraft`, key
+     `chat_reply_draft_<conversationId>`), survives leaving the chat, is cleared by a text send or the
+     reply bar's ✕, and returns with Undo of a held send (`SendHold`); `ChatViewModelReplyTest` holds
+     each of those.
+   - **Starting one**: swipe a bubble to the right (56 dp threshold, a light haptic there, 72 dp cap,
+     horizontal only, never moving the list), or long press it. **The long press is the bubble's
+     one menu** (`BubbleActions.kt`: Reply, Copy text for a text message through
+     `SensitiveClipboard`, and Report message where `MessageReport.isReportable` and the build has a
+     support address, F-10 — `ChatReport.kt` now holds only the report host and the thread's ⋮
+     menu). Android draws Material's `DropdownMenu`, the iPhone the system's action sheet
+     (`NativeControls.ActionSheet`); while it is open the pressed bubble is washed and the others
+     dimmed. TalkBack and VoiceOver get the same entries as custom actions. Don't add a second
+     long-press action elsewhere on a bubble: two menus is the bug this one replaced. The reply arrow
+     is `AutoMirrored.Filled.Reply`, `arrowshape.turn.up.left` on the iPhone (design item 1).
+   - **The quote in a bubble** ("You" or the author's name over the excerpt, a bar in the
+     bubble's own tone) **jumps to the original on a tap** through `ChatSearchViewModel.jumpTo`, the
+     one-step window sizing a search result uses, so an old original opens in one step, not by
+     paging; an unavailable quote says "Message unavailable" and does nothing. The **reply bar**
+     over the composer (`ReplyBar`: "Reply to {name}" or "Reply to your message", the excerpt, ✕) is
+     the composer's, drawn above the keyboard.
+   - **The export names what a reply answers** (item 26), the thread and the record reading the same
+     `ReplyExcerpt`.
+   - **On the iPhone, a rightward swipe on a bubble must not also be the system's back swipe**
+     (a thread pushed over the conversation list): device check §3.47 is where that is judged.
 9. **New user-facing strings go into all five locales** (`values`, `values-cs`, `values-de`,
    `values-ru`, `values-uk`) in the same commit — see "Localization" below.
 10. **The weekend is a base layer, never a competing fill.** `presentation/calendar/DayCellFills.kt`
@@ -545,8 +590,10 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     keyboard-high gap above the keys. And **don't go back to panning**: without `adjustResize` the
     window slid up under the keyboard, taking a chat thread's header off the screen and leaving a
     form's sticky Save behind the keys. The chat thread keeps its newest message in view while the
-    keyboard opens (`FollowNewestWhileKeyboardOpens` in `MessagesList`), and only if it was in view
-    already, so a parent reading older messages is not scrolled away from them.
+    keyboard opens because its list is reversed (design item 8: item 0, the newest, sits against the
+    composer, so the keyboard and the reply bar move it with no code of the thread's own), and a
+    parent reading older messages is not scrolled away from them; don't give the thread a scroll
+    effect for the keyboard, nor a second `imePadding()` for it.
 15. **Money is never cut off** (October 2026 audit, D-1). No `maxLines`, ellipsis or
     `softWrap = false` on an amount, a total or the sentence saying who owes whom; a figure that
     does not fit wraps. Pairs that sit side by side at the default size stack **from font scale
@@ -4402,6 +4449,25 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     with a flag — the gate is MON-11's. Times use `RecordFormat` (fixed `Locale.ROOT` patterns
     with the offset printed); event start/end are the naive wall-clock values the schema stores,
     and the statement says so.
+    **A reply says what it answers** (25 November 2026, chat replies; design item 8).
+    `RecordMessage.replyTo` (`RecordReply`: the original's author by name, its time and its excerpt)
+    prints in the PDF as "In reply to {name}'s message of {time}: “{excerpt}”" under the entry's
+    sender line and before its words, and in the CSV's last column, "In reply to" (blank for an
+    ordinary message and every other row kind; the same
+    `RecordReplyText.line` writes both, in the record's zone, `export_in_reply_to` filled in one pass
+    so a name that reads `%2$s` prints as written). Four things not to undo. **The original is
+    looked up in everything the source handed over, before the period and the sticker filter**, so a
+    reply inside the period to a message outside it still names it. **`CommunicationRecordSource`
+    hands stickers over flagged** (`MessageInput.isSticker`) and `CommunicationRecordBuilder` still
+    drops them from the printed messages, so the record gains no sticker entries but a reply to one
+    prints "a sticker" rather than nothing (item 47). **A reply whose original is not in this
+    phone's data prints a fixed line**, "In reply to an earlier message not in this record"
+    (`RecordReplyTo.NotInRecord`, `export_reply_not_in_record`), in the PDF and the CSV column alike,
+    so the same reply carries a reference on both parents' exports even when only one can quote it;
+    never "unavailable", and never a server read for it. And **the excerpt is the whole original**
+    (`ReplyExcerpt.forRecord`: its lines joined by spaces, cut at 80 characters with an ellipsis, or a
+    file's name), not the thread's first line, so a record never reads as if the original said less
+    than it did; the CSV column joins the last position, so every existing column keeps its place.
     **A registered export carries a record ID the server holds its SHA-256 under** (MON-16,
     `docs/DESIGN-court-record.md` §10; `functions/export-receipts.js`, `web/verify/`). Six more
     things not to undo. **The ID is reserved before the file is rendered, and the hash is of the
@@ -5431,7 +5497,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     `docs/DESIGN-stickers-and-subscription.md` §1). `stickers/{id}` is read by `to` and `from`
     alone, never by a guest, a friend or a professional. **A sent sticker is also a card in the
     pair's thread** (owner decision, 25 October 2026: `STICKER_SENT`, worded by the sender's neutral
-    phrase on both phones), which pushes nobody (`SILENT_CARD_KINDS`) and which the export leaves out.
+    phrase on both phones), which pushes nobody (`SILENT_CARD_KINDS`) and which the export leaves out
+    of its messages (a reply to one still prints "a sticker" as what it answers, item 26).
     **It stays drawn in the thread** (owner decision, November 2026): `isShownInThread` keeps
     `STICKER_SENT` while it hides every other card (design item 8), and it counts as unread like a
     message.

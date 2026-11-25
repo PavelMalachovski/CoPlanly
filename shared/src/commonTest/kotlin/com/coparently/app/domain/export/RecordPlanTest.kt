@@ -136,7 +136,7 @@ class RecordPlanTest {
         val current = lines.indexOfFirst { it.contains("CURRENT STATE AT EXPORT") }
         val firstAnswer = lines.indexOfFirst { it.startsWith("Plan,$RESIDENCE,") }
         assertTrue(disclaimer in 0 until firstAnswer && current in 0 until firstAnswer)
-        assertTrue(lines.any { it.startsWith("Plan,$RETIRED,") && it.endsWith(",NO LONGER ASKED,,") })
+        assertTrue(lines.any { it.startsWith("Plan,$RETIRED,") && it.endsWith(",NO LONGER ASKED,,,") })
         assertTrue(lines.any { it.startsWith("Plan,,,Last changed,Bob,2026-03-09 18:00:00 +01:00,") })
     }
 

@@ -91,6 +91,15 @@ interface SecurePreferences {
     /** The unsent composer text of [conversationId], or an empty string. */
     fun getChatDraft(conversationId: String): String
 
+    /**
+     * Stores the id of the message [conversationId]'s composer is replying to; an empty
+     * [messageId] removes it. One per conversation, never shared.
+     */
+    fun putChatReplyDraft(conversationId: String, messageId: String)
+
+    /** The id of the message [conversationId]'s composer is replying to, or an empty string. */
+    fun getChatReplyDraft(conversationId: String): String
+
     /** Stores the agreed split as slot 1's share in basis points, `0..10000`. */
     fun putSplitRatioBasisPoints(basisPoints: Int)
 

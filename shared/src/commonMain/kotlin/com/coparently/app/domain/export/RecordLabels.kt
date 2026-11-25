@@ -10,6 +10,12 @@ package com.coparently.app.domain.export
  *
  * @property statement The paragraphs that say what the record is and is not — printed first, on
  *   the face of both formats, and never shortened (`docs/DESIGN-court-record.md` §3).
+ * @property inReplyTo The template of the line a reply prints before its words, with `%1$s` the
+ *   original's author, `%2$s` its time and `%3$s` its quoted words. A template, unlike the rest, because
+ *   word order differs between the five languages; [RecordReplyText] fills it.
+ * @property replySticker What a reply to a sticker quotes, in place of words ("a sticker").
+ * @property replyNotInRecord The line a reply prints when its original is not in the record
+ *   ("In reply to an earlier message not in this record").
  * @property plan The words of the parenting-plan section, printed only when the record carries one.
  * @property journal The words of the private-journal section, printed only when the record carries one.
  */
@@ -25,6 +31,9 @@ data class RecordLabels(
     val sectionMessages: String,
     val sectionExpenses: String,
     val nothingInPeriod: String,
+    val inReplyTo: String,
+    val replySticker: String,
+    val replyNotInRecord: String,
     val columns: RecordColumns,
     val actions: RecordActions,
     val notYetOnServer: String,
@@ -140,12 +149,13 @@ data class RecordColumns(
     val parent: String,
     val notes: String,
     val amount: String,
-    val currency: String
+    val currency: String,
+    val inReplyTo: String
 ) {
-    /** In the order the CSV prints them. */
+    /** In the order the CSV prints them; [inReplyTo] is always the last. */
     fun all(): List<String> = listOf(
         section, item, revision, action, by, deviceTime, serverTime, text, starts, ends, parent, notes,
-        amount, currency
+        amount, currency, inReplyTo
     )
 }
 

@@ -96,6 +96,13 @@
     <string name="chat_template_confirm_agreement_content">Damit wir vom Gleichen ausgehen, hier unsere Absprache: [Absprache]. Falls du es anders verstanden hast, sag mir bitte Bescheid.</string>
     <string name="chat_failed_to_send_retry">Nicht gesendet – zum Wiederholen tippen</string>
     <string name="chat_load_earlier">Ältere Nachrichten laden</string>
+    <!-- The button over the thread that brings its newest message into view, and how many
+         messages arrived while the reader was in history. -->
+    <string name="chat_scroll_to_newest">Neueste Nachrichten</string>
+    <plurals name="chat_new_messages">
+        <item quantity="one">%1$d neue Nachricht</item>
+        <item quantity="other">%1$d neue Nachrichten</item>
+    </plurals>
 
     <!-- MON-15: search inside the open conversation. Local to this phone; never a server. -->
     <string name="chat_search">In dieser Unterhaltung suchen</string>
@@ -152,4 +159,16 @@
     <string name="settle_up_iban_copied">IBAN kopiert</string>
     <string name="settle_up_no_account">%1$s hat noch kein Konto für Zahlungen hinterlegt.</string>
     <string name="settle_up_qr_description">QR-Code, um %1$s an %2$s zu zahlen</string>
+    <!-- Replies (chat: newest message in view, and replies, November 2026). A swipe or the
+         long-press menu starts a reply; a reply's bubble quotes the message it answers, and the
+         bar over the composer names whom the parent answers. %1$s = a name, or a file's name. -->
+    <string name="chat_reply">Antworten</string>
+    <string name="chat_copy_text">Text kopieren</string>
+    <string name="chat_reply_to">Antwort an %1$s</string>
+    <!-- The reply bar while the parent answers their own message: never their own name (H4). -->
+    <string name="chat_reply_to_own">Antwort auf deine Nachricht</string>
+    <string name="chat_cancel_reply">Antwort abbrechen</string>
+    <string name="chat_quote_unavailable">Nachricht nicht verfügbar</string>
+    <string name="chat_quote_file">Datei: %1$s</string>
+    <string name="chat_quote_sticker">Sticker</string>
 </resources>

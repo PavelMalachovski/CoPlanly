@@ -98,6 +98,13 @@
     <string name="chat_template_confirm_agreement_content">To make sure we\u0027re on the same page, here\u0027s what we agreed: [agreement]. If you see it differently, please let me know.</string>
     <string name="chat_failed_to_send_retry">Not sent — tap to retry</string>
     <string name="chat_load_earlier">Load earlier messages</string>
+    <!-- The button over the thread that brings its newest message into view, and how many
+         messages arrived while the reader was in history. -->
+    <string name="chat_scroll_to_newest">Newest messages</string>
+    <plurals name="chat_new_messages">
+        <item quantity="one">%1$d new message</item>
+        <item quantity="other">%1$d new messages</item>
+    </plurals>
 
     <!-- MON-15: search inside the open conversation. Local to this phone; never a server. -->
     <string name="chat_search">Search this conversation</string>
@@ -157,4 +164,16 @@
     <string name="settle_up_iban_copied">IBAN copied</string>
     <string name="settle_up_no_account">%1$s hasn\u0027t added a bank account for payments yet.</string>
     <string name="settle_up_qr_description">QR code for paying %1$s to %2$s</string>
+    <!-- Replies (chat: newest message in view, and replies, November 2026). A swipe or the
+         long-press menu starts a reply; a reply's bubble quotes the message it answers, and the
+         bar over the composer names whom the parent answers. %1$s = a name, or a file's name. -->
+    <string name="chat_reply">Reply</string>
+    <string name="chat_copy_text">Copy text</string>
+    <string name="chat_reply_to">Reply to %1$s</string>
+    <!-- The reply bar while the parent answers their own message: never their own name (H4). -->
+    <string name="chat_reply_to_own">Reply to your message</string>
+    <string name="chat_cancel_reply">Cancel reply</string>
+    <string name="chat_quote_unavailable">Message unavailable</string>
+    <string name="chat_quote_file">File: %1$s</string>
+    <string name="chat_quote_sticker">Sticker</string>
 </resources>

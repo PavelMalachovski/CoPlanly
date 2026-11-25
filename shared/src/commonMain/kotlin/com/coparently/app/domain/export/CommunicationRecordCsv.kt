@@ -110,6 +110,7 @@ object CommunicationRecordCsv {
         revision.parentName,
         RecordFormat.eventNotes(revision.facts),
         "",
+        "",
         ""
     )
 
@@ -127,7 +128,8 @@ object CommunicationRecordCsv {
         "",
         RecordFormat.planCitation(message, labels.plan),
         "",
-        ""
+        "",
+        message.replyTo?.let { RecordReplyText.line(it, zone, labels) }.orEmpty()
     )
 
     private fun expenseRow(expense: RecordExpense, labels: RecordLabels): List<String> = listOf(
@@ -144,7 +146,8 @@ object CommunicationRecordCsv {
         expense.paidByName,
         expense.notes,
         RecordFormat.amount(expense.amount),
-        expense.currency
+        expense.currency,
+        ""
     )
 
     private fun List<String>.padded(width: Int): List<String> =

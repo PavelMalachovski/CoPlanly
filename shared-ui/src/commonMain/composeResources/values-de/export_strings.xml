@@ -54,6 +54,10 @@
     <string name="export_col_notes">Notizen</string>
     <string name="export_col_amount">Betrag</string>
     <string name="export_col_currency">Währung</string>
+    <string name="export_col_in_reply_to">Antwort auf</string>
+    <string name="export_in_reply_to">Antwort auf die Nachricht von %1$s vom %2$s: „%3$s“</string>
+    <string name="export_reply_sticker">ein Sticker</string>
+    <string name="export_reply_not_in_record">Antwort auf eine frühere Nachricht, die nicht in diesem Protokoll steht</string>
 
     <string name="export_action_created">Erstellt</string>
     <string name="export_action_updated">Geändert</string>

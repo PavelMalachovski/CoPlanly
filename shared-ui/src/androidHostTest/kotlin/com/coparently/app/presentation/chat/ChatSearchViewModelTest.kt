@@ -155,6 +155,20 @@ class ChatSearchViewModelTest {
         assertEquals(listOf(ChatSearchJump(MESSAGE_ID, WINDOW_NEEDED)), jumps)
     }
 
+    @Test
+    fun `a quote's original pages back is asked for with a window that reaches it`() = runTest {
+        // Search is never opened: a tap on a quote jumps without it.
+        val viewModel = ChatSearchViewModel(repository, testParentsSource())
+        val jumps = mutableListOf<ChatSearchJump>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.jumps.toList(jumps) }
+
+        viewModel.jumpTo(CONVERSATION, MESSAGE_ID, SENT_AT)
+        advanceUntilIdle()
+
+        assertEquals(listOf(ChatSearchJump(MESSAGE_ID, WINDOW_NEEDED)), jumps)
+        assertEquals(ChatSearchState.Closed, viewModel.state.value)
+    }
+
     private fun openSearch(): ChatSearchViewModel =
         ChatSearchViewModel(repository, testParentsSource()).also { it.open(CONVERSATION) }
 

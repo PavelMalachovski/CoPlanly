@@ -215,16 +215,23 @@ object RecordLayout {
         if (record.messages.isEmpty()) return listOf(heading, RecordBlock(labels.nothingInPeriod, LineStyle.BODY))
         return listOf(heading) + record.messages.flatMap { message ->
             val status = if (message.delivered) "" else " — ${labels.actions.notSent}"
-            listOf(
-                RecordBlock(
-                    "${RecordFormat.instant(message.sentAtMillis, record.zone)} — ${message.senderName}$status",
-                    LineStyle.SMALL,
-                    spaceBefore = ITEM_GAP
-                ),
-                RecordBlock(message.text, LineStyle.BODY, indent = 1)
-            ) + RecordFormat.planCitation(message, labels.plan).takeIf { it.isNotEmpty() }?.let {
-                listOf(RecordBlock(it, LineStyle.SMALL, indent = 1))
-            }.orEmpty()
+            buildList {
+                add(
+                    RecordBlock(
+                        "${RecordFormat.instant(message.sentAtMillis, record.zone)} — ${message.senderName}$status",
+                        LineStyle.SMALL,
+                        spaceBefore = ITEM_GAP
+                    )
+                )
+                // The quote comes before the words, as it does in the thread.
+                message.replyTo?.let {
+                    add(RecordBlock(RecordReplyText.line(it, record.zone, labels), LineStyle.SMALL, indent = 1))
+                }
+                add(RecordBlock(message.text, LineStyle.BODY, indent = 1))
+                RecordFormat.planCitation(message, labels.plan).takeIf { it.isNotEmpty() }?.let {
+                    add(RecordBlock(it, LineStyle.SMALL, indent = 1))
+                }
+            }
         }
     }
 

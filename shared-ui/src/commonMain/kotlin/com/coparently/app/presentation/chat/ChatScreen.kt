@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.coparently.app.domain.chat.ReplyQuote
 import com.coparently.app.domain.chat.ToneCheck
 import com.coparently.app.domain.chat.ToneNudge
 import com.coparently.app.domain.chat.isShownInThread
@@ -149,6 +150,8 @@ fun ChatScreen(
     val messages by viewModel.messages.collectAsState()
     val currentUserId by viewModel.currentUserId.collectAsState()
     val canLoadEarlier by viewModel.canLoadEarlier.collectAsState()
+    val quotes by viewModel.quotes.collectAsState()
+    val replyTarget by viewModel.replyTarget.collectAsState()
     val conversations = viewModel.conversations.collectAsState().value.valueOrNull.orEmpty()
     val upcomingEvents by viewModel.upcomingEvents.collectAsState()
     val pendingSend by viewModel.pendingSend.collectAsState()
@@ -226,6 +229,24 @@ fun ChatScreen(
         searchViewModel.jumps.collect { jump ->
             viewModel.showAtLeast(jump.windowNeeded)
             revealTarget = jump.messageId
+        }
+    }
+
+    // A reply chosen by a swipe or from a bubble's menu; the composer takes the focus, so the answer
+    // can be typed at once.
+    // Remembered, as is the quote's tap below, so the thread's bubbles are not handed new callbacks
+    // on every recomposition of the screen.
+    val startReply = remember(viewModel) {
+        fun(message: Message) {
+            viewModel.startReply(message)
+            composerSeeds++
+        }
+    }
+    // A quote's original may be many screens older than the loaded window: it is sized in one step,
+    // as a search result's is, and revealed through the same jump.
+    val revealOriginal = remember(searchViewModel, conversationId) {
+        fun(original: ReplyQuote.Shown) {
+            searchViewModel.jumpTo(conversationId, original.messageId, original.sentAtMillis)
         }
     }
 
@@ -322,7 +343,12 @@ fun ChatScreen(
                                     onRetryFailed = { viewModel.resendFailedMessages() },
                                     modifier = Modifier.weight(1f),
                                     revealMessageId = revealTarget,
-                                    onRevealed = { revealTarget = null }
+                                    onRevealed = { revealTarget = null },
+                                    quotes = quotes,
+                                    onQuoteClick = revealOriginal,
+                                    // A thread the departed co-parent can no longer answer takes no reply.
+                                    onReply = startReply.takeIf { departed == null },
+                                    names = parentNames
                                 )
                             }
                         }
@@ -351,6 +377,15 @@ fun ChatScreen(
             } else if (!searching) {
                 if (!nudge.isEmpty) ToneNudgeHint(nudge)
                 dictation.failure?.let { DictationFailureNotice(it) }
+                // The message being answered, over the composer until a text is sent or ✕.
+                replyTarget?.let { quote ->
+                    ReplyBar(
+                        quote = quote,
+                        readerId = currentUserId,
+                        onCancel = viewModel::cancelReply,
+                        names = parentNames
+                    )
+                }
 
                 // The `+` beside the field, not inside `MessageInput`: a file, a change request and
                 // a template each have their own flow, and the composer stays a text field and a

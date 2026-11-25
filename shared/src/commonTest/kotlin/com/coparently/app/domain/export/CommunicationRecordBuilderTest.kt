@@ -321,6 +321,130 @@ class CommunicationRecordBuilderTest {
     }
 
     @Test
+    fun `a reply names its original's author - time and excerpt`() {
+        val long = "x".repeat(100)
+        val record = CommunicationRecordBuilder.build(
+            sources(
+                messages = listOf(
+                    MessageInput("a", ALICE, MARCH_10_0900, long, delivered = true),
+                    MessageInput("b", BOB, MARCH_10_0900 + 60_000, "Fine", delivered = true, replyToMessageId = "a")
+                )
+            ),
+            scope()
+        )
+
+        assertNull(record.messages.first { it.messageId == "a" }.replyTo)
+        assertEquals(
+            RecordReply(authorName = "Alice", sentAtMillis = MARCH_10_0900, excerpt = "x".repeat(80) + "…"),
+            record.messages.first { it.messageId == "b" }.replyTo
+        )
+    }
+
+    @Test
+    fun `a reply to a message before the period still resolves`() {
+        val beforeMidnight = 1_772_319_599_000L // 2026-02-28 23:59:59 in Prague
+        val record = CommunicationRecordBuilder.build(
+            sources(
+                messages = listOf(
+                    MessageInput("a", ALICE, beforeMidnight, "Can you pick up?", delivered = true),
+                    MessageInput("b", BOB, MARCH_10_0900, "Yes", delivered = true, replyToMessageId = "a")
+                )
+            ),
+            scope()
+        )
+
+        assertEquals(listOf("b"), record.messages.map { it.messageId })
+        assertEquals(RecordReply("Alice", beforeMidnight, "Can you pick up?"), record.messages.single().replyTo)
+    }
+
+    @Test
+    fun `a reply to a message not in the record says so rather than printing as an ordinary message`() {
+        val record = CommunicationRecordBuilder.build(
+            sources(messages = listOf(MessageInput("b", BOB, MARCH_10_0900, "Yes", true, replyToMessageId = "gone"))),
+            scope()
+        )
+
+        assertEquals(RecordReplyTo.NotInRecord, record.messages.single().replyTo)
+    }
+
+    @Test
+    fun `a blank reply id is no reply`() {
+        val record = CommunicationRecordBuilder.build(
+            sources(messages = listOf(MessageInput("b", BOB, MARCH_10_0900, "Yes", true, replyToMessageId = ""))),
+            scope()
+        )
+
+        assertNull(record.messages.single().replyTo)
+    }
+
+    @Test
+    fun `a reply to a multi-line original quotes every line - not the first alone`() {
+        val record = CommunicationRecordBuilder.build(
+            sources(
+                messages = listOf(
+                    MessageInput("a", ALICE, MARCH_10_0900, "Yes.\n\n  But only if you pay the deposit.  ", true),
+                    MessageInput("b", BOB, MARCH_10_0900 + 1, "Fine", true, replyToMessageId = "a")
+                )
+            ),
+            scope()
+        )
+
+        assertEquals(
+            RecordReply("Alice", MARCH_10_0900, "Yes. But only if you pay the deposit."),
+            record.messages.first { it.messageId == "b" }.replyTo
+        )
+    }
+
+    @Test
+    fun `a multi-line original is cut at 80 characters across its lines`() {
+        val text = "First line.\n" + "y".repeat(100)
+        val record = CommunicationRecordBuilder.build(
+            sources(
+                messages = listOf(
+                    MessageInput("a", ALICE, MARCH_10_0900, text, true),
+                    MessageInput("b", BOB, MARCH_10_0900 + 1, "Fine", true, replyToMessageId = "a")
+                )
+            ),
+            scope()
+        )
+
+        val excerpt = (record.messages.first { it.messageId == "b" }.replyTo as RecordReply).excerpt
+        assertEquals(("First line. " + "y".repeat(100)).take(80) + "…", excerpt)
+    }
+
+    @Test
+    fun `a reply to a sticker names the sticker - which is itself not in the record`() {
+        val record = CommunicationRecordBuilder.build(
+            sources(
+                messages = listOf(
+                    MessageInput("s", ALICE, MARCH_10_0900, "", true, isSticker = true),
+                    MessageInput("b", BOB, MARCH_10_0900 + 1, "Thanks", true, replyToMessageId = "s")
+                )
+            ),
+            scope()
+        )
+
+        assertEquals(listOf("b"), record.messages.map { it.messageId })
+        assertEquals(RecordReply("Alice", MARCH_10_0900, "", sticker = true), record.messages.single().replyTo)
+    }
+
+    @Test
+    fun `a reply to a file names the file`() {
+        val file = com.coparently.app.domain.chat.ChatAttachment("att/path", "application/pdf", 10, "ab", "plan.pdf")
+        val record = CommunicationRecordBuilder.build(
+            sources(
+                messages = listOf(
+                    MessageInput("f", ALICE, MARCH_10_0900, "plan.pdf", true, attachments = listOf(file)),
+                    MessageInput("b", BOB, MARCH_10_0900 + 1, "Got it", true, replyToMessageId = "f")
+                )
+            ),
+            scope()
+        )
+
+        assertEquals("plan.pdf", (record.messages.first { it.messageId == "b" }.replyTo as RecordReply).excerpt)
+    }
+
+    @Test
     fun `expenses are cut by their own date and by family`() {
         val record = CommunicationRecordBuilder.build(
             sources(

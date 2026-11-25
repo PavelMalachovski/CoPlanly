@@ -102,6 +102,15 @@
     <string name="chat_template_confirm_agreement_content">Pro jistotu shrnuji naši dohodu: [dohoda]. Pokud to vidíš jinak, dej mi prosím vědět.</string>
     <string name="chat_failed_to_send_retry">Neodesláno – klepnutím zkusíte znovu</string>
     <string name="chat_load_earlier">Načíst starší zprávy</string>
+    <!-- The button over the thread that brings its newest message into view, and how many
+         messages arrived while the reader was in history. -->
+    <string name="chat_scroll_to_newest">Nejnovější zprávy</string>
+    <plurals name="chat_new_messages">
+        <item quantity="one">%1$d nová zpráva</item>
+        <item quantity="few">%1$d nové zprávy</item>
+        <item quantity="many">%1$d nové zprávy</item>
+        <item quantity="other">%1$d nových zpráv</item>
+    </plurals>
 
     <!-- MON-15: search inside the open conversation. Local to this phone; never a server. -->
     <string name="chat_search">Hledat v konverzaci</string>
@@ -158,4 +167,16 @@
     <string name="settle_up_iban_copied">IBAN zkopírován</string>
     <string name="settle_up_no_account">%1$s zatím nemá přidaný účet pro platby.</string>
     <string name="settle_up_qr_description">QR kód k zaplacení %1$s – %2$s</string>
+    <!-- Replies (chat: newest message in view, and replies, November 2026). A swipe or the
+         long-press menu starts a reply; a reply's bubble quotes the message it answers, and the
+         bar over the composer names whom the parent answers. %1$s = a name, or a file's name. -->
+    <string name="chat_reply">Odpovědět</string>
+    <string name="chat_copy_text">Kopírovat text</string>
+    <string name="chat_reply_to">Odpověď – %1$s</string>
+    <!-- The reply bar while the parent answers their own message: never their own name (H4). -->
+    <string name="chat_reply_to_own">Odpověď na vaši zprávu</string>
+    <string name="chat_cancel_reply">Zrušit odpověď</string>
+    <string name="chat_quote_unavailable">Zpráva není k dispozici</string>
+    <string name="chat_quote_file">Soubor: %1$s</string>
+    <string name="chat_quote_sticker">Samolepka</string>
 </resources>

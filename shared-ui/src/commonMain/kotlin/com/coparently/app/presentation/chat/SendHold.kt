@@ -1,5 +1,6 @@
 package com.coparently.app.presentation.chat
 
+import com.coparently.app.domain.chat.ReplyQuote
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -14,11 +15,14 @@ import kotlinx.coroutines.launch
  * @property conversationId The thread it is for.
  * @property text What was typed — returned to the composer on Undo.
  * @property secondsLeft Whole seconds until it is sent, for the "Sending in N s…" line.
+ * @property reply The message it answers, returned to the composer on Undo with the text; null
+ *   for a message that replies to nothing.
  */
 data class PendingSend(
     val conversationId: String,
     val text: String,
-    val secondsLeft: Int
+    val secondsLeft: Int,
+    val reply: ReplyQuote.Shown? = null
 )
 
 /**
@@ -51,17 +55,18 @@ class SendHold(
     /**
      * Holds [text] and runs [send] when the pause ends, unless [undo] comes first.
      *
+     * @param reply The message the held one answers, kept for [undo].
      * @param send Hands the message to the repository. Runs at most once.
      */
-    fun hold(conversationId: String, text: String, send: () -> Unit) {
+    fun hold(conversationId: String, text: String, reply: ReplyQuote.Shown? = null, send: () -> Unit) {
         sendNow()
         release = send
         // Set before the countdown starts, so the line appears in the same frame the composer
         // empties and an Undo in that frame already has something to undo.
-        _pending.value = PendingSend(conversationId, text, seconds)
+        _pending.value = PendingSend(conversationId, text, seconds, reply)
         countdown = scope.launch {
             for (left in seconds downTo 1) {
-                _pending.value = PendingSend(conversationId, text, left)
+                _pending.value = PendingSend(conversationId, text, left, reply)
                 delay(TICK_MS)
             }
             countdown = null

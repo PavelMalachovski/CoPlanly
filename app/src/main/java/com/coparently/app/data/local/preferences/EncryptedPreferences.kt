@@ -335,6 +335,31 @@ class EncryptedPreferences internal constructor(
             .orEmpty()
 
     /**
+     * Stores the id of the message one conversation's composer is replying to.
+     *
+     * An empty [messageId] removes the entry. Cleared with the rest of the store by [clear], like
+     * the draft beside it.
+     *
+     * @param conversationId The thread the reply was chosen in.
+     * @param messageId The original's id.
+     */
+    override fun putChatReplyDraft(conversationId: String, messageId: String) {
+        val key = PreferenceKeys.CHAT_REPLY_DRAFT_PREFIX + conversationId
+        store.edit().apply {
+            if (messageId.isEmpty()) remove(key) else putString(key, messageId)
+        }.apply()
+    }
+
+    /**
+     * The id of the message one conversation's composer is replying to, or an empty string.
+     *
+     * @param conversationId The thread to read the reply of.
+     */
+    override fun getChatReplyDraft(conversationId: String): String =
+        store.getString(PreferenceKeys.CHAT_REPLY_DRAFT_PREFIX + conversationId, null)
+            .orEmpty()
+
+    /**
      * Records the agreed split of a shared expense, as slot 1's share in basis points.
      *
      * @param basisPoints `0..10000`.

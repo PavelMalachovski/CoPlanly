@@ -194,10 +194,8 @@ private fun ResultList(
  * a message from before a re-pairing, or a co-parent of a family other than the one
  * `ParentsSource` follows.
  */
-private fun senderName(hit: ChatSearchHit, names: ParentNames): String {
-    val label = names.labelForUid(hit.message.senderId)
-    return if (label == names.unknownFallback) hit.message.senderName.ifBlank { label } else label
-}
+private fun senderName(hit: ChatSearchHit, names: ParentNames): String =
+    names.chatAuthor(hit.message.senderId, hit.message.senderName)
 
 /** [snippet]'s text with the match picked out in the theme's primary container. */
 @Composable
